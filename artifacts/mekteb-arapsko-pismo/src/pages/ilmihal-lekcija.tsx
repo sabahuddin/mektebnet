@@ -92,42 +92,48 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
 // ──────────────────────────────────────────────────
 const SECTION_CONFIG = {
   story: {
-    bg: "bg-amber-50 border-amber-200",
+    bg: "bg-amber-50",
+    ring: "ring-amber-200",
     headerBg: "bg-amber-500/10 hover:bg-amber-500/15",
     headerText: "text-amber-800",
     icon: <Sparkles className="w-4 h-4 shrink-0" />,
     iconBg: "bg-amber-100 text-amber-600",
   },
   ilmihal: {
-    bg: "bg-blue-50 border-blue-200",
+    bg: "bg-blue-50",
+    ring: "ring-blue-200",
     headerBg: "bg-blue-500/10 hover:bg-blue-500/15",
     headerText: "text-blue-800",
     icon: <BookMarked className="w-4 h-4 shrink-0" />,
     iconBg: "bg-blue-100 text-blue-700",
   },
   pitanja: {
-    bg: "bg-red-50 border-red-200",
+    bg: "bg-red-50",
+    ring: "ring-red-200",
     headerBg: "bg-red-500/10 hover:bg-red-500/15",
     headerText: "text-red-800",
     icon: <MessageSquare className="w-4 h-4 shrink-0" />,
     iconBg: "bg-red-100 text-red-600",
   },
   zadatak: {
-    bg: "bg-purple-50 border-purple-200",
+    bg: "bg-purple-50",
+    ring: "ring-purple-200",
     headerBg: "bg-purple-500/10 hover:bg-purple-500/15",
     headerText: "text-purple-800",
     icon: <PenLine className="w-4 h-4 shrink-0" />,
     iconBg: "bg-purple-100 text-purple-600",
   },
   quiz_box: {
-    bg: "bg-white border-teal-200",
+    bg: "bg-white",
+    ring: "ring-teal-200",
     headerBg: "bg-teal-50 hover:bg-teal-100/60",
     headerText: "text-teal-800",
     icon: <HelpCircle className="w-4 h-4 shrink-0" />,
     iconBg: "bg-teal-100 text-teal-700",
   },
   other: {
-    bg: "bg-gray-50 border-gray-200",
+    bg: "bg-gray-50",
+    ring: "ring-gray-200",
     headerBg: "bg-gray-100 hover:bg-gray-200",
     headerText: "text-gray-800",
     icon: <BookOpen className="w-4 h-4 shrink-0" />,
@@ -224,7 +230,7 @@ function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; 
   const cfg = SECTION_CONFIG[section.type];
 
   return (
-    <div className={`border-2 overflow-hidden ${cfg.bg}`}>
+    <div className={`ring-2 ring-inset rounded-2xl overflow-hidden ${cfg.bg} ${cfg.ring}`}>
       <button onClick={() => setOpen(v => !v)}
         className={`w-full flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors ${cfg.headerBg}`}>
         <div className="flex items-center gap-3">
