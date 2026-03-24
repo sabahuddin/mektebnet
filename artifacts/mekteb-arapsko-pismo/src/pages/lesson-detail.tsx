@@ -183,6 +183,11 @@ const COLOUR_MAP: Record<string, { card: string; badge: string; sound: string }>
   violet: { card: "bg-violet-50 border-violet-300",badge: "bg-violet-500 text-white", sound: "bg-violet-100 text-violet-700 hover:bg-violet-200" },
 };
 
+function isArabicChar(s: string) {
+  const c = (s || "").codePointAt(0) ?? 0;
+  return c >= 0x0600 && c <= 0x06FF;
+}
+
 function playAudio(file: string) {
   const audio = new Audio(`${BASE}audio/harfovi/${file}`);
   audio.play().catch(() => {});
@@ -446,14 +451,15 @@ export default function LessonDetail() {
               {/* Pregled prvih 6 stavki */}
               <div className="grid grid-cols-3 gap-2 mb-5 flex-1">
                 {ex.items.slice(0, 6).map((item, wi) => (
-                  <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 text-center">
+                  <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-row items-center justify-center gap-2 text-center">
                     <span
-                      className="text-4xl font-bold text-foreground leading-none"
-                      style={{ fontFamily: "Noto Naskh Arabic, serif" }}
+                      className={`text-3xl font-bold text-foreground leading-none ${isArabicChar(item.show) ? "ar" : ""}`}
                     >
                       {item.show}
                     </span>
-                    <span className="text-3xl font-bold text-primary">{item.answer}</span>
+                    <span className={`text-xl font-bold text-primary ${isArabicChar(item.answer) ? "ar" : ""}`}>
+                      {item.answer}
+                    </span>
                   </div>
                 ))}
               </div>
