@@ -306,6 +306,24 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
 }
 
 /* ── Čitaonica book content ── */
+/* Sakrivanje WordPress/legacy elemenata koji su u HTML sadržaju knjiga */
+.citaonica-content .book-header,
+.citaonica-content .book-title,
+.citaonica-content .book-meta,
+.citaonica-content .meta-item,
+.citaonica-content .progress-bar,
+.citaonica-content .progress-text,
+.citaonica-content .progress-fill,
+.citaonica-content .page-number,
+.citaonica-content .navigation,
+.citaonica-content .nav-btn,
+.citaonica-content .finish-btn,
+.citaonica-content #tb-auth-right,
+.citaonica-content .tb-right,
+.citaonica-content .topbar {
+  display: none !important;
+}
+
 .citaonica-content {
   font-family: var(--font-sans);
   color: hsl(var(--foreground));
