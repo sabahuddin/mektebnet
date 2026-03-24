@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -12,6 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
+interface LekcijaKvizPitanje {
+  question: string;
+  options: string[];
+  answer: string;
+}
+
 interface Lekcija {
   id: number;
   nivo: number;
@@ -19,6 +25,7 @@ interface Lekcija {
   naslov: string;
   contentHtml: string;
   audioSrc?: string;
+  kvizPitanja?: LekcijaKvizPitanje[] | null;
 }
 
 interface AccordionSection {
@@ -231,6 +238,97 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
 }
 
 // ──────────────────────────────────────────────────
+// AI-generated lekcija kviz accordion
+// ──────────────────────────────────────────────────
+function LekcijaKvizBox({ pitanja }: { pitanja: LekcijaKvizPitanje[] }) {
+  const [current, setCurrent] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const reset = () => { setCurrent(0); setSelected(null); setScore(0); setDone(false); };
+
+  const q = pitanja[current];
+
+  return (
+    <div className="ring-2 ring-inset rounded-2xl overflow-hidden bg-teal-50 ring-teal-200">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors bg-teal-500/10 hover:bg-teal-500/15">
+        <div className="flex items-center gap-3">
+          <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-teal-100 text-teal-700">
+            <HelpCircle className="w-4 h-4 shrink-0" />
+          </span>
+          <span className="font-extrabold text-sm tracking-wide uppercase text-teal-800">
+            Provjeri znanje
+          </span>
+        </div>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-5 h-5 text-teal-800 opacity-70" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+          >
+            <div className="px-5 pb-5 pt-4">
+              {done ? (
+                <div className="text-center py-4">
+                  <Trophy className="w-10 h-10 mx-auto mb-3 text-amber-500" />
+                  <p className="text-lg font-extrabold text-foreground">{score}/{pitanja.length} tačnih!</p>
+                  <p className="text-sm text-muted-foreground mt-1">Provjera za sebe — ne broji u bodove</p>
+                  <Button size="sm" variant="outline" onClick={reset} className="mt-4 rounded-xl">Ponovi kviz</Button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-muted-foreground font-bold mb-3">Pitanje {current + 1}/{pitanja.length}</p>
+                  <p className="font-bold text-foreground mb-4 leading-relaxed">{q.question}</p>
+                  <div className="flex flex-col gap-2">
+                    {q.options.map((opt) => (
+                      <button key={opt} disabled={!!selected}
+                        onClick={() => {
+                          setSelected(opt);
+                          if (opt === q.answer) setScore(s => s + 1);
+                        }}
+                        className={`text-left px-4 py-3 rounded-xl border font-medium text-sm transition-all ${
+                          !selected
+                            ? "border-border hover:border-teal-400 hover:bg-teal-50 bg-white"
+                            : opt === q.answer
+                              ? "border-emerald-500 bg-emerald-50 text-emerald-800 font-bold"
+                              : selected === opt
+                                ? "border-red-400 bg-red-50 text-red-700"
+                                : "border-border opacity-50 bg-white"
+                        }`}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  {selected && (
+                    <div className="mt-4 flex justify-end">
+                      <Button size="sm" onClick={() => {
+                        if (current + 1 >= pitanja.length) setDone(true);
+                        else { setCurrent(c => c + 1); setSelected(null); }
+                      }} className="rounded-xl">
+                        {current + 1 >= pitanja.length ? "Završi ✓" : "Sljedeće →"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────
 // Single accordion section
 // ──────────────────────────────────────────────────
 function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; slug: string; nivo: number }) {
@@ -406,12 +504,34 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {/* Accordion sections */}
+        {/* Accordion sections — ordered: story → ilmihal → Provjeri znanje → pitanja → zadatak → other */}
         {parsed.sections.length > 0 ? (
           <div className="flex flex-col gap-3 mb-6">
-            {parsed.sections.map(section => (
-              <SectionAccordion key={section.id} section={section} slug={slug!} nivo={lekcija.nivo} />
-            ))}
+            {(() => {
+              const ORDER: Record<AccordionSection["type"], number> = {
+                story: 0, ilmihal: 1, quiz_box: 2, pitanja: 3, zadatak: 4, other: 5,
+              };
+              const sorted = [...parsed.sections].sort((a, b) => ORDER[a.type] - ORDER[b.type]);
+              const kvizPitanja = lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 ? lekcija.kvizPitanja : null;
+
+              const items: React.ReactNode[] = [];
+              let kvizInserted = false;
+              for (const section of sorted) {
+                items.push(
+                  <SectionAccordion key={section.id} section={section} slug={slug!} nivo={lekcija.nivo} />
+                );
+                // Insert MCQ quiz right after the ilmihal section
+                if (!kvizInserted && section.type === "ilmihal" && kvizPitanja) {
+                  items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
+                  kvizInserted = true;
+                }
+              }
+              // If no ilmihal section was found but we have pitanja, add kviz before pitanja
+              if (!kvizInserted && kvizPitanja) {
+                items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
+              }
+              return items;
+            })()}
           </div>
         ) : (
           /* Fallback: if no sections parsed, render raw HTML */

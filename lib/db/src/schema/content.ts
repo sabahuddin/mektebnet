@@ -3,6 +3,12 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 // Ilmihal lessons (3 nivoa)
+export interface LekcijaKvizPitanje {
+  question: string;
+  options: string[];
+  answer: string;
+}
+
 export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   id: serial("id").primaryKey(),
   nivo: integer("nivo").notNull(),
@@ -12,6 +18,7 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   audioSrc: varchar("audio_src", { length: 500 }),
   redoslijed: integer("redoslijed").notNull().default(0),
   isPublished: boolean("is_published").notNull().default(true),
+  kvizPitanja: jsonb("kviz_pitanja").$type<LekcijaKvizPitanje[]>(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
