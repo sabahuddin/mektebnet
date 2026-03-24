@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "hello": "tsx ./src/hello.ts",
+    "seed-lessons": "tsx ./src/seed-lessons.ts",
+    "seed-admin": "tsx ./src/seed-admin.ts",
+    "import-content": "tsx ./src/import-content.ts",
+    "fix-image-paths": "tsx ./src/fix-image-paths.ts",
+    "fix-lesson-order": "tsx ./src/fix-lesson-order.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "catalog:",
+    "adm-zip": "^0.5.16",
+    "tsx": "catalog:"
+  }
+}
