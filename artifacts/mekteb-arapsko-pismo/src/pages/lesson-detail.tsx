@@ -453,7 +453,7 @@ export default function LessonDetail() {
                     >
                       {item.show}
                     </span>
-                    <span className="text-sm font-bold text-primary">{item.answer}</span>
+                    <span className="text-3xl font-bold text-primary">{item.answer}</span>
                   </div>
                 ))}
               </div>
