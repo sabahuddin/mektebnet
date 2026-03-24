@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { BookOpen, Search } from "lucide-react";
+import { BookOpen, Search, Volume2 } from "lucide-react";
+
+const BASE = import.meta.env.BASE_URL;
 
 interface Harf {
   id: number;
@@ -12,37 +14,38 @@ interface Harf {
   dots: number;
   connecting: boolean;
   group: string;
+  audioFile: string;
 }
 
 const HARFOVI: Harf[] = [
-  { id: 1, arabic: "ا", name: "Elif", trans: "A / E", dots: 0, connecting: false, group: "Grupa 1" },
-  { id: 2, arabic: "ب", name: "Ba", trans: "B", dots: 1, connecting: true, group: "Grupa 1" },
-  { id: 3, arabic: "ت", name: "Ta", trans: "T", dots: 2, connecting: true, group: "Grupa 1" },
-  { id: 4, arabic: "ث", name: "Sa", trans: "S (meko)", dots: 3, connecting: true, group: "Grupa 1" },
-  { id: 5, arabic: "ج", name: "Džim", trans: "Dž", dots: 1, connecting: true, group: "Grupa 2" },
-  { id: 6, arabic: "ح", name: "Ha", trans: "H (duboko)", dots: 0, connecting: true, group: "Grupa 2" },
-  { id: 7, arabic: "خ", name: "Ha", trans: "H (grlo)", dots: 1, connecting: true, group: "Grupa 2" },
-  { id: 8, arabic: "د", name: "Dal", trans: "D", dots: 0, connecting: false, group: "Grupa 3" },
-  { id: 9, arabic: "ذ", name: "Zal", trans: "Z (meko)", dots: 1, connecting: false, group: "Grupa 3" },
-  { id: 10, arabic: "ر", name: "Ra", trans: "R", dots: 0, connecting: false, group: "Grupa 3" },
-  { id: 11, arabic: "ز", name: "Zejn", trans: "Z", dots: 1, connecting: false, group: "Grupa 3" },
-  { id: 12, arabic: "س", name: "Sin", trans: "S", dots: 0, connecting: true, group: "Grupa 4" },
-  { id: 13, arabic: "ش", name: "Šin", trans: "Š", dots: 3, connecting: true, group: "Grupa 4" },
-  { id: 14, arabic: "ص", name: "Sad", trans: "S (jako)", dots: 0, connecting: true, group: "Grupa 5" },
-  { id: 15, arabic: "ض", name: "Dad", trans: "D (jako)", dots: 1, connecting: true, group: "Grupa 5" },
-  { id: 16, arabic: "ط", name: "Ta", trans: "T (jako)", dots: 0, connecting: true, group: "Grupa 6" },
-  { id: 17, arabic: "ظ", name: "Za", trans: "Z (jako)", dots: 1, connecting: true, group: "Grupa 6" },
-  { id: 18, arabic: "ع", name: "Ajn", trans: "' (grlo)", dots: 0, connecting: true, group: "Grupa 7" },
-  { id: 19, arabic: "غ", name: "Gajn", trans: "G (grlo)", dots: 1, connecting: true, group: "Grupa 7" },
-  { id: 20, arabic: "ف", name: "Fa", trans: "F", dots: 1, connecting: true, group: "Grupa 8" },
-  { id: 21, arabic: "ق", name: "Kaf", trans: "K (duboko)", dots: 2, connecting: true, group: "Grupa 8" },
-  { id: 22, arabic: "ك", name: "Kef", trans: "K", dots: 0, connecting: true, group: "Grupa 9" },
-  { id: 23, arabic: "ل", name: "Lam", trans: "L", dots: 0, connecting: true, group: "Grupa 9" },
-  { id: 24, arabic: "م", name: "Mim", trans: "M", dots: 0, connecting: true, group: "Grupa 9" },
-  { id: 25, arabic: "ن", name: "Nun", trans: "N", dots: 1, connecting: true, group: "Grupa 9" },
-  { id: 26, arabic: "ه", name: "He", trans: "H", dots: 0, connecting: true, group: "Grupa 10" },
-  { id: 27, arabic: "و", name: "Waw", trans: "V / U", dots: 0, connecting: false, group: "Grupa 10" },
-  { id: 28, arabic: "ي", name: "Ja", trans: "J / I", dots: 2, connecting: true, group: "Grupa 10" },
+  { id: 1,  arabic: "ا", name: "Elif", trans: "A / E",      dots: 0, connecting: false, group: "Grupa 1",  audioFile: "elif.mp3" },
+  { id: 2,  arabic: "ب", name: "Ba",   trans: "B",          dots: 1, connecting: true,  group: "Grupa 1",  audioFile: "ba.mp3" },
+  { id: 3,  arabic: "ت", name: "Ta",   trans: "T",          dots: 2, connecting: true,  group: "Grupa 1",  audioFile: "ta.mp3" },
+  { id: 4,  arabic: "ث", name: "Sa",   trans: "S (meko)",   dots: 3, connecting: true,  group: "Grupa 1",  audioFile: "sa.mp3" },
+  { id: 5,  arabic: "ج", name: "Džim", trans: "Dž",         dots: 1, connecting: true,  group: "Grupa 2",  audioFile: "dzim.mp3" },
+  { id: 6,  arabic: "ح", name: "Ha",   trans: "H (duboko)", dots: 0, connecting: true,  group: "Grupa 2",  audioFile: "ha.mp3" },
+  { id: 7,  arabic: "خ", name: "Ha",   trans: "H (grlo)",   dots: 1, connecting: true,  group: "Grupa 2",  audioFile: "ha2.mp3" },
+  { id: 8,  arabic: "د", name: "Dal",  trans: "D",          dots: 0, connecting: false, group: "Grupa 3",  audioFile: "dal.mp3" },
+  { id: 9,  arabic: "ذ", name: "Zal",  trans: "Z (meko)",   dots: 1, connecting: false, group: "Grupa 3",  audioFile: "zal.mp3" },
+  { id: 10, arabic: "ر", name: "Ra",   trans: "R",          dots: 0, connecting: false, group: "Grupa 3",  audioFile: "ra.mp3" },
+  { id: 11, arabic: "ز", name: "Zejn", trans: "Z",          dots: 1, connecting: false, group: "Grupa 3",  audioFile: "zejn.mp3" },
+  { id: 12, arabic: "س", name: "Sin",  trans: "S",          dots: 0, connecting: true,  group: "Grupa 4",  audioFile: "sin.mp3" },
+  { id: 13, arabic: "ش", name: "Šin",  trans: "Š",          dots: 3, connecting: true,  group: "Grupa 4",  audioFile: "sin2.mp3" },
+  { id: 14, arabic: "ص", name: "Sad",  trans: "S (jako)",   dots: 0, connecting: true,  group: "Grupa 5",  audioFile: "sad.mp3" },
+  { id: 15, arabic: "ض", name: "Dad",  trans: "D (jako)",   dots: 1, connecting: true,  group: "Grupa 5",  audioFile: "dad.mp3" },
+  { id: 16, arabic: "ط", name: "Ta",   trans: "T (jako)",   dots: 0, connecting: true,  group: "Grupa 6",  audioFile: "ta2.mp3" },
+  { id: 17, arabic: "ظ", name: "Za",   trans: "Z (jako)",   dots: 1, connecting: true,  group: "Grupa 6",  audioFile: "za.mp3" },
+  { id: 18, arabic: "ع", name: "Ajn",  trans: "' (grlo)",   dots: 0, connecting: true,  group: "Grupa 7",  audioFile: "ajn.mp3" },
+  { id: 19, arabic: "غ", name: "Gajn", trans: "G (grlo)",   dots: 1, connecting: true,  group: "Grupa 7",  audioFile: "gajn.mp3" },
+  { id: 20, arabic: "ف", name: "Fa",   trans: "F",          dots: 1, connecting: true,  group: "Grupa 8",  audioFile: "fa.mp3" },
+  { id: 21, arabic: "ق", name: "Kaf",  trans: "K (duboko)", dots: 2, connecting: true,  group: "Grupa 8",  audioFile: "kaf.mp3" },
+  { id: 22, arabic: "ك", name: "Kef",  trans: "K",          dots: 0, connecting: true,  group: "Grupa 9",  audioFile: "kef.mp3" },
+  { id: 23, arabic: "ل", name: "Lam",  trans: "L",          dots: 0, connecting: true,  group: "Grupa 9",  audioFile: "lam.mp3" },
+  { id: 24, arabic: "م", name: "Mim",  trans: "M",          dots: 0, connecting: true,  group: "Grupa 9",  audioFile: "mim.mp3" },
+  { id: 25, arabic: "ن", name: "Nun",  trans: "N",          dots: 1, connecting: true,  group: "Grupa 9",  audioFile: "nun.mp3" },
+  { id: 26, arabic: "ه", name: "He",   trans: "H",          dots: 0, connecting: true,  group: "Grupa 10", audioFile: "he.mp3" },
+  { id: 27, arabic: "و", name: "Waw",  trans: "V / U",      dots: 0, connecting: false, group: "Grupa 10", audioFile: "waw.mp3" },
+  { id: 28, arabic: "ي", name: "Ja",   trans: "J / I",      dots: 2, connecting: true,  group: "Grupa 10", audioFile: "ja.mp3" },
 ];
 
 const GROUPS = Array.from(new Set(HARFOVI.map(h => h.group)));
@@ -53,6 +56,11 @@ const DOT_COLORS: Record<number, string> = {
   2: "bg-blue-50 text-blue-600",
   3: "bg-purple-50 text-purple-700",
 };
+
+function playHarf(file: string) {
+  const audio = new Audio(`${BASE}audio/harfovi/${file}`);
+  audio.play().catch(() => {});
+}
 
 export default function ArapskoPismoPage() {
   const [search, setSearch] = useState("");
@@ -128,7 +136,17 @@ export default function ArapskoPismoPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
+              className="relative"
             >
+              {/* Play button — stops propagation so card navigation doesn't trigger */}
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); playHarf(harf.audioFile); }}
+                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-teal-100 hover:bg-teal-200 text-teal-700 flex items-center justify-center transition-colors shadow-sm"
+                title={`Čuj izgovor: ${harf.name}`}
+              >
+                <Volume2 className="w-4 h-4" />
+              </button>
+
               <Link href={`/lesson/${harf.id}`}>
                 <div className="bg-white border-2 border-border/40 hover:border-primary/40 hover:shadow-lg rounded-2xl p-5 cursor-pointer transition-all group hover:-translate-y-1 flex flex-col items-center">
                   <div className="text-center mb-3">
