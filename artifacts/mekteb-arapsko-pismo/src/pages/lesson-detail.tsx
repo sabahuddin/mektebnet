@@ -193,6 +193,9 @@ export default function LessonDetail() {
   const dzanaImg = `${BASE}images/dzana-avatar.png`;
   const amirImg  = `${BASE}images/amir-avatar.png`;
 
+  const dzanaLines = data.story.lines.filter(l => l.speaker === "dzana");
+  const amirLines  = data.story.lines.filter(l => l.speaker === "amir");
+
   return (
     <Layout>
       {/* Nazad */}
@@ -228,13 +231,15 @@ export default function LessonDetail() {
         </div>
       </div>
 
-      {/* Priča — isprepleten chat */}
+      {/* Priča */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-orange-50 to-pink-50 border-orange-100">
         <h2 className="text-2xl font-bold text-orange-800 flex items-center gap-2 mb-6">
           <BookOpen className="w-6 h-6" />
           Priča za danas
         </h2>
-        <div className="flex flex-col gap-4">
+
+        {/* MOBILNI: isprepleten chat (jedna kolona) */}
+        <div className="flex flex-col gap-4 md:hidden">
           {data.story.lines.map((line, i) => {
             const isDzana = line.speaker === "dzana";
             return (
@@ -242,20 +247,20 @@ export default function LessonDetail() {
                 key={i}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.12 }}
+                transition={{ delay: i * 0.1 }}
                 className={`flex items-end gap-3 ${isDzana ? "" : "flex-row-reverse"}`}
               >
                 <img
                   src={isDzana ? dzanaImg : amirImg}
                   alt={isDzana ? "Džana" : "Amir"}
-                  className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover shrink-0"
+                  className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0"
                 />
-                <div className={`flex flex-col gap-1 max-w-[78%] ${isDzana ? "items-start" : "items-end"}`}>
+                <div className={`flex flex-col gap-1 max-w-[80%] ${isDzana ? "items-start" : "items-end"}`}>
                   <span className={`text-sm font-extrabold px-1 ${isDzana ? "text-orange-700" : "text-primary"}`}>
                     {isDzana ? "Džana" : "Amir"}
                   </span>
                   <div
-                    className={`px-5 py-3 text-base font-medium leading-relaxed shadow-sm ${
+                    className={`px-5 py-3 text-lg font-medium leading-relaxed shadow-sm ${
                       isDzana
                         ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
                         : "bg-primary text-white rounded-2xl rounded-br-sm"
@@ -267,6 +272,44 @@ export default function LessonDetail() {
               </motion.div>
             );
           })}
+        </div>
+
+        {/* DESKTOP: dvije kolone — Džana lijevo, Amir desno */}
+        <div className="hidden md:grid grid-cols-2 gap-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 mb-1">
+              <img src={dzanaImg} alt="Džana" className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" />
+              <span className="text-xl font-extrabold text-orange-700">Džana</span>
+            </div>
+            {dzanaLines.map((line, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.12 }}
+                className="bg-white rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-foreground border border-orange-100"
+              >
+                {line.text}
+              </motion.div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 mb-1 justify-end">
+              <span className="text-xl font-extrabold text-primary">Amir</span>
+              <img src={amirImg} alt="Amir" className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" />
+            </div>
+            {amirLines.map((line, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.12 + 0.06 }}
+                className="bg-primary rounded-2xl rounded-tr-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-white"
+              >
+                {line.text}
+              </motion.div>
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -313,7 +356,7 @@ export default function LessonDetail() {
                 ].map(({ form, label }) => (
                   <div key={label} className="bg-white rounded-xl p-3">
                     <div className="text-5xl font-bold text-foreground mb-2" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
-                    <div className="text-sm font-semibold text-muted-foreground">{label}</div>
+                    <div className="text-base font-bold text-muted-foreground">{label}</div>
                   </div>
                 ))}
               </div>
@@ -361,9 +404,9 @@ export default function LessonDetail() {
                   <span className="text-2xl font-extrabold">{h.name}</span>
                 </div>
 
-                <p className="text-base font-medium leading-snug">{h.description}</p>
+                <p className="text-lg font-medium leading-snug">{h.description}</p>
                 {h.napomena && (
-                  <p className="text-sm mt-2 opacity-75 italic">{h.napomena}</p>
+                  <p className="text-base mt-2 opacity-75 italic">{h.napomena}</p>
                 )}
               </motion.div>
             );
