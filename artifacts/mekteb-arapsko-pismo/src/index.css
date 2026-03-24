@@ -139,26 +139,49 @@
 /* ── Ilmihal lesson content styles ── */
 .ilmihal-content {
   font-family: var(--font-sans);
-  font-size: 1.05rem;
-  line-height: 1.8;
+  font-size: 1.15rem;
+  line-height: 1.85;
   color: hsl(var(--foreground));
 }
 
 .ilmihal-content .lesson-text {
-  margin-bottom: 0.85rem;
-  line-height: 1.8;
+  margin-bottom: 0.9rem;
+  line-height: 1.85;
 }
 
 .ilmihal-content p {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.9rem;
 }
 
 .ilmihal-content h1,
 .ilmihal-content h2 {
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   margin-bottom: 0.75rem;
   color: hsl(var(--foreground));
+}
+
+/* ── Font size levels (A+ / A-) ── */
+.font-size-2 .ilmihal-content {
+  font-size: 1.3rem;
+}
+.font-size-2 .ilmihal-content h1,
+.font-size-2 .ilmihal-content h2 {
+  font-size: 1.5rem;
+}
+.font-size-2 .ilmihal-content .arabic-card {
+  font-size: 1.2rem;
+}
+
+.font-size-3 .ilmihal-content {
+  font-size: 1.5rem;
+}
+.font-size-3 .ilmihal-content h1,
+.font-size-3 .ilmihal-content h2 {
+  font-size: 1.75rem;
+}
+.font-size-3 .ilmihal-content .arabic-card {
+  font-size: 1.4rem;
 }
 
 .ilmihal-content ol,
