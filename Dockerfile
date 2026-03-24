@@ -42,7 +42,6 @@ RUN pnpm install --prod --frozen-lockfile
 # Copy built assets
 COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=base /app/artifacts/mekteb-arapsko-pismo/dist ./artifacts/mekteb-arapsko-pismo/dist
-COPY --from=base /app/lib/db/dist ./lib/db/dist
 
 ENV NODE_ENV=production
 ENV PORT=3000
