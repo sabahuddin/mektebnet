@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { BookOpen, Search, Volume2 } from "lucide-react";
+import { BookOpen, Search, Volume2, Lock, PlayCircle } from "lucide-react";
+import { LESSONS } from "@/data/lessons";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -94,6 +95,67 @@ export default function ArapskoPismoPage() {
           </div>
         </div>
 
+        {/* ── Lekcije ── */}
+        <div className="mb-8">
+          <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 mb-4">
+            <PlayCircle className="w-5 h-5 text-primary" />
+            Lekcije — Sufara
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {LESSONS.map((lesson, i) => {
+              const isUnlocked = i === 0;
+              return (
+                <motion.div
+                  key={lesson.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  {isUnlocked ? (
+                    <Link href={`/lesson/${lesson.id}`}>
+                      <div className="flex items-center gap-4 p-4 bg-white border-2 border-primary/30 hover:border-primary rounded-2xl cursor-pointer hover:shadow-md transition-all group">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-teal-600 flex items-center justify-center text-white font-black text-lg shrink-0">
+                          {lesson.orderNum}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-extrabold text-foreground text-base leading-tight">{lesson.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {lesson.letters.map(l => (
+                              <span key={l} className="text-xl font-bold text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <PlayCircle className="w-6 h-6 text-primary opacity-60 group-hover:opacity-100 shrink-0 transition-opacity" />
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="flex items-center gap-4 p-4 bg-muted/40 border-2 border-border/40 rounded-2xl opacity-60">
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-black text-lg shrink-0">
+                        {lesson.orderNum}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-extrabold text-muted-foreground text-base leading-tight">{lesson.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {lesson.letters.slice(0, 3).map(l => (
+                            <span key={l} className="text-xl font-bold text-muted-foreground" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <Lock className="w-5 h-5 text-muted-foreground shrink-0" />
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Harfovi referenca ── */}
+        <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 mb-4">
+          <BookOpen className="w-5 h-5 text-primary" />
+          Referenca — svi harfovi
+        </h2>
+
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -147,33 +209,28 @@ export default function ArapskoPismoPage() {
                 <Volume2 className="w-4 h-4" />
               </button>
 
-              <Link href={`/lesson/${harf.id}`}>
-                <div className="bg-white border-2 border-border/40 hover:border-primary/40 hover:shadow-lg rounded-2xl p-5 cursor-pointer transition-all group hover:-translate-y-1 flex flex-col items-center">
-                  <div className="text-center mb-3">
-                    <span
-                      className="text-7xl text-foreground leading-none block"
-                      style={{ fontFamily: "Noto Naskh Arabic, serif", direction: "rtl" }}
-                    >
-                      {harf.arabic}
-                    </span>
-                  </div>
-                  <div className="text-center mb-3">
-                    <p className="font-extrabold text-foreground text-xl leading-tight">{harf.name}</p>
-                    <p className="text-base text-teal-600 font-bold mt-0.5">{harf.trans}</p>
-                  </div>
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${DOT_COLORS[harf.dots]} ${harf.dots > 0 ? "border-current/20" : "border-transparent"}`}>
-                      {harf.dots === 0 ? "–" : `${harf.dots}●`}
-                    </span>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${harf.connecting ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                      {harf.connecting ? "spaja" : "solo"}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-center gap-1 text-xs text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                    <BookOpen className="w-3.5 h-3.5" /> Otvori lekciju
-                  </div>
+              <div className="bg-white border-2 border-border/40 hover:border-primary/20 hover:shadow-md rounded-2xl p-5 transition-all flex flex-col items-center">
+                <div className="text-center mb-3">
+                  <span
+                    className="text-7xl text-foreground leading-none block"
+                    style={{ fontFamily: "Noto Naskh Arabic, serif", direction: "rtl" }}
+                  >
+                    {harf.arabic}
+                  </span>
                 </div>
-              </Link>
+                <div className="text-center mb-3">
+                  <p className="font-extrabold text-foreground text-xl leading-tight">{harf.name}</p>
+                  <p className="text-base text-teal-600 font-bold mt-0.5">{harf.trans}</p>
+                </div>
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${DOT_COLORS[harf.dots]} ${harf.dots > 0 ? "border-current/20" : "border-transparent"}`}>
+                    {harf.dots === 0 ? "–" : `${harf.dots}●`}
+                  </span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${harf.connecting ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                    {harf.connecting ? "spaja" : "solo"}
+                  </span>
+                </div>
+              </div>
             </motion.div>
           ))}
         </div>

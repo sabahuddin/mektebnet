@@ -6,177 +6,9 @@ import { Layout } from "@/components/layout";
 import { ArrowLeft, BookOpen, Check, Gamepad2, Info, PlayCircle, RotateCcw, Star, Trophy, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getLessonById, type Exercise } from "@/data/lessons";
 
 const BASE = import.meta.env.BASE_URL;
-
-const MOCK_LESSON_DETAIL = {
-  id: 2,
-  orderNum: 2,
-  slug: "elif-hareketi",
-  title: "Elif i hareketi",
-  letters: ["ا"],
-  isCompleted: false,
-  story: {
-    lines: [
-      { speaker: "dzana", text: "Amir, jesi li znao da arapska slova sama po sebi uglavnom nemaju samoglasnik?" },
-      { speaker: "amir",  text: "Nisam! Kako onda znamo kako se čitaju?" },
-      { speaker: "dzana", text: "Zato postoje hareketi! To su mali znakovi koji se stavljaju iznad ili ispod slova." },
-      { speaker: "amir",  text: "A, kao tačkice — samo za samoglasnike?" },
-      { speaker: "dzana", text: "Tačno! Fetha iznad elife daje zvuk 'e', a kesra ispod daje zvuk 'i'." },
-      { speaker: "amir",  text: "A šta je damma? Kako izgleda?" },
-      { speaker: "dzana", text: "Damma izgleda kao mali zarez iznad slova i daje zvuk 'u'. Elif s dammom čita se 'u'." },
-      { speaker: "amir",  text: "Super! Znači samo elif može se čitati kao 'e', 'i' ili 'u' — ovisno o hareketu!" },
-    ]
-  },
-  letterData: [
-    {
-      arabic: "ا",
-      name: "Elif",
-      transliteration: "E / I / U",
-      forms: { isolated: "ا", initial: "ا", medial: "ـا", final: "ـا" },
-      nonConnecting: true,
-      visualAssociation: "Kao uspravan štap — jednostavan i snažan",
-      soundFile: "elif.mp3",
-    }
-  ],
-  hareketi: [
-    {
-      arabic: "أَ", hareke: "ـَـ", name: "Fetha",
-      sound: "e", colour: "teal",
-      description: "Crtica iznad slova — daje kratki zvuk \"e\"",
-      napomena: "Iznad krupnih (jakih) harfova čita se \"a\"",
-      soundFile: "hareke-fatha.mp3",
-    },
-    {
-      arabic: "إِ", hareke: "ـِـ", name: "Kesra",
-      sound: "i", colour: "blue",
-      description: "Crtica ispod slova — daje kratki zvuk \"i\"",
-      napomena: null,
-      soundFile: "hareke-kasra.mp3",
-    },
-    {
-      arabic: "أُ", hareke: "ـُـ", name: "Damma",
-      sound: "u", colour: "violet",
-      description: "Zarez iznad slova — daje kratki zvuk \"u\"",
-      napomena: null,
-      soundFile: "hareke-damma.mp3",
-    },
-  ],
-  exercises: [
-    {
-      title: "Prepoznaj hareket",
-      description: "Pogledaj elif s harekom — koji je to hareket?",
-      icon: "👁️",
-      hasanatReward: 15,
-      items: [
-        { show: "أَ", answer: "Fetha" },
-        { show: "إِ", answer: "Kesra" },
-        { show: "أُ", answer: "Damma" },
-        { show: "أُ", answer: "Damma" },
-        { show: "أَ", answer: "Fetha" },
-        { show: "إِ", answer: "Kesra" },
-        { show: "أَ", answer: "Fetha" },
-        { show: "أُ", answer: "Damma" },
-        { show: "إِ", answer: "Kesra" },
-        { show: "أَ", answer: "Fetha" },
-        { show: "إِ", answer: "Kesra" },
-        { show: "أُ", answer: "Damma" },
-        { show: "أَ", answer: "Fetha" },
-        { show: "إِ", answer: "Kesra" },
-        { show: "أُ", answer: "Damma" },
-        { show: "أَ", answer: "Fetha" },
-        { show: "أُ", answer: "Damma" },
-        { show: "إِ", answer: "Kesra" },
-        { show: "أَ", answer: "Fetha" },
-        { show: "أُ", answer: "Damma" },
-      ]
-    },
-    {
-      title: "Koji zvuk?",
-      description: "Pogledaj hareket simbol — koji zvuk daje?",
-      icon: "🔤",
-      hasanatReward: 15,
-      items: [
-        { show: "ـَـ", answer: "e" },
-        { show: "ـِـ", answer: "i" },
-        { show: "ـُـ", answer: "u" },
-        { show: "ـِـ", answer: "i" },
-        { show: "ـَـ", answer: "e" },
-        { show: "ـُـ", answer: "u" },
-        { show: "ـَـ", answer: "e" },
-        { show: "ـِـ", answer: "i" },
-        { show: "ـُـ", answer: "u" },
-        { show: "ـِـ", answer: "i" },
-        { show: "ـَـ", answer: "e" },
-        { show: "ـُـ", answer: "u" },
-        { show: "ـَـ", answer: "e" },
-        { show: "ـُـ", answer: "u" },
-        { show: "ـِـ", answer: "i" },
-        { show: "ـَـ", answer: "e" },
-        { show: "ـُـ", answer: "u" },
-        { show: "ـِـ", answer: "i" },
-        { show: "ـَـ", answer: "e" },
-        { show: "ـِـ", answer: "i" },
-      ]
-    },
-    {
-      title: "Slušaj i odaberi",
-      description: "Pritisni dugme 🔊 — koji elif odgovara zvuku?",
-      icon: "🎧",
-      hasanatReward: 20,
-      items: [
-        { show: "🔊 e", answer: "أَ" },
-        { show: "🔊 i", answer: "إِ" },
-        { show: "🔊 u", answer: "أُ" },
-        { show: "🔊 u", answer: "أُ" },
-        { show: "🔊 e", answer: "أَ" },
-        { show: "🔊 i", answer: "إِ" },
-        { show: "🔊 e", answer: "أَ" },
-        { show: "🔊 u", answer: "أُ" },
-        { show: "🔊 i", answer: "إِ" },
-        { show: "🔊 e", answer: "أَ" },
-        { show: "🔊 u", answer: "أُ" },
-        { show: "🔊 i", answer: "إِ" },
-        { show: "🔊 e", answer: "أَ" },
-        { show: "🔊 i", answer: "إِ" },
-        { show: "🔊 u", answer: "أُ" },
-        { show: "🔊 e", answer: "أَ" },
-        { show: "🔊 u", answer: "أُ" },
-        { show: "🔊 i", answer: "إِ" },
-        { show: "🔊 e", answer: "أَ" },
-        { show: "🔊 u", answer: "أُ" },
-      ]
-    },
-    {
-      title: "Napiši zvuk",
-      description: "Pogledaj elif — napiši latinično koji zvuk ima",
-      icon: "✏️",
-      hasanatReward: 10,
-      items: [
-        { show: "أَ", answer: "e" },
-        { show: "إِ", answer: "i" },
-        { show: "أُ", answer: "u" },
-        { show: "أَ", answer: "e" },
-        { show: "أُ", answer: "u" },
-        { show: "إِ", answer: "i" },
-        { show: "أُ", answer: "u" },
-        { show: "أَ", answer: "e" },
-        { show: "إِ", answer: "i" },
-        { show: "أَ", answer: "e" },
-        { show: "إِ", answer: "i" },
-        { show: "أُ", answer: "u" },
-        { show: "أَ", answer: "e" },
-        { show: "أُ", answer: "u" },
-        { show: "إِ", answer: "i" },
-        { show: "أَ", answer: "e" },
-        { show: "إِ", answer: "i" },
-        { show: "أُ", answer: "u" },
-        { show: "أَ", answer: "e" },
-        { show: "إِ", answer: "i" },
-      ]
-    },
-  ],
-};
 
 const COLOUR_MAP: Record<string, { card: string; badge: string; sound: string }> = {
   teal:   { card: "bg-teal-50 border-teal-300",    badge: "bg-teal-500 text-white",   sound: "bg-teal-100 text-teal-700 hover:bg-teal-200" },
@@ -194,53 +26,33 @@ function playAudio(file: string) {
   audio.play().catch(() => {});
 }
 
-const CHOICES_POOL: Record<number, string[]> = {
-  0: ["Fetha", "Kesra", "Damma"],
-  1: ["e", "i", "u"],
-  2: ["أَ", "إِ", "أُ"],
-  3: ["e", "i", "u"],
-};
+function QuizModal({ exercise, onClose }: { exercise: Exercise; onClose: () => void }) {
+  const isTypeInput = exercise.type === "napiši";
+  const isListening = exercise.type === "slušaj";
 
-const SOUND_FILES: Record<string, string> = {
-  e: "hareke-fatha.mp3",
-  i: "hareke-kasra.mp3",
-  u: "hareke-damma.mp3",
-};
-
-type Exercise = (typeof MOCK_LESSON_DETAIL.exercises)[0];
-
-function QuizModal({ exercise, exerciseIndex, onClose }: {
-  exercise: Exercise;
-  exerciseIndex: number;
-  onClose: () => void;
-}) {
-  const isTypeInput  = exerciseIndex === 3;
-  const isListening  = exerciseIndex === 2;
-
-  const [qIdx,    setQIdx]    = useState(0);
-  const [score,   setScore]   = useState(0);
-  const [status,  setStatus]  = useState<"asking" | "correct" | "wrong" | "done">("asking");
+  const [qIdx,     setQIdx]    = useState(0);
+  const [score,    setScore]   = useState(0);
+  const [status,   setStatus]  = useState<"asking" | "correct" | "wrong" | "done">("asking");
   const [selected, setSelected] = useState<string | null>(null);
-  const [text,    setText]    = useState("");
-  const [choices, setChoices] = useState<string[]>([]);
+  const [text,     setText]    = useState("");
+  const [choices,  setChoices] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const item  = exercise.items[qIdx];
   const total = exercise.items.length;
 
   useEffect(() => {
-    const pool    = CHOICES_POOL[exerciseIndex] ?? [];
+    const pool    = exercise.choices;
     const correct = item.answer;
     const wrong   = pool.filter(c => c !== correct);
-    setChoices([correct, ...wrong.slice(0, 2)].sort(() => Math.random() - 0.5));
+    const picked  = wrong.sort(() => Math.random() - 0.5).slice(0, 2);
+    setChoices([correct, ...picked].sort(() => Math.random() - 0.5));
     setSelected(null);
     setText("");
     setStatus("asking");
 
-    if (isListening) {
-      const soundKey = item.show.replace("🔊", "").trim();
-      const file = SOUND_FILES[soundKey];
-      if (file) setTimeout(() => playAudio(file), 350);
+    if (isListening && item.audio) {
+      setTimeout(() => playAudio(item.audio!), 350);
     }
     if (isTypeInput) setTimeout(() => inputRef.current?.focus(), 100);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,7 +67,7 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
     if (isOk) setScore(s => s + 1);
     setTimeout(() => {
       if (qIdx + 1 >= total) setStatus("done");
-      else { setQIdx(q => q + 1); }
+      else setQIdx(q => q + 1);
     }, 1300);
   }
 
@@ -288,7 +100,6 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
   }
 
   const showIsAr = isArabicChar(item.show);
-  const soundKey = isListening ? item.show.replace("🔊", "").trim() : "";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-br from-teal-800 via-teal-700 to-teal-900">
@@ -322,11 +133,11 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
         {isListening ? (
           <motion.button
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-            onClick={() => { const f = SOUND_FILES[soundKey]; if (f) playAudio(f); }}
+            onClick={() => { if (item.audio) playAudio(item.audio); }}
             className="w-44 h-44 bg-white/20 hover:bg-white/30 rounded-3xl flex flex-col items-center justify-center gap-3 text-white shadow-xl transition-colors"
           >
             <Volume2 className="w-16 h-16" />
-            <span className="text-3xl font-black">{soundKey}</span>
+            <span className="text-2xl font-bold opacity-60">Pritisni za zvuk</span>
           </motion.button>
         ) : (
           <motion.div
@@ -363,14 +174,23 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
                 <X className="w-8 h-8" /> Netačno
               </p>
               <p className="text-white/80 text-xl mt-1">
-                Tačno: <strong className={`text-white ${isArabicChar(item.answer) ? "ar" : ""}`}>{item.answer}</strong>
+                Tačno:{" "}
+                <strong
+                  style={{
+                    fontFamily: isArabicChar(item.answer) ? "Noto Naskh Arabic, serif" : undefined,
+                    fontSize: isArabicChar(item.answer) ? "1.6rem" : undefined,
+                  }}
+                  className="text-white"
+                >
+                  {item.answer}
+                </strong>
               </p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Answer buttons */}
+      {/* Answer section */}
       <div className="px-5 pb-8 shrink-0">
         {isTypeInput ? (
           <div className="flex gap-3 max-w-xs mx-auto">
@@ -381,7 +201,7 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
               onChange={e => setText(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && text.trim()) answer(text); }}
               disabled={status !== "asking"}
-              maxLength={4}
+              maxLength={6}
               placeholder="Napiši zvuk…"
               className="flex-1 text-2xl font-bold text-center rounded-2xl border-2 border-white/30 bg-white/20 text-white placeholder:text-white/50 px-4 py-4 outline-none focus:border-white"
             />
@@ -394,7 +214,7 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+          <div className={`grid gap-3 max-w-md mx-auto ${choices.length <= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
             {choices.map((choice, i) => {
               const isCorrect  = choice === item.answer;
               const isSelected = selected === choice;
@@ -404,6 +224,7 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
                 else if (isSelected) cls = "bg-red-400 text-white border-2 border-red-300";
                 else cls = "bg-white/10 text-white/40 border-2 border-white/10";
               }
+              const choiceIsAr = isArabicChar(choice);
               return (
                 <motion.button
                   key={i}
@@ -414,11 +235,11 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
                 >
                   <span
                     style={{
-                      fontSize: isArabicChar(choice) ? "2.8rem" : undefined,
-                      fontFamily: isArabicChar(choice) ? "Noto Naskh Arabic, serif" : undefined,
-                      lineHeight: isArabicChar(choice) ? "1.6" : undefined,
+                      fontSize: choiceIsAr ? "2.8rem" : undefined,
+                      fontFamily: choiceIsAr ? "Noto Naskh Arabic, serif" : undefined,
+                      lineHeight: choiceIsAr ? "1.6" : undefined,
                     }}
-                    className={isArabicChar(choice) ? "font-bold" : "text-2xl font-bold"}
+                    className={choiceIsAr ? "font-bold" : "text-xl font-bold"}
                   >
                     {choice}
                   </span>
@@ -433,20 +254,36 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
 }
 
 export default function LessonDetail() {
-  const data = MOCK_LESSON_DETAIL;
+  const { id } = useParams<{ id: string }>();
+  const lessonId = parseInt(id ?? "2", 10);
+  const data = getLessonById(lessonId);
+
   const dzanaImg = `${BASE}images/dzana-avatar.png`;
   const amirImg  = `${BASE}images/amir-avatar.png`;
   const [activeQuiz, setActiveQuiz] = useState<number | null>(null);
 
-  const dzanaLines = data.story.lines.filter(l => l.speaker === "dzana");
-  const amirLines  = data.story.lines.filter(l => l.speaker === "amir");
+  if (!data) {
+    return (
+      <Layout>
+        <div className="text-center py-20">
+          <h1 className="text-3xl font-black mb-4">Lekcija nije pronađena</h1>
+          <Link href="/" className="text-primary font-bold underline">← Nazad na lekcije</Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  function getLetterAudio(idx: number): string {
+    if (!data) return "elif.mp3";
+    const ld = data.letterData[idx];
+    return ld?.soundFile ?? "elif.mp3";
+  }
 
   return (
     <Layout>
       {activeQuiz !== null && (
         <QuizModal
           exercise={data.exercises[activeQuiz]}
-          exerciseIndex={activeQuiz}
           onClose={() => setActiveQuiz(null)}
         />
       )}
@@ -473,7 +310,7 @@ export default function LessonDetail() {
             {data.letters.map((letter, i) => (
               <button
                 key={i}
-                onClick={() => playAudio("elif.mp3")}
+                onClick={() => playAudio(getLetterAudio(i))}
                 className="w-24 h-24 bg-gradient-to-br from-primary to-teal-600 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-primary/20 text-white gap-1 hover:scale-105 transition-transform"
               >
                 <span className="text-5xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{letter}</span>
@@ -491,7 +328,7 @@ export default function LessonDetail() {
           Priča za danas
         </h2>
 
-        {/* MOBILNI: isprepleten chat (jedna kolona) */}
+        {/* MOBILNI: isprepleten chat */}
         <div className="flex flex-col gap-4 md:hidden">
           {data.story.lines.map((line, i) => {
             const isDzana = line.speaker === "dzana";
@@ -503,22 +340,17 @@ export default function LessonDetail() {
                 transition={{ delay: i * 0.1 }}
                 className={`flex items-end gap-3 ${isDzana ? "" : "flex-row-reverse"}`}
               >
-                <img
-                  src={isDzana ? dzanaImg : amirImg}
-                  alt={isDzana ? "Džana" : "Amir"}
-                  className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0"
-                />
+                <img src={isDzana ? dzanaImg : amirImg} alt={isDzana ? "Džana" : "Amir"}
+                  className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
                 <div className={`flex flex-col gap-1 max-w-[80%] ${isDzana ? "items-start" : "items-end"}`}>
                   <span className={`text-sm font-extrabold px-1 ${isDzana ? "text-orange-700" : "text-primary"}`}>
                     {isDzana ? "Džana" : "Amir"}
                   </span>
-                  <div
-                    className={`px-5 py-3 text-lg font-medium leading-relaxed shadow-sm ${
-                      isDzana
-                        ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
-                        : "bg-primary text-white rounded-2xl rounded-br-sm"
-                    }`}
-                  >
+                  <div className={`px-5 py-3 text-lg font-medium leading-relaxed shadow-sm ${
+                    isDzana
+                      ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
+                      : "bg-primary text-white rounded-2xl rounded-br-sm"
+                  }`}>
                     {line.text}
                   </div>
                 </div>
@@ -527,7 +359,7 @@ export default function LessonDetail() {
           })}
         </div>
 
-        {/* DESKTOP: dvije kolone — lijeva=prva polovina razgovora, desna=druga polovina */}
+        {/* DESKTOP: dvije kolone */}
         {(() => {
           const half = Math.ceil(data.story.lines.length / 2);
           const leftLines  = data.story.lines.slice(0, half);
@@ -537,18 +369,13 @@ export default function LessonDetail() {
               {lines.map((line, i) => {
                 const isDzana = line.speaker === "dzana";
                 return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
+                  <motion.div key={i}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: startDelay + i * 0.1 }}
                     className={`flex items-end gap-2 ${isDzana ? "" : "flex-row-reverse"}`}
                   >
-                    <img
-                      src={isDzana ? dzanaImg : amirImg}
-                      alt={isDzana ? "Džana" : "Amir"}
-                      className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover shrink-0"
-                    />
+                    <img src={isDzana ? dzanaImg : amirImg} alt={isDzana ? "Džana" : "Amir"}
+                      className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
                     <div className={`flex flex-col gap-1 ${isDzana ? "items-start" : "items-end"}`}>
                       <span className={`text-xs font-extrabold px-1 ${isDzana ? "text-orange-700" : "text-primary"}`}>
                         {isDzana ? "Džana" : "Amir"}
@@ -575,11 +402,11 @@ export default function LessonDetail() {
         })()}
       </Card>
 
-      {/* Elif kartica */}
+      {/* Harfovi i hareketi */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-5">
           <Info className="w-6 h-6 text-primary" />
-          Upoznajmo slovo i harekete
+          {data.hareketi ? "Upoznajmo slovo i harekete" : "Upoznajmo harfove"}
         </h2>
 
         {data.letterData.map((letter, i) => (
@@ -626,57 +453,57 @@ export default function LessonDetail() {
           </Card>
         ))}
 
-        {/* Hareketi kartice */}
-        <h3 className="text-xl font-bold text-foreground mb-4">Hareketi — znakovi za samoglasnike</h3>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {data.hareketi.map((h, i) => {
-            const c = COLOUR_MAP[h.colour];
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className={`border-2 rounded-2xl p-5 ${c.card}`}
-              >
-                {/* Elif s harekom — fiksirani container */}
-                <div className="flex items-center justify-between mb-4">
-                  <div
-                    className="w-24 h-24 flex items-center justify-center overflow-hidden shrink-0"
-                    style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "4.5rem", lineHeight: 1 }}
+        {/* Hareketi kartice (samo ako ih ima) */}
+        {data.hareketi && data.hareketi.length > 0 && (
+          <>
+            <h3 className="text-xl font-bold text-foreground mb-4">Hareketi — znakovi za samoglasnike</h3>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {data.hareketi.map((h, i) => {
+                const c = COLOUR_MAP[h.colour] ?? COLOUR_MAP.teal;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className={`border-2 rounded-2xl p-5 ${c.card}`}
                   >
-                    {h.arabic}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <button
-                      onClick={() => playAudio(h.soundFile)}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${c.sound}`}
-                    >
-                      <Volume2 className="w-4 h-4" />
-                    </button>
-                    <span className={`text-sm font-extrabold px-3 py-1 rounded-full ${c.badge}`}>
-                      zvuk: {h.sound}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Hareke simbol (crtica) + ime */}
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-5xl font-bold ar">{h.hareke}</span>
-                  <span className="text-2xl font-extrabold">{h.name}</span>
-                </div>
-
-                <p className="text-lg font-medium leading-snug">{h.description}</p>
-                {h.napomena && (
-                  <p className="text-base mt-2 opacity-75 italic">{h.napomena}</p>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div
+                        className="w-24 h-24 flex items-center justify-center overflow-hidden shrink-0"
+                        style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "4.5rem", lineHeight: 1 }}
+                      >
+                        {h.arabic}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <button
+                          onClick={() => playAudio(h.soundFile)}
+                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${c.sound}`}
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                        <span className={`text-sm font-extrabold px-3 py-1 rounded-full ${c.badge}`}>
+                          zvuk: {h.sound}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-5xl font-bold ar">{h.hareke}</span>
+                      <span className="text-2xl font-extrabold">{h.name}</span>
+                    </div>
+                    <p className="text-lg font-medium leading-snug">{h.description}</p>
+                    {h.napomena && (
+                      <p className="text-base mt-2 opacity-75 italic">{h.napomena}</p>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Vježbe — 4 vrste */}
+      {/* Vježbe */}
       <div className="mb-12">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-6">
           <Gamepad2 className="w-6 h-6 text-accent" />
@@ -698,18 +525,29 @@ export default function LessonDetail() {
 
               {/* Pregled prvih 6 stavki */}
               <div className="grid grid-cols-3 gap-2 mb-5 flex-1">
-                {ex.items.slice(0, 6).map((item, wi) => (
-                  <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-row items-center justify-center gap-2 text-center">
-                    <span
-                      className={`text-3xl font-bold text-foreground leading-none ${isArabicChar(item.show) ? "ar" : ""}`}
-                    >
-                      {item.show}
-                    </span>
-                    <span className={`text-xl font-bold text-primary ${isArabicChar(item.answer) ? "ar" : ""}`}>
-                      {item.answer}
-                    </span>
-                  </div>
-                ))}
+                {ex.items.slice(0, 6).map((item, wi) => {
+                  const showIsListen = item.show === "🔊";
+                  return (
+                    <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-row items-center justify-center gap-2 text-center">
+                      {showIsListen ? (
+                        <Volume2 className="w-6 h-6 text-teal-600" />
+                      ) : (
+                        <span className={`text-3xl font-bold text-foreground leading-none ${isArabicChar(item.show) ? "ar" : ""}`}>
+                          {item.show}
+                        </span>
+                      )}
+                      <span
+                        className="text-xl font-bold text-primary"
+                        style={{
+                          fontFamily: isArabicChar(item.answer) ? "Noto Naskh Arabic, serif" : undefined,
+                          fontSize: isArabicChar(item.answer) ? "1.4rem" : undefined,
+                        }}
+                      >
+                        {item.answer}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="text-center text-sm text-muted-foreground mb-4 font-medium">
