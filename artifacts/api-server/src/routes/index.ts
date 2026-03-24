@@ -9,6 +9,7 @@ import adminRouter from "./admin";
 import contentRouter from "./content";
 import porukeRouter from "./poruke";
 import setupRouter from "./setup";
+import importContentRouter from "./import-content";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/admin", adminRouter);
 router.use("/content", contentRouter);
 router.use("/poruke", porukeRouter);
 router.use("/setup", setupRouter);
+router.use("/import-content", importContentRouter);
 
 export default router;
