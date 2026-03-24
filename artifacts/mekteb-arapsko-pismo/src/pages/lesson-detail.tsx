@@ -274,42 +274,51 @@ export default function LessonDetail() {
           })}
         </div>
 
-        {/* DESKTOP: dvije kolone — Džana lijevo, Amir desno */}
-        <div className="hidden md:grid grid-cols-2 gap-6">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3 mb-1">
-              <img src={dzanaImg} alt="Džana" className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" />
-              <span className="text-xl font-extrabold text-orange-700">Džana</span>
-            </div>
-            {dzanaLines.map((line, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.12 }}
-                className="bg-white rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-foreground border border-orange-100"
-              >
-                {line.text}
-              </motion.div>
-            ))}
-          </div>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3 mb-1 justify-end">
-              <span className="text-xl font-extrabold text-primary">Amir</span>
-              <img src={amirImg} alt="Amir" className="w-12 h-12 rounded-full border-2 border-white shadow-md object-cover" />
-            </div>
-            {amirLines.map((line, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.12 + 0.06 }}
-                className="bg-primary rounded-2xl rounded-tr-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-white"
-              >
-                {line.text}
-              </motion.div>
-            ))}
-          </div>
+        {/* DESKTOP: parovi red po red — Džana lijevo, Amir desno */}
+        <div className="hidden md:flex flex-col gap-4">
+          {Array.from({ length: Math.ceil(data.story.lines.length / 2) }).map((_, pairIdx) => {
+            const dzLine = data.story.lines[pairIdx * 2];
+            const amLine = data.story.lines[pairIdx * 2 + 1];
+            return (
+              <div key={pairIdx} className="grid grid-cols-2 gap-4 items-start">
+                {/* Džana — lijevo */}
+                {dzLine ? (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: pairIdx * 0.12 }}
+                    className="flex items-end gap-3"
+                  >
+                    <img src={dzanaImg} alt="Džana" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-extrabold text-orange-700 px-1">Džana</span>
+                      <div className="bg-white rounded-2xl rounded-bl-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-foreground border border-orange-100">
+                        {dzLine.text}
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : <div />}
+
+                {/* Amir — desno */}
+                {amLine ? (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: pairIdx * 0.12 + 0.06 }}
+                    className="flex items-end gap-3 flex-row-reverse"
+                  >
+                    <img src={amirImg} alt="Amir" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
+                    <div className="flex flex-col gap-1 items-end">
+                      <span className="text-sm font-extrabold text-primary px-1">Amir</span>
+                      <div className="bg-primary rounded-2xl rounded-br-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-white">
+                        {amLine.text}
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : <div />}
+              </div>
+            );
+          })}
         </div>
       </Card>
 
@@ -393,7 +402,7 @@ export default function LessonDetail() {
                       <Volume2 className="w-4 h-4" />
                     </button>
                     <span className={`text-sm font-extrabold px-3 py-1 rounded-full ${c.badge}`}>
-                      zvuk: «{h.sound}»
+                      zvuk: {h.sound}
                     </span>
                   </div>
                 </div>
