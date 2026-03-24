@@ -39,7 +39,7 @@ app.use("/api", router);
 if (process.env["SERVE_STATIC"] === "true") {
   const frontendDist = path.resolve(__dirname, "../../mekteb-arapsko-pismo/dist");
   app.use(express.static(frontendDist));
-  app.get("*", (_req, res) => {
+  app.get("/{*path}", (_req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
   });
 }
