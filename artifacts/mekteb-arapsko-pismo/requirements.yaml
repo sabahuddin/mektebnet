@@ -1,0 +1,22 @@
+packages:
+  "framer-motion": "For engaging animations and transitions in children's educational games"
+  "canvas-confetti": "For visual celebration effects when earning hasanat points"
+  "@types/canvas-confetti": "Types for canvas-confetti"
+  "uuid": "For generating unique student IDs"
+  "@types/uuid": "Types for uuid"
+
+images:
+  - path: "artifacts/mekteb-arapsko-pismo/public/images/dzana-avatar.png"
+    description: "A high-quality cute cartoon illustration of a young bosnian muslim girl named Dzana wearing a warm orange hijab, smiling and friendly, 2D vector art style, clean transparent background"
+    aspect_ratio: "1:1"
+  - path: "artifacts/mekteb-arapsko-pismo/public/images/amir-avatar.png"
+    description: "A high-quality cute cartoon illustration of a young bosnian muslim boy named Amir wearing a green cap, smiling and friendly, 2D vector art style, clean transparent background"
+    aspect_ratio: "1:1"
+  - path: "artifacts/mekteb-arapsko-pismo/public/images/hero-bg.png"
+    description: "Soft watercolor background in warm cream and light teal with subtle geometric islamic star patterns and floating glowing stars, suitable for a children's educational app"
+    aspect_ratio: "16:9"
+
+notes:
+  - Assuming API runs on same origin or via proxy at /api
+  - Student ID is stored in localStorage and passed to API endpoints
+  - Using generated React Query hooks from @workspace/api-client-react
