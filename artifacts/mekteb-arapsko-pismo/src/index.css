@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-gold: hsl(var(--gold));
+  --color-gold-foreground: hsl(var(--gold-foreground));
+  
+  --color-teal: hsl(var(--teal));
+  --color-teal-foreground: hsl(var(--teal-foreground));
+
+  --font-sans: 'Nunito', sans-serif;
+  --font-arabic: 'Noto Naskh Arabic', serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
+  --radius-full: 9999px;
+}
+
+:root {
+  /* Warm cream/off-white background */
+  --background: 40 33% 98%;
+  --foreground: 200 40% 15%;
+  
+  --border: 40 20% 85%;
+  --input: 40 20% 85%;
+  --ring: 180 60% 35%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 200 40% 15%;
+  --card-border: 40 20% 90%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 200 40% 15%;
+  --popover-border: 40 20% 90%;
+
+  /* Deep vibrant teal for primary actions */
+  --primary: 180 60% 35%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Warm secondary - maybe a soft orange/peach */
+  --secondary: 25 85% 60%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 40 20% 94%;
+  --muted-foreground: 200 20% 45%;
+
+  /* Pinkish accent for fun elements */
+  --accent: 340 80% 65%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Custom Gold for Hasanat */
+  --gold: 45 95% 55%;
+  --gold-foreground: 45 95% 15%;
+
+  /* Custom Teal */
+  --teal: 180 60% 35%;
+  --teal-foreground: 0 0% 100%;
+
+  --radius: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    background-image: radial-gradient(hsl(var(--primary)/0.05) 2px, transparent 2px);
+    background-size: 32px 32px;
+  }
+
+  /* Specific styles for Arabic text to ensure beautiful rendering */
+  .arabic-text {
+    font-family: var(--font-arabic);
+    line-height: 1.8;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-xl shadow-black/5;
+  }
+  
+  .game-button {
+    @apply relative active:scale-95 transition-transform duration-100;
+  }
+  
+  .game-button::after {
+    content: '';
+    @apply absolute inset-0 border-b-4 border-black/20 pointer-events-none;
+    border-radius: inherit;
+  }
+  
+  .game-button:active::after {
+    @apply border-b-0 translate-y-[2px];
+  }
+}
+
+/* ── Ilmihal lesson content styles ── */
+.ilmihal-content {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: hsl(var(--foreground));
+}
+
+.ilmihal-content .lesson-text {
+  margin-bottom: 0.85rem;
+  line-height: 1.8;
+}
+
+.ilmihal-content p {
+  margin-bottom: 0.85rem;
+}
+
+.ilmihal-content h1,
+.ilmihal-content h2 {
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  color: hsl(var(--foreground));
+}
+
+.ilmihal-content ol,
+.ilmihal-content ul {
+  padding-left: 1.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.ilmihal-content li {
+  margin-bottom: 0.4rem;
+  line-height: 1.7;
+}
+
+.ilmihal-content .arabic-card {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1px solid #bbf7d0;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+  font-family: var(--font-arabic);
+  direction: rtl;
+  text-align: right;
+  font-size: 1.05rem;
+  line-height: 2;
+  color: #166534;
+}
+
+.ilmihal-content .arabic-card .lesson-text {
+  direction: ltr;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: #166534;
+  font-style: italic;
+}
+
+.ilmihal-content .info-box {
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+
+.ilmihal-content .info-box .lesson-text {
+  color: #78350f;
+  margin-bottom: 0;
+}
+
+.ilmihal-content img {
+  border-radius: 1rem;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0;
+}
+
+.ilmihal-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+
+.ilmihal-content th,
+.ilmihal-content td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.ilmihal-content th {
+  background: hsl(var(--muted));
+  font-weight: 700;
+}
+
+/* Hide original lesson structure elements that are now handled by React */
+.ilmihal-content .lesson-container,
+.ilmihal-content .hero-box,
+.ilmihal-content .lesson-accordion,
+.ilmihal-content .lesson-section-btn,
+.ilmihal-content .quiz-container,
+.ilmihal-content h1:first-child {
+  display: none;
+}
