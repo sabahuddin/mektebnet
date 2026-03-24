@@ -1,4 +1,4 @@
-FROM node:24-alpine AS base
+FROM node:24-bookworm-slim AS base
 RUN npm install -g pnpm
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN pnpm --filter @workspace/api-server run build
 RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
 
 # -------- Runtime image (smaller) --------
-FROM node:24-alpine AS runner
+FROM node:24-bookworm-slim AS runner
 RUN npm install -g pnpm
 WORKDIR /app
 
