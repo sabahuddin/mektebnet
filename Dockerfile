@@ -25,6 +25,7 @@ COPY scripts/ ./scripts/
 RUN pnpm --filter @workspace/api-server run build
 ENV PORT=3000
 ENV BASE_PATH=/
+ENV NODE_ENV=production
 RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
 
 # -------- Runtime image (smaller) --------
