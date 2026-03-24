@@ -149,6 +149,15 @@
   line-height: 1.85;
 }
 
+.ilmihal-content .lesson-text.lesson-heading {
+  font-weight: 700;
+  font-size: 1.05em;
+  color: hsl(var(--foreground));
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
 .ilmihal-content p {
   margin-bottom: 0.9rem;
 }

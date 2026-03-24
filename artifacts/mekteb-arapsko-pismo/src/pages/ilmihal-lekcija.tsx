@@ -43,6 +43,36 @@ interface QuizQuestion {
 }
 
 // ──────────────────────────────────────────────────
+// Post-process section HTML to fix wall-of-text
+// Splits oversized <p class="lesson-text"> into multiple paragraphs
+// ──────────────────────────────────────────────────
+function postProcessHtml(html: string): string {
+  return html.replace(/<p class="lesson-text">([\s\S]*?)<\/p>/g, (_match, content: string) => {
+    if (content.length < 400) return `<p class="lesson-text">${content}</p>`;
+    // Split at sentence boundaries: ". UPPERCASE" or "! UPPERCASE" or "? UPPERCASE"
+    const sentences = content.split(/(?<=[.!?])\s+(?=[A-ZŠĐĆŽČ])/);
+    if (sentences.length <= 1) {
+      // Try splitting at ALL-CAPS words (headings embedded in text)
+      const parts = content.split(/(?=\b[A-ZŠĐĆŽČ]{4,}(?:\s[A-ZŠĐĆŽČ]{2,})+)/);
+      if (parts.length > 1) {
+        return parts.map(p => p.trim()).filter(Boolean).map((p, i) =>
+          i > 0 && /^[A-ZŠĐĆŽČ]{4}/.test(p)
+            ? `<p class="lesson-text lesson-heading">${p}</p>`
+            : `<p class="lesson-text">${p}</p>`
+        ).join('\n');
+      }
+      return `<p class="lesson-text">${content}</p>`;
+    }
+    // Group sentences into paragraphs (3-4 sentences each)
+    const grouped: string[] = [];
+    for (let i = 0; i < sentences.length; i += 3) {
+      grouped.push(sentences.slice(i, i + 3).join(' '));
+    }
+    return grouped.map(g => `<p class="lesson-text">${g.trim()}</p>`).join('\n');
+  });
+}
+
+// ──────────────────────────────────────────────────
 // Parse the lesson HTML into structured sections
 // Uses DOMParser for robust nested-div handling
 // ──────────────────────────────────────────────────
@@ -85,18 +115,20 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
     // Classify section type — first by sectionId, then by title text as fallback
     let type: AccordionSection["type"] = "other";
     const sid = sectionId.toUpperCase();
-    const titleUp = title.toUpperCase().replace(/^\d+\.\s*/, ""); // strip "1. " prefix
     const classify = (s: string) => {
       if (s === "STORY" || s.includes("PRIČA") || s.includes("PRICA") || s.includes("PUTOKAZ") || s.includes("PUTO")) return "story" as const;
       if (s === "ILMIHAL" || s.includes("ILMIHAL")) return "ilmihal" as const;
-      if (s === "QUIZ_BOX" || s.includes("PROVJERI") || s.includes("KVIZ") || s.includes("ZNANJE")) return "quiz_box" as const;
+      // quiz_box: only if the section ID itself is a quiz section (not just title keywords)
+      if (s === "QUIZ_BOX" || s === "QUIZ" || s === "QUIZ_SECTION" || s === "QUIZ-SECTION" || s === "KVIZ") return "quiz_box" as const;
       if (s.includes("PITAN") || s.includes("RAZGOVOR")) return "pitanja" as const;
-      if (s.includes("ZADATAK") || s.includes("ZADACI") || s.includes("AKTIVNOST")) return "zadatak" as const;
+      if (s.includes("ZADATAK") || s.includes("ZADACI") || s.includes("AKTIVNOST") || s === "ZADACA") return "zadatak" as const;
       return null;
     };
-    type = classify(sid) || classify(titleUp) || "other";
+    // Only classify by sectionId — don't use title keywords for quiz_box (too broad)
+    type = classify(sid) || "other";
 
-    sections.push({ id: sectionId, title, html: contentHtml, defaultOpen: isActive, type });
+    const processedHtml = postProcessHtml(contentHtml);
+    sections.push({ id: sectionId, title, html: processedHtml, defaultOpen: isActive, type });
   });
 
   return { heroImage, sections };
@@ -361,14 +393,10 @@ function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; 
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
             <div className="px-5 pb-5 pt-4">
-              {section.type === "quiz_box" ? (
-                <MiniKviz slug={slug} nivo={nivo} />
-              ) : (
-                <div
-                  className="ilmihal-content"
-                  dangerouslySetInnerHTML={{ __html: section.html }}
-                />
-              )}
+              <div
+                className="ilmihal-content"
+                dangerouslySetInnerHTML={{ __html: section.html }}
+              />
             </div>
           </motion.div>
         )}
@@ -511,8 +539,10 @@ export default function IlmihalLekcijaPage() {
               const ORDER: Record<AccordionSection["type"], number> = {
                 story: 0, ilmihal: 1, quiz_box: 2, pitanja: 3, zadatak: 4, other: 5,
               };
-              const sorted = [...parsed.sections].sort((a, b) => ORDER[a.type] - ORDER[b.type]);
               const kvizPitanja = lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 ? lekcija.kvizPitanja : null;
+              // Filter out original quiz_box sections — replaced by AI LekcijaKvizBox
+              const visibleSections = parsed.sections.filter(s => s.type !== "quiz_box");
+              const sorted = [...visibleSections].sort((a, b) => ORDER[a.type] - ORDER[b.type]);
 
               const items: React.ReactNode[] = [];
               let kvizInserted = false;
@@ -520,13 +550,13 @@ export default function IlmihalLekcijaPage() {
                 items.push(
                   <SectionAccordion key={section.id} section={section} slug={slug!} nivo={lekcija.nivo} />
                 );
-                // Insert MCQ quiz right after the ilmihal section
+                // Insert AI MCQ quiz right after the ilmihal section
                 if (!kvizInserted && section.type === "ilmihal" && kvizPitanja) {
                   items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
                   kvizInserted = true;
                 }
               }
-              // If no ilmihal section was found but we have pitanja, add kviz before pitanja
+              // If no ilmihal section found but we have pitanja, add kviz at end (before pitanja/zadatak)
               if (!kvizInserted && kvizPitanja) {
                 items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
               }
