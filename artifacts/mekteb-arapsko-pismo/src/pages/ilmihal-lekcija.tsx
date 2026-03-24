@@ -224,7 +224,7 @@ function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; 
   const cfg = SECTION_CONFIG[section.type];
 
   return (
-    <div className={`border rounded-2xl overflow-hidden ${cfg.bg}`}>
+    <div className={`border-2 overflow-hidden ${cfg.bg}`}>
       <button onClick={() => setOpen(v => !v)}
         className={`w-full flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors ${cfg.headerBg}`}>
         <div className="flex items-center gap-3">
