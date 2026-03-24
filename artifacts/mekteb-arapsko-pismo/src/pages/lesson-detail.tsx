@@ -326,18 +326,23 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
             className="w-44 h-44 bg-white/20 hover:bg-white/30 rounded-3xl flex flex-col items-center justify-center gap-3 text-white shadow-xl transition-colors"
           >
             <Volume2 className="w-16 h-16" />
-            <span className="text-3xl font-black">"{soundKey}"</span>
+            <span className="text-3xl font-black">{soundKey}</span>
           </motion.button>
         ) : (
           <motion.div
             key={qIdx}
             initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-44 h-44 bg-white/20 rounded-3xl flex items-center justify-center shadow-xl"
+            className="w-44 h-52 bg-white/20 rounded-3xl flex items-center justify-center shadow-xl overflow-visible"
+            style={{ paddingTop: showIsAr ? "2rem" : "0" }}
           >
             <span
-              className={`font-bold text-white leading-none ${showIsAr ? "ar" : ""}`}
-              style={{ fontSize: showIsAr ? "6rem" : "4.5rem" }}
+              className="font-bold text-white"
+              style={{
+                fontSize: showIsAr ? "5.5rem" : "4.5rem",
+                lineHeight: showIsAr ? "1.5" : "1.2",
+                fontFamily: showIsAr ? "Noto Naskh Arabic, serif" : undefined,
+              }}
             >
               {item.show}
             </span>
@@ -407,7 +412,16 @@ function QuizModal({ exercise, exerciseIndex, onClose }: {
                   disabled={status !== "asking"}
                   className={`rounded-2xl p-4 font-bold transition-all shadow-lg min-h-[80px] flex items-center justify-center ${cls}`}
                 >
-                  <span className={`text-2xl ${isArabicChar(choice) ? "ar" : ""}`}>{choice}</span>
+                  <span
+                    style={{
+                      fontSize: isArabicChar(choice) ? "2.8rem" : undefined,
+                      fontFamily: isArabicChar(choice) ? "Noto Naskh Arabic, serif" : undefined,
+                      lineHeight: isArabicChar(choice) ? "1.6" : undefined,
+                    }}
+                    className={isArabicChar(choice) ? "font-bold" : "text-2xl font-bold"}
+                  >
+                    {choice}
+                  </span>
                 </motion.button>
               );
             })}
