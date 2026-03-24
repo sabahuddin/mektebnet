@@ -139,8 +139,8 @@
 /* ── Ilmihal lesson content styles ── */
 .ilmihal-content {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
-  line-height: 1.75;
+  font-size: 1.05rem;
+  line-height: 1.8;
   color: hsl(var(--foreground));
 }
 
@@ -156,7 +156,7 @@
 .ilmihal-content h1,
 .ilmihal-content h2 {
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   margin-bottom: 0.75rem;
   color: hsl(var(--foreground));
 }
