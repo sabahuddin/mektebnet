@@ -191,3 +191,4 @@ export const SaveExerciseSessionResponse = zod.object({
   totalHasanat: zod.number(),
   streakBonus: zod.number(),
 });
+

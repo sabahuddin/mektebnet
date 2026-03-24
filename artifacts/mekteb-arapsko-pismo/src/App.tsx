@@ -12,7 +12,8 @@ import RegisterRoditeljPage from "./pages/register-roditelj";
 import Home from "./pages/home";
 import NotFound from "@/pages/not-found";
 
-// Arapsko pismo module (preserved)
+// Arapsko pismo module
+import ArapskoPismoPage from "./pages/arapsko-pismo";
 import LessonDetail from "./pages/lesson-detail";
 import Exercise from "./pages/exercise";
 import Progress from "./pages/progress";
@@ -61,8 +62,8 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/registracija" component={RegisterRoditeljPage} />
 
-      {/* Arapsko pismo (legacy routes) */}
-      <Route path="/arapsko-pismo" component={Home} />
+      {/* Arapsko pismo */}
+      <Route path="/arapsko-pismo" component={ArapskoPismoPage} />
       <Route path="/lesson/:id" component={LessonDetail} />
       <Route path="/lesson/:id/exercise/:type" component={Exercise} />
       <Route path="/napredak" component={Progress} />

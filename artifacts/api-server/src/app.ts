@@ -50,3 +50,4 @@ if (process.env["SERVE_STATIC"] === "true") {
 }
 
 export default app;
+
