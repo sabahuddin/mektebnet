@@ -364,7 +364,7 @@ export default function IlmihalLekcijaPage() {
         {parsed.heroImage && (
           <div className="rounded-2xl overflow-hidden mb-5 shadow-sm">
             <img src={parsed.heroImage} alt={lekcija.naslov}
-              className="w-full h-48 md:h-64 object-cover"
+              className="w-full h-auto aspect-[3/2] object-cover"
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
           </div>
         )}
