@@ -117,6 +117,15 @@
 }
 
 @layer utilities {
+  /* Noto Naskh Arabic vizualno izgleda ~28-30% manji od Latinice iste veličine.
+     .ar klasa: koristi na svim arapskim elementima bez eksplicitne Tailwind veličine.
+     Za elemente s text-* klasom: postavi veličinu 1.3x veću nego za ekvivalentni latinski tekst. */
+  .ar {
+    font-family: 'Noto Naskh Arabic', serif;
+    font-size: 1.3em;
+    line-height: 1.4;
+  }
+
   .glass-card {
     @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-xl shadow-black/5;
   }

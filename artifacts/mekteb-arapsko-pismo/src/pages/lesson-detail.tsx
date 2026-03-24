@@ -409,7 +409,7 @@ export default function LessonDetail() {
 
                 {/* Hareke simbol (crtica) + ime */}
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-5xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{h.hareke}</span>
+                  <span className="text-5xl font-bold ar">{h.hareke}</span>
                   <span className="text-2xl font-extrabold">{h.name}</span>
                 </div>
 
