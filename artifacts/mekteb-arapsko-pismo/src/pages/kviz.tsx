@@ -454,6 +454,38 @@ export default function KvizPage() {
 
             <p className="text-lg font-bold text-foreground mb-2 leading-relaxed">{pitanje.question}</p>
 
+            {/* ── TRUE/FALSE (Da/Ne) ── */}
+            {qType === "truefalse" && (
+              <div className="flex gap-4 mt-6 mb-6">
+                {["Da", "Ne"].map((opt) => {
+                  const isCorrect = opt === pitanje.answer;
+                  const isSelected = opt === selected;
+                  const isDa = opt === "Da";
+                  let cls = "flex-1 border-2 rounded-2xl py-5 text-center font-extrabold text-lg transition-all cursor-pointer ";
+                  if (!answered) {
+                    cls += isDa
+                      ? "border-emerald-300 hover:bg-emerald-50 text-emerald-700"
+                      : "border-red-300 hover:bg-red-50 text-red-700";
+                  } else if (isCorrect) {
+                    cls += "border-emerald-400 bg-emerald-50 text-emerald-800";
+                  } else if (isSelected) {
+                    cls += "border-red-400 bg-red-50 text-red-800";
+                  } else {
+                    cls += "border-border/30 text-muted-foreground opacity-50";
+                  }
+                  return (
+                    <button key={opt} onClick={() => handleSelect(opt)} className={cls} disabled={answered}>
+                      <div className="flex items-center justify-center gap-2">
+                        {answered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                        {answered && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-red-500" />}
+                        <span>{opt}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* ── RADIO ── */}
             {qType === "radio" && (
               <div className="flex flex-col gap-3 mt-4 mb-6">
