@@ -8,6 +8,7 @@ import roditeljRouter from "./roditelj";
 import adminRouter from "./admin";
 import contentRouter from "./content";
 import porukeRouter from "./poruke";
+import setupRouter from "./setup";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/roditelj", roditeljRouter);
 router.use("/admin", adminRouter);
 router.use("/content", contentRouter);
 router.use("/poruke", porukeRouter);
+router.use("/setup", setupRouter);
 
 export default router;
