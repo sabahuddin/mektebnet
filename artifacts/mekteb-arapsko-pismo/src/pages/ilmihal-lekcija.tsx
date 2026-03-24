@@ -235,11 +235,24 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
           <div className="w-1/2 flex flex-col overflow-hidden">
             <div className="px-4 py-2 bg-muted/60 text-xs font-bold text-muted-foreground border-b border-border shrink-0 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-teal-500 inline-block animate-pulse" />
-              Vizuelni pregled
+              Vizuelni pregled (sve sekcije razvijene)
             </div>
             <div className="flex-1 overflow-y-auto p-5 bg-white">
+              {/* Inject CSS to reveal all hidden sections and hide accordion controls */}
+              <style>{`
+                .editor-preview .lesson-section-btn,
+                .editor-preview .hero-box,
+                .editor-preview h1:first-child,
+                .editor-preview .quiz-container,
+                .editor-preview .audio-controls { display: none !important; }
+                .editor-preview .lesson-content { display: block !important; }
+                .editor-preview .lesson-accordion { margin-bottom: 1.5rem; border-left: 3px solid #e2e8f0; padding-left: 1rem; }
+                .editor-preview .arabic-card { background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 0.75rem 1rem; border-radius: 0.5rem; margin: 0.75rem 0; }
+                .editor-preview .lesson-text { margin-bottom: 0.75rem; line-height: 1.75; font-size: 0.9rem; }
+                .editor-preview strong { font-weight: 700; }
+              `}</style>
               <div
-                className="ilmihal-content prose-sm max-w-none"
+                className="editor-preview ilmihal-content"
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             </div>
