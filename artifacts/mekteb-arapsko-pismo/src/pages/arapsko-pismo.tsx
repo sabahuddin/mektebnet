@@ -121,7 +121,7 @@ export default function ArapskoPismoPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {filtered.map((harf, i) => (
             <motion.div
               key={harf.id}
@@ -130,29 +130,29 @@ export default function ArapskoPismoPage() {
               transition={{ delay: i * 0.03 }}
             >
               <Link href={`/lesson/${harf.id}`}>
-                <div className="bg-white border border-border/50 hover:border-primary/30 hover:shadow-md rounded-2xl p-4 cursor-pointer transition-all group hover:-translate-y-0.5">
+                <div className="bg-white border-2 border-border/40 hover:border-primary/40 hover:shadow-lg rounded-2xl p-5 cursor-pointer transition-all group hover:-translate-y-1 flex flex-col items-center">
                   <div className="text-center mb-3">
                     <span
-                      className="text-5xl text-foreground leading-none block"
+                      className="text-7xl text-foreground leading-none block"
                       style={{ fontFamily: "Noto Naskh Arabic, serif", direction: "rtl" }}
                     >
                       {harf.arabic}
                     </span>
                   </div>
-                  <div className="text-center mb-2">
-                    <p className="font-extrabold text-foreground text-sm">{harf.name}</p>
-                    <p className="text-xs text-muted-foreground font-medium">{harf.trans}</p>
+                  <div className="text-center mb-3">
+                    <p className="font-extrabold text-foreground text-xl leading-tight">{harf.name}</p>
+                    <p className="text-base text-teal-600 font-bold mt-0.5">{harf.trans}</p>
                   </div>
                   <div className="flex items-center justify-center gap-1.5">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${DOT_COLORS[harf.dots]} ${harf.dots > 0 ? "border-current/20" : "border-transparent"}`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${DOT_COLORS[harf.dots]} ${harf.dots > 0 ? "border-current/20" : "border-transparent"}`}>
                       {harf.dots === 0 ? "–" : `${harf.dots}●`}
                     </span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${harf.connecting ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${harf.connecting ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
                       {harf.connecting ? "spaja" : "solo"}
                     </span>
                   </div>
-                  <div className="mt-3 flex items-center justify-center gap-1 text-[10px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                    <BookOpen className="w-3 h-3" /> Otvori lekciju
+                  <div className="mt-3 flex items-center justify-center gap-1 text-xs text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                    <BookOpen className="w-3.5 h-3.5" /> Otvori lekciju
                   </div>
                 </div>
               </Link>
