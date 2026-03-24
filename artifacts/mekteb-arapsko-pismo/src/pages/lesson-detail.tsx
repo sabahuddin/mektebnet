@@ -274,52 +274,52 @@ export default function LessonDetail() {
           })}
         </div>
 
-        {/* DESKTOP: parovi red po red — Džana lijevo, Amir desno */}
-        <div className="hidden md:flex flex-col gap-4">
-          {Array.from({ length: Math.ceil(data.story.lines.length / 2) }).map((_, pairIdx) => {
-            const dzLine = data.story.lines[pairIdx * 2];
-            const amLine = data.story.lines[pairIdx * 2 + 1];
-            return (
-              <div key={pairIdx} className="grid grid-cols-2 gap-4 items-start">
-                {/* Džana — lijevo */}
-                {dzLine ? (
+        {/* DESKTOP: dvije kolone — lijeva=prva polovina razgovora, desna=druga polovina */}
+        {(() => {
+          const half = Math.ceil(data.story.lines.length / 2);
+          const leftLines  = data.story.lines.slice(0, half);
+          const rightLines = data.story.lines.slice(half);
+          const renderChat = (lines: typeof data.story.lines, startDelay: number) => (
+            <div className="flex flex-col gap-3">
+              {lines.map((line, i) => {
+                const isDzana = line.speaker === "dzana";
+                return (
                   <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: pairIdx * 0.12 }}
-                    className="flex items-end gap-3"
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: startDelay + i * 0.1 }}
+                    className={`flex items-end gap-2 ${isDzana ? "" : "flex-row-reverse"}`}
                   >
-                    <img src={dzanaImg} alt="Džana" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-extrabold text-orange-700 px-1">Džana</span>
-                      <div className="bg-white rounded-2xl rounded-bl-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-foreground border border-orange-100">
-                        {dzLine.text}
+                    <img
+                      src={isDzana ? dzanaImg : amirImg}
+                      alt={isDzana ? "Džana" : "Amir"}
+                      className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover shrink-0"
+                    />
+                    <div className={`flex flex-col gap-1 ${isDzana ? "items-start" : "items-end"}`}>
+                      <span className={`text-xs font-extrabold px-1 ${isDzana ? "text-orange-700" : "text-primary"}`}>
+                        {isDzana ? "Džana" : "Amir"}
+                      </span>
+                      <div className={`px-4 py-3 text-base font-medium leading-relaxed shadow-sm ${
+                        isDzana
+                          ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
+                          : "bg-primary text-white rounded-2xl rounded-br-sm"
+                      }`}>
+                        {line.text}
                       </div>
                     </div>
                   </motion.div>
-                ) : <div />}
-
-                {/* Amir — desno */}
-                {amLine ? (
-                  <motion.div
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: pairIdx * 0.12 + 0.06 }}
-                    className="flex items-end gap-3 flex-row-reverse"
-                  >
-                    <img src={amirImg} alt="Amir" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
-                    <div className="flex flex-col gap-1 items-end">
-                      <span className="text-sm font-extrabold text-primary px-1">Amir</span>
-                      <div className="bg-primary rounded-2xl rounded-br-sm px-5 py-4 shadow-sm text-lg font-medium leading-relaxed text-white">
-                        {amLine.text}
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : <div />}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          );
+          return (
+            <div className="hidden md:grid grid-cols-2 gap-6">
+              {renderChat(leftLines, 0)}
+              {renderChat(rightLines, 0.4)}
+            </div>
+          );
+        })()}
       </Card>
 
       {/* Elif kartica */}
