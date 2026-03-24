@@ -40,12 +40,7 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 mx-auto mb-4">
-            <span className="text-white font-arabic font-bold text-3xl">م</span>
-          </div>
-          <h1 className="text-3xl font-extrabold text-primary tracking-tight">
-            mekteb<span className="text-secondary">.net</span>
-          </h1>
+          <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-4" />
           <p className="text-muted-foreground mt-1 font-medium">Islamska edukativna platforma</p>
         </div>
 
