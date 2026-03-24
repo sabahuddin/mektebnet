@@ -1,8 +1,9 @@
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { ArrowLeft, BookOpen, Gamepad2, Info, PlayCircle, Star, Volume2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Gamepad2, Info, PlayCircle, RotateCcw, Star, Trophy, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -193,16 +194,249 @@ function playAudio(file: string) {
   audio.play().catch(() => {});
 }
 
+const CHOICES_POOL: Record<number, string[]> = {
+  0: ["Fetha", "Kesra", "Damma"],
+  1: ["e", "i", "u"],
+  2: ["أَ", "إِ", "أُ"],
+  3: ["e", "i", "u"],
+};
+
+const SOUND_FILES: Record<string, string> = {
+  e: "hareke-fatha.mp3",
+  i: "hareke-kasra.mp3",
+  u: "hareke-damma.mp3",
+};
+
+type Exercise = (typeof MOCK_LESSON_DETAIL.exercises)[0];
+
+function QuizModal({ exercise, exerciseIndex, onClose }: {
+  exercise: Exercise;
+  exerciseIndex: number;
+  onClose: () => void;
+}) {
+  const isTypeInput  = exerciseIndex === 3;
+  const isListening  = exerciseIndex === 2;
+
+  const [qIdx,    setQIdx]    = useState(0);
+  const [score,   setScore]   = useState(0);
+  const [status,  setStatus]  = useState<"asking" | "correct" | "wrong" | "done">("asking");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [text,    setText]    = useState("");
+  const [choices, setChoices] = useState<string[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const item  = exercise.items[qIdx];
+  const total = exercise.items.length;
+
+  useEffect(() => {
+    const pool    = CHOICES_POOL[exerciseIndex] ?? [];
+    const correct = item.answer;
+    const wrong   = pool.filter(c => c !== correct);
+    setChoices([correct, ...wrong.slice(0, 2)].sort(() => Math.random() - 0.5));
+    setSelected(null);
+    setText("");
+    setStatus("asking");
+
+    if (isListening) {
+      const soundKey = item.show.replace("🔊", "").trim();
+      const file = SOUND_FILES[soundKey];
+      if (file) setTimeout(() => playAudio(file), 350);
+    }
+    if (isTypeInput) setTimeout(() => inputRef.current?.focus(), 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qIdx]);
+
+  function answer(a: string) {
+    if (status !== "asking") return;
+    const correct = item.answer.toLowerCase().trim();
+    const isOk    = a.toLowerCase().trim() === correct;
+    setSelected(a);
+    setStatus(isOk ? "correct" : "wrong");
+    if (isOk) setScore(s => s + 1);
+    setTimeout(() => {
+      if (qIdx + 1 >= total) setStatus("done");
+      else { setQIdx(q => q + 1); }
+    }, 1300);
+  }
+
+  function restart() {
+    setQIdx(0); setScore(0); setStatus("asking"); setSelected(null); setText("");
+  }
+
+  const pct = Math.round((score / total) * 100);
+
+  if (status === "done") {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+          <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-3xl font-black mb-1">Odlično!</h2>
+          <p className="text-xl text-muted-foreground mb-2">{score} / {total} tačnih</p>
+          <p className="text-4xl font-black text-primary mb-8">{pct}%</p>
+          <div className="flex gap-3">
+            <Button onClick={restart} variant="outline" className="flex-1 text-base py-5">
+              <RotateCcw className="w-4 h-4 mr-2" /> Ponovi
+            </Button>
+            <Button onClick={onClose} className="flex-1 text-base py-5 game-button">
+              Gotovo
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  const showIsAr = isArabicChar(item.show);
+  const soundKey = isListening ? item.show.replace("🔊", "").trim() : "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-br from-teal-800 via-teal-700 to-teal-900">
+      {/* Top bar */}
+      <div className="flex items-center gap-4 px-5 pt-5 pb-3 shrink-0">
+        <button onClick={onClose}
+          className="text-white/60 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">
+          <X className="w-6 h-6" />
+        </button>
+        <div className="flex-1 bg-white/20 rounded-full h-3 overflow-hidden">
+          <motion.div
+            className="bg-white h-3 rounded-full"
+            animate={{ width: `${(qIdx / total) * 100}%` }}
+            transition={{ duration: 0.4 }}
+          />
+        </div>
+        <div className="text-white font-black text-lg flex items-center gap-1">
+          <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+          {score}
+        </div>
+      </div>
+
+      <p className="text-center text-white/60 text-base font-medium px-4 mb-2">
+        {qIdx + 1} / {total}
+      </p>
+
+      {/* Question area */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+        <p className="text-white/80 text-xl font-semibold text-center">{exercise.description}</p>
+
+        {isListening ? (
+          <motion.button
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={() => { const f = SOUND_FILES[soundKey]; if (f) playAudio(f); }}
+            className="w-44 h-44 bg-white/20 hover:bg-white/30 rounded-3xl flex flex-col items-center justify-center gap-3 text-white shadow-xl transition-colors"
+          >
+            <Volume2 className="w-16 h-16" />
+            <span className="text-3xl font-black">"{soundKey}"</span>
+          </motion.button>
+        ) : (
+          <motion.div
+            key={qIdx}
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-44 h-44 bg-white/20 rounded-3xl flex items-center justify-center shadow-xl"
+          >
+            <span
+              className={`font-bold text-white leading-none ${showIsAr ? "ar" : ""}`}
+              style={{ fontSize: showIsAr ? "6rem" : "4.5rem" }}
+            >
+              {item.show}
+            </span>
+          </motion.div>
+        )}
+
+        <AnimatePresence mode="wait">
+          {status === "correct" && (
+            <motion.div key="ok" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-2 text-green-300 text-3xl font-black">
+              <Check className="w-8 h-8" /> Tačno!
+            </motion.div>
+          )}
+          {status === "wrong" && (
+            <motion.div key="no" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}
+              className="text-center">
+              <p className="text-red-300 text-3xl font-black flex items-center gap-2 justify-center">
+                <X className="w-8 h-8" /> Netačno
+              </p>
+              <p className="text-white/80 text-xl mt-1">
+                Tačno: <strong className={`text-white ${isArabicChar(item.answer) ? "ar" : ""}`}>{item.answer}</strong>
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Answer buttons */}
+      <div className="px-5 pb-8 shrink-0">
+        {isTypeInput ? (
+          <div className="flex gap-3 max-w-xs mx-auto">
+            <input
+              ref={inputRef}
+              type="text"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && text.trim()) answer(text); }}
+              disabled={status !== "asking"}
+              maxLength={4}
+              placeholder="Napiši zvuk…"
+              className="flex-1 text-2xl font-bold text-center rounded-2xl border-2 border-white/30 bg-white/20 text-white placeholder:text-white/50 px-4 py-4 outline-none focus:border-white"
+            />
+            <button
+              onClick={() => { if (text.trim()) answer(text); }}
+              disabled={!text.trim() || status !== "asking"}
+              className="bg-green-400 hover:bg-green-300 disabled:opacity-40 text-white rounded-2xl px-6 font-black text-2xl transition-colors"
+            >
+              ✓
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+            {choices.map((choice, i) => {
+              const isCorrect  = choice === item.answer;
+              const isSelected = selected === choice;
+              let cls = "bg-white/20 hover:bg-white/30 text-white border-2 border-white/20 hover:scale-105";
+              if (status !== "asking") {
+                if (isCorrect) cls = "bg-green-400 text-white border-2 border-green-300 scale-105";
+                else if (isSelected) cls = "bg-red-400 text-white border-2 border-red-300";
+                else cls = "bg-white/10 text-white/40 border-2 border-white/10";
+              }
+              return (
+                <motion.button
+                  key={i}
+                  whileTap={status === "asking" ? { scale: 0.93 } : {}}
+                  onClick={() => answer(choice)}
+                  disabled={status !== "asking"}
+                  className={`rounded-2xl p-4 font-bold transition-all shadow-lg min-h-[80px] flex items-center justify-center ${cls}`}
+                >
+                  <span className={`text-2xl ${isArabicChar(choice) ? "ar" : ""}`}>{choice}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LessonDetail() {
   const data = MOCK_LESSON_DETAIL;
   const dzanaImg = `${BASE}images/dzana-avatar.png`;
   const amirImg  = `${BASE}images/amir-avatar.png`;
+  const [activeQuiz, setActiveQuiz] = useState<number | null>(null);
 
   const dzanaLines = data.story.lines.filter(l => l.speaker === "dzana");
   const amirLines  = data.story.lines.filter(l => l.speaker === "amir");
 
   return (
     <Layout>
+      {activeQuiz !== null && (
+        <QuizModal
+          exercise={data.exercises[activeQuiz]}
+          exerciseIndex={activeQuiz}
+          onClose={() => setActiveQuiz(null)}
+        />
+      )}
+
       {/* Nazad */}
       <div className="mb-6">
         <Link href="/" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
@@ -468,7 +702,11 @@ export default function LessonDetail() {
                 + još {ex.items.length - 6} pitanja u igri
               </div>
 
-              <Button className="w-full game-button text-base py-5" size="sm">
+              <Button
+                className="w-full game-button text-base py-5"
+                size="sm"
+                onClick={() => setActiveQuiz(ei)}
+              >
                 <PlayCircle className="w-5 h-5 mr-2" /> Počni vježbu
               </Button>
             </Card>
