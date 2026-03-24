@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare } from "lucide-react";
@@ -7,10 +7,22 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface LayoutProps { children: ReactNode; }
 
+const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
+
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
+  const [fontLevel, setFontLevel] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    FONT_LEVELS.forEach(c => root.classList.remove(c));
+    root.classList.add(FONT_LEVELS[fontLevel]);
+    try { localStorage.setItem("mekteb-fontsize", String(fontLevel)); } catch {}
+  }, [fontLevel]);
 
   const mainNavLinks = [
     { href: "/", label: "Početna", icon: Home },
@@ -74,6 +86,27 @@ export function Layout({ children }: LayoutProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
+
+            {/* Font size controls */}
+            <div className="hidden sm:flex items-center gap-1 bg-muted/60 rounded-xl px-1 py-1">
+              <button
+                onClick={() => setFontLevel(l => Math.max(0, l - 1))}
+                disabled={fontLevel === 0}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-sm font-bold text-muted-foreground hover:bg-white hover:text-foreground transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Smanji font"
+              >
+                A<span className="text-[10px] leading-none align-bottom">−</span>
+              </button>
+              <button
+                onClick={() => setFontLevel(l => Math.min(2, l + 1))}
+                disabled={fontLevel === 2}
+                className="w-7 h-7 flex items-center justify-center rounded-lg font-bold text-muted-foreground hover:bg-white hover:text-foreground transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Povećaj font"
+              >
+                A<span className="text-xs leading-none align-bottom">+</span>
+              </button>
+            </div>
+
             {user ? (
               <div className="flex items-center gap-2">
                 <div className="hidden sm:flex flex-col items-end">
@@ -103,6 +136,14 @@ export function Layout({ children }: LayoutProps) {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
               className="lg:hidden border-t border-border/50 bg-white">
               <nav className="flex flex-col p-4 gap-1">
+                {/* Mobile font controls */}
+                <div className="flex items-center gap-2 px-4 py-2 mb-1">
+                  <span className="text-xs font-bold text-muted-foreground mr-1">Veličina fonta:</span>
+                  <button onClick={() => setFontLevel(l => Math.max(0, l - 1))} disabled={fontLevel === 0}
+                    className="px-3 py-1 rounded-lg bg-muted text-sm font-bold disabled:opacity-30">A−</button>
+                  <button onClick={() => setFontLevel(l => Math.min(2, l + 1))} disabled={fontLevel === 2}
+                    className="px-3 py-1 rounded-lg bg-muted text-sm font-bold disabled:opacity-30">A+</button>
+                </div>
                 {[...mainNavLinks, ...extraLinks].map((link) => (
                   <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}>
