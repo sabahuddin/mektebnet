@@ -11,6 +11,7 @@
     "fix-image-paths": "tsx ./src/fix-image-paths.ts",
     "fix-lesson-order": "tsx ./src/fix-lesson-order.ts",
     "generate-kviz": "tsx ./src/generate-kviz.ts",
+    "export-kviz-pitanja": "tsx ./src/export-kviz-pitanja.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

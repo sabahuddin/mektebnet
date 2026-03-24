@@ -38,18 +38,23 @@ router.get("/", async (req, res) => {
     const results: string[] = [];
 
     try {
+      // Ensure schema columns exist (safe migrations)
+      await client.query(`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS kviz_pitanja jsonb`);
+
       // Import ilmihal lekcije
       let lekcijeCount = 0;
       for (const l of lekcije) {
         await client.query(
-          `INSERT INTO ilmihal_lekcije (id, nivo, slug, naslov, content_html, audio_src, redoslijed, is_published, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+          `INSERT INTO ilmihal_lekcije (id, nivo, slug, naslov, content_html, audio_src, redoslijed, is_published, created_at, kviz_pitanja)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
            ON CONFLICT (slug) DO UPDATE SET
              naslov = EXCLUDED.naslov,
              content_html = EXCLUDED.content_html,
              redoslijed = EXCLUDED.redoslijed,
-             nivo = EXCLUDED.nivo`,
-          [l.id, l.nivo, l.slug, l.naslov, l.contentHtml, l.audioSrc, l.redoslijed, l.isPublished, l.createdAt]
+             nivo = EXCLUDED.nivo,
+             kviz_pitanja = EXCLUDED.kviz_pitanja`,
+          [l.id, l.nivo, l.slug, l.naslov, l.contentHtml, l.audioSrc, l.redoslijed, l.isPublished, l.createdAt,
+           l.kvizPitanja ? JSON.stringify(l.kvizPitanja) : null]
         );
         lekcijeCount++;
       }
