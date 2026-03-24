@@ -38,6 +38,11 @@ app.use("/api", router);
 // Serve built frontend in production (single-container mode)
 if (process.env["SERVE_STATIC"] === "true") {
   const frontendDist = path.resolve(__dirname, "../../mekteb-arapsko-pismo/dist/public");
+
+  // Serve edu assets (images for ilmihal/kvizovi) from mounted volume
+  const eduDir = path.resolve(__dirname, "../../../edu");
+  app.use("/edu", express.static(eduDir));
+
   app.use(express.static(frontendDist));
   app.get("/{*path}", (_req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
