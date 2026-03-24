@@ -160,6 +160,17 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
   );
 }
 
+const QUIZ_SIZE = 20;
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export default function KvizPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
@@ -167,6 +178,7 @@ export default function KvizPage() {
   const { toast } = useToast();
   const [kviz, setKviz] = useState<Kviz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pitanja, setPitanja] = useState<Pitanje[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
@@ -177,7 +189,13 @@ export default function KvizPage() {
   useEffect(() => {
     if (!slug) return;
     apiRequest<Kviz>("GET", `/content/kvizovi/${slug}`)
-      .then(setKviz)
+      .then(data => {
+        setKviz(data);
+        if (data.pitanja.length > 0) {
+          const pool = shuffle(data.pitanja);
+          setPitanja(pool.slice(0, Math.min(QUIZ_SIZE, pool.length)));
+        }
+      })
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [slug]);
@@ -185,9 +203,7 @@ export default function KvizPage() {
   if (isLoading) return <Layout><div className="max-w-2xl mx-auto"><Skeleton className="h-96 rounded-3xl" /></div></Layout>;
   if (!kviz) return <Layout><div className="text-center py-20 text-muted-foreground">Kviz nije pronađen</div></Layout>;
 
-  const pitanja = kviz.pitanja;
-
-  if (pitanja.length === 0) {
+  if (kviz.pitanja.length === 0) {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto text-center py-20">
@@ -202,6 +218,8 @@ export default function KvizPage() {
       </Layout>
     );
   }
+
+  if (pitanja.length === 0) return <Layout><div className="max-w-2xl mx-auto"><Skeleton className="h-96 rounded-3xl" /></div></Layout>;
 
   const pitanje = pitanja[current];
   const isLast = current === pitanja.length - 1;
@@ -245,7 +263,10 @@ export default function KvizPage() {
               <Trophy className="w-10 h-10 text-yellow-600" />
             </div>
             <h2 className="text-2xl font-extrabold text-foreground mb-2">Kviz završen!</h2>
-            <p className="text-muted-foreground mb-6">Tačnih odgovora: {score} od {pitanja.length}</p>
+            <p className="text-muted-foreground mb-6">Tačnih odgovora: {score} od {pitanja.length} pitanja</p>
+            {kviz.pitanja.length > QUIZ_SIZE && (
+              <p className="text-xs text-muted-foreground mb-2">nasumično odabrano iz {kviz.pitanja.length} pitanja</p>
+            )}
             <div className="text-5xl font-extrabold text-primary mb-6">{pct}%</div>
             {pct >= 80 && (
               <div className="flex items-center gap-2 justify-center bg-yellow-50 text-yellow-700 rounded-2xl p-4 mb-6 border border-yellow-200">
@@ -255,7 +276,11 @@ export default function KvizPage() {
             )}
             <div className="flex gap-3 justify-center">
               <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">Nazad</Button>
-              <Button onClick={() => { setCurrent(0); setScore(0); setSelected(null); setAnswered(false); setFinished(false); }} className="rounded-2xl">
+              <Button onClick={() => {
+                const pool = shuffle(kviz.pitanja);
+                setPitanja(pool.slice(0, Math.min(QUIZ_SIZE, pool.length)));
+                setCurrent(0); setScore(0); setSelected(null); setAnswered(false); setFinished(false);
+              }} className="rounded-2xl">
                 Ponovi
               </Button>
             </div>
