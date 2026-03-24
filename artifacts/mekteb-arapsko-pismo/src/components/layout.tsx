@@ -70,14 +70,14 @@ export function Layout({ children }: LayoutProps) {
           <nav className="hidden lg:flex items-center gap-1">
             {mainNavLinks.map((link) => (
               <Link key={link.href} href={link.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all whitespace-nowrap ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`}>
+                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`}>
                 <link.icon className="w-4 h-4" />
                 {link.label}
               </Link>
             ))}
             {extraLinks.map(link => (
               <Link key={link.href} href={link.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
+                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
                 <link.icon className="w-4 h-4" />
                 {link.label}
               </Link>

@@ -171,9 +171,10 @@
 }
 
 /* ── Global font size levels (A+ / A-) — affects ALL text via rem ── */
-html.font-size-1 { font-size: 112.5%; }   /* 18px base — comfortable for kids */
-html.font-size-2 { font-size: 125%; }     /* 20px base */
-html.font-size-3 { font-size: 140%; }     /* 22.4px base */
+html,
+html.font-size-1 { font-size: 125%; }     /* 20px base — minimum za djecu */
+html.font-size-2  { font-size: 137.5%; }  /* 22px base */
+html.font-size-3  { font-size: 150%; }    /* 24px base */
 
 /* ilmihal-specific overrides still fine-tune heading sizes */
 .font-size-2 .ilmihal-content {
