@@ -99,18 +99,18 @@ const SECTION_CONFIG = {
     iconBg: "bg-amber-100 text-amber-600",
   },
   ilmihal: {
-    bg: "bg-emerald-50 border-emerald-200",
-    headerBg: "bg-emerald-600/10 hover:bg-emerald-600/15",
-    headerText: "text-emerald-800",
-    icon: <BookMarked className="w-4 h-4 shrink-0" />,
-    iconBg: "bg-emerald-100 text-emerald-700",
-  },
-  pitanja: {
     bg: "bg-blue-50 border-blue-200",
     headerBg: "bg-blue-500/10 hover:bg-blue-500/15",
     headerText: "text-blue-800",
+    icon: <BookMarked className="w-4 h-4 shrink-0" />,
+    iconBg: "bg-blue-100 text-blue-700",
+  },
+  pitanja: {
+    bg: "bg-red-50 border-red-200",
+    headerBg: "bg-red-500/10 hover:bg-red-500/15",
+    headerText: "text-red-800",
     icon: <MessageSquare className="w-4 h-4 shrink-0" />,
-    iconBg: "bg-blue-100 text-blue-600",
+    iconBg: "bg-red-100 text-red-600",
   },
   zadatak: {
     bg: "bg-purple-50 border-purple-200",
@@ -120,8 +120,8 @@ const SECTION_CONFIG = {
     iconBg: "bg-purple-100 text-purple-600",
   },
   quiz_box: {
-    bg: "bg-teal-50 border-teal-200",
-    headerBg: "bg-teal-600/10 hover:bg-teal-600/15",
+    bg: "bg-white border-teal-200",
+    headerBg: "bg-teal-50 hover:bg-teal-100/60",
     headerText: "text-teal-800",
     icon: <HelpCircle className="w-4 h-4 shrink-0" />,
     iconBg: "bg-teal-100 text-teal-700",
@@ -138,7 +138,7 @@ const SECTION_CONFIG = {
 // ──────────────────────────────────────────────────
 // Inline Mini-Quiz (nivo3, no score)
 // ──────────────────────────────────────────────────
-function MiniKviz({ slug, naslov }: { slug: string; naslov: string }) {
+function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
   const [pitanja, setPitanja] = useState<QuizQuestion[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -146,15 +146,20 @@ function MiniKviz({ slug, naslov }: { slug: string; naslov: string }) {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Try to load quiz by name embedded in section title (e.g. "KVIZ 18")
-    apiRequest<{ slug: string; pitanja: QuizQuestion[] }>("GET", `/content/kvizovi?linkedSlug=${slug}`)
+    apiRequest<any[]>("GET", `/content/kvizovi?nivo=${nivo}&modul=ilmihal`)
       .then(data => {
-        if (Array.isArray(data)) {
-          const kviz = (data as any[]).find((k: any) => k.pitanja?.length > 0);
-          if (kviz) setPitanja(kviz.pitanja.slice(0, 5));
+        if (Array.isArray(data) && data.length > 0) {
+          const saPitanjima = data.filter((k: any) => k.pitanja?.length > 0);
+          if (saPitanjima.length > 0) {
+            const kviz = saPitanjima[Math.floor(Math.random() * saPitanjima.length)];
+            const sva: QuizQuestion[] = typeof kviz.pitanja === "string"
+              ? JSON.parse(kviz.pitanja) : kviz.pitanja;
+            const shuffled = [...sva].sort(() => Math.random() - 0.5).slice(0, 5);
+            setPitanja(shuffled);
+          }
         }
       }).catch(() => {});
-  }, [slug]);
+  }, [nivo]);
 
   if (pitanja.length === 0) return (
     <p className="text-sm text-teal-700 font-medium text-center py-4">
@@ -214,7 +219,7 @@ function MiniKviz({ slug, naslov }: { slug: string; naslov: string }) {
 // ──────────────────────────────────────────────────
 // Single accordion section
 // ──────────────────────────────────────────────────
-function SectionAccordion({ section, slug }: { section: AccordionSection; slug: string }) {
+function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; slug: string; nivo: number }) {
   const [open, setOpen] = useState(section.defaultOpen);
   const cfg = SECTION_CONFIG[section.type];
 
@@ -245,7 +250,7 @@ function SectionAccordion({ section, slug }: { section: AccordionSection; slug: 
           >
             <div className="px-5 pb-5 pt-4">
               {section.type === "quiz_box" ? (
-                <MiniKviz slug={slug} naslov={section.title} />
+                <MiniKviz slug={slug} nivo={nivo} />
               ) : (
                 <div
                   className="ilmihal-content"
@@ -373,7 +378,7 @@ export default function IlmihalLekcijaPage() {
         {parsed.sections.length > 0 ? (
           <div className="flex flex-col gap-3 mb-6">
             {parsed.sections.map(section => (
-              <SectionAccordion key={section.id} section={section} slug={slug!} />
+              <SectionAccordion key={section.id} section={section} slug={slug!} nivo={lekcija.nivo} />
             ))}
           </div>
         ) : (
