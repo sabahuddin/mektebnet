@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
-import { BookOpen, ChevronRight, Search, Filter } from "lucide-react";
+import { BookOpen, ChevronRight, Search, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -15,11 +15,11 @@ interface Lekcija {
   redoslijed: number;
 }
 
-const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; border: string }> = {
-  1: { label: "Nivo 1 – Osnovi", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  2: { label: "Nivo 2 – Srednji", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
-  21: { label: "Nivo 2 – Prošireni", color: "text-cyan-700", bg: "bg-cyan-50", border: "border-cyan-200" },
-  3: { label: "Nivo 3 – Napredni", color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
+const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; border: string; ring: string }> = {
+  1: { label: "Nivo 1 – Osnovi", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-300" },
+  2: { label: "Nivo 2 – Srednji", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", ring: "ring-blue-300" },
+  21: { label: "Nivo 2 – Prošireni", color: "text-cyan-700", bg: "bg-cyan-50", border: "border-cyan-200", ring: "ring-cyan-300" },
+  3: { label: "Nivo 3 – Napredni", color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200", ring: "ring-violet-300" },
 };
 
 export default function IlmihalPage() {
@@ -27,6 +27,7 @@ export default function IlmihalPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeNivo, setActiveNivo] = useState<number | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     apiRequest<Lekcija[]>("GET", "/content/ilmihal")
@@ -46,6 +47,15 @@ export default function IlmihalPage() {
     acc[l.nivo].push(l);
     return acc;
   }, {});
+
+  const toggleCollapse = (nivo: number) => {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(nivo)) next.delete(nivo);
+      else next.add(nivo);
+      return next;
+    });
+  };
 
   return (
     <Layout>
@@ -76,7 +86,7 @@ export default function IlmihalPage() {
               return (
                 <button key={n} onClick={() => setActiveNivo(n === activeNivo ? null : n)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${activeNivo === n ? `${info.bg} ${info.color} ${info.border}` : "bg-white border-border/70 text-muted-foreground hover:bg-muted"}`}>
-                  Nivo {n}
+                  Nivo {n === 21 ? "2+" : n}
                 </button>
               );
             })}
@@ -89,27 +99,57 @@ export default function IlmihalPage() {
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-5">
             {([1, 2, 21, 3] as number[]).filter(n => grouped[n]?.length > 0).map(nivo => {
               const info = NIVO_LABELS[nivo];
+              const isCollapsed = collapsed.has(nivo);
+              const items = grouped[nivo];
               return (
-                <div key={nivo}>
-                  <h2 className={`text-sm font-extrabold uppercase tracking-wider ${info.color} mb-3`}>{info.label} ({grouped[nivo].length})</h2>
-                  <div className="flex flex-col gap-2">
-                    {grouped[nivo].map((l, i) => (
-                      <motion.div key={l.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}>
-                        <Link href={`/ilmihal/${l.slug}`}>
-                          <div className={`${info.bg} ${info.border} border rounded-2xl px-5 py-4 flex items-center justify-between cursor-pointer hover:shadow-sm hover:border-opacity-100 transition-all group`}>
-                            <div className="flex items-center gap-3">
-                              <span className="text-muted-foreground text-sm font-mono w-6">{l.redoslijed + 1}.</span>
-                              <span className={`font-semibold ${info.color} group-hover:font-bold transition-all`}>{l.naslov}</span>
-                            </div>
-                            <ChevronRight className={`w-4 h-4 ${info.color} opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all`} />
-                          </div>
-                        </Link>
+                <div key={nivo} className={`rounded-2xl border-2 ${info.border} overflow-hidden`}>
+                  {/* Level header — click to expand/collapse */}
+                  <button
+                    onClick={() => toggleCollapse(nivo)}
+                    className={`w-full flex items-center justify-between px-5 py-3 ${info.bg} hover:brightness-95 transition-all`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-extrabold uppercase tracking-wider ${info.color}`}>
+                        {info.label}
+                      </span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/70 ${info.color}`}>
+                        {items.length} lekcija
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-5 h-5 ${info.color} transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`} />
+                  </button>
+
+                  {/* Collapsible list */}
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="divide-y divide-border/30 bg-white">
+                          {items.map((l, i) => (
+                            <motion.div key={l.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }}>
+                              <Link href={`/ilmihal/${l.slug}`}>
+                                <div className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-muted/40 transition-colors group">
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-muted-foreground text-xs font-mono w-6 shrink-0">{l.redoslijed + 1}.</span>
+                                    <span className={`font-semibold text-foreground/80 group-hover:${info.color} group-hover:font-bold transition-all text-sm`}>{l.naslov}</span>
+                                  </div>
+                                  <ChevronRight className={`w-4 h-4 ${info.color} opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0`} />
+                                </div>
+                              </Link>
+                            </motion.div>
+                          ))}
+                        </div>
                       </motion.div>
-                    ))}
-                  </div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}

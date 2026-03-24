@@ -185,6 +185,23 @@ export default function KvizPage() {
   if (!kviz) return <Layout><div className="text-center py-20 text-muted-foreground">Kviz nije pronađen</div></Layout>;
 
   const pitanja = kviz.pitanja;
+
+  if (pitanja.length === 0) {
+    return (
+      <Layout>
+        <div className="max-w-2xl mx-auto text-center py-20">
+          <div className="text-6xl mb-4">📚</div>
+          <h2 className="text-xl font-extrabold text-foreground mb-2">{kviz.naslov}</h2>
+          <p className="text-muted-foreground mb-6">Ovaj kviz je u pripremi — pitanja uskoro stižu!</p>
+          <button onClick={() => setLocation("/kvizovi")}
+            className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-primary font-bold transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Nazad na kvizove
+          </button>
+        </div>
+      </Layout>
+    );
+  }
+
   const pitanje = pitanja[current];
   const isLast = current === pitanja.length - 1;
 
@@ -276,8 +293,21 @@ export default function KvizPage() {
             className="bg-white rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
 
             {pitanje.slika && (
-              <img src={pitanje.slika} alt="" className="w-full rounded-2xl mb-5 object-contain max-h-48"
-                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <img
+                src={`/edu${pitanje.slika.startsWith("/") ? pitanje.slika : "/" + pitanje.slika}`}
+                alt=""
+                className="w-full mb-5 object-contain max-h-64 edu-image"
+                onError={e => {
+                  const img = e.target as HTMLImageElement;
+                  if (!img.dataset.fallback) {
+                    img.dataset.fallback = "1";
+                    const path = pitanje.slika!.startsWith("/") ? pitanje.slika! : "/" + pitanje.slika!;
+                    img.src = `https://mekteb.net/edu${path}`;
+                  } else {
+                    img.style.display = "none";
+                  }
+                }}
+              />
             )}
 
             <p className="text-lg font-bold text-foreground mb-6 leading-relaxed">{pitanje.question}</p>

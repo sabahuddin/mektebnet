@@ -161,7 +161,12 @@
   color: hsl(var(--foreground));
 }
 
-/* ── Font size levels (A+ / A-) ── */
+/* ── Global font size levels (A+ / A-) — affects ALL text via rem ── */
+html.font-size-1 { font-size: 112.5%; }   /* 18px base — comfortable for kids */
+html.font-size-2 { font-size: 125%; }     /* 20px base */
+html.font-size-3 { font-size: 140%; }     /* 22.4px base */
+
+/* ilmihal-specific overrides still fine-tune heading sizes */
 .font-size-2 .ilmihal-content {
   font-size: 1.3rem;
 }
@@ -170,7 +175,7 @@
   font-size: 1.5rem;
 }
 .font-size-2 .ilmihal-content .arabic-card {
-  font-size: 1.2rem;
+  font-size: 1.6rem;
 }
 
 .font-size-3 .ilmihal-content {
@@ -181,7 +186,7 @@
   font-size: 1.75rem;
 }
 .font-size-3 .ilmihal-content .arabic-card {
-  font-size: 1.4rem;
+  font-size: 2rem;
 }
 
 .ilmihal-content ol,
@@ -204,8 +209,8 @@
   font-family: var(--font-arabic);
   direction: rtl;
   text-align: right;
-  font-size: 1.05rem;
-  line-height: 2;
+  font-size: 1.45rem;
+  line-height: 2.2;
   color: #166534;
 }
 
@@ -236,6 +241,20 @@
   max-width: 100%;
   height: auto;
   margin: 0.75rem 0;
+  border: 2px solid rgb(36, 143, 146);
+}
+
+/* Quiz question images */
+.edu-image {
+  border: 2px solid rgb(36, 143, 146);
+  border-radius: 1rem;
+}
+
+/* Arabic text scale — always larger than Latin for readability */
+.arabic-text {
+  font-family: var(--font-arabic);
+  font-size: 1.35em;
+  line-height: 2;
 }
 
 .ilmihal-content table {

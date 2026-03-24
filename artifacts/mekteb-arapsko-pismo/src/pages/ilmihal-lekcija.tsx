@@ -354,11 +354,18 @@ export default function IlmihalLekcijaPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        {/* Back button */}
-        <button onClick={() => setLocation("/ilmihal")}
-          className="flex items-center gap-2 text-muted-foreground hover:text-primary font-bold text-sm mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Nazad na Ilmihal
-        </button>
+        {/* Back navigation */}
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => window.history.back()}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
+            <ArrowLeft className="w-4 h-4" /> Nazad
+          </button>
+          <span className="text-border/70">|</span>
+          <button onClick={() => setLocation("/ilmihal")}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-medium text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
+            📋 Ilmihal lista
+          </button>
+        </div>
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-5">
@@ -381,10 +388,21 @@ export default function IlmihalLekcijaPage() {
 
         {/* Hero image */}
         {parsed.heroImage && (
-          <div className="rounded-2xl overflow-hidden mb-5 shadow-sm">
-            <img src={parsed.heroImage} alt={lekcija.naslov}
+          <div className="rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)]">
+            <img src={`/edu${parsed.heroImage.startsWith("/") ? parsed.heroImage : "/" + parsed.heroImage}`}
+              alt={lekcija.naslov}
               className="w-full h-auto aspect-[3/2] object-cover"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              onError={e => {
+                const img = e.target as HTMLImageElement;
+                if (!img.dataset.fallback) {
+                  img.dataset.fallback = "1";
+                  const path = parsed.heroImage!.startsWith("/") ? parsed.heroImage! : "/" + parsed.heroImage!;
+                  img.src = `https://mekteb.net/edu${path}`;
+                } else {
+                  img.style.display = "none";
+                }
+              }}
+            />
           </div>
         )}
 

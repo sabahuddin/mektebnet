@@ -29,7 +29,7 @@ export function Layout({ children }: LayoutProps) {
     { href: "/ilmihal", label: "Ilmihal", icon: BookOpen },
     { href: "/kvizovi", label: "Kvizovi", icon: HelpCircle },
     { href: "/citaonica", label: "Čitaonica", icon: Library },
-    { href: "/arapsko-pismo", label: "Arapsko pismo", icon: GraduationCap },
+    { href: "/arapsko-pismo", label: "Sufara", icon: GraduationCap },
   ];
 
   const roleLinks = {
