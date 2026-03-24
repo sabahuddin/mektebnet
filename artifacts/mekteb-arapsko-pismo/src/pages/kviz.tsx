@@ -306,7 +306,7 @@ export default function KvizPage() {
               <Button onClick={() => {
                 const pool = shuffle(kviz.pitanja);
                 setPitanja(pool.slice(0, Math.min(QUIZ_SIZE, pool.length)));
-                setCurrent(0); setScore(0); setSelected(null); setAnswered(false); setFinished(false);
+                setCurrent(0); setScore(0); setSelected(null); setSelectedMulti([]); setAnswered(false); setFinished(false);
               }} className="rounded-2xl">
                 Ponovi
               </Button>
