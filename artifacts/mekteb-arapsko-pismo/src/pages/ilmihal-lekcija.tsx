@@ -6,7 +6,8 @@ import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
   ArrowLeft, Volume2, CheckCircle2, BookOpen, BookMarked,
-  ChevronDown, MessageSquare, PenLine, HelpCircle, Sparkles, Trophy
+  ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
+  HelpCircle, Sparkles, Trophy, FileEdit, Save, X, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +41,146 @@ interface QuizQuestion {
   question: string;
   options: string[];
   answer: string;
+}
+
+interface LekcijaNav {
+  id: number;
+  nivo: number;
+  slug: string;
+  naslov: string;
+  redoslijed: number;
+}
+
+// ──────────────────────────────────────────────────
+// Horizontal lesson strip
+// ──────────────────────────────────────────────────
+function LekcijeStrip({ lekcije, currentSlug, onNavigate }: {
+  lekcije: LekcijaNav[];
+  currentSlug: string;
+  onNavigate: (slug: string) => void;
+}) {
+  const stripRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+  const currentIdx = lekcije.findIndex(l => l.slug === currentSlug);
+
+  useEffect(() => {
+    if (activeRef.current && stripRef.current) {
+      activeRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [currentSlug]);
+
+  const prev = currentIdx > 0 ? lekcije[currentIdx - 1] : null;
+  const next = currentIdx < lekcije.length - 1 ? lekcije[currentIdx + 1] : null;
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => prev && onNavigate(prev.slug)}
+          disabled={!prev}
+          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors"
+          title={prev?.naslov}
+        >
+          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+        </button>
+
+        <div ref={stripRef} className="flex-1 overflow-x-auto scrollbar-hide flex gap-1.5 py-1 px-0.5"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          {lekcije.map((l, i) => {
+            const isActive = l.slug === currentSlug;
+            return (
+              <button
+                key={l.id}
+                ref={isActive ? activeRef : undefined}
+                onClick={() => onNavigate(l.slug)}
+                title={l.naslov}
+                className={`shrink-0 flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-xs font-bold transition-all min-w-[2.5rem]
+                  ${isActive
+                    ? "bg-teal-500 text-white shadow-md shadow-teal-200 scale-105"
+                    : "bg-white border border-border/50 text-muted-foreground hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50"
+                  }`}
+              >
+                <span className="text-[10px] leading-none">{i + 1}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => next && onNavigate(next.slug)}
+          disabled={!next}
+          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors"
+          title={next?.naslov}
+        >
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </button>
+      </div>
+      {/* Current lesson name + position */}
+      <div className="text-center mt-1.5">
+        {currentIdx >= 0 && (
+          <span className="text-xs text-muted-foreground font-medium">
+            {currentIdx + 1} / {lekcije.length} — {lekcije[currentIdx]?.naslov}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────
+// Admin content editor modal
+// ──────────────────────────────────────────────────
+function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
+  lekcija: { id: number; naslov: string; contentHtml: string };
+  token: string;
+  onClose: () => void;
+  onSaved: (html: string) => void;
+}) {
+  const { toast } = useToast();
+  const [html, setHtml] = useState(lekcija.contentHtml);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: html }, token);
+      toast({ title: "Sačuvano! ✓", description: "Sadržaj lekcije ažuriran" });
+      onSaved(html);
+      onClose();
+    } catch {
+      toast({ title: "Greška", description: "Nije moguće sačuvati", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex flex-col">
+      <div className="bg-white border-b border-border px-5 py-3 flex items-center justify-between shrink-0">
+        <div>
+          <h3 className="font-extrabold text-base text-foreground">Uredi sadržaj lekcije</h3>
+          <p className="text-xs text-muted-foreground">{lekcija.naslov}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSave} disabled={isSaving} size="sm" className="rounded-xl flex items-center gap-1.5">
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            Sačuvaj
+          </Button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden p-4">
+        <textarea
+          value={html}
+          onChange={e => setHtml(e.target.value)}
+          className="w-full h-full border border-border rounded-xl p-4 font-mono text-xs leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
+          spellCheck={false}
+        />
+      </div>
+    </div>
+  );
 }
 
 // ──────────────────────────────────────────────────
@@ -419,6 +560,10 @@ export default function IlmihalLekcijaPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [completed, setCompleted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [lekcijeStrip, setLekcijeStrip] = useState<LekcijaNav[]>([]);
+  const [showEditor, setShowEditor] = useState(false);
+
+  const displayNivo = (nivo: number) => nivo === 21 ? 2 : nivo;
 
   useEffect(() => {
     if (!slug) return;
@@ -431,6 +576,20 @@ export default function IlmihalLekcijaPage() {
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [slug]);
+
+  // Fetch all lekcije for the same nivo to build the strip
+  useEffect(() => {
+    apiRequest<LekcijaNav[]>("GET", "/content/ilmihal")
+      .then(all => {
+        if (!lekcija) return;
+        const dn = displayNivo(lekcija.nivo);
+        const same = all
+          .filter(l => displayNivo(l.nivo) === dn)
+          .sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
+        setLekcijeStrip(same);
+      })
+      .catch(() => {});
+  }, [lekcija]);
 
   const markComplete = async () => {
     if (!lekcija || !user) return;
@@ -453,6 +612,8 @@ export default function IlmihalLekcijaPage() {
   };
 
   const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 21: "Nivo 2", 3: "Nivo 3" };
+  const backNivo = lekcija ? displayNivo(lekcija.nivo) : null;
+  const goBack = () => setLocation(backNivo ? `/ilmihal?nivo=${backNivo}` : "/ilmihal");
 
   if (isLoading) {
     return (
@@ -478,19 +639,40 @@ export default function IlmihalLekcijaPage() {
   }
 
   return (
+    <>
+    {showEditor && lekcija && token && (
+      <AdminLekcijaEditor
+        lekcija={{ id: lekcija.id, naslov: lekcija.naslov, contentHtml: lekcija.contentHtml }}
+        token={token}
+        onClose={() => setShowEditor(false)}
+        onSaved={html => {
+          setLekcija(prev => prev ? { ...prev, contentHtml: html } : prev);
+          setParsed(parseSections(html));
+        }}
+      />
+    )}
     <Layout>
       <div className="max-w-3xl mx-auto">
         {/* Back navigation */}
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => window.history.back()}
+          <button onClick={goBack}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
             <ArrowLeft className="w-4 h-4" /> Nazad
           </button>
           <span className="text-border/70">|</span>
-          <button onClick={() => setLocation("/ilmihal")}
+          <button onClick={goBack}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-medium text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
             📋 Ilmihal lista
           </button>
+          {user?.role === "admin" && (
+            <>
+              <span className="text-border/70 ml-auto">|</span>
+              <button onClick={() => setShowEditor(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                <FileEdit className="w-3.5 h-3.5" /> Uredi sadržaj
+              </button>
+            </>
+          )}
         </div>
 
         {/* Header */}
@@ -530,6 +712,15 @@ export default function IlmihalLekcijaPage() {
               }}
             />
           </div>
+        )}
+
+        {/* Lesson navigation strip */}
+        {lekcijeStrip.length > 1 && slug && (
+          <LekcijeStrip
+            lekcije={lekcijeStrip}
+            currentSlug={slug}
+            onNavigate={s => setLocation(`/ilmihal/${s}`)}
+          />
         )}
 
         {/* Accordion sections — ordered: story → ilmihal → Provjeri znanje → pitanja → zadatak → other */}
@@ -589,5 +780,6 @@ export default function IlmihalLekcijaPage() {
         )}
       </div>
     </Layout>
+    </>
   );
 }

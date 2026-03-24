@@ -8,6 +8,7 @@ import {
   mektebiTable,
   pretplateTable,
   kvizoviTable,
+  ilmihalLekcijeTable,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -140,6 +141,23 @@ router.post("/reset-password", async (req, res) => {
     const { userId, newPassword } = req.body;
     const newHash = await bcrypt.hash(newPassword, 10);
     await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, userId));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/ilmihal/:id — Update lesson content
+router.put("/ilmihal/:id", async (req, res) => {
+  try {
+    const { contentHtml, naslov, kvizPitanja } = req.body;
+    const updates: Record<string, any> = {};
+    if (contentHtml !== undefined) updates.contentHtml = contentHtml;
+    if (naslov !== undefined) updates.naslov = naslov;
+    if (kvizPitanja !== undefined) {
+      updates.kvizPitanja = typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja);
+    }
+    await db.update(ilmihalLekcijeTable).set(updates).where(eq(ilmihalLekcijeTable.id, parseInt(req.params.id)));
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

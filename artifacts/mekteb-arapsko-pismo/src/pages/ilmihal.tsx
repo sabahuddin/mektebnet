@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
@@ -22,11 +22,20 @@ const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; bo
 };
 
 export default function IlmihalPage() {
+  const search_ = useSearch();
+  const urlNivo = (() => {
+    const p = new URLSearchParams(search_);
+    const n = p.get("nivo");
+    return n ? parseInt(n) : null;
+  })();
+
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeNivo, setActiveNivo] = useState<number | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const [activeNivo, setActiveNivo] = useState<number | null>(urlNivo);
+  const [collapsed, setCollapsed] = useState<Set<number>>(
+    urlNivo ? new Set([1, 2, 3].filter(n => n !== urlNivo)) : new Set()
+  );
 
   useEffect(() => {
     apiRequest<Lekcija[]>("GET", "/content/ilmihal")
