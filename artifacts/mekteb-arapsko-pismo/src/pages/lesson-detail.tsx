@@ -40,76 +40,54 @@ const MOCK_LESSON_DETAIL = {
   ],
   hareketi: [
     {
-      arabic: "أَ", hareke: "ـَ", name: "Fetha",
+      arabic: "أَ", hareke: "ـَـ", name: "Fetha",
       sound: "e", colour: "teal",
       description: "Crtica iznad slova — daje kratki zvuk \"e\"",
       napomena: "Iznad krupnih (jakih) harfova čita se \"a\"",
       soundFile: "hareke-fatha.mp3",
     },
     {
-      arabic: "إِ", hareke: "ـِ", name: "Kesra",
+      arabic: "إِ", hareke: "ـِـ", name: "Kesra",
       sound: "i", colour: "blue",
       description: "Crtica ispod slova — daje kratki zvuk \"i\"",
       napomena: null,
       soundFile: "hareke-kasra.mp3",
     },
     {
-      arabic: "أُ", hareke: "ـُ", name: "Damma",
+      arabic: "أُ", hareke: "ـُـ", name: "Damma",
       sound: "u", colour: "violet",
-      description: "Znak poput zareza iznad slova — daje kratki zvuk \"u\"",
+      description: "Zarez iznad slova — daje kratki zvuk \"u\"",
       napomena: null,
       soundFile: "hareke-damma.mp3",
-    },
-    {
-      arabic: "أْ", hareke: "ـْ", name: "Sukun",
-      sound: "–", colour: "gray",
-      description: "Kružić iznad slova — nema samoglasnika, slovo se zaustavlja",
-      napomena: null,
-      soundFile: "hareke-sukun.mp3",
-    },
-    {
-      arabic: "أّ", hareke: "ـّ", name: "Tešdid",
-      sound: "×2", colour: "orange",
-      description: "Znak poput slova \"w\" — udvostrucuje suglasnik",
-      napomena: null,
-      soundFile: "hareke-sedda.mp3",
     },
   ],
   exercises: [
     {
-      title: "Prepoznaj hareke",
-      description: "Pročitaj slovo s harekom i odaberi tačan zvuk",
+      title: "Čitaj: Elif s harekom",
+      description: "Prepoznaj koji zvuk daje hareket na elifu",
       icon: "👁️",
       hasanatReward: 15,
       words: [
-        { arabic: "أَب",    latin: "eb",    meaning: "otac" },
-        { arabic: "أُمّ",   latin: "umm",   meaning: "majka" },
-        { arabic: "أَخ",    latin: "eh",    meaning: "brat" },
-        { arabic: "أُخْت",  latin: "uht",   meaning: "sestra" },
-        { arabic: "إِسْم",  latin: "ism",   meaning: "ime" },
-        { arabic: "أَرْض",  latin: "erd",   meaning: "zemlja" },
-        { arabic: "أَسَد",  latin: "esed",  meaning: "lav" },
-        { arabic: "أُذُن",  latin: "uzun",  meaning: "uho" },
-        { arabic: "إِبِل",  latin: "ibil",  meaning: "deva" },
-        { arabic: "أَيْن",  latin: "eyn",   meaning: "gdje" },
-      ]
-    },
-    {
-      title: "Upiši zvuk hareke",
-      description: "Pogledaj hareke pa upiši koji zvuk daje",
-      icon: "✏️",
-      hasanatReward: 10,
-      words: [
-        { arabic: "أَمْس",    latin: "ems",    meaning: "jučer" },
-        { arabic: "أَوْ",     latin: "ew",     meaning: "ili" },
-        { arabic: "إِلَى",    latin: "ila",    meaning: "prema" },
-        { arabic: "أَحْمَد",  latin: "Ahmed",  meaning: "Ahmed" },
-        { arabic: "أَمِين",   latin: "Emin",   meaning: "Emin" },
-        { arabic: "إِيمَان",  latin: "Iman",   meaning: "vjera" },
-        { arabic: "أُسْبُوع", latin: "usbuu",  meaning: "sedmica" },
-        { arabic: "أَلَم",    latin: "elem",   meaning: "bol" },
-        { arabic: "أَخْضَر",  latin: "ahdar",  meaning: "zeleno" },
-        { arabic: "أَبْيَض",  latin: "ebjed",  meaning: "bijelo" },
+        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
+        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
+        { arabic: "أُ", latin: "u",  meaning: "Damma" },
+        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
+        { arabic: "أُ", latin: "u",  meaning: "Damma" },
+        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
+        { arabic: "أُ", latin: "u",  meaning: "Damma" },
+        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
+        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
+        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
+        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
+        { arabic: "أُ", latin: "u",  meaning: "Damma" },
+        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
+        { arabic: "أُ", latin: "u",  meaning: "Damma" },
+        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
+        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
+        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
+        { arabic: "أُ", latin: "u",  meaning: "Damma" },
+        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
+        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
       ]
     },
   ],
@@ -286,8 +264,11 @@ export default function LessonDetail() {
                 className={`border-2 rounded-2xl p-5 ${c.card}`}
               >
                 {/* Top: arabic + badge + audio */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="text-8xl leading-none" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
+                <div className="flex items-center justify-between mb-4">
+                  <div
+                    className="w-24 h-24 flex items-center justify-center overflow-hidden shrink-0"
+                    style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "5rem", lineHeight: 1 }}
+                  >
                     {h.arabic}
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -305,7 +286,7 @@ export default function LessonDetail() {
 
                 {/* Hareke symbol + name */}
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-4xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{h.hareke}</span>
+                  <span className="text-5xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{h.hareke}</span>
                   <span className="text-2xl font-extrabold">{h.name}</span>
                 </div>
 
