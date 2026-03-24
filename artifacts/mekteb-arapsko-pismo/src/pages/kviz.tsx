@@ -4,15 +4,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface Pitanje {
   question: string;
   options: string[];
   answer: string;
   explanation?: string;
+  slika?: string;
 }
 
 interface Kviz {
@@ -22,10 +24,146 @@ interface Kviz {
   pitanja: Pitanje[];
 }
 
+function AdminEditModal({ kviz, token, onClose, onSaved }: {
+  kviz: Kviz; token: string; onClose: () => void; onSaved: (updated: Kviz) => void;
+}) {
+  const { toast } = useToast();
+  const [naslov, setNaslov] = useState(kviz.naslov);
+  const [pitanja, setPitanja] = useState<Pitanje[]>(JSON.parse(JSON.stringify(kviz.pitanja)));
+  const [isLoading, setIsLoading] = useState(false);
+  const [activePitanje, setActivePitanje] = useState(0);
+
+  const updatePitanje = (idx: number, field: keyof Pitanje, value: any) => {
+    setPitanja(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+  };
+
+  const updateOption = (pIdx: number, oIdx: number, value: string) => {
+    setPitanja(prev => prev.map((p, i) => {
+      if (i !== pIdx) return p;
+      const opts = [...p.options];
+      opts[oIdx] = value;
+      return { ...p, options: opts };
+    }));
+  };
+
+  const addPitanje = () => {
+    setPitanja(prev => [...prev, { question: "", options: ["", "", "", ""], answer: "", explanation: "" }]);
+    setActivePitanje(pitanja.length);
+  };
+
+  const removePitanje = (idx: number) => {
+    setPitanja(prev => prev.filter((_, i) => i !== idx));
+    setActivePitanje(Math.max(0, idx - 1));
+  };
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      await apiRequest("PUT", `/admin/kvizovi/${kviz.id}`, { naslov, pitanja }, token);
+      toast({ title: "Kviz sačuvan!", description: `${naslov} — ${pitanja.length} pitanja` });
+      onSaved({ ...kviz, naslov, pitanja });
+      onClose();
+    } catch {
+      toast({ title: "Greška", description: "Nije moguće sačuvati kviz", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const p = pitanja[activePitanje];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8">
+        <div className="flex items-center justify-between p-5 border-b">
+          <h3 className="font-extrabold text-lg text-foreground">Uredi kviz</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-5 flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold text-muted-foreground mb-1 block">Naziv kviza</label>
+            <input value={naslov} onChange={e => setNaslov(e.target.value)}
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-bold" />
+          </div>
+
+          <div className="flex gap-2 flex-wrap items-center">
+            {pitanja.map((_, i) => (
+              <button key={i} onClick={() => setActivePitanje(i)}
+                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${i === activePitanje ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                {i + 1}
+              </button>
+            ))}
+            <button onClick={addPitanje}
+              className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 flex items-center justify-center transition-all">
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          {p && (
+            <div className="bg-muted/30 rounded-2xl p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground">Pitanje {activePitanje + 1}/{pitanja.length}</span>
+                <button onClick={() => removePitanje(activePitanje)} className="text-red-500 hover:text-red-700 p-1">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <textarea value={p.question} onChange={e => updatePitanje(activePitanje, "question", e.target.value)}
+                rows={2} placeholder="Tekst pitanja..."
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none font-medium" />
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono, putanja npr. /edu/assets/images/pitanja/slika.jpg)</label>
+                <input value={p.slika || ""} onChange={e => updatePitanje(activePitanje, "slika", e.target.value)}
+                  placeholder="/edu/assets/images/pitanja/..."
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                {p.slika && <img src={p.slika} alt="" className="mt-2 rounded-xl max-h-32 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Opcije (klikni na tačan odgovor da ga označiš)</label>
+                <div className="flex flex-col gap-2">
+                  {p.options.map((opt, oIdx) => (
+                    <div key={oIdx} className="flex items-center gap-2">
+                      <button onClick={() => updatePitanje(activePitanje, "answer", opt)}
+                        className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${p.answer === opt ? "bg-emerald-500 border-emerald-500" : "border-gray-300 hover:border-emerald-400"}`} />
+                      <input value={opt} onChange={e => updateOption(activePitanje, oIdx, e.target.value)}
+                        placeholder={`Opcija ${oIdx + 1}`}
+                        className={`flex-1 border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${p.answer === opt ? "border-emerald-400 bg-emerald-50 font-bold" : "border-border"}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Objašnjenje (opciono)</label>
+                <input value={p.explanation || ""} onChange={e => updatePitanje(activePitanje, "explanation", e.target.value)}
+                  placeholder="Kratko objašnjenje tačnog odgovora..."
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 border-t flex gap-2 justify-end">
+          <Button variant="outline" onClick={onClose} className="rounded-xl">Odustani</Button>
+          <Button onClick={handleSave} disabled={isLoading} className="rounded-xl flex items-center gap-2">
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Sačuvaj kviz
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function KvizPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
+  const { toast } = useToast();
   const [kviz, setKviz] = useState<Kviz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [current, setCurrent] = useState(0);
@@ -33,7 +171,7 @@ export default function KvizPage() {
   const [answered, setAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -75,7 +213,6 @@ export default function KvizPage() {
       setCurrent(c => c + 1);
       setSelected(null);
       setAnswered(false);
-      setShowExplanation(false);
     }
   };
 
@@ -113,16 +250,23 @@ export default function KvizPage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto">
-        <button onClick={() => setLocation("/kvizovi")} className="flex items-center gap-2 text-muted-foreground hover:text-primary font-medium mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Nazad
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={() => setLocation("/kvizovi")} className="flex items-center gap-2 text-muted-foreground hover:text-primary font-medium transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Nazad
+          </button>
+          {user?.role === "admin" && (
+            <button onClick={() => setShowEdit(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+              <Pencil className="w-3.5 h-3.5" /> Uredi kviz
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-extrabold text-foreground">{kviz.naslov}</h1>
           <span className="text-sm font-bold text-muted-foreground">{current + 1} / {pitanja.length}</span>
         </div>
 
-        {/* Progress bar */}
         <div className="h-2 bg-muted rounded-full mb-8 overflow-hidden">
           <motion.div className="h-full bg-primary rounded-full" animate={{ width: `${((current + 1) / pitanja.length) * 100}%` }} transition={{ type: "spring", stiffness: 300 }} />
         </div>
@@ -130,6 +274,12 @@ export default function KvizPage() {
         <AnimatePresence mode="wait">
           <motion.div key={current} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             className="bg-white rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
+
+            {pitanje.slika && (
+              <img src={pitanje.slika} alt="" className="w-full rounded-2xl mb-5 object-contain max-h-48"
+                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            )}
+
             <p className="text-lg font-bold text-foreground mb-6 leading-relaxed">{pitanje.question}</p>
 
             <div className="flex flex-col gap-3 mb-6">
@@ -176,6 +326,10 @@ export default function KvizPage() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {showEdit && kviz && token && (
+        <AdminEditModal kviz={kviz} token={token} onClose={() => setShowEdit(false)} onSaved={setKviz} />
+      )}
     </Layout>
   );
 }
