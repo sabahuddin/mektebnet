@@ -4,20 +4,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 interface Pitanje {
-  type?: "radio" | "checkbox";
+  type?: "radio" | "checkbox" | "reorder" | "markWords" | "dragDrop";
   question: string;
-  options: string[];
-  answer: string;
+  options?: string[];
+  answer?: string;
   correct?: string[];
   explanation?: string;
   image?: string;
   slika?: string;
+  // reorder
+  items?: { text: string; order: number }[];
+  // markWords
+  text?: string;
+  words?: string[];
+  incorrect?: string[];
+  // dragDrop
+  template?: string[];
 }
 
 interface Kviz {
@@ -184,6 +192,10 @@ export default function KvizPage() {
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
+  const [orderedItems, setOrderedItems] = useState<string[]>([]);
+  const [markedWords, setMarkedWords] = useState<string[]>([]);
+  const [droppedWords, setDroppedWords] = useState<(string | null)[]>([]);
+  const [wordBank, setWordBank] = useState<string[]>([]);
   const [answered, setAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -196,7 +208,18 @@ export default function KvizPage() {
         setKviz(data);
         if (data.pitanja.length > 0) {
           const pool = shuffle(data.pitanja);
-          setPitanja(pool.slice(0, Math.min(QUIZ_SIZE, pool.length)));
+          const selected = pool.slice(0, Math.min(QUIZ_SIZE, pool.length));
+          setPitanja(selected);
+          // init state for the first question
+          const first = selected[0];
+          if (first.type === "reorder" && first.items) {
+            setOrderedItems(shuffle(first.items.map((i: any) => i.text)));
+          }
+          if (first.type === "dragDrop" && first.template && first.words) {
+            const dropCount = first.template.filter((t: string) => t === "DROP").length;
+            setDroppedWords(Array(dropCount).fill(null));
+            setWordBank(shuffle([...first.words]));
+          }
         }
       })
       .catch(() => {})
@@ -227,19 +250,32 @@ export default function KvizPage() {
   const pitanje = pitanja[current];
   const isLast = current === pitanja.length - 1;
 
-  const isCheckbox = pitanje?.type === "checkbox";
+  const qType = pitanje?.type || "radio";
 
   const getCorrectArr = (p: Pitanje): string[] => {
     if (p.correct && Array.isArray(p.correct)) return p.correct;
     return p.answer ? p.answer.split("|||") : [];
   };
 
+  const initQuestion = (p: Pitanje) => {
+    setSelected(null);
+    setSelectedMulti([]);
+    setMarkedWords([]);
+    if (p.type === "reorder" && p.items) {
+      setOrderedItems(shuffle(p.items.map(i => i.text)));
+    }
+    if (p.type === "dragDrop" && p.template && p.words) {
+      const dropCount = p.template.filter(t => t === "DROP").length;
+      setDroppedWords(Array(dropCount).fill(null));
+      setWordBank(shuffle([...p.words]));
+    }
+    setAnswered(false);
+  };
+
   const handleSelect = (opt: string) => {
     if (answered) return;
-    if (isCheckbox) {
-      setSelectedMulti(prev =>
-        prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]
-      );
+    if (qType === "checkbox") {
+      setSelectedMulti(prev => prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]);
     } else {
       setSelected(opt);
       setAnswered(true);
@@ -251,10 +287,60 @@ export default function KvizPage() {
     if (answered) return;
     setAnswered(true);
     const correctArr = getCorrectArr(pitanje);
-    const isFullyCorrect =
-      selectedMulti.length === correctArr.length &&
-      correctArr.every(c => selectedMulti.includes(c));
-    if (isFullyCorrect) setScore(s => s + 1);
+    const ok = selectedMulti.length === correctArr.length && correctArr.every(c => selectedMulti.includes(c));
+    if (ok) setScore(s => s + 1);
+  };
+
+  const confirmReorder = () => {
+    if (answered) return;
+    setAnswered(true);
+    const correctOrder = [...(pitanje.items || [])].sort((a, b) => a.order - b.order).map(i => i.text);
+    if (JSON.stringify(orderedItems) === JSON.stringify(correctOrder)) setScore(s => s + 1);
+  };
+
+  const confirmMarkWords = () => {
+    if (answered) return;
+    setAnswered(true);
+    const incorrect = pitanje.incorrect || [];
+    const ok = markedWords.length === incorrect.length && incorrect.every(w => markedWords.includes(w));
+    if (ok) setScore(s => s + 1);
+  };
+
+  const dropWord = (word: string, slotIdx: number) => {
+    if (answered) return;
+    const prev = droppedWords[slotIdx];
+    const newDropped = [...droppedWords];
+    newDropped[slotIdx] = word;
+    setDroppedWords(newDropped);
+    const newBank = wordBank.filter(w => w !== word);
+    if (prev !== null) newBank.push(prev);
+    setWordBank(shuffle(newBank));
+  };
+
+  const removeDropped = (slotIdx: number) => {
+    if (answered) return;
+    const word = droppedWords[slotIdx];
+    if (!word) return;
+    const newDropped = [...droppedWords];
+    newDropped[slotIdx] = null;
+    setDroppedWords(newDropped);
+    setWordBank(prev => shuffle([...prev, word]));
+  };
+
+  const confirmDragDrop = () => {
+    if (answered || droppedWords.some(w => w === null)) return;
+    setAnswered(true);
+    const correct = pitanje.correct || [];
+    const ok = droppedWords.every((w, i) => w === correct[i]);
+    if (ok) setScore(s => s + 1);
+  };
+
+  const moveItem = (idx: number, dir: -1 | 1) => {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= orderedItems.length) return;
+    const a = [...orderedItems];
+    [a[idx], a[newIdx]] = [a[newIdx], a[idx]];
+    setOrderedItems(a);
   };
 
   const next = () => {
@@ -262,20 +348,15 @@ export default function KvizPage() {
       const bodovi = Math.round((score / pitanja.length) * 100);
       if (user && token) {
         apiRequest("POST", "/content/napredak", {
-          contentType: "kviz",
-          contentId: kviz.id,
-          zavrsen: true,
-          bodovi,
-          tacniOdgovori: score,
-          ukupnoPitanja: pitanja.length,
+          contentType: "kviz", contentId: kviz.id,
+          zavrsen: true, bodovi, tacniOdgovori: score, ukupnoPitanja: pitanja.length,
         }, token).catch(() => {});
       }
       setFinished(true);
     } else {
-      setCurrent(c => c + 1);
-      setSelected(null);
-      setSelectedMulti([]);
-      setAnswered(false);
+      const nextIdx = current + 1;
+      setCurrent(nextIdx);
+      initQuestion(pitanja[nextIdx]);
     }
   };
 
@@ -305,8 +386,13 @@ export default function KvizPage() {
               <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">Nazad</Button>
               <Button onClick={() => {
                 const pool = shuffle(kviz.pitanja);
-                setPitanja(pool.slice(0, Math.min(QUIZ_SIZE, pool.length)));
-                setCurrent(0); setScore(0); setSelected(null); setSelectedMulti([]); setAnswered(false); setFinished(false);
+                const sel = pool.slice(0, Math.min(QUIZ_SIZE, pool.length));
+                setPitanja(sel);
+                setCurrent(0); setScore(0); setFinished(false);
+                const first = sel[0];
+                setSelected(null); setSelectedMulti([]); setMarkedWords([]); setAnswered(false);
+                if (first?.type === "reorder" && first.items) setOrderedItems(shuffle(first.items.map((i: any) => i.text)));
+                if (first?.type === "dragDrop" && first.template && first.words) { setDroppedWords(Array(first.template.filter((t: string) => t === "DROP").length).fill(null)); setWordBank(shuffle([...first.words])); }
               }} className="rounded-2xl">
                 Ponovi
               </Button>
@@ -367,54 +453,206 @@ export default function KvizPage() {
             })()}
 
             <p className="text-lg font-bold text-foreground mb-2 leading-relaxed">{pitanje.question}</p>
-            {isCheckbox && !answered && (
-              <p className="text-xs text-muted-foreground mb-5 font-medium">Odaberi sve tačne odgovore</p>
-            )}
-            {!isCheckbox && <div className="mb-4" />}
 
-            <div className="flex flex-col gap-3 mb-6">
-              {pitanje.options.map((opt) => {
-                const correctArr = getCorrectArr(pitanje);
-                const isCorrect = isCheckbox ? correctArr.includes(opt) : opt === pitanje.answer;
-                const isSelected = isCheckbox ? selectedMulti.includes(opt) : opt === selected;
-
-                let cls = "border-2 rounded-2xl px-5 py-4 text-left font-medium transition-all cursor-pointer ";
-                if (!answered) {
-                  cls += isSelected
-                    ? "border-primary bg-primary/10"
-                    : "border-border/50 hover:border-primary/50 hover:bg-primary/5";
-                } else if (isCorrect) {
-                  cls += "border-emerald-400 bg-emerald-50 text-emerald-800";
-                } else if (isSelected && !isCorrect) {
-                  cls += "border-red-400 bg-red-50 text-red-800";
-                } else {
-                  cls += "border-border/30 text-muted-foreground opacity-60";
-                }
-
-                return (
-                  <button key={opt} onClick={() => handleSelect(opt)} className={cls} disabled={answered}>
-                    <div className="flex items-center gap-3">
-                      {isCheckbox && !answered && (
-                        <div className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-border"}`}>
-                          {isSelected && <span className="text-white text-xs font-bold">✓</span>}
-                        </div>
-                      )}
-                      {answered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
-                      {answered && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
-                      <span>{opt}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {isCheckbox && !answered && (
-              <div className="flex justify-end mb-6">
-                <Button onClick={confirmCheckbox} disabled={selectedMulti.length === 0}
-                  className="rounded-2xl px-8 font-bold">
-                  Potvrdi odgovor
-                </Button>
+            {/* ── RADIO ── */}
+            {qType === "radio" && (
+              <div className="flex flex-col gap-3 mt-4 mb-6">
+                {(pitanje.options || []).map((opt) => {
+                  const isCorrect = opt === pitanje.answer;
+                  const isSelected = opt === selected;
+                  let cls = "border-2 rounded-2xl px-5 py-4 text-left font-medium transition-all cursor-pointer ";
+                  if (!answered) cls += "border-border/50 hover:border-primary/50 hover:bg-primary/5";
+                  else if (isCorrect) cls += "border-emerald-400 bg-emerald-50 text-emerald-800";
+                  else if (isSelected) cls += "border-red-400 bg-red-50 text-red-800";
+                  else cls += "border-border/30 text-muted-foreground opacity-60";
+                  return (
+                    <button key={opt} onClick={() => handleSelect(opt)} className={cls} disabled={answered}>
+                      <div className="flex items-center gap-3">
+                        {answered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
+                        {answered && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
+                        <span>{opt}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+            )}
+
+            {/* ── CHECKBOX ── */}
+            {qType === "checkbox" && (
+              <>
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Odaberi sve tačne odgovore</p>}
+                <div className="flex flex-col gap-3 mb-4">
+                  {(pitanje.options || []).map((opt) => {
+                    const correctArr = getCorrectArr(pitanje);
+                    const isCorrect = correctArr.includes(opt);
+                    const isSelected = selectedMulti.includes(opt);
+                    let cls = "border-2 rounded-2xl px-5 py-4 text-left font-medium transition-all cursor-pointer ";
+                    if (!answered) cls += isSelected ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/50 hover:bg-primary/5";
+                    else if (isCorrect) cls += "border-emerald-400 bg-emerald-50 text-emerald-800";
+                    else if (isSelected) cls += "border-red-400 bg-red-50 text-red-800";
+                    else cls += "border-border/30 text-muted-foreground opacity-60";
+                    return (
+                      <button key={opt} onClick={() => handleSelect(opt)} className={cls} disabled={answered}>
+                        <div className="flex items-center gap-3">
+                          {!answered && (
+                            <div className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-border"}`}>
+                              {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+                            </div>
+                          )}
+                          {answered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
+                          {answered && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
+                          <span>{opt}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {!answered && (
+                  <div className="flex justify-end mb-4">
+                    <Button onClick={confirmCheckbox} disabled={selectedMulti.length === 0} className="rounded-2xl px-8 font-bold">
+                      Potvrdi odgovor
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── REORDER ── */}
+            {qType === "reorder" && (
+              <>
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Poredaj stavke u tačan redosljed</p>}
+                <div className="flex flex-col gap-2 mb-4">
+                  {orderedItems.map((item, idx) => {
+                    const correctOrder = [...(pitanje.items || [])].sort((a, b) => a.order - b.order).map(i => i.text);
+                    const isCorrect = answered && correctOrder[idx] === item;
+                    const isWrong = answered && correctOrder[idx] !== item;
+                    return (
+                      <div key={item} className={`flex items-center gap-3 border-2 rounded-2xl px-4 py-3 font-medium transition-all
+                        ${isCorrect ? "border-emerald-400 bg-emerald-50 text-emerald-800" :
+                          isWrong ? "border-red-400 bg-red-50 text-red-800" :
+                          "border-border/50 bg-white"}`}>
+                        <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">{idx + 1}</span>
+                        <span className="flex-1">{item}</span>
+                        {!answered && (
+                          <div className="flex flex-col gap-0.5">
+                            <button onClick={() => moveItem(idx, -1)} disabled={idx === 0} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
+                            <button onClick={() => moveItem(idx, 1)} disabled={idx === orderedItems.length - 1} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+                          </div>
+                        )}
+                        {answered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
+                        {answered && isWrong && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
+                      </div>
+                    );
+                  })}
+                </div>
+                {answered && (
+                  <div className="bg-muted/40 rounded-2xl p-4 mb-4 text-sm text-muted-foreground">
+                    <p className="font-bold text-foreground mb-2">Tačan redosljed:</p>
+                    {[...(pitanje.items || [])].sort((a,b) => a.order - b.order).map((item, i) => (
+                      <p key={i}>{i+1}. {item.text}</p>
+                    ))}
+                  </div>
+                )}
+                {!answered && (
+                  <div className="flex justify-end mb-4">
+                    <Button onClick={confirmReorder} className="rounded-2xl px-8 font-bold">Potvrdi redosljed</Button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── MARK WORDS ── */}
+            {qType === "markWords" && (
+              <>
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Klikni na pogrešnu/e riječ/i</p>}
+                <div className="flex flex-wrap gap-2 mb-4 p-4 bg-muted/30 rounded-2xl">
+                  {(pitanje.words || (pitanje.text || "").split(" ")).map((word, i) => {
+                    const isIncorrect = (pitanje.incorrect || []).includes(word);
+                    const isMarked = markedWords.includes(word);
+                    return (
+                      <button key={i} onClick={() => {
+                        if (answered) return;
+                        setMarkedWords(prev => prev.includes(word) ? prev.filter(w => w !== word) : [...prev, word]);
+                      }}
+                        className={`px-3 py-1.5 rounded-xl font-medium text-sm transition-all border-2
+                          ${answered && isIncorrect ? "border-emerald-400 bg-emerald-50 text-emerald-800" :
+                            answered && isMarked && !isIncorrect ? "border-red-400 bg-red-50 text-red-800" :
+                            !answered && isMarked ? "border-primary bg-primary/10 text-primary" :
+                            "border-border/30 bg-white hover:border-primary/50"}`}>
+                        {word}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!answered && (
+                  <div className="flex justify-end mb-4">
+                    <Button onClick={confirmMarkWords} disabled={markedWords.length === 0} className="rounded-2xl px-8 font-bold">Potvrdi odgovor</Button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── DRAG DROP (click-based) ── */}
+            {qType === "dragDrop" && (
+              <>
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Popuni praznine klikom na odgovore ispod</p>}
+                <div className="flex flex-wrap items-center gap-2 mb-4 p-4 bg-muted/30 rounded-2xl text-base font-medium leading-relaxed">
+                  {(() => {
+                    let dropIdx = 0;
+                    return (pitanje.template || []).map((part, i) => {
+                      if (part === "DROP") {
+                        const idx = dropIdx++;
+                        const filled = droppedWords[idx];
+                        const correct = (pitanje.correct || [])[idx];
+                        const isCorrect = answered && filled === correct;
+                        const isWrong = answered && filled !== correct;
+                        return (
+                          <button key={i} onClick={() => removeDropped(idx)}
+                            className={`min-w-[80px] px-3 py-1.5 rounded-xl border-2 text-sm font-bold transition-all
+                              ${filled
+                                ? (isCorrect ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                                  : isWrong ? "border-red-400 bg-red-50 text-red-800"
+                                  : "border-primary bg-primary/10 text-primary")
+                                : "border-dashed border-muted-foreground/50 bg-white text-muted-foreground"}`}>
+                            {filled || "___"}
+                          </button>
+                        );
+                      }
+                      return <span key={i}>{part}</span>;
+                    });
+                  })()}
+                </div>
+                {answered && droppedWords.some((w, i) => w !== (pitanje.correct || [])[i]) && (
+                  <div className="bg-muted/40 rounded-2xl p-4 mb-4 text-sm text-muted-foreground">
+                    <p className="font-bold text-foreground mb-1">Tačni odgovori: {(pitanje.correct || []).join(", ")}</p>
+                  </div>
+                )}
+                {!answered && (
+                  <>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {wordBank.map((word, i) => (
+                        <button key={i} onClick={() => {
+                          const firstEmpty = droppedWords.findIndex(w => w === null);
+                          if (firstEmpty !== -1) dropWord(word, firstEmpty);
+                        }}
+                          className="px-4 py-2 rounded-xl border-2 border-primary/30 bg-primary/5 text-primary font-medium text-sm hover:bg-primary/15 transition-all">
+                          {word}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center mb-4">
+                      <button onClick={() => { setDroppedWords(Array(droppedWords.length).fill(null)); setWordBank(shuffle([...(pitanje.words||[])])); }}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                        <RotateCcw className="w-3.5 h-3.5" /> Resetuj
+                      </button>
+                      <Button onClick={confirmDragDrop} disabled={droppedWords.some(w => w === null)} className="rounded-2xl px-8 font-bold">
+                        Potvrdi odgovor
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </>
             )}
 
             {answered && pitanje.explanation && (
