@@ -10,9 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 interface Pitanje {
+  type?: "radio" | "checkbox";
   question: string;
   options: string[];
   answer: string;
+  correct?: string[];
   explanation?: string;
   image?: string;
   slika?: string;
@@ -181,6 +183,7 @@ export default function KvizPage() {
   const [pitanja, setPitanja] = useState<Pitanje[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
   const [answered, setAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -224,11 +227,34 @@ export default function KvizPage() {
   const pitanje = pitanja[current];
   const isLast = current === pitanja.length - 1;
 
+  const isCheckbox = pitanje?.type === "checkbox";
+
+  const getCorrectArr = (p: Pitanje): string[] => {
+    if (p.correct && Array.isArray(p.correct)) return p.correct;
+    return p.answer ? p.answer.split("|||") : [];
+  };
+
   const handleSelect = (opt: string) => {
     if (answered) return;
-    setSelected(opt);
+    if (isCheckbox) {
+      setSelectedMulti(prev =>
+        prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]
+      );
+    } else {
+      setSelected(opt);
+      setAnswered(true);
+      if (opt === pitanje.answer) setScore(s => s + 1);
+    }
+  };
+
+  const confirmCheckbox = () => {
+    if (answered) return;
     setAnswered(true);
-    if (opt === pitanje.answer) setScore(s => s + 1);
+    const correctArr = getCorrectArr(pitanje);
+    const isFullyCorrect =
+      selectedMulti.length === correctArr.length &&
+      correctArr.every(c => selectedMulti.includes(c));
+    if (isFullyCorrect) setScore(s => s + 1);
   };
 
   const next = () => {
@@ -248,6 +274,7 @@ export default function KvizPage() {
     } else {
       setCurrent(c => c + 1);
       setSelected(null);
+      setSelectedMulti([]);
       setAnswered(false);
     }
   };
@@ -339,18 +366,26 @@ export default function KvizPage() {
               );
             })()}
 
-            <p className="text-lg font-bold text-foreground mb-6 leading-relaxed">{pitanje.question}</p>
+            <p className="text-lg font-bold text-foreground mb-2 leading-relaxed">{pitanje.question}</p>
+            {isCheckbox && !answered && (
+              <p className="text-xs text-muted-foreground mb-5 font-medium">Odaberi sve tačne odgovore</p>
+            )}
+            {!isCheckbox && <div className="mb-4" />}
 
             <div className="flex flex-col gap-3 mb-6">
               {pitanje.options.map((opt) => {
-                const isCorrect = opt === pitanje.answer;
-                const isSelected = opt === selected;
+                const correctArr = getCorrectArr(pitanje);
+                const isCorrect = isCheckbox ? correctArr.includes(opt) : opt === pitanje.answer;
+                const isSelected = isCheckbox ? selectedMulti.includes(opt) : opt === selected;
+
                 let cls = "border-2 rounded-2xl px-5 py-4 text-left font-medium transition-all cursor-pointer ";
                 if (!answered) {
-                  cls += "border-border/50 hover:border-primary/50 hover:bg-primary/5";
+                  cls += isSelected
+                    ? "border-primary bg-primary/10"
+                    : "border-border/50 hover:border-primary/50 hover:bg-primary/5";
                 } else if (isCorrect) {
                   cls += "border-emerald-400 bg-emerald-50 text-emerald-800";
-                } else if (isSelected) {
+                } else if (isSelected && !isCorrect) {
                   cls += "border-red-400 bg-red-50 text-red-800";
                 } else {
                   cls += "border-border/30 text-muted-foreground opacity-60";
@@ -359,6 +394,11 @@ export default function KvizPage() {
                 return (
                   <button key={opt} onClick={() => handleSelect(opt)} className={cls} disabled={answered}>
                     <div className="flex items-center gap-3">
+                      {isCheckbox && !answered && (
+                        <div className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-border"}`}>
+                          {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+                        </div>
+                      )}
                       {answered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
                       {answered && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
                       <span>{opt}</span>
@@ -367,6 +407,15 @@ export default function KvizPage() {
                 );
               })}
             </div>
+
+            {isCheckbox && !answered && (
+              <div className="flex justify-end mb-6">
+                <Button onClick={confirmCheckbox} disabled={selectedMulti.length === 0}
+                  className="rounded-2xl px-8 font-bold">
+                  Potvrdi odgovor
+                </Button>
+              </div>
+            )}
 
             {answered && pitanje.explanation && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
