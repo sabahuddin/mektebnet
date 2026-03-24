@@ -18,7 +18,6 @@ interface Lekcija {
 const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; border: string; ring: string }> = {
   1: { label: "Nivo 1 – Osnovi", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-300" },
   2: { label: "Nivo 2 – Srednji", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", ring: "ring-blue-300" },
-  21: { label: "Nivo 2 – Prošireni", color: "text-cyan-700", bg: "bg-cyan-50", border: "border-cyan-200", ring: "ring-cyan-300" },
   3: { label: "Nivo 3 – Napredni", color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200", ring: "ring-violet-300" },
 };
 
@@ -36,17 +35,29 @@ export default function IlmihalPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
+  // Nivo 21 is the extended Nivo 2 — treat them as one group (displayNivo = 2)
+  const displayNivo = (l: Lekcija) => (l.nivo === 21 ? 2 : l.nivo);
+
   const filtered = lekcije.filter(l => {
-    if (activeNivo && l.nivo !== activeNivo) return false;
+    if (activeNivo) {
+      const dn = displayNivo(l);
+      if (dn !== activeNivo) return false;
+    }
     if (search && !l.naslov.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
   const grouped = filtered.reduce((acc: Record<number, Lekcija[]>, l) => {
-    if (!acc[l.nivo]) acc[l.nivo] = [];
-    acc[l.nivo].push(l);
+    const dn = displayNivo(l);
+    if (!acc[dn]) acc[dn] = [];
+    acc[dn].push(l);
     return acc;
   }, {});
+
+  // Sort each group by redoslijed
+  for (const n of Object.keys(grouped)) {
+    grouped[Number(n)].sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
+  }
 
   const toggleCollapse = (nivo: number) => {
     setCollapsed(prev => {
@@ -81,12 +92,12 @@ export default function IlmihalPage() {
               className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${!activeNivo ? "bg-primary text-primary-foreground border-primary" : "bg-white border-border/70 text-muted-foreground hover:bg-muted"}`}>
               Svi
             </button>
-            {[1, 2, 21, 3].map(n => {
+            {[1, 2, 3].map(n => {
               const info = NIVO_LABELS[n];
               return (
                 <button key={n} onClick={() => setActiveNivo(n === activeNivo ? null : n)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${activeNivo === n ? `${info.bg} ${info.color} ${info.border}` : "bg-white border-border/70 text-muted-foreground hover:bg-muted"}`}>
-                  Nivo {n === 21 ? "2+" : n}
+                  Nivo {n}
                 </button>
               );
             })}
@@ -100,7 +111,7 @@ export default function IlmihalPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-5">
-            {([1, 2, 21, 3] as number[]).filter(n => grouped[n]?.length > 0).map(nivo => {
+            {([1, 2, 3] as number[]).filter(n => grouped[n]?.length > 0).map(nivo => {
               const info = NIVO_LABELS[nivo];
               const isCollapsed = collapsed.has(nivo);
               const items = grouped[nivo];

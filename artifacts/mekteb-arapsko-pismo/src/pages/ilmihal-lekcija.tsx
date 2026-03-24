@@ -326,7 +326,7 @@ export default function IlmihalLekcijaPage() {
     else { audioRef.current.play(); setIsPlaying(true); }
   };
 
-  const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 21: "Nivo 2 — Dio II", 3: "Nivo 3" };
+  const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 21: "Nivo 2", 3: "Nivo 3" };
 
   if (isLoading) {
     return (
@@ -389,15 +389,15 @@ export default function IlmihalLekcijaPage() {
         {/* Hero image */}
         {parsed.heroImage && (
           <div className="rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)]">
-            <img src={`/edu${parsed.heroImage.startsWith("/") ? parsed.heroImage : "/" + parsed.heroImage}`}
+            <img
+              src={parsed.heroImage}
               alt={lekcija.naslov}
               className="w-full h-auto aspect-[3/2] object-cover"
               onError={e => {
                 const img = e.target as HTMLImageElement;
                 if (!img.dataset.fallback) {
                   img.dataset.fallback = "1";
-                  const path = parsed.heroImage!.startsWith("/") ? parsed.heroImage! : "/" + parsed.heroImage!;
-                  img.src = `https://mekteb.net/edu${path}`;
+                  img.src = `https://mekteb.net${parsed.heroImage}`;
                 } else {
                   img.style.display = "none";
                 }
