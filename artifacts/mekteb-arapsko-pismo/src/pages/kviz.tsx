@@ -130,7 +130,11 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                 <input value={p.slika || ""} onChange={e => updatePitanje(activePitanje, "slika", e.target.value)}
                   placeholder="/edu/assets/images/pitanja/..."
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                {p.slika && <img src={p.slika} alt="" className="mt-2 rounded-xl max-h-32 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />}
+                {p.slika && (
+                  <div className="mt-2 rounded-xl overflow-hidden border border-border aspect-[3/2]">
+                    <img src={p.slika} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -434,21 +438,24 @@ export default function KvizPage() {
             {(pitanje.image || pitanje.slika) && (() => {
               const imgRaw = pitanje.image || pitanje.slika!;
               const imgPath = imgRaw.startsWith("/") ? imgRaw : "/" + imgRaw;
+              const imgSrc = imgPath.startsWith("/edu") ? imgPath : `/edu${imgPath}`;
               return (
-                <img
-                  src={`/edu${imgPath}`}
-                  alt=""
-                  className="w-full mb-5 object-contain max-h-64 edu-image"
-                  onError={e => {
-                    const img = e.target as HTMLImageElement;
-                    if (!img.dataset.fallback) {
-                      img.dataset.fallback = "1";
-                      img.src = `https://mekteb.net/edu${imgPath}`;
-                    } else {
-                      img.style.display = "none";
-                    }
-                  }}
-                />
+                <div className="rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)]">
+                  <img
+                    src={imgSrc}
+                    alt=""
+                    className="w-full h-auto aspect-[3/2] object-cover"
+                    onError={e => {
+                      const img = e.target as HTMLImageElement;
+                      if (!img.dataset.fallback) {
+                        img.dataset.fallback = "1";
+                        img.src = `https://mekteb.net${imgPath.startsWith("/edu") ? imgPath : "/edu" + imgPath}`;
+                      } else {
+                        (img.parentElement as HTMLElement).style.display = "none";
+                      }
+                    }}
+                  />
+                </div>
               );
             })()}
 
