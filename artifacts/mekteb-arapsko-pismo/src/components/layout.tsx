@@ -51,12 +51,7 @@ export function Layout({ children }: LayoutProps) {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group cursor-pointer shrink-0">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
-              <span className="text-white font-arabic font-bold text-2xl mb-0.5">م</span>
-            </div>
-            <span className="font-extrabold text-xl tracking-tight text-primary hidden sm:block">
-              mekteb<span className="text-secondary">.net</span>
-            </span>
+            <img src="/logo-mekteb.png" alt="Mekteb" className="h-10 w-auto group-hover:scale-105 transition-transform" />
           </Link>
 
           {/* Desktop Nav */}
