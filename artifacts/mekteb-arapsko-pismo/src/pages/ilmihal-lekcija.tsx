@@ -70,16 +70,24 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
     if (!contentDiv) return;
     const contentHtml = contentDiv.innerHTML.trim();
 
-    // Default open: has "active" class
-    const isActive = contentDiv.classList.contains("active") || sectionId === "STORY";
+    // Default open: has "active" class or is the story/first narrative section
+    const titleCheck = title.toUpperCase().replace(/^\d+\.\s*/, "");
+    const isStoryLike = sectionId === "STORY" || titleCheck.includes("PUTOKAZ") || titleCheck.includes("PRIČA") || titleCheck.includes("PRICA");
+    const isActive = contentDiv.classList.contains("active") || isStoryLike;
 
-    // Classify section type
+    // Classify section type — first by sectionId, then by title text as fallback
     let type: AccordionSection["type"] = "other";
-    if (sectionId === "STORY") type = "story";
-    else if (sectionId === "ILMIHAL") type = "ilmihal";
-    else if (sectionId === "QUIZ_BOX") type = "quiz_box";
-    else if (sectionId.includes("PITAN") || sectionId.includes("RAZGOVOR")) type = "pitanja";
-    else if (sectionId.includes("ZADATAK") || sectionId.includes("ZADACI") || sectionId.includes("AKTIVNOST")) type = "zadatak";
+    const sid = sectionId.toUpperCase();
+    const titleUp = title.toUpperCase().replace(/^\d+\.\s*/, ""); // strip "1. " prefix
+    const classify = (s: string) => {
+      if (s === "STORY" || s.includes("PRIČA") || s.includes("PRICA") || s.includes("PUTOKAZ") || s.includes("PUTO")) return "story" as const;
+      if (s === "ILMIHAL" || s.includes("ILMIHAL")) return "ilmihal" as const;
+      if (s === "QUIZ_BOX" || s.includes("PROVJERI") || s.includes("KVIZ") || s.includes("ZNANJE")) return "quiz_box" as const;
+      if (s.includes("PITAN") || s.includes("RAZGOVOR")) return "pitanja" as const;
+      if (s.includes("ZADATAK") || s.includes("ZADACI") || s.includes("AKTIVNOST")) return "zadatak" as const;
+      return null;
+    };
+    type = classify(sid) || classify(titleUp) || "other";
 
     sections.push({ id: sectionId, title, html: contentHtml, defaultOpen: isActive, type });
   });
