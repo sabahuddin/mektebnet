@@ -20,11 +20,11 @@ const MOCK_LESSON_DETAIL = {
       { speaker: "dzana", text: "Amir, jesi li znao da arapska slova sama po sebi uglavnom nemaju samoglasnik?" },
       { speaker: "amir",  text: "Nisam! Kako onda znamo kako se čitaju?" },
       { speaker: "dzana", text: "Zato postoje hareketi! To su mali znakovi koji se stavljaju iznad ili ispod slova." },
-      { speaker: "amir",  text: "A, kao tačkice, samo umjesto suglasnika za samoglasnike?" },
-      { speaker: "dzana", text: "Tačno! Na primjer, elif sa fehom iznad se čita 'e', a sa kesrom ispod čita se 'i'." },
-      { speaker: "amir",  text: "A šta je sa dammom? Kako izgleda?" },
+      { speaker: "amir",  text: "A, kao tačkice — samo za samoglasnike?" },
+      { speaker: "dzana", text: "Tačno! Fetha iznad elife daje zvuk 'e', a kesra ispod daje zvuk 'i'." },
+      { speaker: "amir",  text: "A šta je damma? Kako izgleda?" },
       { speaker: "dzana", text: "Damma izgleda kao mali zarez iznad slova i daje zvuk 'u'. Elif s dammom čita se 'u'." },
-      { speaker: "amir",  text: "Znači, samo jedno slovo može se čitati na više načina! Elif je kao čarobnjak." },
+      { speaker: "amir",  text: "Super! Znači samo elif može se čitati kao 'e', 'i' ili 'u' — ovisno o hareketu!" },
     ]
   },
   letterData: [
@@ -63,31 +63,115 @@ const MOCK_LESSON_DETAIL = {
   ],
   exercises: [
     {
-      title: "Čitaj: Elif s harekom",
-      description: "Prepoznaj koji zvuk daje hareket na elifu",
+      title: "Prepoznaj hareket",
+      description: "Pogledaj elif s harekom — koji je to hareket?",
       icon: "👁️",
       hasanatReward: 15,
-      words: [
-        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
-        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
-        { arabic: "أُ", latin: "u",  meaning: "Damma" },
-        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
-        { arabic: "أُ", latin: "u",  meaning: "Damma" },
-        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
-        { arabic: "أُ", latin: "u",  meaning: "Damma" },
-        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
-        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
-        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
-        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
-        { arabic: "أُ", latin: "u",  meaning: "Damma" },
-        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
-        { arabic: "أُ", latin: "u",  meaning: "Damma" },
-        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
-        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
-        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
-        { arabic: "أُ", latin: "u",  meaning: "Damma" },
-        { arabic: "أَ", latin: "e",  meaning: "Fetha" },
-        { arabic: "إِ", latin: "i",  meaning: "Kesra" },
+      items: [
+        { show: "أَ", answer: "Fetha" },
+        { show: "إِ", answer: "Kesra" },
+        { show: "أُ", answer: "Damma" },
+        { show: "أُ", answer: "Damma" },
+        { show: "أَ", answer: "Fetha" },
+        { show: "إِ", answer: "Kesra" },
+        { show: "أَ", answer: "Fetha" },
+        { show: "أُ", answer: "Damma" },
+        { show: "إِ", answer: "Kesra" },
+        { show: "أَ", answer: "Fetha" },
+        { show: "إِ", answer: "Kesra" },
+        { show: "أُ", answer: "Damma" },
+        { show: "أَ", answer: "Fetha" },
+        { show: "إِ", answer: "Kesra" },
+        { show: "أُ", answer: "Damma" },
+        { show: "أَ", answer: "Fetha" },
+        { show: "أُ", answer: "Damma" },
+        { show: "إِ", answer: "Kesra" },
+        { show: "أَ", answer: "Fetha" },
+        { show: "أُ", answer: "Damma" },
+      ]
+    },
+    {
+      title: "Koji zvuk?",
+      description: "Pogledaj hareket simbol — koji zvuk daje?",
+      icon: "🔤",
+      hasanatReward: 15,
+      items: [
+        { show: "ـَـ", answer: "e" },
+        { show: "ـِـ", answer: "i" },
+        { show: "ـُـ", answer: "u" },
+        { show: "ـِـ", answer: "i" },
+        { show: "ـَـ", answer: "e" },
+        { show: "ـُـ", answer: "u" },
+        { show: "ـَـ", answer: "e" },
+        { show: "ـِـ", answer: "i" },
+        { show: "ـُـ", answer: "u" },
+        { show: "ـِـ", answer: "i" },
+        { show: "ـَـ", answer: "e" },
+        { show: "ـُـ", answer: "u" },
+        { show: "ـَـ", answer: "e" },
+        { show: "ـُـ", answer: "u" },
+        { show: "ـِـ", answer: "i" },
+        { show: "ـَـ", answer: "e" },
+        { show: "ـُـ", answer: "u" },
+        { show: "ـِـ", answer: "i" },
+        { show: "ـَـ", answer: "e" },
+        { show: "ـِـ", answer: "i" },
+      ]
+    },
+    {
+      title: "Slušaj i odaberi",
+      description: "Pritisni dugme 🔊 — koji elif odgovara zvuku?",
+      icon: "🎧",
+      hasanatReward: 20,
+      items: [
+        { show: "🔊 e", answer: "أَ" },
+        { show: "🔊 i", answer: "إِ" },
+        { show: "🔊 u", answer: "أُ" },
+        { show: "🔊 u", answer: "أُ" },
+        { show: "🔊 e", answer: "أَ" },
+        { show: "🔊 i", answer: "إِ" },
+        { show: "🔊 e", answer: "أَ" },
+        { show: "🔊 u", answer: "أُ" },
+        { show: "🔊 i", answer: "إِ" },
+        { show: "🔊 e", answer: "أَ" },
+        { show: "🔊 u", answer: "أُ" },
+        { show: "🔊 i", answer: "إِ" },
+        { show: "🔊 e", answer: "أَ" },
+        { show: "🔊 i", answer: "إِ" },
+        { show: "🔊 u", answer: "أُ" },
+        { show: "🔊 e", answer: "أَ" },
+        { show: "🔊 u", answer: "أُ" },
+        { show: "🔊 i", answer: "إِ" },
+        { show: "🔊 e", answer: "أَ" },
+        { show: "🔊 u", answer: "أُ" },
+      ]
+    },
+    {
+      title: "Napiši zvuk",
+      description: "Pogledaj elif — napiši latinično koji zvuk ima",
+      icon: "✏️",
+      hasanatReward: 10,
+      items: [
+        { show: "أَ", answer: "e" },
+        { show: "إِ", answer: "i" },
+        { show: "أُ", answer: "u" },
+        { show: "أَ", answer: "e" },
+        { show: "أُ", answer: "u" },
+        { show: "إِ", answer: "i" },
+        { show: "أُ", answer: "u" },
+        { show: "أَ", answer: "e" },
+        { show: "إِ", answer: "i" },
+        { show: "أَ", answer: "e" },
+        { show: "إِ", answer: "i" },
+        { show: "أُ", answer: "u" },
+        { show: "أَ", answer: "e" },
+        { show: "أُ", answer: "u" },
+        { show: "إِ", answer: "i" },
+        { show: "أَ", answer: "e" },
+        { show: "إِ", answer: "i" },
+        { show: "أُ", answer: "u" },
+        { show: "أَ", answer: "e" },
+        { show: "إِ", answer: "i" },
       ]
     },
   ],
@@ -97,8 +181,6 @@ const COLOUR_MAP: Record<string, { card: string; badge: string; sound: string }>
   teal:   { card: "bg-teal-50 border-teal-300",    badge: "bg-teal-500 text-white",   sound: "bg-teal-100 text-teal-700 hover:bg-teal-200" },
   blue:   { card: "bg-blue-50 border-blue-300",    badge: "bg-blue-500 text-white",   sound: "bg-blue-100 text-blue-700 hover:bg-blue-200" },
   violet: { card: "bg-violet-50 border-violet-300",badge: "bg-violet-500 text-white", sound: "bg-violet-100 text-violet-700 hover:bg-violet-200" },
-  gray:   { card: "bg-gray-50 border-gray-300",    badge: "bg-gray-500 text-white",   sound: "bg-gray-100 text-gray-700 hover:bg-gray-200" },
-  orange: { card: "bg-orange-50 border-orange-300",badge: "bg-orange-500 text-white", sound: "bg-orange-100 text-orange-700 hover:bg-orange-200" },
 };
 
 function playAudio(file: string) {
@@ -110,9 +192,6 @@ export default function LessonDetail() {
   const data = MOCK_LESSON_DETAIL;
   const dzanaImg = `${BASE}images/dzana-avatar.png`;
   const amirImg  = `${BASE}images/amir-avatar.png`;
-
-  const dzanaLines = data.story.lines.filter(l => l.speaker === "dzana");
-  const amirLines  = data.story.lines.filter(l => l.speaker === "amir");
 
   return (
     <Layout>
@@ -149,53 +228,45 @@ export default function LessonDetail() {
         </div>
       </div>
 
-      {/* Priča — dvije kolone na desktopu */}
+      {/* Priča — isprepleten chat */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-orange-50 to-pink-50 border-orange-100">
         <h2 className="text-2xl font-bold text-orange-800 flex items-center gap-2 mb-6">
           <BookOpen className="w-6 h-6" />
           Priča za danas
         </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Džana — lijeva kolona */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3 mb-1">
-              <img src={dzanaImg} alt="Džana"
-                className="w-12 h-12 rounded-full border-3 border-white shadow-md object-cover" />
-              <span className="text-lg font-extrabold text-orange-700">Džana</span>
-            </div>
-            {dzanaLines.map((line, i) => (
+        <div className="flex flex-col gap-4">
+          {data.story.lines.map((line, i) => {
+            const isDzana = line.speaker === "dzana";
+            return (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.15 }}
-                className="bg-white rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm text-base font-medium leading-relaxed text-foreground border border-orange-100"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.12 }}
+                className={`flex items-end gap-3 ${isDzana ? "" : "flex-row-reverse"}`}
               >
-                {line.text}
+                <img
+                  src={isDzana ? dzanaImg : amirImg}
+                  alt={isDzana ? "Džana" : "Amir"}
+                  className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover shrink-0"
+                />
+                <div className={`flex flex-col gap-1 max-w-[78%] ${isDzana ? "items-start" : "items-end"}`}>
+                  <span className={`text-sm font-extrabold px-1 ${isDzana ? "text-orange-700" : "text-primary"}`}>
+                    {isDzana ? "Džana" : "Amir"}
+                  </span>
+                  <div
+                    className={`px-5 py-3 text-base font-medium leading-relaxed shadow-sm ${
+                      isDzana
+                        ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
+                        : "bg-primary text-white rounded-2xl rounded-br-sm"
+                    }`}
+                  >
+                    {line.text}
+                  </div>
+                </div>
               </motion.div>
-            ))}
-          </div>
-
-          {/* Amir — desna kolona */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3 mb-1 justify-end">
-              <span className="text-lg font-extrabold text-primary">Amir</span>
-              <img src={amirImg} alt="Amir"
-                className="w-12 h-12 rounded-full border-3 border-white shadow-md object-cover" />
-            </div>
-            {amirLines.map((line, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.15 + 0.08 }}
-                className="bg-primary rounded-2xl rounded-tr-sm px-5 py-4 shadow-sm text-base font-medium leading-relaxed text-white"
-              >
-                {line.text}
-              </motion.div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </Card>
 
@@ -203,7 +274,7 @@ export default function LessonDetail() {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-5">
           <Info className="w-6 h-6 text-primary" />
-          Upoznajmo slova i harekete
+          Upoznajmo slovo i harekete
         </h2>
 
         {data.letterData.map((letter, i) => (
@@ -227,7 +298,7 @@ export default function LessonDetail() {
                   </span>
                 )}
               </div>
-              <div className="text-9xl text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
+              <div className="text-9xl text-primary shrink-0" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
                 {letter.arabic}
               </div>
             </div>
@@ -252,7 +323,7 @@ export default function LessonDetail() {
 
         {/* Hareketi kartice */}
         <h3 className="text-xl font-bold text-foreground mb-4">Hareketi — znakovi za samoglasnike</h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4">
           {data.hareketi.map((h, i) => {
             const c = COLOUR_MAP[h.colour];
             return (
@@ -260,14 +331,14 @@ export default function LessonDetail() {
                 key={i}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
+                transition={{ delay: i * 0.1 }}
                 className={`border-2 rounded-2xl p-5 ${c.card}`}
               >
-                {/* Top: arabic + badge + audio */}
+                {/* Elif s harekom — fiksirani container */}
                 <div className="flex items-center justify-between mb-4">
                   <div
                     className="w-24 h-24 flex items-center justify-center overflow-hidden shrink-0"
-                    style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "5rem", lineHeight: 1 }}
+                    style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "4.5rem", lineHeight: 1 }}
                   >
                     {h.arabic}
                   </div>
@@ -284,13 +355,12 @@ export default function LessonDetail() {
                   </div>
                 </div>
 
-                {/* Hareke symbol + name */}
+                {/* Hareke simbol (crtica) + ime */}
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-5xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{h.hareke}</span>
                   <span className="text-2xl font-extrabold">{h.name}</span>
                 </div>
 
-                {/* Description */}
                 <p className="text-base font-medium leading-snug">{h.description}</p>
                 {h.napomena && (
                   <p className="text-sm mt-2 opacity-75 italic">{h.napomena}</p>
@@ -301,15 +371,15 @@ export default function LessonDetail() {
         </div>
       </div>
 
-      {/* Vježbe */}
+      {/* Vježbe — 4 vrste */}
       <div className="mb-12">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-6">
           <Gamepad2 className="w-6 h-6 text-accent" />
           Vježbe
         </h2>
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 gap-6">
           {data.exercises.map((ex, ei) => (
-            <Card key={ei} className="p-5 border-2 border-border/50">
+            <Card key={ei} className="p-5 border-2 border-border/50 flex flex-col">
               <div className="flex items-center gap-3 mb-5">
                 <span className="text-3xl">{ex.icon}</span>
                 <div className="flex-1">
@@ -320,18 +390,27 @@ export default function LessonDetail() {
                   <Star className="w-5 h-5 fill-current" /> {ex.hasanatReward}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                {ex.words.map((w, wi) => (
-                  <div key={wi} className="bg-muted/50 rounded-xl px-3 py-3 flex items-center justify-between gap-2">
-                    <span className="text-3xl font-bold text-foreground" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{w.arabic}</span>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-primary">{w.latin}</div>
-                      <div className="text-xs text-muted-foreground">{w.meaning}</div>
-                    </div>
+
+              {/* Pregled prvih 6 stavki */}
+              <div className="grid grid-cols-3 gap-2 mb-5 flex-1">
+                {ex.items.slice(0, 6).map((item, wi) => (
+                  <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 text-center">
+                    <span
+                      className="text-4xl font-bold text-foreground leading-none"
+                      style={{ fontFamily: "Noto Naskh Arabic, serif" }}
+                    >
+                      {item.show}
+                    </span>
+                    <span className="text-sm font-bold text-primary">{item.answer}</span>
                   </div>
                 ))}
               </div>
-              <Button className="w-full mt-4 game-button text-base py-5" size="sm">
+
+              <div className="text-center text-sm text-muted-foreground mb-4 font-medium">
+                + još {ex.items.length - 6} pitanja u igri
+              </div>
+
+              <Button className="w-full game-button text-base py-5" size="sm">
                 <PlayCircle className="w-5 h-5 mr-2" /> Počni vježbu
               </Button>
             </Card>
