@@ -7,6 +7,7 @@ import {
   ucenikProfiliTable,
   mektebiTable,
   pretplateTable,
+  kvizoviTable,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -139,6 +140,23 @@ router.post("/reset-password", async (req, res) => {
     const { userId, newPassword } = req.body;
     const newHash = await bcrypt.hash(newPassword, 10);
     await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, userId));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/kvizovi/:id — Update quiz questions/title
+router.put("/kvizovi/:id", async (req, res) => {
+  try {
+    const { pitanja, naslov, isPublished } = req.body;
+    const updates: Record<string, any> = {};
+    if (pitanja !== undefined) {
+      updates.pitanja = typeof pitanja === "string" ? pitanja : JSON.stringify(pitanja);
+    }
+    if (naslov !== undefined) updates.naslov = naslov;
+    if (isPublished !== undefined) updates.isPublished = isPublished;
+    await db.update(kvizoviTable).set(updates).where(eq(kvizoviTable.id, parseInt(req.params.id)));
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
