@@ -128,7 +128,7 @@ function LekcijeStrip({ lekcije, currentSlug, onNavigate }: {
 }
 
 // ──────────────────────────────────────────────────
-// Admin content editor modal
+// Admin content editor modal — split panel (desktop only)
 // ──────────────────────────────────────────────────
 function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   lekcija: { id: number; naslov: string; contentHtml: string };
@@ -139,45 +139,112 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   const { toast } = useToast();
   const [html, setHtml] = useState(lekcija.contentHtml);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const handleChange = (val: string) => {
+    setHtml(val);
+    setIsDirty(true);
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: html }, token);
-      toast({ title: "Sačuvano! ✓", description: "Sadržaj lekcije ažuriran" });
+      toast({ title: "Sačuvano! ✓", description: "Sadržaj lekcije uspješno ažuriran" });
+      setIsDirty(false);
       onSaved(html);
       onClose();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće sačuvati", variant: "destructive" });
+      toast({ title: "Greška pri čuvanju", description: "Pokušaj ponovo", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleClose = () => {
+    if (isDirty && !window.confirm("Ima nesačuvanih promjena. Zatvori bez čuvanja?")) return;
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex flex-col">
-      <div className="bg-white border-b border-border px-5 py-3 flex items-center justify-between shrink-0">
-        <div>
-          <h3 className="font-extrabold text-base text-foreground">Uredi sadržaj lekcije</h3>
-          <p className="text-xs text-muted-foreground">{lekcija.naslov}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={handleSave} disabled={isSaving} size="sm" className="rounded-xl flex items-center gap-1.5">
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            Sačuvaj
-          </Button>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      {/* Mobile guard */}
+      <div className="flex md:hidden flex-col items-center justify-center h-full gap-4 p-8 text-center">
+        <FileEdit className="w-12 h-12 text-amber-500" />
+        <h3 className="font-extrabold text-lg text-foreground">Editor dostupan samo na desktopu</h3>
+        <p className="text-muted-foreground text-sm">Otvori stranicu na računaru da bi mogao/la uređivati sadržaj lekcije.</p>
+        <Button variant="outline" onClick={onClose} className="rounded-xl">Zatvori</Button>
       </div>
-      <div className="flex-1 overflow-hidden p-4">
-        <textarea
-          value={html}
-          onChange={e => setHtml(e.target.value)}
-          className="w-full h-full border border-border rounded-xl p-4 font-mono text-xs leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
-          spellCheck={false}
-        />
+
+      {/* Desktop split panel */}
+      <div className="hidden md:flex flex-col h-full">
+        {/* Top bar */}
+        <div className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border bg-white shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <FileEdit className="w-5 h-5 text-amber-600 shrink-0" />
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-sm text-foreground truncate">Uredi sadržaj: {lekcija.naslov}</h3>
+              <p className="text-xs text-muted-foreground">Lijevo: HTML kod — Desno: Vizuelni pregled (ažurira se u realnom vremenu)</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isDirty && (
+              <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                Nesačuvano
+              </span>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !isDirty}
+              className="rounded-xl px-5 font-bold flex items-center gap-2"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSaving ? "Čuvam..." : "Sačuvaj"}
+            </Button>
+            <button
+              onClick={handleClose}
+              className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="Zatvori"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Split panels */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left: HTML editor */}
+          <div className="w-1/2 flex flex-col border-r border-border">
+            <div className="px-4 py-2 bg-zinc-800 text-zinc-300 text-xs font-mono font-bold flex items-center gap-2 shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
+              <span className="ml-2">content_html</span>
+            </div>
+            <textarea
+              value={html}
+              onChange={e => handleChange(e.target.value)}
+              className="flex-1 bg-zinc-900 text-green-300 font-mono text-xs leading-relaxed p-4 resize-none focus:outline-none"
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+          </div>
+
+          {/* Right: live preview */}
+          <div className="w-1/2 flex flex-col overflow-hidden">
+            <div className="px-4 py-2 bg-muted/60 text-xs font-bold text-muted-foreground border-b border-border shrink-0 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-teal-500 inline-block animate-pulse" />
+              Vizuelni pregled
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 bg-white">
+              <div
+                className="ilmihal-content prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
