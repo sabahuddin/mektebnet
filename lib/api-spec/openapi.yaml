@@ -1,0 +1,404 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Mekteb - Arapsko pismo API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: lessons
+    description: Lesson content
+  - name: progress
+    description: Student progress tracking
+  - name: exercises
+    description: Exercise sessions
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /lessons:
+    get:
+      operationId: getLessons
+      tags: [lessons]
+      summary: Get all lessons
+      responses:
+        "200":
+          description: List of lessons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lesson"
+
+  /lessons/{id}:
+    get:
+      operationId: getLessonById
+      tags: [lessons]
+      summary: Get lesson by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lesson details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /progress:
+    get:
+      operationId: getProgress
+      tags: [progress]
+      summary: Get student progress
+      parameters:
+        - name: studentId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProgress"
+
+  /progress/lesson:
+    post:
+      operationId: saveLessonProgress
+      tags: [progress]
+      summary: Save lesson completion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveLessonProgressRequest"
+      responses:
+        "200":
+          description: Progress saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProgress"
+
+  /exercises/session:
+    post:
+      operationId: saveExerciseSession
+      tags: [exercises]
+      summary: Save exercise session results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExerciseSessionRequest"
+      responses:
+        "200":
+          description: Session saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseSessionResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderNum:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        lessonType:
+          type: string
+          enum: [intro, new_content, repeat, revision, mega_revision]
+        letters:
+          type: array
+          items:
+            type: string
+        durationMin:
+          type: integer
+        isUnlocked:
+          type: boolean
+        isCompleted:
+          type: boolean
+        hasanatEarned:
+          type: integer
+      required:
+        - id
+        - orderNum
+        - slug
+        - title
+        - lessonType
+        - letters
+        - durationMin
+        - isUnlocked
+        - isCompleted
+        - hasanatEarned
+
+    LessonDetail:
+      allOf:
+        - $ref: "#/components/schemas/Lesson"
+        - type: object
+          properties:
+            story:
+              $ref: "#/components/schemas/LessonStory"
+            letterData:
+              type: array
+              items:
+                $ref: "#/components/schemas/LetterData"
+            exercises:
+              type: array
+              items:
+                $ref: "#/components/schemas/ExerciseConfig"
+          required:
+            - letterData
+            - exercises
+
+    LessonStory:
+      type: object
+      properties:
+        character:
+          type: string
+          enum: [dzana, amir, both]
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              speaker:
+                type: string
+              text:
+                type: string
+              emotion:
+                type: string
+            required:
+              - speaker
+              - text
+              - emotion
+      required:
+        - character
+        - lines
+
+    LetterData:
+      type: object
+      properties:
+        arabic:
+          type: string
+        name:
+          type: string
+        transliteration:
+          type: string
+        forms:
+          type: object
+          properties:
+            isolated:
+              type: string
+            initial:
+              type: string
+            medial:
+              type: string
+            final:
+              type: string
+          required:
+            - isolated
+            - initial
+            - medial
+            - final
+        dotCount:
+          type: integer
+        nonConnecting:
+          type: boolean
+        visualAssociation:
+          type: string
+        soundFile:
+          type: string
+      required:
+        - arabic
+        - name
+        - transliteration
+        - forms
+        - dotCount
+        - nonConnecting
+        - visualAssociation
+        - soundFile
+
+    ExerciseConfig:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [find_letter, count_dots, which_form, yes_no, listen_recognize, group_difference]
+        title:
+          type: string
+        rounds:
+          type: integer
+        timeLimit:
+          type: integer
+        hasanatReward:
+          type: integer
+      required:
+        - type
+        - title
+        - rounds
+        - hasanatReward
+
+    StudentProgress:
+      type: object
+      properties:
+        studentId:
+          type: string
+        totalHasanat:
+          type: integer
+        completedLessons:
+          type: array
+          items:
+            type: integer
+        badges:
+          type: array
+          items:
+            $ref: "#/components/schemas/Badge"
+        streakDays:
+          type: integer
+        lastActivityDate:
+          type: string
+          format: date
+      required:
+        - studentId
+        - totalHasanat
+        - completedLessons
+        - badges
+        - streakDays
+
+    Badge:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        emoji:
+          type: string
+        description:
+          type: string
+        earnedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - emoji
+        - description
+        - earnedAt
+
+    SaveLessonProgressRequest:
+      type: object
+      properties:
+        studentId:
+          type: string
+        lessonId:
+          type: integer
+        score:
+          type: integer
+        maxScore:
+          type: integer
+        timeSpentSeconds:
+          type: integer
+      required:
+        - studentId
+        - lessonId
+        - score
+        - maxScore
+        - timeSpentSeconds
+
+    ExerciseSessionRequest:
+      type: object
+      properties:
+        studentId:
+          type: string
+        lessonId:
+          type: integer
+        exerciseType:
+          type: string
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        timeSpentSeconds:
+          type: integer
+      required:
+        - studentId
+        - lessonId
+        - exerciseType
+        - correctAnswers
+        - totalQuestions
+        - timeSpentSeconds
+
+    ExerciseSessionResult:
+      type: object
+      properties:
+        hasanatEarned:
+          type: integer
+        newBadges:
+          type: array
+          items:
+            $ref: "#/components/schemas/Badge"
+        totalHasanat:
+          type: integer
+        streakBonus:
+          type: integer
+      required:
+        - hasanatEarned
+        - newBadges
+        - totalHasanat
+        - streakBonus
