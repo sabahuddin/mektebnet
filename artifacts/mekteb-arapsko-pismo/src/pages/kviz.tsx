@@ -14,6 +14,7 @@ interface Pitanje {
   options: string[];
   answer: string;
   explanation?: string;
+  image?: string;
   slika?: string;
 }
 
@@ -292,23 +293,26 @@ export default function KvizPage() {
           <motion.div key={current} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             className="bg-white rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
 
-            {pitanje.slika && (
-              <img
-                src={`/edu${pitanje.slika.startsWith("/") ? pitanje.slika : "/" + pitanje.slika}`}
-                alt=""
-                className="w-full mb-5 object-contain max-h-64 edu-image"
-                onError={e => {
-                  const img = e.target as HTMLImageElement;
-                  if (!img.dataset.fallback) {
-                    img.dataset.fallback = "1";
-                    const path = pitanje.slika!.startsWith("/") ? pitanje.slika! : "/" + pitanje.slika!;
-                    img.src = `https://mekteb.net/edu${path}`;
-                  } else {
-                    img.style.display = "none";
-                  }
-                }}
-              />
-            )}
+            {(pitanje.image || pitanje.slika) && (() => {
+              const imgRaw = pitanje.image || pitanje.slika!;
+              const imgPath = imgRaw.startsWith("/") ? imgRaw : "/" + imgRaw;
+              return (
+                <img
+                  src={`/edu${imgPath}`}
+                  alt=""
+                  className="w-full mb-5 object-contain max-h-64 edu-image"
+                  onError={e => {
+                    const img = e.target as HTMLImageElement;
+                    if (!img.dataset.fallback) {
+                      img.dataset.fallback = "1";
+                      img.src = `https://mekteb.net/edu${imgPath}`;
+                    } else {
+                      img.style.display = "none";
+                    }
+                  }}
+                />
+              );
+            })()}
 
             <p className="text-lg font-bold text-foreground mb-6 leading-relaxed">{pitanje.question}</p>
 
