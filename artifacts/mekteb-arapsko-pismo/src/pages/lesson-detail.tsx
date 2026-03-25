@@ -35,8 +35,9 @@ function QuizModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
-  const isTypeInput = exercise.type === "napiši";
-  const isListening = exercise.type === "slušaj";
+  const isTypeInput   = exercise.type === "napiši";
+  const isListening   = exercise.type === "slušaj";
+  const isReadingSlog = exercise.type === "čitaj-slog";
 
   const [qIdx,       setQIdx]    = useState(0);
   const [score,      setScore]   = useState(0);
@@ -157,6 +158,31 @@ function QuizModal({
             <Volume2 className="w-16 h-16" />
             <span className="text-2xl font-bold opacity-60">Pritisni za zvuk</span>
           </motion.button>
+        ) : isReadingSlog ? (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-white/60 text-lg font-semibold tracking-wide uppercase">
+              👆 Pročitaj naglas, pa odaberi
+            </p>
+            <motion.div
+              key={qIdx}
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white/20 rounded-3xl flex items-center justify-center shadow-xl px-10 py-6"
+              style={{ minWidth: "14rem" }}
+            >
+              <span
+                className="font-bold text-white text-center"
+                style={{
+                  fontSize: item.show.length <= 4 ? "5rem" : item.show.length <= 6 ? "4rem" : "3rem",
+                  lineHeight: "1.6",
+                  fontFamily: "Noto Naskh Arabic, serif",
+                  direction: "rtl",
+                }}
+              >
+                {item.show}
+              </span>
+            </motion.div>
+          </div>
         ) : (
           <motion.div
             key={qIdx}

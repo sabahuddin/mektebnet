@@ -5,7 +5,7 @@ export interface ExerciseItem {
 }
 
 export interface Exercise {
-  type: "prepoznaj-hareket" | "koji-harf" | "slušaj" | "napiši" | "koji-znak";
+  type: "prepoznaj-hareket" | "koji-harf" | "slušaj" | "napiši" | "koji-znak" | "čitaj-slog";
   title: string;
   description: string;
   icon: string;
@@ -291,6 +291,39 @@ export const LESSONS: LessonData[] = [
           { show: "بَ", answer: "e" }, { show: "تُ", answer: "u" },
         ]
       },
+      {
+        type: "čitaj-slog",
+        title: "Čitaj slogove",
+        description: "Pročitaj arapski slog naglas — zatim odaberi ispravan izgovor",
+        icon: "📖", hasanatReward: 25,
+        choices: [
+          "be-te", "te-be", "se-be", "bi-se", "ti-be", "bu-te",
+          "e-be", "e-te", "be-se", "tu-be", "bu-se", "si-te",
+          "be-te-se", "te-be-se", "e-be-te", "se-be-te", "ba-te", "ti-se",
+        ],
+        items: [
+          { show: "بَتَ", answer: "be-te" },
+          { show: "تَبَ", answer: "te-be" },
+          { show: "ثَبَ", answer: "se-be" },
+          { show: "بِثَ", answer: "bi-se" },
+          { show: "تِبَ", answer: "ti-be" },
+          { show: "بُتَ", answer: "bu-te" },
+          { show: "أَبَ", answer: "e-be" },
+          { show: "أَتَ", answer: "e-te" },
+          { show: "بَثَ", answer: "be-se" },
+          { show: "تُبَ", answer: "tu-be" },
+          { show: "بُثَ", answer: "bu-se" },
+          { show: "ثِتَ", answer: "si-te" },
+          { show: "بَتَثَ", answer: "be-te-se" },
+          { show: "تَبَثَ", answer: "te-be-se" },
+          { show: "أَبَتَ", answer: "e-be-te" },
+          { show: "ثَبَتَ", answer: "se-be-te" },
+          { show: "بَتَ", answer: "be-te" },
+          { show: "ثَبَ", answer: "se-be" },
+          { show: "تِبَ", answer: "ti-be" },
+          { show: "أَبَتَ", answer: "e-be-te" },
+        ]
+      },
     ]
   },
 
@@ -404,6 +437,40 @@ export const LESSONS: LessonData[] = [
           { show: "جَ", answer: "e" }, { show: "حِ", answer: "i" }, { show: "خُ", answer: "u" },
           { show: "حَ", answer: "e" }, { show: "جُ", answer: "u" }, { show: "خِ", answer: "i" },
           { show: "جَ", answer: "e" }, { show: "حُ", answer: "u" },
+        ]
+      },
+      {
+        type: "čitaj-slog",
+        title: "Čitaj slogove — svih 7 harfova",
+        description: "Pročitaj arapski slog naglas — zatim odaberi ispravan izgovor",
+        icon: "📖", hasanatReward: 25,
+        choices: [
+          "dže-be", "he-be", "hâ-be", "be-dže", "te-dže", "he-dže",
+          "dže-he", "be-he-se", "he-dže-be", "hâ-be-se", "dže-be-te",
+          "he-be-se", "te-dže-he", "hâ-dže-be", "dži-be-se", "bu-džu-he",
+          "be-he", "te-he", "dže-be-he",
+        ],
+        items: [
+          { show: "جَبَ", answer: "dže-be" },
+          { show: "حَبَ", answer: "he-be" },
+          { show: "خَبَ", answer: "hâ-be" },
+          { show: "بَجَ", answer: "be-dže" },
+          { show: "تَجَ", answer: "te-dže" },
+          { show: "حَجَ", answer: "he-dže" },
+          { show: "جَحَ", answer: "dže-he" },
+          { show: "بَحَثَ", answer: "be-he-se" },
+          { show: "حَجَبَ", answer: "he-dže-be" },
+          { show: "خَبَثَ", answer: "hâ-be-se" },
+          { show: "جَبَتَ", answer: "dže-be-te" },
+          { show: "حَبَثَ", answer: "he-be-se" },
+          { show: "تَجَحَ", answer: "te-dže-he" },
+          { show: "خَجَبَ", answer: "hâ-dže-be" },
+          { show: "جِبَثَ", answer: "dži-be-se" },
+          { show: "بُجُحَ", answer: "bu-džu-he" },
+          { show: "جَبَ", answer: "dže-be" },
+          { show: "حَجَبَ", answer: "he-dže-be" },
+          { show: "بَحَثَ", answer: "be-he-se" },
+          { show: "خَبَثَ", answer: "hâ-be-se" },
         ]
       },
     ]
