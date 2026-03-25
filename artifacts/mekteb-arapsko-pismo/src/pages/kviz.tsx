@@ -52,8 +52,29 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
     setPitanja(prev => prev.map((p, i) => {
       if (i !== pIdx) return p;
       const opts = [...p.options];
+      const oldVal = opts[oIdx];
       opts[oIdx] = value;
-      return { ...p, options: opts };
+      // keep correct array in sync if this option was marked correct
+      const correct = p.correct ? [...p.correct] : (p.answer ? [p.answer] : []);
+      const newCorrect = correct.map(c => c === oldVal ? value : c);
+      return { ...p, options: opts, correct: newCorrect, answer: newCorrect[0] || "" };
+    }));
+  };
+
+  // Toggle an option as correct/incorrect in the editor
+  const toggleCorrectInEditor = (pIdx: number, opt: string) => {
+    setPitanja(prev => prev.map((p, i) => {
+      if (i !== pIdx) return p;
+      const correct = p.correct ? [...p.correct] : (p.answer ? [p.answer] : []);
+      const newCorrect = correct.includes(opt)
+        ? correct.filter(c => c !== opt)
+        : [...correct, opt];
+      return {
+        ...p,
+        correct: newCorrect,
+        answer: newCorrect.length === 1 ? newCorrect[0] : (newCorrect[0] || ""),
+        type: newCorrect.length > 1 ? "checkbox" : (p.type === "checkbox" ? "radio" : p.type),
+      };
     }));
   };
 
@@ -138,18 +159,46 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Opcije (klikni na tačan odgovor da ga označiš)</label>
-                <div className="flex flex-col gap-2">
-                  {p.options.map((opt, oIdx) => (
-                    <div key={oIdx} className="flex items-center gap-2">
-                      <button onClick={() => updatePitanje(activePitanje, "answer", opt)}
-                        className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${p.answer === opt ? "bg-emerald-500 border-emerald-500" : "border-gray-300 hover:border-emerald-400"}`} />
-                      <input value={opt} onChange={e => updateOption(activePitanje, oIdx, e.target.value)}
-                        placeholder={`Opcija ${oIdx + 1}`}
-                        className={`flex-1 border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${p.answer === opt ? "border-emerald-400 bg-emerald-50 font-bold" : "border-border"}`} />
-                    </div>
-                  ))}
-                </div>
+                {(() => {
+                  const correctArr = p.correct && p.correct.length > 0
+                    ? p.correct
+                    : p.answer ? [p.answer] : [];
+                  const isMulti = correctArr.length > 1;
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-muted-foreground">
+                          Opcije — klikni kvadratić da označiš tačan odgovor
+                        </label>
+                        {isMulti && (
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            {correctArr.length} tačna odgovora
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {p.options.map((opt, oIdx) => {
+                          const isCorrect = correctArr.includes(opt);
+                          return (
+                            <div key={oIdx} className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleCorrectInEditor(activePitanje, opt)}
+                                className={`w-5 h-5 rounded border-2 shrink-0 transition-all flex items-center justify-center
+                                  ${isCorrect ? "bg-emerald-500 border-emerald-500" : "border-gray-300 hover:border-emerald-400"}`}
+                              >
+                                {isCorrect && <span className="text-white text-xs font-bold leading-none">✓</span>}
+                              </button>
+                              <input value={opt} onChange={e => updateOption(activePitanje, oIdx, e.target.value)}
+                                placeholder={`Opcija ${oIdx + 1}`}
+                                className={`flex-1 border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40
+                                  ${isCorrect ? "border-emerald-400 bg-emerald-50 font-bold" : "border-border"}`} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <div>
