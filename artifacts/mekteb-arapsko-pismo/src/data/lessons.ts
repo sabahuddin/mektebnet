@@ -35,6 +35,7 @@ export interface HarekeData {
   description: string;
   napomena: string | null;
   soundFile: string;
+  speakText?: string;
 }
 
 export interface LessonData {
@@ -793,6 +794,7 @@ export const LESSONS: LessonData[] = [
         description: "Mali 'w' znak iznad slova — slovo se izgovara udvostručeno",
         napomena: "Uvijek dolazi uz hareket koji kaže koji samoglasnik ide uz udvostručenje",
         soundFile: "hareke-sedda.mp3",
+        speakText: "šidda",
       },
     ],
     exercises: [

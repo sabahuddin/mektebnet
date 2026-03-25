@@ -42,12 +42,26 @@ function speakGlas(glas: string) {
   window.speechSynthesis.speak(utter);
 }
 
-function playHareketiSound(h: { sound: string; soundFile: string }) {
-  if (h.sound.startsWith("-")) {
+function playHareketiSound(h: { sound: string; soundFile: string; speakText?: string }) {
+  if (h.speakText) {
+    speakGlas(h.speakText);
+  } else if (h.sound.startsWith("-")) {
     speakGlas(h.sound);
   } else {
     playAudio(h.soundFile);
   }
+}
+
+// Za waqf čitanje — dodaj sukun na zadnji suglasnik bez hareketa
+// da TTS ne dodaje izmišljeni vokal (npr. بَث → بَثْ)
+function prepareForWaqf(text: string): string {
+  if (!text) return text;
+  const last = text.charCodeAt(text.length - 1);
+  const isHareke = last >= 0x064B && last <= 0x0652;
+  if (!isHareke) {
+    return text + "\u0652"; // dodaj sukun
+  }
+  return text;
 }
 
 function ReadingGridModal({
@@ -65,7 +79,7 @@ function ReadingGridModal({
   );
 
   function handleSpeak(text: string, idx: number) {
-    speakArabic(text);
+    speakArabic(prepareForWaqf(text));
     setPlayed((prev) => { const n = new Set(prev); n.add(idx); return n; });
   }
 
