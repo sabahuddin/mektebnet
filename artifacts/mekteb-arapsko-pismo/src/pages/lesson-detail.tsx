@@ -34,6 +34,22 @@ function speakArabic(text: string) {
   window.speechSynthesis.speak(utter);
 }
 
+function speakGlas(glas: string) {
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(glas.replace(/^-/, ""));
+  utter.lang = "bs-BA";
+  utter.rate = 0.8;
+  window.speechSynthesis.speak(utter);
+}
+
+function playHareketiSound(h: { sound: string; soundFile: string }) {
+  if (h.sound.startsWith("-")) {
+    speakGlas(h.sound);
+  } else {
+    playAudio(h.soundFile);
+  }
+}
+
 function ReadingGridModal({
   exercise,
   onClose,
@@ -952,7 +968,7 @@ export default function LessonDetail() {
         {/* Hareketi kartice (samo ako ih ima) */}
         {data.hareketi && data.hareketi.length > 0 && (
           <>
-            <h3 className="text-xl font-bold text-foreground mb-4">Hareketi — znakovi za samoglasnike</h3>
+            <h3 className="text-xl font-bold text-foreground mb-4">{data.hareketiTitle ?? "Hareketi — znakovi za samoglasnike"}</h3>
             <div className="grid sm:grid-cols-3 gap-4">
               {data.hareketi.map((h, i) => {
                 const c = COLOUR_MAP[h.colour] ?? COLOUR_MAP.teal;
@@ -998,7 +1014,7 @@ export default function LessonDetail() {
                         </div>
                         <div className="flex items-center gap-2 mt-3">
                           <button
-                            onClick={() => playAudio(h.soundFile)}
+                            onClick={() => playHareketiSound(h)}
                             className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${c.sound}`}
                           >
                             <Volume2 className="w-4 h-4" />

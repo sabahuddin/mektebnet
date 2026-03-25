@@ -48,6 +48,7 @@ export interface LessonData {
   story: { lines: { speaker: "dzana" | "amir" | "narator" | "otac"; text: string }[] };
   letterData: HarfData[];
   hareketi?: HarekeData[];
+  hareketiTitle?: string;
   exercises: Exercise[];
 }
 
@@ -904,6 +905,7 @@ export const LESSONS: LessonData[] = [
         soundFile: "hareke-damma.mp3",
       },
     ],
+    hareketiTitle: "Tenvin — dupli znakovi za glas N",
     hareketi: [
       {
         arabic: "بًا", hareke: "ً", name: "Tenvin fetha",
