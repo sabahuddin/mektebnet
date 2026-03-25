@@ -188,19 +188,6 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {isDirty && (
-              <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                Nesačuvano
-              </span>
-            )}
-            <Button
-              onClick={handleSave}
-              disabled={isSaving || !isDirty}
-              className="rounded-xl px-5 font-bold flex items-center gap-2"
-            >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isSaving ? "Čuvam..." : "Sačuvaj"}
-            </Button>
             <button
               onClick={handleClose}
               className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -257,6 +244,23 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
               />
             </div>
           </div>
+        </div>
+
+        {/* Bottom bar — Sačuvaj */}
+        <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-border bg-white shrink-0">
+          {isDirty && (
+            <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+              Nesačuvano
+            </span>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !isDirty}
+            className="rounded-xl px-6 font-bold flex items-center gap-2"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? "Čuvam..." : "Sačuvaj"}
+          </Button>
         </div>
       </div>
     </div>

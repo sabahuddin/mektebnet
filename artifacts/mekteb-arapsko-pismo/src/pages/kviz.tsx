@@ -254,7 +254,12 @@ export default function KvizPage() {
   const pitanje = pitanja[current];
   const isLast = current === pitanja.length - 1;
 
-  const qType = pitanje?.type || "radio";
+  // Auto-detect checkbox if pitanje has multiple correct answers, regardless of stored type
+  const hasMultiCorrect = (pitanje?.correct && pitanje.correct.length > 1)
+    || (pitanje?.answer?.includes("|||"));
+  const qType = pitanje?.type === "checkbox" || hasMultiCorrect
+    ? "checkbox"
+    : pitanje?.type || "radio";
 
   const getCorrectArr = (p: Pitanje): string[] => {
     if (p.correct && Array.isArray(p.correct)) return p.correct;
