@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -26,16 +26,25 @@ function playAudio(file: string) {
   audio.play().catch(() => {});
 }
 
-function QuizModal({ exercise, onClose }: { exercise: Exercise; onClose: () => void }) {
+function QuizModal({
+  exercise,
+  onClose,
+  onComplete,
+}: {
+  exercise: Exercise;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
   const isTypeInput = exercise.type === "napiši";
   const isListening = exercise.type === "slušaj";
 
-  const [qIdx,     setQIdx]    = useState(0);
-  const [score,    setScore]   = useState(0);
-  const [status,   setStatus]  = useState<"asking" | "correct" | "wrong" | "done">("asking");
-  const [selected, setSelected] = useState<string | null>(null);
-  const [text,     setText]    = useState("");
-  const [choices,  setChoices] = useState<string[]>([]);
+  const [qIdx,       setQIdx]    = useState(0);
+  const [score,      setScore]   = useState(0);
+  const [status,     setStatus]  = useState<"asking" | "correct" | "wrong" | "done">("asking");
+  const [selected,   setSelected] = useState<string | null>(null);
+  const [text,       setText]    = useState("");
+  const [choices,    setChoices] = useState<string[]>([]);
+  const [wasCompleted, setWasCompleted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const item  = exercise.items[qIdx];
@@ -57,6 +66,15 @@ function QuizModal({ exercise, onClose }: { exercise: Exercise; onClose: () => v
     if (isTypeInput) setTimeout(() => inputRef.current?.focus(), 100);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qIdx]);
+
+  // Notify parent once when quiz is completed for the first time
+  useEffect(() => {
+    if (status === "done" && !wasCompleted) {
+      setWasCompleted(true);
+      onComplete();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   function answer(a: string) {
     if (status !== "asking") return;
@@ -91,7 +109,7 @@ function QuizModal({ exercise, onClose }: { exercise: Exercise; onClose: () => v
               <RotateCcw className="w-4 h-4 mr-2" /> Ponovi
             </Button>
             <Button onClick={onClose} className="flex-1 text-base py-5 game-button">
-              Gotovo
+              Gotovo ✓
             </Button>
           </div>
         </motion.div>
@@ -255,19 +273,22 @@ function QuizModal({ exercise, onClose }: { exercise: Exercise; onClose: () => v
 
 export default function LessonDetail() {
   const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
   const lessonId = parseInt(id ?? "2", 10);
   const data = getLessonById(lessonId);
 
   const dzanaImg = `${BASE}images/dzana-avatar.png`;
   const amirImg  = `${BASE}images/amir-avatar.png`;
   const [activeQuiz, setActiveQuiz] = useState<number | null>(null);
+  const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set());
+  const [showFinishModal, setShowFinishModal] = useState(false);
 
   if (!data) {
     return (
       <Layout>
         <div className="text-center py-20">
           <h1 className="text-3xl font-black mb-4">Lekcija nije pronađena</h1>
-          <Link href="/" className="text-primary font-bold underline">← Nazad na lekcije</Link>
+          <Link href="/arapsko-pismo" className="text-primary font-bold underline">← Nazad na lekcije</Link>
         </div>
       </Layout>
     );
@@ -279,18 +300,62 @@ export default function LessonDetail() {
     return ld?.soundFile ?? "elif.mp3";
   }
 
+  function markExerciseComplete(exerciseIdx: number) {
+    setCompletedExercises(prev => {
+      const next = new Set(prev);
+      next.add(exerciseIdx);
+      return next;
+    });
+  }
+
+  const allDone = data.exercises.length > 0 && completedExercises.size >= data.exercises.length;
+  const nextLessonId = data.id + 1;
+  const hasNextLesson = !!getLessonById(nextLessonId);
+
+  function finishLesson() {
+    if (hasNextLesson) {
+      navigate(`/lesson/${nextLessonId}`);
+    } else {
+      navigate("/arapsko-pismo");
+    }
+  }
+
   return (
     <Layout>
+      {/* Finish modal */}
+      {showFinishModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-3xl font-black mb-2">Lekcija završena!</h2>
+            <p className="text-xl text-muted-foreground mb-6">
+              Odradio si sve {data.exercises.length} vježbe u lekciji <strong>{data.title}</strong>!
+            </p>
+            {hasNextLesson && (
+              <Button onClick={finishLesson} className="w-full game-button text-lg py-6 mb-3">
+                Sljedeća lekcija →
+              </Button>
+            )}
+            <Button onClick={() => { setShowFinishModal(false); navigate("/arapsko-pismo"); }}
+              variant="outline" className="w-full text-base py-5">
+              Nazad na lekcije
+            </Button>
+          </motion.div>
+        </div>
+      )}
+
       {activeQuiz !== null && (
         <QuizModal
           exercise={data.exercises[activeQuiz]}
           onClose={() => setActiveQuiz(null)}
+          onComplete={() => markExerciseComplete(activeQuiz)}
         />
       )}
 
       {/* Nazad */}
       <div className="mb-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
+        <Link href="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
           <ArrowLeft className="w-5 h-5" />
           Nazad na lekcije
         </Link>
@@ -510,17 +575,25 @@ export default function LessonDetail() {
           Vježbe
         </h2>
         <div className="grid sm:grid-cols-2 gap-6">
-          {data.exercises.map((ex, ei) => (
-            <Card key={ei} className="p-5 border-2 border-border/50 flex flex-col">
+          {data.exercises.map((ex, ei) => {
+            const isDone = completedExercises.has(ei);
+            return (
+            <Card key={ei} className={`p-5 flex flex-col transition-all ${isDone ? "border-2 border-green-400 bg-green-50/30" : "border-2 border-border/50"}`}>
               <div className="flex items-center gap-3 mb-5">
                 <span className="text-3xl">{ex.icon}</span>
                 <div className="flex-1">
                   <h3 className="font-extrabold text-xl text-foreground">{ex.title}</h3>
                   <p className="text-base text-muted-foreground">{ex.description}</p>
                 </div>
-                <span className="flex items-center gap-1 text-yellow-600 font-bold text-base shrink-0">
-                  <Star className="w-5 h-5 fill-current" /> {ex.hasanatReward}
-                </span>
+                {isDone ? (
+                  <span className="flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded-full font-bold text-sm shrink-0">
+                    <Check className="w-4 h-4" /> Završeno
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-yellow-600 font-bold text-base shrink-0">
+                    <Star className="w-5 h-5 fill-current" /> {ex.hasanatReward}
+                  </span>
+                )}
               </div>
 
               {/* Pregled prvih 6 stavki */}
@@ -559,17 +632,43 @@ export default function LessonDetail() {
                 size="sm"
                 onClick={() => setActiveQuiz(ei)}
               >
-                <PlayCircle className="w-5 h-5 mr-2" /> Počni vježbu
+                <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? "Ponovi vježbu" : "Počni vježbu"}
               </Button>
             </Card>
-          ))}
+          );
+          })}
         </div>
 
-        <div className="mt-6 p-6 bg-green-50 rounded-2xl border border-green-200 text-center">
-          <h3 className="font-extrabold text-xl text-green-800 mb-2">Spreman za prelazak?</h3>
-          <p className="text-green-700/80 mb-4 text-base">Završi sve vježbe da otključaš sljedeću lekciju i zaradiš sve hasanate!</p>
-          <Button size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white game-button text-lg py-6">
-            Završi lekciju ✓
+        <div className={`mt-6 p-6 rounded-2xl border text-center transition-all ${allDone ? "bg-green-50 border-green-300" : "bg-muted/40 border-border"}`}>
+          {/* Progress dots */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            {data.exercises.map((_, ei) => (
+              <div key={ei} className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg transition-all ${
+                completedExercises.has(ei)
+                  ? "bg-green-500 text-white shadow-lg scale-110"
+                  : "bg-muted text-muted-foreground border-2 border-border"
+              }`}>
+                {completedExercises.has(ei) ? <Check className="w-5 h-5" /> : ei + 1}
+              </div>
+            ))}
+          </div>
+
+          <h3 className={`font-extrabold text-xl mb-2 ${allDone ? "text-green-800" : "text-foreground/70"}`}>
+            {allDone
+              ? "Sve vježbe završene! 🎉"
+              : `${completedExercises.size} / ${data.exercises.length} vježbi urađeno`}
+          </h3>
+          <p className={`mb-4 text-base ${allDone ? "text-green-700/80" : "text-muted-foreground"}`}>
+            {allDone
+              ? (hasNextLesson ? "Odlično! Spreman za sljedeću lekciju." : "Čestitamo — završio si sve dostupne lekcije!")
+              : "Uradi vježbe da utvrdiš gradivo, ili prijeđi na sljedeću lekciju."}
+          </p>
+          <Button
+            size="lg"
+            onClick={() => setShowFinishModal(true)}
+            className={`w-full text-lg py-6 ${allDone ? "bg-green-600 hover:bg-green-700 text-white game-button" : "game-button"}`}
+          >
+            {hasNextLesson ? "Završi i idi na sljedeću lekciju →" : "Završi lekciju ✓"}
           </Button>
         </div>
       </div>

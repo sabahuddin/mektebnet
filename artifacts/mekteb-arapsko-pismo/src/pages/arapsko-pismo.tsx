@@ -103,7 +103,7 @@ export default function ArapskoPismoPage() {
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {LESSONS.map((lesson, i) => {
-              const isUnlocked = i === 0;
+              const isUnlocked = true;
               return (
                 <motion.div
                   key={lesson.id}
