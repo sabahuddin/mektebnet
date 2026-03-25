@@ -6,7 +6,7 @@ import { Layout } from "@/components/layout";
 import { ArrowLeft, BookOpen, Check, Gamepad2, Info, PlayCircle, RotateCcw, Star, Trophy, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getLessonById, type Exercise } from "@/data/lessons";
+import { getLessonById, type Exercise, type ExerciseItem } from "@/data/lessons";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -24,6 +24,122 @@ function isArabicChar(s: string) {
 function playAudio(file: string) {
   const audio = new Audio(`${BASE}audio/harfovi/${file}`);
   audio.play().catch(() => {});
+}
+
+function speakArabic(text: string) {
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "ar-SA";
+  utter.rate = 0.75;
+  window.speechSynthesis.speak(utter);
+}
+
+function ReadingGridModal({
+  exercise,
+  onClose,
+  onComplete,
+}: {
+  exercise: Exercise;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const [played, setPlayed] = useState<Set<number>>(new Set());
+  const [shuffled] = useState<ExerciseItem[]>(() =>
+    [...exercise.items].sort(() => Math.random() - 0.5)
+  );
+
+  function handleSpeak(text: string, idx: number) {
+    speakArabic(text);
+    setPlayed((prev) => { const n = new Set(prev); n.add(idx); return n; });
+  }
+
+  function handleFinish() {
+    onComplete();
+    onClose();
+  }
+
+  const pct = shuffled.length > 0 ? Math.round((played.size / shuffled.length) * 100) : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-teal-900 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-4 px-5 pt-5 pb-4 shrink-0 border-b border-white/10">
+        <button
+          onClick={onClose}
+          className="text-white/60 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-white font-black text-xl leading-tight">{exercise.title}</h2>
+          <p className="text-white/60 text-base">Pročitaj svaki slog naglas — klikni za izgovor</p>
+        </div>
+        <div className="text-white font-extrabold text-lg shrink-0 bg-white/15 px-3 py-1 rounded-full">
+          {played.size}/{shuffled.length}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 bg-white/10 shrink-0">
+        <motion.div
+          className="h-1.5 bg-green-400"
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.3 }}
+        />
+      </div>
+
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <p className="text-center text-white/40 text-base mb-4">
+          {played.size === 0
+            ? "👆 Klikni na slog da čuješ izgovor"
+            : played.size === shuffled.length
+            ? "✅ Sve pročitano! Možeš završiti vježbu."
+            : `Nastavi čitati — ostalo ${shuffled.length - played.size} slogova`}
+        </p>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-w-3xl mx-auto">
+          {shuffled.map((item, i) => {
+            const isPlayed = played.has(i);
+            const len = item.show.length;
+            const fontSize = len <= 2 ? "2.8rem" : len <= 4 ? "2.1rem" : len <= 6 ? "1.6rem" : "1.3rem";
+            return (
+              <motion.button
+                key={i}
+                onClick={() => handleSpeak(item.show, i)}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.93 }}
+                className={`aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 shadow-lg transition-colors ${
+                  isPlayed
+                    ? "bg-green-500 shadow-green-500/30"
+                    : "bg-white/15 hover:bg-white/25"
+                }`}
+              >
+                <span
+                  className="text-white font-bold text-center leading-none"
+                  style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize }}
+                >
+                  {item.show}
+                </span>
+                {isPlayed && <Volume2 className="w-4 h-4 text-white/70" />}
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-5 pb-6 pt-4 shrink-0 border-t border-white/10">
+        <Button
+          onClick={handleFinish}
+          className="w-full game-button text-lg py-6"
+        >
+          {played.size === shuffled.length
+            ? "Odlično! Završi vježbu ✓"
+            : `Završi vježbu (${played.size}/${shuffled.length} pročitano)`}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function QuizModal({
@@ -306,6 +422,7 @@ export default function LessonDetail() {
   const dzanaImg = `${BASE}images/dzana-avatar.png`;
   const amirImg  = `${BASE}images/amir-avatar.png`;
   const [activeQuiz, setActiveQuiz] = useState<number | null>(null);
+  const [activeReading, setActiveReading] = useState<number | null>(null);
   const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set());
   const [showFinishModal, setShowFinishModal] = useState(false);
 
@@ -376,6 +493,14 @@ export default function LessonDetail() {
           exercise={data.exercises[activeQuiz]}
           onClose={() => setActiveQuiz(null)}
           onComplete={() => markExerciseComplete(activeQuiz)}
+        />
+      )}
+
+      {activeReading !== null && (
+        <ReadingGridModal
+          exercise={data.exercises[activeReading]}
+          onClose={() => setActiveReading(null)}
+          onComplete={() => markExerciseComplete(activeReading)}
         />
       )}
 
@@ -622,44 +747,74 @@ export default function LessonDetail() {
                 )}
               </div>
 
-              {/* Pregled prvih 6 stavki */}
-              <div className="grid grid-cols-3 gap-2 mb-5 flex-1">
-                {ex.items.slice(0, 6).map((item, wi) => {
-                  const showIsListen = item.show === "🔊";
-                  return (
-                    <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-row items-center justify-center gap-2 text-center">
-                      {showIsListen ? (
-                        <Volume2 className="w-6 h-6 text-teal-600" />
-                      ) : (
-                        <span className={`text-3xl font-bold text-foreground leading-none ${isArabicChar(item.show) ? "ar" : ""}`}>
+              {/* Pregled vježbe */}
+              {ex.type === "čitaj-slog" ? (
+                <>
+                  <div className="grid grid-cols-4 gap-2 mb-3 flex-1">
+                    {ex.items.slice(0, 8).map((item, wi) => (
+                      <div key={wi} className="bg-teal-50 border border-teal-200 rounded-xl p-2 flex items-center justify-center">
+                        <span
+                          className="font-bold text-teal-900 text-center leading-none"
+                          style={{
+                            fontFamily: "Noto Naskh Arabic, serif",
+                            fontSize: item.show.length <= 2 ? "1.8rem" : item.show.length <= 4 ? "1.4rem" : "1.1rem",
+                          }}
+                        >
                           {item.show}
                         </span>
-                      )}
-                      <span
-                        className="text-xl font-bold text-primary"
-                        style={{
-                          fontFamily: isArabicChar(item.answer) ? "Noto Naskh Arabic, serif" : undefined,
-                          fontSize: isArabicChar(item.answer) ? "1.4rem" : undefined,
-                        }}
-                      >
-                        {item.answer}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="text-center text-sm text-muted-foreground mb-4 font-medium">
-                + još {ex.items.length - 6} pitanja u igri
-              </div>
-
-              <Button
-                className="w-full game-button text-base py-5"
-                size="sm"
-                onClick={() => setActiveQuiz(ei)}
-              >
-                <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? "Ponovi vježbu" : "Počni vježbu"}
-              </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center text-base text-muted-foreground mb-4 font-medium">
+                    📖 {ex.items.length} slogova — klikni da čuješ izgovor
+                  </div>
+                  <Button
+                    className="w-full game-button text-base py-5"
+                    size="sm"
+                    onClick={() => setActiveReading(ei)}
+                  >
+                    <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? "Čitaj ponovo" : "Čitaj slogove"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2 mb-5 flex-1">
+                    {ex.items.slice(0, 6).map((item, wi) => {
+                      const showIsListen = item.show === "🔊";
+                      return (
+                        <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-row items-center justify-center gap-2 text-center">
+                          {showIsListen ? (
+                            <Volume2 className="w-6 h-6 text-teal-600" />
+                          ) : (
+                            <span className={`text-3xl font-bold text-foreground leading-none ${isArabicChar(item.show) ? "ar" : ""}`}>
+                              {item.show}
+                            </span>
+                          )}
+                          <span
+                            className="text-xl font-bold text-primary"
+                            style={{
+                              fontFamily: isArabicChar(item.answer) ? "Noto Naskh Arabic, serif" : undefined,
+                              fontSize: isArabicChar(item.answer) ? "1.4rem" : undefined,
+                            }}
+                          >
+                            {item.answer}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="text-center text-sm text-muted-foreground mb-4 font-medium">
+                    + još {ex.items.length - 6} pitanja u igri
+                  </div>
+                  <Button
+                    className="w-full game-button text-base py-5"
+                    size="sm"
+                    onClick={() => setActiveQuiz(ei)}
+                  >
+                    <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? "Ponovi vježbu" : "Počni vježbu"}
+                  </Button>
+                </>
+              )}
             </Card>
           );
           })}
