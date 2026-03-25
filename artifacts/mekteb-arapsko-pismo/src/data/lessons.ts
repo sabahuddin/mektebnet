@@ -818,8 +818,8 @@ export const LESSONS: LessonData[] = [
     story: {
       lines: [
         { speaker: "dzana", text: "Amir, tenvin je poseban znak koji dodaje zvuk 'n' na kraj riječi." },
-        { speaker: "amir",  text: "Znači kao da kažeš fetha ali dodaš 'n' na kraj — 'an'?" },
-        { speaker: "dzana", text: "Tačno! Tenvin fetha daje '-an', tenvin kesra daje '-in', a tenvin damma '-un'." },
+        { speaker: "amir",  text: "Znači kao da kažeš fetha ali dodaš 'n' na kraj — 'en'?" },
+        { speaker: "dzana", text: "Tačno! Tenvin fetha daje '-en', tenvin kesra daje '-in', a tenvin damma '-un'." },
         { speaker: "amir",  text: "A kako izgledaju? Kao dupli hareketi?" },
         { speaker: "dzana", text: "Upravo! Tenvin fetha su dvije crtice iznad, tenvin kesra dvije ispod, a tenvin damma dva zareza iznad." },
         { speaker: "amir",  text: "Ima li nešto posebno kod tenvin fethe?" },
@@ -831,7 +831,7 @@ export const LESSONS: LessonData[] = [
     },
     letterData: [
       {
-        arabic: "بًا", name: "Tenvin fetha", transliteration: "-an",
+        arabic: "بًا", name: "Tenvin fetha", transliteration: "-en",
         forms: { isolated: "بًا", initial: "—", medial: "—", final: "ـبًا" },
         visualAssociation: "Dvije crtice iznad slova + elif — tenvin fetha UVIJEK dolazi s elifom na kraju",
         soundFile: "hareke-fatha.mp3",
@@ -852,9 +852,9 @@ export const LESSONS: LessonData[] = [
     hareketi: [
       {
         arabic: "بًا", hareke: "ً", name: "Tenvin fetha",
-        sound: "-an", colour: "teal",
-        description: "Dvije crtice iznad + UVIJEK dolazi s elifom (ا) — zvuk '-an' na kraju",
-        napomena: "⚠️ Tenvin fetha uvijek piše s elifom: بًا, ne بً — u govoru se 'an' izostavlja",
+        sound: "-en", colour: "teal",
+        description: "Dvije crtice iznad + UVIJEK dolazi s elifom (ا) — zvuk '-en' na kraju",
+        napomena: "⚠️ Tenvin fetha uvijek piše s elifom: بًا, ne بً — u govoru se 'en' izostavlja",
         soundFile: "hareke-fatha.mp3",
       },
       {
@@ -892,15 +892,15 @@ export const LESSONS: LessonData[] = [
         type: "prepoznaj-hareket",
         title: "Koji zvuk tenvin?", description: "Pogledaj tenvin — koji zvuk daje na kraju?",
         icon: "🔤", hasanatReward: 15,
-        choices: ["-an", "-in", "-un"],
+        choices: ["-en", "-in", "-un"],
         items: [
-          { show: "بًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-an" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
-          { show: "بًا", answer: "-an" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
-          { show: "خًا", answer: "-an" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
-          { show: "ثًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-an" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
-          { show: "ثًا", answer: "-an" }, { show: "جٍ", answer: "-in" },
+          { show: "بًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-en" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
+          { show: "بًا", answer: "-en" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
+          { show: "خًا", answer: "-en" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
+          { show: "ثًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-en" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
+          { show: "ثًا", answer: "-en" }, { show: "جٍ", answer: "-in" },
         ]
       },
       {
@@ -920,17 +920,17 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši zvuk tenvin", description: "Napiši zvuk tenvin (-an, -in ili -un)",
+        title: "Napiši zvuk tenvin", description: "Napiši zvuk tenvin (-en, -in ili -un)",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
-          { show: "بًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-an" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
-          { show: "بًا", answer: "-an" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
-          { show: "خًا", answer: "-an" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
-          { show: "ثًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-an" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
-          { show: "ثًا", answer: "-an" }, { show: "جٍ", answer: "-in" },
+          { show: "بًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-en" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
+          { show: "بًا", answer: "-en" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
+          { show: "خًا", answer: "-en" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
+          { show: "ثًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-en" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
+          { show: "ثًا", answer: "-en" }, { show: "جٍ", answer: "-in" },
         ]
       },
     ]
