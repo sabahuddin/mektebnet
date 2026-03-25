@@ -811,22 +811,27 @@ export default function LessonDetail() {
             const isDzana = line.speaker === "dzana";
             const isOtac  = line.speaker === "otac";
             const isAmir  = line.speaker === "amir";
+            const isMajka = line.speaker === "majka";
 
             const alignClass = isAmir ? "flex-row-reverse" : "";
-            const label = isDzana ? "Džana" : isOtac ? "Babo" : "Amir";
-            const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : "text-primary";
+            const label = isDzana ? "Džana" : isOtac ? "Babo" : isMajka ? "Mama" : "Amir";
+            const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : isMajka ? "text-rose-700" : "text-primary";
 
             const bubbleClass = isDzana
               ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
               : isOtac
                 ? "bg-emerald-600 text-white rounded-2xl rounded-bl-sm"
-                : "bg-primary text-white rounded-2xl rounded-br-sm";
+                : isMajka
+                  ? "bg-rose-500 text-white rounded-2xl rounded-bl-sm"
+                  : "bg-primary text-white rounded-2xl rounded-br-sm";
 
             const avatar = isDzana
               ? <img src={dzanaImg} alt="Džana" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
               : isOtac
                 ? <div className="w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 shadow-md flex items-center justify-center text-2xl shrink-0">👨</div>
-                : <img src={amirImg} alt="Amir" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
+                : isMajka
+                  ? <div className="w-11 h-11 rounded-full bg-rose-100 border-2 border-rose-300 shadow-md flex items-center justify-center text-2xl shrink-0">👩</div>
+                  : <img src={amirImg} alt="Amir" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
 
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
