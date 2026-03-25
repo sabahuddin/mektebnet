@@ -387,3 +387,19 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   border-top: 2px dashed hsl(var(--border));
   margin: 2em 0;
 }
+
+/* ── Print / PDF Worksheet ── */
+@media print {
+  body > * { display: none !important; }
+  #print-worksheet { display: block !important; }
+  #print-worksheet * { visibility: visible !important; }
+  @page {
+    size: A4;
+    margin: 15mm 12mm;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  button, nav, header, footer { display: none !important; }
+}

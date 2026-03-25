@@ -3,10 +3,10 @@ import { useParams, useLocation } from "wouter";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { ArrowLeft, BookOpen, Check, Gamepad2, Info, PlayCircle, RotateCcw, Star, Trophy, Volume2, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Download, Gamepad2, Info, Map, PlayCircle, RotateCcw, Search, Star, Trophy, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getLessonById, type Exercise, type ExerciseItem } from "@/data/lessons";
+import { getLessonById, LESSONS, type Exercise, type ExerciseItem } from "@/data/lessons";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -136,6 +136,127 @@ function ReadingGridModal({
           {played.size === shuffled.length
             ? "Odlično! Završi vježbu ✓"
             : `Završi vježbu (${played.size}/${shuffled.length} pročitano)`}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function PronadiModal({
+  exercise,
+  onClose,
+  onComplete,
+}: {
+  exercise: Exercise;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const target     = exercise.items[0]?.show ?? "ب";
+  const targetName = exercise.items[0]?.answer ?? "?";
+  const pool       = exercise.pool ?? ["ا"];
+  const targetCount = exercise.targetCount ?? 6;
+  const TOTAL = 30;
+
+  const [cells, setCells] = useState<{ harf: string; isTarget: boolean; found: boolean; shake: boolean }[]>(() => {
+    const arr: { harf: string; isTarget: boolean; found: boolean; shake: boolean }[] = [];
+    for (let i = 0; i < targetCount; i++) arr.push({ harf: target, isTarget: true, found: false, shake: false });
+    for (let i = 0; i < TOTAL - targetCount; i++) {
+      arr.push({ harf: pool[i % pool.length], isTarget: false, found: false, shake: false });
+    }
+    return arr.sort(() => Math.random() - 0.5);
+  });
+
+  const foundCount = cells.filter(c => c.found).length;
+  const allFound   = foundCount >= targetCount;
+  const [notified, setNotified] = useState(false);
+
+  useEffect(() => {
+    if (allFound && !notified) { setNotified(true); onComplete(); }
+  }, [allFound, notified, onComplete]);
+
+  function handleTap(idx: number) {
+    const cell = cells[idx];
+    if (cell.found) return;
+    if (cell.isTarget) {
+      speakArabic(target);
+      setCells(prev => prev.map((c, i) => i === idx ? { ...c, found: true } : c));
+    } else {
+      setCells(prev => prev.map((c, i) => i === idx ? { ...c, shake: true } : c));
+      setTimeout(() => setCells(prev => prev.map((c, i) => i === idx ? { ...c, shake: false } : c)), 500);
+    }
+  }
+
+  const pct = Math.round((foundCount / targetCount) * 100);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-indigo-900 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-4 px-5 pt-5 pb-4 shrink-0 border-b border-white/10">
+        <button onClick={onClose} className="text-white/60 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">
+          <X className="w-6 h-6" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-white font-black text-xl leading-tight">Pronađi {targetName}!</h2>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-white/60 text-base">Traži:</span>
+            <span className="text-white font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.6rem", lineHeight: 1 }}>{target}</span>
+          </div>
+        </div>
+        <div className={`font-extrabold text-lg px-3 py-1 rounded-full shrink-0 transition-colors ${allFound ? "bg-green-500 text-white" : "bg-white/15 text-white"}`}>
+          {foundCount}/{targetCount}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 bg-white/10 shrink-0">
+        <motion.div className="h-1.5 bg-green-400" animate={{ width: `${pct}%` }} transition={{ duration: 0.3 }} />
+      </div>
+
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {allFound && (
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="text-center mb-4 bg-green-500/20 border border-green-400/30 rounded-2xl py-3 px-4">
+            <p className="text-green-300 text-xl font-black">🎉 Bravo! Sve si pronašao!</p>
+          </motion.div>
+        )}
+        {!allFound && (
+          <p className="text-center text-white/40 text-base mb-4">
+            👆 Klikni svaki <span style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.2em" }}>{target}</span> koji pronađeš
+          </p>
+        )}
+        <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-w-md mx-auto">
+          {cells.map((cell, i) => (
+            <motion.button
+              key={i}
+              onClick={() => handleTap(i)}
+              whileTap={!cell.found ? { scale: 0.88 } : {}}
+              animate={cell.shake ? { x: [-7, 7, -7, 7, 0] } : {}}
+              transition={{ duration: 0.35 }}
+              className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-colors ${
+                cell.found
+                  ? "bg-green-500 shadow-green-500/30"
+                  : cell.shake
+                  ? "bg-red-500"
+                  : "bg-white/15 hover:bg-white/25"
+              }`}
+            >
+              {cell.found
+                ? <Check className="w-5 h-5 text-white" />
+                : <span style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.7rem", lineHeight: 1 }} className="text-white font-bold">{cell.harf}</span>
+              }
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-5 pb-6 pt-4 shrink-0 border-t border-white/10">
+        <Button
+          onClick={() => { if (!notified) { setNotified(true); onComplete(); } onClose(); }}
+          className="w-full game-button text-lg py-6"
+        >
+          {allFound ? "Odlično! Završi ✓" : `Završi (${foundCount}/${targetCount} pronađeno)`}
         </Button>
       </div>
     </div>
@@ -423,8 +544,10 @@ export default function LessonDetail() {
   const amirImg  = `${BASE}images/amir-avatar.png`;
   const [activeQuiz, setActiveQuiz] = useState<number | null>(null);
   const [activeReading, setActiveReading] = useState<number | null>(null);
+  const [activePronadi, setActivePronadi] = useState<number | null>(null);
   const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set());
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   if (!data) {
     return (
@@ -472,9 +595,22 @@ export default function LessonDetail() {
             className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
             <div className="text-6xl mb-4">🎉</div>
             <h2 className="text-3xl font-black mb-2">Lekcija završena!</h2>
-            <p className="text-xl text-muted-foreground mb-6">
+            <p className="text-xl text-muted-foreground mb-2">
               Odradio si sve {data.exercises.length} vježbe u lekciji <strong>{data.title}</strong>!
             </p>
+            <p className="text-base text-muted-foreground mb-6">
+              Preuzmi radni list i vježbaj čitanje i bez ekrana!
+            </p>
+            <Button
+              onClick={() => {
+                setIsPrinting(true);
+                setTimeout(() => { window.print(); setTimeout(() => setIsPrinting(false), 1000); }, 150);
+              }}
+              variant="outline"
+              className="w-full text-base py-5 mb-3 border-teal-300 text-teal-700 hover:bg-teal-50"
+            >
+              <Download className="w-5 h-5 mr-2" /> Preuzmi radni list (PDF)
+            </Button>
             {hasNextLesson && (
               <Button onClick={finishLesson} className="w-full game-button text-lg py-6 mb-3">
                 Sljedeća lekcija →
@@ -502,6 +638,76 @@ export default function LessonDetail() {
           onClose={() => setActiveReading(null)}
           onComplete={() => markExerciseComplete(activeReading)}
         />
+      )}
+
+      {activePronadi !== null && (
+        <PronadiModal
+          exercise={data.exercises[activePronadi]}
+          onClose={() => setActivePronadi(null)}
+          onComplete={() => markExerciseComplete(activePronadi)}
+        />
+      )}
+
+      {/* Print worksheet — invisible on screen, shows @media print */}
+      {isPrinting && (
+        <div id="print-worksheet" className="hidden print:block">
+          <div style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
+            {/* Header */}
+            <div style={{ textAlign: "center", borderBottom: "3px solid #0d9488", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div style={{ fontSize: "2rem", fontWeight: 900, color: "#0d9488", fontFamily: "Nunito, sans-serif" }}>
+                🕌 Mekteb — Arapsko pismo
+              </div>
+              <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#134e4a", fontFamily: "Nunito, sans-serif", marginTop: "4px" }}>
+                Lekcija {data.orderNum}: {data.title}
+              </div>
+              <div style={{ fontSize: "0.95rem", color: "#6b7280", fontFamily: "Nunito, sans-serif", marginTop: "4px" }}>
+                Radni list za čitanje — Muallim: ______________________   Datum: ___________
+              </div>
+            </div>
+
+            {/* Letters with forms */}
+            <div style={{ marginBottom: "20px" }}>
+              <div style={{ fontSize: "1rem", fontWeight: 700, fontFamily: "Nunito, sans-serif", color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Harfovi — oblici slova
+              </div>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                {data.letterData.map((ld, i) => (
+                  <div key={i} style={{ border: "2px solid #e5e7eb", borderRadius: "12px", padding: "10px 14px", textAlign: "center", minWidth: "100px" }}>
+                    <div style={{ fontSize: "3.5rem", color: "#0d9488", lineHeight: 1.3 }}>{ld.arabic}</div>
+                    <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "#374151" }}>{ld.name} / {ld.transliteration}</div>
+                    <div style={{ display: "flex", gap: "6px", marginTop: "6px", justifyContent: "center" }}>
+                      {[ld.forms.initial, ld.forms.medial, ld.forms.final].map((f, fi) => (
+                        <span key={fi} style={{ fontSize: "1.4rem", background: "#f0fdf4", padding: "2px 6px", borderRadius: "6px", lineHeight: 1.6 }}>{f}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Reading grid — from čitaj-slog exercises */}
+            {data.exercises.filter(e => e.type === "čitaj-slog").map((ex, xi) => (
+              <div key={xi} style={{ marginBottom: "20px" }}>
+                <div style={{ fontSize: "1rem", fontWeight: 700, fontFamily: "Nunito, sans-serif", color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  📖 {ex.title}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "8px" }}>
+                  {ex.items.map((item, ii) => (
+                    <div key={ii} style={{ border: "1.5px solid #d1fae5", borderRadius: "10px", padding: "10px 6px", textAlign: "center", background: "#f0fdf4" }}>
+                      <div style={{ fontSize: item.show.length <= 2 ? "2.2rem" : item.show.length <= 4 ? "1.7rem" : "1.3rem", color: "#134e4a", lineHeight: 1.5 }}>{item.show}</div>
+                      <div style={{ fontFamily: "Nunito, sans-serif", fontSize: "0.75rem", color: "#6b7280", marginTop: "2px" }}>{item.answer}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Footer */}
+            <div style={{ marginTop: "24px", borderTop: "2px solid #e5e7eb", paddingTop: "10px", textAlign: "center", fontFamily: "Nunito, sans-serif", fontSize: "0.8rem", color: "#9ca3af" }}>
+              mekteb.net • Arapsko pismo • {data.title}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Nazad */}
@@ -544,76 +750,83 @@ export default function LessonDetail() {
           Priča za danas
         </h2>
 
-        {/* MOBILNI: isprepleten chat */}
-        <div className="flex flex-col gap-4 md:hidden">
-          {data.story.lines.map((line, i) => {
+        {/* Unified story renderer — handles narator, otac, dzana, amir */}
+        {(() => {
+          const hasNarator = data.story.lines.some(l => l.speaker === "narator" || l.speaker === "otac");
+
+          const renderLine = (line: typeof data.story.lines[0], i: number, delayBase = 0) => {
+            if (line.speaker === "narator") {
+              return (
+                <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  transition={{ delay: delayBase + i * 0.06 }}
+                  className="w-full px-2 py-1">
+                  <p className="text-base italic text-orange-800/70 leading-relaxed text-center">
+                    {line.text}
+                  </p>
+                </motion.div>
+              );
+            }
+
             const isDzana = line.speaker === "dzana";
+            const isOtac  = line.speaker === "otac";
+            const isAmir  = line.speaker === "amir";
+
+            const alignClass = isAmir ? "flex-row-reverse" : "";
+            const label = isDzana ? "Džana" : isOtac ? "Babo" : "Amir";
+            const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : "text-primary";
+
+            const bubbleClass = isDzana
+              ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
+              : isOtac
+                ? "bg-emerald-600 text-white rounded-2xl rounded-bl-sm"
+                : "bg-primary text-white rounded-2xl rounded-br-sm";
+
+            const avatar = isDzana
+              ? <img src={dzanaImg} alt="Džana" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
+              : isOtac
+                ? <div className="w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 shadow-md flex items-center justify-center text-2xl shrink-0">👨</div>
+                : <img src={amirImg} alt="Amir" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
+
             return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className={`flex items-end gap-3 ${isDzana ? "" : "flex-row-reverse"}`}
-              >
-                <img src={isDzana ? dzanaImg : amirImg} alt={isDzana ? "Džana" : "Amir"}
-                  className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
-                <div className={`flex flex-col gap-1 max-w-[80%] ${isDzana ? "items-start" : "items-end"}`}>
-                  <span className={`text-sm font-extrabold px-1 ${isDzana ? "text-orange-700" : "text-primary"}`}>
-                    {isDzana ? "Džana" : "Amir"}
-                  </span>
-                  <div className={`px-5 py-3 text-lg font-medium leading-relaxed shadow-sm ${
-                    isDzana
-                      ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
-                      : "bg-primary text-white rounded-2xl rounded-br-sm"
-                  }`}>
+              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: delayBase + i * 0.07 }}
+                className={`flex items-end gap-3 ${alignClass}`}>
+                {avatar}
+                <div className={`flex flex-col gap-1 max-w-[80%] ${isAmir ? "items-end" : "items-start"}`}>
+                  <span className={`text-sm font-extrabold px-1 ${labelColor}`}>{label}</span>
+                  <div className={`px-5 py-3 text-base font-medium leading-relaxed shadow-sm ${bubbleClass}`}>
                     {line.text}
                   </div>
                 </div>
               </motion.div>
             );
-          })}
-        </div>
+          };
 
-        {/* DESKTOP: dvije kolone */}
-        {(() => {
+          if (hasNarator) {
+            // Single-column for mixed narator/dialogue stories
+            return (
+              <div className="flex flex-col gap-4">
+                {data.story.lines.map((line, i) => renderLine(line, i))}
+              </div>
+            );
+          }
+
+          // Two-column for pure dialogue stories (desktop only)
           const half = Math.ceil(data.story.lines.length / 2);
-          const leftLines  = data.story.lines.slice(0, half);
-          const rightLines = data.story.lines.slice(half);
-          const renderChat = (lines: typeof data.story.lines, startDelay: number) => (
-            <div className="flex flex-col gap-3">
-              {lines.map((line, i) => {
-                const isDzana = line.speaker === "dzana";
-                return (
-                  <motion.div key={i}
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: startDelay + i * 0.1 }}
-                    className={`flex items-end gap-2 ${isDzana ? "" : "flex-row-reverse"}`}
-                  >
-                    <img src={isDzana ? dzanaImg : amirImg} alt={isDzana ? "Džana" : "Amir"}
-                      className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
-                    <div className={`flex flex-col gap-1 ${isDzana ? "items-start" : "items-end"}`}>
-                      <span className={`text-xs font-extrabold px-1 ${isDzana ? "text-orange-700" : "text-primary"}`}>
-                        {isDzana ? "Džana" : "Amir"}
-                      </span>
-                      <div className={`px-4 py-3 text-base font-medium leading-relaxed shadow-sm ${
-                        isDzana
-                          ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
-                          : "bg-primary text-white rounded-2xl rounded-br-sm"
-                      }`}>
-                        {line.text}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          );
           return (
-            <div className="hidden md:grid grid-cols-2 gap-6">
-              {renderChat(leftLines, 0)}
-              {renderChat(rightLines, 0.4)}
-            </div>
+            <>
+              <div className="flex flex-col gap-4 md:hidden">
+                {data.story.lines.map((line, i) => renderLine(line, i))}
+              </div>
+              <div className="hidden md:grid grid-cols-2 gap-6">
+                <div className="flex flex-col gap-3">
+                  {data.story.lines.slice(0, half).map((line, i) => renderLine(line, i))}
+                </div>
+                <div className="flex flex-col gap-3">
+                  {data.story.lines.slice(half).map((line, i) => renderLine(line, i, 0.4))}
+                </div>
+              </div>
+            </>
           );
         })()}
       </Card>
@@ -695,6 +908,44 @@ export default function LessonDetail() {
                 ))}
               </div>
             </div>
+
+            {/* Hareketi slogovi — BE/BI/BU kartice (samo za lekcije bez posebne hareketi sekcije) */}
+            {!data.hareketi && !data.isRevision && (
+              <div className="mt-5">
+                <p className="text-base font-bold text-muted-foreground mb-3 text-center uppercase tracking-wider">
+                  🔊 Klikni i pročitaj naglas
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { hareke: "\u064E", sound: "E" },
+                    { hareke: "\u0650", sound: "I" },
+                    { hareke: "\u064F", sound: "U" },
+                  ].map(({ hareke, sound }) => {
+                    const combined = letter.arabic + hareke;
+                    const short = letter.transliteration.split(" ")[0].replace(/[^A-ZČĆŽŠĐa-zčćžšđ]/g, "");
+                    const label = (short || letter.name[0]) + sound;
+                    return (
+                      <motion.button
+                        key={sound}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={() => speakArabic(combined)}
+                        className="bg-teal-50 hover:bg-teal-100 border-2 border-teal-200 hover:border-teal-400 rounded-2xl py-5 px-2 flex flex-col items-center gap-1 transition-all group"
+                      >
+                        <span
+                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "2.8rem", lineHeight: 1.5 }}
+                          className="text-teal-800 font-bold"
+                        >
+                          {combined}
+                        </span>
+                        <span className="text-base font-extrabold text-teal-600 group-hover:text-teal-800">{label}</span>
+                        <Volume2 className="w-4 h-4 text-teal-400 group-hover:text-teal-600" />
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </Card>
         ))}
 
@@ -779,7 +1030,40 @@ export default function LessonDetail() {
               </div>
 
               {/* Pregled vježbe */}
-              {ex.type === "čitaj-slog" ? (
+              {ex.type === "pronadi-harf" ? (
+                <>
+                  <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 mb-4 flex items-center gap-5 flex-1">
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-indigo-500 uppercase mb-1 tracking-wider">Pronađi</p>
+                      <span
+                        className="text-6xl font-bold text-indigo-800 block leading-none"
+                        style={{ fontFamily: "Noto Naskh Arabic, serif" }}
+                      >
+                        {ex.items[0]?.show}
+                      </span>
+                      <p className="text-sm font-bold text-indigo-600 mt-1">{ex.items[0]?.answer}</p>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1 flex-1 opacity-60">
+                      {(ex.pool ?? []).concat([ex.items[0]?.show ?? "ب", ex.items[0]?.show ?? "ب"]).slice(0, 10).map((h, pi) => (
+                        <div key={pi} className="aspect-square rounded-lg bg-indigo-100 flex items-center justify-center">
+                          <span style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.1rem" }} className="text-indigo-700">{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-center text-base text-muted-foreground mb-4 font-medium">
+                    🔍 Pronađi {ex.targetCount ?? 6} harfova sakrivenih u gridu od 30
+                  </p>
+                  <Button
+                    className="w-full game-button text-base py-5"
+                    style={{ background: isDone ? undefined : "linear-gradient(135deg, #6366f1, #4f46e5)" }}
+                    onClick={() => setActivePronadi(ei)}
+                  >
+                    <Search className="w-5 h-5 mr-2" />
+                    {isDone ? "Igraj ponovo" : "Pronađi harfove"}
+                  </Button>
+                </>
+              ) : ex.type === "čitaj-slog" ? (
                 <>
                   <div className="grid grid-cols-4 gap-2 mb-3 flex-1">
                     {ex.items.slice(0, 8).map((item, wi) => (

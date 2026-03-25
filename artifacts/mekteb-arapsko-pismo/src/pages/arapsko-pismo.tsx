@@ -95,6 +95,18 @@ export default function ArapskoPismoPage() {
           </div>
         </div>
 
+        {/* ── Karta harfova banner ── */}
+        <Link href="/karta-harfova">
+          <div className="mb-6 flex items-center gap-4 p-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-2xl cursor-pointer shadow-md transition-all group">
+            <div className="text-4xl">🗺️</div>
+            <div className="flex-1">
+              <p className="font-extrabold text-white text-lg leading-tight">Karta harfova</p>
+              <p className="text-teal-100 text-sm font-medium">Svi harfovi na jednom mjestu — tapni za izgovor</p>
+            </div>
+            <div className="text-white/70 group-hover:text-white text-2xl transition-colors">→</div>
+          </div>
+        </Link>
+
         {/* ── Lekcije ── */}
         <div className="mb-8">
           <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 mb-4">

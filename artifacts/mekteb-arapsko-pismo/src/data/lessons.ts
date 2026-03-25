@@ -5,13 +5,15 @@ export interface ExerciseItem {
 }
 
 export interface Exercise {
-  type: "prepoznaj-hareket" | "koji-harf" | "slušaj" | "napiši" | "koji-znak" | "čitaj-slog";
+  type: "prepoznaj-hareket" | "koji-harf" | "slušaj" | "napiši" | "koji-znak" | "čitaj-slog" | "pronadi-harf";
   title: string;
   description: string;
   icon: string;
   hasanatReward: number;
   choices: string[];
   items: ExerciseItem[];
+  pool?: string[];
+  targetCount?: number;
 }
 
 export interface HarfData {
@@ -43,7 +45,7 @@ export interface LessonData {
   letters: string[];
   isCompleted: boolean;
   isRevision?: boolean;
-  story: { lines: { speaker: "dzana" | "amir"; text: string }[] };
+  story: { lines: { speaker: "dzana" | "amir" | "narator" | "otac"; text: string }[] };
   letterData: HarfData[];
   hareketi?: HarekeData[];
   exercises: Exercise[];
@@ -83,14 +85,24 @@ export const LESSONS: LessonData[] = [
     isCompleted: false,
     story: {
       lines: [
-        { speaker: "dzana", text: "Amir, jesi li znao da arapska slova sama po sebi uglavnom nemaju samoglasnik?" },
-        { speaker: "amir",  text: "Nisam! Kako onda znamo kako se čitaju?" },
-        { speaker: "dzana", text: "Zato postoje hareketi! To su mali znakovi koji se stavljaju iznad ili ispod slova." },
-        { speaker: "amir",  text: "A, kao tačkice — samo za samoglasnike?" },
-        { speaker: "dzana", text: "Tačno! Fetha iznad elife daje zvuk 'e', a kesra ispod daje zvuk 'i'." },
-        { speaker: "amir",  text: "A šta je damma? Kako izgleda?" },
-        { speaker: "dzana", text: "Damma izgleda kao mali zarez iznad slova i daje zvuk 'u'. Elif s dammom čita se 'u'." },
-        { speaker: "amir",  text: "Super! Znači samo elif može se čitati kao 'e', 'i' ili 'u' — ovisno o hareketu!" },
+        { speaker: "narator", text: "Džana i Amir su ušli u očevu sobu. Babo je radio za računarom — po stolu su bili rašireni planovi, bilježnice i olovke. Ali pored tastature, na svom posebnom mjestu, stajao je Mushaf." },
+        { speaker: "narator", text: "Džana ga je uzela u ruke." },
+        { speaker: "dzana",   text: "Babo, kako ti čitaš ovo? Slova idu naopako." },
+        { speaker: "narator", text: "Otac je odmaknuo pogled od ekrana i nasmijao se." },
+        { speaker: "otac",    text: "Nisu naopako, dušo. Idu s desna na lijevo. Kao što svaka rijeka teče na svoju stranu. A vi biste mogli naučiti ovu rijeku čitati, a jednog dana možda je i napamet znati." },
+        { speaker: "narator", text: "Otac je otvorio Mushaf. Prstom je pokazao jedno tanko, uspravno slovo." },
+        { speaker: "otac",    text: "Ovo je Elif. Prvo slovo. Stoji ravno, ponosno — kao kada vi stojite uspravno ispred učitelja u školi, muallima u mektebu ili kod mame i mene kod kuće." },
+        { speaker: "narator", text: "Amir se napravio važan i ispravio leđa." },
+        { speaker: "amir",    text: "I šta on govori, taj Elif? Nećemo valjda svaki put kazati elif kada ga vidimo — to su četiri slova: E – L – I – F." },
+        { speaker: "otac",    text: "Ne. Ovo slovo nema svoj glas. On je tih, ne govori ako je sam." },
+        { speaker: "amir",    text: "Čekaj, kako može slovo biti tiho?" },
+        { speaker: "otac",    text: "Lijepo razmišljaš. Vi znate engleski, zar ne. Džana, koja su ovo slova u engleskom alfabetu? — upitao je otac pokazujući riječ WHEN." },
+        { speaker: "dzana",   text: "DABLJU, EIČ, I, EN." },
+        { speaker: "otac",    text: "Super. DABLJU se čita kao V, a H se često uopće ne čuje. Tako i u arapskom — ELIF nema glas, ali kada mu dodamo crticu iznad ili ispod, ili zarez iznad njega — onda progovori." },
+        { speaker: "narator", text: "Djeca su gledala iznenađeno." },
+        { speaker: "otac",    text: "Crticu iznad zovemo FETHA — i elif čujemo kao kratko E. Crticu ispod KESRA — i čujemo kratko I. A mali zarez iznad je DAMMA — i čujemo kratko U." },
+        { speaker: "amir",    text: "A imaju li te crtice zajednički naziv?" },
+        { speaker: "otac",    text: "Naravno. Zajedno se zovu HAREKETI — znaci koji harfovima daju glas!" },
       ]
     },
     letterData: [
@@ -121,7 +133,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "koji-znak",
-        title: "Koji zvuk?", description: "Pogledaj hareket simbol — koji zvuk daje?",
+        title: "Koji glas?", description: "Pogledaj simbol hareketa — koji glas čujemo?",
         icon: "🔤", hasanatReward: 15,
         choices: ["e", "i", "u"],
         items: [
@@ -136,7 +148,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "slušaj",
-        title: "Slušaj i odaberi", description: "Pritisni dugme — koji elif odgovara zvuku?",
+        title: "Slušaj i odaberi", description: "Pritisni dugme — koji elif odgovara glasu koji čuješ?",
         icon: "🎧", hasanatReward: 20,
         choices: ["أَ", "إِ", "أُ"],
         items: [
@@ -164,7 +176,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši zvuk", description: "Pogledaj elif — napiši latinično koji zvuk ima",
+        title: "Napiši slovo/glas", description: "Pogledaj elif — napiši latinično slovo/glas koji čuješ",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
@@ -188,14 +200,21 @@ export const LESSONS: LessonData[] = [
     isCompleted: false,
     story: {
       lines: [
-        { speaker: "dzana", text: "Amir, pogledaj ova tri harfa — ba, ta i sa. Primijetaš li nešto posebno?" },
-        { speaker: "amir",  text: "Hmm... svi izgledaju slično! Kao mali brod ili čamac." },
-        { speaker: "dzana", text: "Bravo! Razlikuju se samo po tačkicama. Ba ima jednu tačku ispod." },
-        { speaker: "amir",  text: "A ta ima dvije tačkice iznad, a sa čak tri tačkice iznad!" },
-        { speaker: "dzana", text: "Tačno! I sva tri harfa mogu nositi harekete — fethu, kesru i dammu." },
-        { speaker: "amir",  text: "Pa — ba s fethom daje 'be', ba s kesrom 'bi', a ba s dammom 'bu'?" },
-        { speaker: "dzana", text: "Odlično! Isto vrijedi za ta i sa. Hareketi su uvijek isti!" },
-        { speaker: "amir",  text: "Super, samo trebam upamtiti tačkice — a hareketi su isti kao kod elifa!" },
+        { speaker: "narator", text: "Sljedeće jutro Amir je prvi sjeo za sto. Otvorio je bilježnicu na čistoj stranici i nacrtao nešto — malu zdjelu s tačkicom ispod." },
+        { speaker: "narator", text: "Kad je Džana ušla, pokazao joj je crtež." },
+        { speaker: "dzana",   text: "Šta je ovo?" },
+        { speaker: "amir",    text: "Čamac. Ili zdjela. Ne znam još." },
+        { speaker: "narator", text: "Babo je prolazio hodnikom i bacio pogled kroz otvorena vrata." },
+        { speaker: "otac",    text: "Amire, to što si nacrtao — to je harf BA." },
+        { speaker: "narator", text: "Djeca su se okrenula." },
+        { speaker: "amir",    text: "Ozbiljno? Ja sam ga nacrtao, a nisam ni znao?" },
+        { speaker: "narator", text: "Babo je ušao i sjeo na rub kreveta." },
+        { speaker: "otac",    text: "Ovaj harf liči na malu zdjelu — vidite, ovaj luk ispod? A tačkica ispod je njegov znak. Samo jedna tačkica, i ona je ispod. Ovaj harf se zove BA i ima glas — isti kao naše slovo B. Kad mu staviš fethu — BE. Kesru — BI. Dammu — BU." },
+        { speaker: "dzana",   text: "Be-bi-bu..." },
+        { speaker: "amir",    text: "Ko iz čitanke!" },
+        { speaker: "otac",    text: "Upravo tako. Dok budete učili ostale harfove, vidjet ćete da su tačkice veoma, veoma važne — iako su veoma, veoma male." },
+        { speaker: "amir",    text: "Znači, ima još slova s tačkicama?" },
+        { speaker: "otac",    text: "Naravno. Ako ovaj tvoj čamac, Amire, ima dvije tačkice iznad — onda je to harf TA, glas kao naše T. A ako ima tri tačkice iznad — onda je harf SA, čiji glas ne postoji u bosanskom, ali ga ima u engleskom. Kao kada kažete THREE — nešto između T i S, mehko slovo S. Poslušajte vježbe i naučite kako se ispravno izgovara." },
       ]
     },
     letterData: [
@@ -231,6 +250,24 @@ export const LESSONS: LessonData[] = [
           { show: "بُ", answer: "Ba"  }, { show: "ثِ", answer: "Sa"  }, { show: "تُ", answer: "Ta"  },
           { show: "ثَ", answer: "Sa"  }, { show: "بَ", answer: "Ba"  }, { show: "تِ", answer: "Ta"  },
         ]
+      },
+      {
+        type: "pronadi-harf",
+        title: "Pronađi Ba!",
+        description: "Pronađi sva slova ب u gridu — pazi na tačkice!",
+        icon: "🔍", hasanatReward: 20,
+        choices: [], items: [{ show: "ب", answer: "Ba" }],
+        pool: ["ت", "ث", "ا", "ت", "ث"],
+        targetCount: 6,
+      },
+      {
+        type: "pronadi-harf",
+        title: "Pronađi Sa!",
+        description: "Pronađi sva slova ث u gridu — tri tačkice iznad!",
+        icon: "🔍", hasanatReward: 20,
+        choices: [], items: [{ show: "ث", answer: "Sa" }],
+        pool: ["ب", "ت", "ا", "ب", "ت"],
+        targetCount: 6,
       },
       {
         type: "koji-harf",
@@ -347,6 +384,24 @@ export const LESSONS: LessonData[] = [
           { show: "خِ", answer: "Hâ"   }, { show: "حُ", answer: "Ha"   }, { show: "جُ", answer: "Džim" },
           { show: "خَ", answer: "Hâ"   }, { show: "جِ", answer: "Džim" }, { show: "حَ", answer: "Ha"   },
         ]
+      },
+      {
+        type: "pronadi-harf",
+        title: "Pronađi Ha!",
+        description: "Pronađi sva slova ح u gridu — bez tačke, ne pobrkaj s Džim i Hâ!",
+        icon: "🔍", hasanatReward: 20,
+        choices: [], items: [{ show: "ح", answer: "Ha" }],
+        pool: ["ج", "خ", "ب", "ت", "ث", "ج", "خ"],
+        targetCount: 6,
+      },
+      {
+        type: "pronadi-harf",
+        title: "Pronađi Hâ!",
+        description: "Pronađi sva slova خ u gridu — tačka iznad razlikuje Hâ od Ha!",
+        icon: "🔍", hasanatReward: 20,
+        choices: [], items: [{ show: "خ", answer: "Hâ" }],
+        pool: ["ج", "ح", "ب", "ت", "ث", "ج", "ح"],
+        targetCount: 6,
       },
       {
         type: "slušaj",

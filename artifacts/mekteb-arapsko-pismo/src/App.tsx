@@ -15,6 +15,7 @@ import NotFound from "@/pages/not-found";
 // Arapsko pismo module
 import ArapskoPismoPage from "./pages/arapsko-pismo";
 import LessonDetail from "./pages/lesson-detail";
+import KartaHarfova from "./pages/karta-harfova";
 import Exercise from "./pages/exercise";
 import Progress from "./pages/progress";
 
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/arapsko-pismo" component={ArapskoPismoPage} />
       <Route path="/lesson/:id" component={LessonDetail} />
       <Route path="/lesson/:id/exercise/:type" component={Exercise} />
+      <Route path="/karta-harfova" component={KartaHarfova} />
       <Route path="/napredak" component={Progress} />
 
       {/* Ilmihal */}
