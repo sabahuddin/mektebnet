@@ -83,7 +83,8 @@ function ReadingGridModal({
   );
 
   function handleSpeak(text: string, idx: number) {
-    speakArabic(text);
+    // Dodaj tatweel (ـ) na kraj da spriječimo TTS waqf — ne odbacuj zadnji vokal
+    speakArabic(text + "\u0640");
     setPlayed((prev) => { const n = new Set(prev); n.add(idx); return n; });
   }
 
