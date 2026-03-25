@@ -509,13 +509,13 @@ export const LESSONS: LessonData[] = [
     story: {
       lines: [
         { speaker: "narator", text: "Amir je sjedio sam za stolom. Sufara je bila otvorena pred njim. Prstom je išao od harfa do harfa i poluglasno izgovarao harfove sa hareketima. Muallim im je u mektebu kazao da je veoma važno sebe slušati dok ih izgovaramo. Harfovi se ne mogu čitati očima. Oni se moraju izgovarati. Što ih više čitamo i izgovaramo, to se bolje privikavamo na njihove oblike i bolje ih pamtimo." },
-        { speaker: "amir",    text: "ELIF... BA... TA... SA... DŽIM... HA... HÂ..." },
-        { speaker: "narator", text: "Onda je uzeo tablet, pronašao aplikaciju za učenje harfova i krenuo redom — slušao je izgovor svakog harfa po nekoliko puta, pa onda ponavljao glasno. Sam sebi. Zastao je kod HA bez tačkice. Pritisnuo play još jednom. I još jednom." },
+        { speaker: "amir",    text: "اَلِف... بَ... تَ... ثَ... جِيم... حَ... خَ..." },
+        { speaker: "narator", text: "Onda je uzeo tablet, pronašao aplikaciju za učenje harfova i krenuo redom — slušao je izgovor svakog harfa po nekoliko puta, pa onda ponavljao glasno. Sam sebi. Zastao je kod حَ bez tačkice. Pritisnuo play još jednom. I još jednom." },
         { speaker: "amir",    text: "Sedam harfova. A tek sam počeo." },
         { speaker: "narator", text: "Džana mu je prišla i bacila pogled na otvorenu sufaru i upaljeni tablet." },
-        { speaker: "dzana",   text: "Hajde da i ja poslušam kako se ispravno izgovaraju harfovi kojih nema u bosanskom jeziku. To je SA..." },
-        { speaker: "amir",    text: "Čekaj... Znam i ja. Ono hrapavo slovo HA, kao kada neko hrče dok spava. I drugo HA, ono kad se stisne grlo. Poslušaj!" },
-        { speaker: "narator", text: "Amir je nekoliko puta pokušavao izgovoriti harf HA." },
+        { speaker: "dzana",   text: "Hajde da i ja poslušam kako se ispravno izgovaraju harfovi kojih nema u bosanskom jeziku. To je ثَ..." },
+        { speaker: "amir",    text: "Čekaj... Znam i ja. Ono hrapavo slovo حَ, kao kada neko hrče dok spava. I drugo خَ, ono kad se stisne grlo. Poslušaj!" },
+        { speaker: "narator", text: "Amir je nekoliko puta pokušavao izgovoriti harf حَ." },
         { speaker: "dzana",   text: "Super. Nije loše, Amire." },
         { speaker: "narator", text: "U međuvremenu majka je zastala na vratima i ponosno gledala djecu kako uče svoje prve harfove. Prišla im je, zagrlila ih i kazala:" },
         { speaker: "majka",   text: "Eh, da vas sad dedo Husein vidi. Bio bi ponosan." },

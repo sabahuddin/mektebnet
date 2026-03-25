@@ -234,3 +234,21 @@ id = "Wcmk9v0t4Xaafl8JKimVj"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/anas_bismillah.mp3"
 type = "audio"
 title = "Anas — بِسْمِ اللَّهِ (bismillah)"
+
+[[outputs]]
+id = "m3uKO4gUfov8LXETCMG8n"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/bs_test_narator_brian.mp3"
+type = "audio"
+title = "Narator (Brian) — opisni tekst"
+
+[[outputs]]
+id = "7Kv4vJ5cHbuhlEu4FK8qC"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/bs_test_dzana_alice.mp3"
+type = "audio"
+title = "Džana (Alice) — dijalog"
+
+[[outputs]]
+id = "rea6wkwu5_2aYaA1oiUzD"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/bs_test_amir_liam.mp3"
+type = "audio"
+title = "Amir (Liam) — dijalog"
