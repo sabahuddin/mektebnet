@@ -791,33 +791,27 @@ export default function LessonDetail() {
       {/* Priča */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-orange-50 to-pink-50 border-orange-100">
 
-        {/* Unified story renderer — narator full-width, dialogue always zigzag */}
+        {/* Story renderer — novinski stupci na desktopu, single-column na mobitelu */}
         {(() => {
-          const renderLine = (line: typeof data.story.lines[0], i: number) => {
-            if (line.speaker === "narator") {
-              return (
-                <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.06 }}
-                  className="col-span-2 flex items-center gap-3 py-1">
-                  <div className="flex-1 h-px bg-orange-200/60" />
-                  <p className="text-base italic text-orange-800/70 leading-relaxed text-center px-3 max-w-prose">
-                    {line.text}
-                  </p>
-                  <div className="flex-1 h-px bg-orange-200/60" />
-                </motion.div>
-              );
-            }
-
+          const renderStoryLine = (line: typeof data.story.lines[0], i: number) => {
             const isDzana = line.speaker === "dzana";
             const isOtac  = line.speaker === "otac";
             const isAmir  = line.speaker === "amir";
             const isMajka = line.speaker === "majka";
-
-            // Amir → right side; everyone else → left side
             const isRight = isAmir;
+
+            if (line.speaker === "narator") {
+              return (
+                <div key={i} className="break-inside-avoid mb-3">
+                  <p className="text-base italic text-orange-800/70 leading-relaxed text-center px-1">
+                    {line.text}
+                  </p>
+                </div>
+              );
+            }
+
             const label = isDzana ? "Džana" : isOtac ? "Babo" : isMajka ? "Mama" : "Amir";
             const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : isMajka ? "text-rose-700" : "text-primary";
-
             const bubbleClass = isDzana
               ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
               : isOtac
@@ -825,83 +819,38 @@ export default function LessonDetail() {
                 : isMajka
                   ? "bg-rose-500 text-white rounded-2xl rounded-bl-sm"
                   : "bg-primary text-white rounded-2xl rounded-br-sm";
-
             const avatar = isDzana
-              ? <img src={dzanaImg} alt="Džana" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
+              ? <img src={dzanaImg} alt="Džana" className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
               : isOtac
-                ? <div className="w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 shadow-md flex items-center justify-center text-2xl shrink-0">👨</div>
+                ? <div className="w-9 h-9 rounded-full bg-emerald-100 border-2 border-emerald-300 shadow-md flex items-center justify-center text-xl shrink-0">👨</div>
                 : isMajka
-                  ? <div className="w-11 h-11 rounded-full bg-rose-100 border-2 border-rose-300 shadow-md flex items-center justify-center text-2xl shrink-0">🧕</div>
-                  : <img src={amirImg} alt="Amir" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
+                  ? <div className="w-9 h-9 rounded-full bg-rose-100 border-2 border-rose-300 shadow-md flex items-center justify-center text-xl shrink-0">🧕</div>
+                  : <img src={amirImg} alt="Amir" className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
 
-            // On mobile: one column, zigzag via flex-row-reverse
-            // On desktop: narator spans col-span-2; dialogue sits in col 1 (left) or col 2 (right)
             return (
-              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07 }}
-                className={`
-                  flex items-end gap-3
-                  ${isRight ? "flex-row-reverse col-start-2" : "col-start-1"}
-                `}>
-                {avatar}
-                <div className={`flex flex-col gap-1 max-w-[80%] ${isRight ? "items-end" : "items-start"}`}>
-                  <span className={`text-sm font-extrabold px-1 ${labelColor}`}>{label}</span>
-                  <div className={`px-5 py-3 text-base font-medium leading-relaxed shadow-sm ${bubbleClass}`}>
-                    {line.text}
+              <div key={i} className="break-inside-avoid mb-3">
+                <div className={`flex items-end gap-2 ${isRight ? "flex-row-reverse" : ""}`}>
+                  {avatar}
+                  <div className={`flex flex-col gap-0.5 max-w-[80%] ${isRight ? "items-end" : "items-start"}`}>
+                    <span className={`text-sm font-extrabold px-1 ${labelColor}`}>{label}</span>
+                    <div className={`px-4 py-2.5 text-base font-medium leading-relaxed shadow-sm ${bubbleClass}`}>
+                      {line.text}
+                    </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             );
           };
 
           return (
-            // Mobile: single flex column | Desktop: 2-column grid (narator spans both, dialogue splits left/right)
             <>
-              {/* Mobile */}
-              <div className="flex flex-col gap-4 md:hidden">
-                {data.story.lines.map((line, i) => {
-                  const isRight = line.speaker === "amir";
-                  if (line.speaker === "narator") {
-                    return (
-                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.06 }}
-                        className="flex items-center gap-3 py-1">
-                        <div className="flex-1 h-px bg-orange-200/60" />
-                        <p className="text-base italic text-orange-800/70 leading-relaxed text-center px-2 max-w-[80%]">{line.text}</p>
-                        <div className="flex-1 h-px bg-orange-200/60" />
-                      </motion.div>
-                    );
-                  }
-                  const isDzana = line.speaker === "dzana";
-                  const isOtac  = line.speaker === "otac";
-                  const isMajka = line.speaker === "majka";
-                  const label = isDzana ? "Džana" : isOtac ? "Babo" : isMajka ? "Mama" : "Amir";
-                  const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : isMajka ? "text-rose-700" : "text-primary";
-                  const bubbleClass = isDzana
-                    ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
-                    : isOtac ? "bg-emerald-600 text-white rounded-2xl rounded-bl-sm"
-                    : isMajka ? "bg-rose-500 text-white rounded-2xl rounded-bl-sm"
-                    : "bg-primary text-white rounded-2xl rounded-br-sm";
-                  const avatar = isDzana
-                    ? <img src={dzanaImg} alt="Džana" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
-                    : isOtac ? <div className="w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 shadow-md flex items-center justify-center text-2xl shrink-0">👨</div>
-                    : isMajka ? <div className="w-11 h-11 rounded-full bg-rose-100 border-2 border-rose-300 shadow-md flex items-center justify-center text-2xl shrink-0">🧕</div>
-                    : <img src={amirImg} alt="Amir" className="w-11 h-11 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
-                  return (
-                    <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                      className={`flex items-end gap-3 ${isRight ? "flex-row-reverse" : ""}`}>
-                      {avatar}
-                      <div className={`flex flex-col gap-1 max-w-[80%] ${isRight ? "items-end" : "items-start"}`}>
-                        <span className={`text-sm font-extrabold px-1 ${labelColor}`}>{label}</span>
-                        <div className={`px-5 py-3 text-base font-medium leading-relaxed shadow-sm ${bubbleClass}`}>{line.text}</div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+              {/* Mobile: jedan stupac */}
+              <div className="md:hidden flex flex-col gap-1">
+                {data.story.lines.map((line, i) => renderStoryLine(line, i))}
               </div>
-
-              {/* Desktop: 2-column grid */}
-              <div className="hidden md:grid grid-cols-2 gap-x-8 gap-y-4 items-start">
-                {data.story.lines.map((line, i) => renderLine(line, i))}
+              {/* Desktop: dva novinska stupca — tekst teče lijevo → desno */}
+              <div className="hidden md:block" style={{ columnCount: 2, columnGap: "2.5rem", columnFill: "balance" }}>
+                {data.story.lines.map((line, i) => renderStoryLine(line, i))}
               </div>
             </>
           );
