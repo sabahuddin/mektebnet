@@ -390,9 +390,23 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
 
 /* ── Print / PDF Worksheet ── */
 @media print {
-  body > * { display: none !important; }
-  #print-worksheet { display: block !important; }
-  #print-worksheet * { visibility: visible !important; }
+  /* Sakrij sve sadržaje koristeći visibility — ne display:none (koji blokira djecu) */
+  body * {
+    visibility: hidden !important;
+  }
+  /* Prikaži samo worksheet i sav njegov sadržaj */
+  #print-worksheet,
+  #print-worksheet * {
+    visibility: visible !important;
+  }
+  #print-worksheet {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    z-index: 9999 !important;
+  }
   @page {
     size: A4;
     margin: 15mm 12mm;
@@ -401,5 +415,4 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
     background: white !important;
     color: black !important;
   }
-  button, nav, header, footer { display: none !important; }
 }

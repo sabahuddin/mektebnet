@@ -11,11 +11,25 @@ function playAudio(file: string) {
   audio.play().catch(() => {});
 }
 
+const MAGHREB = /^ar-(MA|DZ|TN|LY|MR)/i;
+const GULF_PREF = ["ar-SA", "ar-EG", "ar-KW", "ar-QA", "ar-AE", "ar-BH", "ar-IQ", "ar-JO"];
+
+function pickArabicVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("ar"));
+  for (const pref of GULF_PREF) {
+    const v = voices.find(v => v.lang === pref);
+    if (v) return v;
+  }
+  return voices.find(v => !MAGHREB.test(v.lang)) ?? voices[0] ?? null;
+}
+
 function speakArabic(text: string) {
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "ar-SA";
   u.rate = 0.75;
+  const voice = pickArabicVoice();
+  if (voice) u.voice = voice;
   window.speechSynthesis.speak(u);
 }
 

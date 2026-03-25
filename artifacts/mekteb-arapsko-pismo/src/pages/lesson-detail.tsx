@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { ArrowLeft, BookOpen, Check, Download, Gamepad2, Info, Map, PlayCircle, RotateCcw, Search, Star, Trophy, Volume2, X } from "lucide-react";
+import { ArrowLeft, Check, Download, Gamepad2, Info, Map, PlayCircle, RotateCcw, Search, Star, Trophy, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getLessonById, LESSONS, type Exercise, type ExerciseItem } from "@/data/lessons";
@@ -26,11 +26,26 @@ function playAudio(file: string) {
   audio.play().catch(() => {});
 }
 
+// Preferiramo Gulf/Egipatski glas — izbjegavamo Magrebiški (MA/DZ/TN) koji ج čita kao Ž
+const MAGHREB = /^ar-(MA|DZ|TN|LY|MR)/i;
+const GULF_PREF = ["ar-SA", "ar-EG", "ar-KW", "ar-QA", "ar-AE", "ar-BH", "ar-IQ", "ar-JO"];
+
+function pickArabicVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("ar"));
+  for (const pref of GULF_PREF) {
+    const v = voices.find(v => v.lang === pref);
+    if (v) return v;
+  }
+  return voices.find(v => !MAGHREB.test(v.lang)) ?? voices[0] ?? null;
+}
+
 function speakArabic(text: string) {
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = "ar-SA";
   utter.rate = 0.75;
+  const voice = pickArabicVoice();
+  if (voice) utter.voice = voice;
   window.speechSynthesis.speak(utter);
 }
 
@@ -52,17 +67,6 @@ function playHareketiSound(h: { sound: string; soundFile: string; speakText?: st
   }
 }
 
-// Za waqf čitanje — dodaj sukun na zadnji suglasnik bez hareketa
-// da TTS ne dodaje izmišljeni vokal (npr. بَث → بَثْ)
-function prepareForWaqf(text: string): string {
-  if (!text) return text;
-  const last = text.charCodeAt(text.length - 1);
-  const isHareke = last >= 0x064B && last <= 0x0652;
-  if (!isHareke) {
-    return text + "\u0652"; // dodaj sukun
-  }
-  return text;
-}
 
 function ReadingGridModal({
   exercise,
@@ -79,7 +83,7 @@ function ReadingGridModal({
   );
 
   function handleSpeak(text: string, idx: number) {
-    speakArabic(prepareForWaqf(text));
+    speakArabic(text);
     setPlayed((prev) => { const n = new Set(prev); n.add(idx); return n; });
   }
 
@@ -775,10 +779,6 @@ export default function LessonDetail() {
 
       {/* Priča */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-orange-50 to-pink-50 border-orange-100">
-        <h2 className="text-2xl font-bold text-orange-800 flex items-center gap-2 mb-6">
-          <BookOpen className="w-6 h-6" />
-          Priča za danas
-        </h2>
 
         {/* Unified story renderer — handles narator, otac, dzana, amir */}
         {(() => {
