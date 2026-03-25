@@ -620,6 +620,35 @@ export default function LessonDetail() {
 
       {/* Harfovi i hareketi */}
       <div className="mb-8">
+        {data.isRevision ? (
+          /* ── Revision lesson: compact reminder, no full letter breakdown ── */
+          <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-5">
+            <h2 className="text-xl font-extrabold text-teal-800 flex items-center gap-2 mb-4">
+              <Volume2 className="w-5 h-5" />
+              Podsjetnik — sva slova
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {data.letterData.map((letter, i) => (
+                <button
+                  key={i}
+                  onClick={() => playAudio(letter.soundFile)}
+                  className="flex flex-col items-center gap-1 bg-white border-2 border-teal-200 hover:border-teal-500 rounded-2xl px-4 py-3 transition-all hover:shadow-md group"
+                >
+                  <span
+                    className="text-4xl text-teal-800 leading-none"
+                    style={{ fontFamily: "Noto Naskh Arabic, serif" }}
+                  >{letter.arabic}</span>
+                  <span className="text-sm font-bold text-teal-600 group-hover:text-teal-800">{letter.name}</span>
+                  <Volume2 className="w-3 h-3 text-teal-400 group-hover:text-teal-600" />
+                </button>
+              ))}
+            </div>
+            <p className="text-base text-teal-700 mt-4 font-medium">
+              Klikni na svako slovo da čuješ izgovor — pa prijeđi na vježbe!
+            </p>
+          </div>
+        ) : (
+        <>
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-5">
           <Info className="w-6 h-6 text-primary" />
           {data.hareketi ? "Upoznajmo slovo i harekete" : "Upoznajmo harfove"}
@@ -716,6 +745,8 @@ export default function LessonDetail() {
               })}
             </div>
           </>
+        )}
+        </>
         )}
       </div>
 
