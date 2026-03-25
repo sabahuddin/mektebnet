@@ -1,0 +1,20 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "70fM7x_DVtCcdVseXrONt"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
+type = "audio"
+title = "بَ (BE)"
+
+[[outputs]]
+id = "AkZHt3JXgmPn4K7YCA2Io"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/dafee7ba9ab6.mp3"
+type = "audio"
+title = "جَ (DŽE)"
+
+[[outputs]]
+id = "oUDwLQ5fXDIWu996ccT0E"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/dc317354e853.mp3"
+type = "audio"
+title = "بَحَثَ (BE-HA-SE)"

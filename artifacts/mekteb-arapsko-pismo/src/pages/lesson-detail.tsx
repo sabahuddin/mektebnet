@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Download, Gamepad2, Info, Map, PlayCircle, RotateCcw,
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getLessonById, LESSONS, type Exercise, type ExerciseItem } from "@/data/lessons";
+import { SLOGOVI_AUDIO } from "@/data/slogovi-mapping";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -24,6 +25,16 @@ function isArabicChar(s: string) {
 function playAudio(file: string) {
   const audio = new Audio(`${BASE}audio/harfovi/${file}`);
   audio.play().catch(() => {});
+}
+
+function playSlog(text: string) {
+  const mp3 = SLOGOVI_AUDIO[text];
+  if (mp3) {
+    const audio = new Audio(`${BASE}audio/slogovi/${mp3}`);
+    audio.play().catch(() => {});
+  } else {
+    speakArabic(text);
+  }
 }
 
 // Preferiramo Gulf/Egipatski glas — izbjegavamo Magrebiški (MA/DZ/TN) koji ج čita kao Ž
@@ -83,7 +94,7 @@ function ReadingGridModal({
   );
 
   function handleSpeak(text: string, idx: number) {
-    speakArabic(text);
+    playSlog(text);
     setPlayed((prev) => { const n = new Set(prev); n.add(idx); return n; });
   }
 
@@ -959,7 +970,7 @@ export default function LessonDetail() {
                         key={sound}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.93 }}
-                        onClick={() => speakArabic(combined)}
+                        onClick={() => playSlog(combined)}
                         className="bg-teal-50 hover:bg-teal-100 border-2 border-teal-200 hover:border-teal-400 rounded-2xl py-5 px-2 flex flex-col items-center gap-1 transition-all group"
                       >
                         <span
