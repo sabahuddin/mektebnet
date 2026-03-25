@@ -6,7 +6,7 @@ import { createHash } from 'crypto';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = join(__dirname, '../artifacts/mekteb-arapsko-pismo/public/audio/slogovi');
 const API_KEY = process.env.ELEVENLABS_API_KEY;
-const VOICE_ID = 'Xb7hH8MSUJpSbSDYk0k2'; // Alice — Clear, Engaging Educator
+const VOICE_ID = 'R6nda3uM038xEEKi7GFl'; // Anas — Calm, Attractive and Clear
 const MODEL = 'eleven_multilingual_v2';
 
 if (!API_KEY) {

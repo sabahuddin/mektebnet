@@ -18,3 +18,219 @@ id = "oUDwLQ5fXDIWu996ccT0E"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/dc317354e853.mp3"
 type = "audio"
 title = "بَحَثَ (BE-HA-SE)"
+
+[[outputs]]
+id = "lh3OevMsoTmVfh61behbb"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/sample_ghaida.mp3"
+type = "audio"
+title = "Ghaida — Prijatna, šarmantna i brižna"
+
+[[outputs]]
+id = "eyBsM0UdznJzpP9EnQOfG"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/sample_asmaa.mp3"
+type = "audio"
+title = "Asmaa — Smirena, ohrabrujuća i jasna"
+
+[[outputs]]
+id = "fX36dxJYe9wIbXTzLOCiT"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/sample_habibah.mp3"
+type = "audio"
+title = "Habibah — Izražajna, jasna i topla"
+
+[[outputs]]
+id = "y_Q_jkyDqEUPPSQGrbrWK"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/sample_salma.mp3"
+type = "audio"
+title = "Salma — Pozitivna, profesionalna i topla"
+
+[[outputs]]
+id = "_77eCHT7ZZrJdpHfT6VMk"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/preview_yousuf_be.mp3"
+type = "audio"
+title = "Yousuf — بَ (BE)"
+
+[[outputs]]
+id = "uT4bhq4lHWwg9qpXKIA65"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/preview_yousuf_dze.mp3"
+type = "audio"
+title = "Yousuf — جَ (DŽE)"
+
+[[outputs]]
+id = "xnmwiE6CC6kMEAm9Nb4U0"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/preview_yousuf_behase.mp3"
+type = "audio"
+title = "Yousuf — بَحَثَ (BE-HA-SE)"
+
+[[outputs]]
+id = "pEM9BrmiO6Tq5SKxYGmKE"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sarah_ha.mp3"
+type = "audio"
+title = "Sarah — حَ (HA)"
+
+[[outputs]]
+id = "05vQqiWrhln7xusH9Hfc5"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sarah_hi.mp3"
+type = "audio"
+title = "Sarah — حِ (HI)"
+
+[[outputs]]
+id = "ircox1dbCzgBGPVwN-BwH"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sarah_dze.mp3"
+type = "audio"
+title = "Sarah — جَ (DŽE)"
+
+[[outputs]]
+id = "TU4BqvNi5TZ5W368W0cPI"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sarah_dzu.mp3"
+type = "audio"
+title = "Sarah — جُ (DŽU)"
+
+[[outputs]]
+id = "UzyT4bym-YtJJojwHVggU"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sara_ha.mp3"
+type = "audio"
+title = "Sara — حَ (HA)"
+
+[[outputs]]
+id = "0sI-K4w33FxYkxmJT4bZg"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sara_hi.mp3"
+type = "audio"
+title = "Sara — حِ (HI)"
+
+[[outputs]]
+id = "Q9xGsomJ1Gb-Y4GkaTZM4"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sara_dze.mp3"
+type = "audio"
+title = "Sara — جَ (DŽE)"
+
+[[outputs]]
+id = "v0dCUGrjcAZUPBRmPddAm"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_sara_dzu.mp3"
+type = "audio"
+title = "Sara — جُ (DŽU)"
+
+[[outputs]]
+id = "hOMsfx6LAPbdEYj0OdNRc"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_novi_ha.mp3"
+type = "audio"
+title = "David Martin 2 — حَ (HA)"
+
+[[outputs]]
+id = "OnI3OF570_YbgJpyREKzw"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_novi_hi.mp3"
+type = "audio"
+title = "David Martin 2 — حِ (HI)"
+
+[[outputs]]
+id = "-W1hOL6j3d9weCwk_sf--"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_novi_dze.mp3"
+type = "audio"
+title = "David Martin 2 — جَ (DŽE)"
+
+[[outputs]]
+id = "3pMXl9WhSyI8jJqt2IJpi"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/probe_novi_dzu.mp3"
+type = "audio"
+title = "David Martin 2 — جُ (DŽU)"
+
+[[outputs]]
+id = "Ixjw1JzWXtRWgMV4pvnY7"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/dm2_marhaba.mp3"
+type = "audio"
+title = "David Martin 2 — مَرْحَبًا (merhaba)"
+
+[[outputs]]
+id = "Hrb0dDYIwMXVZ6NvLv2hm"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/dm2_kitab.mp3"
+type = "audio"
+title = "David Martin 2 — كِتَابౌ (kitab - knjiga)"
+
+[[outputs]]
+id = "W77w6RJp_qYnRNtE2QVlM"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/dm2_madrasa.mp3"
+type = "audio"
+title = "David Martin 2 — مَدْرَسَةౌ (madrasa - škola)"
+
+[[outputs]]
+id = "q-bBSsAAcoD_2m0hQaZtz"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/dm2_rasul.mp3"
+type = "audio"
+title = "David Martin 2 — رَسُولౌ (rasul - poslanik)"
+
+[[outputs]]
+id = "tQc0CP5JHuk1lWjAu8cVA"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/dm2_bismillah.mp3"
+type = "audio"
+title = "David Martin 2 — بِسْمِ اللَّهِ (bismillah)"
+
+[[outputs]]
+id = "F-lVngQ49CODcGGGl50OX"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/novi_ha.mp3"
+type = "audio"
+title = "حَ (HA)"
+
+[[outputs]]
+id = "c4w6hzrkEVQ0SYvrPD_iB"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/novi_hi.mp3"
+type = "audio"
+title = "حِ (HI)"
+
+[[outputs]]
+id = "c8n425DaWjEuYftCZoqJK"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/novi_dze.mp3"
+type = "audio"
+title = "جَ (DŽE)"
+
+[[outputs]]
+id = "W11GQXy_X0jkGBNVYZplQ"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/novi_dzu.mp3"
+type = "audio"
+title = "جُ (DŽU)"
+
+[[outputs]]
+id = "lRLZ5X9ZaYW6yR2ThRSiP"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/novi_marhaba.mp3"
+type = "audio"
+title = "مَرْحَبًا (merhaba)"
+
+[[outputs]]
+id = "b5QOcvA8ZL8YB6UjKOote"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/novi_bismillah.mp3"
+type = "audio"
+title = "بِسْمِ اللَّهِ (bismillah)"
+
+[[outputs]]
+id = "hDwh0EcbrKxuXdef_Rx3Z"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/anas_ha.mp3"
+type = "audio"
+title = "Anas — حَ (HA)"
+
+[[outputs]]
+id = "CVEbr4RvWYTRWYRa8DncL"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/anas_hi.mp3"
+type = "audio"
+title = "Anas — حِ (HI)"
+
+[[outputs]]
+id = "Tm82eLTWM_C5aisvCXF2d"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/anas_dze.mp3"
+type = "audio"
+title = "Anas — جَ (DŽE)"
+
+[[outputs]]
+id = "SNPn8RF9iYoJUMuhum14Y"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/anas_dzu.mp3"
+type = "audio"
+title = "Anas — جُ (DŽU)"
+
+[[outputs]]
+id = "Oz5AsUN_k99fRa-t7DcLx"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/anas_marhaba.mp3"
+type = "audio"
+title = "Anas — مَرْحَبًا (merhaba)"
+
+[[outputs]]
+id = "Wcmk9v0t4Xaafl8JKimVj"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/anas_bismillah.mp3"
+type = "audio"
+title = "Anas — بِسْمِ اللَّهِ (bismillah)"

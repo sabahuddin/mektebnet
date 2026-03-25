@@ -1,0 +1,89 @@
+~/workspace$ rm /home/runner/workspace/.git/index.lock && git add -A && git commit -m "feat: ElevenLabs slogovi audio" && git push github HEAD:main
+[detached HEAD 2cb3868] feat: ElevenLabs slogovi audio
+ 71 files changed, 261 insertions(+), 2 deletions(-)
+ create mode 100644 .agents/agent_assets_metadata.toml
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/0226d4395192.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/0389ec5c6fdc.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/06a43a6eaf1a.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/0bd9dfc070a4.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/1a85e0eab480.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/1e0b8ca9d945.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/21d425f32ec0.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/29a6e0f0ab93.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/2ce15206c393.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/303a1c2376aa.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/341552d997fa.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/39652a39c489.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/4013eb9c404c.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/4596d22df719.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/4a5d18dcee9c.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/4d4927969385.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/542c28b33882.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/56264bc83ad2.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/56a997144222.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/5e757a94037a.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/61410ba110d6.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/636e7ef570ad.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/68515c9cd644.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/6e3edd51c023.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/72d0635775a9.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/73de9c42f0d3.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/7b58e91cc3ed.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/7bd685a5a25c.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/7c01064a5e24.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/82cd741695e2.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/84d7dc8ded0e.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/866ea5b05f68.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/881cfd06af17.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/8d0c80506ed6.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/90a12b14758d.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/9876eecec4cc.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/99108108d986.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/a459a35d2df0.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/a664b3e73df0.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/a97ee66caf02.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/a9f550f9a92b.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/ab6d2f334729.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/ab99b76247e3.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/abd3a801603d.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/af6fcd614f0d.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/b3ee80a5ab9e.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/ba871e2d72bd.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/bcab2aa407b8.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/bd6ca6e16c39.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/bf97866147c5.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/c0b04d298321.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/ca993b3587fb.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/ccd986d3445c.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d11097b57db8.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d2810c6ae9d4.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d4e62e5206f1.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d9b4f92c60e7.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/dafee7ba9ab6.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/db2b6575399c.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/dc317354e853.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/e58055ea16d3.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/ea09860d1971.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/ede96d1c60f2.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/fed545d10f38.mp3
+ create mode 100644 artifacts/mekteb-arapsko-pismo/public/audio/slogovi/mapping.json
+ create mode 100644 artifacts/mekteb-arapsko-pismo/src/data/slogovi-mapping.ts
+ create mode 100644 attached_assets/image_1774450640567.png
+ create mode 100644 scripts/generate-slogovi-audio.mjs
+Enumerating objects: 95, done.
+Counting objects: 100% (95/95), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (84/84), done.
+Writing objects: 100% (84/84), 1.04 MiB | 32.42 MiB/s, done.
+Total 84 (delta 9), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (9/9), completed with 8 local objects.
+To https://github.com/sabahuddin/mektebnet.git
+   ac93018..2cb3868  HEAD -> main
+error: update_ref failed for ref 'refs/remotes/github/main': cannot lock ref 'refs/remotes/github/main': Unable to create '/home/runner/workspace/.git/refs/remotes/github/main.lock': File exists.
+
+Another git process seems to be running in this repository, e.g.
+an editor opened by 'git commit'. Please make sure all processes
+are terminated then try again. If it still fails, a git process
+may have crashed in this repository earlier:
+remove the file manually to continue.
