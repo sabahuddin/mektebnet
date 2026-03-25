@@ -393,7 +393,7 @@ function QuizModal({
             className="w-44 h-44 bg-white/20 hover:bg-white/30 rounded-3xl flex flex-col items-center justify-center gap-3 text-white shadow-xl transition-colors"
           >
             <Volume2 className="w-16 h-16" />
-            <span className="text-2xl font-bold opacity-60">Pritisni za zvuk</span>
+            <span className="text-2xl font-bold opacity-60">Pritisni za glas</span>
           </motion.button>
         ) : isReadingSlog ? (
           <div className="flex flex-col items-center gap-4">
@@ -483,7 +483,7 @@ function QuizModal({
               onKeyDown={e => { if (e.key === "Enter" && text.trim()) answer(text); }}
               disabled={status !== "asking"}
               maxLength={6}
-              placeholder="Napiši zvuk…"
+              placeholder="Napiši glas…"
               className="flex-1 text-2xl font-bold text-center rounded-2xl border-2 border-white/30 bg-white/20 text-white placeholder:text-white/50 px-4 py-4 outline-none focus:border-white"
             />
             <button
@@ -962,35 +962,53 @@ export default function LessonDetail() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.1 }}
-                    className={`border-2 rounded-2xl p-5 ${c.card}`}
+                    className={`border-2 rounded-2xl overflow-hidden ${c.card}`}
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <div
-                        className="w-24 h-24 flex items-center justify-center overflow-hidden shrink-0"
-                        style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "4.5rem", lineHeight: 1 }}
-                      >
-                        {h.arabic}
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <button
-                          onClick={() => playAudio(h.soundFile)}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${c.sound}`}
+                    <div className="flex items-stretch">
+                      {/* Lijevo: veliki arapski karakter — dovoljno prostora za dijakritike */}
+                      <div className="flex items-center justify-center border-r border-black/5 shrink-0"
+                        style={{ minWidth: "110px", paddingTop: "2rem", paddingBottom: "1.5rem", paddingLeft: "0.75rem", paddingRight: "0.75rem" }}>
+                        <span
+                          style={{
+                            fontFamily: "Noto Naskh Arabic, serif",
+                            fontSize: "5rem",
+                            lineHeight: 2,
+                            display: "block",
+                          }}
                         >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                        <span className={`text-sm font-extrabold px-3 py-1 rounded-full ${c.badge}`}>
-                          zvuk: {h.sound}
+                          {h.arabic}
                         </span>
                       </div>
+
+                      {/* Desno: naziv, opis, glas dugme */}
+                      <div className="flex flex-col justify-between p-4 flex-1 min-w-0">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span
+                              style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.6rem", lineHeight: 2 }}
+                            >
+                              {h.hareke}
+                            </span>
+                            <span className="text-xl font-extrabold text-foreground">{h.name}</span>
+                          </div>
+                          <p className="text-base font-medium leading-snug text-foreground">{h.description}</p>
+                          {h.napomena && (
+                            <p className="text-sm mt-2 opacity-70 italic leading-snug">{h.napomena}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={() => playAudio(h.soundFile)}
+                            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${c.sound}`}
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                          <span className={`text-sm font-extrabold px-3 py-1 rounded-full ${c.badge}`}>
+                            glas: {h.sound}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-5xl font-bold ar">{h.hareke}</span>
-                      <span className="text-2xl font-extrabold">{h.name}</span>
-                    </div>
-                    <p className="text-lg font-medium leading-snug">{h.description}</p>
-                    {h.napomena && (
-                      <p className="text-base mt-2 opacity-75 italic">{h.napomena}</p>
-                    )}
                   </motion.div>
                 );
               })}
@@ -1097,11 +1115,19 @@ export default function LessonDetail() {
                     {ex.items.slice(0, 6).map((item, wi) => {
                       const showIsListen = item.show === "🔊";
                       return (
-                        <div key={wi} className="bg-muted/50 rounded-xl p-3 flex flex-row items-center justify-center gap-2 text-center">
+                        <div key={wi} className="bg-muted/50 rounded-xl px-2 py-4 flex flex-row items-center justify-center gap-2 text-center">
                           {showIsListen ? (
                             <Volume2 className="w-6 h-6 text-teal-600" />
                           ) : (
-                            <span className={`text-3xl font-bold text-foreground leading-none ${isArabicChar(item.show) ? "ar" : ""}`}>
+                            <span
+                              className={`font-bold text-foreground ${isArabicChar(item.show) ? "" : "text-3xl"}`}
+                              style={isArabicChar(item.show) ? {
+                                fontFamily: "Noto Naskh Arabic, serif",
+                                fontSize: "2rem",
+                                lineHeight: 2.2,
+                                display: "block",
+                              } : undefined}
+                            >
                               {item.show}
                             </span>
                           )}

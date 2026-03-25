@@ -55,21 +55,21 @@ const HAREKETI_L2: HarekeData[] = [
   {
     arabic: "أَ", hareke: "ـَـ", name: "Fetha",
     sound: "e", colour: "teal",
-    description: "Crtica iznad slova — daje kratki zvuk \"e\"",
+    description: "Crtica iznad slova — daje kratki glas \"e\"",
     napomena: "Iznad krupnih (jakih) harfova čita se \"a\"",
     soundFile: "hareke-fatha.mp3",
   },
   {
     arabic: "إِ", hareke: "ـِـ", name: "Kesra",
     sound: "i", colour: "blue",
-    description: "Crtica ispod slova — daje kratki zvuk \"i\"",
+    description: "Crtica ispod slova — daje kratki glas \"i\"",
     napomena: null,
     soundFile: "hareke-kasra.mp3",
   },
   {
     arabic: "أُ", hareke: "ـُـ", name: "Damma",
     sound: "u", colour: "violet",
-    description: "Zarez iznad slova — daje kratki zvuk \"u\"",
+    description: "Zarez iznad slova — daje kratki glas \"u\"",
     napomena: null,
     soundFile: "hareke-damma.mp3",
   },
@@ -347,8 +347,8 @@ export const LESSONS: LessonData[] = [
         { speaker: "amir",  text: "A ha — bez tačke? Kako se izgovara?" },
         { speaker: "dzana", text: "Ha bez tačke je tihi, topli glas iz grudi. Puhni blago rukom — osjetit ćeš toplinu." },
         { speaker: "amir",  text: "A hâ s tačkom iznad?" },
-        { speaker: "dzana", text: "Hâ s tačkom dolazi iz grla, malo kao zvuk 'h' kad kašlješ." },
-        { speaker: "amir",  text: "Tri slova, tri zvuka — ali sva tri nose iste harekete!" },
+        { speaker: "dzana", text: "Hâ s tačkom dolazi iz grla, malo kao glas 'h' kad kašlješ." },
+        { speaker: "amir",  text: "Tri slova, tri glasa — ali sva tri nose iste harekete!" },
       ]
     },
     letterData: [
@@ -361,7 +361,7 @@ export const LESSONS: LessonData[] = [
       {
         arabic: "ح", name: "Ha", transliteration: "H (toplo)",
         forms: { isolated: "ح", initial: "حـ", medial: "ـحـ", final: "ـح" },
-        visualAssociation: "Ista udubina bez tačke — prazan, tih i mekan zvuk",
+        visualAssociation: "Ista udubina bez tačke — prazan, tih i mekan glas",
         soundFile: "ha.mp3",
       },
       {
@@ -736,7 +736,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši zvuk ili —", description: "Napiši zvuk slova (e/i/u) ili crtu (—) ako nema glasa",
+        title: "Napiši glas ili —", description: "Napiši glas slova (e/i/u) ili crtu (—) ako nema glasa",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
@@ -848,7 +848,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši zvuk", description: "Napiši zvuk hareka koji je uz tešdid (e/i/u)",
+        title: "Napiši glas", description: "Napiši glas hareka koji je uz tešdid (e/i/u)",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
@@ -867,12 +867,12 @@ export const LESSONS: LessonData[] = [
   // ── LEKCIJA 8: TENVIN ───────────────────────────────────────
   {
     id: 8, orderNum: 8, slug: "tenvin",
-    title: "Tenvin — zvuk N na kraju",
+    title: "Tenvin — glas N na kraju",
     letters: ["ً", "ٍ", "ٌ"],
     isCompleted: false,
     story: {
       lines: [
-        { speaker: "dzana", text: "Amir, tenvin je poseban znak koji dodaje zvuk 'n' na kraj riječi." },
+        { speaker: "dzana", text: "Amir, tenvin je poseban znak koji dodaje glas 'n' na kraj riječi." },
         { speaker: "amir",  text: "Znači kao da kažeš fetha ali dodaš 'n' na kraj — 'en'?" },
         { speaker: "dzana", text: "Tačno! Tenvin fetha daje '-en', tenvin kesra daje '-in', a tenvin damma '-un'." },
         { speaker: "amir",  text: "A kako izgledaju? Kao dupli hareketi?" },
@@ -908,21 +908,21 @@ export const LESSONS: LessonData[] = [
       {
         arabic: "بًا", hareke: "ً", name: "Tenvin fetha",
         sound: "-en", colour: "teal",
-        description: "Dvije crtice iznad + UVIJEK dolazi s elifom (ا) — zvuk '-en' na kraju",
+        description: "Dvije crtice iznad + UVIJEK dolazi s elifom (ا) — glas '-en' na kraju",
         napomena: "⚠️ Tenvin fetha uvijek piše s elifom: بًا, ne بً — u govoru se 'en' izostavlja",
         soundFile: "hareke-fatha.mp3",
       },
       {
         arabic: "بٍ", hareke: "ٍ", name: "Tenvin kesra",
         sound: "-in", colour: "blue",
-        description: "Dvije crtice ispod — hareket kesra + zvuk 'n' na kraju",
+        description: "Dvije crtice ispod — hareket kesra + glas 'n' na kraju",
         napomena: null,
         soundFile: "hareke-kasra.mp3",
       },
       {
         arabic: "بٌ", hareke: "ٌ", name: "Tenvin damma",
         sound: "-un", colour: "violet",
-        description: "Dva zareza iznad — hareket damma + zvuk 'n' na kraju",
+        description: "Dva zareza iznad — hareket damma + glas 'n' na kraju",
         napomena: null,
         soundFile: "hareke-damma.mp3",
       },
@@ -945,7 +945,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "prepoznaj-hareket",
-        title: "Koji zvuk tenvin?", description: "Pogledaj tenvin — koji zvuk daje na kraju?",
+        title: "Koji glas tenvin?", description: "Pogledaj tenvin — koji glas daje na kraju?",
         icon: "🔤", hasanatReward: 15,
         choices: ["-en", "-in", "-un"],
         items: [
@@ -975,7 +975,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši zvuk tenvin", description: "Napiši zvuk tenvin (-en, -in ili -un)",
+        title: "Napiši glas tenvin", description: "Napiši glas tenvin (-en, -in ili -un)",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [

@@ -103,7 +103,7 @@ export default function KartaHarfova() {
                     {h.arabic}
                   </span>
                   <span className="text-sm font-bold text-teal-800">{h.name}</span>
-                  <span className="text-xs font-semibold text-teal-600">zvuk: {h.sound}</span>
+                  <span className="text-xs font-semibold text-teal-600">glas: {h.sound}</span>
                   <Volume2 className="w-4 h-4 text-teal-400 group-hover:text-teal-600 transition-colors" />
                 </motion.button>
               ))}
