@@ -1010,11 +1010,6 @@ export default function LessonDetail() {
                       <div className="flex flex-col justify-between p-4 flex-1 min-w-0">
                         <div>
                           <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <span
-                              style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.6rem", lineHeight: 2 }}
-                            >
-                              {h.hareke}
-                            </span>
                             <span className="text-xl font-extrabold text-foreground">{h.name}</span>
                           </div>
                           <p className="text-base font-medium leading-snug text-foreground">{h.description}</p>
