@@ -120,32 +120,32 @@ export const LESSONS: LessonData[] = [
     exercises: [
       {
         type: "prepoznaj-hareket",
-        title: "Prepoznaj hareket", description: "Pogledaj elif s harekom — koji je to hareket?",
+        title: "Prepoznaj hareket", description: "Pogledaj hareket — koji je to hareket?",
         icon: "👁️", hasanatReward: 15,
         choices: ["Fetha", "Kesra", "Damma"],
         items: [
-          { show: "أَ", answer: "Fetha" }, { show: "إِ", answer: "Kesra" }, { show: "أُ", answer: "Damma" },
-          { show: "أُ", answer: "Damma" }, { show: "أَ", answer: "Fetha" }, { show: "إِ", answer: "Kesra" },
-          { show: "أَ", answer: "Fetha" }, { show: "أُ", answer: "Damma" }, { show: "إِ", answer: "Kesra" },
-          { show: "أَ", answer: "Fetha" }, { show: "إِ", answer: "Kesra" }, { show: "أُ", answer: "Damma" },
-          { show: "أَ", answer: "Fetha" }, { show: "إِ", answer: "Kesra" }, { show: "أُ", answer: "Damma" },
-          { show: "أَ", answer: "Fetha" }, { show: "أُ", answer: "Damma" }, { show: "إِ", answer: "Kesra" },
-          { show: "أَ", answer: "Fetha" }, { show: "أُ", answer: "Damma" },
+          { show: "ـَ", answer: "Fetha" }, { show: "ـِ", answer: "Kesra" }, { show: "ـُ", answer: "Damma" },
+          { show: "ـُ", answer: "Damma" }, { show: "ـَ", answer: "Fetha" }, { show: "ـِ", answer: "Kesra" },
+          { show: "ـَ", answer: "Fetha" }, { show: "ـُ", answer: "Damma" }, { show: "ـِ", answer: "Kesra" },
+          { show: "ـَ", answer: "Fetha" }, { show: "ـِ", answer: "Kesra" }, { show: "ـُ", answer: "Damma" },
+          { show: "ـَ", answer: "Fetha" }, { show: "ـِ", answer: "Kesra" }, { show: "ـُ", answer: "Damma" },
+          { show: "ـَ", answer: "Fetha" }, { show: "ـُ", answer: "Damma" }, { show: "ـِ", answer: "Kesra" },
+          { show: "ـَ", answer: "Fetha" }, { show: "ـُ", answer: "Damma" },
         ]
       },
       {
         type: "koji-znak",
-        title: "Koji glas?", description: "Pogledaj simbol hareketa — koji glas čujemo?",
+        title: "Koji glas?", description: "Pogledaj elif s harekom — koji glas čitaš?",
         icon: "🔤", hasanatReward: 15,
         choices: ["e", "i", "u"],
         items: [
-          { show: "ـَـ", answer: "e" }, { show: "ـِـ", answer: "i" }, { show: "ـُـ", answer: "u" },
-          { show: "ـِـ", answer: "i" }, { show: "ـَـ", answer: "e" }, { show: "ـُـ", answer: "u" },
-          { show: "ـَـ", answer: "e" }, { show: "ـِـ", answer: "i" }, { show: "ـُـ", answer: "u" },
-          { show: "ـِـ", answer: "i" }, { show: "ـَـ", answer: "e" }, { show: "ـُـ", answer: "u" },
-          { show: "ـَـ", answer: "e" }, { show: "ـُـ", answer: "u" }, { show: "ـِـ", answer: "i" },
-          { show: "ـَـ", answer: "e" }, { show: "ـُـ", answer: "u" }, { show: "ـِـ", answer: "i" },
-          { show: "ـَـ", answer: "e" }, { show: "ـِـ", answer: "i" },
+          { show: "أَ", answer: "e" }, { show: "إِ", answer: "i" }, { show: "أُ", answer: "u" },
+          { show: "إِ", answer: "i" }, { show: "أَ", answer: "e" }, { show: "أُ", answer: "u" },
+          { show: "أَ", answer: "e" }, { show: "إِ", answer: "i" }, { show: "أُ", answer: "u" },
+          { show: "إِ", answer: "i" }, { show: "أَ", answer: "e" }, { show: "أُ", answer: "u" },
+          { show: "أَ", answer: "e" }, { show: "أُ", answer: "u" }, { show: "إِ", answer: "i" },
+          { show: "أَ", answer: "e" }, { show: "أُ", answer: "u" }, { show: "إِ", answer: "i" },
+          { show: "أَ", answer: "e" }, { show: "إِ", answer: "i" },
         ]
       },
       {
@@ -178,7 +178,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši slovo/glas", description: "Pogledaj elif — napiši latinično slovo/glas koji čuješ",
+        title: "Napiši slovo/glas", description: "Pogledaj elif — napiši latinično slovo koji čitaš",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
@@ -247,10 +247,10 @@ export const LESSONS: LessonData[] = [
         icon: "🔡", hasanatReward: 15,
         choices: ["Ba", "Ta", "Sa"],
         items: [
-          { show: "بَ", answer: "Ba"  }, { show: "تِ", answer: "Ta"  }, { show: "ثُ", answer: "Sa"  },
-          { show: "تَ", answer: "Ta"  }, { show: "ثَ", answer: "Sa"  }, { show: "بِ", answer: "Ba"  },
-          { show: "بُ", answer: "Ba"  }, { show: "ثِ", answer: "Sa"  }, { show: "تُ", answer: "Ta"  },
-          { show: "ثَ", answer: "Sa"  }, { show: "بَ", answer: "Ba"  }, { show: "تِ", answer: "Ta"  },
+          { show: "ب", answer: "Ba"  }, { show: "ت", answer: "Ta"  }, { show: "ث", answer: "Sa"  },
+          { show: "ت", answer: "Ta"  }, { show: "ث", answer: "Sa"  }, { show: "ب", answer: "Ba"  },
+          { show: "ب", answer: "Ba"  }, { show: "ث", answer: "Sa"  }, { show: "ت", answer: "Ta"  },
+          { show: "ث", answer: "Sa"  }, { show: "ب", answer: "Ba"  }, { show: "ت", answer: "Ta"  },
         ]
       },
       {
@@ -330,6 +330,45 @@ export const LESSONS: LessonData[] = [
           { show: "ثَبَتَ", answer: "se-be-te" },
           { show: "بِتَثَ", answer: "bi-te-se" },
           { show: "أَتَثَ", answer: "a-te-se"  },
+        ]
+      },
+      {
+        type: "čitaj-slog",
+        title: "Vježba čitanja",
+        description: "Pročitaj svaku riječ naglas — harfovi بَ تَ ثَ / بُ تُ ثُ",
+        icon: "📖", hasanatReward: 30,
+        choices: [],
+        items: [
+          { show: "أَبَتَ", answer: "a-be-te"  },
+          { show: "أَتَبَ", answer: "a-te-be"  },
+          { show: "أَثَبَ", answer: "a-se-be"  },
+          { show: "بَأَتَ", answer: "be-a-te"  },
+          { show: "بَتَأَ", answer: "be-te-a"  },
+          { show: "بَتَثَ", answer: "be-te-se" },
+          { show: "بَثَتَ", answer: "be-se-te" },
+          { show: "تَأَبَ", answer: "te-a-be"  },
+          { show: "تَبَأَ", answer: "te-be-a"  },
+          { show: "تَبَثَ", answer: "te-be-se" },
+          { show: "تَثَبَ", answer: "te-se-be" },
+          { show: "ثَأَبَ", answer: "se-a-be"  },
+          { show: "ثَبَأَ", answer: "se-be-a"  },
+          { show: "ثَبَتَ", answer: "se-be-te" },
+          { show: "ثَتَبَ", answer: "se-te-be" },
+          { show: "أَبُتُ", answer: "a-bu-tu"  },
+          { show: "أَتُبُ", answer: "a-tu-bu"  },
+          { show: "أَثُبُ", answer: "a-su-bu"  },
+          { show: "بُأَتُ", answer: "bu-a-tu"  },
+          { show: "بُتَأُ", answer: "bu-te-u"  },
+          { show: "بُتُثُ", answer: "bu-tu-su" },
+          { show: "بُثَتُ", answer: "bu-se-tu" },
+          { show: "تُأَبُ", answer: "tu-a-bu"  },
+          { show: "تُبَأُ", answer: "tu-be-u"  },
+          { show: "تُبُثُ", answer: "tu-bu-su" },
+          { show: "تُثَبُ", answer: "tu-se-bu" },
+          { show: "ثُأَبُ", answer: "su-a-bu"  },
+          { show: "ثُبَأُ", answer: "su-be-u"  },
+          { show: "ثُبُتُ", answer: "su-bu-tu" },
+          { show: "ثُتَبُ", answer: "su-te-bu" },
         ]
       },
     ]
@@ -502,7 +541,7 @@ export const LESSONS: LessonData[] = [
   // ── LEKCIJA 5 ───────────────────────────────────────────────
   {
     id: 5, orderNum: 5, slug: "ponavljanje-sedam-harfova",
-    title: "Ponavljanje — svih 7 harfova",
+    title: "Ponavljanje",
     letters: ["ا", "ب", "ت", "ث", "ج", "ح", "خ"],
     isCompleted: false,
     isRevision: true,
@@ -657,8 +696,8 @@ export const LESSONS: LessonData[] = [
   // ── LEKCIJA 6: SUKUN ────────────────────────────────────────
   {
     id: 6, orderNum: 6, slug: "sukun",
-    title: "Sukun — slovo bez glasa",
-    letters: ["ْ"],
+    title: "Sukun",
+    letters: ["\u0640\u0640\u0652"],
     isCompleted: false,
     story: {
       lines: [
@@ -769,8 +808,8 @@ export const LESSONS: LessonData[] = [
   // ── LEKCIJA 7: TEŠDID ───────────────────────────────────────
   {
     id: 7, orderNum: 7, slug: "tesdid",
-    title: "Tešdid — slovo koje se udvoji",
-    letters: ["ّ"],
+    title: "Tešdid",
+    letters: ["\u0640\u0640\u0651"],
     isCompleted: false,
     story: {
       lines: [
@@ -881,8 +920,8 @@ export const LESSONS: LessonData[] = [
   // ── LEKCIJA 8: TENVIN ───────────────────────────────────────
   {
     id: 8, orderNum: 8, slug: "tenvin",
-    title: "Tenvin — glas N na kraju",
-    letters: ["ً", "ٍ", "ٌ"],
+    title: "Tenvin",
+    letters: ["ـًـٍـٌ"],
     isCompleted: false,
     story: {
       lines: [

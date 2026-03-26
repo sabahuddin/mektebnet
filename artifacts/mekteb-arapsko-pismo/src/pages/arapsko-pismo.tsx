@@ -131,9 +131,9 @@ export default function ArapskoPismoPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-extrabold text-foreground text-base leading-tight">{lesson.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1" dir="rtl">
                             {lesson.letters.map(l => (
-                              <span key={l} className="text-xl font-bold text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
+                              <span key={l} className="text-3xl font-bold text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
                             ))}
                           </div>
                         </div>
@@ -147,9 +147,9 @@ export default function ArapskoPismoPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-extrabold text-muted-foreground text-base leading-tight">{lesson.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1" dir="rtl">
                           {lesson.letters.slice(0, 3).map(l => (
-                            <span key={l} className="text-xl font-bold text-muted-foreground" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
+                            <span key={l} className="text-3xl font-bold text-muted-foreground" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
                           ))}
                         </div>
                       </div>

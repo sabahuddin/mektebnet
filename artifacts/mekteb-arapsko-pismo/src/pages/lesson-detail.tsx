@@ -270,7 +270,7 @@ function PronadiModal({
             👆 Klikni svaki <span style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.2em" }}>{target}</span> koji pronađeš
           </p>
         )}
-        <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-w-md mx-auto">
+        <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-w-md mx-auto" dir="rtl">
           {cells.map((cell, i) => (
             <motion.button
               key={i}
@@ -773,7 +773,7 @@ export default function LessonDetail() {
             </span>
             <h1 className="text-4xl md:text-6xl font-black text-foreground mt-2">{data.title}</h1>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3" dir="rtl">
             {data.letters.map((letter, i) => (
               <button
                 key={i}
@@ -941,7 +941,7 @@ export default function LessonDetail() {
                 <p className="text-base font-bold text-muted-foreground mb-3 text-center uppercase tracking-wider">
                   🔊 Klikni i pročitaj naglas
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3" dir="rtl">
                   {[
                     { hareke: "\u064E", sound: "E" },
                     { hareke: "\u0650", sound: "I" },
@@ -1087,7 +1087,7 @@ export default function LessonDetail() {
                       </span>
                       <p className="text-sm font-bold text-indigo-600 mt-1">{ex.items[0]?.answer}</p>
                     </div>
-                    <div className="grid grid-cols-5 gap-1 flex-1 opacity-60">
+                    <div className="grid grid-cols-5 gap-1 flex-1 opacity-60" dir="rtl">
                       {(ex.pool ?? []).concat([ex.items[0]?.show ?? "ب", ex.items[0]?.show ?? "ب"]).slice(0, 10).map((h, pi) => (
                         <div key={pi} className="aspect-square rounded-lg bg-indigo-100 flex items-center justify-center">
                           <span style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.1rem" }} className="text-indigo-700">{h}</span>
@@ -1109,21 +1109,28 @@ export default function LessonDetail() {
                 </>
               ) : ex.type === "čitaj-slog" ? (
                 <>
-                  <div className="grid grid-cols-4 gap-2 mb-3 flex-1">
-                    {ex.items.slice(0, 8).map((item, wi) => (
-                      <div key={wi} className="bg-teal-50 border border-teal-200 rounded-xl p-2 flex items-center justify-center">
-                        <span
-                          className="font-bold text-teal-900 text-center leading-none"
-                          style={{
-                            fontFamily: "Noto Naskh Arabic, serif",
-                            fontSize: item.show.length <= 2 ? "1.8rem" : item.show.length <= 4 ? "1.4rem" : "1.1rem",
-                          }}
-                        >
-                          {item.show}
-                        </span>
+                  {(() => {
+                    const n = ex.items.length;
+                    const step = Math.max(1, Math.floor(n / 8));
+                    const sample = n <= 8 ? ex.items : Array.from({ length: 8 }, (_, i) => ex.items[Math.min(i * step, n - 1)]);
+                    return (
+                      <div className="grid grid-cols-4 gap-2 mb-3 flex-1">
+                        {sample.map((item, wi) => (
+                          <div key={wi} className="bg-teal-50 border border-teal-200 rounded-xl p-2 flex items-center justify-center">
+                            <span
+                              className="font-bold text-teal-900 text-center leading-none"
+                              style={{
+                                fontFamily: "Noto Naskh Arabic, serif",
+                                fontSize: item.show.length <= 2 ? "1.8rem" : item.show.length <= 4 ? "1.4rem" : "1.1rem",
+                              }}
+                            >
+                              {item.show}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                   <div className="text-center text-base text-muted-foreground mb-4 font-medium">
                     📖 {ex.items.length} slogova — klikni da čuješ izgovor
                   </div>
