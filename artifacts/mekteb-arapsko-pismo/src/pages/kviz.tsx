@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 interface Pitanje {
-  type?: "radio" | "checkbox" | "reorder" | "markWords" | "dragDrop";
+  type?: "radio" | "checkbox" | "truefalse" | "reorder" | "markWords" | "dragDrop";
   question: string;
   options?: string[];
   answer?: string;
@@ -35,6 +35,14 @@ interface Kviz {
   pitanja: Pitanje[];
 }
 
+const QUESTION_TYPES = [
+  { value: "radio",     label: "Jedan tačan odgovor" },
+  { value: "checkbox",  label: "Više tačnih odgovora" },
+  { value: "truefalse", label: "Da / Ne" },
+  { value: "markWords", label: "Pronađi grešku (označi pogrešne riječi)" },
+  { value: "reorder",   label: "Poredaj redom" },
+];
+
 function AdminEditModal({ kviz, token, onClose, onSaved }: {
   kviz: Kviz; token: string; onClose: () => void; onSaved: (updated: Kviz) => void;
 }) {
@@ -48,33 +56,39 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
     setPitanja(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
   };
 
+  const changeType = (idx: number, newType: string) => {
+    setPitanja(prev => prev.map((p, i) => {
+      if (i !== idx) return p;
+      if (newType === "radio" || newType === "checkbox")
+        return { ...p, type: newType as any, options: p.options?.length ? p.options : ["", "", "", ""], answer: p.answer || "", correct: p.correct || [], text: undefined, words: undefined, incorrect: undefined, items: undefined };
+      if (newType === "truefalse")
+        return { ...p, type: "truefalse" as any, options: ["Da", "Ne"], answer: p.answer || "Da", correct: undefined, text: undefined, words: undefined, incorrect: undefined, items: undefined };
+      if (newType === "markWords")
+        return { ...p, type: "markWords" as any, text: p.text || "", words: p.words || [], incorrect: p.incorrect || [], options: undefined, answer: undefined, correct: undefined, items: undefined };
+      if (newType === "reorder")
+        return { ...p, type: "reorder" as any, items: p.items?.length ? p.items : [{ text: "", order: 1 }, { text: "", order: 2 }, { text: "", order: 3 }], options: undefined, answer: undefined, correct: undefined, text: undefined, words: undefined, incorrect: undefined };
+      return p;
+    }));
+  };
+
   const updateOption = (pIdx: number, oIdx: number, value: string) => {
     setPitanja(prev => prev.map((p, i) => {
       if (i !== pIdx) return p;
       const opts = [...(p.options || [])];
       const oldVal = opts[oIdx];
       opts[oIdx] = value;
-      // keep correct array in sync if this option was marked correct
       const correct = p.correct ? [...p.correct] : (p.answer ? [p.answer] : []);
       const newCorrect = correct.map(c => c === oldVal ? value : c);
       return { ...p, options: opts, correct: newCorrect, answer: newCorrect[0] || "" };
     }));
   };
 
-  // Toggle an option as correct/incorrect in the editor
   const toggleCorrectInEditor = (pIdx: number, opt: string) => {
     setPitanja(prev => prev.map((p, i) => {
       if (i !== pIdx) return p;
       const correct = p.correct ? [...p.correct] : (p.answer ? [p.answer] : []);
-      const newCorrect = correct.includes(opt)
-        ? correct.filter(c => c !== opt)
-        : [...correct, opt];
-      return {
-        ...p,
-        correct: newCorrect,
-        answer: newCorrect.length === 1 ? newCorrect[0] : (newCorrect[0] || ""),
-        type: newCorrect.length > 1 ? "checkbox" : (p.type === "checkbox" ? "radio" : p.type),
-      };
+      const newCorrect = correct.includes(opt) ? correct.filter(c => c !== opt) : [...correct, opt];
+      return { ...p, correct: newCorrect, answer: newCorrect[0] || "", type: newCorrect.length > 1 ? "checkbox" : (p.type === "checkbox" ? "radio" : p.type) };
     }));
   };
 
@@ -103,6 +117,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
   };
 
   const p = pitanja[activePitanje];
+  const pType = p?.type || "radio";
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
@@ -114,14 +129,16 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
         </div>
 
         <div className="p-5 flex flex-col gap-4">
+          {/* Naziv */}
           <div>
             <label className="text-xs font-bold text-muted-foreground mb-1 block">Naziv kviza</label>
             <input value={naslov} onChange={e => setNaslov(e.target.value)}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-bold" />
           </div>
 
+          {/* Pitanja navigacija */}
           <div className="flex gap-2 flex-wrap items-center">
-            {pitanja.map((_, i) => (
+            {pitanja.map((pit, i) => (
               <button key={i} onClick={() => setActivePitanje(i)}
                 className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${i === activePitanje ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
                 {i + 1}
@@ -135,6 +152,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
 
           {p && (
             <div className="bg-muted/30 rounded-2xl p-4 flex flex-col gap-3">
+              {/* Header */}
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-muted-foreground">Pitanje {activePitanje + 1}/{pitanja.length}</span>
                 <button onClick={() => removePitanje(activePitanje)} className="text-red-500 hover:text-red-700 p-1">
@@ -142,65 +160,146 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                 </button>
               </div>
 
+              {/* Tip pitanja */}
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Tip pitanja</label>
+                <select value={pType} onChange={e => changeType(activePitanje, e.target.value)}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-medium bg-white">
+                  {QUESTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+
+              {/* Tekst pitanja */}
               <textarea value={p.question} onChange={e => updatePitanje(activePitanje, "question", e.target.value)}
                 rows={2} placeholder="Tekst pitanja..."
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none font-medium" />
 
+              {/* Ilustracija */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono, putanja npr. /edu/assets/images/pitanja/slika.jpg)</label>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono)</label>
                 <input value={p.slika || ""} onChange={e => updatePitanje(activePitanje, "slika", e.target.value)}
                   placeholder="/edu/assets/images/pitanja/..."
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                {p.slika && (
-                  <div className="mt-2 rounded-xl overflow-hidden border border-border aspect-[3/2]">
-                    <img src={p.slika} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
-                  </div>
-                )}
               </div>
 
-              <div>
-                {(() => {
-                  const correctArr = p.correct && p.correct.length > 0
-                    ? p.correct
-                    : p.answer ? [p.answer] : [];
-                  const isMulti = correctArr.length > 1;
-                  return (
-                    <>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs font-bold text-muted-foreground">
-                          Opcije — klikni kvadratić da označiš tačan odgovor
-                        </label>
-                        {isMulti && (
-                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                            {correctArr.length} tačna odgovora
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {(p.options || []).map((opt, oIdx) => {
-                          const isCorrect = correctArr.includes(opt);
-                          return (
-                            <div key={oIdx} className="flex items-center gap-2">
-                              <button
-                                onClick={() => toggleCorrectInEditor(activePitanje, opt)}
-                                className={`w-5 h-5 rounded border-2 shrink-0 transition-all flex items-center justify-center
-                                  ${isCorrect ? "bg-emerald-500 border-emerald-500" : "border-gray-300 hover:border-emerald-400"}`}
-                              >
-                                {isCorrect && <span className="text-white text-xs font-bold leading-none">✓</span>}
+              {/* ── RADIO / CHECKBOX ── */}
+              {(pType === "radio" || pType === "checkbox" || pType === "truefalse") && (() => {
+                const correctArr = p.correct && p.correct.length > 0 ? p.correct : p.answer ? [p.answer] : [];
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold text-muted-foreground">
+                        Opcije — klikni kvadratić za tačan odgovor
+                      </label>
+                      {correctArr.length > 1 && (
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          {correctArr.length} tačna odgovora
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {(p.options || []).map((opt, oIdx) => {
+                        const isCorrect = correctArr.includes(opt);
+                        return (
+                          <div key={oIdx} className="flex items-center gap-2">
+                            <button onClick={() => toggleCorrectInEditor(activePitanje, opt)}
+                              className={`w-5 h-5 rounded border-2 shrink-0 transition-all flex items-center justify-center ${isCorrect ? "bg-emerald-500 border-emerald-500" : "border-gray-300 hover:border-emerald-400"}`}>
+                              {isCorrect && <span className="text-white text-xs font-bold leading-none">✓</span>}
+                            </button>
+                            <input value={opt} onChange={e => updateOption(activePitanje, oIdx, e.target.value)}
+                              placeholder={`Opcija ${oIdx + 1}`}
+                              className={`flex-1 border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${isCorrect ? "border-emerald-400 bg-emerald-50 font-bold" : "border-border"}`} />
+                            {pType !== "truefalse" && (
+                              <button onClick={() => updatePitanje(activePitanje, "options", (p.options || []).filter((_, j) => j !== oIdx))}
+                                className="text-red-400 hover:text-red-600 p-1 shrink-0">
+                                <X className="w-3.5 h-3.5" />
                               </button>
-                              <input value={opt} onChange={e => updateOption(activePitanje, oIdx, e.target.value)}
-                                placeholder={`Opcija ${oIdx + 1}`}
-                                className={`flex-1 border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40
-                                  ${isCorrect ? "border-emerald-400 bg-emerald-50 font-bold" : "border-border"}`} />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {pType !== "truefalse" && (
+                      <button onClick={() => updatePitanje(activePitanje, "options", [...(p.options || []), ""])}
+                        className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Dodaj opciju
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
+              {/* ── MARK WORDS (Pronađi grešku) ── */}
+              {pType === "markWords" && (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground mb-1 block">
+                      Puni tekst (npr. cijela dova/sura s greškom unutra)
+                    </label>
+                    <textarea value={p.text || ""} onChange={e => updatePitanje(activePitanje, "text", e.target.value)}
+                      rows={4} placeholder="Npr: Subhaneke allahumme ve bi hamdike ve tebarekesmuke ve..."
+                      className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none font-medium" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground mb-1 block">
+                      SVE klikabilne riječi — odvojene zarezom
+                      <span className="text-muted-foreground font-normal ml-1">(koje riječi korisnik može kliknuti)</span>
+                    </label>
+                    <textarea value={(p.words || []).join(", ")}
+                      onChange={e => updatePitanje(activePitanje, "words", e.target.value.split(",").map(w => w.trim()).filter(Boolean))}
+                      rows={2} placeholder="subhaneke, allahumme, hamdike, ..."
+                      className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-amber-700 mb-1 block">
+                      POGREŠNE riječi — odvojene zarezom
+                      <span className="text-muted-foreground font-normal ml-1">(koje treba pronaći)</span>
+                    </label>
+                    <input value={(p.incorrect || []).join(", ")}
+                      onChange={e => updatePitanje(activePitanje, "incorrect", e.target.value.split(",").map(w => w.trim()).filter(Boolean))}
+                      placeholder="npr: hamdike, džellešanuhu"
+                      className="w-full border border-amber-300 bg-amber-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 font-medium" />
+                  </div>
+                </div>
+              )}
+
+              {/* ── REORDER ── */}
+              {pType === "reorder" && (
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground mb-2 block">
+                    Stavke — upiši tekst i postavi tačan redosljed brojem
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {(p.items || []).map((item, iIdx) => (
+                      <div key={iIdx} className="flex items-center gap-2">
+                        <input type="number" min={1} value={item.order}
+                          onChange={e => {
+                            const items = [...(p.items || [])];
+                            items[iIdx] = { ...items[iIdx], order: parseInt(e.target.value) || 1 };
+                            updatePitanje(activePitanje, "items", items);
+                          }}
+                          className="w-12 border border-border rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                        <input value={item.text}
+                          onChange={e => {
+                            const items = [...(p.items || [])];
+                            items[iIdx] = { ...items[iIdx], text: e.target.value };
+                            updatePitanje(activePitanje, "items", items);
+                          }}
+                          placeholder={`Stavka ${iIdx + 1}`}
+                          className="flex-1 border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                        <button onClick={() => updatePitanje(activePitanje, "items", (p.items || []).filter((_, j) => j !== iIdx))}
+                          className="text-red-400 hover:text-red-600 p-1"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => updatePitanje(activePitanje, "items", [...(p.items || []), { text: "", order: (p.items?.length || 0) + 1 }])}
+                    className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Dodaj stavku
+                  </button>
+                </div>
+              )}
+
+              {/* Objašnjenje */}
               <div>
                 <label className="text-xs font-bold text-muted-foreground mb-1 block">Objašnjenje (opciono)</label>
                 <input value={p.explanation || ""} onChange={e => updatePitanje(activePitanje, "explanation", e.target.value)}
