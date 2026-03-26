@@ -51,7 +51,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
   const updateOption = (pIdx: number, oIdx: number, value: string) => {
     setPitanja(prev => prev.map((p, i) => {
       if (i !== pIdx) return p;
-      const opts = [...p.options];
+      const opts = [...(p.options || [])];
       const oldVal = opts[oIdx];
       opts[oIdx] = value;
       // keep correct array in sync if this option was marked correct
@@ -177,7 +177,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                         )}
                       </div>
                       <div className="flex flex-col gap-2">
-                        {p.options.map((opt, oIdx) => {
+                        {(p.options || []).map((opt, oIdx) => {
                           const isCorrect = correctArr.includes(opt);
                           return (
                             <div key={oIdx} className="flex items-center gap-2">
