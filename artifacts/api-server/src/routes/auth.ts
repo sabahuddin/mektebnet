@@ -12,6 +12,7 @@ import {
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { signToken, requireAuth } from "../middlewares/auth.js";
+import { sendRegistrationNotification } from "../lib/email.js";
 
 const router = Router();
 
@@ -257,6 +258,12 @@ router.post("/register-ucenik", async (req, res) => {
       grupaId: onlineGrupa.id,
     });
 
+    await sendRegistrationNotification("Učenik (samostalni)", {
+      "Ime": newUser.displayName,
+      "Email": email,
+      "Korisničko ime": newUser.username,
+    });
+
     res.status(201).json({ success: true, displayName: newUser.displayName });
   } catch (err) {
     console.error(err);
@@ -304,6 +311,13 @@ router.post("/register-roditelj-v2", async (req, res) => {
 
     await db.insert(roditeljProfiliTable).values({ userId: parentUser.id });
 
+    await sendRegistrationNotification("Roditelj", {
+      "Ime": parentUser.displayName,
+      "Email": email,
+      "Korisničko ime": parentUser.username,
+      "Broj djece": count,
+    });
+
     res.status(201).json({ success: true, displayName: parentUser.displayName });
   } catch (err) {
     console.error(err);
@@ -314,20 +328,36 @@ router.post("/register-roditelj-v2", async (req, res) => {
 // POST /api/auth/register-mekteb — mekteb registration request
 router.post("/register-mekteb", async (req, res) => {
   try {
-    const { email, korisnickoIme, grad, nazivMekteba, paket } = req.body;
+    const { email, korisnickoIme, drzava, grad, nazivMekteba, paket, koliko_muallima, koliko_ucenika } = req.body;
     if (!email?.trim() || !korisnickoIme?.trim() || !grad?.trim() || !nazivMekteba?.trim() || !paket) {
       res.status(400).json({ error: "Sva polja su obavezna" });
       return;
     }
+    if (!drzava?.trim()) {
+      res.status(400).json({ error: "Država je obavezna" });
+      return;
+    }
+
+    const paketNaziv = paket === 4 ? "Posebni zahtjevi" : `Paket ${paket}`;
+    const data: Record<string, any> = {
+      "Email": email,
+      "Korisničko ime": korisnickoIme,
+      "Država": drzava,
+      "Grad": grad,
+      "Naziv mekteba": nazivMekteba,
+      "Paket": paketNaziv,
+    };
+
+    if (paket === 4) {
+      data["Koliko muallima"] = koliko_muallima || 1;
+      data["Koliko učenika"] = koliko_ucenika || "50";
+    }
 
     console.log("=== MEKTEB REGISTRATION REQUEST ===");
-    console.log(`Email: ${email}`);
-    console.log(`Korisničko ime: ${korisnickoIme}`);
-    console.log(`Grad: ${grad}`);
-    console.log(`Naziv mekteba: ${nazivMekteba}`);
-    console.log(`Paket: ${paket}`);
-    console.log("Send to: info@mekteb.net");
+    Object.entries(data).forEach(([k, v]) => console.log(`${k}: ${v}`));
     console.log("====================================");
+
+    await sendRegistrationNotification("Mekteb", data);
 
     res.status(201).json({ success: true });
   } catch (err) {

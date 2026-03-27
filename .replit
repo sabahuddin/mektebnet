@@ -27,3 +27,12 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+SMTP_HOST = "smtppro.zoho.eu"
+SMTP_PORT = "465"
+FROM_EMAIL = "info@mekteb.net"
+SMTP_USER = "info@mekteb.net"
+SMTP_PASS = "Kasariste*92"

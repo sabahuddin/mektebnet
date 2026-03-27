@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogIn, User, Lock, AlertCircle, BookOpen } from "lucide-react";
+import { LogIn, User, Lock, AlertCircle, BookOpen, ShieldCheck } from "lucide-react";
+
+function generateCaptcha(): { a: number; b: number; answer: number } {
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+  return { a, b, answer: a + b };
+}
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -15,15 +21,31 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
+  const [captcha, setCaptcha] = useState(generateCaptcha);
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+
+  const resetCaptcha = useCallback(() => {
+    setCaptcha(generateCaptcha());
+    setCaptchaAnswer("");
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (parseInt(captchaAnswer) !== captcha.answer) {
+      setError("Neispravan odgovor na zaštitno pitanje. Pokušajte ponovo.");
+      resetCaptcha();
+      return;
+    }
+
     setIsLoading(true);
     try {
       await login(username.trim(), password);
       setLocation("/");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Greška pri prijavi");
+      resetCaptcha();
     } finally {
       setIsLoading(false);
     }
@@ -38,13 +60,11 @@ export default function LoginPage() {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        {/* Logo */}
         <div className="text-center mb-8">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-4" />
           <p className="text-muted-foreground mt-1 font-medium">Islamska edukativna platforma</p>
         </div>
 
-        {/* Login Card */}
         <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-8">
           <h2 className="text-xl font-bold mb-6 text-foreground flex items-center gap-2">
             <LogIn className="w-5 h-5 text-primary" />
@@ -99,6 +119,26 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div>
+              <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">
+                Zaštita od spam-a
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="bg-muted/50 border border-border/70 rounded-xl px-4 py-2.5 font-bold text-foreground text-base whitespace-nowrap flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  {captcha.a} + {captcha.b} = ?
+                </div>
+                <Input
+                  type="number"
+                  required
+                  value={captchaAnswer}
+                  onChange={e => setCaptchaAnswer(e.target.value)}
+                  placeholder="Odgovor"
+                  className="h-11 rounded-xl border-border/70 w-24 text-center font-bold"
+                />
+              </div>
+            </div>
+
             <Button
               type="submit"
               size="lg"
@@ -122,7 +162,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Info box */}
         <div className="mt-6 bg-primary/5 rounded-2xl p-4 border border-primary/10">
           <div className="flex items-start gap-3">
             <BookOpen className="w-5 h-5 text-primary mt-0.5 shrink-0" />

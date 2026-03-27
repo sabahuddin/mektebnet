@@ -90,7 +90,7 @@ PostgreSQL (via DATABASE_URL). Ključne tabele:
 - `GET /geo` — IP geolokacija (isBiH: true/false za prikaz KM/EUR cijena)
 - `POST /register-ucenik` — registracija odraslog (isActive: false, admin odobrava)
 - `POST /register-roditelj-v2` — registracija roditelja s brojem djece (1-4, BuyMeACoffee link)
-- `POST /register-mekteb` — zahtjev za registraciju mekteba (email, grad, naziv, paket)
+- `POST /register-mekteb` — zahtjev za registraciju mekteba (email, država, grad, naziv, paket, posebni zahtjevi)
 - `POST /register-roditelj` — stara registracija roditelja (legacy)
 - `POST /logout`
 - `GET /me` — trenutni korisnik
@@ -158,7 +158,13 @@ Roditelji se registruju sami i mogu: a) "Poveži dijete" (link existing, muallim
 - `POST /admin` — kreiranje admina
 - `POST /ucenik` — kreiranje učenika
 
+## Sigurnosne zaštite
+- Captcha (a+b=?) na login i registraciji (client-side spam zaštita)
+- Registracije šalju email notifikaciju na info@mekteb.net (SMTP čeka konfiguraciju)
+- Nodemailer setup: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS env vars
+
 ## Preostalo za implementaciju
+- SMTP kredencijali za info@mekteb.net — potrebno od korisnika
 - Stripe pretplate — čeka Stripe nalog
 - Docker/Coolify deployment config
 
