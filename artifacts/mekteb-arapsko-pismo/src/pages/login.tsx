@@ -111,12 +111,12 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-border/50">
             <p className="text-sm text-center text-muted-foreground">
-              Roditelj?{" "}
+              Nemate račun?{" "}
               <button
                 onClick={() => setLocation("/registracija")}
                 className="text-primary font-bold hover:underline"
               >
-                Registruj se ovdje
+                Registrujte se
               </button>
             </p>
           </div>

@@ -87,7 +87,11 @@ PostgreSQL (via DATABASE_URL). Ključne tabele:
 
 ### Auth (`/api/auth`)
 - `POST /login` — prijava (username + password)
-- `POST /register` — registracija roditelja
+- `GET /geo` — IP geolokacija (isBiH: true/false za prikaz KM/EUR cijena)
+- `POST /register-ucenik` — registracija odraslog (isActive: false, admin odobrava)
+- `POST /register-roditelj-v2` — registracija roditelja s brojem djece (1-4, BuyMeACoffee link)
+- `POST /register-mekteb` — zahtjev za registraciju mekteba (email, grad, naziv, paket)
+- `POST /register-roditelj` — stara registracija roditelja (legacy)
 - `POST /logout`
 - `GET /me` — trenutni korisnik
 

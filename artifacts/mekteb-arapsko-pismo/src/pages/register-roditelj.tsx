@@ -1,88 +1,377 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { useAuth } from "@/context/auth";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, User, Lock, Mail, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  UserPlus, User, Mail, AlertCircle, CheckCircle2,
+  GraduationCap, Users, Building2, MapPin, ExternalLink
+} from "lucide-react";
+
+const BMAC_LINKS = {
+  ucenik: {
+    bih: "https://buymeacoffee.com/mekteb/e/517837",
+    world: "https://buymeacoffee.com/mekteb/e/517833",
+  },
+  roditelj: {
+    bih: [
+      "https://buymeacoffee.com/mekteb/e/517837",
+      "https://buymeacoffee.com/mekteb/e/517839",
+      "https://buymeacoffee.com/mekteb/e/517841",
+      "https://buymeacoffee.com/mekteb/e/523964",
+    ],
+    world: [
+      "https://buymeacoffee.com/mekteb/e/517833",
+      "https://buymeacoffee.com/mekteb/e/517834",
+      "https://buymeacoffee.com/mekteb/e/517835",
+      "https://buymeacoffee.com/mekteb/e/523965",
+    ],
+  },
+};
+
+const PRICE_BIH = { 1: "10 KM", 2: "20 KM", 3: "30 KM", 4: "40 KM" } as Record<number, string>;
+const PRICE_EUR = { 1: "10 €", 2: "20 €", 3: "30 €", 4: "40 €" } as Record<number, string>;
+
+const PAKETI = [
+  { id: 1, naziv: "Paket 1", opis: "1 muallim + 50 učeničkih računa" },
+  { id: 2, naziv: "Paket 2", opis: "2 muallima + 100 učeničkih računa" },
+  { id: 3, naziv: "Paket 3", opis: "3 muallima + 150 učeničkih računa" },
+  { id: 4, naziv: "Posebni zahtjevi", opis: "Prilagođen paket prema vašim potrebama" },
+];
+
+type Tab = "ucenik" | "roditelj" | "mekteb";
 
 export default function RegisterRoditeljPage() {
-  const { login } = useAuth();
   const [, setLocation] = useLocation();
-  const [form, setForm] = useState({ username: "", password: "", displayName: "", email: "" });
+  const [activeTab, setActiveTab] = useState<Tab>("ucenik");
+  const [isBiH, setIsBiH] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [ucenikForm, setUcenikForm] = useState({ displayName: "", email: "" });
+  const [roditeljForm, setRoditeljForm] = useState({ displayName: "", email: "", brojDjece: 1 });
+  const [mektebForm, setMektebForm] = useState({ email: "", korisnickoIme: "", grad: "", nazivMekteba: "", paket: 1 });
+
+  useEffect(() => {
+    apiRequest<{ isBiH: boolean }>("GET", "/auth/geo")
+      .then(data => setIsBiH(data.isBiH))
+      .catch(() => setIsBiH(false));
+  }, []);
+
+  const currency = isBiH ? "KM" : "€";
+  const priceMap = isBiH ? PRICE_BIH : PRICE_EUR;
+
+  const handleUcenikSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (form.password.length < 6) { setError("Lozinka mora imati najmanje 6 znakova"); return; }
-
     setIsLoading(true);
+    const link = isBiH ? BMAC_LINKS.ucenik.bih : BMAC_LINKS.ucenik.world;
     try {
-      await apiRequest("POST", "/auth/register-roditelj", form);
-      await login(form.username, form.password);
-      setLocation("/");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Greška pri registraciji");
+      await apiRequest("POST", "/auth/register-ucenik", { ...ucenikForm, paymentLink: link });
+      window.open(link, "_blank");
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err?.message || "Greška pri registraciji");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleRoditeljSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+    const links = isBiH ? BMAC_LINKS.roditelj.bih : BMAC_LINKS.roditelj.world;
+    const link = links[roditeljForm.brojDjece - 1];
+    try {
+      await apiRequest("POST", "/auth/register-roditelj-v2", { ...roditeljForm, paymentLink: link });
+      window.open(link, "_blank");
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err?.message || "Greška pri registraciji");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMektebSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+    try {
+      await apiRequest("POST", "/auth/register-mekteb", mektebForm);
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err?.message || "Greška pri slanju zahtjeva");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"
+        style={{ backgroundImage: "radial-gradient(circle at 50% 0%, hsl(var(--primary)/0.08) 0%, transparent 70%)" }}>
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md text-center">
+          <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-10">
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-foreground mb-3">Hvala na registraciji!</h2>
+            <p className="text-muted-foreground mb-6">
+              {activeTab === "mekteb"
+                ? "Vaš zahtjev je zaprimljen. Kontaktirat ćemo vas putem e-maila na info@mekteb.net."
+                : "Podaci za prijavu bit će poslani na vaš e-mail nakon što admin odobri vaš račun."}
+            </p>
+            <Button onClick={() => setLocation("/login")} className="rounded-xl">
+              Nazad na prijavu
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    { key: "ucenik", label: "Registracija", icon: <GraduationCap className="w-4 h-4" /> },
+    { key: "roditelj", label: "Roditelj", icon: <Users className="w-4 h-4" /> },
+    { key: "mekteb", label: "Mekteb", icon: <Building2 className="w-4 h-4" /> },
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, hsl(var(--primary)/0.08) 0%, transparent 70%)" }}>
-      <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 mx-auto mb-4">
-            <span className="text-white font-arabic font-bold text-3xl">م</span>
-          </div>
-          <h1 className="text-3xl font-extrabold text-primary">mekteb<span className="text-secondary">.net</span></h1>
+      <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">Islamska edukativna platforma</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-8">
-          <h2 className="text-xl font-bold mb-6 text-foreground flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-primary" />
-            Registracija roditelja
-          </h2>
-
-          {error && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span className="text-sm font-medium">{error}</span>
-            </motion.div>
-          )}
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {[
-              { key: "displayName", label: "Ime i prezime", icon: User, placeholder: "Vaše ime", type: "text" },
-              { key: "username", label: "Korisničko ime", icon: User, placeholder: "npr. amira.besic", type: "text" },
-              { key: "email", label: "Email (opciono)", icon: Mail, placeholder: "email@primjer.ba", type: "email" },
-              { key: "password", label: "Lozinka", icon: Lock, placeholder: "min. 6 znakova", type: "password" },
-            ].map(({ key, label, icon: Icon, placeholder, type }) => (
-              <div key={key}>
-                <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{label}</label>
-                <div className="relative">
-                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input type={type} value={form[key as keyof typeof form]}
-                    onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={placeholder} className="pl-10 h-12 rounded-xl border-border/70"
-                    required={key !== "email"} />
-                </div>
-              </div>
+        <div className="bg-white rounded-3xl shadow-xl border border-border/50 overflow-hidden">
+          <div className="flex border-b border-border/50">
+            {tabs.map(tab => (
+              <button key={tab.key}
+                onClick={() => { setActiveTab(tab.key); setError(""); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-bold transition-all ${
+                  activeTab === tab.key
+                    ? "text-primary border-b-2 border-primary bg-primary/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}>
+                {tab.icon} {tab.label}
+              </button>
             ))}
+          </div>
 
-            <Button type="submit" size="lg" className="w-full h-12 rounded-xl text-base font-bold mt-2" disabled={isLoading}>
-              {isLoading ? "Registracija..." : "Registruj se"}
-            </Button>
-          </form>
+          <div className="p-7">
+            {error && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-5 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span className="text-sm font-medium">{error}</span>
+              </motion.div>
+            )}
 
-          <p className="text-sm text-center text-muted-foreground mt-6">
-            Već imaš račun?{" "}
-            <button onClick={() => setLocation("/login")} className="text-primary font-bold hover:underline">Prijavi se</button>
+            <AnimatePresence mode="wait">
+              {activeTab === "ucenik" && (
+                <motion.div key="ucenik" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
+                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
+                    <p className="text-sm text-foreground">
+                      <strong>📚 Samostalna registracija</strong> — pristup svim sadržajima (Ilmihal, Sufara, Kvizovi, Čitaonica).
+                    </p>
+                    <p className="text-sm text-primary font-bold mt-1.5">
+                      Pretplata: {isBiH === null ? "..." : (isBiH ? "10 KM" : "10 €")} / mjesečno
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleUcenikSubmit} className="flex flex-col gap-4">
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Ime i prezime</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="text" required value={ucenikForm.displayName}
+                          onChange={e => setUcenikForm(p => ({ ...p, displayName: e.target.value }))}
+                          placeholder="Vaše ime i prezime" className="pl-10 h-12 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="email" required value={ucenikForm.email}
+                          onChange={e => setUcenikForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder="vas@email.com" className="pl-10 h-12 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+
+                    <Button type="submit" size="lg" disabled={isLoading}
+                      className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
+                      <ExternalLink className="w-4 h-4" />
+                      {isLoading ? "Obrada..." : `Plati i registriraj se`}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Nakon uplate, admin odobrava račun i šalje podatke za prijavu na vaš email.
+                    </p>
+                  </form>
+                </motion.div>
+              )}
+
+              {activeTab === "roditelj" && (
+                <motion.div key="roditelj" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
+                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
+                    <p className="text-sm text-foreground">
+                      <strong>👨‍👩‍👧‍👦 Registracija roditelja</strong> — kreirajte račun za sebe i svoju djecu.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleRoditeljSubmit} className="flex flex-col gap-4">
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Ime i prezime</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="text" required value={roditeljForm.displayName}
+                          onChange={e => setRoditeljForm(p => ({ ...p, displayName: e.target.value }))}
+                          placeholder="Vaše ime i prezime" className="pl-10 h-12 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="email" required value={roditeljForm.email}
+                          onChange={e => setRoditeljForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder="vas@email.com" className="pl-10 h-12 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Broj djece</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[1, 2, 3, 4].map(n => (
+                          <button key={n} type="button" onClick={() => setRoditeljForm(p => ({ ...p, brojDjece: n }))}
+                            className={`py-3 rounded-xl text-center font-bold transition-all border-2 ${
+                              roditeljForm.brojDjece === n
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border/50 text-muted-foreground hover:border-primary/40"
+                            }`}>
+                            <div className="text-lg">{n}</div>
+                            <div className="text-xs">{n === 1 ? "dijete" : "djece"}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-center">
+                      <p className="text-sm font-bold text-amber-800">
+                        Pretplata: {isBiH === null ? "..." : priceMap[roditeljForm.brojDjece]} / mjesečno
+                      </p>
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        {roditeljForm.brojDjece} {roditeljForm.brojDjece === 1 ? "dijete" : "djece"} × {isBiH ? "10 KM" : "10 €"}
+                      </p>
+                    </div>
+
+                    <Button type="submit" size="lg" disabled={isLoading}
+                      className="w-full h-12 rounded-xl text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2">
+                      <ExternalLink className="w-4 h-4" />
+                      {isLoading ? "Obrada..." : "Plati i registriraj se"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Nakon uplate, admin odobrava račun i šalje podatke za prijavu na vaš email.
+                    </p>
+                  </form>
+                </motion.div>
+              )}
+
+              {activeTab === "mekteb" && (
+                <motion.div key="mekteb" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
+                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
+                    <p className="text-sm text-foreground">
+                      <strong>🏫 Registrirajte vaš mekteb</strong> na platformi Mekteb.net. Nakon registracije, kreirat ćemo račune za muallime i učenike i dostaviti pristupne podatke na vaš email.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleMektebSubmit} className="flex flex-col gap-4">
+                    <div>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">Email muallima</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="email" required value={mektebForm.email}
+                          onChange={e => setMektebForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder="muallim@example.com" className="pl-10 h-11 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">Korisničko ime muallima</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="text" required value={mektebForm.korisnickoIme}
+                          onChange={e => setMektebForm(p => ({ ...p, korisnickoIme: e.target.value }))}
+                          placeholder="hasan.muallim" className="pl-10 h-11 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">Grad</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="text" required value={mektebForm.grad}
+                          onChange={e => setMektebForm(p => ({ ...p, grad: e.target.value }))}
+                          placeholder="npr. Tuzla" className="pl-10 h-11 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">Naziv mekteba</label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="text" required value={mektebForm.nazivMekteba}
+                          onChange={e => setMektebForm(p => ({ ...p, nazivMekteba: e.target.value }))}
+                          placeholder="npr. Mekteb džamije Sultan Ahmeta" className="pl-10 h-11 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-bold text-foreground mb-2 block">📦 Odaberite paket</label>
+                      <div className="flex flex-col gap-2">
+                        {PAKETI.map(p => (
+                          <button key={p.id} type="button" onClick={() => setMektebForm(prev => ({ ...prev, paket: p.id }))}
+                            className={`flex items-center justify-between p-3.5 rounded-xl border-2 text-left transition-all ${
+                              mektebForm.paket === p.id
+                                ? "border-primary bg-primary/5"
+                                : "border-border/50 hover:border-primary/30"
+                            }`}>
+                            <div>
+                              <div className="font-bold text-foreground text-sm">{p.naziv === "Posebni zahtjevi" ? "⭐ " : "📦 "}{p.naziv}</div>
+                              <div className="text-xs text-muted-foreground">{p.opis}</div>
+                            </div>
+                            <span className="text-xs font-bold text-primary shrink-0 ml-2">
+                              {p.id === 4 ? "Po dogovoru" : "Kontaktirajte nas"}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button type="submit" size="lg" disabled={isLoading}
+                      className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20">
+                      {isLoading ? "Slanje..." : "📧 Pošalji zahtjev"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Komunikacija se odvija putem e-maila. Link za uplatu bit će poslan na vašu adresu.
+                    </p>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="mt-5 text-center">
+          <p className="text-sm text-muted-foreground">
+            Već imate nalog?{" "}
+            <button onClick={() => setLocation("/login")} className="text-primary font-bold hover:underline">
+              Prijavite se
+            </button>
           </p>
         </div>
       </motion.div>
