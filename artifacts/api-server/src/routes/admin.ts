@@ -14,7 +14,7 @@ import {
   korisnikNapredakTable,
   grupeTable,
 } from "@workspace/db/schema";
-import { eq, desc, sql, gte, inArray, and } from "drizzle-orm";
+import { eq, desc, sql, gte, inArray, and, isNotNull } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -310,7 +310,7 @@ router.get("/analytics", async (req, res) => {
         country: posjeteTable.country,
         broj: sql<number>`count(*)::int`,
       }).from(posjeteTable)
-        .where(gte(posjeteTable.createdAt, thirtyDaysAgo))
+        .where(and(gte(posjeteTable.createdAt, thirtyDaysAgo), isNotNull(posjeteTable.country)))
         .groupBy(posjeteTable.country)
         .orderBy(sql`count(*) desc`)
         .limit(20),

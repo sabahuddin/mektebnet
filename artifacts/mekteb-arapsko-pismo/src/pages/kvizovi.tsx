@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { HelpCircle, ChevronRight, Trophy, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,23 +17,17 @@ interface Kviz {
   pitanja: unknown[];
 }
 
-const NIVO_INFO: Record<number, { label: string; color: string; bg: string; border: string }> = {
-  1: { label: "Nivo 1", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  2: { label: "Nivo 2", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
-  3: { label: "Nivo 3", color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
-};
-
-const VARIANT_INFO: Record<string, { label: string; extra: string }> = {
-  normal: { label: "Standardni", extra: "" },
-  hard: { label: "Teški", extra: "🔥" },
-  knjiga: { label: "Knjige", extra: "📖" },
-};
-
 function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
-  const info = nivo !== null ? NIVO_INFO[nivo] : {
-    label: "Čitaonica", color: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200"
+  const { t } = useLanguage();
+  const NIVO_INFO: Record<number, { label: string; color: string; bg: string; border: string }> = {
+    1: { label: `${t("ilmihal.nivo1").split(" – ")[0]}`, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+    2: { label: `${t("ilmihal.nivo2").split(" – ")[0]}`, color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
+    3: { label: `${t("ilmihal.nivo3").split(" – ")[0]}`, color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
   };
-  const tipInfo = VARIANT_INFO[k.variant] || VARIANT_INFO.normal;
+
+  const info = nivo !== null ? NIVO_INFO[nivo] : {
+    label: t("nav.citaonica"), color: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200"
+  };
   const pitanjaCount = Array.isArray(k.pitanja) ? k.pitanja.length : 0;
 
   const card = (
@@ -43,13 +38,12 @@ function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
       </div>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {tipInfo.extra && <span>{tipInfo.extra}</span>}
           <span className="text-xs font-medium text-muted-foreground">
-            {pitanjaCount > 0 ? `${pitanjaCount} pitanja` : "U pripremi"}
+            {pitanjaCount > 0 ? `${pitanjaCount} ${t("kviz.pitanja")}` : t("kviz.uPripremi")}
           </span>
         </div>
         <div className={`flex items-center gap-1 ${info.color} font-bold text-sm`}>
-          Pokreni <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+          {t("kviz.pokreni")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
     </div>
@@ -63,8 +57,15 @@ function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
 }
 
 export default function KvizoviPage() {
+  const { t } = useLanguage();
   const [kvizovi, setKvizovi] = useState<Kviz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const NIVO_INFO: Record<number, { label: string; color: string; bg: string; border: string }> = {
+    1: { label: t("ilmihal.nivo1").split(" – ")[0], color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+    2: { label: t("ilmihal.nivo2").split(" – ")[0], color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
+    3: { label: t("ilmihal.nivo3").split(" – ")[0], color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
+  };
 
   useEffect(() => {
     apiRequest<Kviz[]>("GET", "/content/kvizovi")
@@ -91,9 +92,9 @@ export default function KvizoviPage() {
             <HelpCircle className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Kvizovi</h1>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("nav.kvizovi")}</h1>
             <p className="text-muted-foreground text-sm">
-              Provjeri znanje i zarađuj hasanate — {kvizovi.length} kvizova
+              {t("kviz.provjeriZnanje")} — {kvizovi.length} {t("home.kviza")}
             </p>
           </div>
         </div>
@@ -110,7 +111,7 @@ export default function KvizoviPage() {
               return (
                 <div key={nivo}>
                   <h2 className={`text-sm font-extrabold uppercase tracking-wider ${info.color} mb-4`}>
-                    {info.label} — {nivoKvizovi.length} kvizova
+                    {info.label} — {nivoKvizovi.length} {t("home.kviza")}
                   </h2>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {nivoKvizovi.map((k, i) => (
@@ -133,7 +134,7 @@ export default function KvizoviPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <BookOpen className="w-4 h-4 text-rose-600" />
                   <h2 className="text-sm font-extrabold uppercase tracking-wider text-rose-600">
-                    Priče o poslanicima — {knjigaKvizovi.length} kvizova
+                    {t("nav.citaonica")} — {knjigaKvizovi.length} {t("home.kviza")}
                   </h2>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogIn, User, Lock, AlertCircle, BookOpen, ShieldCheck } from "lucide-react";
@@ -14,6 +15,7 @@ function generateCaptcha(): { a: number; b: number; answer: number } {
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +36,7 @@ export default function LoginPage() {
     setError("");
 
     if (parseInt(captchaAnswer) !== captcha.answer) {
-      setError("Neispravan odgovor na zaštitno pitanje. Pokušajte ponovo.");
+      setError(t("login.neispravanCaptcha"));
       resetCaptcha();
       return;
     }
@@ -44,7 +46,7 @@ export default function LoginPage() {
       await login(username.trim(), password);
       setLocation("/");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Greška pri prijavi");
+      setError(err instanceof Error ? err.message : t("login.greskaLogin"));
       resetCaptcha();
     } finally {
       setIsLoading(false);
@@ -62,13 +64,13 @@ export default function LoginPage() {
       >
         <div className="text-center mb-8">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-4" />
-          <p className="text-muted-foreground mt-1 font-medium">Islamska edukativna platforma</p>
+          <p className="text-muted-foreground mt-1 font-medium">{t("login.podNaslov")}</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-8">
           <h2 className="text-xl font-bold mb-6 text-foreground flex items-center gap-2">
             <LogIn className="w-5 h-5 text-primary" />
-            Prijava
+            {t("nav.prijava")}
           </h2>
 
           {error && (
@@ -85,7 +87,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div>
               <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">
-                Korisničko ime
+                {t("login.korisnickoIme")}
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -103,7 +105,7 @@ export default function LoginPage() {
 
             <div>
               <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">
-                Lozinka
+                {t("login.lozinka")}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -121,7 +123,7 @@ export default function LoginPage() {
 
             <div>
               <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">
-                Zaštita od spam-a
+                {t("login.zastitaOdSpama")}
               </label>
               <div className="flex items-center gap-3">
                 <div className="bg-muted/50 border border-border/70 rounded-xl px-4 py-2.5 font-bold text-foreground text-base whitespace-nowrap flex items-center gap-2">
@@ -133,7 +135,6 @@ export default function LoginPage() {
                   required
                   value={captchaAnswer}
                   onChange={e => setCaptchaAnswer(e.target.value)}
-                  placeholder="Odgovor"
                   className="h-11 rounded-xl border-border/70 w-24 text-center font-bold"
                 />
               </div>
@@ -145,18 +146,18 @@ export default function LoginPage() {
               className="w-full h-12 rounded-xl text-base font-bold mt-2 shadow-md shadow-primary/20"
               disabled={isLoading}
             >
-              {isLoading ? "Prijavljivanje..." : "Prijavi se"}
+              {isLoading ? t("login.prijavljivanje") : t("login.prijaviSe")}
             </Button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-border/50">
             <p className="text-sm text-center text-muted-foreground">
-              Nemate račun?{" "}
+              {t("login.nemateRacun")}{" "}
               <button
                 onClick={() => setLocation("/registracija")}
                 className="text-primary font-bold hover:underline"
               >
-                Registrujte se
+                {t("login.registrujte")}
               </button>
             </p>
           </div>
@@ -166,9 +167,9 @@ export default function LoginPage() {
           <div className="flex items-start gap-3">
             <BookOpen className="w-5 h-5 text-primary mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-bold text-foreground">Nemaš korisničko ime?</p>
+              <p className="text-sm font-bold text-foreground">{t("common.nemasKorisnickoIme")}</p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Korisničko ime i lozinku dobijaju učenici od svog muallima. Roditelji se mogu sami registrovati.
+                {t("common.korisnickoImeInfo")}
               </p>
             </div>
           </div>

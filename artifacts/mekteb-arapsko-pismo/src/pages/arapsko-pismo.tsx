@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { useLanguage } from "@/context/language";
 import { BookOpen, Search, Volume2, Lock, PlayCircle } from "lucide-react";
 import { LESSONS } from "@/data/lessons";
 
@@ -64,6 +65,7 @@ function playHarf(file: string) {
 }
 
 export default function ArapskoPismoPage() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
@@ -82,16 +84,16 @@ export default function ArapskoPismoPage() {
             <span className="text-white text-2xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>ب</span>
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Arapsko pismo</h1>
-            <p className="text-muted-foreground font-medium">28 harfova · Nauči kroz igru sa Džanom i Amirom</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("sufara.naslov")}</h1>
+            <p className="text-muted-foreground font-medium">28 {t("sufara.harfova")} · {t("sufara.nauci")}</p>
           </div>
         </div>
 
         <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
           <span className="text-2xl">👧🏻</span>
           <div>
-            <p className="font-bold text-teal-800 text-sm">Džana kaže:</p>
-            <p className="text-teal-700 text-sm">Arapski alphabet ima 28 slova — harfova. Arapski se čita zdesna nalijevo. Svako slovo ima 4 oblika zavisno gdje se nalazi u riječi!</p>
+            <p className="font-bold text-teal-800 text-sm">{t("sufara.dzanaKaze")}</p>
+            <p className="text-teal-700 text-sm">{t("sufara.arabiAlphabet")} {t("sufara.zdesna")}</p>
           </div>
         </div>
 
@@ -100,8 +102,8 @@ export default function ArapskoPismoPage() {
           <div className="mb-6 flex items-center gap-4 p-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-2xl cursor-pointer shadow-md transition-all group">
             <div className="text-4xl">🗺️</div>
             <div className="flex-1">
-              <p className="font-extrabold text-white text-lg leading-tight">Karta harfova</p>
-              <p className="text-teal-100 text-sm font-medium">Svi harfovi na jednom mjestu — tapni za izgovor</p>
+              <p className="font-extrabold text-white text-lg leading-tight">{t("sufara.kartaHarfova")}</p>
+              <p className="text-teal-100 text-sm font-medium">{t("sufara.referenca")}</p>
             </div>
             <div className="text-white/70 group-hover:text-white text-2xl transition-colors">→</div>
           </div>
@@ -111,7 +113,7 @@ export default function ArapskoPismoPage() {
         <div className="mb-8">
           <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 mb-4">
             <PlayCircle className="w-5 h-5 text-primary" />
-            Lekcije — Sufara
+            {t("sufara.lekcije")}
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {LESSONS.map((lesson, i) => {
@@ -165,7 +167,7 @@ export default function ArapskoPismoPage() {
         {/* ── Harfovi referenca ── */}
         <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 mb-4">
           <BookOpen className="w-5 h-5 text-primary" />
-          Referenca — svi harfovi
+          {t("sufara.referenca")}
         </h2>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -174,7 +176,7 @@ export default function ArapskoPismoPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Pretraži harfove..."
+              placeholder={t("sufara.pretrazi")}
               className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
@@ -183,7 +185,7 @@ export default function ArapskoPismoPage() {
               onClick={() => setActiveGroup(null)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${!activeGroup ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
             >
-              Svi
+              {t("common.svi")}
             </button>
             {GROUPS.map(g => (
               <button key={g} onClick={() => setActiveGroup(g === activeGroup ? null : g)}
@@ -196,10 +198,10 @@ export default function ArapskoPismoPage() {
 
         <div className="flex flex-wrap gap-3 mb-6 text-xs font-medium text-muted-foreground">
           <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-emerald-400 inline-block" /> Spaja se s obje strane
+            <span className="w-3 h-3 rounded-full bg-emerald-400 inline-block" /> {t("sufara.spajaSe")}
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-gray-300 inline-block" /> Ne spaja se s lijeve strane
+            <span className="w-3 h-3 rounded-full bg-gray-300 inline-block" /> {t("sufara.neSpajaSe")}
           </span>
         </div>
 
@@ -216,7 +218,7 @@ export default function ArapskoPismoPage() {
               <button
                 onClick={e => { e.preventDefault(); e.stopPropagation(); playHarf(harf.audioFile); }}
                 className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-teal-100 hover:bg-teal-200 text-teal-700 flex items-center justify-center transition-colors shadow-sm"
-                title={`Čuj izgovor: ${harf.name}`}
+                title={`${t("sufara.cujIzgovor")}: ${harf.name}`}
               >
                 <Volume2 className="w-4 h-4" />
               </button>
@@ -239,7 +241,7 @@ export default function ArapskoPismoPage() {
                     {harf.dots === 0 ? "–" : `${harf.dots}●`}
                   </span>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${harf.connecting ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                    {harf.connecting ? "spaja" : "solo"}
+                    {harf.connecting ? t("sufara.spaja") : t("sufara.solo")}
                   </span>
                 </div>
               </div>
@@ -250,15 +252,15 @@ export default function ArapskoPismoPage() {
         {filtered.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-4xl mb-3">🔍</p>
-            <p className="font-bold">Nema rezultata za "{search}"</p>
+            <p className="font-bold">{t("sufara.nemaRezultata")} "{search}"</p>
           </div>
         )}
 
         <div className="mt-8 grid grid-cols-3 gap-4">
           {[
-            { label: "Ukupno harfova", value: "28", icon: "🔤" },
-            { label: "Spajaju se", value: "22", icon: "🔗" },
-            { label: "Ne spajaju se", value: "6", icon: "✂️" },
+            { label: t("sufara.ukupnoHarfova"), value: "28", icon: "🔤" },
+            { label: t("sufara.spajajuSe"), value: "22", icon: "🔗" },
+            { label: t("sufara.neSpajajuSe"), value: "6", icon: "✂️" },
           ].map(s => (
             <div key={s.label} className="bg-white border border-border/50 rounded-2xl p-4 text-center">
               <div className="text-2xl mb-1">{s.icon}</div>

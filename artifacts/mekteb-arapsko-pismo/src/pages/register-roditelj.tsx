@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
+import { useLanguage } from "@/context/language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,14 +53,15 @@ function generateCaptcha(): { a: number; b: number; answer: number } {
   return { a, b, answer: a + b };
 }
 
-function CaptchaField({ captcha, value, onChange }: {
+function CaptchaField({ captcha, value, onChange, label }: {
   captcha: { a: number; b: number };
   value: string;
   onChange: (v: string) => void;
+  label: string;
 }) {
   return (
     <div>
-      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Zaštita od spam-a</label>
+      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{label}</label>
       <div className="flex items-center gap-3">
         <div className="bg-muted/50 border border-border/70 rounded-xl px-4 py-2.5 font-bold text-foreground text-base whitespace-nowrap flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-primary" />
@@ -70,7 +72,6 @@ function CaptchaField({ captcha, value, onChange }: {
           required
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="Odgovor"
           className="h-11 rounded-xl border-border/70 w-24 text-center font-bold"
         />
       </div>
@@ -82,6 +83,7 @@ type Tab = "ucenik" | "roditelj" | "mekteb";
 
 export default function RegisterRoditeljPage() {
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>("ucenik");
   const [isBiH, setIsBiH] = useState<boolean | null>(null);
   const [error, setError] = useState("");
@@ -113,7 +115,7 @@ export default function RegisterRoditeljPage() {
 
   const validateCaptcha = () => {
     if (parseInt(captchaAnswer) !== captcha.answer) {
-      setError("Neispravan odgovor na zaštitno pitanje. Pokušajte ponovo.");
+      setError(t("login.neispravanCaptcha"));
       resetCaptcha();
       return false;
     }
@@ -131,7 +133,7 @@ export default function RegisterRoditeljPage() {
       window.open(link, "_blank");
       setSuccess(true);
     } catch (err: any) {
-      setError(err?.message || "Greška pri registraciji");
+      setError(err?.message || t("common.greskaRegistracija"));
       resetCaptcha();
     } finally {
       setIsLoading(false);
@@ -150,7 +152,7 @@ export default function RegisterRoditeljPage() {
       window.open(link, "_blank");
       setSuccess(true);
     } catch (err: any) {
-      setError(err?.message || "Greška pri registraciji");
+      setError(err?.message || t("common.greskaRegistracija"));
       resetCaptcha();
     } finally {
       setIsLoading(false);
@@ -166,7 +168,7 @@ export default function RegisterRoditeljPage() {
       await apiRequest("POST", "/auth/register-mekteb", mektebForm);
       setSuccess(true);
     } catch (err: any) {
-      setError(err?.message || "Greška pri slanju zahtjeva");
+      setError(err?.message || t("common.greskaSlanje"));
       resetCaptcha();
     } finally {
       setIsLoading(false);
@@ -182,14 +184,14 @@ export default function RegisterRoditeljPage() {
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground mb-3">Hvala na registraciji!</h2>
+            <h2 className="text-2xl font-extrabold text-foreground mb-3">{t("common.hvalaRegistracija")}</h2>
             <p className="text-muted-foreground mb-6">
               {activeTab === "mekteb"
-                ? "Vaš zahtjev je zaprimljen. Kontaktirat ćemo vas putem e-maila na info@mekteb.net."
-                : "Podaci za prijavu bit će poslani na vaš e-mail nakon što admin odobri vaš račun."}
+                ? t("common.zahtjevZaprimljen")
+                : t("common.podaciPoslani")}
             </p>
             <Button onClick={() => setLocation("/login")} className="rounded-xl">
-              Nazad na prijavu
+              {t("common.nazadNaPrijavu")}
             </Button>
           </div>
         </motion.div>
@@ -198,9 +200,9 @@ export default function RegisterRoditeljPage() {
   }
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "ucenik", label: "Registracija", icon: <GraduationCap className="w-4 h-4" /> },
-    { key: "roditelj", label: "Roditelj", icon: <Users className="w-4 h-4" /> },
-    { key: "mekteb", label: "Mekteb", icon: <Building2 className="w-4 h-4" /> },
+    { key: "ucenik", label: t("register.ucenik"), icon: <GraduationCap className="w-4 h-4" /> },
+    { key: "roditelj", label: t("register.roditelj"), icon: <Users className="w-4 h-4" /> },
+    { key: "mekteb", label: t("register.mekteb"), icon: <Building2 className="w-4 h-4" /> },
   ];
 
   return (
@@ -210,7 +212,7 @@ export default function RegisterRoditeljPage() {
         className="w-full max-w-md">
         <div className="text-center mb-6">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium">Islamska edukativna platforma</p>
+          <p className="text-muted-foreground font-medium">{t("login.podNaslov")}</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl border border-border/50 overflow-hidden">
@@ -269,7 +271,7 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
 
-                    <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} />
+                    <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
@@ -337,7 +339,7 @@ export default function RegisterRoditeljPage() {
                       </p>
                     </div>
 
-                    <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} />
+                    <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2">
@@ -468,7 +470,7 @@ export default function RegisterRoditeljPage() {
                       )}
                     </AnimatePresence>
 
-                    <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} />
+                    <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20">
@@ -486,9 +488,9 @@ export default function RegisterRoditeljPage() {
 
         <div className="mt-5 text-center">
           <p className="text-sm text-muted-foreground">
-            Već imate nalog?{" "}
+            {t("register.vecImateRacun")}{" "}
             <button onClick={() => setLocation("/login")} className="text-primary font-bold hover:underline">
-              Prijavite se
+              {t("register.prijavite")}
             </button>
           </p>
         </div>

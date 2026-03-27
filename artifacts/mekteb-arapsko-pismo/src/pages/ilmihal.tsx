@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { BookOpen, ChevronRight, Search, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -15,19 +16,20 @@ interface Lekcija {
   redoslijed: number;
 }
 
-const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; border: string; ring: string }> = {
-  1: { label: "Nivo 1 – Osnovi", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-300" },
-  2: { label: "Nivo 2 – Srednji", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", ring: "ring-blue-300" },
-  3: { label: "Nivo 3 – Napredni", color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200", ring: "ring-violet-300" },
-};
-
 export default function IlmihalPage() {
+  const { t } = useLanguage();
   const search_ = useSearch();
   const urlNivo = (() => {
     const p = new URLSearchParams(search_);
     const n = p.get("nivo");
     return n ? parseInt(n) : null;
   })();
+
+  const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; border: string; ring: string }> = {
+    1: { label: t("ilmihal.nivo1"), color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-300" },
+    2: { label: t("ilmihal.nivo2"), color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", ring: "ring-blue-300" },
+    3: { label: t("ilmihal.nivo3"), color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200", ring: "ring-violet-300" },
+  };
 
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +46,6 @@ export default function IlmihalPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Nivo 21 is the extended Nivo 2 — treat them as one group (displayNivo = 2)
   const displayNivo = (l: Lekcija) => (l.nivo === 21 ? 2 : l.nivo);
 
   const filtered = lekcije.filter(l => {
@@ -63,7 +64,6 @@ export default function IlmihalPage() {
     return acc;
   }, {});
 
-  // Sort each group by redoslijed
   for (const n of Object.keys(grouped)) {
     grouped[Number(n)].sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
   }
@@ -85,35 +85,33 @@ export default function IlmihalPage() {
             <BookOpen className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Ilmihal</h1>
-            <p className="text-muted-foreground text-sm">Islamska vjeronauka — {lekcije.length} lekcija u 3 nivoa</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("nav.ilmihal")}</h1>
+            <p className="text-muted-foreground text-sm">{t("ilmihal.naslov")} — {lekcije.length} {t("ilmihal.lekcija")}</p>
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pretraži lekcije..." className="pl-10 rounded-xl h-11" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("ilmihal.pretrazi")} className="pl-10 rounded-xl h-11" />
           </div>
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => setActiveNivo(null)}
               className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${!activeNivo ? "bg-primary text-primary-foreground border-primary" : "bg-white border-border/70 text-muted-foreground hover:bg-muted"}`}>
-              Svi
+              {t("common.svi")}
             </button>
             {[1, 2, 3].map(n => {
               const info = NIVO_LABELS[n];
               return (
                 <button key={n} onClick={() => setActiveNivo(n === activeNivo ? null : n)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${activeNivo === n ? `${info.bg} ${info.color} ${info.border}` : "bg-white border-border/70 text-muted-foreground hover:bg-muted"}`}>
-                  Nivo {n}
+                  {info.label.split(" – ")[0]}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Content */}
         {isLoading ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
@@ -126,7 +124,6 @@ export default function IlmihalPage() {
               const items = grouped[nivo];
               return (
                 <div key={nivo} className={`rounded-2xl border-2 ${info.border} overflow-hidden`}>
-                  {/* Level header — click to expand/collapse */}
                   <button
                     onClick={() => toggleCollapse(nivo)}
                     className={`w-full flex items-center justify-between px-5 py-3 ${info.bg} hover:brightness-95 transition-all`}
@@ -136,13 +133,12 @@ export default function IlmihalPage() {
                         {info.label}
                       </span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/70 ${info.color}`}>
-                        {items.length} lekcija
+                        {items.length} {t("ilmihal.lekcija")}
                       </span>
                     </div>
                     <ChevronDown className={`w-5 h-5 ${info.color} transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`} />
                   </button>
 
-                  {/* Collapsible list */}
                   <AnimatePresence initial={false}>
                     {!isCollapsed && (
                       <motion.div
@@ -176,7 +172,7 @@ export default function IlmihalPage() {
             {filtered.length === 0 && (
               <div className="text-center py-16 text-muted-foreground">
                 <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="font-medium">Nema lekcija za ovaj filter</p>
+                <p className="font-medium">{t("ilmihal.nemaLekcija")}</p>
               </div>
             )}
           </div>

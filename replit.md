@@ -163,6 +163,27 @@ Roditelji se registruju sami i mogu: a) "Poveži dijete" (link existing, muallim
 - Registracije šalju email notifikaciju na info@mekteb.net (SMTP čeka konfiguraciju)
 - Nodemailer setup: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS env vars
 
+## i18n (internacionalizacija)
+
+- **Jezici**: BS (default), DE, EN, TR, AR
+- **Fajlovi**: `src/lib/i18n.ts` (prijevodi), `src/context/language.tsx` (LanguageProvider)
+- **Hook**: `useLanguage()` → `{ lang, setLang, t, tr, isRTL }`
+- **Geolokacija**: ipapi.co API za auto-detekciju jezika prema državi (AbortController + setTimeout fallback)
+- **Persitencija**: localStorage `mekteb-lang`
+- **RTL**: automatski za AR jezik
+- **Prevedene stranice**: home, login, ilmihal, kvizovi, register-roditelj, arapsko-pismo (sufara)
+- **Jezički prekidač**: Globe ikona u headeru sa dropdown-om
+
+## Admin panel
+
+- **Tabovi**: Muallimi | Korisnici | Analitika | Kviz rezultati (default: Muallimi)
+- **Muallimi tab**: pregled svih muallima, grupe, broj učenika, expand za detalje
+- **Korisnici tab**: CRUD, toggle aktivnost, edit profil, reset lozinke, raspoređivanje učenika
+- **Analitika tab**: posjete, registracije, kviz uspješnost, korisnici po ulogama
+- **Kviz rezultati tab**: svi kvizovi sa statistikama (pokušaji, prosječna tačnost)
+- **Raspoređivanje učenika**: RasporediModal — admin može prebaciti učenika u drugu grupu/muallima
+- **API**: `/admin/muallim-pregled`, `/admin/grupe-all`, `/admin/ucenik/:id/rasporedi`
+
 ## Preostalo za implementaciju
 - SMTP kredencijali za info@mekteb.net — potrebno od korisnika
 - Stripe pretplate — čeka Stripe nalog
