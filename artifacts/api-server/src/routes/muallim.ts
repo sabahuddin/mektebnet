@@ -376,14 +376,16 @@ router.get("/ucenik-rezultati/:id", async (req, res) => {
     const muallimId = req.user!.userId;
     const ucenikId = parseInt(req.params.id);
 
-    const profili = await db.select().from(ucenikProfiliTable)
-      .where(and(
-        eq(ucenikProfiliTable.userId, ucenikId),
-        eq(ucenikProfiliTable.muallimId, muallimId),
-      ));
-    if (profili.length === 0) {
-      res.status(403).json({ error: "Učenik nije vaš" });
-      return;
+    if (req.user!.role !== "admin") {
+      const profili = await db.select().from(ucenikProfiliTable)
+        .where(and(
+          eq(ucenikProfiliTable.userId, ucenikId),
+          eq(ucenikProfiliTable.muallimId, muallimId),
+        ));
+      if (profili.length === 0) {
+        res.status(403).json({ error: "Učenik nije vaš" });
+        return;
+      }
     }
 
     const rezultati = await db.select().from(kvizRezultatiTable)
@@ -436,13 +438,23 @@ router.get("/svi-rezultati", async (req, res) => {
 
 // ── KALENDAR ───────────────────────────────────────────────────────────────────
 
+// Helper: verify group ownership (muallim owns the group, or user is admin)
+async function verifyGrupaAccess(grupaId: number, userId: number, userRole: string) {
+  if (userRole === "admin") {
+    const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
+    return grupa || null;
+  }
+  const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId)));
+  return grupa || null;
+}
+
 // GET /api/muallim/kalendar?grupaId=X&mjesec=YYYY-MM
 router.get("/kalendar", async (req, res) => {
   try {
     const grupaId = parseInt(req.query.grupaId as string);
     if (!grupaId) { res.status(400).json({ error: "grupaId obavezan" }); return; }
 
-    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
 
     const entries = await db.select().from(mektebKalendarTable)
@@ -451,6 +463,7 @@ router.get("/kalendar", async (req, res) => {
 
     res.json(entries);
   } catch (err) {
+    console.error("Kalendar GET error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -462,7 +475,7 @@ router.post("/kalendar", async (req, res) => {
     if (!grupaId || !datum || !tip) { res.status(400).json({ error: "grupaId, datum i tip su obavezni" }); return; }
     if (!["mekteb", "ferije", "vazan_datum"].includes(tip)) { res.status(400).json({ error: "tip mora biti: mekteb, ferije, vazan_datum" }); return; }
 
-    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
 
     const existing = await db.select().from(mektebKalendarTable)
@@ -481,6 +494,7 @@ router.post("/kalendar", async (req, res) => {
       res.status(201).json(nova);
     }
   } catch (err) {
+    console.error("Kalendar POST error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -506,7 +520,7 @@ router.get("/plan-lekcija", async (req, res) => {
     const grupaId = parseInt(req.query.grupaId as string);
     if (!grupaId) { res.status(400).json({ error: "grupaId obavezan" }); return; }
 
-    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
 
     const datum = req.query.datum as string;
@@ -530,7 +544,7 @@ router.post("/plan-lekcija", async (req, res) => {
     const { grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed } = req.body;
     if (!grupaId || !datum || !lekcijaNaslov) { res.status(400).json({ error: "grupaId, datum i lekcijaNaslov su obavezni" }); return; }
 
-    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
 
     const [nova] = await db.insert(planLekcijaTable).values({
@@ -569,6 +583,46 @@ router.get("/lekcije-za-plan", async (req, res) => {
 
     res.json(lekcije);
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/print-kartice — reset passwords for students and return plaintext for printing
+router.post("/print-kartice", async (req, res) => {
+  try {
+    const { ucenikIds } = req.body as { ucenikIds: number[] };
+    if (!ucenikIds || !Array.isArray(ucenikIds) || ucenikIds.length === 0) {
+      res.status(400).json({ error: "ucenikIds je obavezan" });
+      return;
+    }
+
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(and(
+        inArray(ucenikProfiliTable.userId, ucenikIds),
+        eq(ucenikProfiliTable.muallimId, req.user!.userId)
+      ));
+
+    if (profili.length === 0) {
+      res.status(403).json({ error: "Nemate pristup ovim učenicima" });
+      return;
+    }
+    const allowedIds = profili.map(p => p.userId);
+
+    const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
+      .from(usersTable).where(inArray(usersTable.id, allowedIds));
+
+    const results = [];
+    for (const u of users) {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const newPass = `Mekteb${rand}`;
+      const hash = await bcrypt.hash(newPass, 10);
+      await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, u.id));
+      results.push({ id: u.id, displayName: u.displayName, username: u.username, generatedPassword: newPass });
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.error("Print kartice error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

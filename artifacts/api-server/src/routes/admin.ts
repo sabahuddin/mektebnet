@@ -12,8 +12,9 @@ import {
   kvizRezultatiTable,
   posjeteTable,
   korisnikNapredakTable,
+  grupeTable,
 } from "@workspace/db/schema";
-import { eq, desc, sql, gte, inArray } from "drizzle-orm";
+import { eq, desc, sql, gte, inArray, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -401,6 +402,149 @@ router.get("/kviz-statistike", async (req, res) => {
     }));
 
     res.json(combined);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/admin/muallim-pregled — muallim overview with groups and student counts
+router.get("/muallim-pregled", async (req, res) => {
+  try {
+    const muallimi = await db.select({
+      id: usersTable.id,
+      username: usersTable.username,
+      displayName: usersTable.displayName,
+      email: usersTable.email,
+      isActive: usersTable.isActive,
+      createdAt: usersTable.createdAt,
+    }).from(usersTable).where(eq(usersTable.role, "muallim")).orderBy(usersTable.displayName);
+
+    const grupe = await db.select({
+      id: grupeTable.id,
+      muallimId: grupeTable.muallimId,
+      naziv: grupeTable.naziv,
+      skolskaGodina: grupeTable.skolskaGodina,
+      isActive: grupeTable.isActive,
+    }).from(grupeTable);
+
+    const ucenikProfili = await db.select({
+      userId: ucenikProfiliTable.userId,
+      muallimId: ucenikProfiliTable.muallimId,
+      grupaId: ucenikProfiliTable.grupaId,
+    }).from(ucenikProfiliTable).where(eq(ucenikProfiliTable.isArchived, false));
+
+    const ucenikUsers = await db.select({
+      id: usersTable.id,
+      isActive: usersTable.isActive,
+    }).from(usersTable).where(eq(usersTable.role, "ucenik"));
+
+    const ucenikActiveMap = Object.fromEntries(ucenikUsers.map(u => [u.id, u.isActive]));
+
+    const result = muallimi.map(m => {
+      const mGrupe = grupe.filter(g => g.muallimId === m.id);
+      const mUcenici = ucenikProfili.filter(u => u.muallimId === m.id);
+      const aktivniUcenici = mUcenici.filter(u => ucenikActiveMap[u.userId] === true).length;
+
+      return {
+        ...m,
+        brojGrupa: mGrupe.length,
+        brojUcenika: mUcenici.length,
+        aktivniUcenici,
+        grupe: mGrupe.map(g => {
+          const gUcenici = mUcenici.filter(u => u.grupaId === g.id);
+          return {
+            id: g.id,
+            naziv: g.naziv,
+            skolskaGodina: g.skolskaGodina,
+            isActive: g.isActive,
+            brojUcenika: gUcenici.length,
+            aktivniUcenika: gUcenici.filter(u => ucenikActiveMap[u.userId] === true).length,
+          };
+        }),
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Muallim pregled error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/ucenik/:id/rasporedi — reassign student to different muallim/group
+router.put("/ucenik/:id/rasporedi", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const { muallimId, grupaId } = req.body;
+
+    if (!muallimId || !grupaId) {
+      res.status(400).json({ error: "muallimId i grupaId su obavezni" });
+      return;
+    }
+
+    const [ucenik] = await db.select().from(usersTable).where(and(eq(usersTable.id, ucenikId), eq(usersTable.role, "ucenik")));
+    if (!ucenik) {
+      res.status(404).json({ error: "Učenik nije pronađen" });
+      return;
+    }
+
+    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, muallimId)));
+    if (!grupa) {
+      res.status(404).json({ error: "Grupa nije pronađena ili ne pripada odabranom muallimu" });
+      return;
+    }
+
+    const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+    if (!profil) {
+      res.status(404).json({ error: "Profil učenika nije pronađen" });
+      return;
+    }
+
+    const stariMuallimId = profil.muallimId;
+    const muallimChanged = stariMuallimId !== null && stariMuallimId !== muallimId;
+
+    if (muallimChanged) {
+      const [noviMuallimProfil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
+      if (noviMuallimProfil && noviMuallimProfil.licencesUsed >= noviMuallimProfil.licenceCount) {
+        res.status(400).json({ error: "Novi muallim nema slobodnih licenci" });
+        return;
+      }
+    }
+
+    await db.update(ucenikProfiliTable).set({ muallimId, grupaId }).where(eq(ucenikProfiliTable.userId, ucenikId));
+
+    if (muallimChanged) {
+      if (stariMuallimId) {
+        await db.update(muallimProfiliTable)
+          .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
+          .where(eq(muallimProfiliTable.userId, stariMuallimId));
+      }
+      await db.update(muallimProfiliTable)
+        .set({ licencesUsed: sql`${muallimProfiliTable.licencesUsed} + 1` })
+        .where(eq(muallimProfiliTable.userId, muallimId));
+    }
+
+    res.json({ success: true, message: `Učenik raspoređen u grupu "${grupa.naziv}"` });
+  } catch (err) {
+    console.error("Rasporedi error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/admin/grupe-all — all groups with muallim names (for reassignment dropdown)
+router.get("/grupe-all", async (req, res) => {
+  try {
+    const grupe = await db.select({
+      id: grupeTable.id,
+      naziv: grupeTable.naziv,
+      muallimId: grupeTable.muallimId,
+      muallimName: usersTable.displayName,
+      isActive: grupeTable.isActive,
+    }).from(grupeTable)
+      .leftJoin(usersTable, eq(grupeTable.muallimId, usersTable.id))
+      .orderBy(usersTable.displayName, grupeTable.naziv);
+
+    res.json(grupe);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

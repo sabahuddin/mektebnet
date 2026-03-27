@@ -7,7 +7,8 @@ import { useLocation } from "wouter";
 import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
-  BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown
+  BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
+  ChevronRight, UserCog, ArrowRightLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +50,27 @@ interface Korisnik {
   isActive: boolean;
   createdAt: string;
   lastLoginAt: string | null;
+}
+
+interface MuallimPregled {
+  id: number;
+  username: string;
+  displayName: string;
+  email: string | null;
+  isActive: boolean;
+  createdAt: string;
+  brojGrupa: number;
+  brojUcenika: number;
+  aktivniUcenici: number;
+  grupe: { id: number; naziv: string; skolskaGodina: string; isActive: boolean; brojUcenika: number; aktivniUcenika: number }[];
+}
+
+interface GrupaAll {
+  id: number;
+  naziv: string;
+  muallimId: number;
+  muallimName: string;
+  isActive: boolean;
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -404,12 +426,97 @@ function ResetPasswordModal({ token, korisnik, onClose }: { token: string; koris
   );
 }
 
+function RasporediModal({ token, korisnik, grupeAll, onClose, onSaved }: {
+  token: string; korisnik: Korisnik; grupeAll: GrupaAll[]; onClose: () => void; onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [selectedGrupaId, setSelectedGrupaId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const selectedGrupa = grupeAll.find(g => g.id === selectedGrupaId);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGrupa) return;
+    setIsLoading(true);
+    try {
+      await apiRequest("PUT", `/admin/ucenik/${korisnik.id}/rasporedi`, {
+        muallimId: selectedGrupa.muallimId,
+        grupaId: selectedGrupa.id,
+      }, token);
+      toast({ title: "Učenik raspoređen!", description: `${korisnik.displayName} → ${selectedGrupa.naziv} (${selectedGrupa.muallimName})` });
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Greška pri raspoređivanju", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const grupeByMuallim = grupeAll.reduce((acc, g) => {
+    const key = g.muallimName || "Nepoznat";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(g);
+    return acc;
+  }, {} as Record<string, GrupaAll[]>);
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-extrabold text-lg text-foreground">Rasporedi učenika</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          <span className="font-bold text-foreground">{korisnik.displayName}</span> ({korisnik.username})
+        </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div>
+            <label className="block text-xs font-bold text-muted-foreground mb-2">Odaberite grupu</label>
+            {grupeAll.length === 0 ? (
+              <div className="border border-border rounded-xl p-4 text-center text-sm text-muted-foreground">
+                Nema dostupnih grupa. Prvo kreirajte grupu kod muallima.
+              </div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto border border-border rounded-xl">
+                {Object.entries(grupeByMuallim).map(([muallimName, grupe]) => (
+                  <div key={muallimName}>
+                    <div className="px-3 py-2 bg-muted/30 text-xs font-bold text-muted-foreground sticky top-0">
+                      {muallimName}
+                    </div>
+                    {grupe.map(g => (
+                      <button key={g.id} type="button" onClick={() => setSelectedGrupaId(g.id)}
+                        className={`w-full text-left px-4 py-2.5 text-sm border-b border-border/20 transition-colors ${
+                          selectedGrupaId === g.id ? "bg-primary/10 text-primary font-bold" : "hover:bg-muted/20"
+                        }`}>
+                        {g.naziv}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">Odustani</Button>
+            <Button type="submit" disabled={isLoading || !selectedGrupaId} className="flex-1 rounded-xl flex items-center gap-2">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />} Rasporedi
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"korisnici" | "analitika" | "rezultati">("korisnici");
+  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati">("muallimi");
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -428,6 +535,13 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
+  const [muallimPregled, setMuallimPregled] = useState<MuallimPregled[]>([]);
+  const [muallimLoading, setMuallimLoading] = useState(false);
+  const [expandedMuallim, setExpandedMuallim] = useState<number | null>(null);
+
+  const [rasporediKorisnik, setRasporediKorisnik] = useState<Korisnik | null>(null);
+  const [grupeAll, setGrupeAll] = useState<GrupaAll[]>([]);
+
   const loadData = async () => {
     if (!token) return;
     try {
@@ -443,6 +557,19 @@ export default function AdminPage() {
       toast({ title: "Greška", description: "Nije moguće učitati podatke", variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadMuallimPregled = async () => {
+    if (!token) return;
+    setMuallimLoading(true);
+    try {
+      const data = await apiRequest<MuallimPregled[]>("GET", "/admin/muallim-pregled", undefined, token);
+      setMuallimPregled(data);
+    } catch {
+      toast({ title: "Greška", description: "Nije moguće učitati pregled muallima", variant: "destructive" });
+    } finally {
+      setMuallimLoading(false);
     }
   };
 
@@ -470,7 +597,15 @@ export default function AdminPage() {
     }
   };
 
-  useEffect(() => { loadData(); }, [token]);
+  const loadGrupeAll = async () => {
+    if (!token || grupeAll.length > 0) return;
+    try {
+      const data = await apiRequest<GrupaAll[]>("GET", "/admin/grupe-all", undefined, token);
+      setGrupeAll(data);
+    } catch {}
+  };
+
+  useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); }, [token]);
   useEffect(() => { if (activeTab === "analitika") loadAnalytics(); }, [activeTab]);
   useEffect(() => { if (activeTab === "rezultati") loadKvizStatistike(); }, [activeTab]);
 
@@ -490,6 +625,7 @@ export default function AdminPage() {
     try {
       await apiRequest("PUT", `/admin/korisnici/${k.id}`, { isActive: !k.isActive }, token!);
       setKorisnici(prev => prev.map(u => u.id === k.id ? { ...u, isActive: !u.isActive } : u));
+      if (k.role === "muallim") loadMuallimPregled();
     } catch {
       toast({ title: "Greška", description: "Nije moguće promijeniti status", variant: "destructive" });
     } finally {
@@ -518,7 +654,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Statistike */}
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
@@ -527,24 +662,110 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <StatCard icon={<Users className="w-6 h-6 text-teal-700" />} label="Ukupno korisnika" value={statistike.ukupnoKorisnika} color="bg-teal-100" />
             <StatCard icon={<ShieldCheck className="w-6 h-6 text-amber-700" />} label="Muallima" value={statistike.korisnici.muallim || 0} color="bg-amber-100" />
-            <StatCard icon={<Users className="w-6 h-6 text-blue-700" />} label="Roditelja" value={statistike.korisnici.roditelj || 0} color="bg-blue-100" />
-            <StatCard icon={<Building2 className="w-6 h-6 text-purple-700" />} label="Mekteba" value={statistike.ukupnoMekteba} color="bg-purple-100" />
+            <StatCard icon={<Users className="w-6 h-6 text-blue-700" />} label="Učenika" value={statistike.korisnici.ucenik || 0} color="bg-blue-100" />
+            <StatCard icon={<Building2 className="w-6 h-6 text-purple-700" />} label="Roditelja" value={statistike.korisnici.roditelj || 0} color="bg-purple-100" />
           </div>
         )}
 
-        {/* Tab navigacija */}
-        <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6">
+        <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6 overflow-x-auto">
           {[
+            { key: "muallimi" as const, label: "Muallimi", icon: <UserCog className="w-4 h-4" /> },
             { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
             { key: "analitika" as const, label: "Analitika", icon: <BarChart3 className="w-4 h-4" /> },
             { key: "rezultati" as const, label: "Kviz rezultati", icon: <ClipboardList className="w-4 h-4" /> },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {tab.icon} {tab.label}
             </button>
           ))}
         </div>
+
+        {/* ── TAB: MUALLIMI ── */}
+        {activeTab === "muallimi" && (
+          <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-border/50 flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-foreground flex items-center gap-2">
+                  <UserCog className="w-5 h-5 text-primary" /> Pregled muallima
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">Muallimi, njihove grupe i broj učenika</p>
+              </div>
+              <Button size="sm" onClick={() => { setShowDodajMuallim(true); }} className="rounded-xl flex items-center gap-1.5">
+                <Plus className="w-4 h-4" /> Dodaj muallima
+              </Button>
+            </div>
+            {muallimLoading ? (
+              <div className="p-4 flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
+            ) : muallimPregled.length > 0 ? (
+              <div>
+                {muallimPregled.map(m => (
+                  <div key={m.id} className="border-b border-border/20 last:border-b-0">
+                    <button
+                      onClick={() => setExpandedMuallim(expandedMuallim === m.id ? null : m.id)}
+                      className="w-full flex items-center justify-between p-4 hover:bg-muted/20 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${m.isActive ? "bg-teal-100" : "bg-red-100"}`}>
+                          <UserCog className={`w-5 h-5 ${m.isActive ? "text-teal-700" : "text-red-700"}`} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-foreground">{m.displayName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {m.email || m.username} · {m.brojGrupa} {m.brojGrupa === 1 ? "grupa" : "grupa"} · {m.aktivniUcenici}/{m.brojUcenika} učenika
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                          {m.isActive ? "Aktivan" : "Neaktivan"}
+                        </span>
+                        <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expandedMuallim === m.id ? "rotate-90" : ""}`} />
+                      </div>
+                    </button>
+                    {expandedMuallim === m.id && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                        className="px-4 pb-4">
+                        {m.grupe.length > 0 ? (
+                          <div className="bg-muted/30 rounded-xl overflow-hidden">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-border/30 bg-muted/50">
+                                  {["Grupa", "Šk. godina", "Aktivni učenici", "Ukupno učenika", "Status"].map(h => (
+                                    <th key={h} className="text-left px-4 py-2 font-bold text-xs text-muted-foreground">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {m.grupe.map(g => (
+                                  <tr key={g.id} className="border-b border-border/20 last:border-b-0">
+                                    <td className="px-4 py-2.5 font-bold text-foreground">{g.naziv}</td>
+                                    <td className="px-4 py-2.5 text-muted-foreground">{g.skolskaGodina}</td>
+                                    <td className="px-4 py-2.5 font-bold text-emerald-600">{g.aktivniUcenika}</td>
+                                    <td className="px-4 py-2.5 font-bold text-foreground">{g.brojUcenika}</td>
+                                    <td className="px-4 py-2.5">
+                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                                        {g.isActive ? "Aktivna" : "Neaktivna"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground py-3 text-center">Nema grupa</p>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-muted-foreground text-sm">Nema muallima</div>
+            )}
+          </div>
+        )}
 
         {/* ── TAB: ANALITIKA ── */}
         {activeTab === "analitika" && (
@@ -553,42 +774,47 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
               </div>
-            ) : analytics && (
+            ) : analytics ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Posjete po danima */}
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                       <TrendingUp className="w-5 h-5 text-teal-600" /> Posjete (zadnjih 30 dana)
                     </h3>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <LineChart data={analytics.aktivnostPosmjenama}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip labelFormatter={l => `Datum: ${l}`} />
-                        <Line type="monotone" dataKey="broj" stroke="#0d9488" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {analytics.aktivnostPosmjenama.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={analytics.aktivnostPosmjenama}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip labelFormatter={l => `Datum: ${l}`} />
+                          <Line type="monotone" dataKey="broj" stroke="#0d9488" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o posjetama</p>
+                    )}
                   </div>
 
-                  {/* Registracije po danima */}
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                       <Users className="w-5 h-5 text-blue-600" /> Nove registracije (30 dana)
                     </h3>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={analytics.registracijePoMjesecu}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
-                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                        <Tooltip labelFormatter={l => `Datum: ${l}`} />
-                        <Bar dataKey="broj" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {analytics.registracijePoMjesecu.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={analytics.registracijePoMjesecu}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip labelFormatter={l => `Datum: ${l}`} />
+                          <Bar dataKey="broj" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-muted-foreground text-sm text-center py-12">Nema registracija</p>
+                    )}
                   </div>
 
-                  {/* Posjete po državama */}
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                       <Globe className="w-5 h-5 text-purple-600" /> Posjete po državama
@@ -609,7 +835,6 @@ export default function AdminPage() {
                     )}
                   </div>
 
-                  {/* Kviz statistike */}
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                       <Award className="w-5 h-5 text-amber-600" /> Uspješnost po kvizovima
@@ -630,7 +855,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Korisnik stats tabela */}
                 <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
                   <div className="p-4 border-b border-border/50">
                     <h3 className="font-extrabold text-foreground">Pregled korisnika po ulogama</h3>
@@ -660,6 +884,10 @@ export default function AdminPage() {
                   </table>
                 </div>
               </>
+            ) : (
+              <div className="bg-white border border-border/50 rounded-2xl p-8 text-center text-muted-foreground">
+                Nije moguće učitati analitiku
+              </div>
             )}
           </div>
         )}
@@ -721,7 +949,6 @@ export default function AdminPage() {
         {/* ── TAB: KORISNICI ── */}
         {activeTab === "korisnici" && (
         <>
-        {/* Korisnici tabela */}
         <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
             <h2 className="font-extrabold text-foreground">Korisnici</h2>
@@ -815,6 +1042,13 @@ export default function AdminPage() {
                             title="Promijeni lozinku">
                             <KeyRound className="w-4 h-4" />
                           </button>
+                          {k.role === "ucenik" && (
+                            <button onClick={() => { setRasporediKorisnik(k); loadGrupeAll(); }}
+                              className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                              title="Rasporedi u grupu">
+                              <ArrowRightLeft className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -832,13 +1066,13 @@ export default function AdminPage() {
       </div>
 
       {showDodajAdmina && (
-        <DodajAdminaModal token={token!} onClose={() => setShowDodajAdmina(false)} onCreated={loadData} />
+        <DodajAdminaModal token={token!} onClose={() => setShowDodajAdmina(false)} onCreated={() => { loadData(); loadMuallimPregled(); }} />
       )}
       {showDodajMuallim && (
-        <DodajMuallimModal token={token!} onClose={() => setShowDodajMuallim(false)} onCreated={loadData} />
+        <DodajMuallimModal token={token!} onClose={() => setShowDodajMuallim(false)} onCreated={() => { loadData(); loadMuallimPregled(); }} />
       )}
       {showDodajUcnika && (
-        <DodajUcenikaModal token={token!} onClose={() => setShowDodajUcnika(false)} onCreated={loadData} />
+        <DodajUcenikaModal token={token!} onClose={() => setShowDodajUcnika(false)} onCreated={() => { loadData(); loadMuallimPregled(); }} />
       )}
       {resetKorisnik && (
         <ResetPasswordModal token={token!} korisnik={resetKorisnik} onClose={() => setResetKorisnik(null)} />
@@ -849,7 +1083,16 @@ export default function AdminPage() {
           korisnik={editKorisnik}
           muallimProfil={muallimProfili.find(mp => mp.userId === editKorisnik.id)}
           onClose={() => setEditKorisnik(null)}
-          onSaved={loadData}
+          onSaved={() => { loadData(); loadMuallimPregled(); }}
+        />
+      )}
+      {rasporediKorisnik && (
+        <RasporediModal
+          token={token!}
+          korisnik={rasporediKorisnik}
+          grupeAll={grupeAll}
+          onClose={() => setRasporediKorisnik(null)}
+          onSaved={() => { loadData(); loadMuallimPregled(); }}
         />
       )}
     </Layout>

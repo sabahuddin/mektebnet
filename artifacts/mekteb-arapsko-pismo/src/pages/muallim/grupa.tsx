@@ -39,6 +39,7 @@ export default function GrupaPage() {
   const { token } = useAuth();
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
+  const [printLoading, setPrintLoading] = useState(false);
 
   const [grupa, setGrupa] = useState<Grupa | null>(null);
   const [studentiGrupe, setStudentiGrupe] = useState<Ucenik[]>([]);
@@ -142,14 +143,7 @@ export default function GrupaPage() {
     }
   }
 
-  function printCards() {
-    const cards = createdStudents.length > 0 ? createdStudents : studentiGrupe.map(s => ({
-      displayName: s.displayName,
-      username: s.username,
-      generatedPassword: "••••••••",
-    }));
-    if (cards.length === 0) return;
-
+  function openPrintWindow(cards: { displayName: string; username: string; generatedPassword: string }[]) {
     const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Kartice učenika</title>
 <style>
@@ -185,6 +179,25 @@ export default function GrupaPage() {
       w.document.close();
       setTimeout(() => w.print(), 300);
     }
+  }
+
+  function printCards() {
+    if (createdStudents.length > 0) {
+      openPrintWindow(createdStudents);
+      return;
+    }
+    if (studentiGrupe.length === 0) return;
+    setPrintLoading(true);
+    const ucenikIds = studentiGrupe.map(s => s.id);
+    apiRequest<CreatedUcenik[]>("POST", "/muallim/print-kartice", { ucenikIds }, token!)
+      .then(cards => {
+        openPrintWindow(cards);
+        toast({ title: "Lozinke resetirane", description: "Nove lozinke su na karticama. Stare lozinke više ne važe." });
+      })
+      .catch(() => {
+        toast({ title: "Greška", description: "Nije moguće generisati kartice", variant: "destructive" });
+      })
+      .finally(() => setPrintLoading(false));
   }
 
   const bezGrupe = sviStudenti.filter(u => {
@@ -248,8 +261,8 @@ export default function GrupaPage() {
             <Plus className="w-4 h-4" /> Dodaj postojećeg
           </Button>
           {(studentiGrupe.length > 0 || createdStudents.length > 0) && (
-            <Button variant="outline" onClick={printCards} className="rounded-xl font-bold flex items-center gap-2">
-              <Printer className="w-4 h-4" /> Printaj kartice
+            <Button variant="outline" onClick={printCards} disabled={printLoading} className="rounded-xl font-bold flex items-center gap-2">
+              {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} Printaj kartice
             </Button>
           )}
         </div>
