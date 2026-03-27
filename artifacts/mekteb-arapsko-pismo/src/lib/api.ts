@@ -17,7 +17,9 @@ export async function apiRequest<T = unknown>(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Greška servera" }));
-    throw new Error(err.error || "Greška servera");
+    const error = new Error(err.error || "Greška servera") as any;
+    error.status = res.status;
+    throw error;
   }
 
   return res.json() as Promise<T>;

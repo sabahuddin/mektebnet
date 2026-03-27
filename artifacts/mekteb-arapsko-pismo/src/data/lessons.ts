@@ -38,6 +38,11 @@ export interface HarekeData {
   speakText?: string;
 }
 
+export interface SukunExplainer {
+  sentence: string;
+  metaphor: { auto: string; hareketi: string; sukun: string };
+}
+
 export interface LessonData {
   id: number;
   orderNum: number;
@@ -46,10 +51,11 @@ export interface LessonData {
   letters: string[];
   isCompleted: boolean;
   isRevision?: boolean;
-  story: { lines: { speaker: "dzana" | "amir" | "narator" | "otac" | "majka"; text: string }[] };
+  story: { lines: { speaker: "dzana" | "amir" | "narator" | "otac" | "majka" | "muallim"; text: string }[] };
   letterData: HarfData[];
   hareketi?: HarekeData[];
   hareketiTitle?: string;
+  sukunExplainer?: SukunExplainer;
   exercises: Exercise[];
 }
 
@@ -701,105 +707,116 @@ export const LESSONS: LessonData[] = [
     isCompleted: false,
     story: {
       lines: [
-        { speaker: "dzana", text: "Amir, zamisli da slovo može šutjeti. Kad nosi sukun — ne izgovara samoglasnik." },
-        { speaker: "amir",  text: "Kao kad zatvoriš usta? Pa kako onda uopće znaš da je tu?" },
-        { speaker: "dzana", text: "Suglasnik se izgovori, ali odmah stati. Ba s ferethom je 'be', a ba sa sukunom je samo 'b'." },
-        { speaker: "amir",  text: "Ah, kao u 'kitab' — posljednje ba je tiho, samo 'b' bez samoglasnika?" },
-        { speaker: "dzana", text: "Tačno! Sukun izgleda kao mali krug ili nula iznad slova." },
-        { speaker: "amir",  text: "Mali krug — kao balon bez zraka! Hm, lako za upamtiti." },
-        { speaker: "dzana", text: "Pametan si! Pamti: krug iznad slova = nema samoglasnika, slovo šuti." },
-        { speaker: "amir",  text: "Dakle: بَ = 'be', بِ = 'bi', بُ = 'bu', a بْ = samo 'b'. Kapiraoo!" },
+        { speaker: "narator", text: "Muallim ulazi u učionicu s pitanjem za razred." },
+        { speaker: "muallim", text: "Djeco, danas učimo o sukunu. Ali prvo — sukun NIJE harf. Sukun je znak koji stoji na harfu kad taj harf nema hareketa." },
+        { speaker: "amir",    text: "A šta znači da nema hareketa?" },
+        { speaker: "muallim", text: "Zamislite: harf je auto. Hareketi — fetha, kesra, damma — su motor i točkovi. Kad ih stavimo na harf, auto se pokrene i čujemo glas: 'be', 'bi', 'bu'." },
+        { speaker: "muallim", text: "A harf sa sukunom? To je auto bez motora. Stoji, miruje. Nema glasa 'e', 'i' ili 'u' — samo dodirnemo taj harf i odmah idemo na sljedeći." },
+        { speaker: "dzana",   text: "Oo! I zato sukun izgleda kao krug — kao nula! Nula hareketa!" },
+        { speaker: "muallim", text: "Odlično, Džana! Kad harf dobije hareket, čujemo glas. Kad dobije sukun — harf miruje i odmah prelazimo dalje." },
+        { speaker: "amir",    text: "Dakle: بَ = 'be', بِ = 'bi', بُ = 'bu', a بْ = samo 'b'. Kapiraoo!" },
       ]
     },
-    letterData: [
-      {
-        arabic: "بْ", name: "Sukun na Ba", transliteration: "b (bez samoglasnika)",
-        forms: { isolated: "بْ", initial: "بْ", medial: "ـبْ", final: "ـبْ" },
-        visualAssociation: "Mali krug iznad slova — kao balon bez zraka, slovo šuti",
-        soundFile: "hareke-sukun.mp3",
+    letterData: [],
+    hareketi: [],
+    sukunExplainer: {
+      sentence: "Kad harf dobije hareket, on se pokrene i čujemo glas (ba, bi, bu), a kad dobije sukun, harf miruje — izgovorimo ga bez ikakvog samoglasnika i odmah prelazimo na sljedeći harf.",
+      metaphor: {
+        auto:     "🚗  Harf je auto",
+        hareketi: "⚙️  Hareketi (fetha, kesra, damma) su motor i točkovi — pokreću harf, čujemo glas",
+        sukun:    "🔇  Sukun = auto bez motora — harf stoji, miruje, nema samoglasnika",
       },
-    ],
-    hareketi: [
-      {
-        arabic: "بْ", hareke: "ْ", name: "Sukun",
-        sound: "—", colour: "teal",
-        description: "Mali krug iznad slova — slovo nema samoglasnika",
-        napomena: "Izgovori suglasnik ali odmah stani — nema vokala",
-        soundFile: "hareke-sukun.mp3",
-      },
-    ],
+    },
     exercises: [
       {
+        type: "prepoznaj-hareket",
+        title: "Prepoznaj znak", description: "Pogledaj znak na tatweelu — koji je hareket ili sukun?",
+        icon: "🔍", hasanatReward: 15,
+        choices: ["Fetha", "Kesra", "Damma", "Sukun"],
+        items: [
+          { show: "ـَ", answer: "Fetha"  }, { show: "ـِ", answer: "Kesra"  }, { show: "ـُ", answer: "Damma"  }, { show: "ـْ", answer: "Sukun"  },
+          { show: "ـْ", answer: "Sukun"  }, { show: "ـَ", answer: "Fetha"  }, { show: "ـُ", answer: "Damma"  }, { show: "ـِ", answer: "Kesra"  },
+          { show: "ـِ", answer: "Kesra"  }, { show: "ـْ", answer: "Sukun"  }, { show: "ـَ", answer: "Fetha"  }, { show: "ـُ", answer: "Damma"  },
+          { show: "ـُ", answer: "Damma"  }, { show: "ـِ", answer: "Kesra"  }, { show: "ـْ", answer: "Sukun"  }, { show: "ـَ", answer: "Fetha"  },
+          { show: "ـْ", answer: "Sukun"  }, { show: "ـُ", answer: "Damma"  }, { show: "ـِ", answer: "Kesra"  }, { show: "ـْ", answer: "Sukun"  },
+        ]
+      },
+      {
         type: "koji-znak",
-        title: "Sukun ili hareket?", description: "Pogledaj slovo — nosi li sukun ili hareket?",
+        title: "Sukun ili hareket?", description: "Pogledaj harf — nosi li sukun ili hareket?",
         icon: "👁️", hasanatReward: 15,
         choices: ["Sukun", "Fetha", "Kesra", "Damma"],
         items: [
-          { show: "بْ", answer: "Sukun" }, { show: "تَ", answer: "Fetha" }, { show: "جِ", answer: "Kesra" },
-          { show: "حُ", answer: "Damma" }, { show: "خْ", answer: "Sukun" }, { show: "ثَ", answer: "Fetha" },
-          { show: "بِ", answer: "Kesra" }, { show: "تُ", answer: "Damma" }, { show: "جْ", answer: "Sukun" },
-          { show: "حَ", answer: "Fetha" }, { show: "خِ", answer: "Kesra" }, { show: "ثُ", answer: "Damma" },
-          { show: "بْ", answer: "Sukun" }, { show: "تَ", answer: "Fetha" }, { show: "جِ", answer: "Kesra" },
-          { show: "حْ", answer: "Sukun" }, { show: "خَ", answer: "Fetha" }, { show: "ثِ", answer: "Kesra" },
+          { show: "بْ", answer: "Sukun" }, { show: "تَ", answer: "Fetha" }, { show: "جِ", answer: "Kesra"  },
+          { show: "حُ", answer: "Damma" }, { show: "خْ", answer: "Sukun" }, { show: "ثَ", answer: "Fetha"  },
+          { show: "بِ", answer: "Kesra" }, { show: "تُ", answer: "Damma" }, { show: "جْ", answer: "Sukun"  },
+          { show: "حَ", answer: "Fetha" }, { show: "خِ", answer: "Kesra" }, { show: "ثُ", answer: "Damma"  },
+          { show: "بْ", answer: "Sukun" }, { show: "تَ", answer: "Fetha" }, { show: "جِ", answer: "Kesra"  },
+          { show: "حْ", answer: "Sukun" }, { show: "خَ", answer: "Fetha" }, { show: "ثِ", answer: "Kesra"  },
           { show: "بُ", answer: "Damma" }, { show: "جْ", answer: "Sukun" },
         ]
       },
       {
-        type: "prepoznaj-hareket",
-        title: "Prepoznaj hareket ili sukun", description: "Pogledaj slovo s harekom — koji je to znak?",
-        icon: "🔍", hasanatReward: 15,
+        type: "slušaj",
+        title: "Slušaj i odaberi", description: "Pritisni 🔊 — čuješ li fetha (e), kesra (i), damma (u)? Odaberi hareket.",
+        icon: "🎧", hasanatReward: 20,
         choices: ["Fetha", "Kesra", "Damma", "Sukun"],
         items: [
-          { show: "بَ", answer: "Fetha" }, { show: "تِ", answer: "Kesra" }, { show: "جُ", answer: "Damma" },
-          { show: "خْ", answer: "Sukun" }, { show: "حَ", answer: "Fetha" }, { show: "بْ", answer: "Sukun" },
-          { show: "ثِ", answer: "Kesra" }, { show: "تُ", answer: "Damma" }, { show: "جْ", answer: "Sukun" },
-          { show: "خَ", answer: "Fetha" }, { show: "حِ", answer: "Kesra" }, { show: "بُ", answer: "Damma" },
-          { show: "ثْ", answer: "Sukun" }, { show: "تَ", answer: "Fetha" }, { show: "جِ", answer: "Kesra" },
-          { show: "حُ", answer: "Damma" }, { show: "خْ", answer: "Sukun" }, { show: "بَ", answer: "Fetha" },
-          { show: "تْ", answer: "Sukun" }, { show: "ثُ", answer: "Damma" },
+          { show: "🔊", answer: "Fetha", audio: "بَ" },
+          { show: "🔊", answer: "Damma", audio: "جُ" },
+          { show: "🔊", answer: "Kesra", audio: "تِ" },
+          { show: "🔊", answer: "Fetha", audio: "حَ" },
+          { show: "🔊", answer: "Kesra", audio: "خِ" },
+          { show: "🔊", answer: "Damma", audio: "بُ" },
+          { show: "🔊", answer: "Fetha", audio: "ثَ" },
+          { show: "🔊", answer: "Kesra", audio: "جِ" },
+          { show: "🔊", answer: "Damma", audio: "حُ" },
+          { show: "🔊", answer: "Fetha", audio: "تَ" },
+          { show: "🔊", answer: "Damma", audio: "خُ" },
+          { show: "🔊", answer: "Kesra", audio: "ثِ" },
+          { show: "🔊", answer: "Fetha", audio: "خَ" },
+          { show: "🔊", answer: "Kesra", audio: "بِ" },
+          { show: "🔊", answer: "Damma", audio: "تُ" },
+          { show: "🔊", answer: "Fetha", audio: "جَ" },
+          { show: "🔊", answer: "Damma", audio: "ثُ" },
+          { show: "🔊", answer: "Kesra", audio: "حِ" },
         ]
       },
       {
         type: "slušaj",
-        title: "Slušaj i odaberi", description: "Pritisni dugme 🔊 — čuješ li hareket ili sukun?",
-        icon: "🎧", hasanatReward: 20,
-        choices: ["Fetha", "Kesra", "Damma", "Sukun"],
+        title: "Slušaj i odaberi harf", description: "Čuješ slog — odaberi ispravan harf s harekom ili sukunom",
+        icon: "🎯", hasanatReward: 20,
+        choices: ["بَ", "بِ", "بُ", "بْ"],
         items: [
-          { show: "🔊", answer: "Fetha", audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Kesra", audio: "hareke-kasra.mp3" },
-          { show: "🔊", answer: "Damma", audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Sukun", audio: "hareke-sukun.mp3" },
-          { show: "🔊", answer: "Fetha", audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Sukun", audio: "hareke-sukun.mp3" },
-          { show: "🔊", answer: "Kesra", audio: "hareke-kasra.mp3" },
-          { show: "🔊", answer: "Damma", audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Sukun", audio: "hareke-sukun.mp3" },
-          { show: "🔊", answer: "Fetha", audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Damma", audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Sukun", audio: "hareke-sukun.mp3" },
-          { show: "🔊", answer: "Kesra", audio: "hareke-kasra.mp3" },
-          { show: "🔊", answer: "Fetha", audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Sukun", audio: "hareke-sukun.mp3" },
-          { show: "🔊", answer: "Damma", audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Fetha", audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Sukun", audio: "hareke-sukun.mp3" },
-          { show: "🔊", answer: "Kesra", audio: "hareke-kasra.mp3" },
-          { show: "🔊", answer: "Sukun", audio: "hareke-sukun.mp3" },
+          { show: "🔊", answer: "بَ", audio: "بَ" },
+          { show: "🔊", answer: "بِ", audio: "بِ" },
+          { show: "🔊", answer: "بُ", audio: "بُ" },
+          { show: "🔊", answer: "بَ", audio: "بَ" },
+          { show: "🔊", answer: "بِ", audio: "بِ" },
+          { show: "🔊", answer: "بُ", audio: "بُ" },
+          { show: "🔊", answer: "بَ", audio: "بَ" },
+          { show: "🔊", answer: "بُ", audio: "بُ" },
+          { show: "🔊", answer: "بِ", audio: "بِ" },
+          { show: "🔊", answer: "بَ", audio: "بَ" },
         ]
       },
       {
-        type: "napiši",
-        title: "Napiši glas ili —", description: "Napiši glas slova (e/i/u) ili crtu (—) ako nema glasa",
-        icon: "✏️", hasanatReward: 10,
+        type: "čitaj-slog",
+        title: "Čitaj slogove — harfovi + sukun",
+        description: "Pročitaj svaki slog naglas — harfovi s hareketima i sukunom",
+        icon: "📖", hasanatReward: 25,
         choices: [],
         items: [
-          { show: "بَ", answer: "e" }, { show: "تِ", answer: "i" }, { show: "جُ", answer: "u" },
-          { show: "خْ", answer: "—" }, { show: "حَ", answer: "e" }, { show: "بْ", answer: "—" },
-          { show: "ثِ", answer: "i" }, { show: "تُ", answer: "u" }, { show: "جْ", answer: "—" },
-          { show: "خَ", answer: "e" }, { show: "حِ", answer: "i" }, { show: "بُ", answer: "u" },
-          { show: "ثْ", answer: "—" }, { show: "تَ", answer: "e" }, { show: "جِ", answer: "i" },
-          { show: "حُ", answer: "u" }, { show: "خْ", answer: "—" }, { show: "بَ", answer: "e" },
-          { show: "تْ", answer: "—" }, { show: "ثُ", answer: "u" },
+          { show: "بَ",   answer: "be"      }, { show: "بِ",   answer: "bi"      }, { show: "بُ",   answer: "bu"      },
+          { show: "تَ",   answer: "te"      }, { show: "تِ",   answer: "ti"      }, { show: "تُ",   answer: "tu"      },
+          { show: "ثَ",   answer: "se"      }, { show: "ثِ",   answer: "si"      }, { show: "ثُ",   answer: "su"      },
+          { show: "جَ",   answer: "dže"     }, { show: "جِ",   answer: "dži"     }, { show: "جُ",   answer: "džu"     },
+          { show: "حَ",   answer: "ha"      }, { show: "حِ",   answer: "hi"      }, { show: "حُ",   answer: "hu"      },
+          { show: "خَ",   answer: "hâ"      }, { show: "خِ",   answer: "hâ-i"    }, { show: "خُ",   answer: "hâ-u"    },
+          { show: "بَتَ", answer: "be-te"   }, { show: "تَجَ", answer: "te-dže"  },
+          { show: "جَحَ", answer: "dže-ha"  }, { show: "حَبَ", answer: "ha-be"   },
+          { show: "بَتْ", answer: "be-t"    }, { show: "تَجْ", answer: "te-dž"   },
+          { show: "جَحْ", answer: "dže-h"   }, { show: "حَبْ", answer: "ha-b"    },
         ]
       },
     ]

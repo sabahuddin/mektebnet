@@ -6,10 +6,12 @@ import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
   Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
-  BarChart3, Clock, Loader2
+  BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
+  Settings, Save, X, UserCheck, UserX, UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -28,18 +30,84 @@ interface Ucenik {
 
 interface Grupa {
   id: number;
-  ime: string;
-  razred: number;
-  brUcenika: number;
+  naziv: string;
+  skolskaGodina: string;
+  daniNastave: string[];
+  vrijemeNastave: string;
 }
+
+interface KalendarEntry {
+  id: number;
+  grupaId: number;
+  datum: string;
+  tip: "mekteb" | "ferije" | "vazan_datum";
+  opis?: string;
+}
+
+interface PlanLekcija {
+  id: number;
+  grupaId: number;
+  datum: string;
+  lekcijaNaslov: string;
+  lekcijaTip: string;
+  redoslijed: number;
+}
+
+interface IlmihalLekcija {
+  id: number;
+  naslov: string;
+  nivo: number;
+}
+
+interface PendingRoditelj {
+  id: number;
+  roditeljId: number;
+  ucenikId: number;
+  status: string;
+  roditelj: { displayName: string; username: string };
+  ucenik: { displayName: string; username: string };
+}
+
+const TIP_COLORS: Record<string, { bg: string; border: string; text: string; label: string }> = {
+  mekteb: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-700", label: "Mekteb" },
+  ferije: { bg: "bg-red-100", border: "border-red-400", text: "text-red-700", label: "Ferije" },
+  vazan_datum: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-700", label: "Važan datum" },
+};
+
+const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 
 export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"pregled" | "ucenici" | "grupe" | "prisustvo">("pregled");
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar">("pregled");
   const [ucenici, setUcenici] = useState<Ucenik[]>([]);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [selectedGrupaId, setSelectedGrupaId] = useState<number | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
+  const [kalendar, setKalendar] = useState<KalendarEntry[]>([]);
+  const [planLekcija, setPlanLekcija] = useState<PlanLekcija[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [kalendarLoading, setKalendarLoading] = useState(false);
+  const [activeTip, setActiveTip] = useState<"mekteb" | "ferije" | "vazan_datum">("mekteb");
+  const [opisInput, setOpisInput] = useState("");
+  const [dostupneLekcije, setDostupneLekcije] = useState<IlmihalLekcija[]>([]);
+  const [showLekcijaSelect, setShowLekcijaSelect] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
+
+  const loadPendingRoditelji = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<PendingRoditelj[]>("GET", "/muallim/pending-roditelji", undefined, token);
+      setPendingRoditelji(data);
+    } catch {}
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -50,7 +118,104 @@ export default function MuallimPanel() {
       setUcenici(u);
       setGrupe(g);
     }).catch(() => {}).finally(() => setIsLoading(false));
+    loadPendingRoditelji();
   }, [token]);
+
+  async function handleApproveRoditelj(roditeljUcenikId: number, approved: boolean) {
+    if (!token) return;
+    setApprovingId(roditeljUcenikId);
+    try {
+      await apiRequest("POST", "/muallim/approve-roditelj", { roditeljUcenikId, approved }, token);
+      toast({ title: approved ? "Roditelj odobren!" : "Zahtjev odbijen" });
+      setPendingRoditelji(prev => prev.filter(p => p.id !== roditeljUcenikId));
+    } catch {
+      toast({ title: "Greška", variant: "destructive" });
+    } finally {
+      setApprovingId(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!token || !selectedGrupaId) return;
+    setKalendarLoading(true);
+    Promise.all([
+      apiRequest<KalendarEntry[]>("GET", `/muallim/kalendar?grupaId=${selectedGrupaId}`, undefined, token),
+      apiRequest<PlanLekcija[]>("GET", `/muallim/plan-lekcija?grupaId=${selectedGrupaId}`, undefined, token),
+      apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
+    ]).then(([k, p, l]) => {
+      setKalendar(k);
+      setPlanLekcija(p);
+      setDostupneLekcije(l);
+    }).catch(() => {}).finally(() => setKalendarLoading(false));
+  }, [token, selectedGrupaId]);
+
+  async function saveKalendarEntry(datum: string, tip: string, opis: string) {
+    if (!token || !selectedGrupaId) return;
+    try {
+      await apiRequest("POST", "/muallim/kalendar", { grupaId: selectedGrupaId, datum, tip, opis }, token);
+      const updated = await apiRequest<KalendarEntry[]>("GET", `/muallim/kalendar?grupaId=${selectedGrupaId}`, undefined, token);
+      setKalendar(updated);
+      toast({ title: "Sačuvano!" });
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  async function deleteKalendarEntry(id: number) {
+    if (!token) return;
+    try {
+      await apiRequest("DELETE", `/muallim/kalendar/${id}`, undefined, token);
+      setKalendar(prev => prev.filter(k => k.id !== id));
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  async function addLekcija(datum: string, lekcijaNaslov: string, lekcijaTip: string) {
+    if (!token || !selectedGrupaId) return;
+    try {
+      const nova = await apiRequest<PlanLekcija>("POST", "/muallim/plan-lekcija", {
+        grupaId: selectedGrupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed: planLekcija.filter(p => p.datum === datum).length,
+      }, token);
+      setPlanLekcija(prev => [...prev, nova]);
+      setShowLekcijaSelect(false);
+      toast({ title: "Lekcija dodana!" });
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  async function deleteLekcija(id: number) {
+    if (!token) return;
+    try {
+      await apiRequest("DELETE", `/muallim/plan-lekcija/${id}`, undefined, token);
+      setPlanLekcija(prev => prev.filter(p => p.id !== id));
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  async function saveProfile() {
+    if (!token) return;
+    setSavingProfile(true);
+    try {
+      await apiRequest("PUT", "/muallim/profil", { displayName: editDisplayName }, token);
+      toast({ title: "Profil ažuriran!" });
+      setShowProfileEdit(false);
+      window.location.reload();
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+    finally { setSavingProfile(false); }
+  }
+
+  function getDaysInMonth(year: number, month: number) {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    let startWeekDay = firstDay.getDay();
+    startWeekDay = startWeekDay === 0 ? 6 : startWeekDay - 1;
+    const days: (number | null)[] = [];
+    for (let i = 0; i < startWeekDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+    return days;
+  }
+
+  function formatDate(year: number, month: number, day: number) {
+    return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  const monthNames = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
 
   if (!user || user.role !== "muallim") {
     return (
@@ -68,6 +233,7 @@ export default function MuallimPanel() {
     { id: "ucenici", label: `Učenici (${ucenici.length})`, icon: Users },
     { id: "grupe", label: `Grupe (${grupe.length})`, icon: GraduationCap },
     { id: "prisustvo", label: "Prisustvo", icon: CalendarCheck },
+    { id: "kalendar", label: "Kalendar", icon: Calendar },
   ] as const;
 
   return (
@@ -77,11 +243,35 @@ export default function MuallimPanel() {
           <div className="w-12 h-12 bg-gradient-to-br from-secondary to-emerald-600 rounded-2xl flex items-center justify-center shadow-md">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl font-extrabold text-foreground">Muallim panel</h1>
             <p className="text-muted-foreground text-sm">Dobrodošao/la, {user.displayName}</p>
           </div>
+          <button onClick={() => { setEditDisplayName(user.displayName || ""); setShowProfileEdit(true); }}
+            className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors">
+            <Settings className="w-4 h-4" /> Profil
+          </button>
         </div>
+
+        {showProfileEdit && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+            className="bg-white border border-border/50 rounded-2xl p-5 mb-6">
+            <h3 className="font-extrabold text-foreground mb-3">Uredi profil</h3>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <label className="text-sm font-bold text-muted-foreground block mb-1">Ime i prezime</label>
+                <input type="text" value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <Button onClick={saveProfile} disabled={savingProfile} className="rounded-xl">
+                {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> Sačuvaj</>}
+              </Button>
+              <button onClick={() => setShowProfileEdit(false)} className="text-muted-foreground hover:text-foreground p-2">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
@@ -99,19 +289,69 @@ export default function MuallimPanel() {
           <>
             {/* PREGLED */}
             {activeTab === "pregled" && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: "Ukupno učenika", value: ucenici.length, icon: Users, color: "text-primary", bg: "bg-primary/5" },
-                  { label: "Aktivnih grupa", value: grupe.length, icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
-                  { label: "Aktivnih učenika", value: ucenici.filter(u => u.aktivanStatus).length, icon: BookMarked, color: "text-emerald-600", bg: "bg-emerald-50" },
-                  { label: "Školska godina", value: "2024/25", icon: Clock, color: "text-violet-600", bg: "bg-violet-50" },
-                ].map(stat => (
-                  <div key={stat.label} className={`${stat.bg} border border-border/50 rounded-2xl p-5`}>
-                    <stat.icon className={`w-6 h-6 ${stat.color} mb-3`} />
-                    <div className={`text-2xl font-extrabold ${stat.color}`}>{stat.value}</div>
-                    <div className="text-sm text-muted-foreground font-medium mt-1">{stat.label}</div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: "Ukupno učenika", value: ucenici.length, icon: Users, color: "text-primary", bg: "bg-primary/5" },
+                    { label: "Aktivnih grupa", value: grupe.length, icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
+                    { label: "Aktivnih učenika", value: ucenici.filter(u => u.aktivanStatus).length, icon: BookMarked, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    { label: "Školska godina", value: "2024/25", icon: Clock, color: "text-violet-600", bg: "bg-violet-50" },
+                  ].map(stat => (
+                    <div key={stat.label} className={`${stat.bg} border border-border/50 rounded-2xl p-5`}>
+                      <stat.icon className={`w-6 h-6 ${stat.color} mb-3`} />
+                      <div className={`text-2xl font-extrabold ${stat.color}`}>{stat.value}</div>
+                      <div className="text-sm text-muted-foreground font-medium mt-1">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {pendingRoditelji.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <UserPlus className="w-5 h-5 text-amber-600" />
+                      <h3 className="font-extrabold text-base text-amber-800">
+                        Zahtjevi roditelja ({pendingRoditelji.length})
+                      </h3>
+                    </div>
+                    <p className="text-sm text-amber-700 mb-4">
+                      Roditelji koji žele povezati račun sa učenikom. Pregledajte i odobrite ili odbijte.
+                    </p>
+                    <div className="space-y-3">
+                      {pendingRoditelji.map(pr => (
+                        <div key={pr.id} className="bg-white rounded-xl border border-amber-200 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="flex-1">
+                            <div className="font-bold text-foreground">{pr.roditelj.displayName}</div>
+                            <div className="text-sm text-muted-foreground">@{pr.roditelj.username}</div>
+                            <div className="text-sm text-amber-700 mt-1">
+                              želi se povezati sa učenikom: <span className="font-bold">{pr.ucenik.displayName}</span> (@{pr.ucenik.username})
+                            </div>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-xl border-red-300 text-red-600 hover:bg-red-50"
+                              disabled={approvingId === pr.id}
+                              onClick={() => handleApproveRoditelj(pr.id, false)}
+                            >
+                              {approvingId === pr.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4 mr-1" />}
+                              Odbij
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
+                              disabled={approvingId === pr.id}
+                              onClick={() => handleApproveRoditelj(pr.id, true)}
+                            >
+                              {approvingId === pr.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4 mr-1" />}
+                              Odobri
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </motion.div>
             )}
 
@@ -190,8 +430,8 @@ export default function MuallimPanel() {
                         <Link href={`/muallim/grupa/${g.id}`}>
                           <div className="bg-white border-2 border-secondary/20 rounded-2xl p-5 cursor-pointer hover:border-secondary hover:shadow-md transition-all group">
                             <GraduationCap className="w-8 h-8 text-secondary mb-3" />
-                            <h3 className="font-extrabold text-foreground text-lg">{g.ime}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">Razred {g.razred} · {g.brUcenika} učenika</p>
+                            <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => (u as any).profil?.grupaId === g.id).length} učenika</p>
                             <div className="flex items-center gap-1 text-secondary font-bold text-sm mt-3">
                               Otvori <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                             </div>
@@ -215,11 +455,180 @@ export default function MuallimPanel() {
                   {grupe.map(g => (
                     <Link key={g.id} href={`/muallim/prisustvo/${g.id}`}>
                       <button className="bg-primary/10 text-primary border border-primary/20 rounded-xl px-5 py-3 font-bold hover:bg-primary hover:text-primary-foreground transition-all">
-                        {g.ime}
+                        {g.naziv}
                       </button>
                     </Link>
                   ))}
                 </div>
+              </motion.div>
+            )}
+
+            {/* KALENDAR */}
+            {activeTab === "kalendar" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {!selectedGrupaId ? (
+                  <div className="text-center py-16 bg-white rounded-2xl border border-border/50">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                    <p className="font-bold text-foreground mb-2">Odaberi grupu za kalendar</p>
+                    <div className="flex flex-wrap gap-3 justify-center mt-6">
+                      {grupe.map(g => (
+                        <button key={g.id} onClick={() => setSelectedGrupaId(g.id)}
+                          className="bg-primary/10 text-primary border border-primary/20 rounded-xl px-5 py-3 font-bold hover:bg-primary hover:text-primary-foreground transition-all">
+                          {g.naziv}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : kalendarLoading ? (
+                  <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
+                ) : (
+                  <div className="grid lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <div className="bg-white border border-border/50 rounded-2xl p-5">
+                        <div className="flex items-center justify-between mb-4">
+                          <button onClick={() => setCurrentMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 })}
+                            className="p-2 hover:bg-muted rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
+                          <h3 className="font-extrabold text-lg text-foreground">
+                            {monthNames[currentMonth.month]} {currentMonth.year}
+                          </h3>
+                          <button onClick={() => setCurrentMonth(p => p.month === 11 ? { year: p.year + 1, month: 0 } : { ...p, month: p.month + 1 })}
+                            className="p-2 hover:bg-muted rounded-lg"><ChevronRight className="w-5 h-5" /></button>
+                        </div>
+
+                        <div className="flex items-center gap-3 mb-4 flex-wrap">
+                          <span className="text-sm font-bold text-muted-foreground mr-1">Označi dan kao:</span>
+                          {Object.entries(TIP_COLORS).map(([key, val]) => (
+                            <button key={key} onClick={() => setActiveTip(key as any)}
+                              className={`text-sm font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${activeTip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
+                              {val.label}
+                            </button>
+                          ))}
+                          <button onClick={() => setSelectedGrupaId(null)} className="ml-auto text-sm text-muted-foreground hover:text-foreground font-medium">
+                            ← Promijeni grupu
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1">
+                          {DAYS_BS.map(d => (
+                            <div key={d} className="text-center text-xs font-extrabold text-muted-foreground py-2">{d}</div>
+                          ))}
+                          {getDaysInMonth(currentMonth.year, currentMonth.month).map((day, i) => {
+                            if (day === null) return <div key={`e-${i}`} />;
+                            const dateStr = formatDate(currentMonth.year, currentMonth.month, day);
+                            const entry = kalendar.find(k => k.datum === dateStr);
+                            const tipStyle = entry ? TIP_COLORS[entry.tip] : null;
+                            const isSelected = selectedDate === dateStr;
+                            const hasLekcije = planLekcija.some(p => p.datum === dateStr);
+
+                            return (
+                              <button key={dateStr} onClick={() => { setSelectedDate(dateStr); setOpisInput(entry?.opis || ""); }}
+                                onDoubleClick={() => saveKalendarEntry(dateStr, activeTip, "")}
+                                className={`relative aspect-square rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5
+                                  ${isSelected ? "ring-2 ring-primary ring-offset-1" : ""}
+                                  ${tipStyle ? `${tipStyle.bg} ${tipStyle.text} border ${tipStyle.border}` : "hover:bg-muted/50 border border-transparent"}`}>
+                                {day}
+                                {hasLekcije && <div className="w-1.5 h-1.5 bg-violet-500 rounded-full absolute bottom-1" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> Mekteb</span>
+                          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> Ferije</span>
+                          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> Važan datum</span>
+                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> Ima lekcije</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {selectedDate && (
+                        <>
+                          <div className="bg-white border border-border/50 rounded-2xl p-5">
+                            <h4 className="font-extrabold text-foreground mb-3 flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-primary" />
+                              {selectedDate}
+                            </h4>
+                            {(() => {
+                              const entry = kalendar.find(k => k.datum === selectedDate);
+                              return (
+                                <div className="space-y-3">
+                                  <div className="flex gap-2 flex-wrap">
+                                    {Object.entries(TIP_COLORS).map(([key, val]) => (
+                                      <button key={key} onClick={() => saveKalendarEntry(selectedDate, key, opisInput)}
+                                        className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${entry?.tip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
+                                        {val.label}
+                                      </button>
+                                    ))}
+                                    {entry && (
+                                      <button onClick={() => deleteKalendarEntry(entry.id)} className="text-red-500 hover:text-red-700 p-1.5 ml-auto">
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  <input type="text" placeholder="Opis (opcionalno)" value={opisInput}
+                                    onChange={e => setOpisInput(e.target.value)}
+                                    onBlur={() => { if (entry) saveKalendarEntry(selectedDate, entry.tip, opisInput); }}
+                                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          <div className="bg-white border border-border/50 rounded-2xl p-5">
+                            <h4 className="font-extrabold text-foreground mb-3 flex items-center gap-2">
+                              <BookOpen className="w-4 h-4 text-violet-500" /> Plan lekcija
+                            </h4>
+                            {planLekcija.filter(p => p.datum === selectedDate).length === 0 ? (
+                              <p className="text-sm text-muted-foreground text-center py-3">Nema dodanih lekcija za ovaj dan</p>
+                            ) : (
+                              <div className="space-y-2 mb-3">
+                                {planLekcija.filter(p => p.datum === selectedDate).map(l => (
+                                  <div key={l.id} className="flex items-center justify-between bg-violet-50 rounded-lg px-3 py-2">
+                                    <span className="text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                    <button onClick={() => deleteLekcija(l.id)} className="text-red-400 hover:text-red-600">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {showLekcijaSelect ? (
+                              <div className="space-y-2">
+                                <div className="max-h-48 overflow-y-auto border border-border rounded-lg">
+                                  {dostupneLekcije.map(l => (
+                                    <button key={l.id} onClick={() => addLekcija(selectedDate, l.naslov, "ilmihal")}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-primary/5 border-b border-border/30 last:border-0">
+                                      <span className="text-xs text-muted-foreground mr-2">N{l.nivo}</span>
+                                      {l.naslov}
+                                    </button>
+                                  ))}
+                                </div>
+                                <button onClick={() => setShowLekcijaSelect(false)} className="text-sm text-muted-foreground hover:text-foreground font-medium">
+                                  Zatvori
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setShowLekcijaSelect(true)}
+                                className="flex items-center gap-1.5 text-sm font-bold text-primary hover:text-primary/80">
+                                <Plus className="w-4 h-4" /> Dodaj lekciju
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                      {!selectedDate && (
+                        <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
+                          <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+                          <p className="text-sm text-muted-foreground">Klikni na dan u kalendaru za detalje</p>
+                          <p className="text-xs text-muted-foreground mt-1">Dupli klik označava dan aktivnim tipom</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </>

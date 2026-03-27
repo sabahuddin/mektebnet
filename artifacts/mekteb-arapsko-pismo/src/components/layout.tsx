@@ -45,7 +45,11 @@ export function Layout({ children }: LayoutProps) {
       { href: "/roditelj", label: "Moja djeca", icon: User },
       { href: "/poruke", label: "Poruke", icon: MessageSquare },
     ],
-    ucenik: [{ href: "/napredak", label: "Moj napredak", icon: BookMarked }],
+    ucenik: [
+      { href: "/ucenik", label: "Moj profil", icon: User },
+      { href: "/napredak", label: "Moj napredak", icon: BookMarked },
+      { href: "/poruke", label: "Poruke", icon: MessageSquare },
+    ],
   };
 
   const extraLinks = user ? (roleLinks[user.role] || []) : [];

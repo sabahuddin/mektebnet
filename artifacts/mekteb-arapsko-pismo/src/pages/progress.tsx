@@ -1,10 +1,13 @@
+import { useState, useEffect } from "react";
 import { useGetProgress } from "@workspace/api-client-react";
 import { getStudentId } from "@/lib/student";
 import { Layout } from "@/components/layout";
-import { Star, Flame, Trophy, Award, Crown, Zap, BookOpen } from "lucide-react";
+import { Star, Flame, Trophy, Award, Crown, Zap, BookOpen, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { apiRequest } from "@/lib/api";
+import { useAuth } from "@/context/auth";
 
 const ALL_BADGES = [
   { id: "hafiz", name: "Mladi hafiz", emoji: "🌙", description: "Završene sve lekcije" },
@@ -14,14 +17,36 @@ const ALL_BADGES = [
   { id: "brzinac", name: "Brzinac", emoji: "⚡", description: "Završena vježba ispod 30s" },
 ];
 
+interface KvizRezultat {
+  id: number;
+  kvizNaslov: string;
+  tacniOdgovori: number;
+  ukupnoPitanja: number;
+  procenat: number;
+  bodovi: number;
+  completedAt: string;
+}
+
 export default function Progress() {
   const studentId = getStudentId();
+  const { token } = useAuth();
+  const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
+  const [showAllKvizovi, setShowAllKvizovi] = useState(false);
   
   const { data: progress, isLoading } = useGetProgress({ studentId }, {
     query: { retry: 1 }
   });
 
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<KvizRezultat[]>("GET", "/content/kviz-rezultati", undefined, token)
+      .then(data => { if (Array.isArray(data)) setKvizRezultati(data); })
+      .catch(() => {});
+  }, [token]);
+
   const earnedBadgeIds = progress?.badges?.map(b => b.id) || [];
+  const displayedKvizovi = showAllKvizovi ? kvizRezultati : kvizRezultati.slice(0, 5);
+  const avgProcenat = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : 0;
 
   if (isLoading) {
     return (
@@ -88,6 +113,47 @@ export default function Progress() {
         </motion.div>
       </div>
 
+      {/* Quiz History */}
+      {kvizRezultati.length > 0 && (
+        <motion.div initial={{y:20, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.4}} className="mb-12">
+          <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <ClipboardList className="w-6 h-6 text-primary" />
+            Tvoji Kvizovi
+            <span className="ml-auto text-base font-medium text-muted-foreground">
+              Prosjek: <span className={`font-bold ${avgProcenat >= 80 ? "text-emerald-600" : avgProcenat >= 50 ? "text-amber-600" : "text-red-500"}`}>{avgProcenat}%</span>
+            </span>
+          </h2>
+          <Card className="overflow-hidden">
+            <div className="divide-y divide-border/50">
+              {displayedKvizovi.map((r, i) => (
+                <motion.div key={r.id} initial={{x:-10, opacity:0}} animate={{x:0, opacity:1}} transition={{delay:0.05*i}}
+                  className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shrink-0 ${r.procenat >= 80 ? "bg-emerald-100 text-emerald-600" : r.procenat >= 50 ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-500"}`}>
+                    {r.procenat}%
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-foreground truncate">{r.kvizNaslov}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {r.tacniOdgovori}/{r.ukupnoPitanja} tačnih
+                      {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} hasanata</span>}
+                    </p>
+                  </div>
+                  <div className="text-sm text-muted-foreground shrink-0">
+                    {r.completedAt ? new Date(r.completedAt).toLocaleDateString("bs-BA") : "-"}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            {kvizRezultati.length > 5 && (
+              <button onClick={() => setShowAllKvizovi(!showAllKvizovi)}
+                className="w-full py-3 text-sm font-bold text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1">
+                {showAllKvizovi ? (<>Prikaži manje <ChevronUp className="w-4 h-4" /></>) : (<>Prikaži sve ({kvizRezultati.length}) <ChevronDown className="w-4 h-4" /></>)}
+              </button>
+            )}
+          </Card>
+        </motion.div>
+      )}
+
       {/* Badges Section */}
       <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
         <Award className="w-6 h-6 text-primary" />
@@ -122,7 +188,7 @@ export default function Progress() {
 // Simple generic user icon since Lucide User has variations
 function UserIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round" className="w-8 h-8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>

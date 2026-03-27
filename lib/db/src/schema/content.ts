@@ -70,6 +70,29 @@ export const korisnikNapredakTable = pgTable("korisnik_napredak", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const kvizRezultatiTable = pgTable("kviz_rezultati", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  kvizId: integer("kviz_id").notNull(),
+  kvizNaslov: text("kviz_naslov").notNull().default(""),
+  tacniOdgovori: integer("tacni_odgovori").notNull().default(0),
+  ukupnoPitanja: integer("ukupno_pitanja").notNull().default(0),
+  procenat: integer("procenat").notNull().default(0),
+  bodovi: integer("bodovi").notNull().default(0),
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
+export const posjeteTable = pgTable("posjete", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  path: varchar("path", { length: 500 }).notNull().default("/"),
+  ip: varchar("ip", { length: 100 }),
+  country: varchar("country", { length: 100 }),
+  city: varchar("city", { length: 200 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertIlmihalLekcijaSchema = createInsertSchema(ilmihalLekcijeTable).omit({ id: true, createdAt: true });
 export const insertKvizSchema = createInsertSchema(kvizoviTable).omit({ id: true, createdAt: true });
 export const insertKnjigaSchema = createInsertSchema(knjige).omit({ id: true, createdAt: true });
@@ -79,3 +102,5 @@ export type IlmihalLekcija = typeof ilmihalLekcijeTable.$inferSelect;
 export type Kviz = typeof kvizoviTable.$inferSelect;
 export type Knjiga = typeof knjige.$inferSelect;
 export type KorisnikNapredak = typeof korisnikNapredakTable.$inferSelect;
+export type KvizRezultat = typeof kvizRezultatiTable.$inferSelect;
+export type Posjeta = typeof posjeteTable.$inferSelect;

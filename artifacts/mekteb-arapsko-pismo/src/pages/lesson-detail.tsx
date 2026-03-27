@@ -23,6 +23,12 @@ function isArabicChar(s: string) {
 }
 
 function playAudio(file: string) {
+  const slogoviMp3 = SLOGOVI_AUDIO[file];
+  if (slogoviMp3) {
+    const audio = new Audio(`${BASE}audio/slogovi/${slogoviMp3}`);
+    audio.play().catch(() => {});
+    return;
+  }
   const audio = new Audio(`${BASE}audio/harfovi/${file}`);
   audio.play().catch(() => {});
 }
@@ -794,11 +800,12 @@ export default function LessonDetail() {
         {/* Story renderer — novinski stupci na desktopu, single-column na mobitelu */}
         {(() => {
           const renderStoryLine = (line: typeof data.story.lines[0], i: number) => {
-            const isDzana = line.speaker === "dzana";
-            const isOtac  = line.speaker === "otac";
-            const isAmir  = line.speaker === "amir";
-            const isMajka = line.speaker === "majka";
-            const isRight = isAmir;
+            const isDzana   = line.speaker === "dzana";
+            const isOtac    = line.speaker === "otac";
+            const isAmir    = line.speaker === "amir";
+            const isMajka   = line.speaker === "majka";
+            const isMuallim = line.speaker === "muallim";
+            const isRight   = isAmir;
 
             if (line.speaker === "narator") {
               return (
@@ -810,22 +817,26 @@ export default function LessonDetail() {
               );
             }
 
-            const label = isDzana ? "Džana" : isOtac ? "Babo" : isMajka ? "Mama" : "Amir";
-            const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : isMajka ? "text-rose-700" : "text-primary";
+            const label = isDzana ? "Džana" : isOtac ? "Babo" : isMajka ? "Mama" : isMuallim ? "Muallim" : "Amir";
+            const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : isMajka ? "text-rose-700" : isMuallim ? "text-amber-800" : "text-primary";
             const bubbleClass = isDzana
               ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
               : isOtac
                 ? "bg-emerald-600 text-white rounded-2xl rounded-bl-sm"
                 : isMajka
                   ? "bg-rose-500 text-white rounded-2xl rounded-bl-sm"
-                  : "bg-primary text-white rounded-2xl rounded-br-sm";
+                  : isMuallim
+                    ? "bg-amber-50 text-amber-900 rounded-2xl rounded-bl-sm border border-amber-200"
+                    : "bg-primary text-white rounded-2xl rounded-br-sm";
             const avatar = isDzana
               ? <img src={dzanaImg} alt="Džana" className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
               : isOtac
                 ? <div className="w-9 h-9 rounded-full bg-emerald-100 border-2 border-emerald-300 shadow-md flex items-center justify-center text-xl shrink-0">👨</div>
                 : isMajka
                   ? <div className="w-9 h-9 rounded-full bg-rose-100 border-2 border-rose-300 shadow-md flex items-center justify-center text-xl shrink-0">🧕</div>
-                  : <img src={amirImg} alt="Amir" className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
+                  : isMuallim
+                    ? <div className="w-9 h-9 rounded-full bg-amber-100 border-2 border-amber-400 shadow-md flex items-center justify-center text-xl shrink-0">🧑‍🏫</div>
+                    : <img src={amirImg} alt="Amir" className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
 
             return (
               <div key={i} className="break-inside-avoid mb-3">
@@ -857,9 +868,9 @@ export default function LessonDetail() {
         })()}
       </Card>
 
-      {/* Harfovi i hareketi */}
+      {/* Harfovi i hareketi — skriveno ako je letterData prazan (npr. lekcija sukuna) */}
       <div className="mb-8">
-        {data.isRevision ? (
+        {data.letterData.length === 0 ? null : data.isRevision ? (
           /* ── Revision lesson: compact reminder, no full letter breakdown ── */
           <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-5">
             <h2 className="text-xl font-extrabold text-teal-800 flex items-center gap-2 mb-4">
@@ -974,6 +985,30 @@ export default function LessonDetail() {
             )}
           </Card>
         ))}
+
+        {/* Sukun objašnjenje (samo za lekciju sukuna) */}
+        {data.sukunExplainer && (
+          <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-5 mb-2">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-2xl">🧑‍🏫</span>
+              <h3 className="text-lg font-extrabold text-amber-900">Šta je sukun?</h3>
+            </div>
+            <p className="text-base font-medium text-amber-900 leading-relaxed mb-4">
+              {data.sukunExplainer.sentence}
+            </p>
+            <div className="flex flex-col gap-2">
+              {[data.sukunExplainer.metaphor.auto, data.sukunExplainer.metaphor.hareketi, data.sukunExplainer.metaphor.sukun].map((line, i) => (
+                <div key={i} className={`rounded-xl px-4 py-2.5 text-base font-semibold leading-snug ${
+                  i === 0 ? "bg-white text-amber-900 border border-amber-200" :
+                  i === 1 ? "bg-teal-50 text-teal-900 border border-teal-200" :
+                            "bg-slate-100 text-slate-700 border border-slate-200"
+                }`}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Hareketi kartice (samo ako ih ima) */}
         {data.hareketi && data.hareketi.length > 0 && (

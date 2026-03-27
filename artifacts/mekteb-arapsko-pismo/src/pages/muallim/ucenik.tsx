@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,16 @@ interface Grupa {
   naziv: string;
 }
 
+interface KvizRezultat {
+  id: number;
+  kvizNaslov: string;
+  tacniOdgovori: number;
+  ukupnoPitanja: number;
+  procenat: number;
+  bodovi: number;
+  completedAt: string;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   prisutan: "bg-emerald-100 text-emerald-700",
   odsutan: "bg-red-100 text-red-700",
@@ -43,7 +53,7 @@ const STATUS_COLORS: Record<string, string> = {
   opravdan: "bg-blue-100 text-blue-700",
 };
 
-const OCJENA_COLORS = ["", "bg-red-100 text-red-700", "bg-orange-100 text-orange-700", "bg-amber-100 text-amber-700", "bg-blue-100 text-blue-700", "bg-emerald-100 text-emerald-700"];
+const OCJENA_COLORS = ["", "bg-red-100 text-red-700", "bg-orange-100 text-orange-700", "bg-amber-100 text-amber-700", "bg-blue-100 text-blue-700", "bg-emerald-100 text-emerald-700", "bg-emerald-200 text-emerald-800"];
 
 export default function UcenikPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,10 +64,12 @@ export default function UcenikPage() {
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
+  const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showOcjenaForm, setShowOcjenaForm] = useState(false);
-  const [newOcjena, setNewOcjena] = useState({ kategorija: "usmeno", ocjena: 5, napomena: "", datum: new Date().toISOString().split("T")[0] });
+  const [newOcjena, setNewOcjena] = useState({ kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "", datum: new Date().toISOString().split("T")[0] });
   const [savingOcjena, setSavingOcjena] = useState(false);
+  const [planLekcije, setPlanLekcije] = useState<{ id: number; lekcijaNaslov: string }[]>([]);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -67,12 +79,22 @@ export default function UcenikPage() {
       apiRequest<Ocjena[]>("GET", `/muallim/ocjene/${ucenikId}`, undefined, token),
       apiRequest<Prisustvo[]>("GET", `/muallim/prisustvo-ucenik/${ucenikId}`, undefined, token),
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
-    ]).then(([ucenici, oc, prs, g]) => {
+      apiRequest<{ rezultati: KvizRezultat[] }>("GET", `/muallim/ucenik-rezultati/${ucenikId}`, undefined, token).catch(() => ({ rezultati: [] })),
+    ]).then(([ucenici, oc, prs, g, kvizData]) => {
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
       setUcenik(found || null);
       setOcjene(oc);
       setPrisustvo(prs);
       setGrupe(g);
+      setKvizRezultati((kvizData as any).rezultati || []);
+      const gId = found?.profil?.grupaId || found?.grupaId;
+      if (gId) {
+        apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
+          .then(pl => {
+            const unique = [...new Map(pl.map(l => [l.lekcijaNaslov, l])).values()];
+            setPlanLekcije(unique);
+          }).catch(() => {});
+      }
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [token, id]);
 
@@ -82,12 +104,15 @@ export default function UcenikPage() {
     try {
       const oc = await apiRequest<Ocjena>("POST", "/muallim/ocjene", {
         ucenikId: parseInt(id),
-        ...newOcjena,
+        kategorija: newOcjena.kategorija,
         ocjena: parseInt(String(newOcjena.ocjena)),
+        lekcijaNaziv: newOcjena.lekcijaNaziv || null,
+        napomena: newOcjena.napomena,
+        datum: newOcjena.datum,
       }, token);
       setOcjene(prev => [oc, ...prev]);
       setShowOcjenaForm(false);
-      setNewOcjena({ kategorija: "usmeno", ocjena: 5, napomena: "", datum: new Date().toISOString().split("T")[0] });
+      setNewOcjena({ kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "", datum: new Date().toISOString().split("T")[0] });
       toast({ title: "Ocjena dodana!" });
     } catch {
       toast({ title: "Greška", description: "Nije moguće dodati ocjenu", variant: "destructive" });
@@ -136,7 +161,45 @@ export default function UcenikPage() {
               ))}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Kviz rezultati */}
+              <div className="bg-white border border-border/50 rounded-2xl p-5 md:col-span-2 lg:col-span-1 lg:row-span-2">
+                <h2 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
+                  <ClipboardList className="w-4 h-4 text-primary" /> Rezultati kvizova
+                </h2>
+                {kvizRezultati.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">Učenik još nije radio kvizove</p>
+                ) : (
+                  <div className="space-y-2.5 max-h-80 overflow-y-auto">
+                    {kvizRezultati.map(r => (
+                      <div key={r.id} className="bg-muted/20 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-bold text-sm text-foreground truncate mr-2">{r.kvizNaslov}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${r.procenat >= 80 ? "bg-emerald-100 text-emerald-700" : r.procenat >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                            {r.procenat}%
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{r.tacniOdgovori}/{r.ukupnoPitanja} tačnih</span>
+                          <div className="flex items-center gap-2">
+                            {r.bodovi > 0 && (
+                              <span className="flex items-center gap-0.5 text-amber-600 font-bold">
+                                <Award className="w-3 h-3" /> {r.bodovi}
+                              </span>
+                            )}
+                            <span>{r.completedAt ? new Date(r.completedAt).toLocaleDateString("bs-BA") : "-"}</span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                          <div className={`h-1.5 rounded-full ${r.procenat >= 80 ? "bg-emerald-500" : r.procenat >= 50 ? "bg-amber-500" : "bg-red-400"}`}
+                            style={{ width: `${r.procenat}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Ocjene */}
               <div className="bg-white border border-border/50 rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -163,9 +226,16 @@ export default function UcenikPage() {
                       </select>
                       <select value={newOcjena.ocjena} onChange={e => setNewOcjena(p => ({ ...p, ocjena: parseInt(e.target.value) }))}
                         className="border border-border rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                        {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
+                        {[6, 5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
+                    {planLekcije.length > 0 && (
+                      <select value={newOcjena.lekcijaNaziv} onChange={e => setNewOcjena(p => ({ ...p, lekcijaNaziv: e.target.value }))}
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
+                        <option value="">— Odaberi lekciju (opcionalno) —</option>
+                        {planLekcije.map(l => <option key={l.id} value={l.lekcijaNaslov}>{l.lekcijaNaslov}</option>)}
+                      </select>
+                    )}
                     <input type="date" value={newOcjena.datum} onChange={e => setNewOcjena(p => ({ ...p, datum: e.target.value }))}
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white" />
                     <input type="text" placeholder="Napomena (opcionalno)" value={newOcjena.napomena}
@@ -185,6 +255,7 @@ export default function UcenikPage() {
                       <div key={o.id} className="flex items-center justify-between text-sm">
                         <div>
                           <span className="font-medium text-foreground capitalize">{o.kategorija}</span>
+                          {(o as any).lekcijaNaziv && <span className="text-primary ml-2 text-xs font-medium">({(o as any).lekcijaNaziv})</span>}
                           {o.napomena && <span className="text-muted-foreground ml-2">— {o.napomena}</span>}
                           <div className="text-xs text-muted-foreground">{o.datum}</div>
                         </div>

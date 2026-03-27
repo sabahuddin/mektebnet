@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { trackVisit } from "./middlewares/visitTracker.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,7 +36,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
-// Serve built frontend in production (single-container mode)
+app.use(trackVisit);
+
 if (process.env["SERVE_STATIC"] === "true") {
   const frontendDist = path.resolve(__dirname, "../../mekteb-arapsko-pismo/dist/public");
 

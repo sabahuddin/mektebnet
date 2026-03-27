@@ -5,8 +5,9 @@ import {
   kvizoviTable,
   knjige,
   korisnikNapredakTable,
+  kvizRezultatiTable,
 } from "@workspace/db/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
@@ -140,11 +141,14 @@ router.get("/napredak", requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/content/napredak - save progress
+// POST /api/content/napredak - save progress (bodovi only if >= 50%)
 router.post("/napredak", requireAuth, async (req, res) => {
   try {
-    const { contentType, contentId, zavrsen, bodovi } = req.body;
+    const { contentType, contentId, zavrsen, bodovi, tacniOdgovori, ukupnoPitanja } = req.body;
     const userId = req.user!.userId;
+
+    const procenat = ukupnoPitanja > 0 ? Math.round((tacniOdgovori / ukupnoPitanja) * 100) : 0;
+    const stvarniBodovi = procenat >= 50 ? (bodovi || 0) : 0;
 
     const existing = await db.select().from(korisnikNapredakTable)
       .where(and(
@@ -158,25 +162,80 @@ router.post("/napredak", requireAuth, async (req, res) => {
       const [updated] = await db.update(korisnikNapredakTable)
         .set({
           zavrsen: zavrsen || current.zavrsen,
-          bodovi: Math.max(bodovi, current.bodovi),
+          bodovi: Math.max(stvarniBodovi, current.bodovi),
           pokusaji: current.pokusaji + 1,
           completedAt: zavrsen ? new Date() : current.completedAt,
           updatedAt: new Date(),
         })
         .where(eq(korisnikNapredakTable.id, current.id))
         .returning();
-      res.json(updated);
+      res.json({ ...updated, procenat, bodoviBlokirani: procenat < 50 });
     } else {
       const [nova] = await db.insert(korisnikNapredakTable).values({
         userId,
         contentType,
         contentId,
         zavrsen: !!zavrsen,
-        bodovi: bodovi || 0,
+        bodovi: stvarniBodovi,
         completedAt: zavrsen ? new Date() : undefined,
       }).returning();
-      res.json(nova);
+      res.json({ ...nova, procenat, bodoviBlokirani: procenat < 50 });
     }
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/content/kviz-rezultat - save individual quiz attempt (max 1x per quiz per day)
+router.post("/kviz-rezultat", requireAuth, async (req, res) => {
+  try {
+    const { kvizId, kvizNaslov, tacniOdgovori, ukupnoPitanja } = req.body;
+    const userId = req.user!.userId;
+
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+    const existing = await db.select({ id: kvizRezultatiTable.id }).from(kvizRezultatiTable)
+      .where(and(
+        eq(kvizRezultatiTable.userId, userId),
+        eq(kvizRezultatiTable.kvizId, kvizId || 0),
+        gte(kvizRezultatiTable.completedAt, startOfDay),
+        lte(kvizRezultatiTable.completedAt, endOfDay),
+      ));
+
+    if (existing.length > 0) {
+      res.status(429).json({ error: "Već si radio/la ovaj kviz danas. Pokušaj ponovo sutra!" });
+      return;
+    }
+
+    const procenat = ukupnoPitanja > 0 ? Math.round((tacniOdgovori / ukupnoPitanja) * 100) : 0;
+    const bodovi = procenat >= 50 ? Math.round(procenat / 10) : 0;
+
+    const [rezultat] = await db.insert(kvizRezultatiTable).values({
+      userId,
+      kvizId: kvizId || 0,
+      kvizNaslov: kvizNaslov || "",
+      tacniOdgovori: tacniOdgovori || 0,
+      ukupnoPitanja: ukupnoPitanja || 0,
+      procenat,
+      bodovi,
+    }).returning();
+
+    res.status(201).json(rezultat);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/content/kviz-rezultati - get user's quiz history
+router.get("/kviz-rezultati", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const rezultati = await db.select().from(kvizRezultatiTable)
+      .where(eq(kvizRezultatiTable.userId, userId))
+      .orderBy(desc(kvizRezultatiTable.completedAt));
+    res.json(rezultati);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

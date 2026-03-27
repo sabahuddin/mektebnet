@@ -9,8 +9,13 @@ import {
   roditeljUcenikTable,
   priustvoTable,
   ocjeneTable,
+  kvizRezultatiTable,
+  korisnikNapredakTable,
+  mektebKalendarTable,
+  planLekcijaTable,
+  ilmihalLekcijeTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, desc, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -100,10 +105,9 @@ router.post("/ucenici", async (req, res) => {
       return;
     }
 
-    // Generate username
-    const base = displayName.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z0-9.]/g, "");
+    const firstName = displayName.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "");
     const rand = Math.floor(1000 + Math.random() * 9000);
-    const username = `${base}.${rand}`;
+    const username = `${firstName}.${rand}`;
 
     const pass = password || `Mekteb${rand}`;
     const passwordHash = await bcrypt.hash(pass, 10);
@@ -131,6 +135,72 @@ router.post("/ucenici", async (req, res) => {
     res.status(201).json({ ...newUser, passwordHash: undefined, generatedPassword: pass });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/ucenici/bulk - create multiple students at once
+router.post("/ucenici/bulk", async (req, res) => {
+  try {
+    const { imena, grupaId } = req.body as { imena: string[]; grupaId?: number };
+    if (!imena || !Array.isArray(imena) || imena.length === 0) {
+      res.status(400).json({ error: "Listu imena je obavezno poslati" });
+      return;
+    }
+
+    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, req.user!.userId));
+    const remaining = profil ? profil.licenceCount - profil.licencesUsed : 999;
+    if (imena.length > remaining) {
+      res.status(403).json({ error: `Možete dodati još ${remaining} učenika (limit licenci)` });
+      return;
+    }
+
+    const results = [];
+    for (const ime of imena) {
+      const trimmed = ime.trim();
+      if (!trimmed) continue;
+      const firstName = trimmed.split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const username = `${firstName}.${rand}`;
+      const pass = `Mekteb${rand}`;
+      const passwordHash = await bcrypt.hash(pass, 10);
+
+      const [newUser] = await db.insert(usersTable).values({
+        username, passwordHash, displayName: trimmed, role: "ucenik",
+      }).returning();
+
+      await db.insert(ucenikProfiliTable).values({
+        userId: newUser.id, muallimId: req.user!.userId, grupaId: grupaId || null,
+      });
+
+      results.push({ id: newUser.id, displayName: trimmed, username, generatedPassword: pass });
+    }
+
+    if (profil && results.length > 0) {
+      await db.update(muallimProfiliTable)
+        .set({ licencesUsed: profil.licencesUsed + results.length })
+        .where(eq(muallimProfiliTable.userId, req.user!.userId));
+    }
+
+    res.status(201).json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/muallim/ucenici/:id/grupa - move student to different group
+router.put("/ucenici/:id/grupa", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const { grupaId } = req.body;
+    const [updated] = await db.update(ucenikProfiliTable)
+      .set({ grupaId: grupaId || null })
+      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId)))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
+    res.json(updated);
+  } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -207,13 +277,14 @@ router.get("/prisustvo", async (req, res) => {
 // POST /api/muallim/ocjene - add grade
 router.post("/ocjene", async (req, res) => {
   try {
-    const { ucenikId, grupaId, kategorija, ocjena, napomena, datum } = req.body;
+    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, napomena, datum } = req.body;
     const [nova] = await db.insert(ocjeneTable).values({
       ucenikId,
       muallimId: req.user!.userId,
       grupaId,
       kategorija,
       ocjena,
+      lekcijaNaziv: lekcijaNaziv || null,
       napomena,
       datum,
     }).returning();
@@ -250,6 +321,15 @@ router.get("/prisustvo-ucenik/:ucenikId", async (req, res) => {
 router.post("/approve-roditelj", async (req, res) => {
   try {
     const { roditeljUcenikId, approved } = req.body;
+
+    const [request] = await db.select().from(roditeljUcenikTable)
+      .where(and(eq(roditeljUcenikTable.id, roditeljUcenikId), eq(roditeljUcenikTable.status, "pending")));
+    if (!request) { res.status(404).json({ error: "Zahtjev nije pronađen" }); return; }
+
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.userId, request.ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId)));
+    if (profili.length === 0) { res.status(403).json({ error: "Učenik nije vaš" }); return; }
+
     await db.update(roditeljUcenikTable)
       .set({
         status: approved ? "approved" : "rejected",
@@ -263,7 +343,7 @@ router.post("/approve-roditelj", async (req, res) => {
   }
 });
 
-// GET /api/muallim/pending-roditelji - pending parent link requests
+// GET /api/muallim/pending-roditelji - pending parent link requests with names
 router.get("/pending-roditelji", async (req, res) => {
   try {
     const profili = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.muallimId, req.user!.userId));
@@ -271,7 +351,240 @@ router.get("/pending-roditelji", async (req, res) => {
     const ucenikIds = profili.map(p => p.userId);
     const pending = await db.select().from(roditeljUcenikTable)
       .where(and(inArray(roditeljUcenikTable.ucenikId, ucenikIds), eq(roditeljUcenikTable.status, "pending")));
-    res.json(pending);
+
+    if (pending.length === 0) { res.json([]); return; }
+
+    const allUserIds = [...new Set(pending.flatMap(p => [p.roditeljId, p.ucenikId]))];
+    const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
+      .from(usersTable).where(inArray(usersTable.id, allUserIds));
+    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+
+    const enriched = pending.map(p => ({
+      ...p,
+      roditelj: userMap[p.roditeljId] || { displayName: "Nepoznat", username: "" },
+      ucenik: userMap[p.ucenikId] || { displayName: "Nepoznat", username: "" },
+    }));
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/ucenik-rezultati/:id - quiz results for specific student
+router.get("/ucenik-rezultati/:id", async (req, res) => {
+  try {
+    const muallimId = req.user!.userId;
+    const ucenikId = parseInt(req.params.id);
+
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(and(
+        eq(ucenikProfiliTable.userId, ucenikId),
+        eq(ucenikProfiliTable.muallimId, muallimId),
+      ));
+    if (profili.length === 0) {
+      res.status(403).json({ error: "Učenik nije vaš" });
+      return;
+    }
+
+    const rezultati = await db.select().from(kvizRezultatiTable)
+      .where(eq(kvizRezultatiTable.userId, ucenikId))
+      .orderBy(desc(kvizRezultatiTable.completedAt));
+
+    const napredak = await db.select().from(korisnikNapredakTable)
+      .where(eq(korisnikNapredakTable.userId, ucenikId));
+
+    res.json({ rezultati, napredak });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/svi-rezultati - all students' quiz results
+router.get("/svi-rezultati", async (req, res) => {
+  try {
+    const muallimId = req.user!.userId;
+
+    const profili = await db.select({ userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.muallimId, muallimId));
+
+    if (profili.length === 0) { res.json([]); return; }
+    const ucenikIds = profili.map(p => p.userId);
+
+    const rezultati = await db.select({
+      id: kvizRezultatiTable.id,
+      userId: kvizRezultatiTable.userId,
+      kvizNaslov: kvizRezultatiTable.kvizNaslov,
+      tacniOdgovori: kvizRezultatiTable.tacniOdgovori,
+      ukupnoPitanja: kvizRezultatiTable.ukupnoPitanja,
+      procenat: kvizRezultatiTable.procenat,
+      bodovi: kvizRezultatiTable.bodovi,
+      completedAt: kvizRezultatiTable.completedAt,
+      displayName: usersTable.displayName,
+      username: usersTable.username,
+    }).from(kvizRezultatiTable)
+      .leftJoin(usersTable, eq(kvizRezultatiTable.userId, usersTable.id))
+      .where(inArray(kvizRezultatiTable.userId, ucenikIds))
+      .orderBy(desc(kvizRezultatiTable.completedAt))
+      .limit(100);
+
+    res.json(rezultati);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── KALENDAR ───────────────────────────────────────────────────────────────────
+
+// GET /api/muallim/kalendar?grupaId=X&mjesec=YYYY-MM
+router.get("/kalendar", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.query.grupaId as string);
+    if (!grupaId) { res.status(400).json({ error: "grupaId obavezan" }); return; }
+
+    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const entries = await db.select().from(mektebKalendarTable)
+      .where(eq(mektebKalendarTable.grupaId, grupaId))
+      .orderBy(asc(mektebKalendarTable.datum));
+
+    res.json(entries);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/kalendar — add/update calendar entry
+router.post("/kalendar", async (req, res) => {
+  try {
+    const { grupaId, datum, tip, opis } = req.body;
+    if (!grupaId || !datum || !tip) { res.status(400).json({ error: "grupaId, datum i tip su obavezni" }); return; }
+    if (!["mekteb", "ferije", "vazan_datum"].includes(tip)) { res.status(400).json({ error: "tip mora biti: mekteb, ferije, vazan_datum" }); return; }
+
+    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const existing = await db.select().from(mektebKalendarTable)
+      .where(and(eq(mektebKalendarTable.grupaId, grupaId), eq(mektebKalendarTable.datum, datum)));
+
+    if (existing.length > 0) {
+      const [updated] = await db.update(mektebKalendarTable)
+        .set({ tip, opis: opis || null })
+        .where(eq(mektebKalendarTable.id, existing[0].id))
+        .returning();
+      res.json(updated);
+    } else {
+      const [nova] = await db.insert(mektebKalendarTable).values({
+        grupaId, muallimId: req.user!.userId, datum, tip, opis: opis || null,
+      }).returning();
+      res.status(201).json(nova);
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/muallim/kalendar/:id
+router.delete("/kalendar/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.select().from(mektebKalendarTable).where(eq(mektebKalendarTable.id, id));
+    if (!entry || entry.muallimId !== req.user!.userId) { res.status(403).json({ error: "Nemaš pristup" }); return; }
+    await db.delete(mektebKalendarTable).where(eq(mektebKalendarTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── PLAN LEKCIJA ────────────────────────────────────────────────────────────────
+
+// GET /api/muallim/plan-lekcija?grupaId=X&datum=YYYY-MM-DD
+router.get("/plan-lekcija", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.query.grupaId as string);
+    if (!grupaId) { res.status(400).json({ error: "grupaId obavezan" }); return; }
+
+    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const datum = req.query.datum as string;
+    const where = datum
+      ? and(eq(planLekcijaTable.grupaId, grupaId), eq(planLekcijaTable.datum, datum))
+      : eq(planLekcijaTable.grupaId, grupaId);
+
+    const lekcije = await db.select().from(planLekcijaTable)
+      .where(where)
+      .orderBy(asc(planLekcijaTable.datum), asc(planLekcijaTable.redoslijed));
+
+    res.json(lekcije);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/plan-lekcija — add lesson to day plan
+router.post("/plan-lekcija", async (req, res) => {
+  try {
+    const { grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed } = req.body;
+    if (!grupaId || !datum || !lekcijaNaslov) { res.status(400).json({ error: "grupaId, datum i lekcijaNaslov su obavezni" }); return; }
+
+    const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const [nova] = await db.insert(planLekcijaTable).values({
+      grupaId, muallimId: req.user!.userId, datum, lekcijaNaslov,
+      lekcijaTip: lekcijaTip || "ilmihal",
+      redoslijed: redoslijed || 0,
+    }).returning();
+
+    res.status(201).json(nova);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/muallim/plan-lekcija/:id
+router.delete("/plan-lekcija/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.select().from(planLekcijaTable).where(eq(planLekcijaTable.id, id));
+    if (!entry || entry.muallimId !== req.user!.userId) { res.status(403).json({ error: "Nemaš pristup" }); return; }
+    await db.delete(planLekcijaTable).where(eq(planLekcijaTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/lekcije-za-plan — list available lessons for plan assignment
+router.get("/lekcije-za-plan", async (req, res) => {
+  try {
+    const lekcije = await db.select({
+      id: ilmihalLekcijeTable.id,
+      naslov: ilmihalLekcijeTable.naslov,
+      nivo: ilmihalLekcijeTable.nivo,
+    }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
+
+    res.json(lekcije);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/muallim/profil — update muallim profile (displayName)
+router.put("/profil", async (req, res) => {
+  try {
+    const { displayName } = req.body;
+    if (!displayName || displayName.trim().length < 2) { res.status(400).json({ error: "Ime mora imati minimalno 2 karaktera" }); return; }
+
+    const [updated] = await db.update(usersTable)
+      .set({ displayName: displayName.trim() })
+      .where(eq(usersTable.id, req.user!.userId))
+      .returning();
+
+    res.json({ displayName: updated.displayName });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

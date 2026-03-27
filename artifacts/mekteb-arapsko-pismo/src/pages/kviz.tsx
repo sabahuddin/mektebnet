@@ -176,10 +176,16 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
 
               {/* Ilustracija */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono)</label>
-                <input value={p.slika || ""} onChange={e => updatePitanje(activePitanje, "slika", e.target.value)}
-                  placeholder="/edu/assets/images/pitanja/..."
-                  className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono — samo naziv fajla, npr. <span className="font-mono text-primary">slika.jpg</span>)</label>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground font-mono shrink-0">/edu/assets/images/pitanja/</span>
+                  <input value={(p.slika || "").replace(/^\/?(edu\/)?assets\/images\/pitanja\/?/, "")} onChange={e => {
+                    const filename = e.target.value.trim();
+                    updatePitanje(activePitanje, "slika", filename ? `/edu/assets/images/pitanja/${filename}` : "");
+                  }}
+                    placeholder="naziv.jpg"
+                    className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
               </div>
 
               {/* ── RADIO / CHECKBOX ── */}
@@ -508,6 +514,14 @@ export default function KvizPage() {
           contentType: "kviz", contentId: kviz.id,
           zavrsen: true, bodovi, tacniOdgovori: score, ukupnoPitanja: pitanja.length,
         }, token).catch(() => {});
+        apiRequest("POST", "/content/kviz-rezultat", {
+          kvizId: kviz.id, kvizNaslov: kviz.naslov,
+          tacniOdgovori: score, ukupnoPitanja: pitanja.length,
+        }, token).catch((err: any) => {
+          if (err?.status === 429 || err?.message?.includes("429")) {
+            toast({ title: "Već si radio/la ovaj kviz danas", description: "Pokušaj ponovo sutra!", variant: "destructive" });
+          }
+        });
       }
       setFinished(true);
     } else {

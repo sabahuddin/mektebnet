@@ -40,12 +40,16 @@ import PorukePage from "./pages/poruke";
 // Admin panel
 import AdminPage from "./pages/admin";
 
+// Učenik profil
+import UcenikProfilPage from "./pages/ucenik-profil";
+
 // Muallim panel
 import MuallimPanel from "./pages/muallim";
 import MuallimPrisustvoPage from "./pages/muallim/prisustvo";
 import MuallimDodajUcenikaPage from "./pages/muallim/dodaj-ucenika";
 import MuallimDodajGrupuPage from "./pages/muallim/dodaj-grupu";
 import MuallimUcenikPage from "./pages/muallim/ucenik";
+import MuallimGrupaPage from "./pages/muallim/grupa";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +89,9 @@ function Router() {
       {/* Roditelj panel */}
       <Route path="/roditelj" component={RoditeljPage} />
 
+      {/* Učenik profil */}
+      <Route path="/ucenik" component={UcenikProfilPage} />
+
       {/* Poruke */}
       <Route path="/poruke" component={PorukePage} />
 
@@ -97,6 +104,7 @@ function Router() {
       <Route path="/muallim/dodaj-grupu" component={MuallimDodajGrupuPage} />
       <Route path="/muallim/prisustvo/:grupaId" component={MuallimPrisustvoPage} />
       <Route path="/muallim/ucenik/:id" component={MuallimUcenikPage} />
+      <Route path="/muallim/grupa/:id" component={MuallimGrupaPage} />
 
       <Route component={NotFound} />
     </Switch>

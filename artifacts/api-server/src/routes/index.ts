@@ -8,6 +8,7 @@ import roditeljRouter from "./roditelj";
 import adminRouter from "./admin";
 import contentRouter from "./content";
 import porukeRouter from "./poruke";
+import ucenikRouter from "./ucenik";
 import setupRouter from "./setup";
 import importContentRouter from "./import-content";
 
@@ -22,6 +23,7 @@ router.use("/roditelj", roditeljRouter);
 router.use("/admin", adminRouter);
 router.use("/content", contentRouter);
 router.use("/poruke", porukeRouter);
+router.use("/ucenik", ucenikRouter);
 router.use("/setup", setupRouter);
 router.use("/import-content", importContentRouter);
 

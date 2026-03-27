@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
-import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -168,14 +168,24 @@ export default function RoditeljPage() {
   const [djeca, setDjeca] = useState<Dijete[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLink, setShowLink] = useState(false);
+  const [showDodaj, setShowDodaj] = useState(false);
   const [ucenikUsername, setUcenikUsername] = useState("");
   const [isLinking, setIsLinking] = useState(false);
+  const [novoIme, setNovoIme] = useState("");
+  const [novaLozinka, setNovaLozinka] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [createdInfo, setCreatedInfo] = useState<{ username: string; displayName: string } | null>(null);
+  const [passwordChangeId, setPasswordChangeId] = useState<number | null>(null);
+  const [newPw, setNewPw] = useState("");
+  const [isChangingPw, setIsChangingPw] = useState(false);
 
-  useEffect(() => {
+  const loadDjeca = () => {
     if (!token) return;
     apiRequest<Dijete[]>("GET", "/roditelj/djeca", undefined, token)
       .then(setDjeca).catch(() => {}).finally(() => setIsLoading(false));
-  }, [token]);
+  };
+
+  useEffect(() => { loadDjeca(); }, [token]);
 
   if (!user || user.role !== "roditelj") {
     return (
@@ -194,16 +204,49 @@ export default function RoditeljPage() {
     setIsLinking(true);
     try {
       await apiRequest("POST", "/roditelj/link-dijete", { ucenikUsername: ucenikUsername.trim() }, token);
-      toast({
-        title: "Zahtjev poslan!",
-        description: "Muallim mora odobriti povezivanje s djetetom.",
-      });
+      toast({ title: "Zahtjev poslan!", description: "Muallim mora odobriti povezivanje s djetetom." });
       setUcenikUsername("");
       setShowLink(false);
     } catch (err: any) {
       toast({ title: "Greška", description: err?.message || "Korisničko ime nije pronađeno", variant: "destructive" });
     } finally {
       setIsLinking(false);
+    }
+  }
+
+  async function dodajDijete(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || !novoIme.trim() || !novaLozinka) return;
+    setIsCreating(true);
+    try {
+      const result = await apiRequest<{ id: number; displayName: string; username: string }>(
+        "POST", "/roditelj/dodaj-dijete", { displayName: novoIme.trim(), password: novaLozinka }, token
+      );
+      setCreatedInfo({ username: result.username, displayName: result.displayName });
+      setNovoIme("");
+      setNovaLozinka("");
+      loadDjeca();
+      toast({ title: "Dijete dodano!", description: `Korisničko ime: ${result.username}` });
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće dodati dijete", variant: "destructive" });
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function changePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || !passwordChangeId || !newPw) return;
+    setIsChangingPw(true);
+    try {
+      await apiRequest("PUT", "/roditelj/dijete-lozinka", { ucenikId: passwordChangeId, newPassword: newPw }, token);
+      toast({ title: "Lozinka promijenjena!" });
+      setPasswordChangeId(null);
+      setNewPw("");
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće promijeniti lozinku", variant: "destructive" });
+    } finally {
+      setIsChangingPw(false);
     }
   }
 
@@ -226,40 +269,114 @@ export default function RoditeljPage() {
           <div className="text-center py-16 bg-white rounded-2xl border border-border/50">
             <Users className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-30" />
             <p className="font-bold text-foreground mb-1">Nema povezane djece</p>
-            <p className="text-sm text-muted-foreground mb-5">Unesite korisničko ime djeteta da zatražite pristup</p>
-            <Button onClick={() => setShowLink(true)} className="rounded-xl flex items-center gap-2 mx-auto">
-              <Link2 className="w-4 h-4" /> Poveži dijete
-            </Button>
+            <p className="text-sm text-muted-foreground mb-5">Dodajte dijete ili povežite postojeći učenički račun</p>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => { setShowDodaj(true); setShowLink(false); }} className="rounded-xl flex items-center gap-2">
+                <UserPlus className="w-4 h-4" /> Dodaj dijete
+              </Button>
+              <Button variant="outline" onClick={() => { setShowLink(true); setShowDodaj(false); }} className="rounded-xl flex items-center gap-2">
+                <Link2 className="w-4 h-4" /> Poveži dijete
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {djeca.map(d => <DijeteCard key={d.id} dijete={d} token={token!} />)}
-            <div className="flex justify-center mt-2">
-              <button onClick={() => setShowLink(v => !v)}
-                className="flex items-center gap-2 text-primary hover:text-primary/80 font-bold text-sm transition-colors">
-                <Link2 className="w-4 h-4" /> Dodaj još dijete
-              </button>
-            </div>
+            {djeca.map(d => (
+              <div key={d.id}>
+                <DijeteCard dijete={d} token={token!} />
+                <div className="flex justify-end px-2 pt-1.5">
+                  <button onClick={() => { setPasswordChangeId(passwordChangeId === d.id ? null : d.id); setNewPw(""); }}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary font-bold transition-colors">
+                    <KeyRound className="w-3.5 h-3.5" /> Promijeni lozinku
+                  </button>
+                </div>
+                {passwordChangeId === d.id && (
+                  <motion.form initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                    onSubmit={changePassword}
+                    className="mt-1 bg-white border border-border/50 rounded-xl p-4 flex gap-2 items-end">
+                    <div className="flex-1">
+                      <label className="text-xs font-bold text-muted-foreground mb-1 block">Nova lozinka za {d.displayName}</label>
+                      <input type="password" required minLength={6} placeholder="Min. 6 znakova"
+                        value={newPw} onChange={e => setNewPw(e.target.value)}
+                        className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                    </div>
+                    <Button type="submit" size="sm" disabled={isChangingPw} className="rounded-xl shrink-0">
+                      {isChangingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : "Spremi"}
+                    </Button>
+                  </motion.form>
+                )}
+              </div>
+            ))}
+            {djeca.length < 4 && (
+              <div className="flex justify-center gap-4 mt-3">
+                <button onClick={() => { setShowDodaj(v => !v); setShowLink(false); setCreatedInfo(null); }}
+                  className="flex items-center gap-2 text-primary hover:text-primary/80 font-bold text-sm transition-colors">
+                  <UserPlus className="w-4 h-4" /> Dodaj dijete
+                </button>
+                <button onClick={() => { setShowLink(v => !v); setShowDodaj(false); }}
+                  className="flex items-center gap-2 text-muted-foreground hover:text-primary font-bold text-sm transition-colors">
+                  <Link2 className="w-4 h-4" /> Poveži postojeće
+                </button>
+              </div>
+            )}
           </div>
+        )}
+
+        {showDodaj && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="mt-4 bg-white border border-border/50 rounded-2xl p-5">
+            <h3 className="font-extrabold text-foreground mb-2 flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-primary" /> Dodaj dijete
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Kreirajte račun za dijete. Dijete će biti u grupi "Online Mekteb" i moći će učiti arapsko pismo.
+            </p>
+
+            {createdInfo && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
+                <p className="text-sm font-bold text-emerald-800 mb-1">Račun kreiran!</p>
+                <p className="text-sm text-emerald-700">
+                  <strong>{createdInfo.displayName}</strong> — korisničko ime: <span className="font-mono bg-emerald-100 px-1.5 py-0.5 rounded">{createdInfo.username}</span>
+                </p>
+                <p className="text-xs text-emerald-600 mt-1">Zapišite korisničko ime i lozinku — dijete ih koristi za prijavu.</p>
+              </div>
+            )}
+
+            <form onSubmit={dodajDijete} className="flex flex-col gap-3">
+              <div>
+                <label className="text-sm font-bold text-foreground mb-1 block">Ime i prezime djeteta</label>
+                <input type="text" required placeholder="npr. Amina Hadžić" value={novoIme}
+                  onChange={e => setNovoIme(e.target.value)}
+                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-foreground mb-1 block">Lozinka</label>
+                <input type="password" required minLength={6} placeholder="Min. 6 znakova" value={novaLozinka}
+                  onChange={e => setNovaLozinka(e.target.value)}
+                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              </div>
+              <Button type="submit" disabled={isCreating} className="rounded-xl flex items-center gap-2 self-end">
+                {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                Kreiraj račun
+              </Button>
+            </form>
+          </motion.div>
         )}
 
         {showLink && (
           <motion.form initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             onSubmit={linkDijete}
             className="mt-4 bg-white border border-border/50 rounded-2xl p-5">
-            <h3 className="font-extrabold text-foreground mb-3">Poveži dijete</h3>
+            <h3 className="font-extrabold text-foreground mb-3 flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-primary" /> Poveži dijete
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
               Unesite korisničko ime djeteta (dobijate ga od muallima). Muallim mora odobriti zahtjev.
             </p>
             <div className="flex gap-2">
-              <input
-                type="text"
-                required
-                placeholder="npr. amina.hasic.1234"
-                value={ucenikUsername}
+              <input type="text" required placeholder="npr. amina.1234" value={ucenikUsername}
                 onChange={e => setUcenikUsername(e.target.value)}
-                className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
+                className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               <Button type="submit" disabled={isLinking} className="rounded-xl flex items-center gap-2 shrink-0">
                 {isLinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                 Poveži
