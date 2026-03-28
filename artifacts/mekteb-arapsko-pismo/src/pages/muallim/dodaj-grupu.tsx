@@ -14,7 +14,7 @@ export default function DodajGrupuPage() {
   const { token } = useAuth();
   const { toast } = useToast();
   const [naziv, setNaziv] = useState("");
-  const [skolskaGodina, setSkolskaGodina] = useState("2024/25");
+  const [skolskaGodina, setSkolskaGodina] = useState("Mektebska 2025/26");
   const [vrijemeNastave, setVrijemeNastave] = useState("");
   const [daniNastave, setDaniNastave] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -81,7 +81,7 @@ export default function DodajGrupuPage() {
               type="text"
               value={skolskaGodina}
               onChange={e => setSkolskaGodina(e.target.value)}
-              placeholder="2024/25"
+              placeholder="Mektebska 2025/26"
               className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
             />
           </div>

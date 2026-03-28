@@ -20,7 +20,7 @@ export const muallimProfiliTable = pgTable("muallim_profili", {
   mektebId: integer("mekteb_id"),
   licenceCount: integer("licence_count").notNull().default(30),
   licencesUsed: integer("licences_used").notNull().default(0),
-  tekucaSkolskaGodina: varchar("tekuca_skolska_godina", { length: 20 }).default("2024/2025"),
+  tekucaSkolskaGodina: varchar("tekuca_skolska_godina", { length: 30 }).default("Mektebska 2025/26"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

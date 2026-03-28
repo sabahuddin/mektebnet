@@ -133,6 +133,8 @@ export default function UcenikPage() {
 
   const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
   const prosjecnaOcjena = ocjene.length ? (ocjene.reduce((s, o) => s + o.ocjena, 0) / ocjene.length).toFixed(2) : null;
+  const ukupnoBodova = kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
+  const kvizProsjek = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : null;
 
   return (
     <Layout>
@@ -157,11 +159,13 @@ export default function UcenikPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
               {[
                 { label: "Časova prisustvo", value: prisustvo.length || "—", icon: CalendarCheck, color: "text-primary" },
                 { label: "Prisutnih", value: prisustvo.length ? `${prisutnih}/${prisustvo.length}` : "—", icon: CalendarCheck, color: "text-emerald-600" },
                 { label: "Prosj. ocjena", value: prosjecnaOcjena || "—", icon: Star, color: "text-amber-600" },
+                { label: "Kvizova", value: kvizRezultati.length || "—", icon: ClipboardList, color: "text-blue-600" },
+                { label: "Ukupno bodova", value: ukupnoBodova || "—", icon: Award, color: "text-amber-600" },
               ].map(stat => (
                 <div key={stat.label} className="bg-white border border-border/50 rounded-2xl p-4">
                   <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />

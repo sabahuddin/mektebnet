@@ -80,6 +80,8 @@ interface StatistikaUcenik {
   brojOcjena: number;
   kvizCount: number;
   kvizProsjecniProcenat: number | null;
+  ukupnoBodova: number;
+  kvizovaProslejSedmice: number;
 }
 
 interface Zadaca {
@@ -106,7 +108,7 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "statistika" | "zadace">("pregled");
+  const [activeTab, setActiveTab] = useState<"pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace">("pregled");
   const [ucenici, setUcenici] = useState<Ucenik[]>([]);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,8 +133,17 @@ export default function MuallimPanel() {
   const [approvingId, setApprovingId] = useState<number | null>(null);
 
   const [statGrupaId, setStatGrupaId] = useState<number | null>(null);
-  const [statData, setStatData] = useState<{ ucenici: StatistikaUcenik[]; ukupnoCasova: number } | null>(null);
+  const [statData, setStatData] = useState<{ ucenici: StatistikaUcenik[]; ukupnoCasova: number; aktivnihProslejSedmice: number; ukupnoKvizova: number; ukupnoBodovaGrupa: number; prosjekBodovaGrupa: number } | null>(null);
   const [statLoading, setStatLoading] = useState(false);
+
+  const [planGrupaId, setPlanGrupaId] = useState<number | null>(null);
+  const [planLekcijaSep, setPlanLekcijaSep] = useState<PlanLekcija[]>([]);
+  const [planLekcijeLoading, setPlanLekcijeLoading] = useState(false);
+  const [showPlanForm, setShowPlanForm] = useState(false);
+  const [planDatum, setPlanDatum] = useState(new Date().toISOString().split("T")[0]);
+  const [planLekcijaNaslov, setPlanLekcijaNaslov] = useState("");
+  const [planVrstaCasa, setPlanVrstaCasa] = useState("obrada");
+  const [savingPlanLekcija, setSavingPlanLekcija] = useState(false);
 
   const [zadGrupaId, setZadGrupaId] = useState<number | null>(null);
   const [zadace, setZadace] = useState<Zadaca[]>([]);
@@ -257,6 +268,43 @@ export default function MuallimPanel() {
   }, [token, statGrupaId]);
 
   useEffect(() => {
+    if (!token || !planGrupaId) return;
+    setPlanLekcijeLoading(true);
+    Promise.all([
+      apiRequest<PlanLekcija[]>("GET", `/muallim/plan-lekcija?grupaId=${planGrupaId}`, undefined, token),
+      dostupneLekcije.length === 0
+        ? apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => [])
+        : Promise.resolve(dostupneLekcije),
+    ]).then(([p, l]) => {
+      setPlanLekcijaSep(p);
+      if (l !== dostupneLekcije) setDostupneLekcije(l as IlmihalLekcija[]);
+    }).catch(() => {}).finally(() => setPlanLekcijeLoading(false));
+  }, [token, planGrupaId]);
+
+  async function savePlanLekcija() {
+    if (!token || !planGrupaId || !planLekcijaNaslov.trim()) return;
+    setSavingPlanLekcija(true);
+    try {
+      const nova = await apiRequest<PlanLekcija>("POST", "/muallim/plan-lekcija", {
+        grupaId: planGrupaId, datum: planDatum, lekcijaNaslov: planLekcijaNaslov.trim(), lekcijaTip: planVrstaCasa, redoslijed: planLekcijaSep.filter(p => p.datum === planDatum).length,
+      }, token);
+      setPlanLekcijaSep(prev => [...prev, nova]);
+      setPlanLekcijaNaslov("");
+      setShowPlanForm(false);
+      toast({ title: "Lekcija dodana u plan!" });
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+    finally { setSavingPlanLekcija(false); }
+  }
+
+  async function deletePlanLekcija(id: number) {
+    if (!token) return;
+    try {
+      await apiRequest("DELETE", `/muallim/plan-lekcija/${id}`, undefined, token);
+      setPlanLekcijaSep(prev => prev.filter(p => p.id !== id));
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  useEffect(() => {
     if (!token || !zadGrupaId) return;
     setZadLoading(true);
     Promise.all([
@@ -367,6 +415,7 @@ export default function MuallimPanel() {
     { id: "grupe", label: `Grupe (${grupe.length})`, icon: GraduationCap },
     { id: "prisustvo", label: "Prisustvo", icon: CalendarCheck },
     { id: "kalendar", label: "Kalendar", icon: Calendar },
+    { id: "plan", label: "Plan lekcija", icon: BookOpen },
     { id: "statistika", label: "Statistika", icon: TrendingUp },
     { id: "zadace", label: "Zadaće", icon: ClipboardList },
   ] as const;
@@ -609,6 +658,155 @@ export default function MuallimPanel() {
               </motion.div>
             )}
 
+            {/* PLAN LEKCIJA */}
+            {activeTab === "plan" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {!planGrupaId ? (
+                  <div className="text-center py-16 bg-white rounded-2xl border border-border/50">
+                    <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                    <p className="font-bold text-foreground mb-2">Odaberi grupu za plan lekcija</p>
+                    <div className="flex flex-wrap gap-3 justify-center mt-6">
+                      {grupe.map(g => (
+                        <button key={g.id} onClick={() => setPlanGrupaId(g.id)}
+                          className="bg-violet-50 text-violet-700 border border-violet-200 rounded-xl px-5 py-3 font-bold hover:bg-violet-600 hover:text-white transition-all">
+                          {g.naziv}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : planLekcijeLoading ? (
+                  <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-violet-600" />
+                        Plan lekcija: {grupe.find(g => g.id === planGrupaId)?.naziv}
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setShowPlanForm(!showPlanForm)}
+                          className="flex items-center gap-1.5 text-sm font-bold text-violet-600 hover:text-violet-800">
+                          <Plus className="w-4 h-4" /> Dodaj lekciju
+                        </button>
+                        <button onClick={() => { setPlanGrupaId(null); setPlanLekcijaSep([]); }}
+                          className="text-sm text-muted-foreground hover:text-foreground font-medium">← Promijeni grupu</button>
+                      </div>
+                    </div>
+
+                    {showPlanForm && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                        className="bg-violet-50 border border-violet-200 rounded-2xl p-5 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-bold text-muted-foreground block mb-1">Datum</label>
+                            <input type="date" value={planDatum} onChange={e => setPlanDatum(e.target.value)}
+                              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-muted-foreground block mb-1">Vrsta časa</label>
+                            <select value={planVrstaCasa} onChange={e => setPlanVrstaCasa(e.target.value)}
+                              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300">
+                              <option value="obrada">Obrada</option>
+                              <option value="ponavljanje">Ponavljanje</option>
+                              <option value="test">Test</option>
+                              <option value="prakticno">Praktično</option>
+                              <option value="ilmihal">Ilmihal</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-muted-foreground block mb-1">Lekcija</label>
+                          <select value={planLekcijaNaslov} onChange={e => setPlanLekcijaNaslov(e.target.value)}
+                            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300">
+                            <option value="">— Odaberi lekciju —</option>
+                            {[1, 2, 3, 4].map(nivo => {
+                              const nivoLekcije = dostupneLekcije.filter(l => l.nivo === nivo);
+                              if (nivoLekcije.length === 0) return null;
+                              return (
+                                <optgroup key={nivo} label={`Nivo ${nivo}`}>
+                                  {nivoLekcije.map(l => (
+                                    <option key={l.id} value={l.naslov}>{l.naslov}</option>
+                                  ))}
+                                </optgroup>
+                              );
+                            })}
+                          </select>
+                        </div>
+                        {!planLekcijaNaslov && (
+                          <input type="text" placeholder="Ili upišite naziv lekcije ručno" value={planLekcijaNaslov}
+                            onChange={e => setPlanLekcijaNaslov(e.target.value)}
+                            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                        )}
+                        <div className="flex gap-2">
+                          <Button onClick={savePlanLekcija} disabled={savingPlanLekcija || !planLekcijaNaslov.trim()}
+                            className="rounded-xl font-bold text-sm bg-violet-600 hover:bg-violet-700">
+                            {savingPlanLekcija ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sačuvaj"}
+                          </Button>
+                          <button onClick={() => setShowPlanForm(false)} className="text-sm text-muted-foreground hover:text-foreground font-medium px-3">Otkaži</button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {(() => {
+                      const groupedByDate = planLekcijaSep.reduce<Record<string, PlanLekcija[]>>((acc, p) => {
+                        if (!acc[p.datum]) acc[p.datum] = [];
+                        acc[p.datum].push(p);
+                        return acc;
+                      }, {});
+                      const sortedDates = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
+
+                      if (sortedDates.length === 0) {
+                        return (
+                          <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
+                            <BookOpen className="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
+                            <p className="text-sm text-muted-foreground">Nema dodanih lekcija u planu</p>
+                          </div>
+                        );
+                      }
+
+                      const VRSTA_COLORS: Record<string, string> = {
+                        obrada: "bg-blue-100 text-blue-700",
+                        ponavljanje: "bg-amber-100 text-amber-700",
+                        test: "bg-red-100 text-red-700",
+                        prakticno: "bg-emerald-100 text-emerald-700",
+                        ilmihal: "bg-violet-100 text-violet-700",
+                      };
+
+                      return (
+                        <div className="space-y-4">
+                          {sortedDates.map(datum => (
+                            <div key={datum} className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+                              <div className="bg-muted/30 px-4 py-2.5 border-b border-border/30 flex items-center justify-between">
+                                <span className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-violet-500" /> {datum}
+                                </span>
+                                <span className="text-xs text-muted-foreground">{groupedByDate[datum].length} lekcija</span>
+                              </div>
+                              <div className="divide-y divide-border/30">
+                                {groupedByDate[datum].map(l => (
+                                  <div key={l.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${VRSTA_COLORS[l.lekcijaTip] || "bg-gray-100 text-gray-700"}`}>
+                                        {l.lekcijaTip === "obrada" ? "Obrada" : l.lekcijaTip === "ponavljanje" ? "Ponavljanje" : l.lekcijaTip === "test" ? "Test" : l.lekcijaTip === "prakticno" ? "Praktično" : l.lekcijaTip}
+                                      </span>
+                                      <span className="font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                    </div>
+                                    <button onClick={() => deletePlanLekcija(l.id)} className="text-red-400 hover:text-red-600 p-1">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {/* STATISTIKA */}
             {activeTab === "statistika" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -638,16 +836,16 @@ export default function MuallimPanel() {
                         className="text-sm text-muted-foreground hover:text-foreground font-medium">← Promijeni grupu</button>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                       <div className="bg-primary/5 border border-border/50 rounded-2xl p-5">
                         <Users className="w-5 h-5 text-primary mb-2" />
                         <div className="text-2xl font-extrabold text-primary">{statData.ucenici.length}</div>
-                        <div className="text-sm text-muted-foreground font-medium">Učenika u grupi</div>
+                        <div className="text-sm text-muted-foreground font-medium">Učenika</div>
                       </div>
                       <div className="bg-emerald-50 border border-border/50 rounded-2xl p-5">
                         <CalendarCheck className="w-5 h-5 text-emerald-600 mb-2" />
                         <div className="text-2xl font-extrabold text-emerald-600">{statData.ukupnoCasova}</div>
-                        <div className="text-sm text-muted-foreground font-medium">Održanih časova</div>
+                        <div className="text-sm text-muted-foreground font-medium">Časova</div>
                       </div>
                       <div className="bg-violet-50 border border-border/50 rounded-2xl p-5">
                         <Award className="w-5 h-5 text-violet-600 mb-2" />
@@ -656,7 +854,22 @@ export default function MuallimPanel() {
                             ? (statData.ucenici.filter(u => u.ukupnaProsjecna !== null).reduce((a, u) => a + (u.ukupnaProsjecna || 0), 0) / statData.ucenici.filter(u => u.ukupnaProsjecna !== null).length).toFixed(1)
                             : "—"}
                         </div>
-                        <div className="text-sm text-muted-foreground font-medium">Prosječna ocjena grupe</div>
+                        <div className="text-sm text-muted-foreground font-medium">Prosj. ocjena</div>
+                      </div>
+                      <div className="bg-blue-50 border border-border/50 rounded-2xl p-5">
+                        <ClipboardList className="w-5 h-5 text-blue-600 mb-2" />
+                        <div className="text-2xl font-extrabold text-blue-600">{statData.ukupnoKvizova}</div>
+                        <div className="text-sm text-muted-foreground font-medium">Kvizova ukupno</div>
+                      </div>
+                      <div className="bg-amber-50 border border-border/50 rounded-2xl p-5">
+                        <Award className="w-5 h-5 text-amber-600 mb-2" />
+                        <div className="text-2xl font-extrabold text-amber-600">{statData.ukupnoBodovaGrupa}</div>
+                        <div className="text-sm text-muted-foreground font-medium">Bodova ukupno</div>
+                      </div>
+                      <div className="bg-teal-50 border border-border/50 rounded-2xl p-5">
+                        <Target className="w-5 h-5 text-teal-600 mb-2" />
+                        <div className="text-2xl font-extrabold text-teal-600">{statData.aktivnihProslejSedmice}/{statData.ucenici.length}</div>
+                        <div className="text-sm text-muted-foreground font-medium">Aktivnih ove sedmice</div>
                       </div>
                     </div>
 
@@ -665,7 +878,7 @@ export default function MuallimPanel() {
                         <table className="w-full">
                           <thead className="border-b border-border/50 bg-muted/30">
                             <tr>
-                              {["Učenik", "Prisustvo", "Prosj. ocjena", "Kviz aktivnost"].map(h => (
+                              {["Učenik", "Prisustvo", "Prosj. ocjena", "Kvizovi", "Bodovi"].map(h => (
                                 <th key={h} className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
                               ))}
                             </tr>
@@ -701,15 +914,24 @@ export default function MuallimPanel() {
                                 <td className="px-4 py-3">
                                   {u.kvizCount > 0 ? (
                                     <div className="flex items-center gap-2">
-                                      <Target className="w-4 h-4 text-blue-500" />
-                                      <span className="text-sm font-bold text-foreground">{u.kvizCount} kviz.</span>
+                                      <span className="text-sm font-bold text-foreground">{u.kvizCount}</span>
                                       {u.kvizProsjecniProcenat !== null && (
                                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${u.kvizProsjecniProcenat >= 70 ? "bg-emerald-100 text-emerald-700" : u.kvizProsjecniProcenat >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
                                           {u.kvizProsjecniProcenat}%
                                         </span>
                                       )}
+                                      {u.kvizovaProslejSedmice > 0 && (
+                                        <span className="text-xs text-teal-600 font-medium">({u.kvizovaProslejSedmice} ove sed.)</span>
+                                      )}
                                     </div>
                                   ) : <span className="text-sm text-muted-foreground">—</span>}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {u.ukupnoBodova > 0 ? (
+                                    <span className="text-sm font-extrabold text-amber-600 flex items-center gap-1">
+                                      <Award className="w-4 h-4" /> {u.ukupnoBodova}
+                                    </span>
+                                  ) : <span className="text-sm text-muted-foreground">0</span>}
                                 </td>
                               </motion.tr>
                             ))}
@@ -963,7 +1185,10 @@ export default function MuallimPanel() {
                                   ${!isBatchSelected && isSelected ? "ring-2 ring-primary ring-offset-1" : ""}
                                   ${!isBatchSelected && tipStyle ? `${tipStyle.bg} ${tipStyle.text} border ${tipStyle.border}` : !isBatchSelected ? "hover:bg-muted/50 border border-transparent" : ""}`}>
                                 {day}
-                                {hasLekcije && <div className="w-1.5 h-1.5 bg-violet-500 rounded-full absolute bottom-1" />}
+                                {entry?.tip === "vazan_datum" && entry?.opis && (
+                                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[7px] font-bold text-blue-700 truncate max-w-full px-0.5 leading-tight">{entry.opis.substring(0, 8)}</div>
+                                )}
+                                {hasLekcije && !entry?.opis && <div className="w-1.5 h-1.5 bg-violet-500 rounded-full absolute bottom-1" />}
                                 {isBatchSelected && <div className="w-2 h-2 bg-violet-500 rounded-full absolute top-1 right-1" />}
                               </button>
                             );
@@ -993,7 +1218,17 @@ export default function MuallimPanel() {
                                 <div className="space-y-3">
                                   <div className="flex gap-2 flex-wrap">
                                     {Object.entries(TIP_COLORS).map(([key, val]) => (
-                                      <button key={key} onClick={() => saveKalendarEntry(selectedDate, key, opisInput)}
+                                      <button key={key} onClick={() => {
+                                        if (key === "vazan_datum" && !opisInput.trim()) {
+                                          const naziv = prompt("Unesite naziv važnog datuma:");
+                                          if (naziv) {
+                                            setOpisInput(naziv);
+                                            saveKalendarEntry(selectedDate, key, naziv);
+                                          }
+                                        } else {
+                                          saveKalendarEntry(selectedDate, key, opisInput);
+                                        }
+                                      }}
                                         className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${entry?.tip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
                                         {val.label}
                                       </button>
@@ -1004,7 +1239,12 @@ export default function MuallimPanel() {
                                       </button>
                                     )}
                                   </div>
-                                  <input type="text" placeholder="Opis (opcionalno)" value={opisInput}
+                                  {entry?.tip === "vazan_datum" && entry?.opis && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold text-blue-800">
+                                      {entry.opis}
+                                    </div>
+                                  )}
+                                  <input type="text" placeholder={entry?.tip === "vazan_datum" ? "Naziv važnog datuma" : "Opis (opcionalno)"} value={opisInput}
                                     onChange={e => setOpisInput(e.target.value)}
                                     onBlur={() => { if (entry) saveKalendarEntry(selectedDate, entry.tip, opisInput); }}
                                     className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />

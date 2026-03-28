@@ -49,7 +49,7 @@ artifacts/
         ├── ucenik-profil.tsx  # Učenik profil (ocjene, prisustvo, kalendar, kvizovi)
         ├── poruke.tsx     # Poruke (messaging)
         └── muallim/
-            ├── index.tsx   # Muallim panel (pregled + pending roditelj zahtjevi, učenici, grupe, prisustvo, kalendar)
+            ├── index.tsx   # Muallim panel (pregled, učenici, grupe, prisustvo, kalendar, plan lekcija, statistika, zadaće)
             ├── prisustvo.tsx  # Evidencija prisustva za grupu
             ├── ucenik.tsx     # Detalji učenika (prisustvo + ocjene)
             ├── dodaj-ucenika.tsx

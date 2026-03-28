@@ -13,8 +13,17 @@ import {
   posjeteTable,
   korisnikNapredakTable,
   grupeTable,
+  roditeljProfiliTable,
+  roditeljUcenikTable,
+  priustvoTable,
+  ocjeneTable,
+  mektebKalendarTable,
+  planLekcijaTable,
+  porukeTable,
+  zadaceTable,
+  certifikatiTable,
 } from "@workspace/db/schema";
-import { eq, desc, sql, gte, inArray, and, isNotNull } from "drizzle-orm";
+import { eq, desc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -545,6 +554,68 @@ router.get("/grupe-all", async (req, res) => {
     res.json(grupe);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.delete("/korisnik/:id", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) { res.status(400).json({ error: "Nevažeći ID" }); return; }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (!user) { res.status(404).json({ error: "Korisnik nije pronađen" }); return; }
+    if (user.role === "admin") { res.status(403).json({ error: "Ne možete obrisati admin korisnika" }); return; }
+
+    await db.transaction(async (tx) => {
+      if (user.role === "ucenik") {
+        const [profil] = await tx.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
+        if (profil?.muallimId) {
+          await tx.update(muallimProfiliTable)
+            .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
+            .where(eq(muallimProfiliTable.userId, profil.muallimId));
+        }
+      }
+
+      await tx.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, userId));
+      await tx.delete(korisnikNapredakTable).where(eq(korisnikNapredakTable.userId, userId));
+      await tx.delete(certifikatiTable).where(eq(certifikatiTable.ucenikId, userId));
+      await tx.delete(priustvoTable).where(eq(priustvoTable.ucenikId, userId));
+      await tx.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, userId));
+      await tx.delete(porukeTable).where(or(eq(porukeTable.posiljateljId, userId), eq(porukeTable.primateljId, userId)));
+      await tx.delete(roditeljUcenikTable).where(or(eq(roditeljUcenikTable.roditeljId, userId), eq(roditeljUcenikTable.ucenikId, userId)));
+      await tx.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
+      await tx.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, userId));
+      await tx.delete(pretplateTable).where(eq(pretplateTable.userId, userId));
+
+      if (user.role === "muallim") {
+        const muallimGrupe = await tx.select({ id: grupeTable.id }).from(grupeTable).where(eq(grupeTable.muallimId, userId));
+        const grupaIds = muallimGrupe.map(g => g.id);
+        if (grupaIds.length > 0) {
+          await tx.update(ucenikProfiliTable).set({ grupaId: null, muallimId: null }).where(inArray(ucenikProfiliTable.grupaId, grupaIds));
+          await tx.update(ocjeneTable).set({ grupaId: null }).where(inArray(ocjeneTable.grupaId, grupaIds));
+        }
+        await tx.update(ocjeneTable).set({ muallimId: 0 }).where(eq(ocjeneTable.muallimId, userId));
+        await tx.update(priustvoTable).set({ muallimId: 0 }).where(eq(priustvoTable.muallimId, userId));
+        await tx.delete(mektebKalendarTable).where(eq(mektebKalendarTable.muallimId, userId));
+        await tx.delete(planLekcijaTable).where(eq(planLekcijaTable.muallimId, userId));
+        await tx.delete(zadaceTable).where(eq(zadaceTable.muallimId, userId));
+        await tx.delete(grupeTable).where(eq(grupeTable.muallimId, userId));
+        await tx.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+      }
+
+      if (user.role === "roditelj") {
+        await tx.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, userId));
+      }
+
+      try { await tx.delete(posjeteTable).where(eq(posjeteTable.userId, userId)); } catch {}
+
+      await tx.delete(usersTable).where(eq(usersTable.id, userId));
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ error: "Greška pri brisanju korisnika" });
   }
 });
 

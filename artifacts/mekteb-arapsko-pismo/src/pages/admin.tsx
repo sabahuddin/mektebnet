@@ -8,7 +8,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft
+  ChevronRight, UserCog, ArrowRightLeft, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -541,6 +541,8 @@ export default function AdminPage() {
 
   const [rasporediKorisnik, setRasporediKorisnik] = useState<Korisnik | null>(null);
   const [grupeAll, setGrupeAll] = useState<GrupaAll[]>([]);
+  const [deleteKorisnik, setDeleteKorisnik] = useState<Korisnik | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadData = async () => {
     if (!token) return;
@@ -619,6 +621,22 @@ export default function AdminPage() {
       </Layout>
     );
   }
+
+  const handleDeleteKorisnik = async (k: Korisnik) => {
+    if (!token) return;
+    setDeletingId(k.id);
+    try {
+      await apiRequest("DELETE", `/admin/korisnik/${k.id}`, undefined, token);
+      setKorisnici(prev => prev.filter(u => u.id !== k.id));
+      setDeleteKorisnik(null);
+      toast({ title: `Korisnik "${k.displayName}" je obrisan` });
+      if (k.role === "muallim") loadMuallimPregled();
+    } catch {
+      toast({ title: "Greška", description: "Nije moguće obrisati korisnika", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const toggleActive = async (k: Korisnik) => {
     setTogglingId(k.id);
@@ -1049,6 +1067,13 @@ export default function AdminPage() {
                               <ArrowRightLeft className="w-4 h-4" />
                             </button>
                           )}
+                          {k.role !== "admin" && (
+                            <button onClick={() => setDeleteKorisnik(k)}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                              title="Obriši korisnika">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1094,6 +1119,26 @@ export default function AdminPage() {
           onClose={() => setRasporediKorisnik(null)}
           onSaved={() => { loadData(); loadMuallimPregled(); }}
         />
+      )}
+      {deleteKorisnik && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteKorisnik(null)}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-extrabold text-foreground mb-2">Obriši korisnika?</h3>
+            <p className="text-sm text-muted-foreground mb-1">
+              Jeste li sigurni da želite trajno obrisati korisnika:
+            </p>
+            <p className="font-bold text-foreground mb-4">{deleteKorisnik.displayName} ({deleteKorisnik.username})</p>
+            <p className="text-xs text-red-600 mb-4">Ova akcija je nepovratna. Svi podaci korisnika će biti obrisani.</p>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setDeleteKorisnik(null)} className="flex-1 rounded-xl">Otkaži</Button>
+              <Button onClick={() => handleDeleteKorisnik(deleteKorisnik)} disabled={deletingId === deleteKorisnik.id}
+                className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white">
+                {deletingId === deleteKorisnik.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Obriši"}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </Layout>
   );

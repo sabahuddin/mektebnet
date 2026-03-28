@@ -92,6 +92,10 @@ router.delete("/grupe/:id", async (req, res) => {
         .set({ grupaId: null })
         .where(eq(ucenikProfiliTable.grupaId, grupaId));
 
+      await tx.update(ocjeneTable)
+        .set({ grupaId: null })
+        .where(eq(ocjeneTable.grupaId, grupaId));
+
       await tx.delete(zadaceTable).where(eq(zadaceTable.grupaId, grupaId));
       await tx.delete(planLekcijaTable).where(eq(planLekcijaTable.grupaId, grupaId));
       await tx.delete(mektebKalendarTable).where(eq(mektebKalendarTable.grupaId, grupaId));
@@ -778,6 +782,12 @@ router.get("/grupa/:id/statistika", async (req, res) => {
       const kvizProsjecniProcenat = kvizCount > 0
         ? Math.round(kvizovi.reduce((a, k) => a + k.procenat, 0) / kvizCount)
         : null;
+      const ukupnoBodova = kvizovi.reduce((a, k) => a + (k.bodovi || 0), 0);
+
+      const sedmicaDatum = new Date();
+      sedmicaDatum.setDate(sedmicaDatum.getDate() - 7);
+      const sedmicaStr = sedmicaDatum.toISOString().split("T")[0];
+      const kvizovaProslejSedmice = kvizovi.filter(k => k.completedAt && new Date(k.completedAt).toISOString().split("T")[0] >= sedmicaStr).length;
 
       return {
         id: uid,
@@ -790,10 +800,21 @@ router.get("/grupa/:id/statistika", async (req, res) => {
         brojOcjena: ocjeneRec.length,
         kvizCount,
         kvizProsjecniProcenat,
+        ukupnoBodova,
+        kvizovaProslejSedmice,
       };
     });
 
-    res.json({ ucenici, ukupnoCasova });
+    const sedmicaDatum = new Date();
+    sedmicaDatum.setDate(sedmicaDatum.getDate() - 7);
+    const sedmicaStr = sedmicaDatum.toISOString().split("T")[0];
+    const aktivnihProslejSedmice = ucenici.filter(u => u.kvizovaProslejSedmice > 0).length;
+
+    const ukupnoKvizova = ucenici.reduce((a, u) => a + u.kvizCount, 0);
+    const ukupnoBodovaGrupa = ucenici.reduce((a, u) => a + u.ukupnoBodova, 0);
+    const prosjekBodovaGrupa = ucenici.length > 0 ? Math.round(ukupnoBodovaGrupa / ucenici.length) : 0;
+
+    res.json({ ucenici, ukupnoCasova, aktivnihProslejSedmice, ukupnoKvizova, ukupnoBodovaGrupa, prosjekBodovaGrupa });
   } catch (err) {
     console.error("Statistika error:", err);
     res.status(500).json({ error: "Greška servera" });
