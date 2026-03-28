@@ -279,6 +279,27 @@ export default function MuallimPanel() {
     } catch { toast({ title: "Greška", variant: "destructive" }); }
   }
 
+  async function deleteUcenik(ucenikId: number) {
+    if (!token) return;
+    if (!confirm("Da li ste sigurni da želite arhivirati ovog učenika?")) return;
+    try {
+      await apiRequest("DELETE", `/muallim/ucenici/${ucenikId}`, undefined, token);
+      setUcenici(prev => prev.filter(u => u.id !== ucenikId));
+      toast({ title: "Učenik arhiviran" });
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  async function deleteGrupa(grupaId: number) {
+    if (!token) return;
+    if (!confirm("Da li ste sigurni da želite obrisati ovu grupu? Učenici neće biti obrisani, samo premješteni bez grupe.")) return;
+    try {
+      await apiRequest("DELETE", `/muallim/grupe/${grupaId}`, undefined, token);
+      setGrupe(prev => prev.filter(g => g.id !== grupaId));
+      setUcenici(prev => prev.map(u => u.grupaId === grupaId ? { ...u, grupaId: undefined, grupaIme: undefined } : u));
+      toast({ title: "Grupa obrisana" });
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
   async function saveProfile() {
     if (!token) return;
     setSavingProfile(true);
@@ -487,11 +508,16 @@ export default function MuallimPanel() {
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <Link href={`/muallim/ucenik/${u.id}`}>
-                                <button className="text-primary hover:underline font-bold text-sm flex items-center gap-1">
-                                  Detalji <ChevronRight className="w-3 h-3" />
+                              <div className="flex items-center gap-2">
+                                <Link href={`/muallim/ucenik/${u.id}`}>
+                                  <button className="text-primary hover:underline font-bold text-sm flex items-center gap-1">
+                                    Detalji <ChevronRight className="w-3 h-3" />
+                                  </button>
+                                </Link>
+                                <button onClick={() => deleteUcenik(u.id)} className="text-red-400 hover:text-red-600 p-1" title="Arhiviraj učenika">
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                              </Link>
+                              </div>
                             </td>
                           </motion.tr>
                         ))}
@@ -521,16 +547,22 @@ export default function MuallimPanel() {
                   <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {grupe.map((g, i) => (
                       <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                        <Link href={`/muallim/grupa/${g.id}`}>
-                          <div className="bg-white border-2 border-secondary/20 rounded-2xl p-5 cursor-pointer hover:border-secondary hover:shadow-md transition-all group">
-                            <GraduationCap className="w-8 h-8 text-secondary mb-3" />
-                            <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => (u as any).profil?.grupaId === g.id).length} učenika</p>
-                            <div className="flex items-center gap-1 text-secondary font-bold text-sm mt-3">
-                              Otvori <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                        <div className="bg-white border-2 border-secondary/20 rounded-2xl p-5 hover:border-secondary hover:shadow-md transition-all group relative">
+                          <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
+                            className="absolute top-3 right-3 text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Obriši grupu">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <Link href={`/muallim/grupa/${g.id}`}>
+                            <div className="cursor-pointer">
+                              <GraduationCap className="w-8 h-8 text-secondary mb-3" />
+                              <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
+                              <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => u.grupaId === g.id).length} učenika</p>
+                              <div className="flex items-center gap-1 text-secondary font-bold text-sm mt-3">
+                                Otvori <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                              </div>
                             </div>
-                          </div>
-                        </Link>
+                          </Link>
+                        </div>
                       </motion.div>
                     ))}
                   </div>

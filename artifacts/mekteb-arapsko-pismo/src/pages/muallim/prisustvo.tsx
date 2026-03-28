@@ -61,7 +61,7 @@ export default function PrisustvoPage() {
     ]).then(([grupe, sviUcenici]) => {
       const g = grupe.find(g => g.id === parseInt(grupaId));
       setGrupa(g || null);
-      const grupaUcenici = sviUcenici.filter((u: any) => u.profil?.grupaId === parseInt(grupaId));
+      const grupaUcenici = sviUcenici.filter((u: any) => (u.grupaId || u.profil?.grupaId) === parseInt(grupaId));
       setUcenici(grupaUcenici);
       const defaultStatusi: Record<number, Status> = {};
       grupaUcenici.forEach((u: Ucenik) => { defaultStatusi[u.id] = "prisutan"; });

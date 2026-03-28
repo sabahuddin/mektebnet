@@ -74,6 +74,34 @@ router.put("/grupe/:id", async (req, res) => {
   }
 });
 
+// DELETE /api/muallim/grupe/:id
+router.delete("/grupe/:id", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const muallimId = req.user!.userId;
+    const [grupa] = await db.select().from(grupeTable)
+      .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, muallimId)));
+    if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+
+    await db.transaction(async (tx) => {
+      await tx.update(ucenikProfiliTable)
+        .set({ grupaId: null })
+        .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.muallimId, muallimId)));
+
+      await tx.delete(zadaceTable).where(and(eq(zadaceTable.grupaId, grupaId), eq(zadaceTable.muallimId, muallimId)));
+      await tx.delete(planLekcijaTable).where(eq(planLekcijaTable.grupaId, grupaId));
+      await tx.delete(mektebKalendarTable).where(eq(mektebKalendarTable.grupaId, grupaId));
+      await tx.delete(priustvoTable).where(eq(priustvoTable.grupaId, grupaId));
+      await tx.delete(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, muallimId)));
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Delete grupa error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // GET /api/muallim/ucenici
 router.get("/ucenici", async (req, res) => {
   try {
@@ -82,12 +110,20 @@ router.get("/ucenici", async (req, res) => {
 
     const userIds = profili.map(p => p.userId);
     const korisnici = await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
+    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, req.user!.userId));
+    const grupaMap = Object.fromEntries(grupe.map(g => [g.id, g.naziv]));
 
-    const result = korisnici.map(u => ({
-      ...u,
-      passwordHash: undefined,
-      profil: profili.find(p => p.userId === u.id),
-    }));
+    const result = korisnici.map(u => {
+      const profil = profili.find(p => p.userId === u.id);
+      return {
+        ...u,
+        passwordHash: undefined,
+        profil,
+        grupaId: profil?.grupaId || null,
+        grupaIme: profil?.grupaId ? grupaMap[profil.grupaId] || null : null,
+        aktivanStatus: profil ? !profil.isArchived : true,
+      };
+    });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
