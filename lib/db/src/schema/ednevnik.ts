@@ -62,6 +62,20 @@ export const porukeTable = pgTable("poruke", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Homework / Zadaće
+export const zadaceTable = pgTable("zadace", {
+  id: serial("id").primaryKey(),
+  grupaId: integer("grupa_id").notNull(),
+  muallimId: integer("muallim_id").notNull(),
+  naslov: varchar("naslov", { length: 300 }).notNull(),
+  opis: text("opis"),
+  rokDo: varchar("rok_do", { length: 20 }),
+  lekcijaNaslov: varchar("lekcija_naslov", { length: 300 }),
+  lekcijaTip: varchar("lekcija_tip", { length: 50 }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Certificates / Certifikati
 export const certifikatiTable = pgTable("certifikati", {
   id: serial("id").primaryKey(),
@@ -77,6 +91,7 @@ export const insertOcjenaSchema = createInsertSchema(ocjeneTable).omit({ id: tru
 export const insertPorukaSchema = createInsertSchema(porukeTable).omit({ id: true, createdAt: true, procitanoAt: true });
 export const insertKalendarSchema = createInsertSchema(mektebKalendarTable).omit({ id: true, createdAt: true });
 export const insertPlanLekcijaSchema = createInsertSchema(planLekcijaTable).omit({ id: true, createdAt: true });
+export const insertZadacaSchema = createInsertSchema(zadaceTable).omit({ id: true, createdAt: true });
 
 export type Prisustvo = typeof priustvoTable.$inferSelect;
 export type Ocjena = typeof ocjeneTable.$inferSelect;
@@ -84,3 +99,4 @@ export type Poruka = typeof porukeTable.$inferSelect;
 export type Certifikat = typeof certifikatiTable.$inferSelect;
 export type MektebKalendar = typeof mektebKalendarTable.$inferSelect;
 export type PlanLekcija = typeof planLekcijaTable.$inferSelect;
+export type Zadaca = typeof zadaceTable.$inferSelect;

@@ -27,6 +27,7 @@ interface Ocjena {
   id: number;
   kategorija: string;
   ocjena: number;
+  lekcijaNaziv?: string;
   napomena?: string;
   datum: string;
 }
@@ -34,6 +35,12 @@ interface Ocjena {
 interface Grupa {
   id: number;
   naziv: string;
+}
+
+interface IlmihalLekcija {
+  id: number;
+  naslov: string;
+  nivo: number;
 }
 
 interface KvizRezultat {
@@ -70,6 +77,7 @@ export default function UcenikPage() {
   const [newOcjena, setNewOcjena] = useState({ kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "", datum: new Date().toISOString().split("T")[0] });
   const [savingOcjena, setSavingOcjena] = useState(false);
   const [planLekcije, setPlanLekcije] = useState<{ id: number; lekcijaNaslov: string }[]>([]);
+  const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -80,13 +88,15 @@ export default function UcenikPage() {
       apiRequest<Prisustvo[]>("GET", `/muallim/prisustvo-ucenik/${ucenikId}`, undefined, token),
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
       apiRequest<{ rezultati: KvizRezultat[] }>("GET", `/muallim/ucenik-rezultati/${ucenikId}`, undefined, token).catch(() => ({ rezultati: [] })),
-    ]).then(([ucenici, oc, prs, g, kvizData]) => {
+      apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije]) => {
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
       setUcenik(found || null);
       setOcjene(oc);
       setPrisustvo(prs);
       setGrupe(g);
       setKvizRezultati((kvizData as any).rezultati || []);
+      setIlmihalLekcije(lekcije as IlmihalLekcija[]);
       const gId = found?.profil?.grupaId || found?.grupaId;
       if (gId) {
         apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
@@ -220,7 +230,9 @@ export default function UcenikPage() {
                         className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
                         <option value="usmeno">Usmeno</option>
                         <option value="pismeno">Pismeno</option>
+                        <option value="napamet">Napamet</option>
                         <option value="domaći">Domaći</option>
+                        <option value="zadaća">Zadaća</option>
                         <option value="aktivnost">Aktivnost</option>
                         <option value="vladanje">Vladanje</option>
                       </select>
@@ -229,13 +241,28 @@ export default function UcenikPage() {
                         {[6, 5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
-                    {planLekcije.length > 0 && (
-                      <select value={newOcjena.lekcijaNaziv} onChange={e => setNewOcjena(p => ({ ...p, lekcijaNaziv: e.target.value }))}
-                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                        <option value="">— Odaberi lekciju (opcionalno) —</option>
-                        {planLekcije.map(l => <option key={l.id} value={l.lekcijaNaslov}>{l.lekcijaNaslov}</option>)}
-                      </select>
-                    )}
+                    <select value={newOcjena.lekcijaNaziv} onChange={e => setNewOcjena(p => ({ ...p, lekcijaNaziv: e.target.value }))}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
+                      <option value="">— Odaberi lekciju (opcionalno) —</option>
+                      {[1, 2, 3, 4].map(nivo => {
+                        const nivoLekcije = ilmihalLekcije.filter(l => l.nivo === nivo);
+                        if (nivoLekcije.length === 0) return null;
+                        return (
+                          <optgroup key={nivo} label={`Nivo ${nivo}`}>
+                            {nivoLekcije.map(l => (
+                              <option key={l.id} value={l.naslov}>{l.naslov}</option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                      {planLekcije.length > 0 && (
+                        <optgroup label="Iz plana lekcija">
+                          {planLekcije.map(l => (
+                            <option key={`pl-${l.id}`} value={l.lekcijaNaslov}>{l.lekcijaNaslov}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
                     <input type="date" value={newOcjena.datum} onChange={e => setNewOcjena(p => ({ ...p, datum: e.target.value }))}
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white" />
                     <input type="text" placeholder="Napomena (opcionalno)" value={newOcjena.napomena}
@@ -255,7 +282,7 @@ export default function UcenikPage() {
                       <div key={o.id} className="flex items-center justify-between text-sm">
                         <div>
                           <span className="font-medium text-foreground capitalize">{o.kategorija}</span>
-                          {(o as any).lekcijaNaziv && <span className="text-primary ml-2 text-xs font-medium">({(o as any).lekcijaNaziv})</span>}
+                          {o.lekcijaNaziv && <span className="text-primary ml-2 text-xs font-medium">({o.lekcijaNaziv})</span>}
                           {o.napomena && <span className="text-muted-foreground ml-2">— {o.napomena}</span>}
                           <div className="text-xs text-muted-foreground">{o.datum}</div>
                         </div>

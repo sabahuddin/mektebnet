@@ -14,8 +14,9 @@ import {
   mektebKalendarTable,
   planLekcijaTable,
   ilmihalLekcijeTable,
+  zadaceTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, desc, asc } from "drizzle-orm";
+import { eq, and, inArray, desc, asc, sql, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -639,6 +640,147 @@ router.put("/profil", async (req, res) => {
       .returning();
 
     res.json({ displayName: updated.displayName });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── STATISTIKA GRUPE ─────────────────────────────────────────────────────────
+
+router.get("/grupa/:id/statistika", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    if (profili.length === 0) { res.json({ ucenici: [], ukupnoCasova: 0 }); return; }
+
+    const ucenikIds = profili.map(p => p.userId);
+    const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
+      .from(usersTable).where(inArray(usersTable.id, ucenikIds));
+    const userMap = Object.fromEntries(users.map(u => [u.id, u.displayName]));
+
+    const svoPrisustvo = await db.select().from(priustvoTable)
+      .where(eq(priustvoTable.grupaId, grupaId));
+    const sveOcjene = await db.select().from(ocjeneTable)
+      .where(eq(ocjeneTable.grupaId, grupaId));
+    const kvizRezultati = ucenikIds.length > 0
+      ? await db.select().from(kvizRezultatiTable)
+          .where(inArray(kvizRezultatiTable.userId, ucenikIds))
+      : [];
+
+    const uniqueDatumi = new Set(svoPrisustvo.map(p => p.datum));
+    const ukupnoCasova = uniqueDatumi.size;
+
+    const ucenici = ucenikIds.map(uid => {
+      const prisutvoRec = svoPrisustvo.filter(p => p.ucenikId === uid);
+      const prisutanCount = prisutvoRec.filter(p => p.status === "prisutan").length;
+      const ukupnoPrisustvo = prisutvoRec.length;
+      const prisustvoPct = ukupnoPrisustvo > 0 ? Math.round((prisutanCount / ukupnoPrisustvo) * 100) : null;
+
+      const ocjeneRec = sveOcjene.filter(o => o.ucenikId === uid);
+      const kategorije: Record<string, number[]> = {};
+      for (const o of ocjeneRec) {
+        if (!kategorije[o.kategorija]) kategorije[o.kategorija] = [];
+        kategorije[o.kategorija].push(o.ocjena);
+      }
+      const prosjecneOcjene: Record<string, number> = {};
+      for (const [kat, vals] of Object.entries(kategorije)) {
+        prosjecneOcjene[kat] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+      }
+      const ukupnaProsjecna = ocjeneRec.length > 0
+        ? Math.round((ocjeneRec.reduce((a, o) => a + o.ocjena, 0) / ocjeneRec.length) * 10) / 10
+        : null;
+
+      const kvizovi = kvizRezultati.filter(k => k.userId === uid);
+      const kvizCount = kvizovi.length;
+      const kvizProsjecniProcenat = kvizCount > 0
+        ? Math.round(kvizovi.reduce((a, k) => a + k.procenat, 0) / kvizCount)
+        : null;
+
+      return {
+        id: uid,
+        ime: userMap[uid] || "Nepoznat",
+        prisustvoPct,
+        prisutanCount,
+        ukupnoPrisustvo,
+        prosjecneOcjene,
+        ukupnaProsjecna,
+        brojOcjena: ocjeneRec.length,
+        kvizCount,
+        kvizProsjecniProcenat,
+      };
+    });
+
+    res.json({ ucenici, ukupnoCasova });
+  } catch (err) {
+    console.error("Statistika error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── ZADAĆE ───────────────────────────────────────────────────────────────────
+
+router.get("/zadace", async (req, res) => {
+  try {
+    const grupaId = req.query.grupaId ? parseInt(req.query.grupaId as string) : undefined;
+    const where = grupaId
+      ? and(eq(zadaceTable.muallimId, req.user!.userId), eq(zadaceTable.grupaId, grupaId))
+      : eq(zadaceTable.muallimId, req.user!.userId);
+    const zadace = await db.select().from(zadaceTable).where(where).orderBy(desc(zadaceTable.createdAt));
+    res.json(zadace);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.post("/zadace", async (req, res) => {
+  try {
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaTip } = req.body;
+    if (!grupaId || !naslov) { res.status(400).json({ error: "grupaId i naslov su obavezni" }); return; }
+
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const [nova] = await db.insert(zadaceTable).values({
+      grupaId,
+      muallimId: req.user!.userId,
+      naslov,
+      opis: opis || null,
+      rokDo: rokDo || null,
+      lekcijaNaslov: lekcijaNaslov || null,
+      lekcijaTip: lekcijaTip || null,
+    }).returning();
+    res.status(201).json(nova);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.put("/zadace/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, isActive } = req.body;
+    const [updated] = await db.update(zadaceTable)
+      .set({ naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, isActive })
+      .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.delete("/zadace/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.select().from(zadaceTable).where(eq(zadaceTable.id, id));
+    if (!entry || entry.muallimId !== req.user!.userId) { res.status(403).json({ error: "Nemaš pristup" }); return; }
+    await db.delete(zadaceTable).where(eq(zadaceTable.id, id));
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

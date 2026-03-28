@@ -8,7 +8,7 @@ Samostalna platforma za islamsko obrazovanje koja zamjenjuje WordPress. Sadrži:
 - Kvizovi (27/43 sa pitanjima — 1120 pitanja ukupno)
 - Čitaonica (14 knjiga — priče o poslanicima)
 - E-dnevnik (prisustvo + ocjene 1-6 + lekcija naziv)
-- Muallim panel (učenici, grupe, prisustvo, ocjene, kalendar, plan lekcija, profil)
+- Muallim panel (učenici, grupe, prisustvo, ocjene, kalendar, plan lekcija, profil, statistika grupe, zadaće)
 - Roditelj panel (pregled djece, prisustvo, ocjene)
 - Učenik profil (ocjene, prisustvo, kalendar, kvizovi)
 - Poruke (muallim↔roditelj, muallim↔učenik, admin↔svi)
@@ -32,7 +32,7 @@ artifacts/
 │   └── src/routes/
 │       ├── auth.ts         # POST /login, POST /register, POST /logout
 │       ├── content.ts      # GET/POST ilmihal, kvizovi, knjige, napredak
-│       ├── muallim.ts      # Muallim panel (grupe, učenici, prisustvo, ocjene, kalendar, plan lekcija)
+│       ├── muallim.ts      # Muallim panel (grupe, učenici, prisustvo, ocjene, kalendar, plan lekcija, statistika, zadaće)
 │       ├── ucenik.ts       # Učenik panel (profil, kalendar, plan lekcija)
 │       ├── poruke.ts       # Poruke (messaging with role-based auth)
 │       ├── roditelj.ts     # Roditelj panel (djeca, prisustvo, ocjene)
