@@ -121,6 +121,9 @@ export default function MuallimPanel() {
   const [opisInput, setOpisInput] = useState("");
   const [dostupneLekcije, setDostupneLekcije] = useState<IlmihalLekcija[]>([]);
   const [showLekcijaSelect, setShowLekcijaSelect] = useState(false);
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchDatumi, setBatchDatumi] = useState<string[]>([]);
+  const [batchSaving, setBatchSaving] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -188,6 +191,23 @@ export default function MuallimPanel() {
       setDostupneLekcije(l);
     }).catch(() => {}).finally(() => setKalendarLoading(false));
   }, [token, selectedGrupaId]);
+
+  async function saveBatchKalendar() {
+    if (!token || !selectedGrupaId || batchDatumi.length === 0) return;
+    setBatchSaving(true);
+    try {
+      await apiRequest("POST", "/muallim/kalendar/batch", { grupaId: selectedGrupaId, datumi: batchDatumi, tip: activeTip, opis: opisInput || "" }, token);
+      const updated = await apiRequest<KalendarEntry[]>("GET", `/muallim/kalendar?grupaId=${selectedGrupaId}`, undefined, token);
+      setKalendar(updated);
+      setBatchDatumi([]);
+      toast({ title: `${batchDatumi.length} dana označeno kao ${activeTip === "mekteb" ? "Mekteb" : activeTip === "ferije" ? "Ferije" : "Važan datum"}!` });
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+    finally { setBatchSaving(false); }
+  }
+
+  function toggleBatchDate(dateStr: string) {
+    setBatchDatumi(prev => prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr]);
+  }
 
   async function saveKalendarEntry(datum: string, tip: string, opis: string) {
     if (!token || !selectedGrupaId) return;
@@ -887,10 +907,31 @@ export default function MuallimPanel() {
                               {val.label}
                             </button>
                           ))}
-                          <button onClick={() => setSelectedGrupaId(null)} className="ml-auto text-sm text-muted-foreground hover:text-foreground font-medium">
+                          <button onClick={() => { setBatchMode(!batchMode); setBatchDatumi([]); }}
+                            className={`text-sm font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${batchMode ? "bg-violet-100 border-violet-400 text-violet-700" : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
+                            {batchMode ? "✓ Grupno označavanje" : "Grupno označavanje"}
+                          </button>
+                          <button onClick={() => { setSelectedGrupaId(null); setBatchMode(false); setBatchDatumi([]); }} className="ml-auto text-sm text-muted-foreground hover:text-foreground font-medium">
                             ← Promijeni grupu
                           </button>
                         </div>
+
+                        {batchMode && (
+                          <div className="flex items-center gap-3 mb-4 bg-violet-50 border border-violet-200 rounded-xl p-3">
+                            <span className="text-sm font-bold text-violet-700">Klikni na dane koje želiš označiti</span>
+                            <span className="text-sm text-violet-600 font-bold">{batchDatumi.length} odabrano</span>
+                            <div className="ml-auto flex gap-2">
+                              <Button onClick={saveBatchKalendar} disabled={batchDatumi.length === 0 || batchSaving}
+                                className="rounded-xl font-bold text-sm px-4 py-1.5 h-auto flex items-center gap-1.5">
+                                {batchSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                Sačuvaj ({batchDatumi.length})
+                              </Button>
+                              <button onClick={() => setBatchDatumi([])} className="text-sm text-violet-600 hover:text-violet-800 font-medium px-2">
+                                Poništi
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-7 gap-1">
                           {DAYS_BS.map(d => (
@@ -904,14 +945,26 @@ export default function MuallimPanel() {
                             const isSelected = selectedDate === dateStr;
                             const hasLekcije = planLekcija.some(p => p.datum === dateStr);
 
+                            const isBatchSelected = batchDatumi.includes(dateStr);
+
                             return (
-                              <button key={dateStr} onClick={() => { setSelectedDate(dateStr); setOpisInput(entry?.opis || ""); }}
-                                onDoubleClick={() => saveKalendarEntry(dateStr, activeTip, "")}
+                              <button key={dateStr}
+                                onClick={() => {
+                                  if (batchMode) {
+                                    toggleBatchDate(dateStr);
+                                  } else {
+                                    setSelectedDate(dateStr);
+                                    setOpisInput(entry?.opis || "");
+                                  }
+                                }}
+                                onDoubleClick={() => { if (!batchMode) saveKalendarEntry(dateStr, activeTip, ""); }}
                                 className={`relative aspect-square rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5
-                                  ${isSelected ? "ring-2 ring-primary ring-offset-1" : ""}
-                                  ${tipStyle ? `${tipStyle.bg} ${tipStyle.text} border ${tipStyle.border}` : "hover:bg-muted/50 border border-transparent"}`}>
+                                  ${isBatchSelected ? "ring-2 ring-violet-500 ring-offset-1 bg-violet-100" : ""}
+                                  ${!isBatchSelected && isSelected ? "ring-2 ring-primary ring-offset-1" : ""}
+                                  ${!isBatchSelected && tipStyle ? `${tipStyle.bg} ${tipStyle.text} border ${tipStyle.border}` : !isBatchSelected ? "hover:bg-muted/50 border border-transparent" : ""}`}>
                                 {day}
                                 {hasLekcije && <div className="w-1.5 h-1.5 bg-violet-500 rounded-full absolute bottom-1" />}
+                                {isBatchSelected && <div className="w-2 h-2 bg-violet-500 rounded-full absolute top-1 right-1" />}
                               </button>
                             );
                           })}

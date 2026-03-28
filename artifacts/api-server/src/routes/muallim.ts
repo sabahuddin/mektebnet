@@ -78,21 +78,25 @@ router.put("/grupe/:id", async (req, res) => {
 router.delete("/grupe/:id", async (req, res) => {
   try {
     const grupaId = parseInt(req.params.id);
-    const muallimId = req.user!.userId;
-    const [grupa] = await db.select().from(grupeTable)
-      .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, muallimId)));
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+
+    const grupaWhere = isAdmin
+      ? eq(grupeTable.id, grupaId)
+      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
+    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
 
     await db.transaction(async (tx) => {
       await tx.update(ucenikProfiliTable)
         .set({ grupaId: null })
-        .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.muallimId, muallimId)));
+        .where(eq(ucenikProfiliTable.grupaId, grupaId));
 
-      await tx.delete(zadaceTable).where(and(eq(zadaceTable.grupaId, grupaId), eq(zadaceTable.muallimId, muallimId)));
+      await tx.delete(zadaceTable).where(eq(zadaceTable.grupaId, grupaId));
       await tx.delete(planLekcijaTable).where(eq(planLekcijaTable.grupaId, grupaId));
       await tx.delete(mektebKalendarTable).where(eq(mektebKalendarTable.grupaId, grupaId));
       await tx.delete(priustvoTable).where(eq(priustvoTable.grupaId, grupaId));
-      await tx.delete(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, muallimId)));
+      await tx.delete(grupeTable).where(eq(grupeTable.id, grupaId));
     });
 
     res.json({ ok: true });
@@ -532,6 +536,45 @@ router.post("/kalendar", async (req, res) => {
     }
   } catch (err) {
     console.error("Kalendar POST error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/kalendar/batch — mark multiple dates at once
+router.post("/kalendar/batch", async (req, res) => {
+  try {
+    const { grupaId, datumi, tip, opis } = req.body;
+    if (!grupaId || !datumi || !Array.isArray(datumi) || datumi.length === 0 || !tip) {
+      res.status(400).json({ error: "grupaId, datumi (niz) i tip su obavezni" }); return;
+    }
+    if (!["mekteb", "ferije", "vazan_datum"].includes(tip)) {
+      res.status(400).json({ error: "tip mora biti: mekteb, ferije, vazan_datum" }); return;
+    }
+
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const results: any[] = [];
+    for (const datum of datumi) {
+      const existing = await db.select().from(mektebKalendarTable)
+        .where(and(eq(mektebKalendarTable.grupaId, grupaId), eq(mektebKalendarTable.datum, datum)));
+
+      if (existing.length > 0) {
+        const [updated] = await db.update(mektebKalendarTable)
+          .set({ tip, opis: opis || null })
+          .where(eq(mektebKalendarTable.id, existing[0].id))
+          .returning();
+        results.push(updated);
+      } else {
+        const [nova] = await db.insert(mektebKalendarTable).values({
+          grupaId, muallimId: req.user!.userId, datum, tip, opis: opis || null,
+        }).returning();
+        results.push(nova);
+      }
+    }
+    res.json(results);
+  } catch (err) {
+    console.error("Kalendar batch error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

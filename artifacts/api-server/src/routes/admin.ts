@@ -291,55 +291,53 @@ router.get("/analytics", async (req, res) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const [
-      registracijePoMjesecu,
-      posjetePoDrzavi,
-      kvizRezultati,
-      aktivnostPosmjenama,
-      korisnikStats,
-    ] = await Promise.all([
-      db.select({
-        datum: sql<string>`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`,
-        broj: sql<number>`count(*)::int`,
-      }).from(usersTable)
-        .where(gte(usersTable.createdAt, thirtyDaysAgo))
-        .groupBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`)
-        .orderBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`),
+    const registracijePoMjesecu = await db.select({
+      datum: sql<string>`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`,
+      broj: sql<number>`count(*)::int`,
+    }).from(usersTable)
+      .where(gte(usersTable.createdAt, thirtyDaysAgo))
+      .groupBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`);
 
-      db.select({
+    let posjetePoDrzavi: any[] = [];
+    let aktivnostPosmjenama: any[] = [];
+    try {
+      posjetePoDrzavi = await db.select({
         country: posjeteTable.country,
         broj: sql<number>`count(*)::int`,
       }).from(posjeteTable)
         .where(and(gte(posjeteTable.createdAt, thirtyDaysAgo), isNotNull(posjeteTable.country)))
         .groupBy(posjeteTable.country)
         .orderBy(sql`count(*) desc`)
-        .limit(20),
+        .limit(20);
 
-      db.select({
-        kvizNaslov: kvizRezultatiTable.kvizNaslov,
-        pokusaji: sql<number>`count(*)::int`,
-        prosjecniProcenat: sql<number>`round(avg(${kvizRezultatiTable.procenat}))::int`,
-        prosjecniBodovi: sql<number>`round(avg(${kvizRezultatiTable.bodovi}))::int`,
-        najvisiBodovi: sql<number>`max(${kvizRezultatiTable.procenat})::int`,
-      }).from(kvizRezultatiTable)
-        .groupBy(kvizRezultatiTable.kvizNaslov)
-        .orderBy(sql`count(*) desc`),
-
-      db.select({
+      aktivnostPosmjenama = await db.select({
         datum: sql<string>`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`,
         broj: sql<number>`count(*)::int`,
       }).from(posjeteTable)
         .where(gte(posjeteTable.createdAt, thirtyDaysAgo))
         .groupBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`)
-        .orderBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`),
+        .orderBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`);
+    } catch (e) {
+      console.warn("posjete table not available:", (e as any).message);
+    }
 
-      db.select({
-        role: usersTable.role,
-        aktivni: sql<number>`count(*) filter (where ${usersTable.isActive} = true)::int`,
-        neaktivni: sql<number>`count(*) filter (where ${usersTable.isActive} = false)::int`,
-      }).from(usersTable)
-        .groupBy(usersTable.role),
-    ]);
+    const kvizRezultati = await db.select({
+      kvizNaslov: kvizRezultatiTable.kvizNaslov,
+      pokusaji: sql<number>`count(*)::int`,
+      prosjecniProcenat: sql<number>`round(avg(${kvizRezultatiTable.procenat}))::int`,
+      prosjecniBodovi: sql<number>`round(avg(${kvizRezultatiTable.bodovi}))::int`,
+      najvisiBodovi: sql<number>`max(${kvizRezultatiTable.procenat})::int`,
+    }).from(kvizRezultatiTable)
+      .groupBy(kvizRezultatiTable.kvizNaslov)
+      .orderBy(sql`count(*) desc`);
+
+    const korisnikStats = await db.select({
+      role: usersTable.role,
+      aktivni: sql<number>`count(*) filter (where ${usersTable.isActive} = true)::int`,
+      neaktivni: sql<number>`count(*) filter (where ${usersTable.isActive} = false)::int`,
+    }).from(usersTable)
+      .groupBy(usersTable.role);
 
     const nedavniRezultati = await db.select({
       id: kvizRezultatiTable.id,

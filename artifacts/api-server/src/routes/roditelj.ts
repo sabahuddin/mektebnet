@@ -11,8 +11,9 @@ import {
   korisnikNapredakTable,
   grupeTable,
   muallimProfiliTable,
+  mektebKalendarTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -269,6 +270,31 @@ router.put("/dijete-lozinka", async (req, res) => {
     await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, parseInt(ucenikId)));
 
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/kalendar — parent sees calendar for their children's groups
+router.get("/kalendar", async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const veze = await db.select().from(roditeljUcenikTable).where(and(eq(roditeljUcenikTable.roditeljId, userId), eq(roditeljUcenikTable.status, "approved")));
+    if (veze.length === 0) { res.json([]); return; }
+
+    const djecaIds = veze.map(v => v.ucenikId);
+    const profili = await db.select().from(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, djecaIds));
+    const grupaIds = [...new Set(profili.map(p => p.grupaId).filter(Boolean))] as number[];
+    if (grupaIds.length === 0) { res.json([]); return; }
+
+    const entries = await db.select().from(mektebKalendarTable)
+      .where(inArray(mektebKalendarTable.grupaId, grupaIds))
+      .orderBy(asc(mektebKalendarTable.datum));
+
+    const grupe = await db.select().from(grupeTable).where(inArray(grupeTable.id, grupaIds));
+    const grupaMap = Object.fromEntries(grupe.map(g => [g.id, g.naziv]));
+
+    res.json(entries.map(e => ({ ...e, grupaNaziv: grupaMap[e.grupaId] || null })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
