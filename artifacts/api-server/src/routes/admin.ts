@@ -263,10 +263,11 @@ router.post("/ucenik", async (req, res) => {
 // PUT /api/admin/ilmihal/:id — Update lesson content
 router.put("/ilmihal/:id", async (req, res) => {
   try {
-    const { contentHtml, naslov, kvizPitanja } = req.body;
+    const { contentHtml, naslov, kvizPitanja, redoslijed } = req.body;
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) updates.contentHtml = contentHtml;
     if (naslov !== undefined) updates.naslov = naslov;
+    if (redoslijed !== undefined) updates.redoslijed = redoslijed;
     if (kvizPitanja !== undefined) {
       updates.kvizPitanja = typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja);
     }

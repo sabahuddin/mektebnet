@@ -730,93 +730,257 @@ router.put("/profil", async (req, res) => {
 
 // ── STATISTIKA GRUPE ─────────────────────────────────────────────────────────
 
+async function getGrupaFullStats(grupaId: number) {
+  const profili = await db.select().from(ucenikProfiliTable)
+    .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+  if (profili.length === 0) return { ucenici: [], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[] };
+
+  const ucenikIds = profili.map(p => p.userId);
+  const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
+    .from(usersTable).where(inArray(usersTable.id, ucenikIds));
+  const userMap = Object.fromEntries(users.map(u => [u.id, u.displayName]));
+
+  const svoPrisustvoRaw = await db.select().from(priustvoTable)
+    .where(eq(priustvoTable.grupaId, grupaId));
+  const svoPrisustvo = svoPrisustvoRaw.filter(p => ucenikIds.includes(p.ucenikId));
+  const sveOcjeneRaw = await db.select().from(ocjeneTable)
+    .where(eq(ocjeneTable.grupaId, grupaId));
+  const sveOcjene = sveOcjeneRaw.filter(o => ucenikIds.includes(o.ucenikId));
+  const kvizRezultati = ucenikIds.length > 0
+    ? await db.select().from(kvizRezultatiTable)
+        .where(inArray(kvizRezultatiTable.userId, ucenikIds))
+    : [];
+
+  const svaDatumi = [...new Set(svoPrisustvo.map(p => p.datum))].sort();
+  const ukupnoCasova = svaDatumi.length;
+
+  const mjesecSet = new Set<string>();
+  svoPrisustvo.forEach(p => { if (p.datum) mjesecSet.add(p.datum.substring(0, 7)); });
+  const mjeseci = [...mjesecSet].sort();
+
+  const ucenici = ucenikIds.map(uid => {
+    const prisutvoRec = svoPrisustvo.filter(p => p.ucenikId === uid);
+    const prisutanCount = prisutvoRec.filter(p => p.status === "prisutan").length;
+    const odsutanCount = prisutvoRec.filter(p => p.status === "odsutan").length;
+    const zakasnioCount = prisutvoRec.filter(p => p.status === "zakasnio").length;
+    const opravdanCount = prisutvoRec.filter(p => p.status === "opravdan").length;
+    const ukupnoPrisustvo = prisutvoRec.length;
+    const prisustvoPct = ukupnoPrisustvo > 0 ? Math.round((prisutanCount / ukupnoPrisustvo) * 100) : null;
+
+    const prisustvoPoDatumu: Record<string, string> = {};
+    prisutvoRec.forEach(p => { prisustvoPoDatumu[p.datum] = p.status; });
+
+    const mjesecnoStats = mjeseci.map(m => {
+      const mRec = prisutvoRec.filter(p => p.datum.startsWith(m));
+      const mPrisutan = mRec.filter(p => p.status === "prisutan").length;
+      return { mjesec: m, prisutan: mPrisutan, ukupno: mRec.length, pct: mRec.length > 0 ? Math.round((mPrisutan / mRec.length) * 100) : null };
+    });
+
+    const ocjeneRec = sveOcjene.filter(o => o.ucenikId === uid);
+    const kategorije: Record<string, number[]> = {};
+    for (const o of ocjeneRec) {
+      if (!kategorije[o.kategorija]) kategorije[o.kategorija] = [];
+      kategorije[o.kategorija].push(o.ocjena);
+    }
+    const prosjecneOcjene: Record<string, number> = {};
+    for (const [kat, vals] of Object.entries(kategorije)) {
+      prosjecneOcjene[kat] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+    }
+    const ukupnaProsjecna = ocjeneRec.length > 0
+      ? Math.round((ocjeneRec.reduce((a, o) => a + o.ocjena, 0) / ocjeneRec.length) * 10) / 10
+      : null;
+
+    const kvizovi = kvizRezultati.filter(k => k.userId === uid);
+    const kvizCount = kvizovi.length;
+    const kvizProsjecniProcenat = kvizCount > 0
+      ? Math.round(kvizovi.reduce((a, k) => a + k.procenat, 0) / kvizCount)
+      : null;
+    const ukupnoBodova = kvizovi.reduce((a, k) => a + (k.bodovi || 0), 0);
+
+    const sedmicaDatum = new Date();
+    sedmicaDatum.setDate(sedmicaDatum.getDate() - 7);
+    const sedmicaStr = sedmicaDatum.toISOString().split("T")[0];
+    const kvizovaProslejSedmice = kvizovi.filter(k => k.completedAt && new Date(k.completedAt).toISOString().split("T")[0] >= sedmicaStr).length;
+
+    return {
+      id: uid,
+      ime: userMap[uid] || "Nepoznat",
+      prisustvoPct,
+      prisutanCount,
+      odsutanCount,
+      zakasnioCount,
+      opravdanCount,
+      ukupnoPrisustvo,
+      prisustvoPoDatumu,
+      mjesecnoStats,
+      prosjecneOcjene,
+      ukupnaProsjecna,
+      brojOcjena: ocjeneRec.length,
+      kvizCount,
+      kvizProsjecniProcenat,
+      ukupnoBodova,
+      kvizovaProslejSedmice,
+    };
+  });
+
+  const sedmicaDatum = new Date();
+  sedmicaDatum.setDate(sedmicaDatum.getDate() - 7);
+  const sedmicaStr = sedmicaDatum.toISOString().split("T")[0];
+  const aktivnihProslejSedmice = ucenici.filter(u => u.kvizovaProslejSedmice > 0).length;
+
+  const ukupnoKvizova = ucenici.reduce((a, u) => a + u.kvizCount, 0);
+  const ukupnoBodovaGrupa = ucenici.reduce((a, u) => a + u.ukupnoBodova, 0);
+  const prosjekBodovaGrupa = ucenici.length > 0 ? Math.round(ukupnoBodovaGrupa / ucenici.length) : 0;
+
+  const totalPrisustva = ucenici.reduce((a, u) => a + (u.prisutanCount || 0), 0);
+  const totalRecords = ucenici.reduce((a, u) => a + (u.ukupnoPrisustvo || 0), 0);
+  const grupaPrisustvoPct = totalRecords > 0 ? Math.round((totalPrisustva / totalRecords) * 100) : null;
+
+  const ocjeneWithVals = ucenici.filter(u => u.ukupnaProsjecna !== null);
+  const grupaProsjekOcjena = ocjeneWithVals.length > 0
+    ? Math.round((ocjeneWithVals.reduce((a, u) => a + (u.ukupnaProsjecna || 0), 0) / ocjeneWithVals.length) * 10) / 10
+    : null;
+
+  const mjesecniPregled = mjeseci.map(m => {
+    const mRecs = svoPrisustvo.filter(p => p.datum.startsWith(m));
+    const mPrisutan = mRecs.filter(p => p.status === "prisutan").length;
+    const mOdsutan = mRecs.filter(p => p.status === "odsutan").length;
+    const mZakasnio = mRecs.filter(p => p.status === "zakasnio").length;
+    const mOpravdan = mRecs.filter(p => p.status === "opravdan").length;
+    return { mjesec: m, prisutan: mPrisutan, odsutan: mOdsutan, zakasnio: mZakasnio, opravdan: mOpravdan, ukupno: mRecs.length, pct: mRecs.length > 0 ? Math.round((mPrisutan / mRecs.length) * 100) : null };
+  });
+
+  const prisustvoPoDatumu = svaDatumi.map(d => {
+    const recs = svoPrisustvo.filter(p => p.datum === d);
+    const perStudent: Record<number, string> = {};
+    recs.forEach(r => { perStudent[r.ucenikId] = r.status; });
+    const prisutanCount = recs.filter(r => r.status === "prisutan").length;
+    return { datum: d, prisutan: prisutanCount, ukupno: recs.length, pct: recs.length > 0 ? Math.round((prisutanCount / recs.length) * 100) : null, perStudent };
+  });
+
+  return { ucenici, ukupnoCasova, svaDatumi, mjesecniPregled, grupaPrisustvoPct, grupaProsjekOcjena, aktivnihProslejSedmice, ukupnoKvizova, ukupnoBodovaGrupa, prosjekBodovaGrupa, prisustvoPoDatumu };
+}
+
 router.get("/grupa/:id/statistika", async (req, res) => {
   try {
     const grupaId = parseInt(req.params.id);
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
-
-    const profili = await db.select().from(ucenikProfiliTable)
-      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
-    if (profili.length === 0) { res.json({ ucenici: [], ukupnoCasova: 0 }); return; }
-
-    const ucenikIds = profili.map(p => p.userId);
-    const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
-      .from(usersTable).where(inArray(usersTable.id, ucenikIds));
-    const userMap = Object.fromEntries(users.map(u => [u.id, u.displayName]));
-
-    const svoPrisustvo = await db.select().from(priustvoTable)
-      .where(eq(priustvoTable.grupaId, grupaId));
-    const sveOcjene = await db.select().from(ocjeneTable)
-      .where(eq(ocjeneTable.grupaId, grupaId));
-    const kvizRezultati = ucenikIds.length > 0
-      ? await db.select().from(kvizRezultatiTable)
-          .where(inArray(kvizRezultatiTable.userId, ucenikIds))
-      : [];
-
-    const uniqueDatumi = new Set(svoPrisustvo.map(p => p.datum));
-    const ukupnoCasova = uniqueDatumi.size;
-
-    const ucenici = ucenikIds.map(uid => {
-      const prisutvoRec = svoPrisustvo.filter(p => p.ucenikId === uid);
-      const prisutanCount = prisutvoRec.filter(p => p.status === "prisutan").length;
-      const ukupnoPrisustvo = prisutvoRec.length;
-      const prisustvoPct = ukupnoPrisustvo > 0 ? Math.round((prisutanCount / ukupnoPrisustvo) * 100) : null;
-
-      const ocjeneRec = sveOcjene.filter(o => o.ucenikId === uid);
-      const kategorije: Record<string, number[]> = {};
-      for (const o of ocjeneRec) {
-        if (!kategorije[o.kategorija]) kategorije[o.kategorija] = [];
-        kategorije[o.kategorija].push(o.ocjena);
-      }
-      const prosjecneOcjene: Record<string, number> = {};
-      for (const [kat, vals] of Object.entries(kategorije)) {
-        prosjecneOcjene[kat] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
-      }
-      const ukupnaProsjecna = ocjeneRec.length > 0
-        ? Math.round((ocjeneRec.reduce((a, o) => a + o.ocjena, 0) / ocjeneRec.length) * 10) / 10
-        : null;
-
-      const kvizovi = kvizRezultati.filter(k => k.userId === uid);
-      const kvizCount = kvizovi.length;
-      const kvizProsjecniProcenat = kvizCount > 0
-        ? Math.round(kvizovi.reduce((a, k) => a + k.procenat, 0) / kvizCount)
-        : null;
-      const ukupnoBodova = kvizovi.reduce((a, k) => a + (k.bodovi || 0), 0);
-
-      const sedmicaDatum = new Date();
-      sedmicaDatum.setDate(sedmicaDatum.getDate() - 7);
-      const sedmicaStr = sedmicaDatum.toISOString().split("T")[0];
-      const kvizovaProslejSedmice = kvizovi.filter(k => k.completedAt && new Date(k.completedAt).toISOString().split("T")[0] >= sedmicaStr).length;
-
-      return {
-        id: uid,
-        ime: userMap[uid] || "Nepoznat",
-        prisustvoPct,
-        prisutanCount,
-        ukupnoPrisustvo,
-        prosjecneOcjene,
-        ukupnaProsjecna,
-        brojOcjena: ocjeneRec.length,
-        kvizCount,
-        kvizProsjecniProcenat,
-        ukupnoBodova,
-        kvizovaProslejSedmice,
-      };
-    });
-
-    const sedmicaDatum = new Date();
-    sedmicaDatum.setDate(sedmicaDatum.getDate() - 7);
-    const sedmicaStr = sedmicaDatum.toISOString().split("T")[0];
-    const aktivnihProslejSedmice = ucenici.filter(u => u.kvizovaProslejSedmice > 0).length;
-
-    const ukupnoKvizova = ucenici.reduce((a, u) => a + u.kvizCount, 0);
-    const ukupnoBodovaGrupa = ucenici.reduce((a, u) => a + u.ukupnoBodova, 0);
-    const prosjekBodovaGrupa = ucenici.length > 0 ? Math.round(ukupnoBodovaGrupa / ucenici.length) : 0;
-
-    res.json({ ucenici, ukupnoCasova, aktivnihProslejSedmice, ukupnoKvizova, ukupnoBodovaGrupa, prosjekBodovaGrupa });
+    const stats = await getGrupaFullStats(grupaId);
+    res.json(stats);
   } catch (err) {
     console.error("Statistika error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+function sanitizeExcelCell(val: any): any {
+  if (typeof val !== "string") return val;
+  if (/^[=+\-@\t\r]/.test(val)) return "'" + val;
+  return val;
+}
+
+router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
+  try {
+    const XLSX = await import("xlsx");
+    const grupaId = parseInt(req.params.id);
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const stats = await getGrupaFullStats(grupaId);
+    const wb = XLSX.utils.book_new();
+
+    const prisustvoRows: any[] = [];
+    const headerRow: string[] = ["Učenik", ...stats.svaDatumi, "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Ukupno", "%"];
+    prisustvoRows.push(headerRow);
+    for (const u of stats.ucenici) {
+      const row: any[] = [sanitizeExcelCell(u.ime)];
+      for (const d of stats.svaDatumi) {
+        const st = u.prisustvoPoDatumu[d];
+        row.push(st === "prisutan" ? "P" : st === "odsutan" ? "O" : st === "zakasnio" ? "Z" : st === "opravdan" ? "OP" : "");
+      }
+      row.push(u.prisutanCount, u.odsutanCount, u.zakasnioCount, u.opravdanCount, u.ukupnoPrisustvo, u.prisustvoPct !== null ? `${u.prisustvoPct}%` : "—");
+      prisustvoRows.push(row);
+    }
+    if (stats.prisustvoPoDatumu.length > 0) {
+      const totalRow: any[] = ["UKUPNO GRUPA"];
+      for (const d of stats.prisustvoPoDatumu) {
+        totalRow.push(`${d.prisutan}/${d.ukupno}`);
+      }
+      const tp = stats.ucenici.reduce((a, u) => a + u.prisutanCount, 0);
+      const to = stats.ucenici.reduce((a, u) => a + u.odsutanCount, 0);
+      const tz = stats.ucenici.reduce((a, u) => a + u.zakasnioCount, 0);
+      const top = stats.ucenici.reduce((a, u) => a + u.opravdanCount, 0);
+      const tt = stats.ucenici.reduce((a, u) => a + u.ukupnoPrisustvo, 0);
+      totalRow.push(tp, to, tz, top, tt, stats.grupaPrisustvoPct !== null ? `${stats.grupaPrisustvoPct}%` : "—");
+      prisustvoRows.push(totalRow);
+    }
+    const ws1 = XLSX.utils.aoa_to_sheet(prisustvoRows);
+    ws1["!cols"] = [{ wch: 20 }, ...stats.svaDatumi.map(() => ({ wch: 12 })), { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 6 }];
+    XLSX.utils.book_append_sheet(wb, ws1, "Prisustvo");
+
+    const mjesecniRows: any[] = [["Mjesec", "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Ukupno", "%"]];
+    const MJESEC_NAZIVI: Record<string, string> = { "01": "Januar", "02": "Februar", "03": "Mart", "04": "April", "05": "Maj", "06": "Juni", "07": "Juli", "08": "August", "09": "Septembar", "10": "Oktobar", "11": "Novembar", "12": "Decembar" };
+    for (const m of stats.mjesecniPregled) {
+      const parts = m.mjesec.split("-");
+      const naziv = `${MJESEC_NAZIVI[parts[1]] || parts[1]} ${parts[0]}`;
+      mjesecniRows.push([naziv, m.prisutan, m.odsutan, m.zakasnio, m.opravdan, m.ukupno, m.pct !== null ? `${m.pct}%` : "—"]);
+    }
+    const ws1b = XLSX.utils.aoa_to_sheet(mjesecniRows);
+    ws1b["!cols"] = [{ wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 6 }];
+    XLSX.utils.book_append_sheet(wb, ws1b, "Prisustvo po mjesecu");
+
+    const sveOcjeneExcel = await db.select().from(ocjeneTable).where(eq(ocjeneTable.grupaId, grupaId));
+    const activeIds = new Set(stats.ucenici.map(u => u.id));
+    const ocjeneRows: any[] = [["Učenik", "Datum", "Kategorija", "Ocjena", "Lekcija", "Napomena"]];
+    for (const u of stats.ucenici) {
+      const uocjene = sveOcjeneExcel.filter(o => o.ucenikId === u.id && activeIds.has(o.ucenikId)).sort((a, b) => b.datum.localeCompare(a.datum));
+      for (const o of uocjene) {
+        ocjeneRows.push([sanitizeExcelCell(u.ime), o.datum, sanitizeExcelCell(o.kategorija), o.ocjena, sanitizeExcelCell(o.lekcijaNaziv || ""), sanitizeExcelCell(o.napomena || "")]);
+      }
+    }
+    const ws2 = XLSX.utils.aoa_to_sheet(ocjeneRows);
+    ws2["!cols"] = [{ wch: 20 }, { wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 30 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, ws2, "Ocjene");
+
+    const summaryRows: any[] = [
+      ["IZVJEŠTAJ GRUPE", sanitizeExcelCell((grupa as any).naziv || "")],
+      [],
+      ["Ukupno učenika", stats.ucenici.length],
+      ["Ukupno časova", stats.ukupnoCasova],
+      ["Prisustvo grupe (%)", stats.grupaPrisustvoPct !== null ? `${stats.grupaPrisustvoPct}%` : "—"],
+      ["Prosječna ocjena grupe", stats.grupaProsjekOcjena || "—"],
+      ["Ukupno kvizova", stats.ukupnoKvizova],
+      ["Ukupno bodova", stats.ukupnoBodovaGrupa],
+      [],
+      ["Učenik", "Prisustvo %", "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Prosj. ocjena", "Br. ocjena", "Kvizova", "Bodova"],
+    ];
+    for (const u of stats.ucenici) {
+      summaryRows.push([
+        sanitizeExcelCell(u.ime),
+        u.prisustvoPct !== null ? `${u.prisustvoPct}%` : "—",
+        u.prisutanCount,
+        u.odsutanCount,
+        u.zakasnioCount,
+        u.opravdanCount,
+        u.ukupnaProsjecna || "—",
+        u.brojOcjena,
+        u.kvizCount,
+        u.ukupnoBodova,
+      ]);
+    }
+    const ws3 = XLSX.utils.aoa_to_sheet(summaryRows);
+    ws3["!cols"] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws3, "Zbirni izvještaj");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const safeNaziv = ((grupa as any).naziv || "grupa").replace(/[^a-zA-Z0-9\u00C0-\u024F\u0100-\u017F_\- ]/g, "").trim().substring(0, 50);
+    const filename = `izvjestaj_${safeNaziv}_${new Date().toISOString().split("T")[0]}.xlsx`;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(Buffer.from(buf));
+  } catch (err) {
+    console.error("Excel export error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

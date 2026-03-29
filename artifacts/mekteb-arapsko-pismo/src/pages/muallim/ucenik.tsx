@@ -132,9 +132,33 @@ export default function UcenikPage() {
   }
 
   const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
+  const odsutnih = prisustvo.filter(p => p.status === "odsutan").length;
+  const zakasnio = prisustvo.filter(p => p.status === "zakasnio").length;
+  const opravdano = prisustvo.filter(p => p.status === "opravdan").length;
+  const prisustvoPct = prisustvo.length > 0 ? Math.round((prisutnih / prisustvo.length) * 100) : null;
   const prosjecnaOcjena = ocjene.length ? (ocjene.reduce((s, o) => s + o.ocjena, 0) / ocjene.length).toFixed(2) : null;
   const ukupnoBodova = kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
   const kvizProsjek = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : null;
+
+  const mjesecniPrisustvo = (() => {
+    const map: Record<string, { prisutan: number; total: number }> = {};
+    prisustvo.forEach(p => {
+      const m = p.datum.substring(0, 7);
+      if (!map[m]) map[m] = { prisutan: 0, total: 0 };
+      map[m].total++;
+      if (p.status === "prisutan") map[m].prisutan++;
+    });
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([mjesec, v]) => ({
+      mjesec,
+      ...v,
+      pct: Math.round((v.prisutan / v.total) * 100),
+    }));
+  })();
+
+  const MJESEC_NAZIVI: Record<string, string> = {
+    "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "Maj", "06": "Jun",
+    "07": "Jul", "08": "Aug", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dec",
+  };
 
   return (
     <Layout>
@@ -159,20 +183,51 @@ export default function UcenikPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-              {[
-                { label: "Časova prisustvo", value: prisustvo.length || "—", icon: CalendarCheck, color: "text-primary" },
-                { label: "Prisutnih", value: prisustvo.length ? `${prisutnih}/${prisustvo.length}` : "—", icon: CalendarCheck, color: "text-emerald-600" },
-                { label: "Prosj. ocjena", value: prosjecnaOcjena || "—", icon: Star, color: "text-amber-600" },
-                { label: "Kvizova", value: kvizRezultati.length || "—", icon: ClipboardList, color: "text-blue-600" },
-                { label: "Ukupno bodova", value: ukupnoBodova || "—", icon: Award, color: "text-amber-600" },
-              ].map(stat => (
-                <div key={stat.label} className="bg-white border border-border/50 rounded-2xl p-4">
-                  <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
-                  <div className={`text-xl font-extrabold ${stat.color}`}>{stat.value}</div>
-                  <div className="text-xs text-muted-foreground font-medium mt-0.5">{stat.label}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+              <div className={`border border-border/50 rounded-2xl p-4 ${prisustvoPct !== null && prisustvoPct >= 80 ? "bg-emerald-50" : prisustvoPct !== null && prisustvoPct >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
+                <CalendarCheck className="w-5 h-5 text-foreground/60 mb-2" />
+                <div className={`text-2xl font-extrabold ${prisustvoPct !== null && prisustvoPct >= 80 ? "text-emerald-600" : prisustvoPct !== null && prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                  {prisustvoPct !== null ? `${prisustvoPct}%` : "—"}
                 </div>
-              ))}
+                <div className="text-sm text-muted-foreground font-medium">Prisustvo</div>
+                {prisustvo.length > 0 && (
+                  <div className="flex gap-2 mt-2 text-xs font-medium flex-wrap">
+                    <span className="text-emerald-600">{prisutnih}P</span>
+                    <span className="text-red-600">{odsutnih}O</span>
+                    <span className="text-amber-600">{zakasnio}Z</span>
+                    <span className="text-blue-600">{opravdano}OP</span>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white border border-border/50 rounded-2xl p-4">
+                <Star className="w-5 h-5 text-amber-500 mb-2" />
+                <div className="text-2xl font-extrabold text-amber-600">{prosjecnaOcjena || "—"}</div>
+                <div className="text-sm text-muted-foreground font-medium">Prosj. ocjena</div>
+                {ocjene.length > 0 && <div className="text-xs text-muted-foreground mt-1">{ocjene.length} ocjena</div>}
+              </div>
+              <div className="bg-white border border-border/50 rounded-2xl p-4">
+                <ClipboardList className="w-5 h-5 text-blue-600 mb-2" />
+                <div className="text-2xl font-extrabold text-blue-600">{kvizRezultati.length || "—"}</div>
+                <div className="text-sm text-muted-foreground font-medium">Kvizova</div>
+                {kvizProsjek !== null && <div className="text-xs text-muted-foreground mt-1">Prosjek: {kvizProsjek}%</div>}
+              </div>
+              <div className="bg-white border border-border/50 rounded-2xl p-4">
+                <Award className="w-5 h-5 text-amber-600 mb-2" />
+                <div className="text-2xl font-extrabold text-amber-600">{ukupnoBodova || "—"}</div>
+                <div className="text-sm text-muted-foreground font-medium">Bodova</div>
+              </div>
+              <div className="bg-white border border-border/50 rounded-2xl p-4 col-span-2">
+                <CalendarCheck className="w-5 h-5 text-primary mb-2" />
+                <div className="text-lg font-extrabold text-foreground">{prisustvo.length} časova evidentirano</div>
+                {prisustvo.length > 0 && (
+                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mt-2 flex">
+                    {prisutnih > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(prisutnih / prisustvo.length) * 100}%` }} title={`Prisutan: ${prisutnih}`} />}
+                    {zakasnio > 0 && <div className="bg-amber-400 h-full" style={{ width: `${(zakasnio / prisustvo.length) * 100}%` }} title={`Zakasnio: ${zakasnio}`} />}
+                    {opravdano > 0 && <div className="bg-blue-400 h-full" style={{ width: `${(opravdano / prisustvo.length) * 100}%` }} title={`Opravdan: ${opravdano}`} />}
+                    {odsutnih > 0 && <div className="bg-red-500 h-full" style={{ width: `${(odsutnih / prisustvo.length) * 100}%` }} title={`Odsutan: ${odsutnih}`} />}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -299,23 +354,50 @@ export default function UcenikPage() {
                 )}
               </div>
 
-              {/* Prisustvo */}
-              <div className="bg-white border border-border/50 rounded-2xl p-5">
+              {/* Prisustvo — mjesečno + detalji */}
+              <div className="bg-white border border-border/50 rounded-2xl p-5 md:col-span-2 lg:col-span-2">
                 <h2 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                  <CalendarCheck className="w-4 h-4 text-primary" /> Prisustvo
+                  <CalendarCheck className="w-4 h-4 text-primary" /> Prisustvo — pregled
                 </h2>
                 {prisustvo.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nema evidencije prisustva</p>
                 ) : (
-                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                    {[...prisustvo].reverse().map(p => (
-                      <div key={p.id} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{p.datum}</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[p.status] || "bg-gray-100 text-gray-700"}`}>
-                          {p.status}
-                        </span>
+                  <div className="space-y-4">
+                    {mjesecniPrisustvo.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Po mjesecima</h3>
+                        {mjesecniPrisustvo.map(m => {
+                          const parts = m.mjesec.split("-");
+                          const naziv = `${MJESEC_NAZIVI[parts[1]] || parts[1]} ${parts[0]}`;
+                          return (
+                            <div key={m.mjesec} className="flex items-center gap-3">
+                              <span className="w-20 text-sm font-medium text-foreground">{naziv}</span>
+                              <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden relative">
+                                <div className={`h-full rounded-full ${m.pct >= 80 ? "bg-emerald-500" : m.pct >= 50 ? "bg-amber-500" : "bg-red-500"}`}
+                                  style={{ width: `${m.pct}%` }} />
+                              </div>
+                              <span className={`w-16 text-right text-sm font-bold ${m.pct >= 80 ? "text-emerald-600" : m.pct >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                                {m.pct}% <span className="text-xs text-muted-foreground font-normal">({m.prisutan}/{m.total})</span>
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    )}
+
+                    <div>
+                      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Svi datumi</h3>
+                      <div className="space-y-1 max-h-52 overflow-y-auto">
+                        {[...prisustvo].reverse().map(p => (
+                          <div key={p.id} className="flex items-center justify-between text-sm py-1 border-b border-border/20 last:border-0">
+                            <span className="text-foreground font-medium">{p.datum}</span>
+                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${STATUS_COLORS[p.status] || "bg-gray-100 text-gray-700"}`}>
+                              {p.status === "prisutan" ? "Prisutan" : p.status === "odsutan" ? "Odsutan" : p.status === "zakasnio" ? "Zakasnio" : p.status === "opravdan" ? "Opravdan" : p.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
