@@ -38,7 +38,7 @@ artifacts/
 │       ├── ucenik.ts       # Učenik panel (profil, kalendar, plan lekcija)
 │       ├── poruke.ts       # Poruke (messaging with role-based auth)
 │       ├── roditelj.ts     # Roditelj panel (djeca, prisustvo, ocjene)
-│       └── admin.ts        # Admin rute (korisnici CRUD, muallim-profili, licence edit, mektebi, statistike)
+│       └── admin.ts        # Admin rute (korisnici CRUD, muallim-profili, licence edit, mektebi, statistike, image upload)
 └── mekteb-arapsko-pismo/   # React frontend
     └── src/pages/
         ├── home.tsx
@@ -63,9 +63,20 @@ lib/
     ├── ednevnik.ts     # prisustvo, ocjene, poruke
     ├── content.ts      # ilmihal_lekcije, kvizovi, knjige, korisnik_napredak, kviz_rezultati, posjete
     └── (kviz_rezultati = per-attempt tracking; posjete = visitor geo tracking)
+uploads/                    # Uploadovane slike (iz admin WYSIWYG editora)
 scripts/src/
 └── import-content.ts   # Import iz edu ZIP fajla (ilmihal, kvizovi, knjige)
 ```
+
+## Admin WYSIWYG Editor
+
+- **TipTap** vizuelni editor za lekcije (ilmihal-lekcija.tsx)
+- Dva moda: vizuelni (WYSIWYG) i HTML kod
+- Upload slika: `POST /api/admin/upload` (multer, max 10MB, jpg/png/gif/webp)
+- Statički serving: `/uploads/` servira uploadovane slike
+- Custom blokovi: zeleni box (ajet/hadis), žuti box (ZAPAMTI)
+- Formatiranje: bold, italic, underline, headings, liste, poravnanje, highlight, slike
+- Komponenta: `src/components/wysiwyg-editor.tsx`
 
 ## Baza podataka
 

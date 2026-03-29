@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -7,11 +7,12 @@ import { useAuth } from "@/context/auth";
 import {
   ArrowLeft, Volume2, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
-  HelpCircle, Sparkles, Trophy, FileEdit, Save, X, Loader2
+  HelpCircle, Sparkles, Trophy, FileEdit, Save, X, Loader2, Code
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { WysiwygEditor } from "@/components/wysiwyg-editor";
 
 interface LekcijaKvizPitanje {
   question: string;
@@ -140,6 +141,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   const [html, setHtml] = useState(lekcija.contentHtml);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [mode, setMode] = useState<"visual" | "html">("visual");
 
   const handleChange = (val: string) => {
     setHtml(val);
@@ -168,7 +170,6 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      {/* Mobile guard */}
       <div className="flex md:hidden flex-col items-center justify-center h-full gap-4 p-8 text-center">
         <FileEdit className="w-12 h-12 text-amber-500" />
         <h3 className="font-extrabold text-lg text-foreground">Editor dostupan samo na desktopu</h3>
@@ -176,18 +177,28 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
         <Button variant="outline" onClick={onClose} className="rounded-xl">Zatvori</Button>
       </div>
 
-      {/* Desktop split panel */}
       <div className="hidden md:flex flex-col h-full">
-        {/* Top bar */}
         <div className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border bg-white shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <FileEdit className="w-5 h-5 text-amber-600 shrink-0" />
             <div className="min-w-0">
               <h3 className="font-extrabold text-sm text-foreground truncate">Uredi sadržaj: {lekcija.naslov}</h3>
-              <p className="text-xs text-muted-foreground">Lijevo: HTML kod — Desno: Vizuelni pregled (ažurira se u realnom vremenu)</p>
+              <p className="text-xs text-muted-foreground">
+                {mode === "visual" ? "Vizuelni editor — klikni na tekst i uredi kao u Wordu" : "HTML kod — za napredne izmjene"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setMode(mode === "visual" ? "html" : "visual")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                mode === "html" ? "bg-zinc-800 text-green-400" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+              title="Prebaci između vizuelnog i HTML editora"
+            >
+              <Code className="w-3.5 h-3.5" />
+              {mode === "html" ? "HTML" : "Kod"}
+            </button>
             <button
               onClick={handleClose}
               className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -198,55 +209,59 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
           </div>
         </div>
 
-        {/* Split panels */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left: HTML editor */}
-          <div className="w-1/2 flex flex-col border-r border-border">
-            <div className="px-4 py-2 bg-zinc-800 text-zinc-300 text-xs font-mono font-bold flex items-center gap-2 shrink-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block" />
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
-              <span className="ml-2">content_html</span>
+          {mode === "visual" ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <WysiwygEditor content={html} onChange={handleChange} token={token} />
             </div>
-            <textarea
-              value={html}
-              onChange={e => handleChange(e.target.value)}
-              className="flex-1 bg-zinc-900 text-green-300 font-mono text-xs leading-relaxed p-4 resize-none focus:outline-none"
-              spellCheck={false}
-              autoCapitalize="none"
-              autoCorrect="off"
-            />
-          </div>
-
-          {/* Right: live preview */}
-          <div className="w-1/2 flex flex-col overflow-hidden">
-            <div className="px-4 py-2 bg-muted/60 text-xs font-bold text-muted-foreground border-b border-border shrink-0 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-teal-500 inline-block animate-pulse" />
-              Vizuelni pregled (sve sekcije razvijene)
-            </div>
-            <div className="flex-1 overflow-y-auto p-5 bg-white">
-              {/* Inject CSS to reveal all hidden sections and hide accordion controls */}
-              <style>{`
-                .editor-preview .lesson-section-btn,
-                .editor-preview .hero-box,
-                .editor-preview h1:first-child,
-                .editor-preview .quiz-container,
-                .editor-preview .audio-controls { display: none !important; }
-                .editor-preview .lesson-content { display: block !important; }
-                .editor-preview .lesson-accordion { margin-bottom: 1.5rem; border-left: 3px solid #e2e8f0; padding-left: 1rem; }
-                .editor-preview .arabic-card { background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 0.75rem 1rem; border-radius: 0.5rem; margin: 0.75rem 0; }
-                .editor-preview .lesson-text { margin-bottom: 0.75rem; line-height: 1.75; font-size: 0.9rem; }
-                .editor-preview strong { font-weight: 700; }
-              `}</style>
-              <div
-                className="editor-preview ilmihal-content"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="w-1/2 flex flex-col border-r border-border">
+                <div className="px-4 py-2 bg-zinc-800 text-zinc-300 text-xs font-mono font-bold flex items-center gap-2 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
+                  <span className="ml-2">content_html</span>
+                </div>
+                <textarea
+                  value={html}
+                  onChange={e => handleChange(e.target.value)}
+                  className="flex-1 bg-zinc-900 text-green-300 font-mono text-xs leading-relaxed p-4 resize-none focus:outline-none"
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+              </div>
+              <div className="w-1/2 flex flex-col overflow-hidden">
+                <div className="px-4 py-2 bg-muted/60 text-xs font-bold text-muted-foreground border-b border-border shrink-0 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-teal-500 inline-block animate-pulse" />
+                  Vizuelni pregled
+                </div>
+                <div className="flex-1 overflow-y-auto p-5 bg-white">
+                  <style>{`
+                    .editor-preview details { display: block; }
+                    .editor-preview details > * { display: block; }
+                    .editor-preview summary { display: none; }
+                    .editor-preview .arabic-card { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-left: 4px solid #10b981; padding: 0.75rem 1rem; border-radius: 0.75rem; margin: 0.75rem 0; }
+                    .editor-preview .info-box { background: linear-gradient(135deg, #fefce8, #fef9c3); border-left: 4px solid #eab308; padding: 0.75rem 1rem; border-radius: 0.75rem; margin: 0.75rem 0; }
+                    .editor-preview strong { font-weight: 700; }
+                    .editor-preview p { margin: 0.5rem 0; line-height: 1.75; }
+                    .editor-preview ul, .editor-preview ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+                    .editor-preview li { margin: 0.25rem 0; }
+                    .editor-preview h3 { font-size: 1.2rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+                    .editor-preview h4 { font-size: 1.05rem; font-weight: 700; margin: 0.75rem 0 0.5rem; }
+                    .editor-preview img { max-width: 100%; border-radius: 0.75rem; margin: 0.75rem 0; }
+                  `}</style>
+                  <div
+                    className="editor-preview ilmihal-content"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Bottom bar — Sačuvaj */}
         <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-border bg-white shrink-0">
           {isDirty && (
             <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">

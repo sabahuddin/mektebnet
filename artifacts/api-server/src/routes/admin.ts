@@ -1,5 +1,8 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -28,6 +31,41 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("admin"));
+
+const __adminDirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.resolve(__adminDirname, "../../../../uploads");
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+    cb(null, name);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+    if (allowed.test(path.extname(file.originalname))) cb(null, true);
+    else cb(new Error("Dozvoljeni su samo formati slika (jpg, png, gif, webp)"));
+  },
+});
+
+router.post("/upload", (req, res) => {
+  upload.single("image")(req, res, (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? (err.code === "LIMIT_FILE_SIZE" ? "Fajl prevelik (max 10MB)" : err.message)
+        : err.message || "Greška pri uploadu";
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+});
 
 // GET /api/admin/korisnici
 router.get("/korisnici", async (req, res) => {

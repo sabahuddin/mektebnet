@@ -36,6 +36,9 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
+const uploadsDir = path.resolve(__dirname, "../../../uploads");
+app.use("/uploads", express.static(uploadsDir));
+
 app.use(trackVisit);
 
 if (process.env["SERVE_STATIC"] === "true") {
