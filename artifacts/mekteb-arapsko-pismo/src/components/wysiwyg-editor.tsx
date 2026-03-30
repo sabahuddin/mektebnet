@@ -6,6 +6,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
+import { Node, mergeAttributes } from "@tiptap/core";
 import { getApiBase } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -16,6 +17,34 @@ import {
   Quote, Minus, Pilcrow,
   BookOpen, AlertTriangle, ChevronDown, Plus, Trash2, GripVertical
 } from "lucide-react";
+
+function createCustomBlock(name: string, cssClass: string) {
+  return Node.create({
+    name,
+    group: "block",
+    content: "block+",
+    defining: true,
+    parseHTML() {
+      return [{ tag: `div.${cssClass}` }];
+    },
+    renderHTML({ HTMLAttributes }) {
+      return ["div", mergeAttributes(HTMLAttributes, { class: cssClass }), 0];
+    },
+    addCommands() {
+      return {
+        [`set${name.charAt(0).toUpperCase() + name.slice(1)}`]: () => ({ commands }: any) => {
+          return commands.wrapIn(this.name);
+        },
+        [`toggle${name.charAt(0).toUpperCase() + name.slice(1)}`]: () => ({ commands }: any) => {
+          return commands.toggleWrap(this.name);
+        },
+      };
+    },
+  });
+}
+
+const ArabicCard = createCustomBlock("arabicCard", "arabic-card");
+const InfoBox = createCustomBlock("infoBox", "info-box");
 
 interface ParsedSection {
   id: string;
@@ -176,6 +205,8 @@ function SectionEditor({ section, token, onContentChange }: {
       Underline,
       Highlight.configure({ multicolor: true }),
       Placeholder.configure({ placeholder: "Piši sadržaj sekcije..." }),
+      ArabicCard,
+      InfoBox,
     ],
     content: section.contentHtml,
     onUpdate: ({ editor: ed }) => {
@@ -219,9 +250,12 @@ function SectionEditor({ section, token, onContentChange }: {
 
   const insertCustomBlock = useCallback((type: "arabic-card" | "info-box") => {
     if (!editor) return;
+    const nodeName = type === "arabic-card" ? "arabicCard" : "infoBox";
     const label = type === "arabic-card" ? "Ajet / Hadis tekst ovdje..." : "ZAPAMTI: Važna informacija ovdje...";
-    const blockHtml = `<div class="${type}"><p>${label}</p></div><p></p>`;
-    editor.chain().focus().insertContent(blockHtml).run();
+    editor.chain().focus().insertContent({
+      type: nodeName,
+      content: [{ type: "paragraph", content: [{ type: "text", text: label }] }],
+    }).insertContent({ type: "paragraph" }).run();
   }, [editor]);
 
   if (!editor) return null;
