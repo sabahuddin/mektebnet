@@ -251,11 +251,16 @@ function SectionEditor({ section, token, onContentChange }: {
   const insertCustomBlock = useCallback((type: "arabic-card" | "info-box") => {
     if (!editor) return;
     const nodeName = type === "arabic-card" ? "arabicCard" : "infoBox";
-    const label = type === "arabic-card" ? "Ajet / Hadis tekst ovdje..." : "ZAPAMTI: Važna informacija ovdje...";
-    editor.chain().focus().insertContent({
-      type: nodeName,
-      content: [{ type: "paragraph", content: [{ type: "text", text: label }] }],
-    }).insertContent({ type: "paragraph" }).run();
+    const { from, to } = editor.state.selection;
+    const hasSelection = from !== to;
+    if (hasSelection) {
+      editor.chain().focus().wrapIn(nodeName).run();
+    } else {
+      editor.chain().focus().insertContent({
+        type: nodeName,
+        content: [{ type: "paragraph" }],
+      }).run();
+    }
   }, [editor]);
 
   if (!editor) return null;
@@ -312,10 +317,10 @@ function SectionEditor({ section, token, onContentChange }: {
         <MenuButton onClick={() => fileInputRef.current?.click()} title="Slika">
           <ImageIcon className="w-3.5 h-3.5" />
         </MenuButton>
-        <MenuButton onClick={() => insertCustomBlock("arabic-card")} title="Zeleni box (ajet/hadis)">
+        <MenuButton onClick={() => insertCustomBlock("arabic-card")} title="Zeleni box — označi tekst pa klikni">
           <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
         </MenuButton>
-        <MenuButton onClick={() => insertCustomBlock("info-box")} title="Žuti box (ZAPAMTI)">
+        <MenuButton onClick={() => insertCustomBlock("info-box")} title="Žuti box (ZAPAMTI) — označi tekst pa klikni">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
         </MenuButton>
         <Separator />
