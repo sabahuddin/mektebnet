@@ -7,6 +7,7 @@ import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Node, mergeAttributes } from "@tiptap/core";
+import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { getApiBase } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -15,7 +16,7 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Image as ImageIcon, Highlighter, Undo2, Redo2,
   Quote, Pilcrow,
-  BookOpen, AlertTriangle
+  BookOpen, AlertTriangle, TableIcon
 } from "lucide-react";
 
 function createCustomBlock(name: string, cssClass: string) {
@@ -35,6 +36,7 @@ function createCustomBlock(name: string, cssClass: string) {
 
 const ArabicCard = createCustomBlock("arabicCard", "arabic-card");
 const InfoBox = createCustomBlock("infoBox", "info-box");
+const InfoCard = createCustomBlock("infoCard", "info-card");
 
 interface ParsedSection {
   id: string;
@@ -171,8 +173,13 @@ const editorExtensions = [
   Underline,
   Highlight.configure({ multicolor: true }),
   Placeholder.configure({ placeholder: "Piši sadržaj sekcije..." }),
+  Table.configure({ resizable: true }),
+  TableRow,
+  TableCell,
+  TableHeader,
   ArabicCard,
   InfoBox,
+  InfoCard,
 ];
 
 export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) {
@@ -262,9 +269,10 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     e.target.value = "";
   }, [handleImageUpload]);
 
-  const insertCustomBlock = useCallback((type: "arabic-card" | "info-box") => {
+  const insertCustomBlock = useCallback((type: "arabic-card" | "info-box" | "info-card") => {
     if (!editor) return;
-    const nodeName = type === "arabic-card" ? "arabicCard" : "infoBox";
+    const nodeMap: Record<string, string> = { "arabic-card": "arabicCard", "info-box": "infoBox", "info-card": "infoCard" };
+    const nodeName = nodeMap[type];
     const { from, to } = editor.state.selection;
     if (from !== to) {
       editor.chain().focus().wrapIn(nodeName).run();
@@ -274,6 +282,11 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         content: [{ type: "paragraph" }],
       }).run();
     }
+  }, [editor]);
+
+  const insertTable = useCallback(() => {
+    if (!editor) return;
+    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: false }).run();
   }, [editor]);
 
   if (!editor) return null;
@@ -358,6 +371,12 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         <MenuButton onClick={() => insertCustomBlock("info-box")} title="Žuti box — označi tekst pa klikni">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
         </MenuButton>
+        <MenuButton onClick={() => insertCustomBlock("info-card")} title="Crveni isprekidani box (ZAPAMTI)">
+          <AlertTriangle className="w-4 h-4 text-red-500" />
+        </MenuButton>
+        <MenuButton onClick={insertTable} title="Umetni tabelu 3x3">
+          <TableIcon className="w-4 h-4" />
+        </MenuButton>
         <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
           <Undo2 className="w-4 h-4" />
@@ -406,6 +425,28 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             padding: 0.75rem 1rem;
             border-radius: 0.75rem;
             margin: 0.75rem 0;
+          }
+          .wysiwyg-editor-content .ProseMirror div.info-card {
+            border: 2px dashed #e30a17;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin: 0.75rem 0;
+          }
+          .wysiwyg-editor-content .ProseMirror table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 0.75rem 0;
+          }
+          .wysiwyg-editor-content .ProseMirror td,
+          .wysiwyg-editor-content .ProseMirror th {
+            border: 1px solid #145234;
+            padding: 5px 10px;
+            min-width: 80px;
+            vertical-align: top;
+          }
+          .wysiwyg-editor-content .ProseMirror th {
+            background: #f0fdf4;
+            font-weight: 700;
           }
         `}</style>
         <EditorContent editor={editor} />
