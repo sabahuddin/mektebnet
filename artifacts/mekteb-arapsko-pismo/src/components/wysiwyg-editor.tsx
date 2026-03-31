@@ -189,10 +189,9 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     onUpdate: ({ editor: ed }) => {
       const html = ed.getHTML();
       if (parsed.hasAccordions) {
-        sectionContentsRef.current[activeIdx] = html;
-      } else {
-        onChange(html);
+        sectionContentsRef.current[activeIdxRef.current] = html;
       }
+      onChange(html);
     },
     editorProps: {
       attributes: {
