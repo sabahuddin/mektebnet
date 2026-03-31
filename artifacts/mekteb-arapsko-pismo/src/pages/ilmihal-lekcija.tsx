@@ -142,11 +142,20 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [mode, setMode] = useState<"visual" | "html">("visual");
+  const dirtyRef = useRef(false);
 
   const handleChange = (val: string) => {
     setHtml(val);
     setIsDirty(true);
+    dirtyRef.current = true;
   };
+
+  const markDirty = useCallback(() => {
+    if (!dirtyRef.current) {
+      dirtyRef.current = true;
+      setIsDirty(true);
+    }
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -216,7 +225,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
         <div className="flex-1 flex overflow-hidden">
           {mode === "visual" ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <WysiwygEditor content={html} onChange={() => setIsDirty(true)} token={token} />
+              <WysiwygEditor content={html} onChange={markDirty} token={token} />
             </div>
           ) : (
             <>
