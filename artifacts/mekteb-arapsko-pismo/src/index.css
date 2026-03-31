@@ -250,6 +250,25 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   margin-bottom: 0;
 }
 
+.ilmihal-content blockquote {
+  border-left: 3px solid #0d9488;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #374151;
+  position: relative;
+}
+
+.ilmihal-content blockquote::before {
+  content: "\201C";
+  font-size: 2.5rem;
+  color: #0d9488;
+  position: absolute;
+  left: -0.25rem;
+  top: -0.75rem;
+  line-height: 1;
+}
+
 .ilmihal-content .info-card {
   border: 2px dashed #e30a17;
   border-radius: 0.5rem;
