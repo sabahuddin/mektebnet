@@ -194,7 +194,7 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   font-size: 1.5rem;
 }
 .font-size-2 .ilmihal-content .arabic-card {
-  font-size: 1.6rem;
+  font-size: 1.25rem;
 }
 
 .font-size-3 .ilmihal-content {
@@ -205,7 +205,7 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   font-size: 1.75rem;
 }
 .font-size-3 .ilmihal-content .arabic-card {
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 
 .ilmihal-content ol,
@@ -225,21 +225,9 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   border-radius: 1rem;
   padding: 1rem 1.25rem;
   margin: 1rem 0;
-  font-family: var(--font-arabic);
-  direction: rtl;
-  text-align: right;
-  font-size: 1.45rem;
-  line-height: 2.2;
+  font-size: 1rem;
+  line-height: 1.85;
   color: #166534;
-}
-
-.ilmihal-content .arabic-card .lesson-text {
-  direction: ltr;
-  text-align: left;
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  color: #166534;
-  font-style: italic;
 }
 
 .ilmihal-content .info-box {
