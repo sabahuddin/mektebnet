@@ -238,56 +238,65 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       isActive: false,
     };
     const insertAt = afterIdx + 1;
-    const newSections = [...parsed.sections];
-    newSections.splice(insertAt, 0, newSection);
+    setParsed(prev => {
+      const newSections = [...prev.sections];
+      newSections.splice(insertAt, 0, newSection);
+      return { ...prev, sections: newSections };
+    });
     sectionContentsRef.current.splice(insertAt, 0, "<p></p>");
-    setParsed(prev => ({ ...prev, sections: newSections }));
     switchingRef.current = true;
     activeIdxRef.current = insertAt;
     setActiveIdx(insertAt);
     editor.commands.setContent("<p></p>");
     switchingRef.current = false;
     onChange("");
-  }, [editor, parsed.sections, onChange]);
+  }, [editor, onChange]);
 
   const removeSection = useCallback((idx: number) => {
-    if (!editor || parsed.sections.length <= 1) return;
-    const newSections = parsed.sections.filter((_, i) => i !== idx);
-    sectionContentsRef.current.splice(idx, 1);
-    setParsed(prev => ({ ...prev, sections: newSections }));
-    const newIdx = Math.min(idx, newSections.length - 1);
-    switchingRef.current = true;
-    activeIdxRef.current = newIdx;
-    setActiveIdx(newIdx);
-    editor.commands.setContent(sectionContentsRef.current[newIdx] || "");
-    switchingRef.current = false;
+    if (!editor) return;
+    setParsed(prev => {
+      if (prev.sections.length <= 1) return prev;
+      const newSections = prev.sections.filter((_, i) => i !== idx);
+      sectionContentsRef.current.splice(idx, 1);
+      const newIdx = Math.min(idx, newSections.length - 1);
+      switchingRef.current = true;
+      activeIdxRef.current = newIdx;
+      setActiveIdx(newIdx);
+      editor.commands.setContent(sectionContentsRef.current[newIdx] || "");
+      switchingRef.current = false;
+      return { ...prev, sections: newSections };
+    });
     onChange("");
-  }, [editor, parsed.sections, onChange]);
+  }, [editor, onChange]);
 
   const moveSection = useCallback((idx: number, dir: -1 | 1) => {
     if (!editor) return;
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= parsed.sections.length) return;
-    sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
-    const newSections = [...parsed.sections];
-    [newSections[idx], newSections[newIdx]] = [newSections[newIdx], newSections[idx]];
-    const newContents = [...sectionContentsRef.current];
-    [newContents[idx], newContents[newIdx]] = [newContents[newIdx], newContents[idx]];
-    sectionContentsRef.current = newContents;
-    setParsed(prev => ({ ...prev, sections: newSections }));
-    const focusIdx = activeIdxRef.current === idx ? newIdx : activeIdxRef.current === newIdx ? idx : activeIdxRef.current;
-    activeIdxRef.current = focusIdx;
-    setActiveIdx(focusIdx);
+    setParsed(prev => {
+      const newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= prev.sections.length) return prev;
+      sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+      const newSections = [...prev.sections];
+      [newSections[idx], newSections[newIdx]] = [newSections[newIdx], newSections[idx]];
+      const newContents = [...sectionContentsRef.current];
+      [newContents[idx], newContents[newIdx]] = [newContents[newIdx], newContents[idx]];
+      sectionContentsRef.current = newContents;
+      const focusIdx = activeIdxRef.current === idx ? newIdx : activeIdxRef.current === newIdx ? idx : activeIdxRef.current;
+      activeIdxRef.current = focusIdx;
+      setActiveIdx(focusIdx);
+      return { ...prev, sections: newSections };
+    });
     onChange("");
-  }, [editor, parsed.sections, onChange]);
+  }, [editor, onChange]);
 
   const renameSection = useCallback((idx: number, newTitle: string) => {
-    const newSections = [...parsed.sections];
-    newSections[idx] = { ...newSections[idx], title: newTitle };
-    setParsed(prev => ({ ...prev, sections: newSections }));
+    setParsed(prev => {
+      const newSections = [...prev.sections];
+      newSections[idx] = { ...newSections[idx], title: newTitle };
+      return { ...prev, sections: newSections };
+    });
     setRenamingIdx(null);
     onChange("");
-  }, [parsed.sections, onChange]);
+  }, [onChange]);
 
   const getFullHtml = useCallback((): string => {
     if (!parsed.hasAccordions) return editor?.getHTML() || content;
