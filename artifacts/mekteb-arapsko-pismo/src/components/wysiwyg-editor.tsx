@@ -359,9 +359,13 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     }
   }, [editor]);
 
-  const insertTable = useCallback(() => {
+  const [showTablePicker, setShowTablePicker] = useState(false);
+  const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
+
+  const insertTable = useCallback((rows: number, cols: number) => {
     if (!editor) return;
-    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: false }).run();
+    editor.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).run();
+    setShowTablePicker(false);
   }, [editor]);
 
   if (!editor) return null;
@@ -482,9 +486,32 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         <MenuButton onClick={() => insertCustomBlock("info-card")} title="Crveni isprekidani box (ZAPAMTI)">
           <AlertTriangle className="w-4 h-4 text-red-500" />
         </MenuButton>
-        <MenuButton onClick={insertTable} title="Umetni tabelu 3x3">
-          <TableIcon className="w-4 h-4" />
-        </MenuButton>
+        <div className="relative">
+          <MenuButton onClick={() => setShowTablePicker(!showTablePicker)} title="Umetni tabelu">
+            <TableIcon className="w-4 h-4" />
+          </MenuButton>
+          {showTablePicker && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50">
+              <div className="text-xs text-gray-500 text-center mb-1">{tableHover.r}×{tableHover.c}</div>
+              <div className="grid gap-0.5" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
+                {Array.from({ length: 36 }, (_, i) => {
+                  const r = Math.floor(i / 6) + 1;
+                  const c = (i % 6) + 1;
+                  return (
+                    <div
+                      key={i}
+                      className={`w-5 h-5 border rounded-sm cursor-pointer transition-colors ${
+                        r <= tableHover.r && c <= tableHover.c ? "bg-teal-400 border-teal-500" : "bg-gray-100 border-gray-200"
+                      }`}
+                      onMouseEnter={() => setTableHover({ r, c })}
+                      onClick={() => insertTable(r, c)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
         <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
           <Undo2 className="w-4 h-4" />
