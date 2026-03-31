@@ -187,6 +187,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     extensions: editorExtensions,
     content: parsed.hasAccordions ? parsed.sections[0]?.contentHtml || "" : content,
     onUpdate: ({ editor: ed }) => {
+      if (switchingRef.current) return;
       const html = ed.getHTML();
       if (parsed.hasAccordions) {
         sectionContentsRef.current[activeIdxRef.current] = html;
@@ -202,13 +203,17 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
 
   const activeIdxRef = useRef(activeIdx);
   activeIdxRef.current = activeIdx;
+  const switchingRef = useRef(false);
 
   const switchSection = useCallback((newIdx: number) => {
     if (!editor || !parsed.hasAccordions) return;
     if (newIdx === activeIdxRef.current) return;
+    switchingRef.current = true;
     sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    activeIdxRef.current = newIdx;
     setActiveIdx(newIdx);
     editor.commands.setContent(sectionContentsRef.current[newIdx] || "");
+    switchingRef.current = false;
   }, [editor, parsed.hasAccordions]);
 
   const getFullHtml = useCallback((): string => {
