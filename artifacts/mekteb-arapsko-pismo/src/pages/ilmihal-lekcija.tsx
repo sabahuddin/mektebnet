@@ -151,10 +151,14 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: html }, token);
+      let saveHtml = html;
+      if (mode === "visual" && (window as any).__wysiwygGetFullHtml) {
+        saveHtml = (window as any).__wysiwygGetFullHtml();
+      }
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: saveHtml }, token);
       toast({ title: "Sačuvano! ✓", description: "Sadržaj lekcije uspješno ažuriran" });
       setIsDirty(false);
-      onSaved(html);
+      onSaved(saveHtml);
       onClose();
     } catch {
       toast({ title: "Greška pri čuvanju", description: "Pokušaj ponovo", variant: "destructive" });
@@ -212,7 +216,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
         <div className="flex-1 flex overflow-hidden">
           {mode === "visual" ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <WysiwygEditor content={html} onChange={handleChange} token={token} />
+              <WysiwygEditor content={html} onChange={() => setIsDirty(true)} token={token} />
             </div>
           ) : (
             <>

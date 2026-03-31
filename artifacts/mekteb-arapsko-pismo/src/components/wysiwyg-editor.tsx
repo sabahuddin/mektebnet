@@ -11,11 +11,11 @@ import { getApiBase } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
-  Heading2, Heading3, Heading4, List, ListOrdered,
+  Heading3, Heading4, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight,
   Image as ImageIcon, Highlighter, Undo2, Redo2,
-  Quote, Minus, Pilcrow,
-  BookOpen, AlertTriangle, ChevronDown, Plus, Trash2, GripVertical
+  Quote, Pilcrow,
+  BookOpen, AlertTriangle
 } from "lucide-react";
 
 function createCustomBlock(name: string, cssClass: string) {
@@ -29,16 +29,6 @@ function createCustomBlock(name: string, cssClass: string) {
     },
     renderHTML({ HTMLAttributes }) {
       return ["div", mergeAttributes(HTMLAttributes, { class: cssClass }), 0];
-    },
-    addCommands() {
-      return {
-        [`set${name.charAt(0).toUpperCase() + name.slice(1)}`]: () => ({ commands }: any) => {
-          return commands.wrapIn(this.name);
-        },
-        [`toggle${name.charAt(0).toUpperCase() + name.slice(1)}`]: () => ({ commands }: any) => {
-          return commands.toggleWrap(this.name);
-        },
-      };
     },
   });
 }
@@ -71,28 +61,13 @@ function parseAccordionSections(fullHtml: string): { beforeAccordions: string; s
     beforeAccordions += child.outerHTML;
   }
 
-  let afterAccordions = "";
-  let pastLastAccordion = false;
+  let lastAccIdx = -1;
   for (let i = children.length - 1; i >= 0; i--) {
-    if (children[i].classList.contains("lesson-accordion")) {
-      pastLastAccordion = true;
-      break;
-    }
+    if (children[i].classList.contains("lesson-accordion")) { lastAccIdx = i; break; }
   }
-  if (pastLastAccordion) {
-    let foundLast = false;
-    for (const child of children) {
-      if (foundLast) afterAccordions += child.outerHTML;
-      if (child.classList.contains("lesson-accordion")) foundLast = false;
-    }
-    let lastAccIdx = -1;
-    for (let i = children.length - 1; i >= 0; i--) {
-      if (children[i].classList.contains("lesson-accordion")) { lastAccIdx = i; break; }
-    }
-    afterAccordions = "";
-    for (let i = lastAccIdx + 1; i < children.length; i++) {
-      afterAccordions += children[i].outerHTML;
-    }
+  let afterAccordions = "";
+  for (let i = lastAccIdx + 1; i < children.length; i++) {
+    afterAccordions += children[i].outerHTML;
   }
 
   const sections: ParsedSection[] = [];
@@ -166,58 +141,93 @@ function MenuButton({ onClick, active, disabled, title, children }: {
   );
 }
 
-function Separator() {
+function ToolSeparator() {
   return <div className="w-px h-6 bg-gray-200 mx-0.5" />;
 }
 
-const sectionTypeColors: Record<string, { bg: string; border: string; icon: string }> = {
-  story: { bg: "bg-amber-50", border: "border-amber-300", icon: "📖" },
-  ilmihal: { bg: "bg-emerald-50", border: "border-emerald-300", icon: "📗" },
-  quiz_box: { bg: "bg-blue-50", border: "border-blue-300", icon: "❓" },
-  pitanja: { bg: "bg-purple-50", border: "border-purple-300", icon: "💬" },
-  zadatak: { bg: "bg-orange-50", border: "border-orange-300", icon: "📝" },
-  default: { bg: "bg-gray-50", border: "border-gray-300", icon: "📄" },
+const sectionStyles: Record<string, { bg: string; activeBg: string; icon: string }> = {
+  story: { bg: "bg-amber-50 hover:bg-amber-100", activeBg: "bg-amber-200 ring-2 ring-amber-400", icon: "📖" },
+  ilmihal: { bg: "bg-emerald-50 hover:bg-emerald-100", activeBg: "bg-emerald-200 ring-2 ring-emerald-400", icon: "📗" },
+  quiz_box: { bg: "bg-blue-50 hover:bg-blue-100", activeBg: "bg-blue-200 ring-2 ring-blue-400", icon: "❓" },
+  pitanja: { bg: "bg-purple-50 hover:bg-purple-100", activeBg: "bg-purple-200 ring-2 ring-purple-400", icon: "💬" },
+  zadatak: { bg: "bg-orange-50 hover:bg-orange-100", activeBg: "bg-orange-200 ring-2 ring-orange-400", icon: "📝" },
+  default: { bg: "bg-gray-50 hover:bg-gray-100", activeBg: "bg-gray-200 ring-2 ring-gray-400", icon: "📄" },
 };
 
 function getSectionStyle(sectionId: string) {
   const sid = sectionId.toUpperCase();
-  if (sid === "STORY" || sid.includes("PRIČA") || sid.includes("PRICA") || sid.includes("PUTOKAZ")) return sectionTypeColors.story;
-  if (sid === "ILMIHAL" || sid.includes("ILMIHAL")) return sectionTypeColors.ilmihal;
-  if (sid === "QUIZ_BOX" || sid === "QUIZ" || sid === "KVIZ") return sectionTypeColors.quiz_box;
-  if (sid.includes("PITAN") || sid.includes("RAZGOVOR")) return sectionTypeColors.pitanja;
-  if (sid.includes("ZADATAK") || sid.includes("ZADACI") || sid.includes("AKTIVNOST")) return sectionTypeColors.zadatak;
-  return sectionTypeColors.default;
+  if (sid === "STORY" || sid.includes("PRIČA") || sid.includes("PRICA") || sid.includes("PUTOKAZ")) return sectionStyles.story;
+  if (sid === "ILMIHAL" || sid.includes("ILMIHAL")) return sectionStyles.ilmihal;
+  if (sid === "QUIZ_BOX" || sid === "QUIZ" || sid === "KVIZ") return sectionStyles.quiz_box;
+  if (sid.includes("PITAN") || sid.includes("RAZGOVOR")) return sectionStyles.pitanja;
+  if (sid.includes("ZADATAK") || sid.includes("ZADACI") || sid.includes("AKTIVNOST")) return sectionStyles.zadatak;
+  return sectionStyles.default;
 }
 
-function SectionEditor({ section, token, onContentChange }: {
-  section: ParsedSection;
-  token: string;
-  onContentChange: (html: string) => void;
-}) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const editorExtensions = [
+  StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
+  Image.configure({ inline: false, allowBase64: false }),
+  TextAlign.configure({ types: ["heading", "paragraph"] }),
+  Underline,
+  Highlight.configure({ multicolor: true }),
+  Placeholder.configure({ placeholder: "Piši sadržaj sekcije..." }),
+  ArabicCard,
+  InfoBox,
+];
+
+export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [parsed] = useState(() => parseAccordionSections(content));
+  const hasContainer = content.includes('class="lesson-container"');
+  const sectionContentsRef = useRef<string[]>(parsed.sections.map(s => s.contentHtml));
+  const [activeIdx, setActiveIdx] = useState(0);
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
-      Image.configure({ inline: false, allowBase64: false }),
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Underline,
-      Highlight.configure({ multicolor: true }),
-      Placeholder.configure({ placeholder: "Piši sadržaj sekcije..." }),
-      ArabicCard,
-      InfoBox,
-    ],
-    content: section.contentHtml,
+    extensions: editorExtensions,
+    content: parsed.hasAccordions ? parsed.sections[0]?.contentHtml || "" : content,
     onUpdate: ({ editor: ed }) => {
-      onContentChange(ed.getHTML());
+      const html = ed.getHTML();
+      if (parsed.hasAccordions) {
+        sectionContentsRef.current[activeIdx] = html;
+      } else {
+        onChange(html);
+      }
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4",
+        class: "prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4",
       },
     },
   });
+
+  const activeIdxRef = useRef(activeIdx);
+  activeIdxRef.current = activeIdx;
+
+  const switchSection = useCallback((newIdx: number) => {
+    if (!editor || !parsed.hasAccordions) return;
+    if (newIdx === activeIdxRef.current) return;
+    sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    setActiveIdx(newIdx);
+    editor.commands.setContent(sectionContentsRef.current[newIdx] || "");
+  }, [editor, parsed.hasAccordions]);
+
+  const getFullHtml = useCallback((): string => {
+    if (!parsed.hasAccordions) return editor?.getHTML() || content;
+    if (editor) {
+      sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    }
+    const updatedSections = parsed.sections.map((s, i) => ({
+      ...s,
+      contentHtml: sectionContentsRef.current[i] ?? s.contentHtml,
+    }));
+    return reassembleHtml(parsed.beforeAccordions, updatedSections, parsed.afterAccordions, hasContainer);
+  }, [editor, parsed, hasContainer, content]);
+
+  useEffect(() => {
+    (window as any).__wysiwygGetFullHtml = getFullHtml;
+    return () => { delete (window as any).__wysiwygGetFullHtml; };
+  }, [getFullHtml]);
 
   const handleImageUpload = useCallback(async (file: File) => {
     if (!editor) return;
@@ -238,7 +248,7 @@ function SectionEditor({ section, token, onContentChange }: {
         editor.chain().focus().setImage({ src: data.url }).run();
       }
     } catch {
-      toast({ title: "Upload nije uspio", description: "Provjerite konekciju i pokušajte ponovo", variant: "destructive" });
+      toast({ title: "Upload nije uspio", description: "Provjerite konekciju", variant: "destructive" });
     }
   }, [editor, token, toast]);
 
@@ -252,8 +262,7 @@ function SectionEditor({ section, token, onContentChange }: {
     if (!editor) return;
     const nodeName = type === "arabic-card" ? "arabicCard" : "infoBox";
     const { from, to } = editor.state.selection;
-    const hasSelection = from !== to;
-    if (hasSelection) {
+    if (from !== to) {
       editor.chain().focus().wrapIn(nodeName).run();
     } else {
       editor.chain().focus().insertContent({
@@ -266,81 +275,103 @@ function SectionEditor({ section, token, onContentChange }: {
   if (!editor) return null;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-200 bg-gray-50/80 rounded-t-lg">
+    <div className="flex flex-col h-full bg-white">
+      {parsed.hasAccordions && (
+        <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-gray-200 bg-gray-50/80">
+          {parsed.sections.map((sec, idx) => {
+            const style = getSectionStyle(sec.id);
+            const isActive = idx === activeIdx;
+            return (
+              <button
+                key={sec.id}
+                type="button"
+                onClick={() => switchSection(idx)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  isActive ? style.activeBg : style.bg
+                }`}
+              >
+                <span>{style.icon}</span>
+                <span className="truncate max-w-[150px]">{sec.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-200 bg-white">
         <MenuButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
-          <Bold className="w-3.5 h-3.5" />
+          <Bold className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="Italic">
-          <Italic className="w-3.5 h-3.5" />
+          <Italic className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} title="Underline">
-          <UnderlineIcon className="w-3.5 h-3.5" />
+          <UnderlineIcon className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} title="Precrtano">
-          <Strikethrough className="w-3.5 h-3.5" />
+          <Strikethrough className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().toggleHighlight({ color: "#fef08a" }).run()} active={editor.isActive("highlight")} title="Markiraj">
-          <Highlighter className="w-3.5 h-3.5" />
+          <Highlighter className="w-4 h-4" />
         </MenuButton>
-        <Separator />
+        <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="H3">
-          <Heading3 className="w-3.5 h-3.5" />
+          <Heading3 className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={editor.isActive("heading", { level: 4 })} title="H4">
-          <Heading4 className="w-3.5 h-3.5" />
+          <Heading4 className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().setParagraph().run()} active={editor.isActive("paragraph")} title="Paragraf">
-          <Pilcrow className="w-3.5 h-3.5" />
+          <Pilcrow className="w-4 h-4" />
         </MenuButton>
-        <Separator />
+        <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Lista">
-          <List className="w-3.5 h-3.5" />
+          <List className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Numerisana">
-          <ListOrdered className="w-3.5 h-3.5" />
+          <ListOrdered className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} title="Citat">
-          <Quote className="w-3.5 h-3.5" />
+          <Quote className="w-4 h-4" />
         </MenuButton>
-        <Separator />
+        <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title="Lijevo">
-          <AlignLeft className="w-3.5 h-3.5" />
+          <AlignLeft className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title="Centar">
-          <AlignCenter className="w-3.5 h-3.5" />
+          <AlignCenter className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title="Desno">
-          <AlignRight className="w-3.5 h-3.5" />
+          <AlignRight className="w-4 h-4" />
         </MenuButton>
-        <Separator />
-        <MenuButton onClick={() => fileInputRef.current?.click()} title="Slika">
-          <ImageIcon className="w-3.5 h-3.5" />
+        <ToolSeparator />
+        <MenuButton onClick={() => fileInputRef.current?.click()} title="Umetni sliku">
+          <ImageIcon className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => insertCustomBlock("arabic-card")} title="Zeleni box — označi tekst pa klikni">
-          <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+          <BookOpen className="w-4 h-4 text-emerald-600" />
         </MenuButton>
-        <MenuButton onClick={() => insertCustomBlock("info-box")} title="Žuti box (ZAPAMTI) — označi tekst pa klikni">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+        <MenuButton onClick={() => insertCustomBlock("info-box")} title="Žuti box — označi tekst pa klikni">
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
         </MenuButton>
-        <Separator />
+        <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
-          <Undo2 className="w-3.5 h-3.5" />
+          <Undo2 className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Ponovi">
-          <Redo2 className="w-3.5 h-3.5" />
+          <Redo2 className="w-4 h-4" />
         </MenuButton>
       </div>
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
 
-      <div className="wysiwyg-editor-content">
+      <div className="flex-1 overflow-y-auto wysiwyg-editor-content">
         <style>{`
           .wysiwyg-editor-content .ProseMirror {
-            min-height: 200px;
+            min-height: 300px;
             padding: 1rem;
             font-family: 'Nunito', sans-serif;
-            font-size: 0.95rem;
+            font-size: 1rem;
             line-height: 1.75;
           }
           .wysiwyg-editor-content .ProseMirror:focus { outline: none; }
@@ -358,82 +389,23 @@ function SectionEditor({ section, token, onContentChange }: {
           .wysiwyg-editor-content .ProseMirror img { max-width: 100%; height: auto; border-radius: 0.75rem; margin: 0.75rem 0; }
           .wysiwyg-editor-content .ProseMirror mark { background-color: #fef08a; padding: 0.1em 0.2em; border-radius: 0.2em; }
           .wysiwyg-editor-content .ProseMirror hr { border: none; border-top: 2px solid #e5e7eb; margin: 1.5rem 0; }
+          .wysiwyg-editor-content .ProseMirror div.arabic-card {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            border-left: 4px solid #10b981;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            margin: 0.75rem 0;
+          }
+          .wysiwyg-editor-content .ProseMirror div.info-box {
+            background: linear-gradient(135deg, #fefce8, #fef9c3);
+            border-left: 4px solid #eab308;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            margin: 0.75rem 0;
+          }
         `}</style>
         <EditorContent editor={editor} />
       </div>
-    </div>
-  );
-}
-
-export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) {
-  const [parsed, setParsed] = useState(() => parseAccordionSections(content));
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(() => new Set([0]));
-  const sectionsRef = useRef(parsed.sections.map(s => s.contentHtml));
-
-  useEffect(() => {
-    sectionsRef.current = parsed.sections.map(s => s.contentHtml);
-  }, []);
-
-  const hasContainer = content.includes('class="lesson-container"');
-
-  const handleSectionContentChange = useCallback((index: number, newHtml: string) => {
-    sectionsRef.current[index] = newHtml;
-    const updated = { ...parsed };
-    updated.sections = updated.sections.map((s, i) =>
-      i === index ? { ...s, contentHtml: newHtml } : s
-    );
-    const fullHtml = reassembleHtml(updated.beforeAccordions, updated.sections, updated.afterAccordions, hasContainer);
-    onChange(fullHtml);
-  }, [parsed, hasContainer, onChange]);
-
-  const toggleSection = (index: number) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  };
-
-  if (!parsed.hasAccordions) {
-    return (
-      <div className="flex flex-col h-full border border-gray-200 rounded-xl overflow-hidden bg-white">
-        <SectionEditor
-          section={{ id: "full", title: "Sadržaj", iconText: "▶", contentHtml: content, isActive: true }}
-          token={token}
-          onContentChange={(html) => onChange(html)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full overflow-y-auto bg-gray-50/50 p-3 gap-3">
-      {parsed.sections.map((section, idx) => {
-        const style = getSectionStyle(section.id);
-        const isExpanded = expandedSections.has(idx);
-        return (
-          <div key={section.id} className={`border ${style.border} rounded-xl overflow-hidden bg-white shadow-sm`}>
-            <button
-              type="button"
-              onClick={() => toggleSection(idx)}
-              className={`w-full flex items-center gap-2 px-4 py-3 ${style.bg} text-left transition-colors hover:brightness-95`}
-            >
-              <span className="text-lg">{style.icon}</span>
-              <span className="font-bold text-sm text-gray-800 flex-1">{section.title}</span>
-              <span className="text-xs text-gray-500 font-mono">#{section.id}</span>
-              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-            </button>
-            {isExpanded && (
-              <SectionEditor
-                section={section}
-                token={token}
-                onContentChange={(html) => handleSectionContentChange(idx, html)}
-              />
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 }
