@@ -16,7 +16,8 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Image as ImageIcon, Highlighter, Undo2, Redo2,
   Quote, Pilcrow,
-  BookOpen, AlertTriangle, TableIcon
+  BookOpen, AlertTriangle, TableIcon,
+  Plus, ChevronUp, ChevronDown, Trash2, Pencil
 } from "lucide-react";
 
 function createCustomBlock(name: string, cssClass: string) {
@@ -185,10 +186,12 @@ const editorExtensions = [
 export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [parsed] = useState(() => parseAccordionSections(content));
+  const [parsed, setParsed] = useState(() => parseAccordionSections(content));
   const hasContainer = content.includes('class="lesson-container"');
   const sectionContentsRef = useRef<string[]>(parsed.sections.map(s => s.contentHtml));
   const [activeIdx, setActiveIdx] = useState(0);
+  const [renamingIdx, setRenamingIdx] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const editor = useEditor({
     extensions: editorExtensions,
@@ -222,6 +225,69 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     editor.commands.setContent(sectionContentsRef.current[newIdx] || "");
     switchingRef.current = false;
   }, [editor, parsed.hasAccordions]);
+
+  const addSection = useCallback((afterIdx: number) => {
+    if (!editor) return;
+    sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    const newId = `section-${Date.now()}`;
+    const newSection: ParsedSection = {
+      id: newId,
+      title: "NOVA SEKCIJA",
+      iconText: "▶",
+      contentHtml: "<p></p>",
+      isActive: false,
+    };
+    const insertAt = afterIdx + 1;
+    const newSections = [...parsed.sections];
+    newSections.splice(insertAt, 0, newSection);
+    sectionContentsRef.current.splice(insertAt, 0, "<p></p>");
+    setParsed(prev => ({ ...prev, sections: newSections }));
+    switchingRef.current = true;
+    activeIdxRef.current = insertAt;
+    setActiveIdx(insertAt);
+    editor.commands.setContent("<p></p>");
+    switchingRef.current = false;
+    onChange("");
+  }, [editor, parsed.sections, onChange]);
+
+  const removeSection = useCallback((idx: number) => {
+    if (!editor || parsed.sections.length <= 1) return;
+    const newSections = parsed.sections.filter((_, i) => i !== idx);
+    sectionContentsRef.current.splice(idx, 1);
+    setParsed(prev => ({ ...prev, sections: newSections }));
+    const newIdx = Math.min(idx, newSections.length - 1);
+    switchingRef.current = true;
+    activeIdxRef.current = newIdx;
+    setActiveIdx(newIdx);
+    editor.commands.setContent(sectionContentsRef.current[newIdx] || "");
+    switchingRef.current = false;
+    onChange("");
+  }, [editor, parsed.sections, onChange]);
+
+  const moveSection = useCallback((idx: number, dir: -1 | 1) => {
+    if (!editor) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= parsed.sections.length) return;
+    sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    const newSections = [...parsed.sections];
+    [newSections[idx], newSections[newIdx]] = [newSections[newIdx], newSections[idx]];
+    const newContents = [...sectionContentsRef.current];
+    [newContents[idx], newContents[newIdx]] = [newContents[newIdx], newContents[idx]];
+    sectionContentsRef.current = newContents;
+    setParsed(prev => ({ ...prev, sections: newSections }));
+    const focusIdx = activeIdxRef.current === idx ? newIdx : activeIdxRef.current === newIdx ? idx : activeIdxRef.current;
+    activeIdxRef.current = focusIdx;
+    setActiveIdx(focusIdx);
+    onChange("");
+  }, [editor, parsed.sections, onChange]);
+
+  const renameSection = useCallback((idx: number, newTitle: string) => {
+    const newSections = [...parsed.sections];
+    newSections[idx] = { ...newSections[idx], title: newTitle };
+    setParsed(prev => ({ ...prev, sections: newSections }));
+    setRenamingIdx(null);
+    onChange("");
+  }, [parsed.sections, onChange]);
 
   const getFullHtml = useCallback((): string => {
     if (!parsed.hasAccordions) return editor?.getHTML() || content;
@@ -294,24 +360,57 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   return (
     <div className="flex flex-col h-full bg-white">
       {parsed.hasAccordions && (
-        <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-gray-200 bg-gray-50/80">
-          {parsed.sections.map((sec, idx) => {
-            const style = getSectionStyle(sec.id);
-            const isActive = idx === activeIdx;
-            return (
-              <button
-                key={sec.id}
-                type="button"
-                onClick={() => switchSection(idx)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  isActive ? style.activeBg : style.bg
-                }`}
-              >
-                <span>{style.icon}</span>
-                <span className="truncate max-w-[150px]">{sec.title}</span>
-              </button>
-            );
-          })}
+        <div className="px-3 py-2 border-b border-gray-200 bg-gray-50/80">
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {parsed.sections.map((sec, idx) => {
+              const style = getSectionStyle(sec.id);
+              const isActive = idx === activeIdx;
+              return (
+                <div key={sec.id} className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => switchSection(idx)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      isActive ? style.activeBg : style.bg
+                    }`}
+                  >
+                    <span>{style.icon}</span>
+                    {renamingIdx === idx ? (
+                      <input
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => renameSection(idx, renameValue)}
+                        onKeyDown={(e) => { if (e.key === "Enter") renameSection(idx, renameValue); if (e.key === "Escape") setRenamingIdx(null); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white border rounded px-1 py-0.5 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="truncate max-w-[150px]">{sec.title}</span>
+                    )}
+                  </button>
+                  {isActive && (
+                    <div className="flex items-center gap-0.5 ml-0.5">
+                      <button type="button" onClick={() => moveSection(idx, -1)} disabled={idx === 0} title="Pomjeri gore" className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronUp className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => moveSection(idx, 1)} disabled={idx === parsed.sections.length - 1} title="Pomjeri dolje" className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => { setRenamingIdx(idx); setRenameValue(sec.title); }} title="Preimenuj" className="p-0.5 rounded hover:bg-gray-200"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => { if (confirm("Obrisati ovu sekciju?")) removeSection(idx); }} title="Obriši" className="p-0.5 rounded hover:bg-red-100 text-red-500" disabled={parsed.sections.length <= 1}><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => addSection(parsed.sections.length - 1)}
+              title="Dodaj novu sekciju"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nova</span>
+            </button>
+          </div>
         </div>
       )}
 
