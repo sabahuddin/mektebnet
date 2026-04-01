@@ -163,7 +163,9 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
       let saveHtml = html;
       if (mode === "visual" && (window as any).__wysiwygGetFullHtml) {
         saveHtml = (window as any).__wysiwygGetFullHtml();
+        console.log("[SAVE] getFullHtml result sections:", saveHtml.match(/lesson-section-btn[^<]*>([^<]+)</g));
       }
+      console.log("[SAVE] html length:", saveHtml.length, "first 200:", saveHtml.substring(0, 200));
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: saveHtml }, token);
       toast({ title: "Sačuvano! ✓", description: "Sadržaj lekcije uspješno ažuriran" });
       setIsDirty(false);
