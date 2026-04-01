@@ -303,17 +303,23 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     onChange("");
   }, [onChange]);
 
+  const parsedRef = useRef(parsed);
+  parsedRef.current = parsed;
+  const hasContainerRef = useRef(hasContainer);
+  hasContainerRef.current = hasContainer;
+
   const getFullHtml = useCallback((): string => {
-    if (!parsed.hasAccordions) return editor?.getHTML() || content;
+    const p = parsedRef.current;
+    if (!p.hasAccordions) return editor?.getHTML() || content;
     if (editor) {
       sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
     }
-    const updatedSections = parsed.sections.map((s, i) => ({
+    const updatedSections = p.sections.map((s, i) => ({
       ...s,
       contentHtml: sectionContentsRef.current[i] ?? s.contentHtml,
     }));
-    return reassembleHtml(parsed.beforeAccordions, updatedSections, parsed.afterAccordions, hasContainer);
-  }, [editor, parsed, hasContainer, content]);
+    return reassembleHtml(p.beforeAccordions, updatedSections, p.afterAccordions, hasContainerRef.current);
+  }, [editor, content]);
 
   useEffect(() => {
     (window as any).__wysiwygGetFullHtml = getFullHtml;
