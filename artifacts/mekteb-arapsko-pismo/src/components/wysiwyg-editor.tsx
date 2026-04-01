@@ -272,10 +272,14 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const moveSection = useCallback((idx: number, dir: -1 | 1) => {
     if (!editor) return;
     const newIdx = idx + dir;
-    sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    const currentEditorHtml = editor.getHTML();
+    sectionContentsRef.current[activeIdxRef.current] = currentEditorHtml;
     setParsed(prev => {
       if (newIdx < 0 || newIdx >= prev.sections.length) return prev;
-      const newSections = [...prev.sections];
+      const newSections = prev.sections.map((s, i) => ({
+        ...s,
+        contentHtml: sectionContentsRef.current[i] ?? s.contentHtml,
+      }));
       [newSections[idx], newSections[newIdx]] = [newSections[newIdx], newSections[idx]];
       const newContents = [...sectionContentsRef.current];
       [newContents[idx], newContents[newIdx]] = [newContents[newIdx], newContents[idx]];
@@ -288,7 +292,6 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         editor.commands.setContent(sectionContentsRef.current[focusIdx] || "");
         switchingRef.current = false;
       }, 0);
-      console.log("[MOVE] new order:", newSections.map(s => s.title));
       return { ...prev, sections: newSections };
     });
     onChange("");
@@ -313,29 +316,22 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const contentRef = useRef(content);
   contentRef.current = content;
 
-  useEffect(() => {
-    (window as any).__wysiwygGetFullHtml = () => {
-      const p = parsedRef.current;
-      const ed = editorRef.current;
-      if (!p.hasAccordions) return ed?.getHTML() || contentRef.current;
-      if (ed) {
-        sectionContentsRef.current[activeIdxRef.current] = ed.getHTML();
-      }
-      const updatedSections = p.sections.map((s, i) => {
-        const refContent = sectionContentsRef.current[i];
-        return {
-          ...s,
-          contentHtml: refContent != null ? refContent : s.contentHtml,
-        };
-      });
-      console.log("[SAVE-getFullHtml] section titles:", updatedSections.map(s => s.title));
-      console.log("[SAVE-getFullHtml] section content lengths:", updatedSections.map(s => s.contentHtml?.length));
-      const result = reassembleHtml(p.beforeAccordions, updatedSections, p.afterAccordions, hasContainerRef.current);
-      console.log("[SAVE-getFullHtml] result accordion order:", result.match(/lesson-section-btn[^<]*>([^<]+)/g));
-      return result;
-    };
-    return () => { delete (window as any).__wysiwygGetFullHtml; };
-  }, []);
+  (window as any).__wysiwygGetFullHtml = () => {
+    const p = parsedRef.current;
+    const ed = editorRef.current;
+    if (!p.hasAccordions) return ed?.getHTML() || contentRef.current;
+    if (ed) {
+      sectionContentsRef.current[activeIdxRef.current] = ed.getHTML();
+    }
+    const updatedSections = p.sections.map((s, i) => {
+      const refContent = sectionContentsRef.current[i];
+      return {
+        ...s,
+        contentHtml: refContent != null ? refContent : s.contentHtml,
+      };
+    });
+    return reassembleHtml(p.beforeAccordions, updatedSections, p.afterAccordions, hasContainerRef.current);
+  };
 
   const handleImageUpload = useCallback(async (file: File) => {
     if (!editor) return;
