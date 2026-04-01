@@ -163,9 +163,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
       let saveHtml = html;
       if (mode === "visual" && (window as any).__wysiwygGetFullHtml) {
         saveHtml = (window as any).__wysiwygGetFullHtml();
-        console.log("[SAVE] getFullHtml result sections:", saveHtml.match(/lesson-section-btn[^<]*>([^<]+)</g));
       }
-      console.log("[SAVE] html length:", saveHtml.length, "first 200:", saveHtml.substring(0, 200));
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: saveHtml }, token);
       toast({ title: "Sačuvano! ✓", description: "Sadržaj lekcije uspješno ažuriran" });
       setIsDirty(false);
@@ -841,27 +839,20 @@ export default function IlmihalLekcijaPage() {
         {parsed.sections.length > 0 ? (
           <div className="flex flex-col gap-3 mb-6">
             {(() => {
-              const ORDER: Record<AccordionSection["type"], number> = {
-                story: 0, ilmihal: 1, quiz_box: 2, pitanja: 3, zadatak: 4, other: 5,
-              };
               const kvizPitanja = lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 ? lekcija.kvizPitanja : null;
-              // Filter out original quiz_box sections — replaced by AI LekcijaKvizBox
               const visibleSections = parsed.sections.filter(s => s.type !== "quiz_box");
-              const sorted = [...visibleSections].sort((a, b) => ORDER[a.type] - ORDER[b.type]);
 
               const items: React.ReactNode[] = [];
               let kvizInserted = false;
-              for (const section of sorted) {
+              for (const section of visibleSections) {
                 items.push(
                   <SectionAccordion key={section.id} section={section} slug={slug!} nivo={lekcija.nivo} />
                 );
-                // Insert AI MCQ quiz right after the ilmihal section
                 if (!kvizInserted && section.type === "ilmihal" && kvizPitanja) {
                   items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
                   kvizInserted = true;
                 }
               }
-              // If no ilmihal section found but we have pitanja, add kviz at end (before pitanja/zadatak)
               if (!kvizInserted && kvizPitanja) {
                 items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
               }
