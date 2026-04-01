@@ -303,7 +303,22 @@ router.post("/ucenik", async (req, res) => {
   }
 });
 
-// PUT /api/admin/ilmihal/:id — Update lesson content
+router.post("/ilmihal", async (req, res) => {
+  try {
+    const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja } = req.body;
+    if (!naslov || !slug) return res.status(400).json({ error: "naslov and slug required" });
+    const kviz = kvizPitanja ? (typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja)) : null;
+    const [row] = await db.insert(ilmihalLekcijeTable).values({
+      naslov, slug, nivo: nivo || 21, redoslijed: redoslijed || 0,
+      contentHtml: contentHtml || "", kvizPitanja: kviz,
+    }).returning({ id: ilmihalLekcijeTable.id });
+    res.json({ success: true, id: row.id });
+  } catch (err) {
+    console.error("POST /ilmihal error:", err);
+    res.status(500).json({ error: "Greška pri kreiranju lekcije" });
+  }
+});
+
 router.put("/ilmihal/:id", async (req, res) => {
   try {
     const { contentHtml, naslov, kvizPitanja, redoslijed } = req.body;
