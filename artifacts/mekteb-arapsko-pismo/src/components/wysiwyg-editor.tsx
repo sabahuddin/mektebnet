@@ -271,10 +271,10 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
 
   const moveSection = useCallback((idx: number, dir: -1 | 1) => {
     if (!editor) return;
+    const newIdx = idx + dir;
+    sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
     setParsed(prev => {
-      const newIdx = idx + dir;
       if (newIdx < 0 || newIdx >= prev.sections.length) return prev;
-      sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
       const newSections = [...prev.sections];
       [newSections[idx], newSections[newIdx]] = [newSections[newIdx], newSections[idx]];
       const newContents = [...sectionContentsRef.current];
@@ -283,6 +283,11 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       const focusIdx = activeIdxRef.current === idx ? newIdx : activeIdxRef.current === newIdx ? idx : activeIdxRef.current;
       activeIdxRef.current = focusIdx;
       setActiveIdx(focusIdx);
+      switchingRef.current = true;
+      setTimeout(() => {
+        editor.commands.setContent(sectionContentsRef.current[focusIdx] || "");
+        switchingRef.current = false;
+      }, 0);
       return { ...prev, sections: newSections };
     });
     onChange("");
@@ -404,11 +409,11 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
                     )}
                   </button>
                   {isActive && (
-                    <div className="flex items-center gap-0.5 ml-0.5">
-                      <button type="button" onClick={() => moveSection(idx, -1)} disabled={idx === 0} title="Pomjeri gore" className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronUp className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => moveSection(idx, 1)} disabled={idx === parsed.sections.length - 1} title="Pomjeri dolje" className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => { setRenamingIdx(idx); setRenameValue(sec.title); }} title="Preimenuj" className="p-0.5 rounded hover:bg-gray-200"><Pencil className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => { if (confirm("Obrisati ovu sekciju?")) removeSection(idx); }} title="Obriši" className="p-0.5 rounded hover:bg-red-100 text-red-500" disabled={parsed.sections.length <= 1}><Trash2 className="w-3.5 h-3.5" /></button>
+                    <div className="flex items-center gap-1 ml-1">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0} title="Pomjeri lijevo" className="p-1 rounded hover:bg-teal-100 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronUp className="w-4 h-4 -rotate-90" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === parsed.sections.length - 1} title="Pomjeri desno" className="p-1 rounded hover:bg-teal-100 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronDown className="w-4 h-4 -rotate-90" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setRenamingIdx(idx); setRenameValue(sec.title); }} title="Preimenuj" className="p-1 rounded hover:bg-teal-100"><Pencil className="w-4 h-4" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm("Obrisati ovu sekciju?")) removeSection(idx); }} title="Obriši" className="p-1 rounded hover:bg-red-100 text-red-500" disabled={parsed.sections.length <= 1}><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
