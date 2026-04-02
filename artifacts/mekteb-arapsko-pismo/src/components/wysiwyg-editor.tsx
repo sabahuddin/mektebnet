@@ -400,7 +400,18 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   (window as any).__wysiwygGetFullHtml = () => {
     const p = parsedRef.current;
     const ed = editorRef.current;
-    if (!p.hasAccordions) return ed?.getHTML() || contentRef.current;
+    if (!p.hasAccordions) {
+      let baseHtml = ed?.getHTML() || contentRef.current;
+      if (heroImageRef.current) {
+        const existingHero = extractHeroImage(baseHtml);
+        if (existingHero) {
+          baseHtml = baseHtml.replace(/<img\s+src="[^"]*"/, `<img src="${heroImageRef.current}"`);
+        } else {
+          baseHtml = `<div class="hero-box"><img src="${heroImageRef.current}"></div>\n${baseHtml}`;
+        }
+      }
+      return baseHtml;
+    }
     if (ed) {
       sectionContentsRef.current[activeIdxRef.current] = ed.getHTML();
     }
@@ -475,34 +486,36 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
 
   return (
     <div className="flex flex-col h-full bg-white">
+      <div className="px-3 py-2 border-b border-gray-200 bg-gray-50/80">
+        <input ref={heroFileRef} type="file" accept="image/*" className="hidden" onChange={e => {
+          const f = e.target.files?.[0];
+          if (f) handleHeroUpload(f);
+          e.target.value = "";
+        }} />
+        <div className="flex items-center gap-3 mb-2">
+          {heroImage ? (
+            <div className="relative group/hero flex items-center gap-3 w-full">
+              <img src={heroImage} alt="Hero" className="h-14 w-24 object-cover rounded-lg border-2 border-teal-400" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-gray-600 truncate">Hero slika: <span className="text-teal-600">{heroImage}</span></p>
+              </div>
+              <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-colors shrink-0">
+                {heroUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                {heroUploading ? "Uploadujem..." : "Zamijeni"}
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-teal-50 hover:border-teal-300 text-gray-500 hover:text-teal-700 transition-colors w-full justify-center">
+              {heroUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+              {heroUploading ? "Uploadujem..." : "Dodaj hero sliku"}
+            </button>
+          )}
+        </div>
+      </div>
       {parsed.hasAccordions && (
         <div className="px-3 py-2 border-b border-gray-200 bg-gray-50/80">
-          <input ref={heroFileRef} type="file" accept="image/*" className="hidden" onChange={e => {
-            const f = e.target.files?.[0];
-            if (f) handleHeroUpload(f);
-            e.target.value = "";
-          }} />
-          <div className="flex items-center gap-3 mb-2">
-            {heroImage ? (
-              <div className="relative group/hero flex items-center gap-3 w-full">
-                <img src={heroImage} alt="Hero" className="h-14 w-24 object-cover rounded-lg border-2 border-teal-400" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-gray-600 truncate">Hero slika: <span className="text-teal-600">{heroImage}</span></p>
-                </div>
-                <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-colors shrink-0">
-                  {heroUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                  {heroUploading ? "Uploadujem..." : "Zamijeni"}
-                </button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-teal-50 hover:border-teal-300 text-gray-500 hover:text-teal-700 transition-colors w-full justify-center">
-                {heroUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
-                {heroUploading ? "Uploadujem..." : "Dodaj hero sliku"}
-              </button>
-            )}
-          </div>
           <div className="flex flex-wrap gap-1.5 items-center">
             {parsed.sections.map((sec, idx) => {
               const style = getSectionStyle(sec.id);
