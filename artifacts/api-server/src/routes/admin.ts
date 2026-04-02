@@ -72,6 +72,22 @@ router.post("/upload", (req, res) => {
   });
 });
 
+router.get("/uploads", (_req, res) => {
+  try {
+    if (!fs.existsSync(uploadsDir)) return res.json([]);
+    const files = fs.readdirSync(uploadsDir)
+      .filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f))
+      .map(f => {
+        const stat = fs.statSync(path.join(uploadsDir, f));
+        return { name: f, url: `/uploads/${f}`, size: stat.size, modified: stat.mtime };
+      })
+      .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
+    res.json(files);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/admin/korisnici
 router.get("/korisnici", async (req, res) => {
   try {

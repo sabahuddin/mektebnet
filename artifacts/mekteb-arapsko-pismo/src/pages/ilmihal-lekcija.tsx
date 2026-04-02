@@ -7,7 +7,8 @@ import { useAuth } from "@/context/auth";
 import {
   ArrowLeft, Volume2, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
-  HelpCircle, Sparkles, Trophy, FileEdit, Save, X, Loader2, Code
+  HelpCircle, Sparkles, Trophy, FileEdit, Save, X, Loader2, Code,
+  ImagePlus, Camera
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -664,6 +665,109 @@ function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; 
 }
 
 // ──────────────────────────────────────────────────
+// Hero image uploader (admin only)
+// ──────────────────────────────────────────────────
+function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
+  lekcija: Lekcija;
+  token: string;
+  onUpdated: (html: string) => void;
+  showAlways?: boolean;
+}) {
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const uploadRes = await apiRequest<{ url: string }>("POST", "/admin/upload", formData, token, true);
+      if (!uploadRes?.url) throw new Error("Upload nije uspio");
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(lekcija.contentHtml, "text/html");
+      let heroBox = doc.querySelector(".hero-box");
+      if (heroBox) {
+        let heroImg = heroBox.querySelector("img");
+        if (heroImg) {
+          heroImg.setAttribute("src", uploadRes.url);
+        } else {
+          heroImg = doc.createElement("img");
+          heroImg.setAttribute("src", uploadRes.url);
+          heroBox.prepend(heroImg);
+        }
+      } else {
+        const firstImg = doc.querySelector("img");
+        if (firstImg) {
+          firstImg.setAttribute("src", uploadRes.url);
+        } else {
+          heroBox = doc.createElement("div");
+          heroBox.className = "hero-box";
+          const img = doc.createElement("img");
+          img.setAttribute("src", uploadRes.url);
+          heroBox.appendChild(img);
+          const container = doc.querySelector(".lesson-container") || doc.body;
+          container.insertBefore(heroBox, container.firstChild);
+        }
+      }
+
+      const newHtml = (doc.querySelector(".lesson-container") || doc.body).innerHTML;
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: newHtml }, token);
+      toast({ title: "Slika ažurirana! ✓" });
+      onUpdated(newHtml);
+    } catch (e: any) {
+      toast({ title: "Greška", description: e.message || "Upload nije uspio", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0];
+          if (f) handleUpload(f);
+          e.target.value = "";
+        }}
+      />
+      {showAlways ? (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex flex-col items-center gap-2 text-gray-400 hover:text-teal-600 transition-colors"
+        >
+          {uploading ? (
+            <Loader2 className="w-8 h-8 animate-spin" />
+          ) : (
+            <ImagePlus className="w-8 h-8" />
+          )}
+          <span className="text-sm font-bold">{uploading ? "Uploadujem..." : "Dodaj hero sliku"}</span>
+        </button>
+      ) : (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+        >
+          {uploading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Camera className="w-3.5 h-3.5" />
+          )}
+          {uploading ? "Uploadujem..." : "Zamijeni sliku"}
+        </button>
+      )}
+    </>
+  );
+}
+
+// ──────────────────────────────────────────────────
 // Main page
 // ──────────────────────────────────────────────────
 export default function IlmihalLekcijaPage() {
@@ -812,8 +916,8 @@ export default function IlmihalLekcijaPage() {
         </div>
 
         {/* Hero image */}
-        {parsed.heroImage && (
-          <div className="rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)]">
+        {parsed.heroImage ? (
+          <div className="relative rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)] group">
             <img
               src={parsed.heroImage}
               alt={lekcija.naslov}
@@ -828,8 +932,30 @@ export default function IlmihalLekcijaPage() {
                 }
               }}
             />
+            {user?.role === "admin" && token && (
+              <HeroImageUploader
+                lekcija={lekcija}
+                token={token}
+                onUpdated={(newHtml) => {
+                  setLekcija(prev => prev ? { ...prev, contentHtml: newHtml } : prev);
+                  setParsed(parseSections(newHtml));
+                }}
+              />
+            )}
           </div>
-        )}
+        ) : user?.role === "admin" && token ? (
+          <div className="relative rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center aspect-[3/2]">
+            <HeroImageUploader
+              lekcija={lekcija}
+              token={token}
+              showAlways
+              onUpdated={(newHtml) => {
+                setLekcija(prev => prev ? { ...prev, contentHtml: newHtml } : prev);
+                setParsed(parseSections(newHtml));
+              }}
+            />
+          </div>
+        ) : null}
 
         {/* Lesson navigation strip */}
         {lekcijeStrip.length > 1 && slug && (
