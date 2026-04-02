@@ -18,7 +18,7 @@ import {
   Quote, Pilcrow,
   BookOpen, AlertTriangle, TableIcon,
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
-  Maximize, RectangleHorizontal, Square
+  Maximize, RectangleHorizontal, Square, Loader2
 } from "lucide-react";
 
 const CustomImage = Image.extend({
@@ -208,15 +208,38 @@ const editorExtensions = [
   InfoCard,
 ];
 
+function extractHeroImage(beforeHtml: string): string | null {
+  const match = beforeHtml.match(/<div class="hero-box">\s*<img\s+src="([^"]*)"[^>]*>/);
+  if (match) return match[1];
+  const imgMatch = beforeHtml.match(/<img\s+src="([^"]*)"[^>]*>/);
+  return imgMatch ? imgMatch[1] : null;
+}
+
+function replaceHeroImage(beforeHtml: string, newSrc: string): string {
+  if (/<div class="hero-box">/.test(beforeHtml)) {
+    return beforeHtml.replace(
+      /(<div class="hero-box">\s*<img\s+src=")[^"]*(")/,
+      `$1${newSrc}$2`
+    );
+  }
+  if (/<img\s+src="[^"]*"/.test(beforeHtml)) {
+    return beforeHtml.replace(/<img\s+src="[^"]*"/, `<img src="${newSrc}"`);
+  }
+  return `<div class="hero-box"><img src="${newSrc}"></div>\n${beforeHtml}`;
+}
+
 export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const heroFileRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState(() => parseAccordionSections(content));
   const hasContainer = content.includes('class="lesson-container"');
   const sectionContentsRef = useRef<string[]>(parsed.sections.map(s => s.contentHtml));
   const [activeIdx, setActiveIdx] = useState(0);
   const [renamingIdx, setRenamingIdx] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [heroImage, setHeroImage] = useState<string | null>(() => extractHeroImage(parsed.beforeAccordions));
+  const [heroUploading, setHeroUploading] = useState(false);
 
   const editor = useEditor({
     extensions: editorExtensions,
@@ -340,6 +363,39 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   editorRef.current = editor;
   const contentRef = useRef(content);
   contentRef.current = content;
+  const heroImageRef = useRef(heroImage);
+  heroImageRef.current = heroImage;
+
+  const handleHeroUpload = useCallback(async (file: File) => {
+    setHeroUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const resp = await fetch(`${getApiBase()}/admin/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        toast({ title: "Greška pri uploadu", description: data.error || "Nepoznata greška", variant: "destructive" });
+        return;
+      }
+      if (data.url) {
+        setHeroImage(data.url);
+        setParsed(prev => ({
+          ...prev,
+          beforeAccordions: replaceHeroImage(prev.beforeAccordions, data.url),
+        }));
+        onChange("");
+        toast({ title: "Hero slika ažurirana ✓" });
+      }
+    } catch {
+      toast({ title: "Upload nije uspio", variant: "destructive" });
+    } finally {
+      setHeroUploading(false);
+    }
+  }, [token, toast, onChange]);
 
   (window as any).__wysiwygGetFullHtml = () => {
     const p = parsedRef.current;
@@ -355,7 +411,11 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         contentHtml: refContent != null ? refContent : s.contentHtml,
       };
     });
-    return reassembleHtml(p.beforeAccordions, updatedSections, p.afterAccordions, hasContainerRef.current);
+    let before = p.beforeAccordions;
+    if (heroImageRef.current && heroImageRef.current !== extractHeroImage(before)) {
+      before = replaceHeroImage(before, heroImageRef.current);
+    }
+    return reassembleHtml(before, updatedSections, p.afterAccordions, hasContainerRef.current);
   };
 
   const handleImageUpload = useCallback(async (file: File) => {
@@ -417,6 +477,32 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     <div className="flex flex-col h-full bg-white">
       {parsed.hasAccordions && (
         <div className="px-3 py-2 border-b border-gray-200 bg-gray-50/80">
+          <input ref={heroFileRef} type="file" accept="image/*" className="hidden" onChange={e => {
+            const f = e.target.files?.[0];
+            if (f) handleHeroUpload(f);
+            e.target.value = "";
+          }} />
+          <div className="flex items-center gap-3 mb-2">
+            {heroImage ? (
+              <div className="relative group/hero flex items-center gap-3 w-full">
+                <img src={heroImage} alt="Hero" className="h-14 w-24 object-cover rounded-lg border-2 border-teal-400" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-600 truncate">Hero slika: <span className="text-teal-600">{heroImage}</span></p>
+                </div>
+                <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-colors shrink-0">
+                  {heroUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                  {heroUploading ? "Uploadujem..." : "Zamijeni"}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-teal-50 hover:border-teal-300 text-gray-500 hover:text-teal-700 transition-colors w-full justify-center">
+                {heroUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                {heroUploading ? "Uploadujem..." : "Dodaj hero sliku"}
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-1.5 items-center">
             {parsed.sections.map((sec, idx) => {
               const style = getSectionStyle(sec.id);
