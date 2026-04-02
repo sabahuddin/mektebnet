@@ -168,6 +168,12 @@ uri = "file://attached_assets/generated_images/prispijevanje_dzemat_v3.png"
 type = "image"
 title = "boy arriving late prayer"
 
+[[generated]]
+id = "bF_LlajD8u-kMZKblJc8O"
+uri = "file://attached_assets/generated_images/adem_as.png"
+type = "image"
+title = "paradise garden adam eve"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
