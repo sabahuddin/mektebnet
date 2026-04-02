@@ -336,6 +336,28 @@ router.put("/ilmihal/:id", async (req, res) => {
   }
 });
 
+router.delete("/ilmihal/:id", async (req, res) => {
+  try {
+    await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, parseInt(req.params.id)));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.post("/ilmihal/delete-batch", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: "ids array required" });
+    for (const id of ids) {
+      await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
+    }
+    res.json({ success: true, deleted: ids.length });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // PUT /api/admin/kvizovi/:id — Update quiz questions/title
 router.put("/kvizovi/:id", async (req, res) => {
   try {
