@@ -17,8 +17,33 @@ import {
   Image as ImageIcon, Highlighter, Undo2, Redo2,
   Quote, Pilcrow,
   BookOpen, AlertTriangle, TableIcon,
-  Plus, ChevronUp, ChevronDown, Trash2, Pencil
+  Plus, ChevronUp, ChevronDown, Trash2, Pencil,
+  Maximize, RectangleHorizontal, Square
 } from "lucide-react";
+
+const CustomImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      "data-align": {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute("data-align"),
+        renderHTML: (attrs: Record<string, any>) => {
+          if (!attrs["data-align"]) return {};
+          return { "data-align": attrs["data-align"] };
+        },
+      },
+      "data-size": {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute("data-size"),
+        renderHTML: (attrs: Record<string, any>) => {
+          if (!attrs["data-size"]) return {};
+          return { "data-size": attrs["data-size"] };
+        },
+      },
+    };
+  },
+});
 
 function createCustomBlock(name: string, cssClass: string) {
   return Node.create({
@@ -169,7 +194,7 @@ function getSectionStyle(sectionId: string) {
 
 const editorExtensions = [
   StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
-  Image.configure({ inline: false, allowBase64: false }),
+  CustomImage.configure({ inline: false, allowBase64: false }),
   TextAlign.configure({ types: ["heading", "paragraph"] }),
   Underline,
   Highlight.configure({ multicolor: true }),
@@ -541,7 +566,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
 
-      <div className="flex-1 overflow-y-auto wysiwyg-editor-content">
+      <div className="flex-1 overflow-y-auto wysiwyg-editor-content relative">
         <style>{`
           .wysiwyg-editor-content .ProseMirror {
             min-height: 300px;
@@ -562,7 +587,13 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           .wysiwyg-editor-content .ProseMirror ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
           .wysiwyg-editor-content .ProseMirror li { margin: 0.25rem 0; }
           .wysiwyg-editor-content .ProseMirror blockquote { border-left: 4px solid #0d9488; padding-left: 1rem; margin: 0.75rem 0; color: #4b5563; font-style: italic; }
-          .wysiwyg-editor-content .ProseMirror img { max-width: 100%; height: auto; border-radius: 0.75rem; margin: 0.75rem 0; }
+          .wysiwyg-editor-content .ProseMirror img { max-width: 100%; height: auto; border-radius: 0.75rem; margin: 0.75rem 0; cursor: pointer; transition: outline 0.15s; }
+          .wysiwyg-editor-content .ProseMirror img.ProseMirror-selectednode { outline: 3px solid #0d9488; outline-offset: 2px; }
+          .wysiwyg-editor-content .ProseMirror img[data-size="medium"] { max-width: 50%; width: 50%; }
+          .wysiwyg-editor-content .ProseMirror img[data-size="small"] { max-width: 33%; width: 33%; }
+          .wysiwyg-editor-content .ProseMirror img[data-align="left"] { float: left; margin: 0.5rem 1.25rem 0.75rem 0; }
+          .wysiwyg-editor-content .ProseMirror img[data-align="right"] { float: right; margin: 0.5rem 0 0.75rem 1.25rem; }
+          .wysiwyg-editor-content .ProseMirror img[data-align="center"] { display: block; margin-left: auto; margin-right: auto; }
           .wysiwyg-editor-content .ProseMirror mark { background-color: #fef08a; padding: 0.1em 0.2em; border-radius: 0.2em; }
           .wysiwyg-editor-content .ProseMirror hr { border: none; border-top: 2px solid #e5e7eb; margin: 1.5rem 0; }
           .wysiwyg-editor-content .ProseMirror div.arabic-card {
@@ -603,7 +634,100 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           }
         `}</style>
         <EditorContent editor={editor} />
+        <ImageToolbar editor={editor} />
       </div>
+    </div>
+  );
+}
+
+function ImageToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [attrs, setAttrs] = useState<{ align: string | null; size: string | null }>({ align: null, size: null });
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      const { selection } = editor.state;
+      const node = (selection as any).node;
+      if (node && node.type.name === "image") {
+        const dom = editor.view.nodeDOM(selection.from) as HTMLElement | null;
+        if (dom) {
+          const editorEl = editor.view.dom.closest(".wysiwyg-editor-content");
+          if (editorEl) {
+            const editorRect = editorEl.getBoundingClientRect();
+            const imgRect = dom.getBoundingClientRect();
+            setPos({
+              top: imgRect.top - editorRect.top - 48,
+              left: imgRect.left - editorRect.left + imgRect.width / 2,
+            });
+          }
+        }
+        setAttrs({
+          align: node.attrs["data-align"] || null,
+          size: node.attrs["data-size"] || null,
+        });
+      } else {
+        setPos(null);
+      }
+    };
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+
+  const setImageAttr = (key: string, value: string | null) => {
+    if (!editor) return;
+    const { selection } = editor.state;
+    const selNode = (selection as any).node;
+    if (!selNode || selNode.type.name !== "image") return;
+    const current = selNode.attrs[key];
+    const newVal = current === value ? null : value;
+    editor.chain().focus().updateAttributes("image", { [key]: newVal }).run();
+    setAttrs(prev => ({ ...prev, [key === "data-align" ? "align" : "size"]: newVal }));
+  };
+
+  if (!pos || !editor) return null;
+
+  const btnClass = (active: boolean) =>
+    `p-1.5 rounded-md text-xs font-bold transition-colors ${
+      active ? "bg-teal-500 text-white" : "bg-white text-gray-600 hover:bg-gray-100"
+    }`;
+
+  return (
+    <div
+      ref={toolbarRef}
+      className="absolute z-50 flex items-center gap-1 bg-white border border-gray-200 rounded-xl shadow-lg px-2 py-1.5"
+      style={{
+        top: Math.max(0, pos.top),
+        left: pos.left,
+        transform: "translateX(-50%)",
+      }}
+    >
+      <span className="text-[10px] text-gray-400 font-bold mr-1">Pozicija:</span>
+      <button type="button" className={btnClass(attrs.align === "left")} onClick={() => setImageAttr("data-align", "left")} title="Lijevo (tekst desno)">
+        <AlignLeft className="w-3.5 h-3.5" />
+      </button>
+      <button type="button" className={btnClass(attrs.align === "center" || !attrs.align)} onClick={() => setImageAttr("data-align", "center")} title="Centar">
+        <AlignCenter className="w-3.5 h-3.5" />
+      </button>
+      <button type="button" className={btnClass(attrs.align === "right")} onClick={() => setImageAttr("data-align", "right")} title="Desno (tekst lijevo)">
+        <AlignRight className="w-3.5 h-3.5" />
+      </button>
+      <div className="w-px h-5 bg-gray-200 mx-1" />
+      <span className="text-[10px] text-gray-400 font-bold mr-1">Veličina:</span>
+      <button type="button" className={btnClass(!attrs.size)} onClick={() => setImageAttr("data-size", null)} title="Puna širina">
+        <Maximize className="w-3.5 h-3.5" />
+      </button>
+      <button type="button" className={btnClass(attrs.size === "medium")} onClick={() => setImageAttr("data-size", "medium")} title="Srednja (50%)">
+        <RectangleHorizontal className="w-3.5 h-3.5" />
+      </button>
+      <button type="button" className={btnClass(attrs.size === "small")} onClick={() => setImageAttr("data-size", "small")} title="Mala (33%)">
+        <Square className="w-3.5 h-3.5" />
+      </button>
     </div>
   );
 }

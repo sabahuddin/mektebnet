@@ -302,6 +302,47 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   border: 2px solid rgb(36, 143, 146);
 }
 
+.ilmihal-content img[data-size="medium"] {
+  max-width: 50%;
+  width: 50%;
+}
+
+.ilmihal-content img[data-size="small"] {
+  max-width: 33%;
+  width: 33%;
+}
+
+.ilmihal-content img[data-align="left"] {
+  float: left;
+  margin: 0.5rem 1.25rem 0.75rem 0;
+}
+
+.ilmihal-content img[data-align="right"] {
+  float: right;
+  margin: 0.5rem 0 0.75rem 1.25rem;
+}
+
+.ilmihal-content img[data-align="center"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ilmihal-content .clearfix::after,
+.ilmihal-content p:has(+ img[data-align])::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+@media (max-width: 640px) {
+  .ilmihal-content img[data-size="medium"],
+  .ilmihal-content img[data-size="small"] {
+    max-width: 60%;
+    width: 60%;
+  }
+}
+
 /* Quiz question images */
 .edu-image {
   border: 2px solid rgb(36, 143, 146);

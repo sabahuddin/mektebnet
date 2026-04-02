@@ -264,6 +264,11 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
                     .editor-preview h3 { font-size: 1.2rem; font-weight: 700; margin: 1rem 0 0.5rem; }
                     .editor-preview h4 { font-size: 1.05rem; font-weight: 700; margin: 0.75rem 0 0.5rem; }
                     .editor-preview img { max-width: 100%; border-radius: 0.75rem; margin: 0.75rem 0; }
+                    .editor-preview img[data-size="medium"] { max-width: 50%; width: 50%; }
+                    .editor-preview img[data-size="small"] { max-width: 33%; width: 33%; }
+                    .editor-preview img[data-align="left"] { float: left; margin: 0.5rem 1.25rem 0.75rem 0; }
+                    .editor-preview img[data-align="right"] { float: right; margin: 0.5rem 0 0.75rem 1.25rem; }
+                    .editor-preview img[data-align="center"] { display: block; margin-left: auto; margin-right: auto; }
                   `}</style>
                   <div
                     className="editor-preview ilmihal-content"
