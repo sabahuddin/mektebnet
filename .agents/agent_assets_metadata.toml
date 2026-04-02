@@ -150,6 +150,18 @@ uri = "file://attached_assets/generated_images/lekad_dzaekum.png"
 type = "image"
 title = "quran recitation study"
 
+[[generated]]
+id = "zQe6z1fDXauU3HoCNTTjB"
+uri = "file://attached_assets/generated_images/sehvi_sedzda_v2.png"
+type = "image"
+title = "sehvi sedzda prostration"
+
+[[generated]]
+id = "MAiaRDONEhj4tOA5f3XEl"
+uri = "file://attached_assets/generated_images/prispijevanje_dzemat_v2.png"
+type = "image"
+title = "joining prayer congregation"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
