@@ -1,5 +1,154 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "P3yU_h-44XnrUUDaqW-67"
+uri = "file://attached_assets/generated_images/sehvi_sedzda.png"
+type = "image"
+title = "sehvi sedzda prayer"
+
+[[generated]]
+id = "zp53JHSVlkH9weAyODPgm"
+uri = "file://attached_assets/generated_images/prispijevanje_dzemat.png"
+type = "image"
+title = "joining congregational prayer"
+
+[[generated]]
+id = "6Ft_mu2Icx0GLXs2rteDP"
+uri = "file://attached_assets/generated_images/cistoca_higijena.png"
+type = "image"
+title = "cleanliness hygiene"
+
+[[generated]]
+id = "f3Zo3zj8fvykSXt5VsmDq"
+uri = "file://attached_assets/generated_images/zdrava_ishrana.png"
+type = "image"
+title = "healthy eating family"
+
+[[generated]]
+id = "iBoq8wOS6bfKYTQVYRDwP"
+uri = "file://attached_assets/generated_images/ponasanje_jelo.png"
+type = "image"
+title = "table manners eating"
+
+[[generated]]
+id = "hGUjnq8Qv51U58WuvihRj"
+uri = "file://attached_assets/generated_images/dova_jelo.png"
+type = "image"
+title = "prayer after meal"
+
+[[generated]]
+id = "H4LmLt12TioBWczaltBqJ"
+uri = "file://attached_assets/generated_images/paznja_braca.png"
+type = "image"
+title = "siblings caring"
+
+[[generated]]
+id = "Mc9HJelY9BTtB1o6VvqDL"
+uri = "file://attached_assets/generated_images/namaz_cuva.png"
+type = "image"
+title = "prayer protects"
+
+[[generated]]
+id = "9djMmVpBLceSTOh69F1QT"
+uri = "file://attached_assets/generated_images/mesh_mestve.png"
+type = "image"
+title = "wiping over socks"
+
+[[generated]]
+id = "XegRE18UzW_yKjMiVgbYe"
+uri = "file://attached_assets/generated_images/veliki_grijesi.png"
+type = "image"
+title = "major sins paths"
+
+[[generated]]
+id = "rkHKhQRmQu5srmS5KTCuw"
+uri = "file://attached_assets/generated_images/teski_grijesi.png"
+type = "image"
+title = "grave sins chains"
+
+[[generated]]
+id = "m49hPjZIwYltJ_DZ7zM4Y"
+uri = "file://attached_assets/generated_images/posljedice_grijeha.png"
+type = "image"
+title = "consequences of sin"
+
+[[generated]]
+id = "ntFJtI4sKan8YQbmvHc9u"
+uri = "file://attached_assets/generated_images/cestitost.png"
+type = "image"
+title = "honesty responsibility"
+
+[[generated]]
+id = "ore9ljkT6ZgN-A9IvaKiQ"
+uri = "file://attached_assets/generated_images/namaz_bolesnika.png"
+type = "image"
+title = "prayer of sick person"
+
+[[generated]]
+id = "FyTM6caZ4kBhdbuC__fBf"
+uri = "file://attached_assets/generated_images/kunut_dova.png"
+type = "image"
+title = "qunut supplication dawn"
+
+[[generated]]
+id = "5qryv322ZfzwiiWCbRfFD"
+uri = "file://attached_assets/generated_images/namaska_dova.png"
+type = "image"
+title = "post prayer supplication"
+
+[[generated]]
+id = "bAh-CJdsC3KJs5Lte6JOl"
+uri = "file://attached_assets/generated_images/radne_navike.png"
+type = "image"
+title = "work habits studying"
+
+[[generated]]
+id = "iVrLdytQ8WGhewA66ktyp"
+uri = "file://attached_assets/generated_images/srednji_put.png"
+type = "image"
+title = "middle path moderation"
+
+[[generated]]
+id = "WKo4WRqbzZNMLr50QlF83"
+uri = "file://attached_assets/generated_images/teravih_namaz.png"
+type = "image"
+title = "tarawih prayer ramadan"
+
+[[generated]]
+id = "SapdCH-Z1eWjbKiyDqrpI"
+uri = "file://attached_assets/generated_images/istina.png"
+type = "image"
+title = "power of truth"
+
+[[generated]]
+id = "M7KlIGLBtjEaOTPp5LR5y"
+uri = "file://attached_assets/generated_images/prevara_laz.png"
+type = "image"
+title = "deception lies theft"
+
+[[generated]]
+id = "8ZWZ6vjCGmaSqT6PMY_7R"
+uri = "file://attached_assets/generated_images/ponasanje_drustvo.png"
+type = "image"
+title = "social gathering behavior"
+
+[[generated]]
+id = "A82Rr1QnsjDKWw2p02UhH"
+uri = "file://attached_assets/generated_images/kultura_tradicija.png"
+type = "image"
+title = "bosnian culture tradition"
+
+[[generated]]
+id = "qoIkBC9OQa8CLH287VEdE"
+uri = "file://attached_assets/generated_images/bosnjak.png"
+type = "image"
+title = "bosniak identity pride"
+
+[[generated]]
+id = "5wDjbNn-xKpxrEkWwRFy8"
+uri = "file://attached_assets/generated_images/lekad_dzaekum.png"
+type = "image"
+title = "quran recitation study"
 
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
