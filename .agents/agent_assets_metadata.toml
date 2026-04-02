@@ -186,6 +186,18 @@ uri = "file://attached_assets/generated_images/sifatus_subutijje.png"
 type = "image"
 title = "divine affirmative attributes"
 
+[[generated]]
+id = "5yszaQkLKSIFXrRq1qSQC"
+uri = "file://attached_assets/generated_images/sifatuz_zatijje_v2.png"
+type = "image"
+title = "Earth from space view"
+
+[[generated]]
+id = "CYsLww6_S-MqUUUHJbhk0"
+uri = "file://attached_assets/generated_images/sifatus_subutijje_v2.png"
+type = "image"
+title = "mountains rivers birds nature"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
