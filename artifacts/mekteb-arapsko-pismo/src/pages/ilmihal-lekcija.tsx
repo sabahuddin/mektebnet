@@ -929,7 +929,8 @@ export default function IlmihalLekcijaPage() {
             onClick={() => {
               const printWindow = window.open("", "_blank");
               if (!printWindow) return;
-              const sections = parsed.sections.map(s => `<h2 style="margin-top:24px;color:#0d6e6e;border-bottom:2px solid #0d6e6e;padding-bottom:4px;">${s.title}</h2><div>${s.content}</div>`).join("");
+              const visibleForPrint = parsed.sections.filter(s => s.type !== "quiz_box" && s.type !== "priprema");
+              const sections = visibleForPrint.map(s => `<h2 style="margin-top:24px;color:#0d6e6e;border-bottom:2px solid #0d6e6e;padding-bottom:4px;">${s.title}</h2><div>${s.html}</div>`).join("");
               printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${lekcija.naslov} — Mekteb</title><style>
                 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
                 body{font-family:'Nunito',sans-serif;max-width:800px;margin:0 auto;padding:40px 30px;color:#222;line-height:1.7;font-size:15px;}
