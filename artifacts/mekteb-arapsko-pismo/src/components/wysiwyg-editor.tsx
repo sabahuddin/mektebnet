@@ -18,7 +18,8 @@ import {
   Quote, Pilcrow,
   BookOpen, AlertTriangle, TableIcon,
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
-  Maximize, RectangleHorizontal, Square, Loader2
+  Maximize, RectangleHorizontal, Square, Loader2,
+  FolderOpen, X, Copy, Check
 } from "lucide-react";
 
 const CustomImage = Image.extend({
@@ -240,6 +241,44 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [renameValue, setRenameValue] = useState("");
   const [heroImage, setHeroImage] = useState<string | null>(() => extractHeroImage(parsed.beforeAccordions));
   const [heroUploading, setHeroUploading] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<{name:string;url:string;size:number;modified:string}[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [galleryMode, setGalleryMode] = useState<"hero" | "insert">("hero");
+
+  const loadGallery = useCallback(async () => {
+    setGalleryLoading(true);
+    try {
+      const resp = await fetch(`${getApiBase()}/admin/uploads`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await resp.json();
+      setGalleryImages(Array.isArray(data) ? data : data.files || []);
+    } catch { }
+    setGalleryLoading(false);
+  }, [token]);
+
+  const openGallery = useCallback((mode: "hero" | "insert") => {
+    setGalleryMode(mode);
+    setShowGallery(true);
+    loadGallery();
+  }, [loadGallery]);
+
+  const selectGalleryImage = useCallback((url: string) => {
+    if (galleryMode === "hero") {
+      setHeroImage(url);
+      setParsed(prev => ({
+        ...prev,
+        beforeAccordions: replaceHeroImage(prev.beforeAccordions, url),
+      }));
+      onChange("");
+      toast({ title: "Hero slika postavljena ✓" });
+    } else if (editor) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+    setShowGallery(false);
+  }, [galleryMode, editor, onChange, toast]);
 
   const editor = useEditor({
     extensions: editorExtensions,
@@ -499,21 +538,85 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-gray-600 truncate">Hero slika: <span className="text-teal-600">{heroImage}</span></p>
               </div>
+              <button type="button" onClick={() => openGallery("hero")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors shrink-0">
+                <FolderOpen className="w-3.5 h-3.5" />
+                Galerija
+              </button>
               <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-colors shrink-0">
                 {heroUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                {heroUploading ? "Uploadujem..." : "Zamijeni"}
+                {heroUploading ? "Uploadujem..." : "Upload"}
               </button>
             </div>
           ) : (
-            <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-teal-50 hover:border-teal-300 text-gray-500 hover:text-teal-700 transition-colors w-full justify-center">
-              {heroUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
-              {heroUploading ? "Uploadujem..." : "Dodaj hero sliku"}
-            </button>
+            <div className="flex items-center gap-2 w-full">
+              <button type="button" onClick={() => openGallery("hero")}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex-1 justify-center">
+                <FolderOpen className="w-4 h-4" />
+                Iz galerije
+              </button>
+              <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-teal-50 hover:border-teal-300 text-gray-500 hover:text-teal-700 transition-colors flex-1 justify-center">
+                {heroUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                {heroUploading ? "Uploadujem..." : "Upload novu"}
+              </button>
+            </div>
           )}
         </div>
       </div>
+
+      {showGallery && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowGallery(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-4xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+              <h3 className="text-base font-bold text-gray-800">
+                {galleryMode === "hero" ? "Odaberi hero sliku" : "Umetni sliku iz galerije"}
+              </h3>
+              <button type="button" onClick={() => setShowGallery(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {galleryLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+                </div>
+              ) : galleryImages.length === 0 ? (
+                <p className="text-center text-gray-400 py-12">Nema uploadovanih slika</p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  {galleryImages.map(img => (
+                    <div key={img.url} className="group relative">
+                      <button
+                        type="button"
+                        onClick={() => selectGalleryImage(img.url)}
+                        className="w-full aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-teal-400 transition-colors bg-gray-50"
+                      >
+                        <img src={img.url} alt={img.name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>" }} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(img.url);
+                          setCopiedUrl(img.url);
+                          setTimeout(() => setCopiedUrl(null), 2000);
+                        }}
+                        title="Kopiraj URL"
+                        className="absolute top-1 right-1 p-1 rounded-md bg-white/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-teal-50"
+                      >
+                        {copiedUrl === img.url ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                      </button>
+                      <p className="text-[10px] text-gray-400 truncate mt-1 px-0.5">{img.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {parsed.hasAccordions && (
         <div className="px-3 py-2 border-b border-gray-200 bg-gray-50/80">
           <div className="flex flex-wrap gap-1.5 items-center">
@@ -616,8 +719,11 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           <AlignRight className="w-4 h-4" />
         </MenuButton>
         <ToolSeparator />
-        <MenuButton onClick={() => fileInputRef.current?.click()} title="Umetni sliku">
+        <MenuButton onClick={() => fileInputRef.current?.click()} title="Upload sliku">
           <ImageIcon className="w-4 h-4" />
+        </MenuButton>
+        <MenuButton onClick={() => openGallery("insert")} title="Umetni iz galerije">
+          <FolderOpen className="w-4 h-4 text-amber-600" />
         </MenuButton>
         <MenuButton onClick={() => insertCustomBlock("arabic-card")} title="Zeleni box — označi tekst pa klikni">
           <BookOpen className="w-4 h-4 text-emerald-600" />
