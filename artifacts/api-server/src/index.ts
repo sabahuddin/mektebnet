@@ -30,7 +30,15 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    logger.info("Auto-migration: prilozi table ready");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS rjecnik (
+        id SERIAL PRIMARY KEY,
+        rijec VARCHAR(200) NOT NULL UNIQUE,
+        definicija TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    logger.info("Auto-migration: prilozi + rjecnik tables ready");
   } catch (e: any) {
     logger.error({ err: e }, "Auto-migration failed");
   }

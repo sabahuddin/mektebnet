@@ -685,6 +685,12 @@ export default function AdminPage() {
           </div>
         )}
 
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">
+            <BookOpen className="w-4 h-4" /> Rječnik pojmova
+          </button>
+        </div>
+
         <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6 overflow-x-auto">
           {[
             { key: "muallimi" as const, label: "Muallimi", icon: <UserCog className="w-4 h-4" /> },

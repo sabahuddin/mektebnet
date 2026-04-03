@@ -70,11 +70,15 @@ scripts/src/
 
 ## Rječnik (Glossary Tooltip)
 
-- **224+ islamskih termina** u `src/lib/rjecnik.ts`
-- `processRjecnik(html)` označava **prvi** pojavak svakog termina u tekstu sa `<span class="rjecnik-rijec">` (dashed teal underline)
-- Klik na termin prikazuje tooltip popup sa definicijom (komponenta `RjecnikContent`)
-- Integrisan u prikaz lekcija (`SectionAccordion` i fallback sadržaj) — isključen za pripremu sekcije
+- **314+ islamskih termina** pohranjeno u `rjecnik` tabeli u bazi podataka
+- Admin CRUD: `GET/POST/PUT/DELETE /api/admin/rjecnik` + `POST /api/admin/rjecnik/seed` (additive seed)
+- Javni endpoint: `GET /api/content/rjecnik` (vraća `{rijec: definicija}` objekat)
+- Frontend čita iz API-ja sa kešom (`fetchRjecnik`, `invalidateRjecnikCache` u `src/lib/rjecnik.ts`)
+- `processRjecnik(html, dict)` označava **prvi** pojavak svakog termina sa `<span class="rjecnik-rijec">`
+- Klik na termin prikazuje tooltip popup (komponenta `RjecnikContent`)
+- Admin stranica: `/admin/rjecnik` — pretraga, dodavanje, uređivanje, brisanje riječi
 - CSS stilovi: `.rjecnik-rijec` (dashed underline) + `.rjecnik-popup` (animated tooltip) u `index.css`
+- Seed fajl: `api-server/src/routes/rjecnik-seed.ts` (početnih 314 termina)
 
 ## Admin WYSIWYG Editor
 

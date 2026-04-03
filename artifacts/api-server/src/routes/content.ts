@@ -7,6 +7,7 @@ import {
   korisnikNapredakTable,
   kvizRezultatiTable,
   prilozi,
+  rjecnikTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -260,6 +261,20 @@ router.get("/kviz-rezultati", requireAuth, async (req, res) => {
       .where(eq(kvizRezultatiTable.userId, userId))
       .orderBy(desc(kvizRezultatiTable.completedAt));
     res.json(rezultati);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.get("/rjecnik", async (_req, res) => {
+  try {
+    const rows = await db.select({
+      rijec: rjecnikTable.rijec,
+      definicija: rjecnikTable.definicija,
+    }).from(rjecnikTable).orderBy(asc(rjecnikTable.rijec));
+    const dict: Record<string, string> = {};
+    for (const r of rows) dict[r.rijec] = r.definicija;
+    res.json(dict);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

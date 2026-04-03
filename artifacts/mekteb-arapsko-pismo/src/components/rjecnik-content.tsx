@@ -1,5 +1,5 @@
-import { useRef, useState, useEffect, useCallback } from "react";
-import { processRjecnik } from "@/lib/rjecnik";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { processRjecnik, fetchRjecnik, getRjecnikSync } from "@/lib/rjecnik";
 import { X } from "lucide-react";
 
 interface Props {
@@ -17,7 +17,13 @@ interface Tooltip {
 export function RjecnikContent({ html, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
-  const processed = processRjecnik(html);
+  const [dict, setDict] = useState<Record<string, string>>(getRjecnikSync());
+
+  useEffect(() => {
+    fetchRjecnik().then(d => setDict(d));
+  }, []);
+
+  const processed = useMemo(() => processRjecnik(html, dict), [html, dict]);
 
   const handleClick = useCallback((e: MouseEvent) => {
     const el = e.target as HTMLElement;

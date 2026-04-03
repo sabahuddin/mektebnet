@@ -103,6 +103,15 @@ export const prilozi = pgTable("prilozi", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const rjecnikTable = pgTable("rjecnik", {
+  id: serial("id").primaryKey(),
+  rijec: varchar("rijec", { length: 200 }).notNull().unique(),
+  definicija: text("definicija").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type Rjecnik = typeof rjecnikTable.$inferSelect;
+
 export const insertIlmihalLekcijaSchema = createInsertSchema(ilmihalLekcijeTable).omit({ id: true, createdAt: true });
 export const insertKvizSchema = createInsertSchema(kvizoviTable).omit({ id: true, createdAt: true });
 export const insertKnjigaSchema = createInsertSchema(knjige).omit({ id: true, createdAt: true });

@@ -28,8 +28,9 @@ import {
   zadaceTable,
   certifikatiTable,
   prilozi,
+  rjecnikTable,
 } from "@workspace/db/schema";
-import { eq, desc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
+import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -872,6 +873,70 @@ router.delete("/korisnik/:id", async (req, res) => {
   } catch (err) {
     console.error("Delete user error:", err);
     res.status(500).json({ error: "Greška pri brisanju korisnika" });
+  }
+});
+
+router.get("/rjecnik", async (_req, res) => {
+  try {
+    const rows = await db.select().from(rjecnikTable).orderBy(asc(rjecnikTable.rijec));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.post("/rjecnik", async (req, res) => {
+  try {
+    const { rijec, definicija } = req.body;
+    if (!rijec || !definicija) return res.status(400).json({ error: "Riječ i definicija su obavezne" });
+    const trimmed = rijec.trim().toLowerCase();
+    const existing = await db.select().from(rjecnikTable).where(eq(rjecnikTable.rijec, trimmed));
+    if (existing.length > 0) return res.status(409).json({ error: "Riječ već postoji u rječniku" });
+    const [row] = await db.insert(rjecnikTable).values({ rijec: trimmed, definicija: definicija.trim() }).returning();
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: "Greška pri dodavanju riječi" });
+  }
+});
+
+router.put("/rjecnik/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { rijec, definicija } = req.body;
+    if (!rijec || !definicija) return res.status(400).json({ error: "Riječ i definicija su obavezne" });
+    const trimmed = rijec.trim().toLowerCase();
+    const dup = await db.select().from(rjecnikTable).where(and(eq(rjecnikTable.rijec, trimmed), sql`id != ${id}`));
+    if (dup.length > 0) return res.status(409).json({ error: "Druga riječ s istim nazivom već postoji" });
+    const [row] = await db.update(rjecnikTable).set({ rijec: trimmed, definicija: definicija.trim() }).where(eq(rjecnikTable.id, id)).returning();
+    if (!row) return res.status(404).json({ error: "Riječ nije pronađena" });
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: "Greška pri ažuriranju riječi" });
+  }
+});
+
+router.delete("/rjecnik/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(rjecnikTable).where(eq(rjecnikTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška pri brisanju riječi" });
+  }
+});
+
+router.post("/rjecnik/seed", async (_req, res) => {
+  try {
+    const before = await db.select({ c: sql<number>`count(*)::int` }).from(rjecnikTable);
+    const { RJECNIK } = await import("./rjecnik-seed.js");
+    const values = Object.entries(RJECNIK).map(([rijec, definicija]) => ({ rijec, definicija: definicija as string }));
+    await db.insert(rjecnikTable).values(values).onConflictDoNothing();
+    const after = await db.select({ c: sql<number>`count(*)::int` }).from(rjecnikTable);
+    const added = after[0].c - before[0].c;
+    res.json({ message: added > 0 ? `Dodano ${added} novih riječi` : "Sve riječi već postoje", count: after[0].c, added });
+  } catch (err: any) {
+    console.error("Seed error:", err);
+    res.status(500).json({ error: "Greška pri seedanju rječnika" });
   }
 });
 
