@@ -7,13 +7,13 @@ import { useAuth } from "@/context/auth";
 import {
   ArrowLeft, Volume2, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
-  HelpCircle, Sparkles, Trophy, FileEdit, Save, X, Loader2, Code,
+  HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
   ImagePlus, Camera, Printer
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { WysiwygEditor } from "@/components/wysiwyg-editor";
+const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
 
 interface LekcijaKvizPitanje {
   question: string;
@@ -185,7 +185,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <div className="flex md:hidden flex-col items-center justify-center h-full gap-4 p-8 text-center">
-        <FileEdit className="w-12 h-12 text-amber-500" />
+        <FilePen className="w-12 h-12 text-amber-500" />
         <h3 className="font-extrabold text-lg text-foreground">Editor dostupan samo na desktopu</h3>
         <p className="text-muted-foreground text-sm">Otvori stranicu na računaru da bi mogao/la uređivati sadržaj lekcije.</p>
         <Button variant="outline" onClick={onClose} className="rounded-xl">Zatvori</Button>
@@ -194,7 +194,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
       <div className="hidden md:flex flex-col h-full">
         <div className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border bg-white shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <FileEdit className="w-5 h-5 text-amber-600 shrink-0" />
+            <FilePen className="w-5 h-5 text-amber-600 shrink-0" />
             <div className="min-w-0">
               <h3 className="font-extrabold text-sm text-foreground truncate">Uredi sadržaj: {lekcija.naslov}</h3>
               <p className="text-xs text-muted-foreground">
@@ -226,7 +226,9 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
         <div className="flex-1 flex overflow-hidden">
           {mode === "visual" ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <WysiwygEditor content={html} onChange={markDirty} token={token} />
+              <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-teal-500" /></div>}>
+                <WysiwygEditor content={html} onChange={markDirty} token={token} />
+              </Suspense>
             </div>
           ) : (
             <>
@@ -442,7 +444,7 @@ const SECTION_CONFIG = {
     ring: "ring-green-300",
     headerBg: "bg-green-500/10 hover:bg-green-500/15",
     headerText: "text-green-800",
-    Icon: FileEdit,
+    Icon: FilePen,
     iconBg: "bg-green-100 text-green-700",
   },
   other: {
@@ -898,7 +900,7 @@ export default function IlmihalLekcijaPage() {
               <span className="text-border/70 ml-auto">|</span>
               <button onClick={() => setShowEditor(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
-                <FileEdit className="w-3.5 h-3.5" /> Uredi sadržaj
+                <FilePen className="w-3.5 h-3.5" /> Uredi sadržaj
               </button>
             </>
           )}
