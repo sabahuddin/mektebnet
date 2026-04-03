@@ -19,7 +19,7 @@ import {
   BookOpen, AlertTriangle, TableIcon,
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
   Maximize, RectangleHorizontal, Square, Loader2,
-  FolderOpen, X, Copy, Check, FileText
+  FolderOpen, X, Copy, Check, FileText, Minus
 } from "lucide-react";
 
 const CustomImage = Image.extend({
@@ -791,6 +791,9 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           )}
         </div>
         <ToolSeparator />
+        <MenuButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Umetni horizontalnu liniju">
+          <Minus className="w-4 h-4" />
+        </MenuButton>
         <MenuButton onClick={() => docInputRef.current?.click()} disabled={docUploading} title="Umetni PDF / DOCX">
           {docUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 text-blue-600" />}
         </MenuButton>
