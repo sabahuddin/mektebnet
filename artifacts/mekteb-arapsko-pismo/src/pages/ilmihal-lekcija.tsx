@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
-  ArrowLeft, Volume2, CheckCircle2, BookOpen, BookMarked,
+  ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
   ImagePlus, Camera, Printer
@@ -785,12 +785,10 @@ export default function IlmihalLekcijaPage() {
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
   const { toast } = useToast();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [lekcija, setLekcija] = useState<Lekcija | null>(null);
   const [parsed, setParsed] = useState<{ heroImage: string | null; sections: AccordionSection[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [completed, setCompleted] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [lekcijeStrip, setLekcijeStrip] = useState<LekcijaNav[]>([]);
   const [showEditor, setShowEditor] = useState(false);
 
@@ -834,12 +832,6 @@ export default function IlmihalLekcijaPage() {
       setCompleted(true);
       toast({ title: "Bravo! ⭐", description: "Lekcija označena kao završena" });
     } catch {}
-  };
-
-  const toggleAudio = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
-    else { audioRef.current.play(); setIsPlaying(true); }
   };
 
   const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 21: "Nivo 2", 3: "Nivo 3" };
@@ -914,15 +906,6 @@ export default function IlmihalLekcijaPage() {
             </span>
             <h1 className="text-2xl font-extrabold text-foreground leading-tight">{lekcija.naslov}</h1>
           </div>
-          {lekcija.audioSrc && (
-            <>
-              <button onClick={toggleAudio}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shrink-0 transition-colors ${isPlaying ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"}`}>
-                <Volume2 className="w-4 h-4" /> {isPlaying ? "Pauza" : "Slušaj"}
-              </button>
-              <audio ref={audioRef} src={lekcija.audioSrc} onEnded={() => setIsPlaying(false)} />
-            </>
-          )}
         </div>
 
         {/* Print button */}
