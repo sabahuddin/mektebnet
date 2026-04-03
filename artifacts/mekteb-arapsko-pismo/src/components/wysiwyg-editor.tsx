@@ -265,21 +265,6 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     loadGallery();
   }, [loadGallery]);
 
-  const selectGalleryImage = useCallback((url: string) => {
-    if (galleryMode === "hero") {
-      setHeroImage(url);
-      setParsed(prev => ({
-        ...prev,
-        beforeAccordions: replaceHeroImage(prev.beforeAccordions, url),
-      }));
-      onChange("");
-      toast({ title: "Hero slika postavljena ✓" });
-    } else if (editor) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-    setShowGallery(false);
-  }, [galleryMode, editor, onChange, toast]);
-
   const editor = useEditor({
     extensions: editorExtensions,
     content: parsed.hasAccordions ? parsed.sections[0]?.contentHtml || "" : content,
@@ -297,6 +282,21 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       },
     },
   });
+
+  const selectGalleryImage = useCallback((url: string) => {
+    if (galleryMode === "hero") {
+      setHeroImage(url);
+      setParsed(prev => ({
+        ...prev,
+        beforeAccordions: replaceHeroImage(prev.beforeAccordions, url),
+      }));
+      onChange("");
+      toast({ title: "Hero slika postavljena ✓" });
+    } else if (editor) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+    setShowGallery(false);
+  }, [galleryMode, editor, onChange, toast]);
 
   const activeIdxRef = useRef(activeIdx);
   activeIdxRef.current = activeIdx;
