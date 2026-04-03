@@ -8,7 +8,7 @@ import {
   ArrowLeft, Volume2, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FileEdit, Save, X, Loader2, Code,
-  ImagePlus, Camera
+  ImagePlus, Camera, Printer
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,7 +36,7 @@ interface AccordionSection {
   title: string;
   html: string;
   defaultOpen: boolean;
-  type: "story" | "ilmihal" | "quiz_box" | "pitanja" | "zadatak" | "other";
+  type: "story" | "ilmihal" | "quiz_box" | "pitanja" | "zadatak" | "priprema" | "other";
 }
 
 interface QuizQuestion {
@@ -375,16 +375,16 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
     let type: AccordionSection["type"] = "other";
     const sid = sectionId.toUpperCase();
     const classify = (s: string) => {
+      if (s === "PRIPREMA" || s.includes("PRIPREMA ZA NASTAVU")) return "priprema" as const;
       if (s === "STORY" || s.includes("PRIČA") || s.includes("PRICA") || s.includes("PUTOKAZ") || s.includes("PUTO")) return "story" as const;
       if (s === "ILMIHAL" || s.includes("ILMIHAL")) return "ilmihal" as const;
-      // quiz_box: only if the section ID itself is a quiz section (not just title keywords)
       if (s === "QUIZ_BOX" || s === "QUIZ" || s === "QUIZ_SECTION" || s === "QUIZ-SECTION" || s === "KVIZ") return "quiz_box" as const;
       if (s.includes("PITAN") || s.includes("RAZGOVOR")) return "pitanja" as const;
       if (s.includes("ZADATAK") || s.includes("ZADACI") || s.includes("AKTIVNOST") || s === "ZADACA") return "zadatak" as const;
       return null;
     };
-    // Only classify by sectionId — don't use title keywords for quiz_box (too broad)
-    type = classify(sid) || "other";
+    // Classify by sectionId first, then by title for priprema
+    type = classify(sid) || classify(titleCheck) || "other";
 
     const processedHtml = postProcessHtml(contentHtml);
     sections.push({ id: sectionId, title, html: processedHtml, defaultOpen: isActive, type });
@@ -436,6 +436,14 @@ const SECTION_CONFIG = {
     headerText: "text-teal-800",
     icon: <HelpCircle className="w-4 h-4 shrink-0" />,
     iconBg: "bg-teal-100 text-teal-700",
+  },
+  priprema: {
+    bg: "bg-green-50",
+    ring: "ring-green-300",
+    headerBg: "bg-green-500/10 hover:bg-green-500/15",
+    headerText: "text-green-800",
+    icon: <FileEdit className="w-4 h-4 shrink-0" />,
+    iconBg: "bg-green-100 text-green-700",
   },
   other: {
     bg: "bg-gray-50",
@@ -915,6 +923,46 @@ export default function IlmihalLekcijaPage() {
           )}
         </div>
 
+        {/* Print button */}
+        <div className="flex justify-end mb-2 print:hidden">
+          <button
+            onClick={() => {
+              const printWindow = window.open("", "_blank");
+              if (!printWindow) return;
+              const sections = parsed.sections.map(s => `<h2 style="margin-top:24px;color:#0d6e6e;border-bottom:2px solid #0d6e6e;padding-bottom:4px;">${s.title}</h2><div>${s.content}</div>`).join("");
+              printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${lekcija.naslov} — Mekteb</title><style>
+                @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+                body{font-family:'Nunito',sans-serif;max-width:800px;margin:0 auto;padding:40px 30px;color:#222;line-height:1.7;font-size:15px;}
+                h1{color:#0d6e6e;font-size:22px;margin-bottom:8px;}
+                h2{font-size:18px;}
+                h3{font-size:16px;color:#333;}
+                h4{font-size:15px;color:#555;}
+                img{max-width:100%;height:auto;border-radius:12px;margin:12px 0;}
+                .hero-print{text-align:center;margin-bottom:20px;}
+                .hero-print img{max-height:300px;object-fit:cover;width:100%;}
+                .nivo-badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;color:#0d6e6e;background:#e6f7f7;padding:3px 12px;border-radius:20px;border:1px solid #b2e0e0;margin-bottom:8px;}
+                .footer{margin-top:40px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee;padding-top:12px;}
+                p{margin:6px 0;}
+                strong{color:#333;}
+                .arabic-card{background:#e8f5e9;border-left:4px solid #2e7d32;padding:12px 16px;border-radius:8px;margin:10px 0;font-size:18px;text-align:center;direction:rtl;}
+                .info-box{background:#fffde7;border-left:4px solid #f9a825;padding:12px 16px;border-radius:8px;margin:10px 0;}
+                @media print{body{padding:20px;}}
+              </style></head><body>
+                <div class="nivo-badge">${lekcija.nivo === 21 ? "Nivo 2" : "Nivo " + lekcija.nivo}</div>
+                <h1>${lekcija.naslov}</h1>
+                ${parsed.heroImage ? '<div class="hero-print"><img src="' + (parsed.heroImage.startsWith("http") ? parsed.heroImage : "https://mekteb.net" + parsed.heroImage) + '" /></div>' : ""}
+                ${sections}
+                <div class="footer">mekteb.net — Islamska edukativna platforma</div>
+              </body></html>`);
+              printWindow.document.close();
+              setTimeout(() => printWindow.print(), 500);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+          >
+            <Printer className="w-4 h-4" /> Printaj lekciju
+          </button>
+        </div>
+
         {/* Hero image */}
         {parsed.heroImage ? (
           <div className="relative rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)] group">
@@ -971,7 +1019,8 @@ export default function IlmihalLekcijaPage() {
           <div className="flex flex-col gap-3 mb-6">
             {(() => {
               const kvizPitanja = lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 ? lekcija.kvizPitanja : null;
-              const visibleSections = parsed.sections.filter(s => s.type !== "quiz_box");
+              const isMuallim = user?.role === "admin" || user?.role === "muallim";
+              const visibleSections = parsed.sections.filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim));
 
               const items: React.ReactNode[] = [];
               let kvizInserted = false;
