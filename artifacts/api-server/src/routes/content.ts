@@ -6,6 +6,7 @@ import {
   knjige,
   korisnikNapredakTable,
   kvizRezultatiTable,
+  prilozi,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -51,7 +52,30 @@ router.get("/ilmihal/:slug", async (req, res) => {
   try {
     const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, req.params.slug));
     if (!lekcija) { res.status(404).json({ error: "Lekcija nije pronađena" }); return; }
-    res.json(lekcija);
+
+    const result: Record<string, unknown> = { ...lekcija };
+
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const jwt = await import("jsonwebtoken");
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
+        if (decoded.role === "admin" || decoded.role === "muallim") {
+          const attachments = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(desc(prilozi.createdAt));
+          result.prilozi = attachments.map(a => ({
+            id: a.id,
+            originalName: a.originalName,
+            fileSize: a.fileSize,
+            mimeType: a.mimeType,
+            url: `/api/admin/prilozi/download/${a.id}`,
+            createdAt: a.createdAt,
+          }));
+        }
+      } catch {}
+    }
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

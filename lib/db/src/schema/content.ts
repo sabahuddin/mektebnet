@@ -93,6 +93,16 @@ export const posjeteTable = pgTable("posjete", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const prilozi = pgTable("prilozi", {
+  id: serial("id").primaryKey(),
+  lekcijaId: integer("lekcija_id").notNull(),
+  originalName: text("original_name").notNull(),
+  storedName: varchar("stored_name", { length: 300 }).notNull(),
+  fileSize: integer("file_size").notNull().default(0),
+  mimeType: varchar("mime_type", { length: 100 }).notNull().default("application/octet-stream"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertIlmihalLekcijaSchema = createInsertSchema(ilmihalLekcijeTable).omit({ id: true, createdAt: true });
 export const insertKvizSchema = createInsertSchema(kvizoviTable).omit({ id: true, createdAt: true });
 export const insertKnjigaSchema = createInsertSchema(knjige).omit({ id: true, createdAt: true });

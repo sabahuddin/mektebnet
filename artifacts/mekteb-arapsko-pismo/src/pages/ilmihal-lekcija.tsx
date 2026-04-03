@@ -8,7 +8,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +21,15 @@ interface LekcijaKvizPitanje {
   answer: string;
 }
 
+interface Prilog {
+  id: number;
+  originalName: string;
+  fileSize: number;
+  mimeType: string;
+  url: string;
+  createdAt: string;
+}
+
 interface Lekcija {
   id: number;
   nivo: number;
@@ -29,6 +38,7 @@ interface Lekcija {
   contentHtml: string;
   audioSrc?: string;
   kvizPitanja?: LekcijaKvizPitanje[] | null;
+  prilozi?: Prilog[];
 }
 
 interface AccordionSection {
@@ -778,6 +788,181 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
 }
 
 // ──────────────────────────────────────────────────
+// Prilozi (Materijali za muallime)
+// ──────────────────────────────────────────────────
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+function getFileIcon(mimeType: string) {
+  if (mimeType.includes("pdf")) return "📄";
+  if (mimeType.includes("word") || mimeType.includes("document")) return "📝";
+  if (mimeType.includes("sheet") || mimeType.includes("excel")) return "📊";
+  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "📑";
+  if (mimeType.includes("text")) return "📃";
+  return "📎";
+}
+
+function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: string | null; isAdmin: boolean }) {
+  const [open, setOpen] = useState(true);
+  const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !token) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}`, fd, token, true);
+      setAttachments(prev => [{ ...result, url: `/uploads/${(result as any).storedName || ""}` }, ...prev]);
+      toast({ title: "Uspješno", description: `"${file.name}" uploadovan.` });
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Obrisati "${name}"?`)) return;
+    try {
+      await apiRequest("DELETE", `/admin/prilozi/${id}`, undefined, token);
+      setAttachments(prev => prev.filter(a => a.id !== id));
+      toast({ title: "Obrisano", description: `"${name}" je obrisan.` });
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "/api";
+
+  const downloadFile = async (attachment: Prilog, openInTab = false) => {
+    try {
+      const res = await fetch(`${apiBase}${attachment.url}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Greška pri preuzimanju");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      if (openInTab) {
+        window.open(blobUrl, "_blank");
+      } else {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = attachment.originalName;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      }
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="mb-6 rounded-2xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden shadow-sm">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-blue-100/50 transition-colors"
+      >
+        <Paperclip className="w-5 h-5 text-blue-600 flex-shrink-0" />
+        <span className="font-bold text-blue-800 text-base flex-1">
+          Materijali za nastavu
+          {attachments.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-blue-500">({attachments.length})</span>
+          )}
+        </span>
+        <ChevronDown className={`w-5 h-5 text-blue-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5">
+              {isAdmin && (
+                <div className="mb-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf"
+                    onChange={handleUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    variant="outline"
+                    className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
+                  >
+                    {uploading ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploadujem...</>
+                    ) : (
+                      <><Upload className="w-4 h-4 mr-2" /> Dodaj materijal</>
+                    )}
+                  </Button>
+                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB)</p>
+                </div>
+              )}
+
+              {attachments.length === 0 ? (
+                <p className="text-blue-400 text-base italic">Nema uploadovanih materijala za ovu lekciju.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {attachments.map(a => (
+                    <div key={a.id} className="flex items-center gap-3 bg-white rounded-xl border border-blue-100 px-4 py-3 hover:shadow-md transition-shadow">
+                      <span className="text-2xl flex-shrink-0">{getFileIcon(a.mimeType)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
+                        <p className="text-sm text-gray-400">{formatFileSize(a.fileSize)}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => downloadFile(a, false)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
+                        >
+                          <FileDown className="w-4 h-4" /> Download
+                        </button>
+                        <button
+                          onClick={() => downloadFile(a, true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Open
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDelete(a.id, a.originalName)}
+                            className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Obriši"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────
 // Main page
 // ──────────────────────────────────────────────────
 export default function IlmihalLekcijaPage() {
@@ -1030,6 +1215,11 @@ export default function IlmihalLekcijaPage() {
           <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-6 mb-6">
             <div className="ilmihal-content" dangerouslySetInnerHTML={{ __html: lekcija.contentHtml }} />
           </div>
+        )}
+
+        {/* Prilozi / Materijali — visible to muallim & admin */}
+        {(user?.role === "admin" || user?.role === "muallim") && (
+          <PriloziSection lekcija={lekcija} token={token} isAdmin={user?.role === "admin"} />
         )}
 
         {/* Complete button */}

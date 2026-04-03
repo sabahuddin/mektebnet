@@ -27,6 +27,7 @@ import {
   porukeTable,
   zadaceTable,
   certifikatiTable,
+  prilozi,
 } from "@workspace/db/schema";
 import { eq, desc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -127,6 +128,107 @@ router.post("/upload", (req, res) => {
     const url = `/uploads/${req.file.filename}`;
     res.json({ url });
   });
+});
+
+const attachUpload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(pdf|docx|doc|xlsx|xls|pptx|ppt|txt|rtf)$/i;
+    if (allowed.test(path.extname(file.originalname))) cb(null, true);
+    else cb(new Error("Dozvoljeni formati: PDF, DOCX, DOC, XLSX, PPTX, TXT"));
+  },
+});
+
+router.post("/prilozi/:lekcijaId", (req, res) => {
+  attachUpload.single("file")(req, res, async (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? (err.code === "LIMIT_FILE_SIZE" ? "Fajl prevelik (max 20MB)" : err.message)
+        : err.message || "Greška pri uploadu";
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+    try {
+      const lekcijaId = parseInt(req.params.lekcijaId);
+      if (isNaN(lekcijaId)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
+      const [exists] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
+      if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
+      const mimeMap: Record<string, string> = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xls": "application/vnd.ms-excel",
+        ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ".ppt": "application/vnd.ms-powerpoint",
+        ".txt": "text/plain",
+        ".rtf": "application/rtf",
+      };
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      const [inserted] = await db.insert(prilozi).values({
+        lekcijaId,
+        originalName: req.file.originalname,
+        storedName: req.file.filename,
+        fileSize: req.file.size,
+        mimeType: mimeMap[ext] || "application/octet-stream",
+      }).returning();
+      res.json(inserted);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+});
+
+router.get("/prilozi/:lekcijaId", async (req, res) => {
+  try {
+    const lekcijaId = parseInt(req.params.lekcijaId);
+    const files = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcijaId)).orderBy(desc(prilozi.createdAt));
+    res.json(files.map(f => ({
+      ...f,
+      url: `/uploads/${f.storedName}`,
+    })));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get("/prilozi/download/:id", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Neautorizovan pristup" });
+    const jwt = await import("jsonwebtoken");
+    const token = authHeader.replace("Bearer ", "");
+    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
+    if (decoded.role !== "admin" && decoded.role !== "muallim") {
+      return res.status(403).json({ error: "Samo muallimi i admini mogu pristupiti materijalima" });
+    }
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID" });
+    const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
+    if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
+    const filePath = path.join(uploadsDir, file.storedName);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Fajl nije pronađen na serveru" });
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+    res.setHeader("Content-Type", file.mimeType);
+    res.sendFile(filePath);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete("/prilozi/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
+    if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
+    const filePath = path.join(uploadsDir, file.storedName);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await db.delete(prilozi).where(eq(prilozi.id, id));
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.get("/uploads", (_req, res) => {

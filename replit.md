@@ -38,7 +38,7 @@ artifacts/
 │       ├── ucenik.ts       # Učenik panel (profil, kalendar, plan lekcija)
 │       ├── poruke.ts       # Poruke (messaging with role-based auth)
 │       ├── roditelj.ts     # Roditelj panel (djeca, prisustvo, ocjene)
-│       └── admin.ts        # Admin rute (korisnici CRUD, muallim-profili, licence edit, mektebi, statistike, image upload)
+│       └── admin.ts        # Admin rute (korisnici CRUD, muallim-profili, licence edit, mektebi, statistike, image upload, prilozi/attachments)
 └── mekteb-arapsko-pismo/   # React frontend
     └── src/pages/
         ├── home.tsx
@@ -95,6 +95,7 @@ PostgreSQL (via DATABASE_URL). Ključne tabele:
 - `kvizovi` — 43 kviza (27 sa pitanjima = 1120 pitanja), modul: ilmihal/knjige
 - `knjige` — 14 knjiga (priče o poslanicima)
 - `korisnik_napredak` — praćenje napretka (zavrsen, bodovi)
+- `prilozi` — fajl-prilozi uz lekcije (lekcijaId, originalName, storedName, fileSize, mimeType) — vidljivi muallimima i adminu
 
 ## API rute
 
