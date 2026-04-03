@@ -68,6 +68,14 @@ scripts/src/
 └── import-content.ts   # Import iz edu ZIP fajla (ilmihal, kvizovi, knjige)
 ```
 
+## Rječnik (Glossary Tooltip)
+
+- **224+ islamskih termina** u `src/lib/rjecnik.ts`
+- `processRjecnik(html)` označava **prvi** pojavak svakog termina u tekstu sa `<span class="rjecnik-rijec">` (dashed teal underline)
+- Klik na termin prikazuje tooltip popup sa definicijom (komponenta `RjecnikContent`)
+- Integrisan u prikaz lekcija (`SectionAccordion` i fallback sadržaj) — isključen za pripremu sekcije
+- CSS stilovi: `.rjecnik-rijec` (dashed underline) + `.rjecnik-popup` (animated tooltip) u `index.css`
+
 ## Admin WYSIWYG Editor
 
 - **TipTap** vizuelni editor za lekcije (ilmihal-lekcija.tsx)

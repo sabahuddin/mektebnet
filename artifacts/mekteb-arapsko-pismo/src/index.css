@@ -496,3 +496,23 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
     color: black !important;
   }
 }
+
+/* ── Rječnik tooltip (glossary) ── */
+.rjecnik-rijec {
+  border-bottom: 2px dashed #14b8a6;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.rjecnik-rijec:hover,
+.rjecnik-rijec:focus {
+  background-color: rgba(20, 184, 166, 0.12);
+  border-bottom-color: #0d9488;
+  outline: none;
+}
+.rjecnik-popup {
+  animation: rjecnikFadeIn 0.15s ease-out;
+}
+@keyframes rjecnikFadeIn {
+  from { opacity: 0; transform: translateY(-100%) translateY(6px); }
+  to   { opacity: 1; transform: translateY(-100%); }
+}

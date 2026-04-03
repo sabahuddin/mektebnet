@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { RjecnikContent } from "@/components/rjecnik-content";
 import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
@@ -672,10 +673,14 @@ function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; 
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
             <div className="px-5 pb-5 pt-4">
-              <div
-                className="ilmihal-content"
-                dangerouslySetInnerHTML={{ __html: section.html }}
-              />
+              {section.type === "priprema" ? (
+                <div
+                  className="ilmihal-content"
+                  dangerouslySetInnerHTML={{ __html: section.html }}
+                />
+              ) : (
+                <RjecnikContent html={section.html} />
+              )}
             </div>
           </motion.div>
         )}
@@ -1213,7 +1218,7 @@ export default function IlmihalLekcijaPage() {
         ) : (
           /* Fallback: if no sections parsed, render raw HTML */
           <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-6 mb-6">
-            <div className="ilmihal-content" dangerouslySetInnerHTML={{ __html: lekcija.contentHtml }} />
+            <RjecnikContent html={lekcija.contentHtml} />
           </div>
         )}
 
