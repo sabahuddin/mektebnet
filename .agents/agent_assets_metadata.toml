@@ -198,6 +198,150 @@ uri = "file://attached_assets/generated_images/sifatus_subutijje_v2.png"
 type = "image"
 title = "mountains rivers birds nature"
 
+[[generated]]
+id = "1pV3pHybgEp8cwfQTqf89"
+uri = "file://attached_assets/hero_images/iman-vjera.png"
+type = "image"
+title = "iman faith hero"
+
+[[generated]]
+id = "KFoRdw8EN9CotbPu5dH0T"
+uri = "file://attached_assets/hero_images/allah-sifati.png"
+type = "image"
+title = "allah attributes hero"
+
+[[generated]]
+id = "GgR9Z5SzYhZMNrsiYIH1q"
+uri = "file://attached_assets/hero_images/namaz.png"
+type = "image"
+title = "namaz prayer hero"
+
+[[generated]]
+id = "a_EsVrJ9cpJAhrTSmaItA"
+uri = "file://attached_assets/hero_images/abdest.png"
+type = "image"
+title = "abdest wudu hero"
+
+[[generated]]
+id = "glV07b3DABEO8LgGtRM7l"
+uri = "file://attached_assets/hero_images/dzamija.png"
+type = "image"
+title = "mosque dzamija hero"
+
+[[generated]]
+id = "S9CuOWha0b5YU6n_iuZjw"
+uri = "file://attached_assets/hero_images/kufr-grijesi.png"
+type = "image"
+title = "moral choice hero"
+
+[[generated]]
+id = "N_dsca1GjQNaaVyfZrRiy"
+uri = "file://attached_assets/hero_images/melaike.png"
+type = "image"
+title = "angels sky hero"
+
+[[generated]]
+id = "vlNNZNhUr-ydq5W77mwEz"
+uri = "file://attached_assets/hero_images/kitabi-kuran.png"
+type = "image"
+title = "quran books hero"
+
+[[generated]]
+id = "iXscRGsIBENmb3Rz6IkDw"
+uri = "file://attached_assets/hero_images/poslanici.png"
+type = "image"
+title = "prophets landscape hero"
+
+[[generated]]
+id = "SOTAAqevUa0Qvd--EMyTV"
+uri = "file://attached_assets/hero_images/muhammed-as.png"
+type = "image"
+title = "medina prophet hero"
+
+[[generated]]
+id = "YCuZz64x1uMPgvbtngFKG"
+uri = "file://attached_assets/hero_images/ahiret.png"
+type = "image"
+title = "paradise afterlife hero"
+
+[[generated]]
+id = "AO-bpdBS5gi-vh6HpC6_8"
+uri = "file://attached_assets/hero_images/ahlak-dobro.png"
+type = "image"
+title = "good character hero"
+
+[[generated]]
+id = "84IVkhWrSjT6OIFgTXSOK"
+uri = "file://attached_assets/hero_images/ahlak-lose.png"
+type = "image"
+title = "bad character hero"
+
+[[generated]]
+id = "pYFQCZs-_WeiCEWu_R1K8"
+uri = "file://attached_assets/hero_images/poroci.png"
+type = "image"
+title = "say no vices hero"
+
+[[generated]]
+id = "NrhcrWkaBS61XCTbL2vfV"
+uri = "file://attached_assets/hero_images/post-zekat-hadz.png"
+type = "image"
+title = "fasting iftar hero"
+
+[[generated]]
+id = "6nxMd1MUhs0jBT2vW9XCS"
+uri = "file://attached_assets/hero_images/dove-sure.png"
+type = "image"
+title = "dua prayer hero"
+
+[[generated]]
+id = "BnZMbbWEToRyop0eTsBbd"
+uri = "file://attached_assets/hero_images/sure-kuran.png"
+type = "image"
+title = "quran suras hero"
+
+[[generated]]
+id = "EJObhcztshUe2hdsU2dsj"
+uri = "file://attached_assets/hero_images/porodica.png"
+type = "image"
+title = "family love hero"
+
+[[generated]]
+id = "ClgIhXj1sLPCZbT25-lkZ"
+uri = "file://attached_assets/hero_images/zdravlje-cistoca.png"
+type = "image"
+title = "health cleanliness hero"
+
+[[generated]]
+id = "jS5U-qghHn_5diRsWJ2OK"
+uri = "file://attached_assets/hero_images/mekteb-skola.png"
+type = "image"
+title = "school mekteb hero"
+
+[[generated]]
+id = "uxT68Jx_ueMhtVEQUAQxJ"
+uri = "file://attached_assets/hero_images/historija-bih.png"
+type = "image"
+title = "bosnia history hero"
+
+[[generated]]
+id = "1TF0zEFKkabyeehDp0tWS"
+uri = "file://attached_assets/hero_images/ekologija.png"
+type = "image"
+title = "ecology nature hero"
+
+[[generated]]
+id = "mxwaCS9pAKFnsC4zKPQKl"
+uri = "file://attached_assets/hero_images/bajram.png"
+type = "image"
+title = "eid bajram hero"
+
+[[generated]]
+id = "QbAwZ7XbFIuc0xrA0fxcu"
+uri = "file://attached_assets/hero_images/ulazak-izlazak.png"
+type = "image"
+title = "entering home hero"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
