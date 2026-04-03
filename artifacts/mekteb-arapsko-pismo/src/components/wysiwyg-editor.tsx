@@ -19,7 +19,7 @@ import {
   BookOpen, AlertTriangle, TableIcon,
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
   Maximize, RectangleHorizontal, Square, Loader2,
-  FolderOpen, X, Copy, Check
+  FolderOpen, X, Copy, Check, FileText
 } from "lucide-react";
 
 const CustomImage = Image.extend({
@@ -246,6 +246,8 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [galleryMode, setGalleryMode] = useState<"hero" | "insert">("hero");
+  const [docUploading, setDocUploading] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const loadGallery = useCallback(async () => {
     setGalleryLoading(true);
@@ -297,6 +299,34 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     }
     setShowGallery(false);
   }, [galleryMode, editor, onChange, toast]);
+
+  const onDocumentUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor) return;
+    e.target.value = "";
+    setDocUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("document", file);
+      const resp = await fetch(`${getApiBase()}/admin/upload-document`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error || "Upload nije uspio");
+      }
+      const data = await resp.json();
+      if (data.html) {
+        editor.chain().focus().insertContent(data.html).run();
+        toast({ title: `${data.filename} umetnut ✓`, description: `Format: ${data.format.toUpperCase()}` });
+      }
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    }
+    setDocUploading(false);
+  }, [editor, token, toast]);
 
   const activeIdxRef = useRef(activeIdx);
   activeIdxRef.current = activeIdx;
@@ -761,6 +791,10 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           )}
         </div>
         <ToolSeparator />
+        <MenuButton onClick={() => docInputRef.current?.click()} disabled={docUploading} title="Umetni PDF / DOCX">
+          {docUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 text-blue-600" />}
+        </MenuButton>
+        <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
           <Undo2 className="w-4 h-4" />
         </MenuButton>
@@ -770,6 +804,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       </div>
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
+      <input ref={docInputRef} type="file" accept=".pdf,.docx" onChange={onDocumentUpload} className="hidden" />
 
       <div className="flex-1 overflow-y-auto wysiwyg-editor-content relative">
         <style>{`

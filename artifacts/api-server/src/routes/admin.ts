@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
+import mammoth from "mammoth";
+import PDFParser from "pdf2json";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -56,6 +58,61 @@ const upload = multer({
     if (allowed.test(path.extname(file.originalname))) cb(null, true);
     else cb(new Error("Dozvoljeni su samo formati slika (jpg, png, gif, webp)"));
   },
+});
+
+const docUpload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(pdf|docx)$/i;
+    if (allowed.test(path.extname(file.originalname))) cb(null, true);
+    else cb(new Error("Dozvoljeni su samo PDF i DOCX formati"));
+  },
+});
+
+router.post("/upload-document", (req, res) => {
+  docUpload.single("document")(req, res, async (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? (err.code === "LIMIT_FILE_SIZE" ? "Fajl prevelik (max 20MB)" : err.message)
+        : err.message || "Greška pri uploadu";
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+
+    try {
+      const filePath = req.file.path;
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      let html = "";
+
+      if (ext === ".docx") {
+        const result = await mammoth.convertToHtml({ path: filePath });
+        html = result.value;
+      } else if (ext === ".pdf") {
+        const pdfText = await new Promise<string>((resolve, reject) => {
+          const pdfParser = new (PDFParser as any)(null, true);
+          pdfParser.on("pdfParser_dataError", (errData: any) => reject(new Error(errData.parserError)));
+          pdfParser.on("pdfParser_dataReady", () => {
+            const rawText = (pdfParser as any).getRawTextContent();
+            resolve(rawText);
+          });
+          pdfParser.loadPDF(filePath);
+        });
+        const lines = pdfText.split("\n").filter((l: string) => l.trim());
+        html = lines.map((l: string) => `<p>${l.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`).join("\n");
+      }
+
+      fs.unlinkSync(filePath);
+
+      res.json({
+        html,
+        filename: req.file.originalname,
+        format: ext.replace(".", ""),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: "Greška pri obradi dokumenta: " + e.message });
+    }
+  });
 });
 
 router.post("/upload", (req, res) => {
