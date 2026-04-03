@@ -402,7 +402,7 @@ const SECTION_CONFIG = {
     ring: "ring-amber-200",
     headerBg: "bg-amber-500/10 hover:bg-amber-500/15",
     headerText: "text-amber-800",
-    icon: <Sparkles className="w-4 h-4 shrink-0" />,
+    Icon: Sparkles,
     iconBg: "bg-amber-100 text-amber-600",
   },
   ilmihal: {
@@ -410,7 +410,7 @@ const SECTION_CONFIG = {
     ring: "ring-blue-200",
     headerBg: "bg-blue-500/10 hover:bg-blue-500/15",
     headerText: "text-blue-800",
-    icon: <BookMarked className="w-4 h-4 shrink-0" />,
+    Icon: BookMarked,
     iconBg: "bg-blue-100 text-blue-700",
   },
   pitanja: {
@@ -418,7 +418,7 @@ const SECTION_CONFIG = {
     ring: "ring-red-200",
     headerBg: "bg-red-500/10 hover:bg-red-500/15",
     headerText: "text-red-800",
-    icon: <MessageSquare className="w-4 h-4 shrink-0" />,
+    Icon: MessageSquare,
     iconBg: "bg-red-100 text-red-600",
   },
   zadatak: {
@@ -426,7 +426,7 @@ const SECTION_CONFIG = {
     ring: "ring-purple-200",
     headerBg: "bg-purple-500/10 hover:bg-purple-500/15",
     headerText: "text-purple-800",
-    icon: <PenLine className="w-4 h-4 shrink-0" />,
+    Icon: PenLine,
     iconBg: "bg-purple-100 text-purple-600",
   },
   quiz_box: {
@@ -434,7 +434,7 @@ const SECTION_CONFIG = {
     ring: "ring-teal-200",
     headerBg: "bg-teal-50 hover:bg-teal-100/60",
     headerText: "text-teal-800",
-    icon: <HelpCircle className="w-4 h-4 shrink-0" />,
+    Icon: HelpCircle,
     iconBg: "bg-teal-100 text-teal-700",
   },
   priprema: {
@@ -442,7 +442,7 @@ const SECTION_CONFIG = {
     ring: "ring-green-300",
     headerBg: "bg-green-500/10 hover:bg-green-500/15",
     headerText: "text-green-800",
-    icon: <FileEdit className="w-4 h-4 shrink-0" />,
+    Icon: FileEdit,
     iconBg: "bg-green-100 text-green-700",
   },
   other: {
@@ -450,7 +450,7 @@ const SECTION_CONFIG = {
     ring: "ring-gray-200",
     headerBg: "bg-gray-100 hover:bg-gray-200",
     headerText: "text-gray-800",
-    icon: <BookOpen className="w-4 h-4 shrink-0" />,
+    Icon: BookOpen,
     iconBg: "bg-gray-100 text-gray-600",
   },
 };
@@ -640,7 +640,7 @@ function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; 
         className={`w-full flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors ${cfg.headerBg}`}>
         <div className="flex items-center gap-3">
           <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${cfg.iconBg}`}>
-            {cfg.icon}
+            <cfg.Icon className="w-4 h-4 shrink-0" />
           </span>
           <span className={`font-extrabold text-sm tracking-wide uppercase ${cfg.headerText}`}>
             {section.title}
