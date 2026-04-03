@@ -372,7 +372,7 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
     // Button title: text without the span
     const iconSpan = btn.querySelector(".section-icon");
     if (iconSpan) iconSpan.remove();
-    const title = btn.textContent?.trim() || sectionId;
+    const title = (btn.textContent?.trim() || sectionId).replace(/^\d+\.\s*/, "");
 
     // Content div
     const contentDiv = accordion.querySelector(".lesson-content");
