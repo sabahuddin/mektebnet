@@ -925,6 +925,33 @@ router.delete("/rjecnik/:id", async (req, res) => {
   }
 });
 
+router.post("/lekcije/seed-missing", async (_req, res) => {
+  try {
+    const { MISSING_NIVO1_LESSONS } = await import("./lekcije-seed.js");
+    let added = 0;
+    const skipped: string[] = [];
+    for (const l of MISSING_NIVO1_LESSONS) {
+      const existing = await db.select({ id: ilmihalLekcijeTable.id })
+        .from(ilmihalLekcijeTable)
+        .where(eq(ilmihalLekcijeTable.slug, l.slug));
+      if (existing.length > 0) { skipped.push(l.slug); continue; }
+      await db.insert(ilmihalLekcijeTable).values({
+        nivo: 1,
+        slug: l.slug,
+        naslov: l.naslov,
+        contentHtml: l.content_html,
+        redoslijed: l.redoslijed,
+        isPublished: true,
+      });
+      added++;
+    }
+    res.json({ message: added > 0 ? `Dodano ${added} lekcija` : "Sve lekcije već postoje", added, skipped });
+  } catch (err: any) {
+    console.error("Seed lekcije error:", err);
+    res.status(500).json({ error: "Greška pri seedanju lekcija: " + err.message });
+  }
+});
+
 router.post("/rjecnik/seed", async (_req, res) => {
   try {
     const before = await db.select({ c: sql<number>`count(*)::int` }).from(rjecnikTable);

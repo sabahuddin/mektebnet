@@ -39,6 +39,24 @@ async function runMigrations() {
       );
     `);
     logger.info("Auto-migration: prilozi + rjecnik tables ready");
+
+    // Auto-seed missing Nivo 1 lessons (idempotent by slug)
+    try {
+      const { MISSING_NIVO1_LESSONS } = await import("./routes/lekcije-seed.js");
+      let added = 0;
+      for (const l of MISSING_NIVO1_LESSONS) {
+        const result: any = await db.execute(sql`
+          INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, redoslijed, is_published)
+          VALUES (1, ${l.slug}, ${l.naslov}, ${l.content_html}, ${l.redoslijed}, true)
+          ON CONFLICT (slug) DO NOTHING
+          RETURNING id
+        `);
+        if (result.rows && result.rows.length > 0) added++;
+      }
+      if (added > 0) logger.info({ added }, "Auto-seeded missing Nivo 1 lessons");
+    } catch (seedErr: any) {
+      logger.error({ err: seedErr }, "Lesson auto-seed failed");
+    }
   } catch (e: any) {
     logger.error({ err: e }, "Auto-migration failed");
   }
