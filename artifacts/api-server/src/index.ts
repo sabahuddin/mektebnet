@@ -75,6 +75,25 @@ async function runMigrations() {
     } catch (seedErr: any) {
       logger.error({ err: seedErr }, "Lesson auto-seed failed");
     }
+
+    // Auto-backfill priprema-za-nastavu sections for Nivo 1 lessons that lack them
+    try {
+      const { NIVO1_PRIPREME } = await import("./routes/pripreme-seed.js");
+      let pripremaAdded = 0;
+      for (const [slug, pripremaHtml] of Object.entries(NIVO1_PRIPREME)) {
+        const upd: any = await db.execute(sql`
+          UPDATE ilmihal_lekcije
+          SET content_html = regexp_replace(content_html, '</div>\s*$', ${'\n' + pripremaHtml + '\n</div>'})
+          WHERE slug = ${slug}
+            AND content_html !~* 'PRIPREMA ZA NASTAVU'
+          RETURNING id
+        `);
+        if (upd.rows && upd.rows.length > 0) pripremaAdded++;
+      }
+      if (pripremaAdded > 0) logger.info({ pripremaAdded }, "Backfilled PRIPREMA ZA NASTAVU for Nivo 1 lessons");
+    } catch (pripremaErr: any) {
+      logger.error({ err: pripremaErr }, "Priprema auto-backfill failed");
+    }
   } catch (e: any) {
     logger.error({ err: e }, "Auto-migration failed");
   }
