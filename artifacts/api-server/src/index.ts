@@ -76,21 +76,74 @@ async function runMigrations() {
       logger.error({ err: seedErr }, "Lesson auto-seed failed");
     }
 
-    // Auto-backfill priprema-za-nastavu sections for Nivo 1 lessons that lack them
+    // Auto-backfill priprema-za-nastavu sections for Nivo 1 lessons.
+    // Strategy: strip any existing priprema (old or new), then insert fresh
+    // priprema as the FIRST accordion. Idempotent via marker comments.
     try {
       const { NIVO1_PRIPREME } = await import("./routes/pripreme-seed.js");
+
+      // Step 1a: strip new-format priprema (marker-wrapped)
+      await db.execute(sql`
+        UPDATE ilmihal_lekcije
+        SET content_html = regexp_replace(
+          content_html,
+          '<!--PRIPREMA-START-->[\\s\\S]*?<!--PRIPREMA-END-->',
+          '',
+          'g'
+        )
+        WHERE content_html LIKE '%PRIPREMA-START%'
+      `);
+
+      // Step 1b: strip old-format priprema (no markers, identified by toggleSection('priprema'))
+      await db.execute(sql`
+        UPDATE ilmihal_lekcije
+        SET content_html = regexp_replace(
+          content_html,
+          '\\s*<div class="lesson-accordion">\\s*<button[^<]*onclick="toggleSection\\(''priprema''[\\s\\S]*?</div>\\s*</div>\\s*</div>',
+          ''
+        )
+        WHERE content_html ~ 'toggleSection\\(''priprema'''
+      `);
+
+      // Step 2: insert new priprema BEFORE first existing lesson-accordion
       let pripremaAdded = 0;
+      let pripremaAppended = 0;
       for (const [slug, pripremaHtml] of Object.entries(NIVO1_PRIPREME)) {
+        // Try to insert before first lesson-accordion
+        const replacement = pripremaHtml + '\n        <div class="lesson-accordion">';
         const upd: any = await db.execute(sql`
           UPDATE ilmihal_lekcije
-          SET content_html = regexp_replace(content_html, '</div>\s*$', ${'\n' + pripremaHtml + '\n</div>'})
+          SET content_html = regexp_replace(
+            content_html,
+            '<div class="lesson-accordion">',
+            ${replacement}
+          )
           WHERE slug = ${slug}
-            AND content_html !~* 'PRIPREMA ZA NASTAVU'
+            AND content_html !~ 'PRIPREMA-START'
+            AND content_html ~ '<div class="lesson-accordion">'
           RETURNING id
         `);
-        if (upd.rows && upd.rows.length > 0) pripremaAdded++;
+        if (upd.rows && upd.rows.length > 0) {
+          pripremaAdded++;
+          continue;
+        }
+        // Fallback: lesson has no accordion — append before closing lesson-container </div>
+        const fallback: any = await db.execute(sql`
+          UPDATE ilmihal_lekcije
+          SET content_html = regexp_replace(
+            content_html,
+            '</div>\\s*$',
+            ${'\n' + pripremaHtml + '\n</div>'}
+          )
+          WHERE slug = ${slug}
+            AND content_html !~ 'PRIPREMA-START'
+          RETURNING id
+        `);
+        if (fallback.rows && fallback.rows.length > 0) pripremaAppended++;
       }
-      if (pripremaAdded > 0) logger.info({ pripremaAdded }, "Backfilled PRIPREMA ZA NASTAVU for Nivo 1 lessons");
+      if (pripremaAdded > 0 || pripremaAppended > 0) {
+        logger.info({ pripremaAdded, pripremaAppended }, "Reinjected PRIPREMA ZA NASTAVU for Nivo 1");
+      }
     } catch (pripremaErr: any) {
       logger.error({ err: pripremaErr }, "Priprema auto-backfill failed");
     }
