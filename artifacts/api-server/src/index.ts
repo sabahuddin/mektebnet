@@ -81,8 +81,9 @@ async function runMigrations() {
     // priprema as the FIRST accordion. Idempotent via marker comments.
     try {
       const { NIVO1_PRIPREME } = await import("./routes/pripreme-seed.js");
+      const nivo1Slugs = Object.keys(NIVO1_PRIPREME);
 
-      // Step 1a: strip new-format priprema (marker-wrapped)
+      // Step 1a: strip new-format priprema (marker-wrapped) — scoped to Nivo 1 seed slugs only
       await db.execute(sql`
         UPDATE ilmihal_lekcije
         SET content_html = regexp_replace(
@@ -91,10 +92,13 @@ async function runMigrations() {
           '',
           'g'
         )
-        WHERE content_html LIKE '%PRIPREMA-START%'
+        WHERE nivo = 1
+          AND slug IN (${sql.join(nivo1Slugs.map(s => sql`${s}`), sql`, `)})
+          AND content_html LIKE '%PRIPREMA-START%'
       `);
 
       // Step 1b: strip old-format priprema (no markers, identified by toggleSection('priprema'))
+      // Scoped to Nivo 1 seed slugs to avoid wiping pripreme in other levels
       await db.execute(sql`
         UPDATE ilmihal_lekcije
         SET content_html = regexp_replace(
@@ -102,7 +106,9 @@ async function runMigrations() {
           '\\s*<div class="lesson-accordion">\\s*<button[^<]*onclick="toggleSection\\(''priprema''[\\s\\S]*?</div>\\s*</div>\\s*</div>',
           ''
         )
-        WHERE content_html ~ 'toggleSection\\(''priprema'''
+        WHERE nivo = 1
+          AND slug IN (${sql.join(nivo1Slugs.map(s => sql`${s}`), sql`, `)})
+          AND content_html ~ 'toggleSection\\(''priprema'''
       `);
 
       // Step 2: insert new priprema BEFORE first existing lesson-accordion
