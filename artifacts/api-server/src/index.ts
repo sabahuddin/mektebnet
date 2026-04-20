@@ -38,22 +38,40 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    logger.info("Auto-migration: prilozi + rjecnik tables ready");
+    // Ensure kviz_pitanja column exists on ilmihal_lekcije (idempotent)
+    await db.execute(sql`
+      ALTER TABLE IF EXISTS ilmihal_lekcije
+      ADD COLUMN IF NOT EXISTS kviz_pitanja JSONB
+    `);
+    logger.info("Auto-migration: prilozi + rjecnik + kviz_pitanja column ready");
 
     // Auto-seed missing Nivo 1 lessons (idempotent by slug)
     try {
       const { MISSING_NIVO1_LESSONS } = await import("./routes/lekcije-seed.js");
       let added = 0;
+      let quizUpdated = 0;
       for (const l of MISSING_NIVO1_LESSONS) {
+        const quizJson = JSON.stringify((l as any).kviz_pitanja ?? null);
         const result: any = await db.execute(sql`
-          INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, redoslijed, is_published)
-          VALUES (1, ${l.slug}, ${l.naslov}, ${l.content_html}, ${l.redoslijed}, true)
+          INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, redoslijed, is_published, kviz_pitanja)
+          VALUES (1, ${l.slug}, ${l.naslov}, ${l.content_html}, ${l.redoslijed}, true, ${quizJson}::jsonb)
           ON CONFLICT (slug) DO NOTHING
           RETURNING id
         `);
         if (result.rows && result.rows.length > 0) added++;
+        // Backfill kviz_pitanja for previously inserted lessons that lack it
+        if ((l as any).kviz_pitanja) {
+          const upd: any = await db.execute(sql`
+            UPDATE ilmihal_lekcije
+            SET kviz_pitanja = ${quizJson}::jsonb
+            WHERE slug = ${l.slug} AND kviz_pitanja IS NULL
+            RETURNING id
+          `);
+          if (upd.rows && upd.rows.length > 0) quizUpdated++;
+        }
       }
       if (added > 0) logger.info({ added }, "Auto-seeded missing Nivo 1 lessons");
+      if (quizUpdated > 0) logger.info({ quizUpdated }, "Backfilled kviz_pitanja for Nivo 1 lessons");
     } catch (seedErr: any) {
       logger.error({ err: seedErr }, "Lesson auto-seed failed");
     }
