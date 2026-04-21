@@ -513,8 +513,9 @@ router.put("/ilmihal/:id", async (req, res) => {
     }
     await db.update(ilmihalLekcijeTable).set(updates).where(eq(ilmihalLekcijeTable.id, id));
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "Greška servera" });
+  } catch (err: any) {
+    console.error("PUT /ilmihal/:id error:", err?.message, err?.stack);
+    res.status(500).json({ error: "Greška servera", detail: err?.message });
   }
 });
 
