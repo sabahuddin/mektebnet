@@ -19,6 +19,9 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   redoslijed: integer("redoslijed").notNull().default(0),
   isPublished: boolean("is_published").notNull().default(true),
   kvizPitanja: jsonb("kviz_pitanja").$type<LekcijaKvizPitanje[]>(),
+  locked: boolean("locked").notNull().default(false),
+  lockedAt: timestamp("locked_at"),
+  lockedNote: text("locked_note"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

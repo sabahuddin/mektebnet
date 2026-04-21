@@ -103,11 +103,22 @@ PostgreSQL (via DATABASE_URL). Ključne tabele:
 - `poruke` — poruke (muallim↔roditelj, muallim↔učenik, admin↔svi; server-side auth)
 - `mekteb_kalendar` — kalendar grupe (tip: mekteb/ferije/vazan_datum, opis)
 - `plan_lekcija` — plan lekcija po danu (grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed)
-- `ilmihal_lekcije` — 228 lekcija (nivo 1/2/3)
+- `ilmihal_lekcije` — 228 lekcija (nivo 1/2/3); kolone `locked`, `locked_at`, `locked_note` za zaštitu sadržaja
 - `kvizovi` — 43 kviza (27 sa pitanjima = 1120 pitanja), modul: ilmihal/knjige
 - `knjige` — 14 knjiga (priče o poslanicima)
 - `korisnik_napredak` — praćenje napretka (zavrsen, bodovi)
 - `prilozi` — fajl-prilozi uz lekcije (lekcijaId, originalName, storedName, fileSize, mimeType) — vidljivi muallimima i adminu
+
+## 🔒 PRINCIP: Zaključane lekcije
+
+**Slug je nedodirljiv** — jednom kreiran, ne mijenja se nikad. Ručno verifikovan sadržaj je svet.
+
+- Tabela `ilmihal_lekcije` ima `locked BOOLEAN` kolonu
+- Admin može zaključati lekciju sa `POST /api/admin/ilmihal/:id/lock` (UI dugme na stranici lekcije)
+- Bulk: `POST /api/admin/ilmihal/lock-by-slug` sa `{slugs: [...]}`
+- **PUT /api/admin/ilmihal/:id sa `contentHtml` vraća 423 ako je locked=true** (treba `forceUnlock: true` za override)
+- **SVE BUDUĆE auto-skripte (seed, restore, backfill) MORAJU imati `WHERE locked = false`** — inače ručni rad nestaje
+- Vizuelno: zelena 🔒 ikona u headeru lekcije za admina kad je zaključana
 
 ## API rute
 

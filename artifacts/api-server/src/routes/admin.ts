@@ -497,7 +497,13 @@ router.post("/ilmihal", async (req, res) => {
 
 router.put("/ilmihal/:id", async (req, res) => {
   try {
-    const { contentHtml, naslov, kvizPitanja, redoslijed } = req.body;
+    const id = parseInt(req.params.id);
+    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock } = req.body;
+    const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
+    if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    if (existing.locked && contentHtml !== undefined && !forceUnlock) {
+      return res.status(423).json({ error: "Lekcija je zaključana. Otključajte je prije izmjene sadržaja.", locked: true });
+    }
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) updates.contentHtml = contentHtml;
     if (naslov !== undefined) updates.naslov = naslov;
@@ -505,10 +511,57 @@ router.put("/ilmihal/:id", async (req, res) => {
     if (kvizPitanja !== undefined) {
       updates.kvizPitanja = typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja);
     }
-    await db.update(ilmihalLekcijeTable).set(updates).where(eq(ilmihalLekcijeTable.id, parseInt(req.params.id)));
+    await db.update(ilmihalLekcijeTable).set(updates).where(eq(ilmihalLekcijeTable.id, id));
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/ilmihal/:id/lock — zaključaj lekciju (zaštita od auto-skripti)
+router.post("/ilmihal/:id/lock", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const note = (req.body?.note as string) || "OVAJ SADRŽAJ NE DIRAJ NIKADA — ručno verifikovan";
+    const [row] = await db.update(ilmihalLekcijeTable)
+      .set({ locked: true, lockedAt: new Date(), lockedNote: note })
+      .where(eq(ilmihalLekcijeTable.id, id))
+      .returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, locked: ilmihalLekcijeTable.locked });
+    if (!row) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    res.json({ success: true, ...row });
+  } catch (err) {
+    res.status(500).json({ error: "Greška pri zaključavanju" });
+  }
+});
+
+// POST /api/admin/ilmihal/:id/unlock — otključaj lekciju
+router.post("/ilmihal/:id/unlock", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [row] = await db.update(ilmihalLekcijeTable)
+      .set({ locked: false, lockedAt: null, lockedNote: null })
+      .where(eq(ilmihalLekcijeTable.id, id))
+      .returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, locked: ilmihalLekcijeTable.locked });
+    if (!row) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    res.json({ success: true, ...row });
+  } catch (err) {
+    res.status(500).json({ error: "Greška pri otključavanju" });
+  }
+});
+
+// POST /api/admin/ilmihal/lock-by-slug — zaključaj po slug-u (za bulk i CLI)
+router.post("/ilmihal/lock-by-slug", async (req, res) => {
+  try {
+    const { slugs, note } = req.body as { slugs: string[]; note?: string };
+    if (!Array.isArray(slugs) || slugs.length === 0) return res.status(400).json({ error: "slugs array required" });
+    const lockedNote = note || "OVAJ SADRŽAJ NE DIRAJ NIKADA — ručno verifikovan";
+    const result = await db.update(ilmihalLekcijeTable)
+      .set({ locked: true, lockedAt: new Date(), lockedNote })
+      .where(inArray(ilmihalLekcijeTable.slug, slugs))
+      .returning({ slug: ilmihalLekcijeTable.slug });
+    res.json({ success: true, locked: result.map(r => r.slug), count: result.length });
+  } catch (err) {
+    res.status(500).json({ error: "Greška pri bulk zaključavanju" });
   }
 });
 

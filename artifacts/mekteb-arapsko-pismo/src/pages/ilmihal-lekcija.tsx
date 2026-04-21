@@ -9,7 +9,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +40,9 @@ interface Lekcija {
   audioSrc?: string;
   kvizPitanja?: LekcijaKvizPitanje[] | null;
   prilozi?: Prilog[];
+  locked?: boolean;
+  lockedNote?: string | null;
+  lockedAt?: string | null;
 }
 
 interface AccordionSection {
@@ -1080,6 +1083,23 @@ export default function IlmihalLekcijaPage() {
           {user?.role === "admin" && (
             <>
               <span className="text-border/70 ml-auto">|</span>
+              <button onClick={async () => {
+                if (!lekcija || !token) return;
+                const isLocked = lekcija.locked;
+                const url = `/api/admin/ilmihal/${lekcija.id}/${isLocked ? "unlock" : "lock"}`;
+                if (isLocked && !confirm("Otključati lekciju? Nakon otključavanja je možeš uređivati ili je auto-skripte mogu prepisati.")) return;
+                try {
+                  await apiRequest("POST", url, {});
+                  setLekcija(prev => prev ? { ...prev, locked: !isLocked } : prev);
+                  toast({ title: isLocked ? "Otključano" : "🔒 Zaključano", description: isLocked ? "Lekcija je otključana." : "Sadržaj je zaštićen od izmjena." });
+                } catch {
+                  toast({ title: "Greška", description: "Ne mogu promijeniti status zaključavanja.", variant: "destructive" });
+                }
+              }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${lekcija?.locked ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                title={lekcija?.locked ? (lekcija.lockedNote || "Lekcija je zaključana") : "Zaključaj lekciju (zaštita od auto-skripti)"}>
+                {lekcija?.locked ? <><Lock className="w-3.5 h-3.5" /> Zaključano</> : <><Unlock className="w-3.5 h-3.5" /> Zaključaj</>}
+              </button>
               <button onClick={() => setShowEditor(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
                 <FilePen className="w-3.5 h-3.5" /> Uredi sadržaj
