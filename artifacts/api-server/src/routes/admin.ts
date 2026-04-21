@@ -505,7 +505,11 @@ router.put("/ilmihal/:id", async (req, res) => {
       return res.status(423).json({ error: "Lekcija je zaključana. Otključajte je prije izmjene sadržaja.", locked: true });
     }
     const updates: Record<string, any> = {};
-    if (contentHtml !== undefined) updates.contentHtml = contentHtml;
+    if (contentHtml !== undefined) {
+      // Auto-clean before save: remove duplicate priprema accordions, upgrade old design.
+      const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
+      updates.contentHtml = regeneratePripremaInHtml(contentHtml);
+    }
     if (naslov !== undefined) updates.naslov = naslov;
     if (redoslijed !== undefined) updates.redoslijed = redoslijed;
     if (kvizPitanja !== undefined) {

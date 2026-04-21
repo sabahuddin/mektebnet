@@ -199,37 +199,74 @@ export function renderNewPriprema(s: PripremaStruct): string {
 }
 
 /**
+ * Removes duplicate priprema accordions, keeping only the FIRST (richest) one.
+ * Some legacy lessons accumulated multiple <div class="lesson-accordion">
+ * blocks for priprema due to broken save logic — this collapses them to one.
+ */
+function dedupePripremaAccordions(fullHtml: string): string {
+  if (!fullHtml.includes('toggleSection(\'priprema\'')) return fullHtml;
+
+  // Match each priprema accordion: <div class="lesson-accordion"> ... toggleSection('priprema' ... </div></div>
+  // We use a non-greedy match that ends at the closing </div></div> that wraps the accordion.
+  const accRe = /<div class="lesson-accordion">[\s\S]*?toggleSection\('priprema'[\s\S]*?<\/div>\s*<\/div>/g;
+  const matches = fullHtml.match(accRe);
+  if (!matches || matches.length <= 1) return fullHtml;
+
+  // Pick the accordion with the LONGEST inner content (most data).
+  let best = matches[0];
+  for (const m of matches) {
+    if (m.length > best.length) best = m;
+  }
+
+  // Remove ALL priprema accordions, then re-insert the best one in place
+  // of the first occurrence.
+  let result = fullHtml;
+  // Replace first with placeholder, remove the rest
+  let firstReplaced = false;
+  result = result.replace(accRe, () => {
+    if (!firstReplaced) {
+      firstReplaced = true;
+      return "__PRIPREMA_PLACEHOLDER__";
+    }
+    return "";
+  });
+  result = result.replace("__PRIPREMA_PLACEHOLDER__", best);
+  return result;
+}
+
+/**
  * Detects the priprema accordion in a lesson's full HTML and, if its inner
  * content uses the OLD design (no "📋 Priprema za nastavu" gradient marker),
  * replaces the inner HTML with the NEW gradient design.
+ *
+ * Also collapses duplicate priprema accordions into a single one.
  *
  * Returns the (possibly transformed) full HTML.
  */
 export function regeneratePripremaInHtml(fullHtml: string): string {
   if (!fullHtml || typeof fullHtml !== "string") return fullHtml;
 
-  // Find the priprema accordion block. The accordion has a button with
-  // onclick="toggleSection('priprema', ...)" and a div with id="priprema".
+  // Step 1: Collapse duplicate priprema accordions (keep richest).
+  let working = dedupePripremaAccordions(fullHtml);
+
+  // Step 2: Find the priprema accordion block.
   const re = /<div\s+id="priprema"\s+class="lesson-content"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i;
-  const m = fullHtml.match(re);
-  if (!m) return fullHtml;
+  const m = working.match(re);
+  if (!m) return working;
 
   const innerHtml = m[1];
 
-  // Already new design — leave alone.
+  // Already new design — leave alone (return de-duped html).
   if (innerHtml.includes("📋 Priprema za nastavu") || innerHtml.includes("linear-gradient(135deg, #14b8a6")) {
-    return fullHtml;
+    return working;
   }
 
   // Parse old design and re-render new
   const parsed = parseOldPriprema(innerHtml);
-  // Sanity: if we couldn't extract anything meaningful, leave the original alone.
   if (!parsed.nastavnaJedinica && !parsed.odgojni && !parsed.obrazovni && !parsed.uvodniDio && !parsed.glavniDio) {
-    return fullHtml;
+    return working;
   }
   const newInner = renderNewPriprema(parsed);
-
-  // Replace just the inner HTML, keep the outer <div id="priprema" class="lesson-content"></div></div>
   const replacement = m[0].replace(innerHtml, "\n" + newInner + "\n");
-  return fullHtml.replace(m[0], replacement);
+  return working.replace(m[0], replacement);
 }
