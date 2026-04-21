@@ -21,6 +21,7 @@ import {
   Maximize, RectangleHorizontal, Square, Loader2,
   FolderOpen, X, Copy, Check, FileText, Minus
 } from "lucide-react";
+import { parsePripremaContent, renderPripremaContent, type PripremaStruct } from "@/lib/priprema-design";
 
 const CustomImage = Image.extend({
   addAttributes() {
@@ -66,13 +67,12 @@ const InfoBox = createCustomBlock("infoBox", "info-box");
 const InfoCard = createCustomBlock("infoCard", "info-card");
 
 interface ParsedSection {
-  isProtected?: boolean;
-  rawOuterHtml?: string;
   id: string;
   title: string;
   iconText: string;
   contentHtml: string;
   isActive: boolean;
+  isPriprema?: boolean;
 }
 
 function parseAccordionSections(fullHtml: string): { beforeAccordions: string; sections: ParsedSection[]; afterAccordions: string; hasAccordions: boolean } {
@@ -121,12 +121,9 @@ function parseAccordionSections(fullHtml: string): { beforeAccordions: string; s
     const contentHtml = contentDiv ? contentDiv.innerHTML.trim() : "";
     const isActive = contentDiv?.classList.contains("active") || contentDiv?.getAttribute("style")?.includes("display: block") || false;
 
-    // Priprema accordion sadrži komplikovan inline-styled dizajn koji TipTap strip-uje.
-    // Čuvamo ga u rawOuterHtml i ne propuštamo ga kroz editor — dizajn ostaje netaknut.
-    const isProtected = sectionId === "priprema" || /PRIPREMA ZA NASTAVU/i.test(title);
-    const rawOuterHtml = isProtected ? acc.outerHTML : undefined;
+    const isPriprema = sectionId === "priprema" || /PRIPREMA ZA NASTAVU/i.test(title);
 
-    sections.push({ id: sectionId, title, iconText, contentHtml, isActive, isProtected, rawOuterHtml });
+    sections.push({ id: sectionId, title, iconText, contentHtml, isActive, isPriprema });
   });
 
   return { beforeAccordions, sections, afterAccordions, hasAccordions: true };
@@ -138,10 +135,6 @@ function reassembleHtml(beforeAccordions: string, sections: ParsedSection[], aft
   html += beforeAccordions + "\n";
 
   for (const sec of sections) {
-    if (sec.isProtected && sec.rawOuterHtml) {
-      html += sec.rawOuterHtml + "\n";
-      continue;
-    }
     const activeClass = sec.isActive ? " active" : "";
     const activeStyle = sec.isActive ? ' style="display: block;"' : "";
     html += `    <div class="lesson-accordion">\n`;
@@ -247,8 +240,35 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [parsed, setParsed] = useState(() => parseAccordionSections(content));
   const hasContainer = content.includes('class="lesson-container"');
   const sectionContentsRef = useRef<string[]>(parsed.sections.map(s => s.contentHtml));
-  const firstEditableIdx = parsed.sections.findIndex(s => !s.isProtected);
-  const [activeIdx, setActiveIdx] = useState(firstEditableIdx >= 0 ? firstEditableIdx : 0);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const activeIdxRef = useRef(0);
+  activeIdxRef.current = activeIdx;
+  const switchingRef = useRef(false);
+  // Priprema form state (per section; index matches parsed.sections)
+  const [pripremaStructs, setPripremaStructs] = useState<Record<number, PripremaStruct>>(() => {
+    const out: Record<number, PripremaStruct> = {};
+    parsed.sections.forEach((sec, i) => {
+      if (sec.isPriprema) {
+        const parsedStruct = parsePripremaContent(sec.contentHtml);
+        if (parsedStruct) out[i] = parsedStruct;
+        else out[i] = {
+          predmet: "Ahlak",
+          nastavnaJedinica: "",
+          tipSata: "Obrada novog gradiva",
+          odgojni: "",
+          obrazovni: "",
+          funkcionalni: "",
+          obliciRada: "Frontalni, individualni",
+          sredstva: "Udžbenik, tabla, kreda",
+          metode: "Metoda usmenog izlaganja, demonstrativna metoda, razgovor",
+          uvodniDio: "",
+          glavniDio: "",
+          zavrsniDio: "",
+        };
+      }
+    });
+    return out;
+  });
   const [renamingIdx, setRenamingIdx] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [heroImage, setHeroImage] = useState<string | null>(() => extractHeroImage(parsed.beforeAccordions));
@@ -279,16 +299,16 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     loadGallery();
   }, [loadGallery]);
 
-  const initialSection = parsed.sections[firstEditableIdx >= 0 ? firstEditableIdx : 0];
+  const initialSection = parsed.sections[0];
   const editor = useEditor({
     extensions: editorExtensions,
-    content: parsed.hasAccordions ? (initialSection?.isProtected ? "" : initialSection?.contentHtml || "") : content,
+    content: parsed.hasAccordions ? (initialSection?.isPriprema ? "" : initialSection?.contentHtml || "") : content,
     onUpdate: ({ editor: ed }) => {
       if (switchingRef.current) return;
+      // Priprema sekcija koristi formu, ne TipTap — ignoriši TipTap update-e kad je ona aktivna
+      if (parsed.hasAccordions && parsed.sections[activeIdxRef.current]?.isPriprema) return;
       const html = ed.getHTML();
       if (parsed.hasAccordions) {
-        // Ne overwrite-uj contentHtml protected sekcije (priprema) — rawOuterHtml se čuva separatno
-        if (parsed.sections[activeIdxRef.current]?.isProtected) return;
         sectionContentsRef.current[activeIdxRef.current] = html;
       }
       onChange(html);
@@ -343,25 +363,35 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     setDocUploading(false);
   }, [editor, token, toast]);
 
-  const activeIdxRef = useRef(activeIdx);
-  activeIdxRef.current = activeIdx;
-  const switchingRef = useRef(false);
-
   const switchSection = useCallback((newIdx: number) => {
     if (!editor || !parsed.hasAccordions) return;
     if (newIdx === activeIdxRef.current) return;
     switchingRef.current = true;
-    // Sačuvaj trenutnu sekciju (ali ne overwrite-uj protected)
-    if (!parsed.sections[activeIdxRef.current]?.isProtected) {
+    // Sačuvaj trenutnu sekciju iz TipTap-a (osim ako je priprema — ona ima svoj form state)
+    if (!parsed.sections[activeIdxRef.current]?.isPriprema) {
       sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
     }
     activeIdxRef.current = newIdx;
     setActiveIdx(newIdx);
-    // Za protected sekciju NE učitavaj inline-styled HTML u TipTap (on bi strip-ao stilove)
+    // Kad prelazim na priprema, TipTap-ov content ne treba — forma preuzima
     const target = parsed.sections[newIdx];
-    editor.commands.setContent(target?.isProtected ? "" : (sectionContentsRef.current[newIdx] || ""));
+    editor.commands.setContent(target?.isPriprema ? "" : (sectionContentsRef.current[newIdx] || ""));
     switchingRef.current = false;
   }, [editor, parsed.hasAccordions, parsed.sections]);
+
+  // Update priprema struct field, rebuild HTML, propagate change
+  const updatePripremaField = useCallback((idx: number, field: keyof PripremaStruct, value: string) => {
+    setPripremaStructs(prev => {
+      const current = prev[idx];
+      if (!current) return prev;
+      const next = { ...current, [field]: value };
+      const newHtml = renderPripremaContent(next);
+      sectionContentsRef.current[idx] = newHtml;
+      // Trigger onChange so parent dirty-flag works
+      onChange(newHtml);
+      return { ...prev, [idx]: next };
+    });
+  }, [onChange]);
 
   const addSection = useCallback((afterIdx: number) => {
     if (!editor) return;
@@ -501,7 +531,8 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       }
       return baseHtml;
     }
-    if (ed) {
+    // Ne overwrite-uj priprema sekciju iz TipTap-a — ona se builda iz forme
+    if (ed && !p.sections[activeIdxRef.current]?.isPriprema) {
       sectionContentsRef.current[activeIdxRef.current] = ed.getHTML();
     }
     const updatedSections = p.sections.map((s, i) => {
@@ -896,23 +927,135 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             font-weight: 700;
           }
         `}</style>
-        {parsed.sections[activeIdx]?.isProtected ? (
-          <div className="p-4">
-            <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm flex items-start gap-2">
-              <span className="text-base">🔒</span>
-              <div>
-                <div className="font-extrabold mb-1">Zaštićena sekcija — dizajn pripreme</div>
-                <div>Priprema za nastavu ima bogat dizajn (gradient kartica + obojeni ciljevi) koji se ovdje ne može editovati kao običan tekst. Dizajn ostaje netaknut pri čuvanju. Ako želiš da izmijeniš tekst u pripremi, koristi alat "Regeneriši dizajn pripreme" u Admin → Alati ili prebaci na HTML mod u toolbar-u.</div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-4 opacity-70 pointer-events-none" dangerouslySetInnerHTML={{ __html: parsed.sections[activeIdx]?.rawOuterHtml || "" }} />
-          </div>
+        {parsed.sections[activeIdx]?.isPriprema ? (
+          <PripremaForm
+            struct={pripremaStructs[activeIdx]}
+            onChange={(field, value) => updatePripremaField(activeIdx, field, value)}
+          />
         ) : (
           <>
             <EditorContent editor={editor} />
             <ImageToolbar editor={editor} />
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, value, onChange, multiline, hint, rows }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
+  hint?: string;
+  rows?: number;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide">{label}</label>
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={rows || 3}
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none text-sm resize-y"
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none text-sm"
+        />
+      )}
+      {hint && <div className="text-[11px] text-gray-500">{hint}</div>}
+    </div>
+  );
+}
+
+function PripremaForm({ struct, onChange }: {
+  struct: PripremaStruct | undefined;
+  onChange: (field: keyof PripremaStruct, value: string) => void;
+}) {
+  if (!struct) {
+    return (
+      <div className="p-6 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl m-4">
+        Priprema nije mogla biti učitana. Pokušaj spremiti lekciju kako bi se inicijalizirala prazna forma.
+      </div>
+    );
+  }
+  return (
+    <div className="p-4 space-y-5">
+      <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-sm flex items-start gap-2">
+        <span className="text-base">✏️</span>
+        <div>
+          <div className="font-extrabold mb-0.5">Uredi pripremu za nastavu</div>
+          <div>Izmijeni tekst u poljima dolje. Dizajn (gradient kartica, obojeni ciljevi) automatski se primjenjuje pri spremanju — ne moraš ništa dizajnirati ručno.</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 p-4 space-y-3">
+        <div className="text-white font-extrabold text-base flex items-center gap-2">📋 Osnovni podaci</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <FormField label="Predmet" value={struct.predmet} onChange={(v) => onChange("predmet", v)} />
+          <FormField label="Tip sata" value={struct.tipSata} onChange={(v) => onChange("tipSata", v)} />
+        </div>
+        <FormField label="Nastavna jedinica" value={struct.nastavnaJedinica} onChange={(v) => onChange("nastavnaJedinica", v)} />
+      </div>
+
+      <div className="space-y-3">
+        <div className="font-extrabold text-teal-700 flex items-center gap-2">🎯 Ciljevi nastavnog sata</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="rounded-xl bg-red-50 border-t-4 border-red-500 p-3">
+            <FormField label="❤️ Odgojni cilj" value={struct.odgojni} onChange={(v) => onChange("odgojni", v)} multiline rows={4} />
+          </div>
+          <div className="rounded-xl bg-blue-50 border-t-4 border-blue-500 p-3">
+            <FormField label="📚 Obrazovni cilj" value={struct.obrazovni} onChange={(v) => onChange("obrazovni", v)} multiline rows={4} />
+          </div>
+          <div className="rounded-xl bg-green-50 border-t-4 border-green-500 p-3">
+            <FormField label="💪 Funkcionalni cilj" value={struct.funkcionalni} onChange={(v) => onChange("funkcionalni", v)} multiline rows={4} />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+        <div className="font-extrabold text-slate-700 flex items-center gap-2">🗂️ Organizacija nastave</div>
+        <FormField label="Oblici rada" value={struct.obliciRada} onChange={(v) => onChange("obliciRada", v)} />
+        <FormField label="Sredstva" value={struct.sredstva} onChange={(v) => onChange("sredstva", v)} />
+        <FormField label="Metode" value={struct.metode} onChange={(v) => onChange("metode", v)} />
+      </div>
+
+      <div className="space-y-3">
+        <div className="font-extrabold text-teal-700 flex items-center gap-2">📖 Struktura sata</div>
+        <div className="rounded-xl bg-blue-50 border-l-4 border-blue-500 p-3">
+          <FormField
+            label="🔵 Uvodni dio"
+            value={struct.uvodniDio}
+            onChange={(v) => onChange("uvodniDio", v)}
+            multiline
+            rows={5}
+            hint="HTML je dozvoljen: <p>, <strong>, <em>, <br> — bit će očuvan u finalnom dizajnu."
+          />
+        </div>
+        <div className="rounded-xl bg-green-50 border-l-4 border-green-500 p-3">
+          <FormField
+            label="🟢 Glavni dio"
+            value={struct.glavniDio}
+            onChange={(v) => onChange("glavniDio", v)}
+            multiline
+            rows={8}
+          />
+        </div>
+        <div className="rounded-xl bg-yellow-50 border-l-4 border-yellow-500 p-3">
+          <FormField
+            label="🟡 Završni dio"
+            value={struct.zavrsniDio}
+            onChange={(v) => onChange("zavrsniDio", v)}
+            multiline
+            rows={5}
+          />
+        </div>
       </div>
     </div>
   );
