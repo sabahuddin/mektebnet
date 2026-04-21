@@ -1,0 +1,73 @@
+026-Apr-21 12:04:12.876502
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-Apr-21 12:04:13.672764
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-Apr-21 12:04:16.546178
+----------------------------------------
+2026-Apr-21 12:04:16.550718
+Importing sabahuddin/mektebnet:main (commit sha d52e68b817aba134937c6cb27afb8022eee8f58a) to /artifacts/io880g0gw4400wwsoc0wgkww.
+2026-Apr-21 12:04:28.872657
+Image not found (i8w884sgkkgogkwsokcwc0c4:d52e68b817aba134937c6cb27afb8022eee8f58a). Building new image.
+2026-Apr-21 12:04:33.831230
+----------------------------------------
+2026-Apr-21 12:04:33.842825
+Building docker image started.
+2026-Apr-21 12:04:33.851185
+To check the current progress, click on Show Debug Logs.
+2026-Apr-21 12:04:57.686075
+Building docker image completed.
+2026-Apr-21 12:04:59.224979
+----------------------------------------
+2026-Apr-21 12:04:59.238221
+Rolling update started.
+2026-Apr-21 12:05:00.502219
+New container started.
+2026-Apr-21 12:05:00.509456
+Custom healthcheck found in Dockerfile.
+2026-Apr-21 12:05:00.515586
+Waiting for healthcheck to pass on the new container.
+2026-Apr-21 12:05:00.521547
+Waiting for the start period (15 seconds) before starting healthcheck.
+2026-Apr-21 12:05:16.388837
+Attempt 1 of 5 | Healthcheck status: "healthy"
+2026-Apr-21 12:05:16.395690
+Healthcheck logs: 
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+Mekteb — Naučimo arapsko pismo
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+window.dataLayer = window.dataLayer || [];
+2026-Apr-21 12:05:16.395690
+function gtag(){dataLayer.push(arguments);}
+2026-Apr-21 12:05:16.395690
+gtag('js', new Date());
+2026-Apr-21 12:05:16.395690
+gtag('config', 'G-P10X0MRPDG');
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+2026-Apr-21 12:05:16.395690
+| Return code: 0
+2026-Apr-21 12:05:16.409029
+New container is healthy.
+2026-Apr-21 12:05:16.418258
+Removing old containers.
+2026-Apr-21 12:05:47.935922
+Rolling update completed.
+2026-Apr-21 12:05:49.199391
+Gracefully shutting down build container: io880g0gw4400wwsoc0wgkww
