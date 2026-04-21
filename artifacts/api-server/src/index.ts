@@ -45,6 +45,42 @@ async function runMigrations() {
     `);
     logger.info("Auto-migration: prilozi + rjecnik + kviz_pitanja column ready");
 
+    // BOOTSTRAP: if ilmihal_lekcije is completely empty (fresh prod DB),
+    // import the full dataset (all nivoa, ~232 lessons) + rjecnik (~314 entries).
+    // Idempotent: only runs when count = 0. Safe on already-populated DBs.
+    try {
+      const cnt: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije`);
+      const totalLekcije = Number(cnt.rows?.[0]?.c ?? 0);
+      if (totalLekcije === 0) {
+        logger.info("Empty ilmihal_lekcije detected — running FULL bootstrap import");
+        const { FULL_LEKCIJE, FULL_RJECNIK } = await import("./routes/full-data-seed.js");
+        let lekImported = 0;
+        for (const l of FULL_LEKCIJE) {
+          const quizJson = JSON.stringify(l.kviz_pitanja ?? null);
+          const r: any = await db.execute(sql`
+            INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, audio_src, redoslijed, is_published, kviz_pitanja)
+            VALUES (${l.nivo}, ${l.slug}, ${l.naslov}, ${l.content_html}, ${l.audio_src}, ${l.redoslijed}, ${l.is_published}, ${quizJson}::jsonb)
+            ON CONFLICT (slug) DO NOTHING
+            RETURNING id
+          `);
+          if (r.rows && r.rows.length > 0) lekImported++;
+        }
+        let rjImported = 0;
+        for (const r of FULL_RJECNIK) {
+          const ins: any = await db.execute(sql`
+            INSERT INTO rjecnik (rijec, definicija)
+            VALUES (${r.rijec}, ${r.definicija})
+            ON CONFLICT (rijec) DO NOTHING
+            RETURNING id
+          `);
+          if (ins.rows && ins.rows.length > 0) rjImported++;
+        }
+        logger.info({ lekImported, rjImported }, "Full bootstrap import complete");
+      }
+    } catch (bootErr: any) {
+      logger.error({ err: bootErr }, "Full bootstrap import failed");
+    }
+
     // Auto-seed missing Nivo 1 lessons (idempotent by slug)
     try {
       const { MISSING_NIVO1_LESSONS } = await import("./routes/lekcije-seed.js");
