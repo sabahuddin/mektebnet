@@ -516,7 +516,9 @@ export default function AdminPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati">("muallimi");
+  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "alati">("muallimi");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -697,6 +699,7 @@ export default function AdminPage() {
             { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
             { key: "analitika" as const, label: "Analitika", icon: <BarChart3 className="w-4 h-4" /> },
             { key: "rezultati" as const, label: "Kviz rezultati", icon: <ClipboardList className="w-4 h-4" /> },
+            { key: "alati" as const, label: "Alati", icon: <ShieldCheck className="w-4 h-4" /> },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -966,6 +969,102 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="p-8 text-center text-muted-foreground text-sm">Nema kvizova</div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB: ALATI ── */}
+        {activeTab === "alati" && (
+          <div className="bg-white border border-border/50 rounded-2xl p-6 space-y-6">
+            <div>
+              <h3 className="font-extrabold text-foreground flex items-center gap-2 text-lg">
+                <ShieldCheck className="w-5 h-5 text-primary" /> Sinhronizacija lekcija iz seeda
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Provjeri šta fali u bazi (dry-run), ili popuni samo nedostajuće lekcije bez gaženja postojećeg sadržaja. Lekcije sa zelenim 🔒 katancem ostaju netaknute.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={async () => {
+                  setSyncBusy(true); setSyncResult(null);
+                  try {
+                    const r = await apiRequest<any>("POST", "/admin/ilmihal/sync-from-seed", { dryRun: true }, token);
+                    setSyncResult(r);
+                    toast({ title: "Provjera gotova", description: `Bi insertovalo ${r.inserted}, update-ovalo ${r.updated}, preskočilo ${r.skippedLocked} zaključanih.` });
+                  } catch (e: any) {
+                    toast({ title: "Greška", description: e?.message || "Sync provjera neuspješna", variant: "destructive" });
+                  } finally { setSyncBusy(false); }
+                }}
+                disabled={syncBusy}
+                variant="outline"
+                className="rounded-xl font-bold"
+              >
+                {syncBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardList className="w-4 h-4 mr-2" />}
+                Provjeri (dry-run)
+              </Button>
+
+              <Button
+                onClick={async () => {
+                  if (!confirm("Sigurno popuniti nedostajuće lekcije iz seeda? Postojeće (nezaključane) lekcije će biti ažurirane sadržajem iz DEV baze. Zaključane lekcije se NE diraju.")) return;
+                  setSyncBusy(true); setSyncResult(null);
+                  try {
+                    const r = await apiRequest<any>("POST", "/admin/ilmihal/sync-from-seed", { dryRun: false, syncRjecnik: true }, token);
+                    setSyncResult(r);
+                    toast({ title: "Sinhronizacija završena ✓", description: `Insertovano ${r.inserted}, update-ovano ${r.updated}, preskočeno ${r.skippedLocked} zaključanih.` });
+                  } catch (e: any) {
+                    toast({ title: "Greška", description: e?.message || "Sync neuspješan", variant: "destructive" });
+                  } finally { setSyncBusy(false); }
+                }}
+                disabled={syncBusy}
+                className="rounded-xl font-bold"
+              >
+                {syncBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                Popuni iz seeda (uradi izmjene)
+              </Button>
+            </div>
+
+            {syncResult && (
+              <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
+                <h4 className="font-extrabold text-sm mb-2">Izvještaj {syncResult.dryRun ? "(dry-run)" : "(izvršeno)"}</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <div className="bg-white border border-border/40 rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground">Seed ukupno</div>
+                    <div className="font-extrabold text-lg">{syncResult.seedTotal}</div>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <div className="text-xs text-emerald-700">Insertovano (falilo)</div>
+                    <div className="font-extrabold text-lg text-emerald-700">{syncResult.inserted}</div>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="text-xs text-blue-700">Update-ovano</div>
+                    <div className="font-extrabold text-lg text-blue-700">{syncResult.updated}</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="text-xs text-amber-700">Preskočeno (🔒 zaključano)</div>
+                    <div className="font-extrabold text-lg text-amber-700">{syncResult.skippedLocked}</div>
+                  </div>
+                </div>
+                {syncResult.insertedByNivo && Object.keys(syncResult.insertedByNivo).length > 0 && (
+                  <div className="mt-3 text-sm">
+                    <strong>Po nivoima:</strong> {Object.entries(syncResult.insertedByNivo).map(([n, c]) => `Nivo ${n}: +${c}`).join(", ")}
+                  </div>
+                )}
+                {syncResult.rjecnik && (
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Rječnik: {syncResult.rjecnik.inserted} novih termina (od {syncResult.rjecnik.seedTotal} u seedu)
+                  </div>
+                )}
+                {syncResult.insertedSlugs && syncResult.insertedSlugs.length > 0 && (
+                  <details className="mt-3 text-xs">
+                    <summary className="cursor-pointer font-bold text-muted-foreground">Prikaži slug-ove ({syncResult.insertedSlugs.length})</summary>
+                    <div className="mt-2 font-mono text-muted-foreground bg-white border border-border/30 rounded p-2 max-h-40 overflow-y-auto">
+                      {syncResult.insertedSlugs.join(", ")}
+                    </div>
+                  </details>
+                )}
+              </div>
             )}
           </div>
         )}

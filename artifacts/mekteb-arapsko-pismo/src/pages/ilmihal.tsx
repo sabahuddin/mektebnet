@@ -154,7 +154,7 @@ export default function IlmihalPage() {
                               <Link href={`/ilmihal/${l.slug}`}>
                                 <div className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-muted/40 transition-colors group">
                                   <div className="flex items-center gap-3">
-                                    <span className="text-muted-foreground text-xs font-mono w-6 shrink-0">{l.redoslijed + 1}.</span>
+                                    <span className="text-muted-foreground text-xs font-mono w-6 shrink-0">{i + 1}.</span>
                                     <span className={`font-semibold text-foreground/80 group-hover:${info.color} group-hover:font-bold transition-all text-sm`}>{l.naslov}</span>
                                   </div>
                                   <ChevronRight className={`w-4 h-4 ${info.color} opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0`} />
