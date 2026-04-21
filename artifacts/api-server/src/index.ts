@@ -315,6 +315,91 @@ async function runMigrations() {
     } catch (pripremaN21Err: any) {
       logger.error({ err: pripremaN21Err }, "Priprema Nivo 21 auto-backfill failed");
     }
+
+    // Auto-backfill priprema-za-nastavu for Nivo 3 (100 lessons)
+    try {
+      const { NIVO3_PRIPREME } = await import("./routes/pripreme-seed-n3.js");
+      const nivo3Slugs = Object.keys(NIVO3_PRIPREME);
+      if (nivo3Slugs.length > 0) {
+        // Step 1a: strip new-format priprema (marker-wrapped) — scoped to Nivo 3 seed slugs only
+        await db.execute(sql`
+          UPDATE ilmihal_lekcije
+          SET content_html = regexp_replace(
+            content_html,
+            '<!--PRIPREMA-START-->[\\s\\S]*?<!--PRIPREMA-END-->',
+            '',
+            'g'
+          )
+          WHERE nivo = 3
+            AND slug IN (${sql.join(nivo3Slugs.map(s => sql`${s}`), sql`, `)})
+            AND content_html LIKE '%PRIPREMA-START%'
+        `);
+
+        // Step 1b: strip old-format priprema (no markers) for Nivo 3 seed slugs
+        await db.execute(sql`
+          UPDATE ilmihal_lekcije
+          SET content_html = regexp_replace(
+            content_html,
+            '\\s*<div class="lesson-accordion">\\s*<button[^<]*onclick="toggleSection\\(''priprema''[\\s\\S]*?</div>\\s*</div>\\s*</div>',
+            ''
+          )
+          WHERE nivo = 3
+            AND slug IN (${sql.join(nivo3Slugs.map(s => sql`${s}`), sql`, `)})
+            AND content_html ~ 'toggleSection\\(''priprema'''
+        `);
+
+        // Step 2: insert new priprema BEFORE first existing lesson-accordion (with fallback append)
+        let n3Added = 0;
+        let n3Appended = 0;
+        for (const [slug, pripremaHtml] of Object.entries(NIVO3_PRIPREME)) {
+          const replacement = pripremaHtml + '\n        <div class="lesson-accordion">';
+          const upd: any = await db.execute(sql`
+            UPDATE ilmihal_lekcije
+            SET content_html = regexp_replace(
+              content_html,
+              '<div class="lesson-accordion">',
+              ${replacement}
+            )
+            WHERE nivo = 3
+              AND slug = ${slug}
+              AND content_html !~ 'PRIPREMA-START'
+              AND content_html ~ '<div class="lesson-accordion">'
+            RETURNING id
+          `);
+          if (upd.rows && upd.rows.length > 0) {
+            n3Added++;
+            continue;
+          }
+          const fallback: any = await db.execute(sql`
+            UPDATE ilmihal_lekcije
+            SET content_html = regexp_replace(
+              content_html,
+              '</div>\\s*$',
+              ${'\n' + pripremaHtml + '\n</div>'}
+            )
+            WHERE nivo = 3
+              AND slug = ${slug}
+              AND content_html !~ 'PRIPREMA-START'
+            RETURNING id
+          `);
+          if (fallback.rows && fallback.rows.length > 0) { n3Appended++; continue; }
+          const lastResort: any = await db.execute(sql`
+            UPDATE ilmihal_lekcije
+            SET content_html = content_html || ${'\n' + pripremaHtml}
+            WHERE nivo = 3
+              AND slug = ${slug}
+              AND content_html !~ 'PRIPREMA-START'
+            RETURNING id
+          `);
+          if (lastResort.rows && lastResort.rows.length > 0) n3Appended++;
+        }
+        if (n3Added > 0 || n3Appended > 0) {
+          logger.info({ pripremaAdded: n3Added, pripremaAppended: n3Appended }, "Reinjected PRIPREMA ZA NASTAVU for Nivo 3");
+        }
+      }
+    } catch (pripremaN3Err: any) {
+      logger.error({ err: pripremaN3Err }, "Priprema Nivo 3 auto-backfill failed");
+    }
   } catch (e: any) {
     logger.error({ err: e }, "Auto-migration failed");
   }
