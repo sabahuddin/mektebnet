@@ -30,8 +30,14 @@ RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
 
 # -------- Runtime image (smaller) --------
 FROM node:24-bookworm-slim AS runner
-RUN npm install -g pnpm
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends wget ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g pnpm
 WORKDIR /app
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
+  CMD wget -qO- http://localhost:3000/healthz || exit 1
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY lib/db/package.json ./lib/db/

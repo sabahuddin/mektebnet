@@ -1,0 +1,119 @@
+2026-Apr-21 11:58:44.269379
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-Apr-21 11:58:45.065023
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-Apr-21 11:58:48.155134
+----------------------------------------
+2026-Apr-21 11:58:48.164508
+Importing sabahuddin/mektebnet:main (commit sha cec9c29aa0d21a1f5aa81a388bc7b51a87076a4d) to /artifacts/f048o4g4gwswswogcgg4cc48.
+2026-Apr-21 11:59:02.240771
+No configuration changed & image found (i8w884sgkkgogkwsokcwc0c4:cec9c29aa0d21a1f5aa81a388bc7b51a87076a4d) with the same Git Commit SHA. Build step skipped.
+2026-Apr-21 11:59:05.771445
+----------------------------------------
+2026-Apr-21 11:59:05.778954
+Rolling update started.
+2026-Apr-21 11:59:07.105530
+New container started.
+2026-Apr-21 11:59:07.112303
+Waiting for healthcheck to pass on the new container.
+2026-Apr-21 11:59:07.118497
+Healthcheck URL (inside the container): GET: http://localhost:3000/healthz
+2026-Apr-21 11:59:07.123537
+Waiting for the start period (5 seconds) before starting healthcheck.
+2026-Apr-21 11:59:12.985658
+Attempt 1 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:12.998594
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:12.998594
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:12.998594
+| Return code: 1
+2026-Apr-21 11:59:18.862682
+Attempt 2 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:18.874020
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:18.874020
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:18.874020
+| Return code: 1
+2026-Apr-21 11:59:24.698776
+Attempt 3 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:24.710458
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:24.710458
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:24.710458
+| Return code: 1
+2026-Apr-21 11:59:30.656114
+Attempt 4 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:30.666442
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:30.666442
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:30.666442
+| Return code: 1
+2026-Apr-21 11:59:36.472166
+Attempt 5 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:36.481923
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:36.481923
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:36.481923
+| Return code: 1
+2026-Apr-21 11:59:42.336227
+Attempt 6 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:42.347836
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:42.347836
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:42.347836
+| Return code: 1
+2026-Apr-21 11:59:48.191872
+Attempt 7 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:48.203257
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:48.203257
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:48.203257
+| Return code: 1
+2026-Apr-21 11:59:54.116241
+Attempt 8 of 10 | Healthcheck status: "starting"
+2026-Apr-21 11:59:54.129513
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:54.129513
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:54.129513
+| Return code: 1
+2026-Apr-21 11:59:59.982549
+Attempt 9 of 10 | Healthcheck status: "unhealthy"
+2026-Apr-21 11:59:59.994959
+Healthcheck logs: /bin/sh: 1: curl: not found
+2026-Apr-21 11:59:59.994959
+/bin/sh: 1: wget: not found
+2026-Apr-21 11:59:59.994959
+| Return code: 1
+2026-Apr-21 12:00:00.007936
+New container is unhealthy.
+2026-Apr-21 12:00:00.020489
+----------------------------------------
+2026-Apr-21 12:00:00.031883
+Container logs:
+2026-Apr-21 12:00:00.492345
+[CMD]: docker logs -n 100 i8w884sgkkgogkwsokcwc0c4-115842841023
+2026-Apr-21 12:00:00.492345
+[Email] SMTP not configured — emails will be logged to console only
+2026-Apr-21 12:00:00.492345
+{"level":30,"time":1776772747681,"pid":1,"hostname":"700331667bf5","msg":"Auto-migration: prilozi + rjecnik + lock columns ready"}
+2026-Apr-21 12:00:00.492345
+{"level":30,"time":1776772747727,"pid":1,"hostname":"700331667bf5","port":3000,"msg":"Server listening"}
+2026-Apr-21 12:00:00.513318
+----------------------------------------
+2026-Apr-21 12:00:00.525882
+Removing old containers.
+2026-Apr-21 12:00:00.536544
+----------------------------------------
+2026-Apr-21 12:00:00.546274
+WARNING: Dockerfile or Docker Image based deployment detected. The healthcheck needs a curl or wget command to check the health of the application. Please make sure that it is available in the image or turn off healthcheck on Coolify's UI.
+2026-Apr-21 12:00:00.553673
+----------------------------------------
+2026-Apr-21 12:00:00.562291
