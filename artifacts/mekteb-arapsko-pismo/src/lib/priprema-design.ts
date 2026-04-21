@@ -23,148 +23,171 @@ function decodeEntities(s: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
-function stripTags(html: string): string {
-  return decodeEntities(html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+function textOf(el: Element | null | undefined): string {
+  return (el?.textContent || "").replace(/\s+/g, " ").trim();
 }
 
-function keepInlineFormatting(html: string): string {
-  // Zadrži <strong>, <em>, <br>, <p> ali uprosti ostalo
-  return decodeEntities(
-    html
-      .replace(/<div[^>]*>/gi, "")
-      .replace(/<\/div>/gi, "")
-      .replace(/<span[^>]*>/gi, "")
-      .replace(/<\/span>/gi, "")
-      .trim()
-  );
+/** Parse new inline-styled gradient design via DOM. */
+function parseNewDesign(contentHtml: string): PripremaStruct | null {
+  const doc = new DOMParser().parseFromString(`<div>${contentHtml}</div>`, "text/html");
+  const root = doc.body.firstElementChild;
+  if (!root) return null;
+
+  const result: PripremaStruct = {
+    predmet: "Ahlak",
+    nastavnaJedinica: "",
+    tipSata: "",
+    odgojni: "",
+    obrazovni: "",
+    funkcionalni: "",
+    obliciRada: "",
+    sredstva: "",
+    metode: "",
+    uvodniDio: "",
+    glavniDio: "",
+    zavrsniDio: "",
+  };
+
+  // 1) Walk all divs and look for label/value pairs
+  const divs = Array.from(root.querySelectorAll("div"));
+  for (const d of divs) {
+    const t = textOf(d);
+    // Hero teal block: each label ("Nastavna jedinica", "Predmet", "Tip sata") sits
+    // in a small <div> immediately followed by a value <div>
+    if (t === "Nastavna jedinica") {
+      result.nastavnaJedinica = textOf(d.nextElementSibling);
+    } else if (t === "Predmet") {
+      const v = textOf(d.nextElementSibling);
+      if (v) result.predmet = v;
+    } else if (t === "Tip sata") {
+      result.tipSata = textOf(d.nextElementSibling);
+    } else if (/^❤️\s*Odgojni\s+cilj/i.test(t)) {
+      result.odgojni = textOf(d.nextElementSibling);
+    } else if (/^📚\s*Obrazovni\s+cilj/i.test(t)) {
+      result.obrazovni = textOf(d.nextElementSibling);
+    } else if (/^(💪|⚙️)\s*Funkcionalni\s+cilj/i.test(t)) {
+      result.funkcionalni = textOf(d.nextElementSibling);
+    } else if (/^🔵\s*Uvodni\s+dio/i.test(t)) {
+      result.uvodniDio = innerHtmlOfNext(d);
+    } else if (/^🟢\s*Glavni\s+dio/i.test(t)) {
+      result.glavniDio = innerHtmlOfNext(d);
+    } else if (/^🟡\s*Završni\s+dio/i.test(t)) {
+      result.zavrsniDio = innerHtmlOfNext(d);
+    }
+  }
+
+  // 2) Pills (Oblici rada / Sredstva / Metode)
+  const pillRows = Array.from(root.querySelectorAll("div"));
+  for (const d of pillRows) {
+    const span = d.querySelector("span");
+    if (!span) continue;
+    const label = textOf(span);
+    // Get the text after the span (sibling text node)
+    let after = "";
+    let n: Node | null = span.nextSibling;
+    while (n) {
+      if (n.nodeType === 3) after += n.nodeValue || "";
+      else if (n.nodeType === 1) after += (n as Element).textContent || "";
+      n = n.nextSibling;
+    }
+    after = after.replace(/\s+/g, " ").trim();
+    if (!after) continue;
+    if (label === "Oblici rada") result.obliciRada = after;
+    else if (label === "Sredstva") result.sredstva = after;
+    else if (label === "Metode") result.metode = after;
+  }
+
+  return result;
 }
 
-function extractAfterStrong(html: string, label: string): string {
-  const re = new RegExp(
-    `<strong[^>]*>\\s*${label}\\s*:?\\s*<\\/strong>([\\s\\S]*?)(?=<\\/div>)`,
-    "i"
-  );
-  const m = html.match(re);
-  return m ? stripTags(m[1]) : "";
+/** Get inner HTML of next element sibling, OR full sibling chain text if it's <p>. */
+function innerHtmlOfNext(headerDiv: Element): string {
+  const next = headerDiv.nextElementSibling;
+  if (!next) return "";
+  // Could be <p>...</p> or <div>...</div>; we want the inner HTML cleaned of style attrs
+  const html = next.innerHTML.trim();
+  return decodeEntities(html);
 }
 
-function extractAfterPill(html: string, label: string): string {
-  const re = new RegExp(
-    `<span[^>]*>\\s*${label}\\s*<\\/span>([\\s\\S]*?)<\\/div>`,
-    "i"
-  );
-  const m = html.match(re);
-  return m ? stripTags(m[1]) : "";
+/** Parse old "lesson-intro" design using regex (kept as fallback). */
+function parseOldDesign(contentHtml: string): PripremaStruct | null {
+  function stripTags(html: string): string {
+    return decodeEntities(html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+  }
+  function extractAfterStrong(html: string, label: string): string {
+    const re = new RegExp(`<strong[^>]*>\\s*${label}\\s*:?\\s*<\\/strong>([\\s\\S]*?)(?=<\\/div>)`, "i");
+    const m = html.match(re);
+    return m ? stripTags(m[1]) : "";
+  }
+  function extractAfterPill(html: string, label: string): string {
+    const re = new RegExp(`<span[^>]*>\\s*${label}\\s*<\\/span>([\\s\\S]*?)<\\/div>`, "i");
+    const m = html.match(re);
+    return m ? stripTags(m[1]) : "";
+  }
+  function extractStructureDio(html: string, dioName: string): string {
+    const re = new RegExp(`${dioName}\\s+dio\\s*<\\/div>([\\s\\S]*?)<\\/div>\\s*(?=<div|<\\/div>|$)`, "i");
+    const m = html.match(re);
+    if (!m) return "";
+    let inner = m[1].trim();
+    inner = inner.replace(/^<p[^>]*>([\s\S]*)<\/p>\s*$/i, "$1");
+    inner = inner.replace(/^<div[^>]*>([\s\S]*)<\/div>\s*$/i, "$1");
+    return decodeEntities(inner);
+  }
+  function extractTableField(html: string, label: string): string {
+    const re = new RegExp(
+      `<td[^>]*>\\s*${label.replace(/\s+/g, "\\s+")}\\s*<\\/td>\\s*<td[^>]*>([\\s\\S]*?)<\\/td>`,
+      "i",
+    );
+    const m = html.match(re);
+    return m ? stripTags(m[1]) : "";
+  }
+
+  return {
+    predmet: extractTableField(contentHtml, "Predmet") || "Ahlak",
+    nastavnaJedinica: extractTableField(contentHtml, "Nastavna jedinica"),
+    tipSata: extractTableField(contentHtml, "Tip nastavnog sata"),
+    odgojni: extractAfterStrong(contentHtml, "Odgojni"),
+    obrazovni: extractAfterStrong(contentHtml, "Obrazovni"),
+    funkcionalni: extractAfterStrong(contentHtml, "Funkcionalni"),
+    obliciRada: extractAfterPill(contentHtml, "Oblici rada") || "Frontalni, individualni",
+    sredstva: extractAfterPill(contentHtml, "Sredstva") || "Udžbenik, tabla, kreda",
+    metode: extractAfterPill(contentHtml, "Metode") || "Metoda usmenog izlaganja, demonstrativna metoda, razgovor",
+    uvodniDio: extractStructureDio(contentHtml, "Uvodni"),
+    glavniDio: extractStructureDio(contentHtml, "Glavni"),
+    zavrsniDio: extractStructureDio(contentHtml, "Završni"),
+  };
 }
 
-function extractStructureDio(html: string, dioName: string): string {
-  const re = new RegExp(
-    `${dioName}\\s+dio\\s*<\\/div>([\\s\\S]*?)<\\/div>\\s*(?=<div|<\\/div>|$)`,
-    "i"
-  );
-  const m = html.match(re);
-  if (!m) return "";
-  let inner = m[1].trim();
-  inner = inner.replace(/^<p[^>]*>([\s\S]*)<\/p>\s*$/i, "$1");
-  inner = inner.replace(/^<div[^>]*>([\s\S]*)<\/div>\s*$/i, "$1");
-  return keepInlineFormatting(inner);
-}
-
-function extractTableField(html: string, label: string): string {
-  const re = new RegExp(
-    `<td[^>]*>\\s*${label.replace(/\s+/g, "\\s+")}\\s*<\\/td>\\s*<td[^>]*>([\\s\\S]*?)<\\/td>`,
-    "i"
-  );
-  const m = html.match(re);
-  return m ? stripTags(m[1]) : "";
-}
-
-function extractGradientField(html: string, label: string): string {
-  // New design: <div>Label</div><div>Value</div> inside cards
-  const re = new RegExp(
-    `<div[^>]*>\\s*${label.replace(/\s+/g, "\\s+")}\\s*<\\/div>\\s*<div[^>]*>([\\s\\S]*?)<\\/div>`,
-    "i"
-  );
-  const m = html.match(re);
-  return m ? stripTags(m[1]) : "";
-}
-
-function extractCiljField(html: string, emoji: string, label: string): string {
-  // New design: gradient cilj cards with emoji + label, then value in next div
-  const re = new RegExp(
-    `${emoji}\\s*${label.replace(/\s+/g, "\\s+")}[^<]*<\\/div>\\s*<div[^>]*>([\\s\\S]*?)<\\/div>`,
-    "i"
-  );
-  const m = html.match(re);
-  return m ? stripTags(m[1]) : "";
-}
-
-function extractDioField(html: string, emoji: string, label: string): string {
-  // New design: emoji + label header, then value div after
-  const re = new RegExp(
-    `${emoji}\\s*${label.replace(/\s+/g, "\\s+")}[^<]*<\\/div>\\s*<div[^>]*>([\\s\\S]*?)<\\/div>`,
-    "i"
-  );
-  const m = html.match(re);
-  if (!m) return "";
-  return keepInlineFormatting(m[1]);
-}
-
-/**
- * Parse priprema content (the innerHTML of `<div id="priprema" class="lesson-content">`)
- * into structured fields. Handles both old `lesson-intro` design and new inline-styled design.
- */
 export function parsePripremaContent(contentHtml: string): PripremaStruct | null {
   if (!contentHtml || contentHtml.trim().length < 20) return null;
 
-  // Try NEW inline-styled design first (has "Nastavna jedinica" as <div> label)
-  if (/Nastavna\s+jedinica\s*<\/div>/i.test(contentHtml) || /📋\s*Priprema za nastavu/i.test(contentHtml)) {
-    return {
-      predmet: extractGradientField(contentHtml, "Predmet") || "Ahlak",
-      nastavnaJedinica: extractGradientField(contentHtml, "Nastavna jedinica"),
-      tipSata: extractGradientField(contentHtml, "Tip sata"),
-      odgojni: extractCiljField(contentHtml, "❤️", "Odgojni cilj"),
-      obrazovni: extractCiljField(contentHtml, "📚", "Obrazovni cilj"),
-      funkcionalni: extractCiljField(contentHtml, "💪", "Funkcionalni cilj"),
-      obliciRada: extractAfterPill(contentHtml, "Oblici rada") || "Frontalni, individualni",
-      sredstva: extractAfterPill(contentHtml, "Sredstva") || "Udžbenik, tabla, kreda",
-      metode: extractAfterPill(contentHtml, "Metode") || "Metoda usmenog izlaganja, demonstrativna metoda, razgovor",
-      uvodniDio: extractDioField(contentHtml, "🔵", "Uvodni dio"),
-      glavniDio: extractDioField(contentHtml, "🟢", "Glavni dio"),
-      zavrsniDio: extractDioField(contentHtml, "🟡", "Završni dio"),
-    };
+  if (/📋\s*Priprema za nastavu/i.test(contentHtml) || /Nastavna\s+jedinica\s*<\/div>/i.test(contentHtml)) {
+    const r = parseNewDesign(contentHtml);
+    if (r && (r.uvodniDio || r.glavniDio || r.zavrsniDio || r.nastavnaJedinica)) return r;
   }
 
-  // OLD design (lesson-intro + tables)
   if (/lesson-intro/i.test(contentHtml) || /Tip nastavnog sata/i.test(contentHtml)) {
-    return {
-      predmet: extractTableField(contentHtml, "Predmet") || "Ahlak",
-      nastavnaJedinica: extractTableField(contentHtml, "Nastavna jedinica"),
-      tipSata: extractTableField(contentHtml, "Tip nastavnog sata"),
-      odgojni: extractAfterStrong(contentHtml, "Odgojni"),
-      obrazovni: extractAfterStrong(contentHtml, "Obrazovni"),
-      funkcionalni: extractAfterStrong(contentHtml, "Funkcionalni"),
-      obliciRada: extractAfterPill(contentHtml, "Oblici rada") || "Frontalni, individualni",
-      sredstva: extractAfterPill(contentHtml, "Sredstva") || "Udžbenik, tabla, kreda",
-      metode: extractAfterPill(contentHtml, "Metode") || "Metoda usmenog izlaganja, demonstrativna metoda, razgovor",
-      uvodniDio: extractStructureDio(contentHtml, "Uvodni"),
-      glavniDio: extractStructureDio(contentHtml, "Glavni"),
-      zavrsniDio: extractStructureDio(contentHtml, "Završni"),
-    };
+    return parseOldDesign(contentHtml);
   }
 
-  return null;
+  // Last resort — try new design parser anyway (returns empty struct rather than null)
+  return parseNewDesign(contentHtml);
 }
 
 function esc(s: string): string {
   return (s || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/**
- * Render priprema struct as rich inline-styled HTML.
- * Returns the INNER HTML of `<div id="priprema" class="lesson-content">` (starts with <div class="lesson-text">).
- * The outer accordion wrapper is added by reassembleHtml.
- */
+/** Wrap a dio value: if it already contains block tags (<p>, <div>, <ul>) keep as-is, else wrap in <p>. */
+function wrapDio(v: string): string {
+  const trimmed = (v || "").trim();
+  if (!trimmed) return '<p style="margin: 0; line-height: 1.6; color: #1f2937;"></p>';
+  if (/<(p|div|ul|ol|h[1-6])\b/i.test(trimmed)) {
+    return `<div style="line-height: 1.6; color: #1f2937;">${trimmed}</div>`;
+  }
+  return `<p style="margin: 0; line-height: 1.6; color: #1f2937;">${trimmed}</p>`;
+}
+
 export function renderPripremaContent(s: PripremaStruct): string {
   const predmetShort = (s.predmet || "Ahlak")
     .replace(/Vjeronauka\s*[–-]\s*Ilmihal\s*\([^)]*\)/i, "Ahlak")
@@ -216,17 +239,17 @@ export function renderPripremaContent(s: PripremaStruct): string {
 
       <div style="background: #eff6ff; border-left: 5px solid #3b82f6; padding: 14px 18px; border-radius: 0 12px 12px 0; margin-bottom: 14px;">
         <div style="font-weight: 800; color: #1d4ed8; font-size: 1.05rem; margin-bottom: 8px;">🔵 Uvodni dio</div>
-        <div style="margin: 0; line-height: 1.6; color: #1f2937;">${s.uvodniDio}</div>
+        ${wrapDio(s.uvodniDio)}
       </div>
 
       <div style="background: #f0fdf4; border-left: 5px solid #22c55e; padding: 14px 18px; border-radius: 0 12px 12px 0; margin-bottom: 14px;">
         <div style="font-weight: 800; color: #15803d; font-size: 1.05rem; margin-bottom: 8px;">🟢 Glavni dio</div>
-        <div style="line-height: 1.6; color: #1f2937;">${s.glavniDio}</div>
+        ${wrapDio(s.glavniDio)}
       </div>
 
       <div style="background: #fefce8; border-left: 5px solid #eab308; padding: 14px 18px; border-radius: 0 12px 12px 0;">
         <div style="font-weight: 800; color: #a16207; font-size: 1.05rem; margin-bottom: 8px;">🟡 Završni dio</div>
-        <div style="margin: 0; line-height: 1.6; color: #1f2937;">${s.zavrsniDio}</div>
+        ${wrapDio(s.zavrsniDio)}
       </div>
 
     </div>`;
