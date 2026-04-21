@@ -118,13 +118,18 @@ async function runMigrations() {
     logger.error({ err: e }, "Auto-migration failed");
   }
 
-  // Auto-backfill PRIPREMA ZA NASTAVU sections (skips locked lessons)
-  try {
-    const { backfillAllPripreme } = await import("./routes/pripreme-backfill.js");
-    await backfillAllPripreme();
-  } catch (pripErr) {
-    logger.error({ err: pripErr }, "Pripreme auto-backfill module load failed");
-  }
+  // DISABLED 2026-04-21: backfillAllPripreme() je STRIPED novi dizajn pripreme
+  // (gradient kartica + obojeni ciljevi) na nezaključanim lekcijama i prepisivao
+  // ga sa starim dizajnom (table layout) iz pripreme-seed*.ts fajlova.
+  // Korisnik je novi dizajn pravio direktno na produ ručno; nikad nije bio u seedu.
+  // Re-enable TEK kad seedovi budu regenerirani sa novim dizajn HTML-om.
+  //
+  // try {
+  //   const { backfillAllPripreme } = await import("./routes/pripreme-backfill.js");
+  //   await backfillAllPripreme();
+  // } catch (pripErr) {
+  //   logger.error({ err: pripErr }, "Pripreme auto-backfill module load failed");
+  // }
 }
 
 runMigrations().then(() => {
