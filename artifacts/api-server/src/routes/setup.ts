@@ -210,7 +210,6 @@ router.get("/", async (req, res) => {
         audio_src VARCHAR(500),
         redoslijed INTEGER NOT NULL DEFAULT 0,
         is_published BOOLEAN NOT NULL DEFAULT true,
-        kviz_pitanja JSONB,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
