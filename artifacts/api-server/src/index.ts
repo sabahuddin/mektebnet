@@ -78,6 +78,35 @@ async function runMigrations() {
     } catch (bootErr: any) {
       logger.error({ err: bootErr }, "Full bootstrap import failed");
     }
+
+    // FILL-GAPS: even on non-empty DBs, INSERT any seed lessons whose slug doesn't exist.
+    // Never updates or deletes anything. Safe to run on every start. Idempotent.
+    try {
+      const { FULL_LEKCIJE } = await import("./routes/full-data-seed.js");
+      const existingSlugs: any = await db.execute(sql`SELECT slug FROM ilmihal_lekcije`);
+      const haveSet = new Set((existingSlugs.rows as any[]).map(r => r.slug));
+      let gapInserted = 0;
+      const insertedByNivo: Record<number, number> = {};
+      for (const l of FULL_LEKCIJE) {
+        if (haveSet.has(l.slug)) continue;
+        const quizJson = JSON.stringify(l.kviz_pitanja ?? null);
+        const r: any = await db.execute(sql`
+          INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, audio_src, redoslijed, is_published, kviz_pitanja)
+          VALUES (${l.nivo}, ${l.slug}, ${l.naslov}, ${l.content_html}, ${l.audio_src}, ${l.redoslijed}, ${l.is_published}, ${quizJson}::jsonb)
+          ON CONFLICT (slug) DO NOTHING
+          RETURNING id
+        `);
+        if (r.rows && r.rows.length > 0) {
+          gapInserted++;
+          insertedByNivo[l.nivo] = (insertedByNivo[l.nivo] || 0) + 1;
+        }
+      }
+      if (gapInserted > 0) {
+        logger.info({ gapInserted, insertedByNivo }, "Fill-gaps: inserted missing lessons");
+      }
+    } catch (gapErr: any) {
+      logger.error({ err: gapErr }, "Fill-gaps insert failed");
+    }
   } catch (e: any) {
     logger.error({ err: e }, "Auto-migration failed");
   }
