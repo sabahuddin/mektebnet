@@ -571,8 +571,16 @@ router.post("/ilmihal/lock-by-slug", async (req, res) => {
 // MATCH PO SLUG-u. NE dira `nivo` ni `redoslijed`. PRESKAČE sve lekcije gdje je locked = true.
 router.post("/ilmihal/restore-from-prod-seed", async (req, res) => {
   try {
-    const { dryRun } = (req.body || {}) as { dryRun?: boolean };
+    const { dryRun, confirm } = (req.body || {}) as { dryRun?: boolean; confirm?: string };
     const { FULL_LEKCIJE } = await import("./full-data-seed.js");
+    const REQUIRED_CONFIRM = "RESTORE-228-LESSONS";
+    if (!dryRun && confirm !== REQUIRED_CONFIRM) {
+      return res.status(400).json({
+        error: "Potvrda je obavezna",
+        detail: `Ovaj endpoint može pregaziti sadržaj svih ${FULL_LEKCIJE.length} lekcija (osim zaključanih). Da bi nastavio, pošalji u body-ju: { "confirm": "${REQUIRED_CONFIRM}" }. Za probni run bez izmjena pošalji { "dryRun": true }.`,
+        requiredConfirm: REQUIRED_CONFIRM,
+      });
+    }
     const existing = await db.select({
       id: ilmihalLekcijeTable.id,
       slug: ilmihalLekcijeTable.slug,
