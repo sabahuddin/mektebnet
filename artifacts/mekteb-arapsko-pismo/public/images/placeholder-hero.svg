@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f7a7d"/>
+      <stop offset="100%" stop-color="#0d5052"/>
+    </linearGradient>
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1.5" fill="#ffffff" opacity="0.08"/>
+    </pattern>
+  </defs>
+  <rect width="900" height="600" fill="url(#bg)"/>
+  <rect width="900" height="600" fill="url(#dots)"/>
+  <g transform="translate(450 270)" text-anchor="middle">
+    <text font-family="'Noto Naskh Arabic', 'Amiri', serif" font-size="180" fill="#ffffff" opacity="0.95">مكتب</text>
+    <text y="90" font-family="'Nunito', system-ui, sans-serif" font-size="38" font-weight="700" fill="#ffffff" opacity="0.92">MEKTEB</text>
+    <text y="135" font-family="'Nunito', system-ui, sans-serif" font-size="22" fill="#ffffff" opacity="0.75">Naučimo islamske vrijednosti</text>
+  </g>
+</svg>

@@ -1176,13 +1176,10 @@ export default function IlmihalLekcijaPage() {
                   // Try resolved absolute URL on mekteb.net
                   const cleanPath = parsed.heroImage.replace(/^(\.\.\/)+/, "/");
                   img.src = `https://mekteb.net${cleanPath}`;
-                } else {
-                  // Both failed — hide the entire hero container (incl. green border)
-                  // so lessons render cleanly without empty boxes.
-                  // Admin can still upload via the empty-state dropzone below.
-                  const container = img.closest("[data-hero-container]") as HTMLElement | null;
-                  if (container) container.style.display = "none";
-                  else img.style.display = "none";
+                } else if (img.dataset.fallback !== "placeholder") {
+                  // Both originals failed — show branded placeholder (mekteb mim+logo).
+                  img.dataset.fallback = "placeholder";
+                  img.src = `${import.meta.env.BASE_URL}images/placeholder-hero.svg`;
                 }
               }}
             />
