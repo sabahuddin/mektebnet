@@ -982,7 +982,7 @@ export default function IlmihalLekcijaPage() {
   const [lekcijeStrip, setLekcijeStrip] = useState<LekcijaNav[]>([]);
   const [showEditor, setShowEditor] = useState(false);
 
-  const displayNivo = (nivo: number) => nivo === 21 ? 2 : nivo;
+  const displayNivo = (nivo: number) => nivo;
 
   useEffect(() => {
     if (!slug) return;
@@ -1024,7 +1024,7 @@ export default function IlmihalLekcijaPage() {
     } catch {}
   };
 
-  const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 21: "Nivo 2", 3: "Nivo 3" };
+  const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 3: "Nivo 3" };
   const backNivo = lekcija ? displayNivo(lekcija.nivo) : null;
   const goBack = () => setLocation(backNivo ? `/ilmihal?nivo=${backNivo}` : "/ilmihal");
 
@@ -1124,7 +1124,7 @@ export default function IlmihalLekcijaPage() {
                 .info-box{background:#fffde7;border-left:4px solid #f9a825;padding:12px 16px;border-radius:8px;margin:10px 0;}
                 @media print{body{padding:20px;}}
               </style></head><body>
-                <div class="nivo-badge">${lekcija.nivo === 21 ? "Nivo 2" : "Nivo " + lekcija.nivo}</div>
+                <div class="nivo-badge">Nivo ${lekcija.nivo}</div>
                 <h1>${lekcija.naslov}</h1>
                 ${parsed.heroImage ? '<div class="hero-print"><img src="' + (parsed.heroImage.startsWith("http") ? parsed.heroImage : "https://mekteb.net" + parsed.heroImage) + '" /></div>' : ""}
                 ${sections}

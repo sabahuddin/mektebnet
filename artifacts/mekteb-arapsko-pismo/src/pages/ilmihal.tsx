@@ -46,7 +46,7 @@ export default function IlmihalPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const displayNivo = (l: Lekcija) => (l.nivo === 21 ? 2 : l.nivo);
+  const displayNivo = (l: Lekcija) => l.nivo;
 
   const filtered = lekcije.filter(l => {
     if (activeNivo) {

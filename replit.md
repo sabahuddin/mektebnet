@@ -103,7 +103,7 @@ PostgreSQL (via DATABASE_URL). Ključne tabele:
 - `poruke` — poruke (muallim↔roditelj, muallim↔učenik, admin↔svi; server-side auth)
 - `mekteb_kalendar` — kalendar grupe (tip: mekteb/ferije/vazan_datum, opis)
 - `plan_lekcija` — plan lekcija po danu (grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed)
-- `ilmihal_lekcije` — 231 lekcija (nivo 1/2/21/3)
+- `ilmihal_lekcije` — 228 lekcija (nivo 1/2/3)
 - `kvizovi` — 43 kviza (27 sa pitanjima = 1120 pitanja), modul: ilmihal/knjige
 - `knjige` — 14 knjiga (priče o poslanicima)
 - `korisnik_napredak` — praćenje napretka (zavrsen, bodovi)
