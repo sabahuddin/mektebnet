@@ -66,6 +66,8 @@ const InfoBox = createCustomBlock("infoBox", "info-box");
 const InfoCard = createCustomBlock("infoCard", "info-card");
 
 interface ParsedSection {
+  isProtected?: boolean;
+  rawOuterHtml?: string;
   id: string;
   title: string;
   iconText: string;
@@ -119,7 +121,12 @@ function parseAccordionSections(fullHtml: string): { beforeAccordions: string; s
     const contentHtml = contentDiv ? contentDiv.innerHTML.trim() : "";
     const isActive = contentDiv?.classList.contains("active") || contentDiv?.getAttribute("style")?.includes("display: block") || false;
 
-    sections.push({ id: sectionId, title, iconText, contentHtml, isActive });
+    // Priprema accordion sadrži komplikovan inline-styled dizajn koji TipTap strip-uje.
+    // Čuvamo ga u rawOuterHtml i ne propuštamo ga kroz editor — dizajn ostaje netaknut.
+    const isProtected = sectionId === "priprema" || /PRIPREMA ZA NASTAVU/i.test(title);
+    const rawOuterHtml = isProtected ? acc.outerHTML : undefined;
+
+    sections.push({ id: sectionId, title, iconText, contentHtml, isActive, isProtected, rawOuterHtml });
   });
 
   return { beforeAccordions, sections, afterAccordions, hasAccordions: true };
@@ -131,6 +138,10 @@ function reassembleHtml(beforeAccordions: string, sections: ParsedSection[], aft
   html += beforeAccordions + "\n";
 
   for (const sec of sections) {
+    if (sec.isProtected && sec.rawOuterHtml) {
+      html += sec.rawOuterHtml + "\n";
+      continue;
+    }
     const activeClass = sec.isActive ? " active" : "";
     const activeStyle = sec.isActive ? ' style="display: block;"' : "";
     html += `    <div class="lesson-accordion">\n`;
@@ -236,7 +247,8 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [parsed, setParsed] = useState(() => parseAccordionSections(content));
   const hasContainer = content.includes('class="lesson-container"');
   const sectionContentsRef = useRef<string[]>(parsed.sections.map(s => s.contentHtml));
-  const [activeIdx, setActiveIdx] = useState(0);
+  const firstEditableIdx = parsed.sections.findIndex(s => !s.isProtected);
+  const [activeIdx, setActiveIdx] = useState(firstEditableIdx >= 0 ? firstEditableIdx : 0);
   const [renamingIdx, setRenamingIdx] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [heroImage, setHeroImage] = useState<string | null>(() => extractHeroImage(parsed.beforeAccordions));
@@ -267,13 +279,16 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     loadGallery();
   }, [loadGallery]);
 
+  const initialSection = parsed.sections[firstEditableIdx >= 0 ? firstEditableIdx : 0];
   const editor = useEditor({
     extensions: editorExtensions,
-    content: parsed.hasAccordions ? parsed.sections[0]?.contentHtml || "" : content,
+    content: parsed.hasAccordions ? (initialSection?.isProtected ? "" : initialSection?.contentHtml || "") : content,
     onUpdate: ({ editor: ed }) => {
       if (switchingRef.current) return;
       const html = ed.getHTML();
       if (parsed.hasAccordions) {
+        // Ne overwrite-uj contentHtml protected sekcije (priprema) — rawOuterHtml se čuva separatno
+        if (parsed.sections[activeIdxRef.current]?.isProtected) return;
         sectionContentsRef.current[activeIdxRef.current] = html;
       }
       onChange(html);
@@ -336,12 +351,17 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     if (!editor || !parsed.hasAccordions) return;
     if (newIdx === activeIdxRef.current) return;
     switchingRef.current = true;
-    sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    // Sačuvaj trenutnu sekciju (ali ne overwrite-uj protected)
+    if (!parsed.sections[activeIdxRef.current]?.isProtected) {
+      sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    }
     activeIdxRef.current = newIdx;
     setActiveIdx(newIdx);
-    editor.commands.setContent(sectionContentsRef.current[newIdx] || "");
+    // Za protected sekciju NE učitavaj inline-styled HTML u TipTap (on bi strip-ao stilove)
+    const target = parsed.sections[newIdx];
+    editor.commands.setContent(target?.isProtected ? "" : (sectionContentsRef.current[newIdx] || ""));
     switchingRef.current = false;
-  }, [editor, parsed.hasAccordions]);
+  }, [editor, parsed.hasAccordions, parsed.sections]);
 
   const addSection = useCallback((afterIdx: number) => {
     if (!editor) return;
@@ -876,8 +896,23 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             font-weight: 700;
           }
         `}</style>
-        <EditorContent editor={editor} />
-        <ImageToolbar editor={editor} />
+        {parsed.sections[activeIdx]?.isProtected ? (
+          <div className="p-4">
+            <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm flex items-start gap-2">
+              <span className="text-base">🔒</span>
+              <div>
+                <div className="font-extrabold mb-1">Zaštićena sekcija — dizajn pripreme</div>
+                <div>Priprema za nastavu ima bogat dizajn (gradient kartica + obojeni ciljevi) koji se ovdje ne može editovati kao običan tekst. Dizajn ostaje netaknut pri čuvanju. Ako želiš da izmijeniš tekst u pripremi, koristi alat "Regeneriši dizajn pripreme" u Admin → Alati ili prebaci na HTML mod u toolbar-u.</div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 opacity-70 pointer-events-none" dangerouslySetInnerHTML={{ __html: parsed.sections[activeIdx]?.rawOuterHtml || "" }} />
+          </div>
+        ) : (
+          <>
+            <EditorContent editor={editor} />
+            <ImageToolbar editor={editor} />
+          </>
+        )}
       </div>
     </div>
   );
