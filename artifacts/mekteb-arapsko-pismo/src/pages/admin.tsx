@@ -1068,7 +1068,6 @@ export default function AdminPage() {
                 )}
               </div>
             )}
-          </div>
 
           {/* ── REGENERATOR PRIPREMA DIZAJNA ── */}
           <div className="bg-white border border-border/50 rounded-2xl p-6 mt-6">
