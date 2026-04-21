@@ -565,6 +565,51 @@ router.post("/ilmihal/lock-by-slug", async (req, res) => {
   }
 });
 
+// POST /api/admin/ilmihal/restore-from-prod-seed
+// Vrati content_html / naslov / audio / kviz iz commit-a 1ed5e79 snapshot-a (prod backup).
+// MATCH PO SLUG-u. NE dira `nivo` ni `redoslijed` (zbog Nivo 21 → 2 mergea u DEV bazi).
+// PRESKAČE sve lekcije gdje je locked = true.
+router.post("/ilmihal/restore-from-prod-seed", async (req, res) => {
+  try {
+    const { dryRun } = (req.body || {}) as { dryRun?: boolean };
+    const { FULL_LEKCIJE } = await import("./full-data-seed.js");
+    const existing = await db.select({
+      id: ilmihalLekcijeTable.id,
+      slug: ilmihalLekcijeTable.slug,
+      locked: ilmihalLekcijeTable.locked,
+    }).from(ilmihalLekcijeTable);
+    const bySlug = new Map(existing.map(r => [r.slug, r]));
+    let updated = 0, skippedLocked = 0, notFound: string[] = [], unchanged = 0;
+    for (const lek of FULL_LEKCIJE as any[]) {
+      const row = bySlug.get(lek.slug);
+      if (!row) { notFound.push(lek.slug); continue; }
+      if (row.locked) { skippedLocked++; continue; }
+      if (!dryRun) {
+        await db.update(ilmihalLekcijeTable).set({
+          naslov: lek.naslov,
+          contentHtml: lek.content_html,
+          audioSrc: lek.audio_src,
+          kvizPitanja: lek.kviz_pitanja,
+        }).where(eq(ilmihalLekcijeTable.id, row.id));
+      }
+      updated++;
+    }
+    res.json({
+      success: true,
+      dryRun: !!dryRun,
+      seedTotal: (FULL_LEKCIJE as any[]).length,
+      dbTotal: existing.length,
+      updated,
+      skippedLocked,
+      notFoundCount: notFound.length,
+      notFound: notFound.slice(0, 20),
+      note: "nivo i redoslijed nisu dirani; samo content_html, naslov, audio_src, kviz_pitanja",
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Restore failed", detail: err?.message });
+  }
+});
+
 router.delete("/ilmihal/:id", async (req, res) => {
   try {
     await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, parseInt(req.params.id)));
