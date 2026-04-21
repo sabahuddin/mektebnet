@@ -199,38 +199,52 @@ export function renderNewPriprema(s: PripremaStruct): string {
 }
 
 /**
- * Removes duplicate priprema accordions, keeping only the FIRST (richest) one.
- * Some legacy lessons accumulated multiple <div class="lesson-accordion">
- * blocks for priprema due to broken save logic — this collapses them to one.
+ * Removes duplicate accordions by section ID, keeping only the richest (longest) one
+ * for each ID. Some legacy lessons accumulated multiple copies of the same section
+ * (priprema, plus other sections) due to broken save logic.
  */
 function dedupePripremaAccordions(fullHtml: string): string {
-  if (!fullHtml.includes('toggleSection(\'priprema\'')) return fullHtml;
+  if (!fullHtml.includes('class="lesson-accordion"')) return fullHtml;
 
-  // Match each priprema accordion: <div class="lesson-accordion"> ... toggleSection('priprema' ... </div></div>
-  // We use a non-greedy match that ends at the closing </div></div> that wraps the accordion.
-  const accRe = /<div class="lesson-accordion">[\s\S]*?toggleSection\('priprema'[\s\S]*?<\/div>\s*<\/div>/g;
-  const matches = fullHtml.match(accRe);
-  if (!matches || matches.length <= 1) return fullHtml;
-
-  // Pick the accordion with the LONGEST inner content (most data).
-  let best = matches[0];
-  for (const m of matches) {
-    if (m.length > best.length) best = m;
+  // Match each accordion as a whole block, capturing its section ID.
+  const accRe = /<div class="lesson-accordion">[\s\S]*?toggleSection\('([^']+)'[\s\S]*?<\/div>\s*<\/div>/g;
+  const blocks: { id: string; html: string; index: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = accRe.exec(fullHtml)) !== null) {
+    blocks.push({ id: m[1], html: m[0], index: m.index });
   }
+  if (blocks.length === 0) return fullHtml;
 
-  // Remove ALL priprema accordions, then re-insert the best one in place
-  // of the first occurrence.
-  let result = fullHtml;
-  // Replace first with placeholder, remove the rest
-  let firstReplaced = false;
-  result = result.replace(accRe, () => {
-    if (!firstReplaced) {
-      firstReplaced = true;
-      return "__PRIPREMA_PLACEHOLDER__";
+  // Group by id; pick longest per id.
+  const byId = new Map<string, { id: string; html: string; index: number }>();
+  for (const b of blocks) {
+    const existing = byId.get(b.id);
+    if (!existing || b.html.length > existing.html.length) {
+      byId.set(b.id, b);
     }
-    return "";
-  });
-  result = result.replace("__PRIPREMA_PLACEHOLDER__", best);
+  }
+  // If no duplicates, return as-is.
+  if (byId.size === blocks.length) return fullHtml;
+
+  // Rebuild html: walk blocks; for each block, emit it only if it's the chosen
+  // representative for its id; otherwise drop it. Preserve non-accordion content
+  // between blocks.
+  let result = "";
+  let cursor = 0;
+  const emitted = new Set<string>();
+  for (const b of blocks) {
+    // Append everything between previous cursor and this block.
+    result += fullHtml.slice(cursor, b.index);
+    const winner = byId.get(b.id)!;
+    if (!emitted.has(b.id)) {
+      // First time we encounter this id — emit the WINNER (richest version).
+      result += winner.html;
+      emitted.add(b.id);
+    }
+    // else: skip (dropped duplicate).
+    cursor = b.index + b.html.length;
+  }
+  result += fullHtml.slice(cursor);
   return result;
 }
 
