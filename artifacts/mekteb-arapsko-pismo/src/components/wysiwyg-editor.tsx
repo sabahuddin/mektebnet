@@ -118,7 +118,15 @@ function parseAccordionSections(fullHtml: string): { beforeAccordions: string; s
     const title = clonedBtn.textContent?.trim() || sectionId;
 
     const contentDiv = acc.querySelector(".lesson-content");
-    const contentHtml = contentDiv ? contentDiv.innerHTML.trim() : "";
+    // KRITIČNO: ako je HTML nepravilno zatvoren, browser ugnijezdi sljedeće accordion-e
+    // unutar contentDiv. Klonira-j i ukloni sve ugnijezđene .lesson-accordion prije
+    // ekstrakcije inner HTML-a — inače save bi duplicirao sve sekcije.
+    let contentHtml = "";
+    if (contentDiv) {
+      const cloned = contentDiv.cloneNode(true) as Element;
+      cloned.querySelectorAll(".lesson-accordion").forEach(nested => nested.remove());
+      contentHtml = cloned.innerHTML.trim();
+    }
     const isActive = contentDiv?.classList.contains("active") || contentDiv?.getAttribute("style")?.includes("display: block") || false;
 
     const isPriprema = sectionId === "priprema" || /PRIPREMA ZA NASTAVU/i.test(title);
