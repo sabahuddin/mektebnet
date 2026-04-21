@@ -117,6 +117,14 @@ async function runMigrations() {
   } catch (e) {
     logger.error({ err: e }, "Auto-migration failed");
   }
+
+  // Auto-backfill PRIPREMA ZA NASTAVU sections (skips locked lessons)
+  try {
+    const { backfillAllPripreme } = await import("./routes/pripreme-backfill.js");
+    await backfillAllPripreme();
+  } catch (pripErr) {
+    logger.error({ err: pripErr }, "Pripreme auto-backfill module load failed");
+  }
 }
 
 runMigrations().then(() => {
