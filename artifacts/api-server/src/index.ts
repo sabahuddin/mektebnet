@@ -48,7 +48,7 @@ async function runMigrations() {
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS locked BOOLEAN NOT NULL DEFAULT false;`);
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS locked_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS locked_note TEXT;`);
-    logger.info("Auto-migration: prilozi + rjecnik + lock columns ready");
+    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock columns ready");
 
     // BOOTSTRAP: if ilmihal_lekcije is completely empty (fresh prod DB),
     // import the full dataset (~232 lessons) + rjecnik (~314 entries).
