@@ -179,9 +179,19 @@ async function runMigrations() {
           )
           WHERE slug = ${slug}
             AND content_html !~ 'PRIPREMA-START'
+            AND content_html ~ '</div>\\s*$'
           RETURNING id
         `);
         if (fallback.rows && fallback.rows.length > 0) pripremaAppended++;
+        else {
+          // Last resort: empty/non-conforming content — concat priprema unconditionally
+          await db.execute(sql`
+            UPDATE ilmihal_lekcije
+            SET content_html = COALESCE(content_html, '') || ${'\n' + pripremaHtml}
+            WHERE slug = ${slug}
+              AND content_html !~ 'PRIPREMA-START'
+          `);
+        }
       }
       if (pripremaAdded > 0 || pripremaAppended > 0) {
         logger.info({ pripremaAdded, pripremaAppended }, "Reinjected PRIPREMA ZA NASTAVU for Nivo 1");
@@ -254,9 +264,18 @@ async function runMigrations() {
             WHERE nivo = 2
               AND slug = ${slug}
               AND content_html !~ 'PRIPREMA-START'
+              AND content_html ~ '</div>\\s*$'
             RETURNING id
           `);
-          if (fallback.rows && fallback.rows.length > 0) n2Appended++;
+          if (fallback.rows && fallback.rows.length > 0) { n2Appended++; continue; }
+          await db.execute(sql`
+            UPDATE ilmihal_lekcije
+            SET content_html = COALESCE(content_html, '') || ${'\n' + pripremaHtml}
+            WHERE nivo = 2
+              AND slug = ${slug}
+              AND content_html !~ 'PRIPREMA-START'
+          `);
+          n2Appended++;
         }
         if (n2Added > 0 || n2Appended > 0) {
           logger.info({ pripremaAdded: n2Added, pripremaAppended: n2Appended }, "Reinjected PRIPREMA ZA NASTAVU for Nivo 2");
@@ -330,6 +349,7 @@ async function runMigrations() {
             WHERE nivo = 21
               AND slug = ${slug}
               AND content_html !~ 'PRIPREMA-START'
+              AND content_html ~ '</div>\\s*$'
             RETURNING id
           `);
           if (fallback.rows && fallback.rows.length > 0) { n21Appended++; continue; }
@@ -416,6 +436,7 @@ async function runMigrations() {
             WHERE nivo = 3
               AND slug = ${slug}
               AND content_html !~ 'PRIPREMA-START'
+              AND content_html ~ '</div>\\s*$'
             RETURNING id
           `);
           if (fallback.rows && fallback.rows.length > 0) { n3Appended++; continue; }
