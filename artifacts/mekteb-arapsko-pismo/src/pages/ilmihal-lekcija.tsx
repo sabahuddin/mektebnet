@@ -1161,18 +1161,28 @@ export default function IlmihalLekcijaPage() {
 
         {/* Hero image */}
         {parsed.heroImage ? (
-          <div className="relative rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)] group">
+          <div
+            className="relative rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)] group"
+            data-hero-container
+          >
             <img
               src={parsed.heroImage}
               alt={lekcija.naslov}
               className="w-full h-auto aspect-[3/2] object-cover"
               onError={e => {
                 const img = e.target as HTMLImageElement;
-                if (!img.dataset.fallback) {
+                if (!img.dataset.fallback && parsed.heroImage) {
                   img.dataset.fallback = "1";
-                  img.src = `https://mekteb.net${parsed.heroImage}`;
+                  // Try resolved absolute URL on mekteb.net
+                  const cleanPath = parsed.heroImage.replace(/^(\.\.\/)+/, "/");
+                  img.src = `https://mekteb.net${cleanPath}`;
                 } else {
-                  img.style.display = "none";
+                  // Both failed — hide the entire hero container (incl. green border)
+                  // so lessons render cleanly without empty boxes.
+                  // Admin can still upload via the empty-state dropzone below.
+                  const container = img.closest("[data-hero-container]") as HTMLElement | null;
+                  if (container) container.style.display = "none";
+                  else img.style.display = "none";
                 }
               }}
             />
