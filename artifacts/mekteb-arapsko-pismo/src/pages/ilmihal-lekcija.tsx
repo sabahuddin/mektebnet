@@ -1171,13 +1171,19 @@ export default function IlmihalLekcijaPage() {
               className="w-full h-auto aspect-[3/2] object-cover"
               onError={e => {
                 const img = e.target as HTMLImageElement;
-                if (!img.dataset.fallback && parsed.heroImage) {
-                  img.dataset.fallback = "1";
-                  // Try resolved absolute URL on mekteb.net
+                const stage = img.dataset.fallback;
+                if (!stage && parsed.heroImage) {
+                  // Step 1: try local /images/<filename> (slike koje sam kopirao iz attached_assets)
+                  img.dataset.fallback = "local";
+                  const fname = parsed.heroImage.split("/").pop() || "";
+                  img.src = `${import.meta.env.BASE_URL}images/${fname}`;
+                } else if (stage === "local" && parsed.heroImage) {
+                  // Step 2: try mekteb.net (možda nešto i dalje ima)
+                  img.dataset.fallback = "mekteb";
                   const cleanPath = parsed.heroImage.replace(/^(\.\.\/)+/, "/");
                   img.src = `https://mekteb.net${cleanPath}`;
-                } else if (img.dataset.fallback !== "placeholder") {
-                  // Both originals failed — show branded placeholder (mekteb mim+logo).
+                } else if (stage !== "placeholder") {
+                  // Step 3: branded placeholder
                   img.dataset.fallback = "placeholder";
                   img.src = `${import.meta.env.BASE_URL}images/placeholder-hero.svg`;
                 }
