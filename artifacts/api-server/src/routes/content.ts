@@ -11,6 +11,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
 
 const router = Router();
 
@@ -54,7 +55,11 @@ router.get("/ilmihal/:slug", async (req, res) => {
     const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, req.params.slug));
     if (!lekcija) { res.status(404).json({ error: "Lekcija nije pronađena" }); return; }
 
-    const result: Record<string, unknown> = { ...lekcija };
+    // Auto-upgrade legacy priprema (table-based) to new gradient design on read.
+    // No DB write — purely transforms HTML before serving.
+    const upgradedHtml = regeneratePripremaInHtml(lekcija.contentHtml || "");
+
+    const result: Record<string, unknown> = { ...lekcija, contentHtml: upgradedHtml };
 
     const authHeader = req.headers.authorization;
     if (authHeader) {
