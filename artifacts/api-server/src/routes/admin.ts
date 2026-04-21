@@ -605,6 +605,23 @@ router.post("/ilmihal/restore-from-prod-seed", async (req, res) => {
   }
 });
 
+// POST /api/admin/ilmihal/regenerate-priprema-design
+// Parsira stari dizajn pripreme (table layout) i regeneriše u novi dizajn
+// (gradient kartica + 3 obojena cilja). Skipuje zaključane.
+router.post("/ilmihal/regenerate-priprema-design", async (req, res) => {
+  try {
+    const { dryRun, nivo } = (req.body || {}) as { dryRun?: boolean; nivo?: number };
+    const { regenerateOldDesignToNew } = await import("./regenerate-priprema-design.js");
+    const report = await regenerateOldDesignToNew({
+      nivo: typeof nivo === "number" ? nivo : 1,
+      dryRun: !!dryRun,
+    });
+    res.json({ success: true, ...report });
+  } catch (err: any) {
+    res.status(500).json({ error: "Regenerate failed", detail: err?.message });
+  }
+});
+
 // POST /api/admin/ilmihal/sync-from-seed
 // FULL UPSERT iz aktuelnog full-data-seed.ts (228 lekcija iz DEV baze):
 //   - INSERT lekcije koje fale (slug ne postoji u prod bazi)

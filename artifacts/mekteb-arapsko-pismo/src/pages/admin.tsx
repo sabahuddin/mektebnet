@@ -519,6 +519,8 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "alati">("muallimi");
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
+  const [regenBusy, setRegenBusy] = useState(false);
+  const [regenResult, setRegenResult] = useState<any>(null);
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -1067,6 +1069,94 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+
+          {/* ── REGENERATOR PRIPREMA DIZAJNA ── */}
+          <div className="bg-white border border-border/50 rounded-2xl p-6 mt-6">
+            <h3 className="font-extrabold text-lg mb-2 text-foreground">Regeneriši dizajn pripreme</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Konvertuje stari dizajn pripreme (tabela) u novi dizajn (zelena gradient kartica + 3 obojena cilja).
+              Parsira sadržaj iz starog HTML-a — sve tvoje tekstove čuva. Skipuje zaključane lekcije (🔒).
+              Default: samo Nivo 1 (lekcije koje su izgubile novi dizajn).
+            </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Button
+                onClick={async () => {
+                  setRegenBusy(true); setRegenResult(null);
+                  try {
+                    const r = await apiRequest<any>("POST", "/admin/ilmihal/regenerate-priprema-design", { dryRun: true, nivo: 1 }, token);
+                    setRegenResult(r);
+                    toast({ title: "Provjera završena ✓", description: `Skenirano ${r.scanned}, regeneracije bi: ${r.regenerated.length}, fail-ovala bi parse: ${r.failedParse.length}.` });
+                  } catch (e: any) {
+                    toast({ title: "Greška", description: e?.message || "Provjera neuspješna", variant: "destructive" });
+                  } finally { setRegenBusy(false); }
+                }}
+                disabled={regenBusy}
+                variant="outline"
+                className="rounded-xl font-bold"
+              >
+                {regenBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardList className="w-4 h-4 mr-2" />}
+                Provjeri (dry-run, Nivo 1)
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!confirm("Sigurno regenerisati dizajn pripreme za sve nezaključane lekcije Nivo 1? Sadržaj se čuva, mijenja se samo izgled (stari → novi). Zaključane lekcije se NE diraju.")) return;
+                  setRegenBusy(true); setRegenResult(null);
+                  try {
+                    const r = await apiRequest<any>("POST", "/admin/ilmihal/regenerate-priprema-design", { dryRun: false, nivo: 1 }, token);
+                    setRegenResult(r);
+                    toast({ title: "Regeneracija završena ✓", description: `${r.regenerated.length} lekcija dobilo novi dizajn.` });
+                  } catch (e: any) {
+                    toast({ title: "Greška", description: e?.message || "Regeneracija neuspješna", variant: "destructive" });
+                  } finally { setRegenBusy(false); }
+                }}
+                disabled={regenBusy}
+                className="rounded-xl font-bold"
+              >
+                {regenBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                Regeneriši Nivo 1
+              </Button>
+            </div>
+            {regenResult && (
+              <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
+                <h4 className="font-extrabold text-sm mb-2">Izvještaj {regenResult.dryRun ? "(dry-run)" : "(izvršeno)"}</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
+                  <div className="bg-white border border-border/40 rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground">Skenirano</div>
+                    <div className="font-extrabold text-lg">{regenResult.scanned}</div>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <div className="text-xs text-emerald-700">Regenerisano (novi dizajn)</div>
+                    <div className="font-extrabold text-lg text-emerald-700">{regenResult.regenerated.length}</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="text-xs text-amber-700">Preskočeno (🔒)</div>
+                    <div className="font-extrabold text-lg text-amber-700">{regenResult.skippedLocked.length}</div>
+                  </div>
+                  <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+                    <div className="text-xs text-rose-700">Fail-ovan parse</div>
+                    <div className="font-extrabold text-lg text-rose-700">{regenResult.failedParse.length}</div>
+                  </div>
+                </div>
+                {regenResult.regenerated.length > 0 && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer font-bold text-emerald-700">Slugovi regenerisani ({regenResult.regenerated.length})</summary>
+                    <div className="mt-2 max-h-40 overflow-y-auto bg-white border border-border/40 rounded p-2 font-mono">
+                      {regenResult.regenerated.join(", ")}
+                    </div>
+                  </details>
+                )}
+                {regenResult.failedParse.length > 0 && (
+                  <details className="text-xs mt-2">
+                    <summary className="cursor-pointer font-bold text-rose-700">Fail-ovan parse ({regenResult.failedParse.length})</summary>
+                    <div className="mt-2 max-h-40 overflow-y-auto bg-white border border-border/40 rounded p-2 font-mono">
+                      {regenResult.failedParse.map((f: any) => `${f.slug}: missing ${f.missing.join(",")}`).join(" | ")}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
         )}
 
         {/* ── TAB: KORISNICI ── */}
