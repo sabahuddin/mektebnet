@@ -1089,7 +1089,7 @@ export default function IlmihalLekcijaPage() {
                 const url = `/admin/ilmihal/${lekcija.id}/${isLocked ? "unlock" : "lock"}`;
                 if (isLocked && !confirm("Otključati lekciju? Nakon otključavanja je možeš uređivati ili je auto-skripte mogu prepisati.")) return;
                 try {
-                  await apiRequest("POST", url, {});
+                  await apiRequest("POST", url, {}, token);
                   setLekcija(prev => prev ? { ...prev, locked: !isLocked } : prev);
                   toast({ title: isLocked ? "Otključano" : "🔒 Zaključano", description: isLocked ? "Lekcija je otključana." : "Sadržaj je zaštićen od izmjena." });
                 } catch {
