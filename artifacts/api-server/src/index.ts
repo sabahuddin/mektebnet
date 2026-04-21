@@ -3,6 +3,13 @@ import { logger } from "./lib/logger";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
+interface DbExecResult<T = Record<string, unknown>> {
+  rows: T[];
+}
+async function exec<T = Record<string, unknown>>(query: ReturnType<typeof sql>): Promise<DbExecResult<T>> {
+  return (await db.execute(query)) as unknown as DbExecResult<T>;
+}
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
@@ -47,35 +54,35 @@ async function runMigrations() {
     // import the full dataset (~232 lessons) + rjecnik (~314 entries).
     // Idempotent: only runs when count = 0. ON CONFLICT (slug) DO NOTHING is safe.
     try {
-      const cnt: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije`);
-      const totalLekcije = Number(cnt.rows?.[0]?.c ?? 0);
+      const cnt = await exec<{ c: number }>(sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije`);
+      const totalLekcije = Number(cnt.rows[0]?.c ?? 0);
       if (totalLekcije === 0) {
         logger.info("Empty ilmihal_lekcije detected — running FULL bootstrap import");
         const { FULL_LEKCIJE, FULL_RJECNIK } = await import("./routes/full-data-seed.js");
         let lekImported = 0;
         for (const l of FULL_LEKCIJE) {
           const quizJson = JSON.stringify(l.kviz_pitanja ?? null);
-          const r: any = await db.execute(sql`
+          const r = await exec<{ id: number }>(sql`
             INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, audio_src, redoslijed, is_published, kviz_pitanja)
             VALUES (${l.nivo}, ${l.slug}, ${l.naslov}, ${l.content_html}, ${l.audio_src}, ${l.redoslijed}, ${l.is_published}, ${quizJson}::jsonb)
             ON CONFLICT (slug) DO NOTHING
             RETURNING id
           `);
-          if (r.rows && r.rows.length > 0) lekImported++;
+          if (r.rows.length > 0) lekImported++;
         }
         let rjImported = 0;
         for (const r of FULL_RJECNIK) {
-          const ins: any = await db.execute(sql`
+          const ins = await exec<{ id: number }>(sql`
             INSERT INTO rjecnik (rijec, definicija)
             VALUES (${r.rijec}, ${r.definicija})
             ON CONFLICT (rijec) DO NOTHING
             RETURNING id
           `);
-          if (ins.rows && ins.rows.length > 0) rjImported++;
+          if (ins.rows.length > 0) rjImported++;
         }
         logger.info({ lekImported, rjImported }, "Full bootstrap import complete");
       }
-    } catch (bootErr: any) {
+    } catch (bootErr) {
       logger.error({ err: bootErr }, "Full bootstrap import failed");
     }
 
@@ -83,20 +90,20 @@ async function runMigrations() {
     // Never updates or deletes anything. Safe to run on every start. Idempotent.
     try {
       const { FULL_LEKCIJE } = await import("./routes/full-data-seed.js");
-      const existingSlugs: any = await db.execute(sql`SELECT slug FROM ilmihal_lekcije`);
-      const haveSet = new Set((existingSlugs.rows as any[]).map(r => r.slug));
+      const existingSlugs = await exec<{ slug: string }>(sql`SELECT slug FROM ilmihal_lekcije`);
+      const haveSet = new Set(existingSlugs.rows.map(r => r.slug));
       let gapInserted = 0;
       const insertedByNivo: Record<number, number> = {};
       for (const l of FULL_LEKCIJE) {
         if (haveSet.has(l.slug)) continue;
         const quizJson = JSON.stringify(l.kviz_pitanja ?? null);
-        const r: any = await db.execute(sql`
+        const r = await exec<{ id: number }>(sql`
           INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, audio_src, redoslijed, is_published, kviz_pitanja)
           VALUES (${l.nivo}, ${l.slug}, ${l.naslov}, ${l.content_html}, ${l.audio_src}, ${l.redoslijed}, ${l.is_published}, ${quizJson}::jsonb)
           ON CONFLICT (slug) DO NOTHING
           RETURNING id
         `);
-        if (r.rows && r.rows.length > 0) {
+        if (r.rows.length > 0) {
           gapInserted++;
           insertedByNivo[l.nivo] = (insertedByNivo[l.nivo] || 0) + 1;
         }
@@ -104,10 +111,10 @@ async function runMigrations() {
       if (gapInserted > 0) {
         logger.info({ gapInserted, insertedByNivo }, "Fill-gaps: inserted missing lessons");
       }
-    } catch (gapErr: any) {
+    } catch (gapErr) {
       logger.error({ err: gapErr }, "Fill-gaps insert failed");
     }
-  } catch (e: any) {
+  } catch (e) {
     logger.error({ err: e }, "Auto-migration failed");
   }
 }

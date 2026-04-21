@@ -579,7 +579,7 @@ router.post("/ilmihal/restore-from-prod-seed", async (req, res) => {
     }).from(ilmihalLekcijeTable);
     const bySlug = new Map(existing.map(r => [r.slug, r]));
     let updated = 0, skippedLocked = 0, notFound: string[] = [];
-    for (const lek of FULL_LEKCIJE as any[]) {
+    for (const lek of FULL_LEKCIJE) {
       const row = bySlug.get(lek.slug);
       if (!row) { notFound.push(lek.slug); continue; }
       if (row.locked) { skippedLocked++; continue; }
@@ -595,7 +595,7 @@ router.post("/ilmihal/restore-from-prod-seed", async (req, res) => {
     }
     res.json({
       success: true, dryRun: !!dryRun,
-      seedTotal: (FULL_LEKCIJE as any[]).length, dbTotal: existing.length,
+      seedTotal: FULL_LEKCIJE.length, dbTotal: existing.length,
       updated, skippedLocked,
       notFoundCount: notFound.length, notFound: notFound.slice(0, 20),
       note: "nivo i redoslijed nisu dirani; samo content_html, naslov, audio_src, kviz_pitanja",
@@ -624,7 +624,7 @@ router.post("/ilmihal/sync-from-seed", async (req, res) => {
     let inserted = 0, updated = 0, skippedLocked = 0;
     const insertedSlugs: string[] = [];
     const insertedByNivo: Record<number, number> = {};
-    for (const lek of FULL_LEKCIJE as any[]) {
+    for (const lek of FULL_LEKCIJE) {
       const row = bySlug.get(lek.slug);
       if (!row) {
         if (!dryRun) {
@@ -661,32 +661,32 @@ router.post("/ilmihal/sync-from-seed", async (req, res) => {
 
     let rjecnikInserted = 0;
     if (syncRjecnik) {
-      for (const r of FULL_RJECNIK as any[]) {
+      for (const r of FULL_RJECNIK) {
         if (!dryRun) {
-          const ins: any = await db.execute(sql`
+          const ins = (await db.execute(sql`
             INSERT INTO rjecnik (rijec, definicija)
             VALUES (${r.rijec}, ${r.definicija})
             ON CONFLICT (rijec) DO NOTHING
             RETURNING id
-          `);
-          if (ins.rows && ins.rows.length > 0) rjecnikInserted++;
+          `)) as unknown as { rows: { id: number }[] };
+          if (ins.rows.length > 0) rjecnikInserted++;
         }
       }
     }
 
     res.json({
       success: true, dryRun: !!dryRun,
-      seedTotal: (FULL_LEKCIJE as any[]).length,
+      seedTotal: FULL_LEKCIJE.length,
       dbTotalBefore: existing.length,
       inserted, updated, skippedLocked,
       insertedByNivo,
       insertedSlugs: insertedSlugs.slice(0, 50),
-      rjecnik: syncRjecnik ? { seedTotal: (FULL_RJECNIK as any[]).length, inserted: rjecnikInserted } : null,
+      rjecnik: syncRjecnik ? { seedTotal: FULL_RJECNIK.length, inserted: rjecnikInserted } : null,
       note: "Locked lekcije su preskočene. Insertovane su one koje su falile.",
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("sync-from-seed error", err);
-    res.status(500).json({ error: "Sync failed", detail: err?.message });
+    res.status(500).json({ error: "Sync failed", detail: err instanceof Error ? err.message : String(err) });
   }
 });
 
