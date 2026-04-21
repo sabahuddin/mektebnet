@@ -1086,7 +1086,7 @@ export default function IlmihalLekcijaPage() {
               <button onClick={async () => {
                 if (!lekcija || !token) return;
                 const isLocked = lekcija.locked;
-                const url = `/api/admin/ilmihal/${lekcija.id}/${isLocked ? "unlock" : "lock"}`;
+                const url = `/admin/ilmihal/${lekcija.id}/${isLocked ? "unlock" : "lock"}`;
                 if (isLocked && !confirm("Otključati lekciju? Nakon otključavanja je možeš uređivati ili je auto-skripte mogu prepisati.")) return;
                 try {
                   await apiRequest("POST", url, {});
