@@ -725,7 +725,7 @@ router.post("/ilmihal/sync-from-seed", async (req, res) => {
 // za 31 lekciju kojima su nestale kvačice. Skipuje locked.
 router.post("/ilmihal/restore-diac", async (req, res) => {
   try {
-    const { dryRun } = (req.body || {}) as { dryRun?: boolean };
+    const { dryRun, force } = (req.body || {}) as { dryRun?: boolean; force?: boolean };
     const fs = await import("fs");
     const path = await import("path");
     const url = await import("url");
@@ -761,7 +761,7 @@ router.post("/ilmihal/restore-diac", async (req, res) => {
       const newDiac = (lek.content_html.match(/[čćšžđČĆŠŽĐ]/g) || []).length;
       if (!row) { missing++; report.push({ slug: lek.slug, oldDiac: 0, newDiac, status: "MISSING" }); continue; }
       const oldDiac = (row.contentHtml?.match(/[čćšžđČĆŠŽĐ]/g) || []).length;
-      if (row.locked) { skippedLocked++; report.push({ slug: lek.slug, oldDiac, newDiac, status: "LOCKED" }); continue; }
+      if (row.locked && !force) { skippedLocked++; report.push({ slug: lek.slug, oldDiac, newDiac, status: "LOCKED" }); continue; }
       if (!dryRun) {
         await db.update(ilmihalLekcijeTable)
           .set({ contentHtml: lek.content_html })
