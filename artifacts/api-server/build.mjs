@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, mkdir, copyFile } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -118,6 +118,16 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // Copy runtime JSON assets that endpoints read via fs.readFileSync
+  const assetsToCopy = ["src/routes/restore-diac-31.json"];
+  for (const rel of assetsToCopy) {
+    const src = path.resolve(artifactDir, rel);
+    const dst = path.resolve(distDir, "routes", path.basename(rel));
+    await mkdir(path.dirname(dst), { recursive: true });
+    try { await copyFile(src, dst); console.log("Copied asset:", rel); }
+    catch (e) { console.warn("Could not copy asset", rel, e?.message); }
+  }
 }
 
 buildAll().catch((err) => {
