@@ -12,6 +12,8 @@ interface Tooltip {
   def: string;
   x: number;
   y: number;
+  placeBelow: boolean;
+  wordHeight: number;
 }
 
 export function RjecnikContent({ html, className }: Props) {
@@ -35,7 +37,11 @@ export function RjecnikContent({ html, className }: Props) {
       const containerRect = ref.current?.getBoundingClientRect();
       const x = rect.left - (containerRect?.left || 0) + rect.width / 2;
       const y = rect.top - (containerRect?.top || 0);
-      setTooltip({ word, def, x, y });
+      // Provjeri ima li dovoljno prostora iznad rijeci do vrha viewport-a.
+      // Ako ne — flip ispod (u trenutnom akordionu, ne preklapa prethodni).
+      const APPROX_POPUP_HEIGHT = 140;
+      const placeBelow = rect.top < APPROX_POPUP_HEIGHT + 16;
+      setTooltip({ word, def, x, y, placeBelow, wordHeight: rect.height });
     } else if (!el.closest(".rjecnik-popup")) {
       setTooltip(null);
     }
@@ -66,8 +72,8 @@ export function RjecnikContent({ html, className }: Props) {
           className="rjecnik-popup absolute z-40 max-w-xs bg-white border-2 border-teal-200 rounded-2xl shadow-xl p-4"
           style={{
             left: Math.max(8, Math.min(tooltip.x - 140, (ref.current?.offsetWidth || 400) - 290)),
-            top: tooltip.y - 10,
-            transform: "translateY(-100%)",
+            top: tooltip.placeBelow ? tooltip.y + tooltip.wordHeight + 10 : tooltip.y - 10,
+            transform: tooltip.placeBelow ? "none" : "translateY(-100%)",
           }}
           role="tooltip"
         >
@@ -81,7 +87,11 @@ export function RjecnikContent({ html, className }: Props) {
             </button>
           </div>
           <p className="text-sm text-foreground leading-relaxed">{tooltip.def}</p>
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-[-8px] w-3 h-3 bg-white border-r-2 border-b-2 border-teal-200 rotate-45" />
+          {tooltip.placeBelow ? (
+            <div className="absolute left-1/2 -translate-x-1/2 top-[-8px] w-3 h-3 bg-white border-l-2 border-t-2 border-teal-200 rotate-45" />
+          ) : (
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[-8px] w-3 h-3 bg-white border-r-2 border-b-2 border-teal-200 rotate-45" />
+          )}
         </div>
       )}
     </div>
