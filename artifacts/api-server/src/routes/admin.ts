@@ -726,8 +726,24 @@ router.post("/ilmihal/sync-from-seed", async (req, res) => {
 router.post("/ilmihal/restore-diac", async (req, res) => {
   try {
     const { dryRun } = (req.body || {}) as { dryRun?: boolean };
-    const mod = await import("./restore-diac-31.json", { with: { type: "json" } });
-    const data = (mod.default || mod) as Array<{ slug: string; content_html: string }>;
+    const fs = await import("fs");
+    const path = await import("path");
+    const url = await import("url");
+    const here = path.dirname(url.fileURLToPath(import.meta.url));
+    // Try multiple candidate locations (dev: src/routes, prod: dist)
+    const candidates = [
+      path.resolve(here, "restore-diac-31.json"),
+      path.resolve(here, "../routes/restore-diac-31.json"),
+      path.resolve(here, "../../src/routes/restore-diac-31.json"),
+      path.resolve(process.cwd(), "src/routes/restore-diac-31.json"),
+      path.resolve(process.cwd(), "artifacts/api-server/src/routes/restore-diac-31.json"),
+    ];
+    let raw: string | null = null;
+    for (const p of candidates) {
+      if (fs.existsSync(p)) { raw = fs.readFileSync(p, "utf8"); break; }
+    }
+    if (!raw) throw new Error("restore-diac-31.json not found in any candidate path");
+    const data = JSON.parse(raw) as Array<{ slug: string; content_html: string }>;
     const existing = await db.select({
       id: ilmihalLekcijeTable.id,
       slug: ilmihalLekcijeTable.slug,
