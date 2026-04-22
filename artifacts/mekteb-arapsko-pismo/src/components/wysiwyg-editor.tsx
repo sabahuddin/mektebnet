@@ -447,8 +447,11 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const moveSection = useCallback((idx: number, dir: -1 | 1) => {
     if (!editor) return;
     const newIdx = idx + dir;
-    const currentEditorHtml = editor.getHTML();
-    sectionContentsRef.current[activeIdxRef.current] = currentEditorHtml;
+    // Sačuvaj content iz TipTap-a SAMO ako trenutna sekcija nije priprema —
+    // priprema koristi svoju formu, TipTap je prazan i prepisao bi pripremu.
+    if (!parsed.sections[activeIdxRef.current]?.isPriprema) {
+      sectionContentsRef.current[activeIdxRef.current] = editor.getHTML();
+    }
     setParsed(prev => {
       if (newIdx < 0 || newIdx >= prev.sections.length) return prev;
       const newSections = prev.sections.map((s, i) => ({
@@ -459,18 +462,29 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       const newContents = [...sectionContentsRef.current];
       [newContents[idx], newContents[newIdx]] = [newContents[newIdx], newContents[idx]];
       sectionContentsRef.current = newContents;
+      // Premjesti i priprema form state ako je jedna od pomjerenih sekcija priprema
+      setPripremaStructs(prevStructs => {
+        const next: Record<number, PripremaStruct> = {};
+        for (const [k, v] of Object.entries(prevStructs)) {
+          const i = Number(k);
+          const target = i === idx ? newIdx : i === newIdx ? idx : i;
+          next[target] = v;
+        }
+        return next;
+      });
       const focusIdx = activeIdxRef.current === idx ? newIdx : activeIdxRef.current === newIdx ? idx : activeIdxRef.current;
       activeIdxRef.current = focusIdx;
       setActiveIdx(focusIdx);
       switchingRef.current = true;
       setTimeout(() => {
-        editor.commands.setContent(sectionContentsRef.current[focusIdx] || "");
+        const targetSec = newSections[focusIdx];
+        editor.commands.setContent(targetSec?.isPriprema ? "" : (sectionContentsRef.current[focusIdx] || ""));
         switchingRef.current = false;
       }, 0);
       return { ...prev, sections: newSections };
     });
     onChange("");
-  }, [editor, onChange]);
+  }, [editor, onChange, parsed.sections]);
 
   const renameSection = useCallback((idx: number, newTitle: string) => {
     setParsed(prev => {
