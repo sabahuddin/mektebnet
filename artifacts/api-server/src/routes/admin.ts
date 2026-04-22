@@ -733,9 +733,12 @@ router.post("/ilmihal/restore-diac", async (req, res) => {
     // Try multiple candidate locations (dev: src/routes, prod: dist)
     const candidates = [
       path.resolve(here, "restore-diac-31.json"),
+      path.resolve(here, "routes/restore-diac-31.json"),
       path.resolve(here, "../routes/restore-diac-31.json"),
       path.resolve(here, "../../src/routes/restore-diac-31.json"),
+      path.resolve(process.cwd(), "dist/routes/restore-diac-31.json"),
       path.resolve(process.cwd(), "src/routes/restore-diac-31.json"),
+      path.resolve(process.cwd(), "artifacts/api-server/dist/routes/restore-diac-31.json"),
       path.resolve(process.cwd(), "artifacts/api-server/src/routes/restore-diac-31.json"),
     ];
     let raw: string | null = null;
