@@ -1,9 +1,10 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+// StarterKit u v3 vec ukljucuje Underline — eksplicitan import bi pravio duplikat
+// koji moze tiho slomiti druge komande (setImage, setLink, itd.)
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
-import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Node, mergeAttributes } from "@tiptap/core";
@@ -228,7 +229,6 @@ const editorExtensions = [
   StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
   CustomImage.configure({ inline: false, allowBase64: false }),
   TextAlign.configure({ types: ["heading", "paragraph"] }),
-  Underline,
   Highlight.configure({ multicolor: true }),
   Placeholder.configure({ placeholder: "Piši sadržaj sekcije..." }),
   Table.configure({ resizable: true }),
