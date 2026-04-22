@@ -117,8 +117,37 @@ router.post("/upload-document", (req, res) => {
   });
 });
 
+// Resize/optimize uploaded raster images: max 1600px width, WebP quality 82.
+// Skips animated GIFs and SVGs (preserved as-is).
+async function optimizeUploadedImage(filePath: string, originalName: string): Promise<{ filename: string; bytesBefore: number; bytesAfter: number; skipped: boolean }> {
+  const ext = path.extname(originalName).toLowerCase();
+  const stat = fs.statSync(filePath);
+  const bytesBefore = stat.size;
+  if (ext === ".gif" || ext === ".svg") {
+    return { filename: path.basename(filePath), bytesBefore, bytesAfter: bytesBefore, skipped: true };
+  }
+  try {
+    const sharp = (await import("sharp")).default;
+    const buf = await sharp(filePath, { failOn: "none" })
+      .rotate()
+      .resize({ width: 1600, withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+    const newName = path.basename(filePath, ext) + ".webp";
+    const newPath = path.join(path.dirname(filePath), newName);
+    fs.writeFileSync(newPath, buf);
+    if (newPath !== filePath) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+    return { filename: newName, bytesBefore, bytesAfter: buf.length, skipped: false };
+  } catch (e) {
+    console.warn("[Upload] Sharp optimize failed, keeping original:", (e as Error).message);
+    return { filename: path.basename(filePath), bytesBefore, bytesAfter: bytesBefore, skipped: true };
+  }
+}
+
 router.post("/upload", (req, res) => {
-  upload.single("image")(req, res, (err) => {
+  upload.single("image")(req, res, async (err) => {
     if (err) {
       const msg = err instanceof multer.MulterError
         ? (err.code === "LIMIT_FILE_SIZE" ? "Fajl prevelik (max 10MB)" : err.message)
@@ -126,8 +155,14 @@ router.post("/upload", (req, res) => {
       return res.status(400).json({ error: msg });
     }
     if (!req.file) return res.status(400).json({ error: "Nema fajla" });
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
+    try {
+      const result = await optimizeUploadedImage(req.file.path, req.file.originalname);
+      const url = `/uploads/${result.filename}`;
+      console.log(`[Upload] ${req.file.originalname}: ${(result.bytesBefore/1024).toFixed(0)}KB -> ${(result.bytesAfter/1024).toFixed(0)}KB${result.skipped ? " (skipped)" : ""}`);
+      res.json({ url, originalSize: result.bytesBefore, finalSize: result.bytesAfter, optimized: !result.skipped });
+    } catch (e: any) {
+      res.status(500).json({ error: "Greška pri obradi slike: " + e.message });
+    }
   });
 });
 
