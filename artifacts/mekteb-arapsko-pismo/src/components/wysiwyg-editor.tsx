@@ -84,20 +84,39 @@ function parseAccordionSections(fullHtml: string): { beforeAccordions: string; s
     return { beforeAccordions: fullHtml, sections: [], afterAccordions: "", hasAccordions: false };
   }
 
-  const container = doc.querySelector(".lesson-container") || doc.body;
-  let beforeAccordions = "";
-  const children = Array.from(container.children);
-  for (const child of children) {
-    if (child.classList.contains("lesson-accordion")) break;
-    beforeAccordions += child.outerHTML;
-  }
+  // Sektori mogu biti DIREKTNA djeca containera, ALI mogu biti i ugnijezdjeni
+  // u wrapper div-ovima (legacy HTML). Koristimo "host child" — najbliži predak
+  // accordion-a koji je direktno dijete containera. Sve hostove brišemo iz
+  // before/after — accordioni se emit-uju fresh u reassembleHtml.
+  const container = (doc.querySelector(".lesson-container") || doc.body) as HTMLElement;
+  const findHostChild = (descendant: Element): Element | null => {
+    let node: Node | null = descendant;
+    while (node && node.parentNode !== container) node = node.parentNode;
+    return node as Element | null;
+  };
 
-  let lastAccIdx = -1;
-  for (let i = children.length - 1; i >= 0; i--) {
-    if (children[i].classList.contains("lesson-accordion")) { lastAccIdx = i; break; }
+  const children = Array.from(container.children);
+  const accHostIndices = new Set<number>();
+  accordions.forEach(acc => {
+    const host = findHostChild(acc);
+    if (host) {
+      const idx = children.indexOf(host);
+      if (idx >= 0) accHostIndices.add(idx);
+    }
+  });
+
+  const sortedHostIdx = Array.from(accHostIndices).sort((a, b) => a - b);
+  const firstHostIdx = sortedHostIdx[0] ?? children.length;
+  const lastHostIdx = sortedHostIdx[sortedHostIdx.length - 1] ?? -1;
+
+  let beforeAccordions = "";
+  for (let i = 0; i < firstHostIdx; i++) {
+    beforeAccordions += children[i].outerHTML;
   }
   let afterAccordions = "";
-  for (let i = lastAccIdx + 1; i < children.length; i++) {
+  for (let i = lastHostIdx + 1; i < children.length; i++) {
+    // Preskoči host indekse koji se mogu naći između (rijetko, ali za svaki slučaj)
+    if (accHostIndices.has(i)) continue;
     afterAccordions += children[i].outerHTML;
   }
 
