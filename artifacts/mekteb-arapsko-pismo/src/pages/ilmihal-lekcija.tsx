@@ -1229,7 +1229,10 @@ export default function IlmihalLekcijaPage() {
             {(() => {
               const kvizPitanja = lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 ? lekcija.kvizPitanja : null;
               const isMuallim = user?.role === "admin" || user?.role === "muallim";
-              const visibleSections = parsed.sections.filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim));
+              const visibleSections = parsed.sections
+                .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim))
+                .slice()
+                .sort((a, b) => (a.type === "priprema" ? 1 : 0) - (b.type === "priprema" ? 1 : 0));
 
               const items: React.ReactNode[] = [];
               let kvizInserted = false;
