@@ -720,6 +720,44 @@ router.post("/ilmihal/sync-from-seed", async (req, res) => {
   }
 });
 
+// POST /api/admin/ilmihal/restore-diac
+// Jednokratni restore: učita restore-diac-31.json i UPSERTuje content_html
+// za 31 lekciju kojima su nestale kvačice. Skipuje locked.
+router.post("/ilmihal/restore-diac", async (req, res) => {
+  try {
+    const { dryRun } = (req.body || {}) as { dryRun?: boolean };
+    const mod = await import("./restore-diac-31.json", { with: { type: "json" } });
+    const data = (mod.default || mod) as Array<{ slug: string; content_html: string }>;
+    const existing = await db.select({
+      id: ilmihalLekcijeTable.id,
+      slug: ilmihalLekcijeTable.slug,
+      locked: ilmihalLekcijeTable.locked,
+      contentHtml: ilmihalLekcijeTable.contentHtml,
+    }).from(ilmihalLekcijeTable);
+    const bySlug = new Map(existing.map(r => [r.slug, r]));
+    let updated = 0, skippedLocked = 0, missing = 0;
+    const report: Array<{ slug: string; oldDiac: number; newDiac: number; status: string }> = [];
+    for (const lek of data) {
+      const row = bySlug.get(lek.slug);
+      const newDiac = (lek.content_html.match(/[čćšžđČĆŠŽĐ]/g) || []).length;
+      if (!row) { missing++; report.push({ slug: lek.slug, oldDiac: 0, newDiac, status: "MISSING" }); continue; }
+      const oldDiac = (row.contentHtml?.match(/[čćšžđČĆŠŽĐ]/g) || []).length;
+      if (row.locked) { skippedLocked++; report.push({ slug: lek.slug, oldDiac, newDiac, status: "LOCKED" }); continue; }
+      if (!dryRun) {
+        await db.update(ilmihalLekcijeTable)
+          .set({ contentHtml: lek.content_html })
+          .where(eq(ilmihalLekcijeTable.id, row.id));
+      }
+      updated++;
+      report.push({ slug: lek.slug, oldDiac, newDiac, status: dryRun ? "WOULD-UPDATE" : "UPDATED" });
+    }
+    res.json({ success: true, dryRun: !!dryRun, total: data.length, updated, skippedLocked, missing, report });
+  } catch (err) {
+    console.error("restore-diac error", err);
+    res.status(500).json({ error: "Restore failed", detail: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 router.delete("/ilmihal/:id", async (req, res) => {
   try {
     await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, parseInt(req.params.id)));
