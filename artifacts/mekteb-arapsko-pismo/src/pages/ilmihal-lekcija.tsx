@@ -29,6 +29,8 @@ interface Prilog {
   mimeType: string;
   url: string;
   createdAt: string;
+  kind?: "file" | "url";
+  externalUrl?: string | null;
 }
 
 interface Lekcija {
@@ -813,10 +815,31 @@ function getFileIcon(mimeType: string) {
   return "📎";
 }
 
+function getYoutubeEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (/youtu\.be$/i.test(u.hostname)) {
+      const id = u.pathname.slice(1).split("/")[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (/youtube\.com$/i.test(u.hostname) || /^(www\.)?youtube\.com$/i.test(u.hostname)) {
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube.com/embed/${v}`;
+      const m = u.pathname.match(/\/(embed|shorts)\/([^/?]+)/);
+      if (m) return `https://www.youtube.com/embed/${m[2]}`;
+    }
+    return null;
+  } catch { return null; }
+}
+
 function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: string | null; isAdmin: boolean }) {
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   const [uploading, setUploading] = useState(false);
+  const [showUrlForm, setShowUrlForm] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
+  const [urlLabel, setUrlLabel] = useState("");
+  const [savingUrl, setSavingUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -835,6 +858,23 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAddUrl = async () => {
+    if (!urlValue.trim() || !token) return;
+    setSavingUrl(true);
+    try {
+      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/url`, {
+        url: urlValue.trim(), label: urlLabel.trim() || undefined
+      }, token);
+      setAttachments(prev => [{ ...result, url: (result as any).externalUrl || urlValue.trim() }, ...prev]);
+      toast({ title: "Link dodan", description: result.originalName });
+      setUrlValue(""); setUrlLabel(""); setShowUrlForm(false);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingUrl(false);
     }
   };
 
@@ -908,19 +948,53 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
                     onChange={handleUpload}
                     className="hidden"
                   />
-                  <Button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    variant="outline"
-                    className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
-                  >
-                    {uploading ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploadujem...</>
-                    ) : (
-                      <><Upload className="w-4 h-4 mr-2" /> Dodaj materijal</>
-                    )}
-                  </Button>
-                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB)</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      variant="outline"
+                      className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
+                    >
+                      {uploading ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploadujem...</>
+                      ) : (
+                        <><Upload className="w-4 h-4 mr-2" /> Dodaj fajl</>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => setShowUrlForm(v => !v)}
+                      variant="outline"
+                      className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? "Odustani" : "Dodaj link"}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB) ili YouTube/web link</p>
+                  {showUrlForm && (
+                    <div className="mt-3 p-3 bg-white rounded-xl border border-blue-200 flex flex-col gap-2">
+                      <input
+                        type="url"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        value={urlValue}
+                        onChange={e => setUrlValue(e.target.value)}
+                        className="px-3 py-2 rounded-lg border border-blue-200 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Naziv (opciono, npr. 'Video o abdestu')"
+                        value={urlLabel}
+                        onChange={e => setUrlLabel(e.target.value)}
+                        className="px-3 py-2 rounded-lg border border-blue-200 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                      <Button
+                        onClick={handleAddUrl}
+                        disabled={savingUrl || !urlValue.trim()}
+                        className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold self-start"
+                      >
+                        {savingUrl ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</> : "Spasi link"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -928,38 +1002,73 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
                 <p className="text-blue-400 text-base italic">Nema uploadovanih materijala za ovu lekciju.</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {attachments.map(a => (
-                    <div key={a.id} className="flex items-center gap-3 bg-white rounded-xl border border-blue-100 px-4 py-3 hover:shadow-md transition-shadow">
-                      <span className="text-2xl flex-shrink-0">{getFileIcon(a.mimeType)}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
-                        <p className="text-sm text-gray-400">{formatFileSize(a.fileSize)}</p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => downloadFile(a, false)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
-                        >
-                          <FileDown className="w-4 h-4" /> Download
-                        </button>
-                        <button
-                          onClick={() => downloadFile(a, true)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors"
-                        >
-                          <ExternalLink className="w-4 h-4" /> Open
-                        </button>
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleDelete(a.id, a.originalName)}
-                            className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Obriši"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                  {attachments.map(a => {
+                    const isUrl = a.kind === "url";
+                    const targetUrl = a.externalUrl || a.url;
+                    const ytEmbed = isUrl ? getYoutubeEmbedUrl(targetUrl) : null;
+                    return (
+                      <div key={a.id} className="flex flex-col gap-2 bg-white rounded-xl border border-blue-100 p-3 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl flex-shrink-0">
+                            {isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
+                            <p className="text-sm text-gray-400 truncate">
+                              {isUrl ? targetUrl : formatFileSize(a.fileSize)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {isUrl ? (
+                              <a
+                                href={targetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors"
+                              >
+                                <ExternalLink className="w-4 h-4" /> Otvori
+                              </a>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => downloadFile(a, false)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
+                                >
+                                  <FileDown className="w-4 h-4" /> Download
+                                </button>
+                                <button
+                                  onClick={() => downloadFile(a, true)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors"
+                                >
+                                  <ExternalLink className="w-4 h-4" /> Open
+                                </button>
+                              </>
+                            )}
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDelete(a.id, a.originalName)}
+                                className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Obriši"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {ytEmbed && (
+                          <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
+                            <iframe
+                              src={ytEmbed}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title={a.originalName}
+                            />
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

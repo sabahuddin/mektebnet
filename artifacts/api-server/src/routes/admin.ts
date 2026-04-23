@@ -216,13 +216,42 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
   });
 });
 
+// POST /api/admin/prilozi/:lekcijaId/url — dodaj eksterni link (YouTube, web)
+router.post("/prilozi/:lekcijaId/url", async (req, res) => {
+  try {
+    const lekcijaId = parseInt(req.params.lekcijaId);
+    if (isNaN(lekcijaId)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
+    const { url, label } = (req.body || {}) as { url?: string; label?: string };
+    if (!url || !/^https?:\/\//i.test(url)) return res.status(400).json({ error: "Nevažeći URL (mora počinjati sa http:// ili https://)" });
+    if (url.length > 2000) return res.status(400).json({ error: "URL predugačak" });
+    const [exists] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
+    if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    let mimeType = "text/uri-list";
+    if (/youtube\.com|youtu\.be/i.test(url)) mimeType = "video/youtube";
+    else if (/vimeo\.com/i.test(url)) mimeType = "video/vimeo";
+    const displayName = (label && label.trim()) || url.replace(/^https?:\/\//i, "").slice(0, 120);
+    const [inserted] = await db.insert(prilozi).values({
+      lekcijaId,
+      originalName: displayName,
+      storedName: "",
+      fileSize: 0,
+      mimeType,
+      kind: "url",
+      externalUrl: url,
+    }).returning();
+    res.json(inserted);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get("/prilozi/:lekcijaId", async (req, res) => {
   try {
     const lekcijaId = parseInt(req.params.lekcijaId);
     const files = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcijaId)).orderBy(desc(prilozi.createdAt));
     res.json(files.map(f => ({
       ...f,
-      url: `/uploads/${f.storedName}`,
+      url: f.kind === "url" ? (f.externalUrl || "") : `/uploads/${f.storedName}`,
     })));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -258,8 +287,10 @@ router.delete("/prilozi/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
     if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
-    const filePath = path.join(uploadsDir, file.storedName);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (file.kind !== "url" && file.storedName) {
+      const filePath = path.join(uploadsDir, file.storedName);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
     await db.delete(prilozi).where(eq(prilozi.id, id));
     res.json({ ok: true });
   } catch (e: any) {

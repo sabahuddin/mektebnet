@@ -100,9 +100,11 @@ export const prilozi = pgTable("prilozi", {
   id: serial("id").primaryKey(),
   lekcijaId: integer("lekcija_id").notNull(),
   originalName: text("original_name").notNull(),
-  storedName: varchar("stored_name", { length: 300 }).notNull(),
+  storedName: varchar("stored_name", { length: 300 }).notNull().default(""),
   fileSize: integer("file_size").notNull().default(0),
   mimeType: varchar("mime_type", { length: 100 }).notNull().default("application/octet-stream"),
+  kind: varchar("kind", { length: 20 }).notNull().default("file"),
+  externalUrl: text("external_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

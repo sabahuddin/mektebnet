@@ -48,6 +48,10 @@ async function runMigrations() {
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS locked BOOLEAN NOT NULL DEFAULT false;`);
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS locked_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS locked_note TEXT;`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'file';`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS external_url TEXT;`);
+    await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name DROP NOT NULL;`);
+    await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name SET DEFAULT '';`);
     logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock columns ready");
 
     // BOOTSTRAP: if ilmihal_lekcije is completely empty (fresh prod DB),
