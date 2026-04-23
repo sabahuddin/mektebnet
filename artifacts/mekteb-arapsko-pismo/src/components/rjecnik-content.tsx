@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { processRjecnik, fetchRjecnik, getRjecnikSync } from "@/lib/rjecnik";
 import { X } from "lucide-react";
 
@@ -10,11 +11,16 @@ interface Props {
 interface Tooltip {
   word: string;
   def: string;
-  x: number;
-  y: number;
-  placeBelow: boolean;
+  // Viewport coordinates (for position:fixed in portal)
+  centerX: number;
+  wordTop: number;
   wordHeight: number;
+  placeBelow: boolean;
 }
+
+const POPUP_WIDTH = 280;
+const APPROX_POPUP_HEIGHT = 140;
+const VIEWPORT_PADDING = 8;
 
 export function RjecnikContent({ html, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
@@ -34,14 +40,15 @@ export function RjecnikContent({ html, className }: Props) {
       const def = el.getAttribute("data-def") || "";
       const word = el.textContent || "";
       const rect = el.getBoundingClientRect();
-      const containerRect = ref.current?.getBoundingClientRect();
-      const x = rect.left - (containerRect?.left || 0) + rect.width / 2;
-      const y = rect.top - (containerRect?.top || 0);
-      // Provjeri ima li dovoljno prostora iznad rijeci do vrha viewport-a.
-      // Ako ne — flip ispod (u trenutnom akordionu, ne preklapa prethodni).
-      const APPROX_POPUP_HEIGHT = 140;
       const placeBelow = rect.top < APPROX_POPUP_HEIGHT + 16;
-      setTooltip({ word, def, x, y, placeBelow, wordHeight: rect.height });
+      setTooltip({
+        word,
+        def,
+        centerX: rect.left + rect.width / 2,
+        wordTop: rect.top,
+        wordHeight: rect.height,
+        placeBelow,
+      });
     } else if (!el.closest(".rjecnik-popup")) {
       setTooltip(null);
     }
@@ -56,9 +63,24 @@ export function RjecnikContent({ html, className }: Props) {
 
   useEffect(() => {
     const close = (e: KeyboardEvent) => { if (e.key === "Escape") setTooltip(null); };
+    const onScroll = () => setTooltip(null);
     document.addEventListener("keydown", close);
-    return () => document.removeEventListener("keydown", close);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      document.removeEventListener("keydown", close);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
+
+  // Clamp tooltip horizontally inside viewport
+  const left = tooltip
+    ? Math.max(
+        VIEWPORT_PADDING,
+        Math.min(tooltip.centerX - POPUP_WIDTH / 2, window.innerWidth - POPUP_WIDTH - VIEWPORT_PADDING)
+      )
+    : 0;
 
   return (
     <div ref={ref} className={`relative ${className || ""}`}>
@@ -67,12 +89,16 @@ export function RjecnikContent({ html, className }: Props) {
         dangerouslySetInnerHTML={{ __html: processed }}
       />
 
-      {tooltip && (
+      {tooltip && typeof document !== "undefined" && createPortal(
         <div
-          className="rjecnik-popup absolute z-40 max-w-xs bg-white border-2 border-teal-200 rounded-2xl shadow-xl p-4"
+          className="rjecnik-popup fixed bg-white border-2 border-teal-200 rounded-2xl shadow-xl p-4"
           style={{
-            left: Math.max(8, Math.min(tooltip.x - 140, (ref.current?.offsetWidth || 400) - 290)),
-            top: tooltip.placeBelow ? tooltip.y + tooltip.wordHeight + 10 : tooltip.y - 10,
+            zIndex: 9999,
+            width: POPUP_WIDTH,
+            left,
+            top: tooltip.placeBelow
+              ? tooltip.wordTop + tooltip.wordHeight + 10
+              : tooltip.wordTop - 10,
             transform: tooltip.placeBelow ? "none" : "translateY(-100%)",
           }}
           role="tooltip"
@@ -88,11 +114,18 @@ export function RjecnikContent({ html, className }: Props) {
           </div>
           <p className="text-sm text-foreground leading-relaxed">{tooltip.def}</p>
           {tooltip.placeBelow ? (
-            <div className="absolute left-1/2 -translate-x-1/2 top-[-8px] w-3 h-3 bg-white border-l-2 border-t-2 border-teal-200 rotate-45" />
+            <div
+              className="absolute w-3 h-3 bg-white border-l-2 border-t-2 border-teal-200 rotate-45"
+              style={{ left: Math.max(12, Math.min(POPUP_WIDTH - 24, tooltip.centerX - left - 6)), top: -8 }}
+            />
           ) : (
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-[-8px] w-3 h-3 bg-white border-r-2 border-b-2 border-teal-200 rotate-45" />
+            <div
+              className="absolute w-3 h-3 bg-white border-r-2 border-b-2 border-teal-200 rotate-45"
+              style={{ left: Math.max(12, Math.min(POPUP_WIDTH - 24, tooltip.centerX - left - 6)), bottom: -8 }}
+            />
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
