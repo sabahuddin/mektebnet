@@ -37,7 +37,13 @@ app.use(express.urlencoded({ limit: "20mb", extended: true }));
 app.use("/api", router);
 
 const uploadsDir = path.resolve(__dirname, "../../../uploads");
-app.use("/uploads", express.static(uploadsDir));
+app.use("/uploads", express.static(uploadsDir, {
+  maxAge: "30d",
+  immutable: true,
+  setHeaders: (res) => {
+    res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+  },
+}));
 
 app.use(trackVisit);
 

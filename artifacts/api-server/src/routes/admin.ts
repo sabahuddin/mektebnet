@@ -168,7 +168,7 @@ router.post("/upload", (req, res) => {
 
 const attachUpload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(pdf|docx|doc|xlsx|xls|pptx|ppt|txt|rtf)$/i;
     if (allowed.test(path.extname(file.originalname))) cb(null, true);
@@ -180,7 +180,7 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
   attachUpload.single("file")(req, res, async (err) => {
     if (err) {
       const msg = err instanceof multer.MulterError
-        ? (err.code === "LIMIT_FILE_SIZE" ? "Fajl prevelik (max 20MB)" : err.message)
+        ? (err.code === "LIMIT_FILE_SIZE" ? "Fajl prevelik (max 25MB)" : err.message)
         : err.message || "Greška pri uploadu";
       return res.status(400).json({ error: msg });
     }
