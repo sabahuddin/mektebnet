@@ -388,19 +388,69 @@ async function withLekcijaLock<T>(id: number, fn: () => Promise<T>): Promise<T> 
   }
 }
 
+// Find balanced </div> for a <div ...> opening tag at position openEnd
+// (openEnd = index right AFTER the opening tag). Returns index of matching
+// </div>, or -1 if not found. Skips nested divs.
+function findMatchingDivClose(html: string, openEnd: number): number {
+  const tagRe = /<\/?div\b[^>]*>/gi;
+  tagRe.lastIndex = openEnd;
+  let depth = 1;
+  let m: RegExpExecArray | null;
+  while ((m = tagRe.exec(html)) !== null) {
+    if (m[0].toLowerCase().startsWith("</")) {
+      depth--;
+      if (depth === 0) return m.index;
+    } else {
+      depth++;
+    }
+  }
+  return -1;
+}
+
+// Find every <div ... class="...lesson-content..."> block. Returns inner
+// content boundaries [contentStart, contentEnd) so callers can prepend or
+// append inside the div.
+function findLessonContentBlocks(html: string): Array<{ contentStart: number; contentEnd: number }> {
+  const out: Array<{ contentStart: number; contentEnd: number }> = [];
+  const openRe = /<div\b[^>]*\bclass\s*=\s*"[^"]*\blesson-content\b[^"]*"[^>]*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = openRe.exec(html)) !== null) {
+    const openEnd = m.index + m[0].length;
+    const closeStart = findMatchingDivClose(html, openEnd);
+    if (closeStart === -1) continue;
+    out.push({ contentStart: openEnd, contentEnd: closeStart });
+    openRe.lastIndex = closeStart;
+  }
+  return out;
+}
+
 // POST /api/admin/lekcije/:id/insert-image
-// body: { filename: string, position?: "top" | "bottom" }
-// Dodaje <img src="/uploads/<filename>" /> u contentHtml lekcije ako nije već prisutan.
+// body: { filename: string, mode?: "section-top" | "section-bottom" | "hero",
+//         position?: "top" | "bottom" (legacy alias) }
+// Ubacuje sliku u contentHtml lekcije pazeći na strukturu .lesson-accordion /
+// .lesson-content / .hero-box, jer renderer prikazuje samo te dijelove.
 router.post("/lekcije/:id/insert-image", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
-    const { filename, position } = (req.body || {}) as { filename?: string; position?: "top" | "bottom" };
+    const body = (req.body || {}) as {
+      filename?: string;
+      mode?: "section-top" | "section-bottom" | "hero";
+      position?: "top" | "bottom";
+    };
+    const filename = body.filename;
     if (!filename || typeof filename !== "string") return res.status(400).json({ error: "Nedostaje filename" });
     if (filename.includes("/") || filename.includes("..")) return res.status(400).json({ error: "Nevažeći filename" });
     if (!/\.(jpg|jpeg|png|gif|webp)$/i.test(filename)) return res.status(400).json({ error: "Dozvoljene su samo slike" });
     const filePath = path.join(uploadsDir, filename);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Fajl ne postoji na disku" });
+
+    let mode: "section-top" | "section-bottom" | "hero" = body.mode || "section-top";
+    if (!body.mode && body.position === "bottom") mode = "section-bottom";
+    if (!body.mode && body.position === "top") mode = "section-top";
+    if (mode !== "section-top" && mode !== "section-bottom" && mode !== "hero") {
+      return res.status(400).json({ error: "Nevažeći mode" });
+    }
 
     const result = await withLekcijaLock(id, async () => {
       const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
@@ -409,17 +459,57 @@ router.post("/lekcije/:id/insert-image", async (req, res) => {
       const url = `/uploads/${filename}`;
       const currentHtml = lekcija.contentHtml || "";
       if (currentHtml.includes(url)) {
-        return { status: 200 as const, body: { ok: true, alreadyPresent: true, lekcija: { id, slug: lekcija.slug } } };
+        return { status: 200 as const, body: { ok: true, alreadyPresent: true, mode, lekcija: { id, slug: lekcija.slug } } };
       }
 
-      const imgTag = `<p><img src="${url}" alt="${(lekcija.naslov || "").replace(/"/g, "&quot;")}" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
-      const newHtml = position === "bottom" ? `${currentHtml}\n${imgTag}` : `${imgTag}\n${currentHtml}`;
+      const altText = (lekcija.naslov || "").replace(/"/g, "&quot;");
+      let newHtml: string;
+
+      if (mode === "hero") {
+        // Replace existing .hero-box img src, or insert a new .hero-box at the
+        // top of the lesson container. If neither exists, prepend at the start.
+        const heroBoxRe = /(<div\s+class="hero-box">\s*<img\s+src=")[^"]*(")/i;
+        if (heroBoxRe.test(currentHtml)) {
+          newHtml = currentHtml.replace(heroBoxRe, `$1${url}$2`);
+        } else {
+          const heroDiv = `<div class="hero-box"><img src="${url}" alt="${altText}"></div>`;
+          // Prefer to insert right after <h1>...</h1> inside .lesson-container
+          const h1Match = currentHtml.match(/<h1\b[^>]*>[\s\S]*?<\/h1>/i);
+          if (h1Match) {
+            const insertAt = (h1Match.index ?? 0) + h1Match[0].length;
+            newHtml = currentHtml.slice(0, insertAt) + `\n    ${heroDiv}` + currentHtml.slice(insertAt);
+          } else {
+            newHtml = `${heroDiv}\n${currentHtml}`;
+          }
+        }
+      } else {
+        const blocks = findLessonContentBlocks(currentHtml);
+        const imgTag = `<p><img src="${url}" alt="${altText}" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+
+        if (blocks.length === 0) {
+          // No accordion sections — fall back to plain prepend/append.
+          newHtml = mode === "section-bottom" ? `${currentHtml}\n${imgTag}` : `${imgTag}\n${currentHtml}`;
+        } else if (mode === "section-top") {
+          const target = blocks[0];
+          newHtml =
+            currentHtml.slice(0, target.contentStart) +
+            imgTag +
+            currentHtml.slice(target.contentStart, target.contentEnd) +
+            currentHtml.slice(target.contentEnd);
+        } else {
+          const target = blocks[blocks.length - 1];
+          newHtml =
+            currentHtml.slice(0, target.contentEnd) +
+            imgTag +
+            currentHtml.slice(target.contentEnd);
+        }
+      }
 
       await db.update(ilmihalLekcijeTable)
         .set({ contentHtml: newHtml })
         .where(eq(ilmihalLekcijeTable.id, id));
 
-      return { status: 200 as const, body: { ok: true, alreadyPresent: false, lekcija: { id, slug: lekcija.slug, naslov: lekcija.naslov } } };
+      return { status: 200 as const, body: { ok: true, alreadyPresent: false, mode, lekcija: { id, slug: lekcija.slug, naslov: lekcija.naslov } } };
     });
     res.status(result.status).json(result.body);
   } catch (e: any) {

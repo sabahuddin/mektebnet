@@ -63,7 +63,7 @@ export default function AdminOrphanUploadsPage() {
   const [insertingFor, setInsertingFor] = useState<string | null>(null);
   const [busyLekcijaIds, setBusyLekcijaIds] = useState<Set<number>>(new Set());
   const [doneFor, setDoneFor] = useState<Set<string>>(new Set());
-  const [position, setPosition] = useState<"top" | "bottom">("top");
+  const [mode, setMode] = useState<"section-top" | "section-bottom" | "hero">("section-top");
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -116,7 +116,7 @@ export default function AdminOrphanUploadsPage() {
       const r = await apiRequest<{ ok: boolean; alreadyPresent: boolean; lekcija: { slug: string; naslov?: string } }>(
         "POST",
         `/admin/lekcije/${lekcijaId}/insert-image`,
-        { filename: file.name, position },
+        { filename: file.name, mode },
         token,
       );
       if (r.alreadyPresent) {
@@ -195,19 +195,16 @@ export default function AdminOrphanUploadsPage() {
                 />
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Pozicija:</span>
-                <button
-                  onClick={() => setPosition("top")}
-                  className={`px-3 py-1.5 rounded-lg border ${position === "top" ? "bg-teal-600 text-white border-teal-600" : "bg-white border-border/50"}`}
+                <span className="text-muted-foreground whitespace-nowrap">Gdje ubaciti:</span>
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value as "section-top" | "section-bottom" | "hero")}
+                  className="px-3 py-1.5 rounded-lg border border-border/50 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
-                  Vrh
-                </button>
-                <button
-                  onClick={() => setPosition("bottom")}
-                  className={`px-3 py-1.5 rounded-lg border ${position === "bottom" ? "bg-teal-600 text-white border-teal-600" : "bg-white border-border/50"}`}
-                >
-                  Dno
-                </button>
+                  <option value="section-top">U prvu sekciju (vrh)</option>
+                  <option value="section-bottom">U posljednju sekciju (dno)</option>
+                  <option value="hero">Hero slika (zamijeni)</option>
+                </select>
               </div>
             </div>
 
