@@ -372,6 +372,22 @@ router.get("/orphan-uploads", async (_req, res) => {
   }
 });
 
+// Per-lekcija in-memory mutex da se izbjegnu izgubljeni insert-i pri paralelnim zahtjevima
+const insertLocks = new Map<number, Promise<unknown>>();
+async function withLekcijaLock<T>(id: number, fn: () => Promise<T>): Promise<T> {
+  const prev = insertLocks.get(id) || Promise.resolve();
+  let release!: () => void;
+  const next = new Promise<void>(r => { release = r; });
+  insertLocks.set(id, prev.then(() => next));
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (insertLocks.get(id) === next) insertLocks.delete(id);
+  }
+}
+
 // POST /api/admin/lekcije/:id/insert-image
 // body: { filename: string, position?: "top" | "bottom" }
 // Dodaje <img src="/uploads/<filename>" /> u contentHtml lekcije ako nije već prisutan.
@@ -386,23 +402,26 @@ router.post("/lekcije/:id/insert-image", async (req, res) => {
     const filePath = path.join(uploadsDir, filename);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Fajl ne postoji na disku" });
 
-    const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
-    if (!lekcija) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    const result = await withLekcijaLock(id, async () => {
+      const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
+      if (!lekcija) return { status: 404 as const, body: { error: "Lekcija nije pronađena" } };
 
-    const url = `/uploads/${filename}`;
-    const currentHtml = lekcija.contentHtml || "";
-    if (currentHtml.includes(url)) {
-      return res.json({ ok: true, alreadyPresent: true, lekcija: { id, slug: lekcija.slug } });
-    }
+      const url = `/uploads/${filename}`;
+      const currentHtml = lekcija.contentHtml || "";
+      if (currentHtml.includes(url)) {
+        return { status: 200 as const, body: { ok: true, alreadyPresent: true, lekcija: { id, slug: lekcija.slug } } };
+      }
 
-    const imgTag = `<p><img src="${url}" alt="${(lekcija.naslov || "").replace(/"/g, "&quot;")}" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
-    const newHtml = position === "bottom" ? `${currentHtml}\n${imgTag}` : `${imgTag}\n${currentHtml}`;
+      const imgTag = `<p><img src="${url}" alt="${(lekcija.naslov || "").replace(/"/g, "&quot;")}" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+      const newHtml = position === "bottom" ? `${currentHtml}\n${imgTag}` : `${imgTag}\n${currentHtml}`;
 
-    await db.update(ilmihalLekcijeTable)
-      .set({ contentHtml: newHtml })
-      .where(eq(ilmihalLekcijeTable.id, id));
+      await db.update(ilmihalLekcijeTable)
+        .set({ contentHtml: newHtml })
+        .where(eq(ilmihalLekcijeTable.id, id));
 
-    res.json({ ok: true, alreadyPresent: false, lekcija: { id, slug: lekcija.slug, naslov: lekcija.naslov } });
+      return { status: 200 as const, body: { ok: true, alreadyPresent: false, lekcija: { id, slug: lekcija.slug, naslov: lekcija.naslov } } };
+    });
+    res.status(result.status).json(result.body);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

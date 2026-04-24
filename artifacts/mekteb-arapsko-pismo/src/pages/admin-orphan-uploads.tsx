@@ -61,6 +61,7 @@ export default function AdminOrphanUploadsPage() {
   const [search, setSearch] = useState("");
   const [selections, setSelections] = useState<Record<string, number>>({});
   const [insertingFor, setInsertingFor] = useState<string | null>(null);
+  const [busyLekcijaIds, setBusyLekcijaIds] = useState<Set<number>>(new Set());
   const [doneFor, setDoneFor] = useState<Set<string>>(new Set());
   const [position, setPosition] = useState<"top" | "bottom">("top");
 
@@ -105,8 +106,13 @@ export default function AdminOrphanUploadsPage() {
       return;
     }
     if (!token) return;
+    if (busyLekcijaIds.has(lekcijaId)) {
+      toast({ title: "Sačekaj", description: "Drugi upload za istu lekciju je u toku.", variant: "destructive" });
+      return;
+    }
     try {
       setInsertingFor(file.name);
+      setBusyLekcijaIds(prev => new Set(prev).add(lekcijaId));
       const r = await apiRequest<{ ok: boolean; alreadyPresent: boolean; lekcija: { slug: string; naslov?: string } }>(
         "POST",
         `/admin/lekcije/${lekcijaId}/insert-image`,
@@ -123,6 +129,11 @@ export default function AdminOrphanUploadsPage() {
       toast({ title: "Greška", description: e?.message || "Nije moguće ubaciti sliku", variant: "destructive" });
     } finally {
       setInsertingFor(null);
+      setBusyLekcijaIds(prev => {
+        const next = new Set(prev);
+        next.delete(lekcijaId);
+        return next;
+      });
     }
   };
 
@@ -210,6 +221,8 @@ export default function AdminOrphanUploadsPage() {
                 {filteredOrphans.map(file => {
                   const isDone = doneFor.has(file.name);
                   const isInserting = insertingFor === file.name;
+                  const selectedId = selections[file.name];
+                  const isLekcijaBusy = !!selectedId && busyLekcijaIds.has(selectedId) && !isInserting;
                   return (
                     <div
                       key={file.name}
@@ -254,13 +267,15 @@ export default function AdminOrphanUploadsPage() {
                         <Button
                           size="sm"
                           onClick={() => handleInsert(file)}
-                          disabled={isDone || isInserting || !selections[file.name]}
+                          disabled={isDone || isInserting || !selections[file.name] || isLekcijaBusy}
                           className="bg-teal-600 hover:bg-teal-700 text-white"
                         >
                           {isInserting ? (
                             <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Ubacujem…</>
                           ) : isDone ? (
                             <><Check className="w-4 h-4 mr-2" /> Ubačeno</>
+                          ) : isLekcijaBusy ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lekcija zauzeta…</>
                           ) : (
                             "Ubaci u lekciju"
                           )}
