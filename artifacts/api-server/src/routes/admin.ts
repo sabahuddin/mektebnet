@@ -318,6 +318,96 @@ router.get("/uploads", (_req, res) => {
   }
 });
 
+// GET /api/admin/orphan-uploads — slike koje postoje na disku ali NE postoje
+// kao /uploads/<name> referenca u contentHtml-u nijedne lekcije.
+// Vraća { orphans: [...], used: [...], lekcije: [...] } da UI može popunjavati dropdown.
+router.get("/orphan-uploads", async (_req, res) => {
+  try {
+    if (!fs.existsSync(uploadsDir)) return res.json({ orphans: [], used: [], lekcije: [] });
+
+    // 1) Sve slike na disku
+    const diskFiles = fs.readdirSync(uploadsDir)
+      .filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
+    const diskSet = new Set(diskFiles);
+
+    // 2) Sve lekcije + skup korištenih /uploads/<name> referenci
+    const lessons = await db.select({
+      id: ilmihalLekcijeTable.id,
+      slug: ilmihalLekcijeTable.slug,
+      naslov: ilmihalLekcijeTable.naslov,
+      nivo: ilmihalLekcijeTable.nivo,
+      contentHtml: ilmihalLekcijeTable.contentHtml,
+    }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
+
+    const usedSet = new Set<string>();
+    for (const l of lessons) {
+      const html = l.contentHtml || "";
+      const matches = html.matchAll(/\/uploads\/([^\s"'<>?#]+)/g);
+      for (const m of matches) usedSet.add(m[1]);
+    }
+
+    const orphans = diskFiles
+      .filter(f => !usedSet.has(f))
+      .map(f => {
+        const stat = fs.statSync(path.join(uploadsDir, f));
+        return { name: f, url: `/uploads/${f}`, size: stat.size, modified: stat.mtime };
+      })
+      .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
+
+    const used = Array.from(usedSet)
+      .filter(f => diskSet.has(f))
+      .map(f => ({ name: f, url: `/uploads/${f}` }));
+
+    const missing = Array.from(usedSet).filter(f => !diskSet.has(f));
+
+    res.json({
+      orphans,
+      used,
+      missing,
+      lekcije: lessons.map(l => ({ id: l.id, slug: l.slug, naslov: l.naslov, nivo: l.nivo })),
+      stats: { diskCount: diskFiles.length, usedCount: usedSet.size, orphanCount: orphans.length, missingCount: missing.length },
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/admin/lekcije/:id/insert-image
+// body: { filename: string, position?: "top" | "bottom" }
+// Dodaje <img src="/uploads/<filename>" /> u contentHtml lekcije ako nije već prisutan.
+router.post("/lekcije/:id/insert-image", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
+    const { filename, position } = (req.body || {}) as { filename?: string; position?: "top" | "bottom" };
+    if (!filename || typeof filename !== "string") return res.status(400).json({ error: "Nedostaje filename" });
+    if (filename.includes("/") || filename.includes("..")) return res.status(400).json({ error: "Nevažeći filename" });
+    if (!/\.(jpg|jpeg|png|gif|webp)$/i.test(filename)) return res.status(400).json({ error: "Dozvoljene su samo slike" });
+    const filePath = path.join(uploadsDir, filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Fajl ne postoji na disku" });
+
+    const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
+    if (!lekcija) return res.status(404).json({ error: "Lekcija nije pronađena" });
+
+    const url = `/uploads/${filename}`;
+    const currentHtml = lekcija.contentHtml || "";
+    if (currentHtml.includes(url)) {
+      return res.json({ ok: true, alreadyPresent: true, lekcija: { id, slug: lekcija.slug } });
+    }
+
+    const imgTag = `<p><img src="${url}" alt="${(lekcija.naslov || "").replace(/"/g, "&quot;")}" style="max-width:100%;height:auto;border-radius:8px;" /></p>`;
+    const newHtml = position === "bottom" ? `${currentHtml}\n${imgTag}` : `${imgTag}\n${currentHtml}`;
+
+    await db.update(ilmihalLekcijeTable)
+      .set({ contentHtml: newHtml })
+      .where(eq(ilmihalLekcijeTable.id, id));
+
+    res.json({ ok: true, alreadyPresent: false, lekcija: { id, slug: lekcija.slug, naslov: lekcija.naslov } });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/admin/korisnici
 router.get("/korisnici", async (req, res) => {
   try {

@@ -41,6 +41,7 @@ import PorukePage from "./pages/poruke";
 // Admin panel
 import AdminPage from "./pages/admin";
 import AdminRjecnikPage from "./pages/admin-rjecnik";
+import AdminOrphanUploadsPage from "./pages/admin-orphan-uploads";
 
 // Učenik profil
 import UcenikProfilPage from "./pages/ucenik-profil";
@@ -99,6 +100,7 @@ function Router() {
 
       {/* Admin panel */}
       <Route path="/admin/rjecnik" component={AdminRjecnikPage} />
+      <Route path="/admin/orphan-uploads" component={AdminOrphanUploadsPage} />
       <Route path="/admin" component={AdminPage} />
 
       {/* Muallim panel */}

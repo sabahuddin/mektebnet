@@ -689,9 +689,12 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">
             <BookOpen className="w-4 h-4" /> Rječnik pojmova
+          </button>
+          <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+            <BookOpen className="w-4 h-4" /> Slike bez lekcije
           </button>
         </div>
 
