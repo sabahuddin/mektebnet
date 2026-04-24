@@ -37,11 +37,15 @@ const router = Router();
 router.use(requireAuth, requireRole("admin"));
 
 const __adminDirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.resolve(process.cwd(), "uploads");
+const uploadsDir = process.env["UPLOADS_DIR"]
+  ? path.resolve(process.env["UPLOADS_DIR"])
+  : path.resolve(process.cwd(), "uploads");
 import fs from "fs";
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
   console.log(`[Upload] Created uploads dir: ${uploadsDir}`);
+} else {
+  console.log(`[Upload] Using uploads dir: ${uploadsDir}`);
 }
 
 const storage = multer.diskStorage({

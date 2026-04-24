@@ -36,7 +36,10 @@ app.use(express.urlencoded({ limit: "20mb", extended: true }));
 
 app.use("/api", router);
 
-const uploadsDir = path.resolve(__dirname, "../../../uploads");
+const uploadsDir = process.env["UPLOADS_DIR"]
+  ? path.resolve(process.env["UPLOADS_DIR"])
+  : path.resolve(process.cwd(), "uploads");
+console.log(`[Static] Serving /uploads from: ${uploadsDir}`);
 app.use("/uploads", express.static(uploadsDir, {
   maxAge: "30d",
   immutable: true,
