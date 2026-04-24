@@ -378,13 +378,15 @@ async function withLekcijaLock<T>(id: number, fn: () => Promise<T>): Promise<T> 
   const prev = insertLocks.get(id) || Promise.resolve();
   let release!: () => void;
   const next = new Promise<void>(r => { release = r; });
-  insertLocks.set(id, prev.then(() => next));
+  const chained = prev.then(() => next);
+  insertLocks.set(id, chained);
   await prev;
   try {
     return await fn();
   } finally {
     release();
-    if (insertLocks.get(id) === next) insertLocks.delete(id);
+    // Brišemo entry samo ako niko drugi nije već postavio sljedeći lanac.
+    if (insertLocks.get(id) === chained) insertLocks.delete(id);
   }
 }
 
@@ -412,7 +414,8 @@ function findMatchingDivClose(html: string, openEnd: number): number {
 // append inside the div.
 function findLessonContentBlocks(html: string): Array<{ contentStart: number; contentEnd: number }> {
   const out: Array<{ contentStart: number; contentEnd: number }> = [];
-  const openRe = /<div\b[^>]*\bclass\s*=\s*"[^"]*\blesson-content\b[^"]*"[^>]*>/gi;
+  // Podržava double i single quotes oko class atributa
+  const openRe = /<div\b[^>]*\bclass\s*=\s*(?:"[^"]*\blesson-content\b[^"]*"|'[^']*\blesson-content\b[^']*')[^>]*>/gi;
   let m: RegExpExecArray | null;
   while ((m = openRe.exec(html)) !== null) {
     const openEnd = m.index + m[0].length;
@@ -467,16 +470,33 @@ router.post("/lekcije/:id/insert-image", async (req, res) => {
 
       if (mode === "hero") {
         // Replace existing .hero-box img src, or insert a new .hero-box at the
-        // top of the lesson container. If neither exists, prepend at the start.
-        const heroBoxRe = /(<div\s+class="hero-box">\s*<img\s+src=")[^"]*(")/i;
-        if (heroBoxRe.test(currentHtml)) {
-          newHtml = currentHtml.replace(heroBoxRe, `$1${url}$2`);
-        } else {
+        // top of the lesson container. Tolerantno na single/double quote i
+        // proizvoljan poredak atributa na <div> i <img>.
+        const heroOpenRe = /<div\b[^>]*\bclass\s*=\s*(?:"[^"]*\bhero-box\b[^"]*"|'[^']*\bhero-box\b[^']*')[^>]*>/i;
+        const heroOpenMatch = currentHtml.match(heroOpenRe);
+        let replaced = false;
+        if (heroOpenMatch && heroOpenMatch.index !== undefined) {
+          const heroOpenEnd = heroOpenMatch.index + heroOpenMatch[0].length;
+          const heroCloseStart = findMatchingDivClose(currentHtml, heroOpenEnd);
+          if (heroCloseStart !== -1) {
+            const heroInner = currentHtml.slice(heroOpenEnd, heroCloseStart);
+            const imgSrcRe = /(<img\b[^>]*?\bsrc\s*=\s*)(?:"[^"]*"|'[^']*')/i;
+            let newInner: string;
+            if (imgSrcRe.test(heroInner)) {
+              newInner = heroInner.replace(imgSrcRe, (_full, p1) => `${p1}"${url}"`);
+            } else {
+              newInner = `<img src="${url}" alt="${altText}">${heroInner}`;
+            }
+            newHtml =
+              currentHtml.slice(0, heroOpenEnd) + newInner + currentHtml.slice(heroCloseStart);
+            replaced = true;
+          }
+        }
+        if (!replaced) {
           const heroDiv = `<div class="hero-box"><img src="${url}" alt="${altText}"></div>`;
-          // Prefer to insert right after <h1>...</h1> inside .lesson-container
           const h1Match = currentHtml.match(/<h1\b[^>]*>[\s\S]*?<\/h1>/i);
-          if (h1Match) {
-            const insertAt = (h1Match.index ?? 0) + h1Match[0].length;
+          if (h1Match && h1Match.index !== undefined) {
+            const insertAt = h1Match.index + h1Match[0].length;
             newHtml = currentHtml.slice(0, insertAt) + `\n    ${heroDiv}` + currentHtml.slice(insertAt);
           } else {
             newHtml = `${heroDiv}\n${currentHtml}`;
