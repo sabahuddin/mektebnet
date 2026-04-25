@@ -1479,6 +1479,129 @@ router.delete("/rjecnik/:id", async (req, res) => {
   }
 });
 
+// ============================================================
+// LESSON VERSIONS — uvid u sve snimke + ručni restore
+// Backup tabele: ilmihal_lekcije_backup_{scrape,pre_ai,diac}_20260422
+// ============================================================
+
+const BACKUP_SOURCES = {
+  scrape: { table: "ilmihal_lekcije_backup_scrape_20260422", label: "Scrape (originalno sa starog sajta)" },
+  pre_ai: { table: "ilmihal_lekcije_backup_pre_ai_20260422", label: "Prije AI restore-a" },
+  diac:   { table: "ilmihal_lekcije_backup_diac_20260422",   label: "Poslije AI restore (sa kvačicama)" },
+} as const;
+type BackupSource = keyof typeof BACKUP_SOURCES;
+
+router.get("/lekcije/:slug/versions", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    if (!slug || typeof slug !== "string") return res.status(400).json({ error: "Nedostaje slug" });
+
+    const [current] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, slug));
+    if (!current) return res.status(404).json({ error: "Lekcija nije pronađena" });
+
+    const versions: Array<{
+      source: "current" | BackupSource;
+      label: string;
+      contentHtml: string;
+      length: number;
+      naslov?: string;
+      locked?: boolean;
+    }> = [
+      {
+        source: "current",
+        label: "Trenutno (uživo)",
+        contentHtml: current.contentHtml || "",
+        length: (current.contentHtml || "").length,
+        naslov: current.naslov,
+        locked: current.locked,
+      },
+    ];
+
+    for (const [key, meta] of Object.entries(BACKUP_SOURCES) as Array<[BackupSource, typeof BACKUP_SOURCES[BackupSource]]>) {
+      try {
+        const result = await db.execute(
+          sql.raw(`SELECT content_html FROM "${meta.table}" WHERE slug = '${slug.replace(/'/g, "''")}' LIMIT 1`)
+        );
+        const rows = (result as any).rows as Array<{ content_html: string }>;
+        if (rows && rows.length > 0) {
+          const html = rows[0].content_html || "";
+          versions.push({ source: key, label: meta.label, contentHtml: html, length: html.length });
+        }
+      } catch {
+        // Tabela ne postoji ili druga greška — preskoči, ne padaj.
+      }
+    }
+
+    res.json({ slug, lekcija: { id: current.id, slug: current.slug, naslov: current.naslov, nivo: current.nivo, locked: current.locked }, versions });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/lekcije/:slug/restore-version", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const body = (req.body || {}) as { source?: string; confirm?: string };
+    const source = body.source as BackupSource | undefined;
+    const confirm = body.confirm;
+
+    if (!slug) return res.status(400).json({ error: "Nedostaje slug" });
+    if (!source || !(source in BACKUP_SOURCES)) return res.status(400).json({ error: "Nevažeći source" });
+    if (confirm !== `VRATI ${slug}`) {
+      return res.status(400).json({ error: `Za potvrdu pošalji confirm = "VRATI ${slug}"` });
+    }
+
+    const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, slug));
+    if (!lekcija) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    if (lekcija.locked) return res.status(409).json({ error: "Lekcija je zaključana — otključaj prije restore-a" });
+
+    const meta = BACKUP_SOURCES[source];
+    const result = await db.execute(
+      sql.raw(`SELECT content_html FROM "${meta.table}" WHERE slug = '${slug.replace(/'/g, "''")}' LIMIT 1`)
+    );
+    const rows = (result as any).rows as Array<{ content_html: string }>;
+    if (!rows || rows.length === 0) return res.status(404).json({ error: "Verzija ne postoji u snimku" });
+
+    const newHtml = rows[0].content_html || "";
+    const oldHtml = lekcija.contentHtml || "";
+
+    await withLekcijaLock(lekcija.id, async () => {
+      await db.update(ilmihalLekcijeTable).set({ contentHtml: newHtml }).where(eq(ilmihalLekcijeTable.id, lekcija.id));
+    });
+
+    res.json({
+      ok: true,
+      slug,
+      source,
+      sourceLabel: meta.label,
+      lengthBefore: oldHtml.length,
+      lengthAfter: newHtml.length,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Lista svih lekcija (sa slug-om) — koristi versions stranica za dropdown
+router.get("/lekcije/list-all", async (_req, res) => {
+  try {
+    const rows = await db
+      .select({
+        id: ilmihalLekcijeTable.id,
+        slug: ilmihalLekcijeTable.slug,
+        naslov: ilmihalLekcijeTable.naslov,
+        nivo: ilmihalLekcijeTable.nivo,
+        redoslijed: ilmihalLekcijeTable.redoslijed,
+        locked: ilmihalLekcijeTable.locked,
+      })
+      .from(ilmihalLekcijeTable)
+      .orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed), asc(ilmihalLekcijeTable.naslov));
+    res.json({ lekcije: rows });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post("/rjecnik/seed", async (_req, res) => {
   try {
     const before = await db.select({ c: sql<number>`count(*)::int` }).from(rjecnikTable);

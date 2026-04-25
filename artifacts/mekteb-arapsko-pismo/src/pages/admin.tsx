@@ -696,6 +696,9 @@ export default function AdminPage() {
           <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
             <BookOpen className="w-4 h-4" /> Slike bez lekcije
           </button>
+          <button onClick={() => setLocation("/admin/lesson-versions")} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl font-semibold hover:bg-indigo-100 transition text-sm">
+            <BookOpen className="w-4 h-4" /> Historija verzija lekcija
+          </button>
         </div>
 
         <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6 overflow-x-auto">
