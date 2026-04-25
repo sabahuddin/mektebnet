@@ -516,11 +516,7 @@ export default function AdminPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "alati">("muallimi");
-  const [syncBusy, setSyncBusy] = useState(false);
-  const [syncResult, setSyncResult] = useState<any>(null);
-  const [regenBusy, setRegenBusy] = useState(false);
-  const [regenResult, setRegenResult] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati">("muallimi");
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -696,9 +692,6 @@ export default function AdminPage() {
           <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
             <BookOpen className="w-4 h-4" /> Slike bez lekcije
           </button>
-          <button onClick={() => setLocation("/admin/lesson-versions")} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl font-semibold hover:bg-indigo-100 transition text-sm">
-            <BookOpen className="w-4 h-4" /> Historija verzija lekcija
-          </button>
         </div>
 
         <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6 overflow-x-auto">
@@ -707,7 +700,6 @@ export default function AdminPage() {
             { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
             { key: "analitika" as const, label: "Analitika", icon: <BarChart3 className="w-4 h-4" /> },
             { key: "rezultati" as const, label: "Kviz rezultati", icon: <ClipboardList className="w-4 h-4" /> },
-            { key: "alati" as const, label: "Alati", icon: <ShieldCheck className="w-4 h-4" /> },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -981,188 +973,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── TAB: ALATI ── */}
-        {activeTab === "alati" && (
-          <div className="bg-white border border-border/50 rounded-2xl p-6 space-y-6">
-            <div>
-              <h3 className="font-extrabold text-foreground flex items-center gap-2 text-lg">
-                <ShieldCheck className="w-5 h-5 text-primary" /> Sinhronizacija lekcija iz seeda
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Provjeri šta fali u bazi (dry-run), ili popuni samo nedostajuće lekcije bez gaženja postojećeg sadržaja. Lekcije sa zelenim 🔒 katancem ostaju netaknute.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={async () => {
-                  setSyncBusy(true); setSyncResult(null);
-                  try {
-                    const r = await apiRequest<any>("POST", "/admin/ilmihal/sync-from-seed", { dryRun: true }, token);
-                    setSyncResult(r);
-                    toast({ title: "Provjera gotova", description: `Bi insertovalo ${r.inserted}, update-ovalo ${r.updated}, preskočilo ${r.skippedLocked} zaključanih.` });
-                  } catch (e: any) {
-                    toast({ title: "Greška", description: e?.message || "Sync provjera neuspješna", variant: "destructive" });
-                  } finally { setSyncBusy(false); }
-                }}
-                disabled={syncBusy}
-                variant="outline"
-                className="rounded-xl font-bold"
-              >
-                {syncBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardList className="w-4 h-4 mr-2" />}
-                Provjeri (dry-run)
-              </Button>
-
-              <Button
-                onClick={async () => {
-                  if (!confirm("Sigurno popuniti nedostajuće lekcije iz seeda? Postojeće (nezaključane) lekcije će biti ažurirane sadržajem iz DEV baze. Zaključane lekcije se NE diraju.")) return;
-                  setSyncBusy(true); setSyncResult(null);
-                  try {
-                    const r = await apiRequest<any>("POST", "/admin/ilmihal/sync-from-seed", { dryRun: false, syncRjecnik: true }, token);
-                    setSyncResult(r);
-                    toast({ title: "Sinhronizacija završena ✓", description: `Insertovano ${r.inserted}, update-ovano ${r.updated}, preskočeno ${r.skippedLocked} zaključanih.` });
-                  } catch (e: any) {
-                    toast({ title: "Greška", description: e?.message || "Sync neuspješan", variant: "destructive" });
-                  } finally { setSyncBusy(false); }
-                }}
-                disabled={syncBusy}
-                className="rounded-xl font-bold"
-              >
-                {syncBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                Popuni iz seeda (uradi izmjene)
-              </Button>
-            </div>
-
-            {syncResult && (
-              <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
-                <h4 className="font-extrabold text-sm mb-2">Izvještaj {syncResult.dryRun ? "(dry-run)" : "(izvršeno)"}</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                  <div className="bg-white border border-border/40 rounded-lg p-3">
-                    <div className="text-xs text-muted-foreground">Seed ukupno</div>
-                    <div className="font-extrabold text-lg">{syncResult.seedTotal}</div>
-                  </div>
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <div className="text-xs text-emerald-700">Insertovano (falilo)</div>
-                    <div className="font-extrabold text-lg text-emerald-700">{syncResult.inserted}</div>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="text-xs text-blue-700">Update-ovano</div>
-                    <div className="font-extrabold text-lg text-blue-700">{syncResult.updated}</div>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <div className="text-xs text-amber-700">Preskočeno (🔒 zaključano)</div>
-                    <div className="font-extrabold text-lg text-amber-700">{syncResult.skippedLocked}</div>
-                  </div>
-                </div>
-                {syncResult.insertedByNivo && Object.keys(syncResult.insertedByNivo).length > 0 && (
-                  <div className="mt-3 text-sm">
-                    <strong>Po nivoima:</strong> {Object.entries(syncResult.insertedByNivo).map(([n, c]) => `Nivo ${n}: +${c}`).join(", ")}
-                  </div>
-                )}
-                {syncResult.rjecnik && (
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Rječnik: {syncResult.rjecnik.inserted} novih termina (od {syncResult.rjecnik.seedTotal} u seedu)
-                  </div>
-                )}
-                {syncResult.insertedSlugs && syncResult.insertedSlugs.length > 0 && (
-                  <details className="mt-3 text-xs">
-                    <summary className="cursor-pointer font-bold text-muted-foreground">Prikaži slug-ove ({syncResult.insertedSlugs.length})</summary>
-                    <div className="mt-2 font-mono text-muted-foreground bg-white border border-border/30 rounded p-2 max-h-40 overflow-y-auto">
-                      {syncResult.insertedSlugs.join(", ")}
-                    </div>
-                  </details>
-                )}
-              </div>
-            )}
-
-          {/* ── REGENERATOR PRIPREMA DIZAJNA ── */}
-          <div className="bg-white border border-border/50 rounded-2xl p-6 mt-6">
-            <h3 className="font-extrabold text-lg mb-2 text-foreground">Regeneriši dizajn pripreme</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Konvertuje stari dizajn pripreme (tabela) u novi dizajn (zelena gradient kartica + 3 obojena cilja).
-              Parsira sadržaj iz starog HTML-a — sve tvoje tekstove čuva. Skipuje zaključane lekcije (🔒).
-              Default: samo Nivo 1 (lekcije koje su izgubile novi dizajn).
-            </p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <Button
-                onClick={async () => {
-                  setRegenBusy(true); setRegenResult(null);
-                  try {
-                    const r = await apiRequest<any>("POST", "/admin/ilmihal/regenerate-priprema-design", { dryRun: true, nivo: 1 }, token);
-                    setRegenResult(r);
-                    toast({ title: "Provjera završena ✓", description: `Skenirano ${r.scanned}, regeneracije bi: ${r.regenerated.length}, fail-ovala bi parse: ${r.failedParse.length}.` });
-                  } catch (e: any) {
-                    toast({ title: "Greška", description: e?.message || "Provjera neuspješna", variant: "destructive" });
-                  } finally { setRegenBusy(false); }
-                }}
-                disabled={regenBusy}
-                variant="outline"
-                className="rounded-xl font-bold"
-              >
-                {regenBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ClipboardList className="w-4 h-4 mr-2" />}
-                Provjeri (dry-run, Nivo 1)
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!confirm("Sigurno regenerisati dizajn pripreme za sve nezaključane lekcije Nivo 1? Sadržaj se čuva, mijenja se samo izgled (stari → novi). Zaključane lekcije se NE diraju.")) return;
-                  setRegenBusy(true); setRegenResult(null);
-                  try {
-                    const r = await apiRequest<any>("POST", "/admin/ilmihal/regenerate-priprema-design", { dryRun: false, nivo: 1 }, token);
-                    setRegenResult(r);
-                    toast({ title: "Regeneracija završena ✓", description: `${r.regenerated.length} lekcija dobilo novi dizajn.` });
-                  } catch (e: any) {
-                    toast({ title: "Greška", description: e?.message || "Regeneracija neuspješna", variant: "destructive" });
-                  } finally { setRegenBusy(false); }
-                }}
-                disabled={regenBusy}
-                className="rounded-xl font-bold"
-              >
-                {regenBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                Regeneriši Nivo 1
-              </Button>
-            </div>
-            {regenResult && (
-              <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
-                <h4 className="font-extrabold text-sm mb-2">Izvještaj {regenResult.dryRun ? "(dry-run)" : "(izvršeno)"}</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
-                  <div className="bg-white border border-border/40 rounded-lg p-3">
-                    <div className="text-xs text-muted-foreground">Skenirano</div>
-                    <div className="font-extrabold text-lg">{regenResult.scanned}</div>
-                  </div>
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <div className="text-xs text-emerald-700">Regenerisano (novi dizajn)</div>
-                    <div className="font-extrabold text-lg text-emerald-700">{regenResult.regenerated.length}</div>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <div className="text-xs text-amber-700">Preskočeno (🔒)</div>
-                    <div className="font-extrabold text-lg text-amber-700">{regenResult.skippedLocked.length}</div>
-                  </div>
-                  <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-                    <div className="text-xs text-rose-700">Fail-ovan parse</div>
-                    <div className="font-extrabold text-lg text-rose-700">{regenResult.failedParse.length}</div>
-                  </div>
-                </div>
-                {regenResult.regenerated.length > 0 && (
-                  <details className="text-xs">
-                    <summary className="cursor-pointer font-bold text-emerald-700">Slugovi regenerisani ({regenResult.regenerated.length})</summary>
-                    <div className="mt-2 max-h-40 overflow-y-auto bg-white border border-border/40 rounded p-2 font-mono">
-                      {regenResult.regenerated.join(", ")}
-                    </div>
-                  </details>
-                )}
-                {regenResult.failedParse.length > 0 && (
-                  <details className="text-xs mt-2">
-                    <summary className="cursor-pointer font-bold text-rose-700">Fail-ovan parse ({regenResult.failedParse.length})</summary>
-                    <div className="mt-2 max-h-40 overflow-y-auto bg-white border border-border/40 rounded p-2 font-mono">
-                      {regenResult.failedParse.map((f: any) => `${f.slug}: missing ${f.missing.join(",")}`).join(" | ")}
-                    </div>
-                  </details>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        )}
 
         {/* ── TAB: KORISNICI ── */}
         {activeTab === "korisnici" && (
