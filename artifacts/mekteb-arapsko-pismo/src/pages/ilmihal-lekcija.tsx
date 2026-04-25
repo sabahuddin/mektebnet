@@ -1093,8 +1093,35 @@ export default function IlmihalLekcijaPage() {
   const [completed, setCompleted] = useState(false);
   const [lekcijeStrip, setLekcijeStrip] = useState<LekcijaNav[]>([]);
   const [showEditor, setShowEditor] = useState(false);
+  const [editingNaslov, setEditingNaslov] = useState(false);
+  const [naslovDraft, setNaslovDraft] = useState("");
+  const [savingNaslov, setSavingNaslov] = useState(false);
 
   const displayNivo = (nivo: number) => nivo;
+
+  const handleSaveNaslov = async () => {
+    if (!lekcija || !token) return;
+    const novi = naslovDraft.trim();
+    if (!novi) {
+      toast({ title: "Naziv ne smije biti prazan", variant: "destructive" });
+      return;
+    }
+    if (novi === lekcija.naslov) {
+      setEditingNaslov(false);
+      return;
+    }
+    setSavingNaslov(true);
+    try {
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { naslov: novi }, token);
+      setLekcija(prev => prev ? { ...prev, naslov: novi } : prev);
+      setEditingNaslov(false);
+      toast({ title: "Naziv ažuriran", description: `Lekcija sada nosi naziv: ${novi}` });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Ne mogu spasiti naziv.", variant: "destructive" });
+    } finally {
+      setSavingNaslov(false);
+    }
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -1209,6 +1236,10 @@ export default function IlmihalLekcijaPage() {
                 title={lekcija?.locked ? (lekcija.lockedNote || "Lekcija je zaključana") : "Zaključaj lekciju (zaštita od auto-skripti)"}>
                 {lekcija?.locked ? <><Lock className="w-3.5 h-3.5" /> Zaključano</> : <><Unlock className="w-3.5 h-3.5" /> Zaključaj</>}
               </button>
+              <button onClick={() => { setNaslovDraft(lekcija?.naslov || ""); setEditingNaslov(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
+                <PenLine className="w-3.5 h-3.5" /> Uredi naziv
+              </button>
               <button onClick={() => setShowEditor(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
                 <FilePen className="w-3.5 h-3.5" /> Uredi sadržaj
@@ -1223,7 +1254,38 @@ export default function IlmihalLekcijaPage() {
             <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 mb-2">
               {NIVO_LABELS[lekcija.nivo] || `Nivo ${lekcija.nivo}`}
             </span>
-            <h1 className="text-2xl font-extrabold text-foreground leading-tight">{lekcija.naslov}</h1>
+            {editingNaslov && user?.role === "admin" ? (
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <input
+                  autoFocus
+                  type="text"
+                  value={naslovDraft}
+                  onChange={(e) => setNaslovDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); handleSaveNaslov(); }
+                    if (e.key === "Escape") { e.preventDefault(); setEditingNaslov(false); }
+                  }}
+                  disabled={savingNaslov}
+                  className="flex-1 text-2xl font-extrabold text-foreground leading-tight bg-white border-2 border-sky-300 focus:border-sky-500 focus:outline-none rounded-xl px-3 py-1.5 min-w-0"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveNaslov}
+                    disabled={savingNaslov}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50">
+                    {savingNaslov ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Spasi
+                  </button>
+                  <button
+                    onClick={() => setEditingNaslov(false)}
+                    disabled={savingNaslov}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50">
+                    <X className="w-3.5 h-3.5" /> Otkaži
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <h1 className="text-2xl font-extrabold text-foreground leading-tight">{lekcija.naslov}</h1>
+            )}
           </div>
         </div>
 
