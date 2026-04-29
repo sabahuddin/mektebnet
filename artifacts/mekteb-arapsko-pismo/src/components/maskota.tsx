@@ -161,10 +161,65 @@ export function MaskotaCelebration({
  * - pointer-events: none — nikad ne blokira interakciju.
  * - Poštuje prefers-reduced-motion (potpuno se ne renderuje).
  */
+type FlightTrajectory = {
+  /** Funkcija koja iz širine viewporta izračuna 5 X tačaka (od ulaska do izlaska). */
+  x: (vw: number) => number[];
+  /** 5 Y tačaka u px (relativno na vrh ekrana). */
+  y: number[];
+  /** 5 vrijednosti rotacije u stepenima. */
+  rotate: number[];
+  /** Vremenske čvorne tačke (0..1). */
+  times: number[];
+  /** Trajanje cijelog leta u sekundama. */
+  duration: number;
+};
+
+const TRAJECTORIES: FlightTrajectory[] = [
+  {
+    // Klasični luk preko gornjeg dijela — talasanje gore-dolje.
+    x: (vw) => [-120, vw * 0.25, vw * 0.55, vw * 0.8, vw + 120],
+    y: [220, 180, 250, 195, 235],
+    rotate: [-8, -3, 4, -2, 6],
+    times: [0, 0.2, 0.5, 0.8, 1],
+    duration: 5.4,
+  },
+  {
+    // Donja, mirnija putanja — pčela krstari sredinom ekrana.
+    x: (vw) => [-120, vw * 0.3, vw * 0.6, vw * 0.85, vw + 120],
+    y: [360, 320, 390, 340, 380],
+    rotate: [-5, 0, 3, -1, 4],
+    times: [0, 0.25, 0.5, 0.78, 1],
+    duration: 5.8,
+  },
+  {
+    // Diagonala odozgo nadole — uđe visoko lijevo, izađe nisko desno.
+    x: (vw) => [-120, vw * 0.28, vw * 0.55, vw * 0.82, vw + 120],
+    y: [180, 250, 320, 400, 460],
+    rotate: [4, 8, 12, 9, 6],
+    times: [0, 0.22, 0.48, 0.78, 1],
+    duration: 5.0,
+  },
+  {
+    // Diagonala odozdo nagore — uđe nisko lijevo, izađe visoko desno.
+    x: (vw) => [-120, vw * 0.27, vw * 0.55, vw * 0.83, vw + 120],
+    y: [440, 360, 280, 220, 170],
+    rotate: [-12, -9, -6, -3, 0],
+    times: [0, 0.22, 0.5, 0.78, 1],
+    duration: 5.2,
+  },
+  {
+    // Zig-zag — više valova, življa putanja.
+    x: (vw) => [-120, vw * 0.22, vw * 0.42, vw * 0.62, vw * 0.82, vw + 120],
+    y: [280, 220, 340, 230, 320, 260],
+    rotate: [-6, 4, -5, 6, -4, 5],
+    times: [0, 0.18, 0.38, 0.6, 0.82, 1],
+    duration: 5.6,
+  },
+];
+
 export function FlyingMaskota() {
   const [location] = useLocation();
-  const [flightId, setFlightId] = useState(0);
-  const [active, setActive] = useState(false);
+  const [flight, setFlight] = useState<{ id: number; traj: FlightTrajectory } | null>(null);
   const [vw, setVw] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 1280);
 
   const reduce =
@@ -181,10 +236,10 @@ export function FlyingMaskota() {
 
   useEffect(() => {
     if (reduce) return;
-    setActive(false);
+    setFlight(null);
     const startTimer = setTimeout(() => {
-      setFlightId((id) => id + 1);
-      setActive(true);
+      const traj = TRAJECTORIES[Math.floor(Math.random() * TRAJECTORIES.length)];
+      setFlight((prev) => ({ id: (prev?.id ?? 0) + 1, traj }));
     }, 350);
     return () => clearTimeout(startTimer);
   }, [location, reduce]);
@@ -192,31 +247,32 @@ export function FlyingMaskota() {
   if (reduce) return null;
 
   const size = 56;
-  const offscreenLeft = -120;
-  const offscreenRight = vw + 120;
-  const baseY = 80;
 
   return (
     <div
       aria-hidden="true"
-      className="fixed inset-x-0 top-0 pointer-events-none z-30 overflow-hidden"
-      style={{ height: 220 }}
+      className="fixed inset-0 pointer-events-none z-30 overflow-hidden"
       data-testid="flying-maskota-container"
     >
       <AnimatePresence>
-        {active && (
+        {flight && (
           <motion.div
-            key={flightId}
-            initial={{ x: offscreenLeft, y: baseY, opacity: 0, rotate: -8 }}
+            key={flight.id}
+            initial={{
+              x: flight.traj.x(vw)[0],
+              y: flight.traj.y[0],
+              opacity: 0,
+              rotate: flight.traj.rotate[0],
+            }}
             animate={{
-              x: [offscreenLeft, vw * 0.25, vw * 0.55, vw * 0.8, offscreenRight],
-              y: [baseY, baseY - 35, baseY + 10, baseY - 25, baseY + 5],
-              opacity: [0, 1, 1, 1, 0],
-              rotate: [-8, -3, 4, -2, 6],
+              x: flight.traj.x(vw),
+              y: flight.traj.y,
+              opacity: [0, 1, 1, 1, 0, 0].slice(0, flight.traj.times.length),
+              rotate: flight.traj.rotate,
             }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 5.2, ease: "easeInOut", times: [0, 0.18, 0.5, 0.82, 1] }}
-            onAnimationComplete={() => setActive(false)}
+            transition={{ duration: flight.traj.duration, ease: "easeInOut", times: flight.traj.times }}
+            onAnimationComplete={() => setFlight(null)}
             style={{ position: "absolute", left: 0, top: 0, width: size, height: size }}
           >
             <motion.div
