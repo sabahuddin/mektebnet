@@ -24,6 +24,78 @@ import { sendEmail } from "../lib/email.js";
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
 
+// Helper: pošalji in-app poruku (i opcionalno email) svim odobrenim
+// roditeljima datog učenika. Ne baca — sve greške se loguju.
+async function notifyApprovedRoditelji(opts: {
+  ucenikId: number;
+  posiljateljId: number;
+  naslov: string;
+  sadrzaj: string;
+  emailSubject?: string;
+  logTag: string;
+}) {
+  const { ucenikId, posiljateljId, naslov, sadrzaj, logTag } = opts;
+  const emailSubject = opts.emailSubject || naslov;
+
+  try {
+    const veze = await db
+      .select({ roditeljId: roditeljUcenikTable.roditeljId })
+      .from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+
+    if (veze.length === 0) return;
+
+    const roditeljIds = veze.map(v => v.roditeljId);
+    const userIds = [...new Set([ucenikId, posiljateljId, ...roditeljIds])];
+    const users = await db
+      .select({ id: usersTable.id, displayName: usersTable.displayName, email: usersTable.email })
+      .from(usersTable)
+      .where(inArray(usersTable.id, userIds));
+    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+    const muallimIme = userMap[posiljateljId]?.displayName || "Muallim";
+
+    for (const roditeljId of roditeljIds) {
+      const logCtx = { logTag, ucenikId, roditeljId };
+      try {
+        await db.insert(porukeTable).values({
+          posiljateljId,
+          primateljId: roditeljId,
+          naslov,
+          sadrzaj,
+        });
+      } catch (err) {
+        console.error(`[${logTag}] In-app poruka insert failed`, logCtx, err);
+        continue;
+      }
+
+      const roditelj = userMap[roditeljId];
+      if (roditelj?.email) {
+        const html = `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+            <div style="background:#0d9488;padding:20px;border-radius:12px 12px 0 0">
+              <h2 style="color:white;margin:0">${naslov}</h2>
+            </div>
+            <div style="padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px">
+              <p>Poštovani/a ${roditelj.displayName || ""},</p>
+              <p>${sadrzaj}</p>
+              <p style="color:#6b7280;font-size:14px;margin-top:16px">Muallim: ${muallimIme}</p>
+              <p style="color:#6b7280;font-size:14px">Ova poruka je automatski generisana sa mekteb.net</p>
+            </div>
+          </div>
+        `;
+        sendEmail(roditelj.email, `[Mekteb.net] ${emailSubject}`, html).catch(err => {
+          console.error(`[${logTag}] Email send failed`, logCtx, err);
+        });
+      }
+    }
+  } catch (err) {
+    console.error(`[${logTag}] notifyApprovedRoditelji failed`, { ucenikId, posiljateljId }, err);
+  }
+}
+
 // GET /api/muallim/info
 router.get("/info", async (req, res) => {
   try {
@@ -279,28 +351,71 @@ router.post("/prisustvo", async (req, res) => {
     const { grupaId, datum, prisustvo } = req.body;
     // prisustvo: [{ ucenikId, status, napomena }]
 
+    // Pratimo koji su zapisi prešli u "odsutan"/"zakasnio" da bismo poslije
+    // poslali notifikaciju roditeljima (samo na promjenu, ne na ponovni save).
+    const NOTIFY_STATUSES = new Set(["odsutan", "zakasnio"]);
+    const toNotify: { ucenikId: number; status: string }[] = [];
+
     for (const p of prisustvo) {
+      const newStatus = p.status || "prisutan";
+
       // Upsert
       const existing = await db.select().from(priustvoTable)
         .where(and(eq(priustvoTable.ucenikId, p.ucenikId), eq(priustvoTable.datum, datum)));
 
       if (existing.length > 0) {
+        const prev = existing[0];
         await db.update(priustvoTable)
-          .set({ status: p.status, napomena: p.napomena })
-          .where(eq(priustvoTable.id, existing[0].id));
+          .set({ status: newStatus, napomena: p.napomena })
+          .where(eq(priustvoTable.id, prev.id));
+        if (NOTIFY_STATUSES.has(newStatus) && prev.status !== newStatus) {
+          toNotify.push({ ucenikId: p.ucenikId, status: newStatus });
+        }
       } else {
         await db.insert(priustvoTable).values({
           ucenikId: p.ucenikId,
           grupaId,
           muallimId: req.user!.userId,
           datum,
-          status: p.status || "prisutan",
+          status: newStatus,
           napomena: p.napomena || null,
         });
+        if (NOTIFY_STATUSES.has(newStatus)) {
+          toNotify.push({ ucenikId: p.ucenikId, status: newStatus });
+        }
       }
     }
 
     res.json({ success: true });
+
+    // Notifikacije roditelja — pokrećemo nakon odgovora kako ne bismo blokirali UI
+    if (toNotify.length > 0) {
+      (async () => {
+        const ucenikIds = [...new Set(toNotify.map(t => t.ucenikId))];
+        const ucenici = await db
+          .select({ id: usersTable.id, displayName: usersTable.displayName })
+          .from(usersTable)
+          .where(inArray(usersTable.id, ucenikIds));
+        const imeMap = Object.fromEntries(ucenici.map(u => [u.id, u.displayName]));
+        const statusText: Record<string, string> = {
+          odsutan: "odsutno",
+          zakasnio: "zakasnilo",
+        };
+        for (const t of toNotify) {
+          const ime = imeMap[t.ucenikId] || "vaše dijete";
+          const stText = statusText[t.status] || t.status;
+          const naslov = `Izostanak: ${ime} (${datum})`;
+          const sadrzaj = `Vaše dijete ${ime} je dana ${datum} evidentirano kao ${stText}.`;
+          await notifyApprovedRoditelji({
+            ucenikId: t.ucenikId,
+            posiljateljId: req.user!.userId,
+            naslov,
+            sadrzaj,
+            logTag: "prisustvo-notify",
+          });
+        }
+      })().catch(err => console.error("[prisustvo-notify] background notify failed", err));
+    }
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -336,6 +451,24 @@ router.post("/ocjene", async (req, res) => {
       datum,
     }).returning();
     res.status(201).json(nova);
+
+    // Notifikacija roditeljima — ne blokira odgovor
+    (async () => {
+      const [ucenik] = await db
+        .select({ displayName: usersTable.displayName })
+        .from(usersTable)
+        .where(eq(usersTable.id, ucenikId));
+      const ime = ucenik?.displayName || "vaše dijete";
+      const naslov = `Nova ocjena za ${ime}`;
+      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjena}) iz ${kategorija}.`;
+      await notifyApprovedRoditelji({
+        ucenikId,
+        posiljateljId: req.user!.userId,
+        naslov,
+        sadrzaj,
+        logTag: "ocjene-notify",
+      });
+    })().catch(err => console.error("[ocjene-notify] background notify failed", err));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
