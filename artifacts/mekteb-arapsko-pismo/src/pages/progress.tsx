@@ -2,20 +2,12 @@ import { useState, useEffect } from "react";
 import { useGetProgress } from "@workspace/api-client-react";
 import { getStudentId } from "@/lib/student";
 import { Layout } from "@/components/layout";
-import { Star, Flame, Trophy, Award, Crown, Zap, BookOpen, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
+import { Star, Flame, Award, BookOpen, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-
-const ALL_BADGES = [
-  { id: "hafiz", name: "Mladi hafiz", emoji: "🌙", description: "Završene sve lekcije" },
-  { id: "zvijezda", name: "Zvijezda elif-be", emoji: "⭐", description: "Osvojeno 1000 hasanata" },
-  { id: "silsila", name: "Silsila", emoji: "🔥", description: "7 dana zaredom učenje" },
-  { id: "pisac", name: "Pisac", emoji: "🖊️", description: "Završene vježbe pisanja" },
-  { id: "brzinac", name: "Brzinac", emoji: "⚡", description: "Završena vježba ispod 30s" },
-];
 
 interface KvizRezultat {
   id: number;
@@ -27,24 +19,56 @@ interface KvizRezultat {
   completedAt: string;
 }
 
+interface BedzInfo {
+  id: string;
+  naziv: string;
+  opis: string;
+  ikona: string;
+  bojaGradient: string;
+  uslov: string;
+  earned: boolean;
+  earnedAt: string | null;
+}
+
+interface ProfilData {
+  napredak?: {
+    bedzevi?: BedzInfo[];
+  };
+}
+
 export default function Progress() {
   const studentId = getStudentId();
   const { token } = useAuth();
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [showAllKvizovi, setShowAllKvizovi] = useState(false);
-  
+  const [bedzevi, setBedzevi] = useState<BedzInfo[]>([]);
+  const [bedzeviStatus, setBedzeviStatus] = useState<"loading" | "ready" | "error">("loading");
+
   const { data: progress, isLoading } = useGetProgress({ studentId }, {
     query: { retry: 1 }
   });
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setBedzeviStatus("error");
+      return;
+    }
     apiRequest<KvizRezultat[]>("GET", "/content/kviz-rezultati", undefined, token)
       .then(data => { if (Array.isArray(data)) setKvizRezultati(data); })
       .catch(() => {});
+    setBedzeviStatus("loading");
+    apiRequest<ProfilData>("GET", "/ucenik/profil", undefined, token)
+      .then(data => {
+        if (data?.napredak?.bedzevi && Array.isArray(data.napredak.bedzevi)) {
+          setBedzevi(data.napredak.bedzevi);
+          setBedzeviStatus("ready");
+        } else {
+          setBedzeviStatus("error");
+        }
+      })
+      .catch(() => setBedzeviStatus("error"));
   }, [token]);
 
-  const earnedBadgeIds = progress?.badges?.map(b => b.id) || [];
   const displayedKvizovi = showAllKvizovi ? kvizRezultati : kvizRezultati.slice(0, 5);
   const avgProcenat = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : 0;
 
@@ -158,29 +182,54 @@ export default function Progress() {
       <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
         <Award className="w-6 h-6 text-primary" />
         Kolekcija Bedževa
+        {bedzeviStatus === "ready" && bedzevi.length > 0 && (
+          <span className="ml-auto text-base font-medium text-muted-foreground">
+            <span className="font-bold text-primary">{bedzevi.filter(b => b.earned).length}</span>
+            <span className="text-muted-foreground">/{bedzevi.length}</span>
+          </span>
+        )}
       </h2>
-      
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {ALL_BADGES.map((badge, i) => {
-          const isEarned = earnedBadgeIds.includes(badge.id);
-          return (
-            <motion.div 
-              initial={{scale: 0.9, opacity: 0}} 
-              animate={{scale: 1, opacity: 1}} 
-              transition={{delay: 0.1 * i}}
-              key={badge.id}
-            >
-              <Card className={`p-6 flex flex-col items-center text-center h-full transition-all ${isEarned ? 'bg-white border-primary/30 shadow-md shadow-primary/5' : 'bg-muted/50 border-dashed opacity-60 grayscale'}`}>
-                <div className={`text-5xl mb-4 ${isEarned ? 'drop-shadow-lg scale-110' : ''}`}>
-                  {badge.emoji}
-                </div>
-                <h3 className={`font-bold leading-tight mb-2 ${isEarned ? 'text-foreground' : 'text-muted-foreground'}`}>{badge.name}</h3>
-                <p className="text-xs text-muted-foreground mt-auto">{badge.description}</p>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
+
+      {bedzeviStatus === "loading" ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 rounded-2xl" />
+          ))}
+        </div>
+      ) : bedzeviStatus === "error" || bedzevi.length === 0 ? (
+        <Card className="p-8 text-center bg-muted/30 border-dashed">
+          <Award className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="font-bold text-foreground mb-1">Nije moguće učitati bedževe</p>
+          <p className="text-sm text-muted-foreground">
+            Pokušaj ponovo kasnije ili osvježi stranicu.
+          </p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {bedzevi.map((badge, i) => {
+            const isEarned = badge.earned;
+            return (
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: Math.min(0.05 * i, 0.6) }}
+                key={badge.id}
+              >
+                <Card className={`p-6 flex flex-col items-center text-center h-full transition-all ${isEarned ? 'bg-white border-primary/30 shadow-md shadow-primary/5' : 'bg-muted/50 border-dashed opacity-60 grayscale'}`}>
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${isEarned ? `bg-gradient-to-br ${badge.bojaGradient} shadow-md` : 'bg-gray-200'}`}>
+                    <span className={`text-4xl ${isEarned ? 'drop-shadow-sm' : ''}`}>{badge.ikona}</span>
+                  </div>
+                  <h3 className={`font-bold leading-tight mb-2 ${isEarned ? 'text-foreground' : 'text-muted-foreground'}`}>{badge.naziv}</h3>
+                  <p className="text-xs text-muted-foreground mt-auto">{badge.opis}</p>
+                  {!isEarned && (
+                    <p className="text-[10px] text-muted-foreground/80 mt-2 italic">Uslov: {badge.uslov}</p>
+                  )}
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </Layout>
   );
 }
