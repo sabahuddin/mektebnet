@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { Maskota } from "@/components/maskota";
+import { playRewardSound } from "@/lib/sound-prefs";
 
 export interface CelebrationData {
   isRepeat: boolean;
@@ -49,6 +50,14 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
     data.isRepeat ? data.totalHasanat : data.previousHasanat,
     true,
   );
+
+  // Play reward sound on mount for new (non-repeat) completions only.
+  // Respects the user's sound-effects toggle and prefers-reduced-motion.
+  useEffect(() => {
+    if (!data.isRepeat) {
+      playRewardSound();
+    }
+  }, [data.isRepeat]);
 
   // Auto-dismiss after ~2.5s
   useEffect(() => {

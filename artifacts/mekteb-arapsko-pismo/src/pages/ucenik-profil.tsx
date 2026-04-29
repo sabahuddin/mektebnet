@@ -7,10 +7,16 @@ import { useLocation } from "wouter";
 import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
-  Flame, Trophy, Sparkles, Target, Footprints
+  Flame, Trophy, Sparkles, Target, Footprints, Settings, Volume2, VolumeX
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  getSoundEffectsEnabled,
+  setSoundEffectsEnabled,
+  prefersReducedMotion,
+  playRewardSound,
+} from "@/lib/sound-prefs";
 
 interface StudentProgress {
   studentId: string;
@@ -99,7 +105,9 @@ export default function UcenikProfilPage() {
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "kvizovi">("moj-put");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "kvizovi" | "postavke">("moj-put");
+  const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
+  const reducedMotion = prefersReducedMotion();
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -166,7 +174,19 @@ export default function UcenikProfilPage() {
     { id: "ocjene", label: "Ocjene", icon: Star },
     { id: "kalendar", label: "Kalendar", icon: Calendar },
     { id: "kvizovi", label: "Kvizovi", icon: ClipboardList },
+    { id: "postavke", label: "Postavke", icon: Settings },
   ] as const;
+
+  const handleToggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabledState(next);
+    setSoundEffectsEnabled(next);
+    // Give immediate audio feedback when turning on (so child knows it works)
+    if (next && !reducedMotion) {
+      // Ensure persistence is committed before we read it back
+      setTimeout(() => playRewardSound(), 0);
+    }
+  };
 
   const completedSet = new Set(progress?.completedLessons ?? []);
   const totalLekcija = ilmihalLekcije.length;
@@ -714,6 +734,53 @@ export default function UcenikProfilPage() {
                         <p className="text-sm text-muted-foreground">Klikni na dan za detalje</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "postavke" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="bg-white border border-border/50 rounded-2xl p-5 max-w-xl">
+                  <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
+                    <Settings className="w-5 h-5 text-primary" /> Postavke
+                  </h3>
+
+                  <div className="flex items-start gap-4 p-4 rounded-2xl border border-border/60 bg-muted/20">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${soundEnabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
+                      {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <label htmlFor="sound-toggle" className="font-extrabold text-foreground cursor-pointer">
+                          Zvučni efekti
+                        </label>
+                        <button
+                          id="sound-toggle"
+                          role="switch"
+                          aria-checked={soundEnabled}
+                          aria-label="Zvučni efekti"
+                          data-testid="toggle-sound-effects"
+                          onClick={handleToggleSound}
+                          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                            soundEnabled ? "bg-emerald-500" : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              soundEnabled ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Kratki zvuk pohvale kad završiš novu lekciju. {reducedMotion && (
+                          <span className="block mt-1 text-amber-700 font-medium">
+                            Sistem je u režimu „smanjene animacije" — zvuk je trenutno isključen.
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </motion.div>
