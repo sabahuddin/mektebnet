@@ -19,8 +19,11 @@ export async function apiRequest<T = unknown>(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Greška servera" }));
-    const error = new Error(err.error || "Greška servera") as any;
+    const baseMsg = err.error || "Greška servera";
+    const fullMsg = err.detail ? `${baseMsg}: ${err.detail}` : baseMsg;
+    const error = new Error(fullMsg) as any;
     error.status = res.status;
+    error.detail = err.detail;
     throw error;
   }
 

@@ -290,34 +290,45 @@ export async function seedDemo() {
   }
 
   // 9) Kviz rezultati i student_progress za sve učenike
-  const [{ id: lekcijaSampleStart }] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).limit(1);
+  // Defanzivno: ako produkcija još nema lekcija/kvizova, preskoči vezane dijelove
   const allLekcije = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).limit(40);
   const allKvizovi = await db.select({ id: kvizoviTable.id, naslov: kvizoviTable.naslov }).from(kvizoviTable).limit(8);
 
+  if (allLekcije.length === 0) {
+    console.log("⚠️  Tabela ilmihal_lekcije je prazna — preskačem napredak po lekcijama.");
+  }
+  if (allKvizovi.length === 0) {
+    console.log("⚠️  Tabela kvizovi je prazna — preskačem demo kviz rezultate.");
+  }
+
   for (const ucId of allUcenikIds) {
-    // 3-5 kviz rezultata
-    const brojKv = randInt(3, 5);
-    for (let i = 0; i < brojKv; i++) {
-      const kv = rand(allKvizovi);
-      const tacni = randInt(6, 10);
-      const ukupno = 10;
-      const procenat = Math.round((tacni / ukupno) * 100);
-      const completed = new Date(today);
-      completed.setDate(completed.getDate() - randInt(1, 40));
-      await db.insert(kvizRezultatiTable).values({
-        userId: ucId,
-        kvizId: kv.id,
-        kvizNaslov: kv.naslov,
-        tacniOdgovori: tacni,
-        ukupnoPitanja: ukupno,
-        procenat,
-        bodovi: tacni * 10,
-        completedAt: completed,
-      });
+    // 3-5 kviz rezultata (samo ako imamo kvizove)
+    if (allKvizovi.length > 0) {
+      const brojKv = randInt(3, 5);
+      for (let i = 0; i < brojKv; i++) {
+        const kv = rand(allKvizovi);
+        const tacni = randInt(6, 10);
+        const ukupno = 10;
+        const procenat = Math.round((tacni / ukupno) * 100);
+        const completed = new Date(today);
+        completed.setDate(completed.getDate() - randInt(1, 40));
+        await db.insert(kvizRezultatiTable).values({
+          userId: ucId,
+          kvizId: kv.id,
+          kvizNaslov: kv.naslov,
+          tacniOdgovori: tacni,
+          ukupnoPitanja: ukupno,
+          procenat,
+          bodovi: tacni * 10,
+          completedAt: completed,
+        });
+      }
     }
 
-    // student_progress
-    const completedLekcije = pickN(allLekcije.map(l => l.id), randInt(3, 18));
+    // student_progress (uvijek upisujemo, ali completedLessons je prazan ako nema lekcija)
+    const completedLekcije = allLekcije.length > 0
+      ? pickN(allLekcije.map(l => l.id), randInt(3, Math.min(18, allLekcije.length)))
+      : [];
     const streakDays = randInt(1, 14);
     const lastActivity = new Date(today);
     lastActivity.setDate(lastActivity.getDate() - randInt(0, 2));

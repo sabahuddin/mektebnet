@@ -740,8 +740,12 @@ export default function AdminPage() {
       setDeleteKorisnik(null);
       toast({ title: `Korisnik "${k.displayName}" je obrisan` });
       if (k.role === "muallim") loadMuallimPregled();
-    } catch {
-      toast({ title: "Greška", description: "Nije moguće obrisati korisnika", variant: "destructive" });
+    } catch (e: any) {
+      toast({
+        title: "Greška pri brisanju korisnika",
+        description: e?.message || "Nepoznata greška",
+        variant: "destructive",
+      });
     } finally {
       setDeletingId(null);
     }
