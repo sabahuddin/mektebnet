@@ -20,14 +20,19 @@ export interface AuthUser {
   id: number;
   username: string;
   displayName: string;
-  role: "muallim" | "ucenik" | "admin";
+  role: "muallim" | "ucenik" | "admin" | "roditelj";
+  email?: string;
   mektebId?: number;
   mektebNaziv?: string;
   muallimId?: number;
-  token: string;
+  token?: string;
 }
 
-const AUTH_KEY = "mekteb_auth_user";
+// IMPORTANT: keep in sync with TOKEN_KEY/USER_KEY in src/context/auth.tsx.
+// The auth context is the single source of truth — it writes the logged-in
+// user to localStorage under "mekteb_user". This module only reads that key
+// so progress queries use the real user.id (not a per-tab UUID).
+const AUTH_KEY = "mekteb_user";
 
 export function getAuthUser(): AuthUser | null {
   try {
