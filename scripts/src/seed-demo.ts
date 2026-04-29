@@ -344,8 +344,8 @@ export async function seedDemo() {
   console.log("\nDa obrišeš demo podatke, pokreni: pnpm --filter @workspace/scripts run clear-demo");
 }
 
-const isDirectRun = import.meta.url === `file://${process.argv[1]}`;
-if (isDirectRun) {
+const invokedViaCli = process.argv[1]?.endsWith("/seed-demo.ts") ?? false;
+if (invokedViaCli) {
   seedDemo().catch(err => {
     console.error("❌ Greška:", err);
     process.exit(1);

@@ -1541,6 +1541,42 @@ router.delete("/rjecnik/:id", async (req, res) => {
   }
 });
 
+router.post("/system/seed-demo", async (req, res) => {
+  try {
+    const confirm = (req.body?.confirm ?? "").toString();
+    if (confirm !== "DEMO") {
+      res.status(400).json({ error: "Potvrda nije ispravna. Pošalji { confirm: \"DEMO\" }." });
+      return;
+    }
+    const before = await db.select({ c: sql<number>`count(*)::int` }).from(usersTable);
+    const beforeCount = before[0]?.c ?? 0;
+
+    const { seedDemo } = await import("@workspace/scripts/seed-demo");
+    await seedDemo();
+
+    const after = await db.select({ c: sql<number>`count(*)::int` }).from(usersTable);
+    const afterCount = after[0]?.c ?? 0;
+    const added = afterCount - beforeCount;
+
+    res.json({
+      ok: true,
+      message: added > 0
+        ? `Demo podaci dodani. ${added} novih korisnika.`
+        : "Demo podaci ažurirani (svi nalozi već postojali — ponovno seedovani).",
+      addedUsers: added,
+      totalUsers: afterCount,
+      logins: {
+        muallim: "demo.muallim / demo123",
+        ucenik: "demo.amina.hasic / demo123 (i ostali)",
+        roditelj: "demo.roditelj.amir / demo123, demo.roditelj.fatma / demo123",
+      },
+    });
+  } catch (err: any) {
+    console.error("[admin/system/seed-demo] greška:", err);
+    res.status(500).json({ error: "Greška pri učitavanju demo podataka", detail: err?.message ?? String(err) });
+  }
+});
+
 router.post("/rjecnik/seed", async (_req, res) => {
   try {
     const before = await db.select({ c: sql<number>`count(*)::int` }).from(rjecnikTable);

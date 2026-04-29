@@ -98,6 +98,115 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
   );
 }
 
+function SistemAlati({ token }: { token: string }) {
+  const { toast } = useToast();
+  const [showSeedModal, setShowSeedModal] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [lastResult, setLastResult] = useState<string | null>(null);
+
+  const handleSeed = async () => {
+    if (confirmText !== "DEMO") return;
+    setIsSeeding(true);
+    try {
+      const data = await apiRequest<{ message?: string }>("POST", "/admin/system/seed-demo", { confirm: "DEMO" }, token);
+      const msg = data.message || "Demo podaci dodani.";
+      setLastResult(msg);
+      toast({ title: "Gotovo!", description: msg });
+      setShowSeedModal(false);
+      setConfirmText("");
+    } catch (err: any) {
+      const detail = err?.message || "Pokušaj ponovo.";
+      toast({ title: "Greška", description: detail, variant: "destructive" });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="mt-8 bg-white border border-border/50 rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-border/50">
+          <h3 className="font-extrabold text-foreground flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary" /> Sistem alati
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">Administrativne radnje nad bazom podataka</p>
+        </div>
+        <div className="p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <div className="flex-1">
+              <div className="font-bold text-foreground">Učitaj demo podatke</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Dodaje 3 demo grupe sa muallimom, 18 učenika i 2 roditelja (svi sa prefiksom <code className="text-xs bg-white px-1 rounded">demo.</code>, lozinka <code className="text-xs bg-white px-1 rounded">demo123</code>).
+                Tvoji stvarni korisnici se NE diraju.
+              </p>
+              {lastResult && (
+                <p className="text-xs text-emerald-700 mt-2 font-medium">✓ {lastResult}</p>
+              )}
+            </div>
+            <Button
+              onClick={() => setShowSeedModal(true)}
+              data-testid="button-seed-demo"
+              className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Učitaj demo
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {showSeedModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !isSeeding && setShowSeedModal(false)}>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-extrabold text-foreground mb-2">Potvrdi učitavanje demo podataka</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Skripta će dodati demo grupe, muallima, učenike i roditelje u <strong>ovu bazu</strong>. Postojeći demo nalozi će biti osvježeni.
+            </p>
+            <p className="text-sm text-foreground mb-2">Da potvrdiš, upiši <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono">DEMO</code>:</p>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={e => setConfirmText(e.target.value)}
+              data-testid="input-confirm-seed"
+              autoFocus
+              disabled={isSeeding}
+              placeholder="DEMO"
+              className="w-full px-3 py-2 border border-border rounded-xl mb-4 font-mono uppercase"
+            />
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => { setShowSeedModal(false); setConfirmText(""); }}
+                disabled={isSeeding}
+                className="flex-1 rounded-xl"
+              >
+                Otkaži
+              </Button>
+              <Button
+                onClick={handleSeed}
+                disabled={confirmText !== "DEMO" || isSeeding}
+                data-testid="button-confirm-seed"
+                className="flex-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white"
+              >
+                {isSeeding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Učitaj"}
+              </Button>
+            </div>
+            {isSeeding && (
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                Ovo može potrajati 10-30 sekundi...
+              </p>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function DodajMuallimModal({ token, onClose, onCreated }: { token: string; onClose: () => void; onCreated: () => void }) {
   const { toast } = useToast();
   const [form, setForm] = useState({ username: "", password: "", displayName: "", email: "", licenceCount: "30" });
@@ -1098,6 +1207,8 @@ export default function AdminPage() {
         </div>
         </>
         )}
+
+        <SistemAlati token={token!} />
       </div>
 
       {showDodajAdmina && (

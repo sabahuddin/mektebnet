@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./seed-demo": "./src/seed-demo.ts",
+    "./clear-demo": "./src/clear-demo.ts"
+  },
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-lessons": "tsx ./src/seed-lessons.ts",

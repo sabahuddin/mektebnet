@@ -74,8 +74,8 @@ export async function clearDemoData(verbose = true) {
   log("✅ Demo podaci obrisani.");
 }
 
-const isDirectRun = import.meta.url === `file://${process.argv[1]}`;
-if (isDirectRun) {
+const invokedViaCli = process.argv[1]?.endsWith("/clear-demo.ts") ?? false;
+if (invokedViaCli) {
   console.log("🧹 Brišem demo podatke...");
   clearDemoData()
     .then(() => process.exit(0))
