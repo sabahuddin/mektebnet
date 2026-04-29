@@ -382,12 +382,6 @@ function CelebrationModal({ data, onClose }: { data: CelebrationData; onClose: (
     true,
   );
 
-  // Auto-dismiss after ~2.5s
-  useEffect(() => {
-    const t = setTimeout(onClose, 2500);
-    return () => clearTimeout(t);
-  }, [onClose]);
-
   // Keyboard: Esc/Enter/Space closes
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
