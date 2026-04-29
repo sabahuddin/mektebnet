@@ -12,8 +12,9 @@ import {
   grupeTable,
   muallimProfiliTable,
   mektebKalendarTable,
+  studentProgressTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, asc } from "drizzle-orm";
+import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -160,6 +161,71 @@ router.get("/pretrazi-djecu", async (req, res) => {
 
     // Limit na 20 rezultata da ne otkrivamo previše
     res.json(results.slice(0, 20));
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/dashboard/:ucenikId — sažetak za karticu djeteta
+router.get("/dashboard/:ucenikId", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    if (!Number.isFinite(ucenikId)) {
+      res.status(400).json({ error: "Neispravan ID učenika" });
+      return;
+    }
+
+    const [veza] = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, req.user!.userId),
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (!veza) {
+      res.status(403).json({ error: "Nemate pristup ovom učeniku" });
+      return;
+    }
+
+    // Posljednja ocjena
+    const [posljednja] = await db.select().from(ocjeneTable)
+      .where(eq(ocjeneTable.ucenikId, ucenikId))
+      .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
+      .limit(1);
+
+    // Prisustvo ovaj mjesec — datum je text "YYYY-MM-DD", filtriramo lokalno
+    const sviPrisustvo = await db.select().from(priustvoTable)
+      .where(eq(priustvoTable.ucenikId, ucenikId));
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const ovajMjesec = sviPrisustvo.filter(p => typeof p.datum === "string" && p.datum.startsWith(yearMonth));
+    const prisutanOvajMjesec = ovajMjesec.filter(p => p.status === "prisutan").length;
+
+    // Završene lekcije + streak iz studentProgressTable (studentId je text)
+    const [progress] = await db.select().from(studentProgressTable)
+      .where(eq(studentProgressTable.studentId, String(ucenikId)))
+      .limit(1);
+    const completedLessons = (progress?.completedLessons as number[] | undefined) ?? [];
+    const streakDays = progress?.streakDays ?? 0;
+    const totalHasanat = progress?.totalHasanat ?? 0;
+
+    // Fallback: završene lekcije iz korisnik_napredak (ilmihal) ako student_progress nema zapis
+    let zavrseneLekcije = completedLessons.length;
+    if (zavrseneLekcije === 0) {
+      const napredak = await db.select().from(korisnikNapredakTable)
+        .where(and(eq(korisnikNapredakTable.userId, ucenikId), eq(korisnikNapredakTable.zavrsen, true)));
+      zavrseneLekcije = napredak.length;
+    }
+
+    res.json({
+      posljednjaOcjena: posljednja
+        ? { ocjena: posljednja.ocjena, kategorija: posljednja.kategorija, datum: posljednja.datum, napomena: posljednja.napomena }
+        : null,
+      prisustvoOvajMjesec: prisutanOvajMjesec,
+      ukupnoOvajMjesec: ovajMjesec.length,
+      zavrseneLekcije,
+      streakDays,
+      totalHasanat,
+    });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

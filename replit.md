@@ -171,8 +171,10 @@ PostgreSQL (via DATABASE_URL). Ključne tabele:
 ### Roditelj (`/api/roditelj`) — zahtijeva role: roditelj/admin
 - `GET /djeca` — lista odobrene djece
 - `POST /link-dijete` — zahtjev za povezivanje (muallim odobrava)
+- `GET /pretrazi-djecu?q=&grupa=` — pretraga djece po imenu + opcionalno mektebu/muallimu
 - `POST /dodaj-dijete` — kreiranje dječjeg računa (max 4, Online Mekteb grupa, transakcija)
 - `PUT /dijete-lozinka` — promjena lozinke djeteta
+- `GET /dashboard/:ucenikId` — sažetak za karticu djeteta (posljednja ocjena, prisustvo ovaj mjesec, završene lekcije, streak); vraća 403 bez approved veze
 - `GET /prisustvo/:ucenikId`, `GET /ocjene/:ucenikId`, `GET /napredak/:ucenikId`
 
 ## Korisnici (test)

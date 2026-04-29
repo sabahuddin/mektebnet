@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
-import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, Search, GraduationCap } from "lucide-react";
+import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, Search, GraduationCap, BookOpen, Flame, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -39,15 +39,36 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 
 const OCJENA_COLOR = ["", "text-red-700 bg-red-100", "text-orange-700 bg-orange-100", "text-amber-700 bg-amber-100", "text-blue-700 bg-blue-100", "text-emerald-700 bg-emerald-100"];
 
+interface DashboardSummary {
+  posljednjaOcjena: { ocjena: number; kategorija: string; datum: string; napomena?: string | null } | null;
+  prisustvoOvajMjesec: number;
+  ukupnoOvajMjesec: number;
+  zavrseneLekcije: number;
+  streakDays: number;
+  totalHasanat: number;
+}
+
 function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
   const [expanded, setExpanded] = useState(false);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"prisustvo" | "ocjene">("prisustvo");
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSummaryLoading(true);
+    apiRequest<DashboardSummary>("GET", `/roditelj/dashboard/${dijete.id}`, undefined, token)
+      .then(d => { if (!cancelled) setSummary(d); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setSummaryLoading(false); });
+    return () => { cancelled = true; };
+  }, [dijete.id, token]);
 
   const loadData = async () => {
-    if (isLoading || prisustvo.length > 0) return;
+    if (isLoading || prisustvo.length > 0 || ocjene.length > 0) return;
     setIsLoading(true);
     try {
       const [prs, oc] = await Promise.all([
@@ -62,38 +83,71 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
   };
 
   const handleToggle = () => {
-    setExpanded(v => !v);
-    if (!expanded) loadData();
+    const next = !expanded;
+    setExpanded(next);
+    if (next) loadData();
   };
-
-  const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
-  const prosjecna = ocjene.length ? (ocjene.reduce((s, o) => s + o.ocjena, 0) / ocjene.length).toFixed(2) : null;
 
   return (
     <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
-      <button
-        onClick={handleToggle}
-        className="w-full flex items-center justify-between p-5 hover:bg-muted/20 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center">
+      <div className="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center shrink-0">
             <span className="text-lg font-extrabold text-primary">{dijete.displayName[0]}</span>
           </div>
-          <div className="text-left">
-            <div className="font-extrabold text-foreground">{dijete.displayName}</div>
-            <div className="text-xs text-muted-foreground font-mono">{dijete.username}</div>
+          <div className="text-left flex-1 min-w-0">
+            <div className="font-extrabold text-foreground truncate">{dijete.displayName}</div>
+            <div className="text-xs text-muted-foreground font-mono truncate">{dijete.username}</div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {prisustvo.length > 0 && (
-            <div className="flex gap-3 text-xs font-bold">
-              <span className="text-emerald-600">{prisutnih}/{prisustvo.length} ✓</span>
-              {prosjecna && <span className="text-amber-600">⭐ {prosjecna}</span>}
-            </div>
+
+        {/* Summary stat tiles */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          {summaryLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
+          ) : (
+            <>
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                <Star className="w-4 h-4 text-amber-600 mb-1" />
+                <div className="text-lg font-extrabold text-amber-700 leading-none">
+                  {summary?.posljednjaOcjena ? summary.posljednjaOcjena.ocjena : "—"}
+                </div>
+                <div className="text-[10px] text-amber-700/80 font-bold uppercase mt-1 tracking-wide">Posljednja ocjena</div>
+                {summary?.posljednjaOcjena?.kategorija && (
+                  <div className="text-[10px] text-amber-700/60 font-medium mt-0.5 truncate w-full">{summary.posljednjaOcjena.kategorija}</div>
+                )}
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                <CalendarCheck className="w-4 h-4 text-emerald-600 mb-1" />
+                <div className="text-lg font-extrabold text-emerald-700 leading-none">
+                  {summary ? `${summary.prisustvoOvajMjesec}/${summary.ukupnoOvajMjesec || 0}` : "—"}
+                </div>
+                <div className="text-[10px] text-emerald-700/80 font-bold uppercase mt-1 tracking-wide">Prisustvo ovaj mj.</div>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                <BookOpen className="w-4 h-4 text-blue-600 mb-1" />
+                <div className="text-lg font-extrabold text-blue-700 leading-none">{summary?.zavrseneLekcije ?? 0}</div>
+                <div className="text-[10px] text-blue-700/80 font-bold uppercase mt-1 tracking-wide">Završene lekcije</div>
+              </div>
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                <Flame className="w-4 h-4 text-orange-600 mb-1" />
+                <div className="text-lg font-extrabold text-orange-700 leading-none">{summary?.streakDays ?? 0}</div>
+                <div className="text-[10px] text-orange-700/80 font-bold uppercase mt-1 tracking-wide">Dana niz</div>
+              </div>
+            </>
           )}
-          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </div>
-      </button>
+
+        <button
+          onClick={handleToggle}
+          className="w-full flex items-center justify-center gap-2 text-sm font-bold text-primary hover:text-primary/80 bg-primary/5 hover:bg-primary/10 rounded-xl py-2.5 transition-colors"
+          data-testid={`button-pogledaj-detalje-${dijete.id}`}
+        >
+          <Eye className="w-4 h-4" />
+          {expanded ? "Sakrij detalje" : "Pogledaj detalje"}
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+      </div>
 
       {expanded && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-t border-border/50 p-5">
