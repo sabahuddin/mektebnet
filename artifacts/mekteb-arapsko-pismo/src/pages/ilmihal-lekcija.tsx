@@ -1685,10 +1685,33 @@ export default function IlmihalLekcijaPage() {
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-5">
-          <div>
-            <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 mb-2">
-              {NIVO_LABELS[lekcija.nivo] || `Nivo ${lekcija.nivo}`}
-            </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                {NIVO_LABELS[lekcija.nivo] || `Nivo ${lekcija.nivo}`}
+              </span>
+              {completedIds.has(lekcija.id) && (
+                <span
+                  className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200"
+                  data-testid="badge-lekcija-zavrsena"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={3} />
+                  Završeno
+                </span>
+              )}
+              {!completedIds.has(lekcija.id) && (() => {
+                const firstUndone = lekcijeStrip.find(l => !completedIds.has(l.id));
+                return firstUndone?.id === lekcija.id ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border-2 border-amber-300"
+                    data-testid="badge-lekcija-sljedeca"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Sljedeća lekcija
+                  </span>
+                ) : null;
+              })()}
+            </div>
             {editingNaslov && user?.role === "admin" ? (
               <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                 <input
@@ -1721,6 +1744,21 @@ export default function IlmihalLekcijaPage() {
             ) : (
               <h1 className="text-2xl font-extrabold text-foreground leading-tight">{lekcija.naslov}</h1>
             )}
+            {(() => {
+              const nextUndone = lekcijeStrip.find(l => !completedIds.has(l.id) && l.id !== lekcija.id);
+              if (!nextUndone) return null;
+              return (
+                <button
+                  onClick={() => setLocation(`/ilmihal/${nextUndone.slug}`)}
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-800 hover:underline"
+                  data-testid="link-sljedeca-lekcija"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  <span className="text-muted-foreground font-semibold">Sljedeća:</span>
+                  <span className="truncate max-w-[16rem] sm:max-w-xs">{nextUndone.naslov}</span>
+                </button>
+              );
+            })()}
           </div>
         </div>
 
