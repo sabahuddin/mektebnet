@@ -15,9 +15,11 @@ import {
   planLekcijaTable,
   ilmihalLekcijeTable,
   zadaceTable,
+  porukeTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, asc, sql, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { sendEmail } from "../lib/email.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
@@ -382,7 +384,67 @@ router.post("/approve-roditelj", async (req, res) => {
         approvedBy: req.user!.userId,
       })
       .where(eq(roditeljUcenikTable.id, roditeljUcenikId));
-    res.json({ success: true });
+
+    // Pošalji notifikaciju roditelju (in-app poruka + opcionalno email)
+    const logCtx = { roditeljUcenikId, roditeljId: request.roditeljId, ucenikId: request.ucenikId, approved };
+    let usersInfo: { id: number; displayName: string; email: string | null }[] = [];
+    try {
+      usersInfo = await db
+        .select({ id: usersTable.id, displayName: usersTable.displayName, email: usersTable.email })
+        .from(usersTable)
+        .where(inArray(usersTable.id, [request.ucenikId, request.roditeljId, req.user!.userId]));
+    } catch (lookupErr) {
+      console.error("[approve-roditelj] User lookup failed", logCtx, lookupErr);
+    }
+
+    const userMap = Object.fromEntries(usersInfo.map(u => [u.id, u]));
+    const ucenikIme = userMap[request.ucenikId]?.displayName || "vaše dijete";
+    const roditelj = userMap[request.roditeljId];
+    const muallimIme = userMap[req.user!.userId]?.displayName || "Muallim";
+
+    const naslov = approved
+      ? `Zahtjev za ${ucenikIme} je odobren`
+      : `Zahtjev za ${ucenikIme} je odbijen`;
+    const sadrzaj = approved
+      ? `Vaš zahtjev za povezivanje s djetetom ${ucenikIme} je odobren. Sada možete pratiti napredak svog djeteta u roditeljskom portalu.`
+      : `Vaš zahtjev za povezivanje s djetetom ${ucenikIme} je odbijen. Za više informacija obratite se muallimu (${muallimIme}).`;
+
+    // In-app poruka — primarni kanal notifikacije; pratimo uspjeh kako bismo
+    // u responseu označili partial-success ako insert ne uspije
+    let notificationDelivered = true;
+    try {
+      await db.insert(porukeTable).values({
+        posiljateljId: req.user!.userId,
+        primateljId: request.roditeljId,
+        naslov,
+        sadrzaj,
+      });
+    } catch (porukaErr) {
+      notificationDelivered = false;
+      console.error("[approve-roditelj] In-app poruka insert failed", logCtx, porukaErr);
+    }
+
+    // Email — opcionalni dodatni kanal; ne blokira odgovor
+    if (roditelj?.email) {
+      const html = `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+          <div style="background:${approved ? '#0d9488' : '#dc2626'};padding:20px;border-radius:12px 12px 0 0">
+            <h2 style="color:white;margin:0">${naslov}</h2>
+          </div>
+          <div style="padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px">
+            <p>Poštovani/a ${roditelj.displayName || ""},</p>
+            <p>${sadrzaj}</p>
+            <p style="color:#6b7280;font-size:14px;margin-top:16px">Muallim: ${muallimIme}</p>
+            <p style="color:#6b7280;font-size:14px">Ova poruka je automatski generisana sa mekteb.net</p>
+          </div>
+        </div>
+      `;
+      sendEmail(roditelj.email, `[Mekteb.net] ${naslov}`, html).catch(err => {
+        console.error("[approve-roditelj] Email send failed", logCtx, err);
+      });
+    }
+
+    res.json({ success: true, notificationDelivered });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
