@@ -223,9 +223,16 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       <footer className="border-t border-border/30 py-6 text-center text-sm text-muted-foreground space-y-2">
-        <div>
+        <div className="flex items-center justify-center gap-2">
+          <img
+            src={`${import.meta.env.BASE_URL}images/maskota/pcela.png`}
+            alt=""
+            aria-hidden="true"
+            className="w-7 h-7 object-contain opacity-90"
+            data-testid="footer-maskota"
+          />
           <span className="font-bold text-primary">mekteb<span className="text-secondary">.net</span></span>
-          <span className="mx-2">©</span>
+          <span className="mx-1">©</span>
           <span>{new Date().getFullYear()} · {t("footer.platforma")}</span>
         </div>
         <div>

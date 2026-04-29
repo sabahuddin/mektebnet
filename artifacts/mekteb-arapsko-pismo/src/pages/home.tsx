@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { Layout } from "@/components/layout";
+import { Maskota } from "@/components/maskota";
 import { BookOpen, HelpCircle, Library, GraduationCap, Star, Flame, ChevronRight, BookMarked } from "lucide-react";
 
 export default function Home() {
@@ -87,9 +88,26 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="hidden md:flex items-center gap-3 shrink-0">
-            <img src={`${import.meta.env.BASE_URL}images/dzana.png`} alt="Džana" className="w-24 h-24 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            <img src={`${import.meta.env.BASE_URL}images/amir.png`} alt="Amir" className="w-24 h-24 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <div className="hidden md:flex items-center shrink-0" data-testid="home-maskota-pozdrav">
+            <motion.div
+              initial={{ opacity: 0, x: 20, rotate: -8 }}
+              animate={{ opacity: 1, x: 0, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 200, damping: 16, delay: 0.2 }}
+            >
+              <motion.div
+                animate={
+                  typeof window !== "undefined" &&
+                  typeof window.matchMedia === "function" &&
+                  window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                    ? undefined
+                    : { rotate: [0, -6, 6, -4, 0] }
+                }
+                transition={{ duration: 2.4, ease: "easeInOut", delay: 0.8, repeat: 1, repeatDelay: 6 }}
+                style={{ transformOrigin: "50% 90%" }}
+              >
+                <Maskota varijanta="pozdrav" size={120} className="drop-shadow-md" />
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </motion.div>
