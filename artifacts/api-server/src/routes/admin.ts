@@ -170,6 +170,31 @@ router.post("/upload", (req, res) => {
   });
 });
 
+const audioUpload = multer({
+  storage,
+  limits: { fileSize: 30 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(mp3|m4a|aac|ogg|oga|opus|wav|webm)$/i;
+    if (allowed.test(path.extname(file.originalname))) cb(null, true);
+    else cb(new Error("Dozvoljeni formati: MP3, M4A, AAC, OGG, OPUS, WAV"));
+  },
+});
+
+router.post("/upload-audio", (req, res) => {
+  audioUpload.single("audio")(req, res, async (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? (err.code === "LIMIT_FILE_SIZE" ? "Audio fajl prevelik (max 30MB)" : err.message)
+        : err.message || "Greška pri uploadu";
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+    const url = `/uploads/${req.file.filename}`;
+    console.log(`[Upload-Audio] ${req.file.originalname} -> ${req.file.filename} (${(req.file.size / 1024).toFixed(0)}KB)`);
+    res.json({ url, filename: req.file.originalname, size: req.file.size });
+  });
+});
+
 const attachUpload = multer({
   storage,
   limits: { fileSize: 25 * 1024 * 1024 },

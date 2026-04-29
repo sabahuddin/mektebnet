@@ -20,7 +20,7 @@ import {
   BookOpen, AlertTriangle, TableIcon,
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
   Maximize, RectangleHorizontal, Square, Loader2,
-  FolderOpen, X, Copy, Check, FileText, Minus
+  FolderOpen, X, Copy, Check, FileText, Minus, Music
 } from "lucide-react";
 import { parsePripremaContent, renderPripremaContent, type PripremaStruct } from "@/lib/priprema-design";
 
@@ -66,6 +66,38 @@ function createCustomBlock(name: string, cssClass: string) {
 const ArabicCard = createCustomBlock("arabicCard", "arabic-card");
 const InfoBox = createCustomBlock("infoBox", "info-box");
 const InfoCard = createCustomBlock("infoCard", "info-card");
+
+const AudioBlock = Node.create({
+  name: "audioBlock",
+  group: "block",
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+      title: { default: null },
+    };
+  },
+  parseHTML() {
+    return [{
+      tag: "audio[src]",
+      getAttrs: (el) => {
+        const node = el as HTMLElement;
+        return {
+          src: node.getAttribute("src"),
+          title: node.getAttribute("data-title") || node.getAttribute("title"),
+        };
+      },
+    }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const { src, title } = HTMLAttributes;
+    const attrs: Record<string, any> = { src, controls: "true", preload: "metadata", class: "lesson-audio" };
+    if (title) attrs["data-title"] = title;
+    return ["audio", mergeAttributes(attrs)];
+  },
+});
 
 interface ParsedSection {
   id: string;
@@ -238,6 +270,7 @@ const editorExtensions = [
   ArabicCard,
   InfoBox,
   InfoCard,
+  AudioBlock,
 ];
 
 function extractHeroImage(beforeHtml: string): string | null {
@@ -306,6 +339,8 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [galleryMode, setGalleryMode] = useState<"hero" | "insert">("hero");
   const [docUploading, setDocUploading] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const [audioUploading, setAudioUploading] = useState(false);
   const docInputRef = useRef<HTMLInputElement>(null);
 
   const loadGallery = useCallback(async () => {
@@ -619,6 +654,42 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     e.target.value = "";
   }, [handleImageUpload]);
 
+  const handleAudioUpload = useCallback(async (file: File) => {
+    if (!editor) return;
+    setAudioUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", file);
+      const resp = await fetch(`${getApiBase()}/admin/upload-audio`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        toast({ title: "Greška pri uploadu audio fajla", description: data.error || "Nepoznata greška", variant: "destructive" });
+        return;
+      }
+      if (data.url) {
+        editor.chain().focus().insertContent({
+          type: "audioBlock",
+          attrs: { src: data.url, title: data.filename || null },
+        }).run();
+        toast({ title: "Audio dodat ✓", description: data.filename || "Player umetnut u lekciju" });
+      }
+    } catch {
+      toast({ title: "Upload nije uspio", description: "Provjerite konekciju", variant: "destructive" });
+    } finally {
+      setAudioUploading(false);
+    }
+  }, [editor, token, toast]);
+
+  const onAudioFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleAudioUpload(file);
+    e.target.value = "";
+  }, [handleAudioUpload]);
+
   const insertCustomBlock = useCallback((type: "arabic-card" | "info-box" | "info-card") => {
     if (!editor) return;
     const nodeMap: Record<string, string> = { "arabic-card": "arabicCard", "info-box": "infoBox", "info-card": "infoCard" };
@@ -889,6 +960,9 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         <MenuButton onClick={() => docInputRef.current?.click()} disabled={docUploading} title="Umetni PDF / DOCX">
           {docUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 text-blue-600" />}
         </MenuButton>
+        <MenuButton onClick={() => audioInputRef.current?.click()} disabled={audioUploading} title="Umetni audio (MP3, M4A...)">
+          {audioUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4 text-purple-600" />}
+        </MenuButton>
         <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
           <Undo2 className="w-4 h-4" />
@@ -900,6 +974,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
       <input ref={docInputRef} type="file" accept=".pdf,.docx" onChange={onDocumentUpload} className="hidden" />
+      <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav" onChange={onAudioFileChange} className="hidden" />
 
       <div className="flex-1 overflow-y-auto wysiwyg-editor-content relative">
         <style>{`
@@ -929,6 +1004,18 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           .wysiwyg-editor-content .ProseMirror img[data-align="left"] { float: left; margin: 0.5rem 1.25rem 0.75rem 0; }
           .wysiwyg-editor-content .ProseMirror img[data-align="right"] { float: right; margin: 0.5rem 0 0.75rem 1.25rem; }
           .wysiwyg-editor-content .ProseMirror img[data-align="center"] { display: block; margin-left: auto; margin-right: auto; }
+          .wysiwyg-editor-content .ProseMirror audio.lesson-audio {
+            display: block;
+            width: 100%;
+            max-width: 480px;
+            margin: 0.75rem 0;
+            border-radius: 999px;
+            outline: none;
+          }
+          .wysiwyg-editor-content .ProseMirror audio.lesson-audio.ProseMirror-selectednode {
+            outline: 3px solid #a855f7;
+            outline-offset: 4px;
+          }
           .wysiwyg-editor-content .ProseMirror mark { background-color: #fef08a; padding: 0.1em 0.2em; border-radius: 0.2em; }
           .wysiwyg-editor-content .ProseMirror hr { border: none; border-top: 2px solid #e5e7eb; margin: 1.5rem 0; }
           .wysiwyg-editor-content .ProseMirror div.arabic-card {
