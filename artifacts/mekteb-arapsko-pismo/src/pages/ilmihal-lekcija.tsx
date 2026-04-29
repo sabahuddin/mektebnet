@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
 
 interface LekcijaKvizPitanje {
@@ -1149,17 +1150,64 @@ export default function IlmihalLekcijaPage() {
       .catch(() => {});
   }, [lekcija]);
 
+  const prefersReducedMotion = () =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const fireConfetti = () => {
+    if (prefersReducedMotion()) return; // a11y: poštujemo OS/browser motion settings
+    const duration = 1500;
+    const end = Date.now() + duration;
+    const colors = ["#10b981", "#14b8a6", "#fbbf24", "#f59e0b", "#a78bfa"];
+    (function frame() {
+      confetti({ particleCount: 4, angle: 60, spread: 55, startVelocity: 50, origin: { x: 0, y: 0.7 }, colors });
+      confetti({ particleCount: 4, angle: 120, spread: 55, startVelocity: 50, origin: { x: 1, y: 0.7 }, colors });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    })();
+    confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, colors });
+  };
+
   const markComplete = async () => {
     if (!lekcija || !user) return;
     try {
-      await apiRequest("POST", "/content/napredak", {
-        contentType: "ilmihal",
-        contentId: lekcija.id,
-        zavrsen: true,
-        bodovi: 10,
-      }, token);
+      const resp = await apiRequest<{ progressDelta?: { newCompletion: boolean; streakDays: number; totalHasanat: number; novelyEarnedBadges?: string[] } }>(
+        "POST", "/content/napredak", {
+          contentType: "ilmihal",
+          contentId: lekcija.id,
+          zavrsen: true,
+          bodovi: 10,
+        }, token
+      );
+      const wasNew = !completed && resp?.progressDelta?.newCompletion === true;
       setCompleted(true);
-      toast({ title: "Bravo! ⭐", description: "Lekcija označena kao završena" });
+      if (wasNew) {
+        fireConfetti();
+        const hasanat = resp.progressDelta?.totalHasanat ?? 0;
+        const streak = resp.progressDelta?.streakDays ?? 0;
+        const newBadges = resp.progressDelta?.novelyEarnedBadges || [];
+        toast({
+          title: "Bravo! ⭐",
+          description: streak > 1
+            ? `+15 hasanata! 🔥 ${streak} dana zaredom · ukupno ${hasanat} hasanata`
+            : `+15 hasanata! Ukupno ${hasanat} hasanata`,
+        });
+        // Toast za svaki novi bedž (sa odgodom da se ne overlapuju)
+        if (newBadges.length > 0) {
+          setTimeout(() => {
+            toast({
+              title: `🏆 Novi bedž osvojen!${newBadges.length > 1 ? ` (${newBadges.length})` : ""}`,
+              description: "Pogledaj svoj profil za detalje",
+            });
+            // Drugi konfeti za bedž — preskoči ako korisnik preferira reduced motion
+            if (!prefersReducedMotion()) {
+              confetti({ particleCount: 120, spread: 90, origin: { y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#fde047"] });
+            }
+          }, 1000);
+        }
+      } else {
+        toast({ title: "Bravo! ⭐", description: "Lekcija označena kao završena" });
+      }
     } catch {}
   };
 

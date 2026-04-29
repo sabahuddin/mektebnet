@@ -3,8 +3,9 @@ import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
+import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { BookOpen, ChevronRight, Search, ChevronDown } from "lucide-react";
+import { BookOpen, ChevronRight, Search, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -14,6 +15,7 @@ interface Lekcija {
   slug: string;
   naslov: string;
   redoslijed: number;
+  zavrseno?: boolean;
 }
 
 export default function IlmihalPage() {
@@ -39,12 +41,13 @@ export default function IlmihalPage() {
     urlNivo ? new Set([1, 2, 3].filter(n => n !== urlNivo)) : new Set()
   );
 
+  const { token } = useAuth();
   useEffect(() => {
-    apiRequest<Lekcija[]>("GET", "/content/ilmihal")
+    apiRequest<Lekcija[]>("GET", "/content/ilmihal", undefined, token || undefined)
       .then(setLekcije)
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [token]);
 
   const displayNivo = (l: Lekcija) => l.nivo;
 
@@ -152,10 +155,15 @@ export default function IlmihalPage() {
                           {items.map((l, i) => (
                             <motion.div key={l.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }}>
                               <Link href={`/ilmihal/${l.slug}`}>
-                                <div className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-muted/40 transition-colors group">
-                                  <div className="flex items-center gap-3">
+                                <div className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors group ${l.zavrseno ? "bg-emerald-50/40 hover:bg-emerald-50/70" : "hover:bg-muted/40"}`}>
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
                                     <span className="text-muted-foreground text-xs font-mono w-6 shrink-0">{i + 1}.</span>
-                                    <span className={`font-semibold text-foreground/80 group-hover:${info.color} group-hover:font-bold transition-all text-sm`}>{l.naslov}</span>
+                                    {l.zavrseno ? (
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    ) : (
+                                      <span className="w-4 h-4 rounded-full border-2 border-border/50 shrink-0" />
+                                    )}
+                                    <span className={`font-semibold transition-all text-sm truncate ${l.zavrseno ? "text-emerald-800" : `text-foreground/80 group-hover:${info.color} group-hover:font-bold`}`}>{l.naslov}</span>
                                   </div>
                                   <ChevronRight className={`w-4 h-4 ${info.color} opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0`} />
                                 </div>

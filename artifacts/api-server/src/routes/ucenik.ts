@@ -14,6 +14,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { BADGE_CATALOG, type EarnedBadge, computeEarnedBadgeIds, mergeBadges } from "../lib/badges.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
@@ -85,12 +86,41 @@ router.get("/profil", async (req, res) => {
       }
     }
 
+    // Bedževi: backfill ako fale (idempotentno) + enrich sa metadata
+    const streakDays = progress?.streakDays || 0;
+    const totalHasanat = progress?.totalHasanat || 0;
+    const earnedIds = computeEarnedBadgeIds({
+      totalHasanat,
+      completedCount: completedLessonIds.length,
+      streakDays,
+      completedByNivo,
+    });
+    const { merged, novelyEarned } = mergeBadges(progress?.badges, earnedIds);
+
+    // Ako su novi bedževi izračunati, ažuriraj DB (bez bloka ako padne)
+    if (novelyEarned.length > 0 && progress) {
+      try {
+        await db.update(studentProgressTable)
+          .set({ badges: merged, updatedAt: new Date() })
+          .where(eq(studentProgressTable.studentId, studentIdStr));
+      } catch {}
+    }
+
+    const bedzevi = merged
+      .map(b => {
+        const meta = BADGE_CATALOG[b.id];
+        if (!meta) return null;
+        return { ...meta, earnedAt: b.earnedAt };
+      })
+      .filter(Boolean);
+
     const napredak = {
       streakDays: progress?.streakDays || 0,
       totalHasanat: progress?.totalHasanat || 0,
       completedCount: completedLessonIds.length,
       lastActivityDate: progress?.lastActivityDate || null,
       poNivou: completedByNivo,
+      bedzevi,
     };
 
     res.json({ user, profil, grupa, muallim, ocjene, prisustvo, kvizovi, napredak });

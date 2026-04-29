@@ -41,39 +41,125 @@ router.get("/djeca", async (req, res) => {
   }
 });
 
-// POST /api/roditelj/link-dijete - request to link to a child
+// POST /api/roditelj/link-dijete - request to link to a child (po username ili ucenikId)
 router.post("/link-dijete", async (req, res) => {
   try {
-    const { ucenikUsername } = req.body;
-    if (!ucenikUsername) {
-      res.status(400).json({ error: "Unesite korisničko ime djeteta" });
+    const { ucenikUsername, ucenikId } = req.body;
+    if (!ucenikUsername && !ucenikId) {
+      res.status(400).json({ error: "Unesite korisničko ime ili odaberite dijete" });
       return;
     }
 
-    const [ucenik] = await db.select().from(usersTable)
-      .where(and(eq(usersTable.username, ucenikUsername.trim().toLowerCase()), eq(usersTable.role, "ucenik")));
+    let ucenik;
+    if (ucenikId) {
+      [ucenik] = await db.select().from(usersTable)
+        .where(and(eq(usersTable.id, parseInt(String(ucenikId))), eq(usersTable.role, "ucenik")));
+    } else {
+      [ucenik] = await db.select().from(usersTable)
+        .where(and(eq(usersTable.username, String(ucenikUsername).trim().toLowerCase()), eq(usersTable.role, "ucenik")));
+    }
 
     if (!ucenik) {
-      res.status(404).json({ error: "Učenik s tim korisničkim imenom nije pronađen" });
+      res.status(404).json({ error: "Učenik nije pronađen" });
       return;
     }
 
-    // Check if already linked
-    const existing = await db.select().from(roditeljUcenikTable)
-      .where(and(eq(roditeljUcenikTable.roditeljId, req.user!.userId), eq(roditeljUcenikTable.ucenikId, ucenik.id)));
-
-    if (existing.length > 0) {
-      res.status(409).json({ error: "Zahtjev već postoji", status: existing[0].status });
-      return;
-    }
-
-    const [nova] = await db.insert(roditeljUcenikTable).values({
+    // Atomic insert with ON CONFLICT — relies on unique index (roditelj_id, ucenik_id)
+    // onConflictDoNothing vraća prazan array ako je duplikat
+    const inserted = await db.insert(roditeljUcenikTable).values({
       roditeljId: req.user!.userId,
       ucenikId: ucenik.id,
       status: "pending",
+    }).onConflictDoNothing({
+      target: [roditeljUcenikTable.roditeljId, roditeljUcenikTable.ucenikId],
     }).returning();
 
-    res.status(201).json({ success: true, request: nova, ucenikName: ucenik.displayName });
+    if (inserted.length === 0) {
+      // Duplikat — pročitaj postojeći zapis za ispravan statusMsg
+      const [existing] = await db.select().from(roditeljUcenikTable)
+        .where(and(eq(roditeljUcenikTable.roditeljId, req.user!.userId), eq(roditeljUcenikTable.ucenikId, ucenik.id)));
+      const statusMsg = !existing
+        ? "Zahtjev je već poslan"
+        : existing.status === "pending"
+        ? "Zahtjev za ovo dijete je već poslan i čeka odobrenje muallima"
+        : existing.status === "approved"
+        ? "Već ste povezani s ovim djetetom"
+        : "Vaš zahtjev za ovo dijete je odbijen";
+      res.status(409).json({ error: statusMsg, status: existing?.status || "pending" });
+      return;
+    }
+
+    res.status(201).json({ success: true, request: inserted[0], ucenikName: ucenik.displayName });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/pretrazi-djecu?q=Amina&grupa=Online
+// Sigurno: vraća samo id, displayName i naziv grupe/muallima — ne otkriva username/lozinke
+router.get("/pretrazi-djecu", async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    const grupaQuery = String(req.query.grupa || "").trim();
+
+    if (q.length < 3) {
+      res.status(400).json({ error: "Unesite najmanje 3 znaka za pretragu" });
+      return;
+    }
+
+    // Pretraga svih učenika
+    const sviUcenici = await db.select({
+      id: usersTable.id,
+      displayName: usersTable.displayName,
+    }).from(usersTable).where(eq(usersTable.role, "ucenik"));
+
+    const qLower = q.toLowerCase();
+    const matches = sviUcenici.filter(u => u.displayName.toLowerCase().includes(qLower));
+
+    if (matches.length === 0) { res.json([]); return; }
+
+    // Učitaj profile + grupe za matching učenike
+    const matchIds = matches.map(m => m.id);
+    const profili = await db.select().from(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, matchIds));
+    const grupaIds = [...new Set(profili.map(p => p.grupaId).filter(Boolean))] as number[];
+    const muallimIds = [...new Set(profili.map(p => p.muallimId).filter(Boolean))] as number[];
+
+    const grupe = grupaIds.length > 0
+      ? await db.select({ id: grupeTable.id, naziv: grupeTable.naziv }).from(grupeTable).where(inArray(grupeTable.id, grupaIds))
+      : [];
+    const grupaMap = Object.fromEntries(grupe.map(g => [g.id, g.naziv]));
+
+    const muallimi = muallimIds.length > 0
+      ? await db.select({ id: usersTable.id, displayName: usersTable.displayName }).from(usersTable).where(inArray(usersTable.id, muallimIds))
+      : [];
+    const muallimMap = Object.fromEntries(muallimi.map(m => [m.id, m.displayName]));
+
+    // Postojeće veze ovog roditelja (da pokažemo status)
+    const postoje = await db.select().from(roditeljUcenikTable)
+      .where(and(eq(roditeljUcenikTable.roditeljId, req.user!.userId), inArray(roditeljUcenikTable.ucenikId, matchIds)));
+    const statusMap = Object.fromEntries(postoje.map(p => [p.ucenikId, p.status]));
+
+    let results = matches.map(u => {
+      const p = profili.find(pp => pp.userId === u.id);
+      return {
+        id: u.id,
+        displayName: u.displayName,
+        grupaNaziv: p?.grupaId ? grupaMap[p.grupaId] || null : null,
+        muallimNaziv: p?.muallimId ? muallimMap[p.muallimId] || null : null,
+        existingStatus: statusMap[u.id] || null,
+      };
+    });
+
+    if (grupaQuery) {
+      const grpLower = grupaQuery.toLowerCase();
+      results = results.filter(r =>
+        (r.grupaNaziv || "").toLowerCase().includes(grpLower) ||
+        (r.muallimNaziv || "").toLowerCase().includes(grpLower)
+      );
+    }
+
+    // Limit na 20 rezultata da ne otkrivamo previše
+    res.json(results.slice(0, 20));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

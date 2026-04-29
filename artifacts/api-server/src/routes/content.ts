@@ -13,6 +13,7 @@ import {
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
+import { BADGE_CATALOG, computeEarnedBadgeIds, mergeBadges } from "../lib/badges.js";
 
 const router = Router();
 
@@ -44,6 +45,40 @@ router.get("/ilmihal", async (req, res) => {
         isPublished: ilmihalLekcijeTable.isPublished,
       }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.redoslijed));
     }
+
+    // Optional: ako je auth, dodaj zavrseno boolean za svaku lekciju
+    // Izvor istine: student_progress.completedLessons (jsonb array). Fallback: korisnik_napredak.
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const jwt = await import("jsonwebtoken");
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
+        const userId = decoded.userId;
+        if (userId) {
+          const completedSet = new Set<number>();
+
+          const [progressRow] = await db.select({ completedLessons: studentProgressTable.completedLessons })
+            .from(studentProgressTable)
+            .where(eq(studentProgressTable.studentId, String(userId)));
+          const lessonsArr = progressRow?.completedLessons as unknown;
+          if (Array.isArray(lessonsArr)) {
+            for (const lid of lessonsArr) if (typeof lid === "number") completedSet.add(lid);
+          }
+
+          // Backfill iz korisnik_napredak (stari sistem) — union sa student_progress
+          const napredakRows = await db.select({ contentId: korisnikNapredakTable.contentId, zavrsen: korisnikNapredakTable.zavrsen })
+            .from(korisnikNapredakTable)
+            .where(and(eq(korisnikNapredakTable.userId, userId), eq(korisnikNapredakTable.contentType, "ilmihal")));
+          for (const r of napredakRows) if (r.zavrsen) completedSet.add(r.contentId);
+
+          const enriched = lekcije.map(l => ({ ...l, zavrseno: completedSet.has(l.id) }));
+          res.json(enriched);
+          return;
+        }
+      } catch {}
+    }
+
     res.json(lekcije);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -172,7 +207,24 @@ router.get("/napredak", requireAuth, async (req, res) => {
   }
 });
 
-// Helper: ažurira student_progress (streak, hasanati, completedLessons) za ilmihal lekcije
+// Helper: izračunaj completedByNivo iz liste completed lesson IDs
+async function computeCompletedByNivo(completedLessonIds: number[]) {
+  const allLekcije = await db.select({ id: ilmihalLekcijeTable.id, nivo: ilmihalLekcijeTable.nivo })
+    .from(ilmihalLekcijeTable);
+  const idToNivo = new Map(allLekcije.map(r => [r.id, r.nivo]));
+  const completedByNivo: Record<number, { gotov: number; ukupno: number }> = {};
+  for (const r of allLekcije) {
+    if (!completedByNivo[r.nivo]) completedByNivo[r.nivo] = { gotov: 0, ukupno: 0 };
+    completedByNivo[r.nivo].ukupno++;
+  }
+  for (const lid of completedLessonIds) {
+    const nv = idToNivo.get(lid);
+    if (nv != null && completedByNivo[nv]) completedByNivo[nv].gotov++;
+  }
+  return completedByNivo;
+}
+
+// Helper: ažurira student_progress (streak, hasanati, completedLessons, badges) za ilmihal lekcije
 async function updateStudentProgressForLesson(userId: number, lessonId: number, hasanatEarned: number) {
   const studentIdStr = String(userId);
   const today = new Date().toISOString().split("T")[0];
@@ -184,15 +236,25 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
     .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
 
   if (!existing) {
+    // Compute badges za prvi insert
+    const completedByNivo = await computeCompletedByNivo([lessonId]);
+    const earnedIds = computeEarnedBadgeIds({
+      totalHasanat: hasanatEarned,
+      completedCount: 1,
+      streakDays: 1,
+      completedByNivo,
+    });
+    const { merged, novelyEarned } = mergeBadges([], earnedIds);
+
     await db.insert(studentProgressTable).values({
       studentId: studentIdStr,
       totalHasanat: hasanatEarned,
       completedLessons: [lessonId],
-      badges: [],
+      badges: merged,
       streakDays: 1,
       lastActivityDate: today,
     });
-    return { newCompletion: true, streakDays: 1, totalHasanat: hasanatEarned };
+    return { newCompletion: true, streakDays: 1, totalHasanat: hasanatEarned, novelyEarnedBadges: novelyEarned };
   }
 
   const rawLessons = existing.completedLessons as unknown;
@@ -208,11 +270,21 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
 
   const totalHasanat = existing.totalHasanat + (newCompletion ? hasanatEarned : 0);
 
+  // Compute badges
+  const completedByNivo = await computeCompletedByNivo(completedLessons);
+  const earnedIds = computeEarnedBadgeIds({
+    totalHasanat,
+    completedCount: completedLessons.length,
+    streakDays,
+    completedByNivo,
+  });
+  const { merged, novelyEarned } = mergeBadges(existing.badges, earnedIds);
+
   await db.update(studentProgressTable)
-    .set({ totalHasanat, completedLessons, streakDays, lastActivityDate: today, updatedAt: new Date() })
+    .set({ totalHasanat, completedLessons, streakDays, lastActivityDate: today, badges: merged, updatedAt: new Date() })
     .where(eq(studentProgressTable.studentId, studentIdStr));
 
-  return { newCompletion, streakDays, totalHasanat };
+  return { newCompletion, streakDays, totalHasanat, novelyEarnedBadges: novelyEarned };
 }
 
 // POST /api/content/napredak - save progress (bodovi only if >= 50%)

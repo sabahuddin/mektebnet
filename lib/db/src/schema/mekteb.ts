@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -62,7 +62,9 @@ export const roditeljUcenikTable = pgTable("roditelj_ucenik", {
   requestedAt: timestamp("requested_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
   approvedBy: integer("approved_by"),
-});
+}, (t) => ({
+  uniqRoditeljUcenik: uniqueIndex("roditelj_ucenik_unique_idx").on(t.roditeljId, t.ucenikId),
+}));
 
 // Subscriptions / licences
 export const pretplateTable = pgTable("pretplate", {

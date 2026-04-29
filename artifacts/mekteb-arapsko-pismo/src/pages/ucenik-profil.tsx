@@ -26,6 +26,7 @@ interface ProfilData {
     completedCount: number;
     lastActivityDate: string | null;
     poNivou: Record<number, { ukupno: number; gotov: number }>;
+    bedzevi?: { id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earnedAt: string }[];
   };
 }
 
@@ -195,6 +196,25 @@ export default function UcenikProfilPage() {
                         );
                       })}
                     </div>
+
+                    {profil.napredak.bedzevi && profil.napredak.bedzevi.length > 0 && (
+                      <div className="mt-5 pt-5 border-t border-primary/15">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Award className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-extrabold text-foreground">Moji bedževi ({profil.napredak.bedzevi.length})</h3>
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                          {profil.napredak.bedzevi.map(b => (
+                            <div key={b.id} className="group relative" title={`${b.naziv} — ${b.opis}`}>
+                              <div className={`aspect-square rounded-2xl bg-gradient-to-br ${b.bojaGradient} flex items-center justify-center shadow-md hover:scale-105 transition-transform cursor-help`}>
+                                <span className="text-2xl filter drop-shadow-sm">{b.ikona}</span>
+                              </div>
+                              <div className="text-[10px] text-center font-bold text-foreground/70 mt-1 truncate">{b.naziv}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
-import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound } from "lucide-react";
+import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, Search, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -171,6 +171,12 @@ export default function RoditeljPage() {
   const [showDodaj, setShowDodaj] = useState(false);
   const [ucenikUsername, setUcenikUsername] = useState("");
   const [isLinking, setIsLinking] = useState(false);
+  const [linkMode, setLinkMode] = useState<"pretraga" | "username">("pretraga");
+  const [searchQ, setSearchQ] = useState("");
+  const [searchGrupa, setSearchGrupa] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: number; displayName: string; grupaNaziv: string | null; muallimNaziv: string | null; existingStatus: string | null }[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [linkingId, setLinkingId] = useState<number | null>(null);
   const [novoIme, setNovoIme] = useState("");
   const [novaLozinka, setNovaLozinka] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -211,6 +217,42 @@ export default function RoditeljPage() {
       toast({ title: "Greška", description: err?.message || "Korisničko ime nije pronađeno", variant: "destructive" });
     } finally {
       setIsLinking(false);
+    }
+  }
+
+  async function pretraziDjecu(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || searchQ.trim().length < 3) {
+      toast({ title: "Unesite najmanje 3 znaka", variant: "destructive" });
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const params = new URLSearchParams({ q: searchQ.trim() });
+      if (searchGrupa.trim()) params.set("grupa", searchGrupa.trim());
+      const res = await apiRequest<typeof searchResults>("GET", `/roditelj/pretrazi-djecu?${params.toString()}`, undefined, token);
+      setSearchResults(res);
+      if (res.length === 0) {
+        toast({ title: "Nema rezultata", description: "Provjerite ime djeteta i pokušajte ponovo." });
+      }
+    } catch (err: any) {
+      toast({ title: "Greška pretrage", description: err?.message || "Pokušajte ponovo", variant: "destructive" });
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  async function posaljiZahtjev(ucenikId: number, displayName: string) {
+    if (!token) return;
+    setLinkingId(ucenikId);
+    try {
+      await apiRequest("POST", "/roditelj/link-dijete", { ucenikId }, token);
+      toast({ title: "Zahtjev poslan!", description: `Muallim će odobriti povezivanje s djetetom ${displayName}.` });
+      setSearchResults(prev => prev.map(r => r.id === ucenikId ? { ...r, existingStatus: "pending" } : r));
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Pokušajte ponovo", variant: "destructive" });
+    } finally {
+      setLinkingId(null);
     }
   }
 
@@ -364,25 +406,111 @@ export default function RoditeljPage() {
         )}
 
         {showLink && (
-          <motion.form initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            onSubmit={linkDijete}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="mt-4 bg-white border border-border/50 rounded-2xl p-5">
             <h3 className="font-extrabold text-foreground mb-3 flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-primary" /> Poveži dijete
+              <Link2 className="w-5 h-5 text-primary" /> Poveži se s djetetom
             </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Unesite korisničko ime djeteta (dobijate ga od muallima). Muallim mora odobriti zahtjev.
-            </p>
-            <div className="flex gap-2">
-              <input type="text" required placeholder="npr. amina.1234" value={ucenikUsername}
-                onChange={e => setUcenikUsername(e.target.value)}
-                className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-              <Button type="submit" disabled={isLinking} className="rounded-xl flex items-center gap-2 shrink-0">
-                {isLinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
-                Poveži
-              </Button>
+
+            {/* Mode toggle */}
+            <div className="flex gap-2 mb-4 bg-muted/30 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => { setLinkMode("pretraga"); setSearchResults([]); }}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                  linkMode === "pretraga" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Search className="w-4 h-4" /> Pretraga po imenu
+              </button>
+              <button
+                type="button"
+                onClick={() => setLinkMode("username")}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                  linkMode === "username" ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <KeyRound className="w-4 h-4" /> Korisničko ime
+              </button>
             </div>
-          </motion.form>
+
+            {linkMode === "pretraga" ? (
+              <>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Pretražite dijete po imenu. Možete dodati i mekteb/muallima za precizniju pretragu. Muallim mora odobriti zahtjev prije nego što vidite podatke.
+                </p>
+                <form onSubmit={pretraziDjecu} className="flex flex-col sm:flex-row gap-2 mb-4">
+                  <input type="text" required minLength={3} placeholder="Ime i prezime djeteta (min. 3 znaka)" value={searchQ}
+                    onChange={e => setSearchQ(e.target.value)}
+                    className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <input type="text" placeholder="Mekteb ili muallim (opcionalno)" value={searchGrupa}
+                    onChange={e => setSearchGrupa(e.target.value)}
+                    className="sm:w-56 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <Button type="submit" disabled={isSearching} className="rounded-xl flex items-center gap-2 shrink-0">
+                    {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    Pretraži
+                  </Button>
+                </form>
+
+                {searchResults.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Rezultati ({searchResults.length})</div>
+                    {searchResults.map(r => (
+                      <div key={r.id} className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl border border-border/40">
+                        <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-base font-extrabold text-primary">{r.displayName[0]}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-foreground truncate">{r.displayName}</div>
+                          {(r.grupaNaziv || r.muallimNaziv) && (
+                            <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                              {r.grupaNaziv && <><GraduationCap className="w-3 h-3" />{r.grupaNaziv}</>}
+                              {r.muallimNaziv && <span>· muallim {r.muallimNaziv}</span>}
+                            </div>
+                          )}
+                        </div>
+                        {r.existingStatus === "pending" && (
+                          <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">Čeka odobrenje</span>
+                        )}
+                        {r.existingStatus === "approved" && (
+                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg">Povezano</span>
+                        )}
+                        {r.existingStatus === "rejected" && (
+                          <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">Odbijeno</span>
+                        )}
+                        {!r.existingStatus && (
+                          <Button
+                            size="sm"
+                            disabled={linkingId === r.id}
+                            onClick={() => posaljiZahtjev(r.id, r.displayName)}
+                            className="rounded-xl flex items-center gap-2 shrink-0"
+                          >
+                            {linkingId === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                            Pošalji zahtjev
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <form onSubmit={linkDijete}>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Unesite korisničko ime djeteta (dobili ste ga od muallima). Muallim mora odobriti zahtjev.
+                </p>
+                <div className="flex gap-2">
+                  <input type="text" required placeholder="npr. amina.1234" value={ucenikUsername}
+                    onChange={e => setUcenikUsername(e.target.value)}
+                    className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  <Button type="submit" disabled={isLinking} className="rounded-xl flex items-center gap-2 shrink-0">
+                    {isLinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                    Poveži
+                  </Button>
+                </div>
+              </form>
+            )}
+          </motion.div>
         )}
       </div>
     </Layout>
