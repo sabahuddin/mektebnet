@@ -11,6 +11,7 @@ import {
   kvizRezultatiTable,
   studentProgressTable,
   ilmihalLekcijeTable,
+  zadaceTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -151,6 +152,23 @@ router.get("/plan-lekcija", async (req, res) => {
       .orderBy(asc(planLekcijaTable.datum), asc(planLekcijaTable.redoslijed));
 
     res.json(lekcije);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/ucenik/zadace — student sees active homework for their group
+router.get("/zadace", async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
+    if (!profil?.grupaId) { res.json([]); return; }
+
+    const zadace = await db.select().from(zadaceTable)
+      .where(and(eq(zadaceTable.grupaId, profil.grupaId), eq(zadaceTable.isActive, true)))
+      .orderBy(desc(zadaceTable.createdAt));
+
+    res.json(zadace);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

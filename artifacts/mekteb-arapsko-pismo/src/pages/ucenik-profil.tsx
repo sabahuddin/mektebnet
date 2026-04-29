@@ -7,7 +7,8 @@ import { useLocation } from "wouter";
 import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
-  Flame, Trophy, Sparkles, Target, Footprints, Settings, Volume2, VolumeX
+  Flame, Trophy, Sparkles, Target, Footprints, Settings, Volume2, VolumeX,
+  FileText, Clock, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,6 +81,16 @@ interface PlanLekcija {
   id: number; datum: string; lekcijaNaslov: string; lekcijaTip: string;
 }
 
+interface Zadaca {
+  id: number;
+  naslov: string;
+  opis?: string | null;
+  rokDo?: string | null;
+  lekcijaNaslov?: string | null;
+  lekcijaTip?: string | null;
+  createdAt: string;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   prisutan: "bg-emerald-100 text-emerald-700",
   odsutan: "bg-red-100 text-red-700",
@@ -102,10 +113,11 @@ export default function UcenikProfilPage() {
   const [profil, setProfil] = useState<ProfilData | null>(null);
   const [kalendar, setKalendar] = useState<KalendarEntry[]>([]);
   const [planLekcija, setPlanLekcija] = useState<PlanLekcija[]>([]);
+  const [zadace, setZadace] = useState<Zadaca[]>([]);
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "kvizovi" | "postavke">("moj-put");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "postavke">("moj-put");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
   const reducedMotion = prefersReducedMotion();
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
@@ -119,9 +131,10 @@ export default function UcenikProfilPage() {
         return Promise.all([
           apiRequest<KalendarEntry[]>("GET", "/ucenik/kalendar", undefined, token).catch(() => []),
           apiRequest<PlanLekcija[]>("GET", "/ucenik/plan-lekcija", undefined, token).catch(() => []),
+          apiRequest<Zadaca[]>("GET", "/ucenik/zadace", undefined, token).catch(() => []),
         ]);
       })
-      .then(([k, p]) => { setKalendar(k); setPlanLekcija(p); })
+      .then(([k, p, z]) => { setKalendar(k); setPlanLekcija(p); setZadace(z); })
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [token]);
