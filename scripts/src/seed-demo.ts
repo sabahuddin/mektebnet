@@ -4,6 +4,8 @@ import {
   usersTable,
   muallimProfiliTable,
   ucenikProfiliTable,
+  roditeljProfiliTable,
+  roditeljUcenikTable,
   grupeTable,
   mektebiTable,
   priustvoTable,
@@ -94,7 +96,7 @@ function slugify(name: string): string {
     .replace(/[^a-z0-9]/g, ".");
 }
 
-async function seedDemo() {
+export async function seedDemo() {
   console.log("🌱 Seeding demo data...");
   console.log("🧹 Brišem prethodne demo podatke (ako postoje) da izbjegnem duplikate...");
   await clearDemoData(false);
@@ -255,10 +257,36 @@ async function seedDemo() {
         naslov: `${DEMO_NOTE_TAG} ${z.naslov}`,
         opis: z.opis,
         rokDo: fmtDate(rok),
-        lekcijaNaziv: rand(naslovi),
+        lekcijaNaslov: rand(naslovi),
         lekcijaTip: "ilmihal",
       });
     }
+  }
+
+  // 8.5) Demo roditelji — povezani sa po nekoliko demo učenika
+  const demoRoditelji = [
+    { username: `${DEMO_PREFIX}roditelj.amir`, displayName: "Amir Hadžić (roditelj)", linkSlugs: ["demo.amina.hasic", "demo.ali.bektic"] },
+    { username: `${DEMO_PREFIX}roditelj.fatma`, displayName: "Fatma Selimović (roditelj)", linkSlugs: ["demo.faris.tahirovic", "demo.lamija.beganovic"] },
+  ];
+  for (const r of demoRoditelji) {
+    let [u] = await db.select().from(usersTable).where(eq(usersTable.username, r.username));
+    if (!u) {
+      const hash = await bcrypt.hash("demo123", 10);
+      [u] = await db.insert(usersTable).values({
+        username: r.username,
+        displayName: r.displayName,
+        passwordHash: hash,
+        role: "roditelj",
+      }).returning();
+      await db.insert(roditeljProfiliTable).values({ userId: u.id });
+    }
+    for (const slug of r.linkSlugs) {
+      const [child] = await db.select().from(usersTable).where(eq(usersTable.username, slug));
+      if (child) {
+        await db.insert(roditeljUcenikTable).values({ roditeljId: u.id, ucenikId: child.id }).onConflictDoNothing();
+      }
+    }
+    console.log(`✅ Demo roditelj: ${r.username} / demo123 (${r.linkSlugs.length} djece)`);
   }
 
   // 9) Kviz rezultati i student_progress za sve učenike
@@ -314,11 +342,12 @@ async function seedDemo() {
   console.log("  Muallim:  demo.muallim / demo123");
   console.log("  Učenik:   demo.amina.hasic / demo123  (i ostali)");
   console.log("\nDa obrišeš demo podatke, pokreni: pnpm --filter @workspace/scripts run clear-demo");
-
-  process.exit(0);
 }
 
-seedDemo().catch(err => {
-  console.error("❌ Greška:", err);
-  process.exit(1);
-});
+const isDirectRun = import.meta.url === `file://${process.argv[1]}`;
+if (isDirectRun) {
+  seedDemo().catch(err => {
+    console.error("❌ Greška:", err);
+    process.exit(1);
+  });
+}

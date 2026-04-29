@@ -9,6 +9,7 @@
     "seed-admin": "tsx ./src/seed-admin.ts",
     "seed-demo": "tsx ./src/seed-demo.ts",
     "clear-demo": "tsx ./src/clear-demo.ts",
+    "prod-reset": "tsx ./src/prod-reset.ts",
     "import-content": "tsx ./src/import-content.ts",
     "fix-image-paths": "tsx ./src/fix-image-paths.ts",
     "fix-lesson-order": "tsx ./src/fix-lesson-order.ts",

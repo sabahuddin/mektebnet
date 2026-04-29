@@ -29,6 +29,8 @@ import {
   certifikatiTable,
   prilozi,
   rjecnikTable,
+  studentProgressTable,
+  exerciseSessionsTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -1446,6 +1448,8 @@ router.delete("/korisnik/:id", async (req, res) => {
 
       await tx.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, userId));
       await tx.delete(korisnikNapredakTable).where(eq(korisnikNapredakTable.userId, userId));
+      try { await tx.delete(studentProgressTable).where(eq(studentProgressTable.studentId, String(userId))); } catch {}
+      try { await tx.delete(exerciseSessionsTable).where(eq(exerciseSessionsTable.studentId, String(userId))); } catch {}
       await tx.delete(certifikatiTable).where(eq(certifikatiTable.ucenikId, userId));
       await tx.delete(priustvoTable).where(eq(priustvoTable.ucenikId, userId));
       await tx.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, userId));
@@ -1483,7 +1487,8 @@ router.delete("/korisnik/:id", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("Delete user error:", err);
-    res.status(500).json({ error: "Greška pri brisanju korisnika" });
+    const detail = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: "Greška pri brisanju korisnika", detail });
   }
 });
 
