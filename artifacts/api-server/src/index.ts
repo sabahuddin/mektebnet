@@ -52,7 +52,72 @@ async function runMigrations() {
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS external_url TEXT;`);
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name DROP NOT NULL;`);
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name SET DEFAULT '';`);
-    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock columns ready");
+
+    // Tabele koje su dodane u shemu, ali nisu u setup.ts — kreiraj ih idempotentno
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS kviz_rezultati (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        kviz_id INTEGER NOT NULL,
+        kviz_naslov TEXT NOT NULL DEFAULT '',
+        tacni_odgovori INTEGER NOT NULL DEFAULT 0,
+        ukupno_pitanja INTEGER NOT NULL DEFAULT 0,
+        procenat INTEGER NOT NULL DEFAULT 0,
+        bodovi INTEGER NOT NULL DEFAULT 0,
+        completed_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS posjete (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        path VARCHAR(500) NOT NULL DEFAULT '/',
+        ip VARCHAR(100),
+        country VARCHAR(100),
+        city VARCHAR(200),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS mekteb_kalendar (
+        id SERIAL PRIMARY KEY,
+        grupa_id INTEGER NOT NULL,
+        muallim_id INTEGER NOT NULL,
+        datum VARCHAR(20) NOT NULL,
+        tip VARCHAR(20) NOT NULL DEFAULT 'mekteb',
+        opis TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS plan_lekcija (
+        id SERIAL PRIMARY KEY,
+        grupa_id INTEGER NOT NULL,
+        muallim_id INTEGER NOT NULL,
+        datum VARCHAR(20) NOT NULL,
+        lekcija_naslov VARCHAR(300) NOT NULL,
+        lekcija_tip VARCHAR(50) NOT NULL DEFAULT 'ilmihal',
+        redoslijed INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS zadace (
+        id SERIAL PRIMARY KEY,
+        grupa_id INTEGER NOT NULL,
+        muallim_id INTEGER NOT NULL,
+        naslov VARCHAR(300) NOT NULL,
+        opis TEXT,
+        rok_do VARCHAR(20),
+        lekcija_naslov VARCHAR(300),
+        lekcija_tip VARCHAR(50),
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock + kviz_rezultati/posjete/mekteb_kalendar/plan_lekcija/zadace ready");
 
     // BOOTSTRAP: if ilmihal_lekcije is completely empty (fresh prod DB),
     // import the full dataset (~232 lessons) + rjecnik (~314 entries).
