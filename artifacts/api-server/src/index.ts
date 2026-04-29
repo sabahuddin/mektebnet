@@ -57,6 +57,9 @@ async function runMigrations() {
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS lekcija_naziv VARCHAR(200);`);
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS kviz_pitanja JSONB;`);
 
+    // Unique index potreban za ON CONFLICT u /api/roditelj/link-dijete
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS roditelj_ucenik_unique_idx ON roditelj_ucenik (roditelj_id, ucenik_id);`);
+
     // Tabele koje su dodane u shemu, ali nisu u setup.ts — kreiraj ih idempotentno
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS kviz_rezultati (
