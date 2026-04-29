@@ -1131,43 +1131,58 @@ router.put("/kvizovi/:id", async (req, res) => {
 });
 
 // GET /api/admin/analytics — comprehensive analytics for admin dashboard
+// Resilient: every query is isolated; if one fails, others still return.
 router.get("/analytics", async (req, res) => {
-  try {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const errors: Record<string, string> = {};
+  const safe = async <T>(name: string, fn: () => Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await fn();
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      errors[name] = msg;
+      console.error(`Analytics[${name}] error:`, msg);
+      return fallback;
+    }
+  };
 
-    const registracijePoMjesecu = await db.select({
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const registracijePoMjesecu = await safe("registracijePoMjesecu", () =>
+    db.select({
       datum: sql<string>`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`,
       broj: sql<number>`count(*)::int`,
     }).from(usersTable)
       .where(gte(usersTable.createdAt, thirtyDaysAgo))
       .groupBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`)
-      .orderBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`);
+      .orderBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`),
+    [] as { datum: string; broj: number }[],
+  );
 
-    let posjetePoDrzavi: any[] = [];
-    let aktivnostPosmjenama: any[] = [];
-    try {
-      posjetePoDrzavi = await db.select({
-        country: posjeteTable.country,
-        broj: sql<number>`count(*)::int`,
-      }).from(posjeteTable)
-        .where(and(gte(posjeteTable.createdAt, thirtyDaysAgo), isNotNull(posjeteTable.country)))
-        .groupBy(posjeteTable.country)
-        .orderBy(sql`count(*) desc`)
-        .limit(20);
+  const posjetePoDrzavi = await safe("posjetePoDrzavi", () =>
+    db.select({
+      country: posjeteTable.country,
+      broj: sql<number>`count(*)::int`,
+    }).from(posjeteTable)
+      .where(and(gte(posjeteTable.createdAt, thirtyDaysAgo), isNotNull(posjeteTable.country)))
+      .groupBy(posjeteTable.country)
+      .orderBy(sql`count(*) desc`)
+      .limit(20),
+    [] as { country: string | null; broj: number }[],
+  );
 
-      aktivnostPosmjenama = await db.select({
-        datum: sql<string>`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`,
-        broj: sql<number>`count(*)::int`,
-      }).from(posjeteTable)
-        .where(gte(posjeteTable.createdAt, thirtyDaysAgo))
-        .groupBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`)
-        .orderBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`);
-    } catch (e) {
-      console.warn("posjete table not available:", (e as any).message);
-    }
+  const aktivnostPosmjenama = await safe("aktivnostPosmjenama", () =>
+    db.select({
+      datum: sql<string>`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`,
+      broj: sql<number>`count(*)::int`,
+    }).from(posjeteTable)
+      .where(gte(posjeteTable.createdAt, thirtyDaysAgo))
+      .groupBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`),
+    [] as { datum: string; broj: number }[],
+  );
 
-    const kvizRezultati = await db.select({
+  const kvizRezultati = await safe("kvizRezultati", () =>
+    db.select({
       kvizNaslov: kvizRezultatiTable.kvizNaslov,
       pokusaji: sql<number>`count(*)::int`,
       prosjecniProcenat: sql<number>`round(avg(${kvizRezultatiTable.procenat}))::int`,
@@ -1175,16 +1190,22 @@ router.get("/analytics", async (req, res) => {
       najvisiBodovi: sql<number>`max(${kvizRezultatiTable.procenat})::int`,
     }).from(kvizRezultatiTable)
       .groupBy(kvizRezultatiTable.kvizNaslov)
-      .orderBy(sql`count(*) desc`);
+      .orderBy(sql`count(*) desc`),
+    [] as { kvizNaslov: string; pokusaji: number; prosjecniProcenat: number; prosjecniBodovi: number; najvisiBodovi: number }[],
+  );
 
-    const korisnikStats = await db.select({
+  const korisnikStats = await safe("korisnikStats", () =>
+    db.select({
       role: usersTable.role,
       aktivni: sql<number>`count(*) filter (where ${usersTable.isActive} = true)::int`,
       neaktivni: sql<number>`count(*) filter (where ${usersTable.isActive} = false)::int`,
     }).from(usersTable)
-      .groupBy(usersTable.role);
+      .groupBy(usersTable.role),
+    [] as { role: string; aktivni: number; neaktivni: number }[],
+  );
 
-    const nedavniRezultati = await db.select({
+  const nedavniRezultati = await safe("nedavniRezultati", () =>
+    db.select({
       id: kvizRezultatiTable.id,
       userId: kvizRezultatiTable.userId,
       kvizNaslov: kvizRezultatiTable.kvizNaslov,
@@ -1198,20 +1219,30 @@ router.get("/analytics", async (req, res) => {
     }).from(kvizRezultatiTable)
       .leftJoin(usersTable, eq(kvizRezultatiTable.userId, usersTable.id))
       .orderBy(desc(kvizRezultatiTable.completedAt))
-      .limit(50);
+      .limit(50),
+    [] as {
+      id: number;
+      userId: number;
+      kvizNaslov: string;
+      tacniOdgovori: number;
+      ukupnoPitanja: number;
+      procenat: number;
+      bodovi: number;
+      completedAt: Date | null;
+      username: string | null;
+      displayName: string | null;
+    }[],
+  );
 
-    res.json({
-      registracijePoMjesecu,
-      posjetePoDrzavi,
-      kvizRezultati,
-      aktivnostPosmjenama,
-      korisnikStats,
-      nedavniRezultati,
-    });
-  } catch (err) {
-    console.error("Analytics error:", err);
-    res.status(500).json({ error: "Greška servera" });
-  }
+  res.json({
+    registracijePoMjesecu,
+    posjetePoDrzavi,
+    kvizRezultati,
+    aktivnostPosmjenama,
+    korisnikStats,
+    nedavniRezultati,
+    ...(Object.keys(errors).length > 0 ? { _errors: errors } : {}),
+  });
 });
 
 // GET /api/admin/kviz-statistike — quiz-centric stats: all quizzes with attempt counts and accuracy
