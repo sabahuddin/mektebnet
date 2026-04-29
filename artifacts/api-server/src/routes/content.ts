@@ -13,7 +13,7 @@ import {
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
-import { BADGE_CATALOG, computeEarnedBadgeIds, mergeBadges } from "../lib/badges.js";
+import { evaluateAndPersistBadges } from "../lib/badges.js";
 
 const router = Router();
 
@@ -207,24 +207,8 @@ router.get("/napredak", requireAuth, async (req, res) => {
   }
 });
 
-// Helper: izračunaj completedByNivo iz liste completed lesson IDs
-async function computeCompletedByNivo(completedLessonIds: number[]) {
-  const allLekcije = await db.select({ id: ilmihalLekcijeTable.id, nivo: ilmihalLekcijeTable.nivo })
-    .from(ilmihalLekcijeTable);
-  const idToNivo = new Map(allLekcije.map(r => [r.id, r.nivo]));
-  const completedByNivo: Record<number, { gotov: number; ukupno: number }> = {};
-  for (const r of allLekcije) {
-    if (!completedByNivo[r.nivo]) completedByNivo[r.nivo] = { gotov: 0, ukupno: 0 };
-    completedByNivo[r.nivo].ukupno++;
-  }
-  for (const lid of completedLessonIds) {
-    const nv = idToNivo.get(lid);
-    if (nv != null && completedByNivo[nv]) completedByNivo[nv].gotov++;
-  }
-  return completedByNivo;
-}
-
-// Helper: ažurira student_progress (streak, hasanati, completedLessons, badges) za ilmihal lekcije
+// Helper: ažurira student_progress (streak, hasanati, completedLessons, badges) za ilmihal lekcije.
+// Bedževi se evaluiraju centralno preko `evaluateAndPersistBadges` (uključuje i kviz-bedževe).
 async function updateStudentProgressForLesson(userId: number, lessonId: number, hasanatEarned: number) {
   const studentIdStr = String(userId);
   const today = new Date().toISOString().split("T")[0];
@@ -235,56 +219,45 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
   const [existing] = await db.select().from(studentProgressTable)
     .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
 
-  if (!existing) {
-    // Compute badges za prvi insert
-    const completedByNivo = await computeCompletedByNivo([lessonId]);
-    const earnedIds = computeEarnedBadgeIds({
-      totalHasanat: hasanatEarned,
-      completedCount: 1,
-      streakDays: 1,
-      completedByNivo,
-    });
-    const { merged, novelyEarned } = mergeBadges([], earnedIds);
+  let newCompletion: boolean;
+  let streakDays: number;
+  let totalHasanat: number;
 
+  if (!existing) {
     await db.insert(studentProgressTable).values({
       studentId: studentIdStr,
       totalHasanat: hasanatEarned,
       completedLessons: [lessonId],
-      badges: merged,
+      badges: [],
       streakDays: 1,
       lastActivityDate: today,
     });
-    return { newCompletion: true, streakDays: 1, totalHasanat: hasanatEarned, novelyEarnedBadges: novelyEarned };
+    newCompletion = true;
+    streakDays = 1;
+    totalHasanat = hasanatEarned;
+  } else {
+    const rawLessons = existing.completedLessons as unknown;
+    const completedLessons: number[] = Array.isArray(rawLessons) ? [...rawLessons as number[]] : [];
+    newCompletion = !completedLessons.includes(lessonId);
+    if (newCompletion) completedLessons.push(lessonId);
+
+    streakDays = existing.streakDays;
+    if (existing.lastActivityDate !== today) {
+      if (existing.lastActivityDate === yesterdayStr) streakDays += 1;
+      else streakDays = 1;
+    }
+
+    totalHasanat = existing.totalHasanat + (newCompletion ? hasanatEarned : 0);
+
+    await db.update(studentProgressTable)
+      .set({ totalHasanat, completedLessons, streakDays, lastActivityDate: today, updatedAt: new Date() })
+      .where(eq(studentProgressTable.studentId, studentIdStr));
   }
 
-  const rawLessons = existing.completedLessons as unknown;
-  const completedLessons: number[] = Array.isArray(rawLessons) ? [...rawLessons as number[]] : [];
-  const newCompletion = !completedLessons.includes(lessonId);
-  if (newCompletion) completedLessons.push(lessonId);
+  const novelyEarned = await evaluateAndPersistBadges(userId);
+  const novelyEarnedBadges = novelyEarned.map(b => b.id);
 
-  let streakDays = existing.streakDays;
-  if (existing.lastActivityDate !== today) {
-    if (existing.lastActivityDate === yesterdayStr) streakDays += 1;
-    else streakDays = 1;
-  }
-
-  const totalHasanat = existing.totalHasanat + (newCompletion ? hasanatEarned : 0);
-
-  // Compute badges
-  const completedByNivo = await computeCompletedByNivo(completedLessons);
-  const earnedIds = computeEarnedBadgeIds({
-    totalHasanat,
-    completedCount: completedLessons.length,
-    streakDays,
-    completedByNivo,
-  });
-  const { merged, novelyEarned } = mergeBadges(existing.badges, earnedIds);
-
-  await db.update(studentProgressTable)
-    .set({ totalHasanat, completedLessons, streakDays, lastActivityDate: today, badges: merged, updatedAt: new Date() })
-    .where(eq(studentProgressTable.studentId, studentIdStr));
-
-  return { newCompletion, streakDays, totalHasanat, novelyEarnedBadges: novelyEarned };
+  return { newCompletion, streakDays, totalHasanat, novelyEarnedBadges, newBadges: novelyEarned };
 }
 
 // POST /api/content/napredak - save progress (bodovi only if >= 50%)
@@ -381,7 +354,38 @@ router.post("/kviz-rezultat", requireAuth, async (req, res) => {
       bodovi,
     }).returning();
 
-    res.status(201).json(rezultat);
+    // Dodaj hasanate u student_progress i evaluiraj nove bedževe (uključujući kviz-bedževe).
+    let newBadges: Awaited<ReturnType<typeof evaluateAndPersistBadges>> = [];
+    let totalHasanat = 0;
+    try {
+      const studentIdStr = String(userId);
+      const [existing] = await db.select().from(studentProgressTable)
+        .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
+
+      if (!existing) {
+        await db.insert(studentProgressTable).values({
+          studentId: studentIdStr,
+          totalHasanat: bodovi,
+          completedLessons: [],
+          badges: [],
+          streakDays: 0,
+        });
+        totalHasanat = bodovi;
+      } else if (bodovi > 0) {
+        totalHasanat = existing.totalHasanat + bodovi;
+        await db.update(studentProgressTable)
+          .set({ totalHasanat, updatedAt: new Date() })
+          .where(eq(studentProgressTable.studentId, studentIdStr));
+      } else {
+        totalHasanat = existing.totalHasanat;
+      }
+
+      newBadges = await evaluateAndPersistBadges(userId);
+    } catch (badgeErr) {
+      // Bedž evaluacija ne smije srušiti glavni odgovor
+    }
+
+    res.status(201).json({ ...rezultat, hasanatEarned: bodovi, totalHasanat, newBadges });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

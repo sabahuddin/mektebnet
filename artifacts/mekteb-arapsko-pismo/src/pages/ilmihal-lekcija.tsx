@@ -1171,7 +1171,7 @@ export default function IlmihalLekcijaPage() {
   const markComplete = async () => {
     if (!lekcija || !user) return;
     try {
-      const resp = await apiRequest<{ progressDelta?: { newCompletion: boolean; streakDays: number; totalHasanat: number; novelyEarnedBadges?: string[] } }>(
+      const resp = await apiRequest<{ progressDelta?: { newCompletion: boolean; streakDays: number; totalHasanat: number; novelyEarnedBadges?: string[]; newBadges?: { id: string; naziv: string; opis: string; ikona: string }[] } }>(
         "POST", "/content/napredak", {
           contentType: "ilmihal",
           contentId: lekcija.id,
@@ -1202,7 +1202,7 @@ export default function IlmihalLekcijaPage() {
         fireConfetti();
         const hasanat = resp.progressDelta?.totalHasanat ?? 0;
         const streak = resp.progressDelta?.streakDays ?? 0;
-        const newBadges = resp.progressDelta?.novelyEarnedBadges || [];
+        const newBadges = resp.progressDelta?.newBadges || [];
         toast({
           title: "Bravo! ⭐",
           description: streak > 1
@@ -1212,9 +1212,10 @@ export default function IlmihalLekcijaPage() {
         // Toast za svaki novi bedž (sa odgodom da se ne overlapuju)
         if (newBadges.length > 0) {
           setTimeout(() => {
+            const first = newBadges[0];
             toast({
-              title: `🏆 Novi bedž osvojen!${newBadges.length > 1 ? ` (${newBadges.length})` : ""}`,
-              description: "Pogledaj svoj profil za detalje",
+              title: `🎉 Osvojio si bedž!${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
+              description: `${first.ikona} ${first.naziv} — ${first.opis}`,
             });
             // Drugi konfeti za bedž — preskoči ako korisnik preferira reduced motion
             if (!prefersReducedMotion()) {

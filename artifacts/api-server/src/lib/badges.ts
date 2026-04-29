@@ -1,5 +1,14 @@
 // Katalog bedževa za učenike. Auto-dodjela na osnovu napretka.
 // Bedževi se čuvaju u student_progress.badges kao array { id, earnedAt }.
+// Evaluacija je idempotentna — može se zvati pri svakom updateu napretka.
+
+import { db } from "@workspace/db";
+import {
+  studentProgressTable,
+  ilmihalLekcijeTable,
+  kvizRezultatiTable,
+} from "@workspace/db/schema";
+import { eq, and, gte } from "drizzle-orm";
 
 export interface BadgeMeta {
   id: string;
@@ -27,6 +36,14 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
     bojaGradient: "from-blue-400 to-indigo-500",
     uslov: "10 lekcija",
   },
+  lekcije_30: {
+    id: "lekcije_30",
+    naziv: "Vrijedni hafiz znanja",
+    opis: "Završio si 30 lekcija",
+    ikona: "📖",
+    bojaGradient: "from-indigo-400 to-purple-500",
+    uslov: "30 lekcija",
+  },
   lekcije_50: {
     id: "lekcije_50",
     naziv: "Posvećenik znanja",
@@ -37,7 +54,7 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
   },
   lekcije_100: {
     id: "lekcije_100",
-    naziv: "Mještar ilmihala",
+    naziv: "Mali huffaz",
     opis: "Završio si 100 lekcija",
     ikona: "🏆",
     bojaGradient: "from-yellow-400 to-orange-500",
@@ -83,6 +100,30 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
     bojaGradient: "from-yellow-500 to-amber-700",
     uslov: "1000 hasanata",
   },
+  prvi_kviz: {
+    id: "prvi_kviz",
+    naziv: "Prvi kviz",
+    opis: "Riješio si svoj prvi kviz",
+    ikona: "🧠",
+    bojaGradient: "from-sky-400 to-cyan-500",
+    uslov: "1 kviz",
+  },
+  kvizovi_10: {
+    id: "kvizovi_10",
+    naziv: "10 kvizova",
+    opis: "Riješio si 10 kvizova",
+    ikona: "🎯",
+    bojaGradient: "from-fuchsia-400 to-pink-500",
+    uslov: "10 kvizova",
+  },
+  kviz_majstor: {
+    id: "kviz_majstor",
+    naziv: "Kviz majstor",
+    opis: "10 kvizova sa rezultatom 80% ili više",
+    ikona: "🥇",
+    bojaGradient: "from-amber-500 to-orange-600",
+    uslov: "10 kvizova ≥ 80%",
+  },
   nivo_1_complete: {
     id: "nivo_1_complete",
     naziv: "Svršeni početnik",
@@ -119,6 +160,8 @@ export interface ProgressSnapshot {
   completedCount: number;
   streakDays: number;
   completedByNivo: Record<number, { gotov: number; ukupno: number }>;
+  quizCount: number;
+  quizPassedCount: number; // procenat >= 80
 }
 
 /**
@@ -130,6 +173,7 @@ export function computeEarnedBadgeIds(snap: ProgressSnapshot): string[] {
 
   if (snap.completedCount >= 1) ids.push("prvi_korak");
   if (snap.completedCount >= 10) ids.push("lekcije_10");
+  if (snap.completedCount >= 30) ids.push("lekcije_30");
   if (snap.completedCount >= 50) ids.push("lekcije_50");
   if (snap.completedCount >= 100) ids.push("lekcije_100");
 
@@ -139,6 +183,10 @@ export function computeEarnedBadgeIds(snap: ProgressSnapshot): string[] {
 
   if (snap.totalHasanat >= 500) ids.push("hasanati_500");
   if (snap.totalHasanat >= 1000) ids.push("hasanati_1000");
+
+  if (snap.quizCount >= 1) ids.push("prvi_kviz");
+  if (snap.quizCount >= 10) ids.push("kvizovi_10");
+  if (snap.quizPassedCount >= 10) ids.push("kviz_majstor");
 
   for (const nivo of [1, 2, 3]) {
     const n = snap.completedByNivo[nivo];
@@ -173,4 +221,80 @@ export function mergeBadges(
   }
 
   return { merged: arr, novelyEarned };
+}
+
+/**
+ * Izvuci snapshot napretka za korisnika iz baze i vrati ga u obliku pogodnom za computeEarnedBadgeIds.
+ */
+export async function buildProgressSnapshot(userId: number, overrides?: { totalHasanatOverride?: number }): Promise<ProgressSnapshot> {
+  const studentIdStr = String(userId);
+  const [progress] = await db.select().from(studentProgressTable)
+    .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
+
+  const completedLessonIds = (progress?.completedLessons as number[] | undefined) || [];
+  const totalHasanat = overrides?.totalHasanatOverride ?? (progress?.totalHasanat || 0);
+  const streakDays = progress?.streakDays || 0;
+
+  const allLekcije = await db.select({ id: ilmihalLekcijeTable.id, nivo: ilmihalLekcijeTable.nivo })
+    .from(ilmihalLekcijeTable);
+  const idToNivo = new Map(allLekcije.map(r => [r.id, r.nivo]));
+  const completedByNivo: Record<number, { gotov: number; ukupno: number }> = {};
+  for (const r of allLekcije) {
+    if (!completedByNivo[r.nivo]) completedByNivo[r.nivo] = { gotov: 0, ukupno: 0 };
+    completedByNivo[r.nivo].ukupno++;
+  }
+  for (const lid of completedLessonIds) {
+    const nv = idToNivo.get(lid);
+    if (nv != null && completedByNivo[nv]) completedByNivo[nv].gotov++;
+  }
+
+  const quizRows = await db.select({ procenat: kvizRezultatiTable.procenat })
+    .from(kvizRezultatiTable)
+    .where(eq(kvizRezultatiTable.userId, userId));
+  const quizCount = quizRows.length;
+  const quizPassedCount = quizRows.filter(r => (r.procenat || 0) >= 80).length;
+
+  return {
+    totalHasanat,
+    completedCount: completedLessonIds.length,
+    streakDays,
+    completedByNivo,
+    quizCount,
+    quizPassedCount,
+  };
+}
+
+export interface NovelyEarnedBadgeInfo extends BadgeMeta {
+  earnedAt: string;
+}
+
+/**
+ * Glavna funkcija: izračunaj nove bedževe i pohrani ih u student_progress.badges.
+ * Vrati listu metapodataka za novo zarađene bedževe (za toast notifikaciju u UI).
+ * Idempotentno — sigurno za pozivati nakon svake aktivnosti.
+ */
+export async function evaluateAndPersistBadges(userId: number, overrides?: { totalHasanatOverride?: number }): Promise<NovelyEarnedBadgeInfo[]> {
+  const studentIdStr = String(userId);
+  const [progress] = await db.select().from(studentProgressTable)
+    .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
+  if (!progress) return [];
+
+  const snap = await buildProgressSnapshot(userId, overrides);
+  const earnedIds = computeEarnedBadgeIds(snap);
+  const { merged, novelyEarned } = mergeBadges(progress.badges, earnedIds);
+
+  if (novelyEarned.length > 0) {
+    await db.update(studentProgressTable)
+      .set({ badges: merged, updatedAt: new Date() })
+      .where(eq(studentProgressTable.studentId, studentIdStr));
+  }
+
+  const now = new Date().toISOString();
+  return novelyEarned
+    .map(id => {
+      const meta = BADGE_CATALOG[id];
+      if (!meta) return null;
+      return { ...meta, earnedAt: now };
+    })
+    .filter((b): b is NovelyEarnedBadgeInfo => b !== null);
 }

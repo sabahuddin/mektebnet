@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { studentProgressTable, exerciseSessionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { evaluateAndPersistBadges } from "../lib/badges.js";
 
 const router: IRouter = Router();
 
@@ -102,6 +103,25 @@ router.post("/progress/lesson", async (req, res) => {
       progress = updated;
     }
 
+    // Evaluate and persist any newly-earned badges
+    let novelyEarned: Awaited<ReturnType<typeof evaluateAndPersistBadges>> = [];
+    const userIdNum = Number(progress.studentId);
+    if (Number.isFinite(userIdNum)) {
+      try {
+        novelyEarned = await evaluateAndPersistBadges(userIdNum);
+        if (novelyEarned.length > 0) {
+          const [reread] = await db
+            .select()
+            .from(studentProgressTable)
+            .where(eq(studentProgressTable.studentId, progress.studentId))
+            .limit(1);
+          if (reread) progress = reread;
+        }
+      } catch (badgeErr) {
+        req.log.error({ err: badgeErr }, "Failed to evaluate badges after lesson");
+      }
+    }
+
     res.json({
       studentId: progress.studentId,
       totalHasanat: progress.totalHasanat,
@@ -109,6 +129,7 @@ router.post("/progress/lesson", async (req, res) => {
       badges: progress.badges,
       streakDays: progress.streakDays,
       lastActivityDate: progress.lastActivityDate || null,
+      newBadges: novelyEarned,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to save lesson progress");

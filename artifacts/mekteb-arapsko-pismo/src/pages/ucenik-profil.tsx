@@ -62,7 +62,7 @@ interface ProfilData {
     completedCount: number;
     lastActivityDate: string | null;
     poNivou: Record<number, { ukupno: number; gotov: number }>;
-    bedzevi?: { id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earnedAt: string }[];
+    bedzevi?: { id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean; earnedAt: string | null }[];
   };
 }
 
@@ -467,24 +467,31 @@ export default function UcenikProfilPage() {
                       })}
                     </div>
 
-                    {profil.napredak.bedzevi && profil.napredak.bedzevi.length > 0 && (
-                      <div className="mt-5 pt-5 border-t border-primary/15">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Award className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-extrabold text-foreground">Moji bedževi ({profil.napredak.bedzevi.length})</h3>
-                        </div>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                          {profil.napredak.bedzevi.map(b => (
-                            <div key={b.id} className="group relative" title={`${b.naziv} — ${b.opis}`}>
-                              <div className={`aspect-square rounded-2xl bg-gradient-to-br ${b.bojaGradient} flex items-center justify-center shadow-md hover:scale-105 transition-transform cursor-help`}>
-                                <span className="text-2xl filter drop-shadow-sm">{b.ikona}</span>
+                    {profil.napredak.bedzevi && profil.napredak.bedzevi.length > 0 && (() => {
+                      const earnedCount = profil.napredak!.bedzevi!.filter(b => b.earned).length;
+                      const totalCount = profil.napredak!.bedzevi!.length;
+                      return (
+                        <div className="mt-5 pt-5 border-t border-primary/15">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Award className="w-4 h-4 text-primary" />
+                            <h3 className="text-sm font-extrabold text-foreground">Moji bedževi ({earnedCount}/{totalCount})</h3>
+                          </div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                            {profil.napredak!.bedzevi!.map(b => (
+                              <div key={b.id} className="group relative" title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}>
+                                <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
+                                  <span className={`text-2xl ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
+                                </div>
+                                <div className={`text-[10px] text-center font-bold mt-1 truncate ${b.earned ? "text-foreground/70" : "text-muted-foreground"}`}>{b.naziv}</div>
                               </div>
-                              <div className="text-[10px] text-center font-bold text-foreground/70 mt-1 truncate">{b.naziv}</div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-3 italic">
+                            Sivi bedževi su zaključani — nastavi učiti da ih osvojiš!
+                          </p>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
 

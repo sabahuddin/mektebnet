@@ -14,7 +14,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
-import { BADGE_CATALOG, type EarnedBadge, computeEarnedBadgeIds, mergeBadges } from "../lib/badges.js";
+import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges } from "../lib/badges.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
@@ -86,39 +86,27 @@ router.get("/profil", async (req, res) => {
       }
     }
 
-    // Bedževi: backfill ako fale (idempotentno) + enrich sa metadata
-    const streakDays = progress?.streakDays || 0;
-    const totalHasanat = progress?.totalHasanat || 0;
-    const earnedIds = computeEarnedBadgeIds({
-      totalHasanat,
-      completedCount: completedLessonIds.length,
-      streakDays,
-      completedByNivo,
-    });
-    const { merged, novelyEarned } = mergeBadges(progress?.badges, earnedIds);
-
-    // Ako su novi bedževi izračunati, ažuriraj DB (bez bloka ako padne)
-    if (novelyEarned.length > 0 && progress) {
-      try {
-        await db.update(studentProgressTable)
-          .set({ badges: merged, updatedAt: new Date() })
-          .where(eq(studentProgressTable.studentId, studentIdStr));
-      } catch {}
+    // Bedževi: backfill ako fale (idempotentno) + vrati cijeli katalog sa earned statusom
+    if (progress) {
+      try { await evaluateAndPersistBadges(userId); } catch {}
     }
+    const [refreshed] = await db.select().from(studentProgressTable)
+      .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
+    const earned = (Array.isArray(refreshed?.badges) ? refreshed!.badges as EarnedBadge[] : [])
+      .filter(b => b && typeof b.id === "string" && typeof b.earnedAt === "string");
+    const earnedMap = new Map(earned.map(b => [b.id, b.earnedAt]));
 
-    const bedzevi = merged
-      .map(b => {
-        const meta = BADGE_CATALOG[b.id];
-        if (!meta) return null;
-        return { ...meta, earnedAt: b.earnedAt };
-      })
-      .filter(Boolean);
+    const bedzevi = Object.values(BADGE_CATALOG).map(meta => ({
+      ...meta,
+      earned: earnedMap.has(meta.id),
+      earnedAt: earnedMap.get(meta.id) ?? null,
+    }));
 
     const napredak = {
-      streakDays: progress?.streakDays || 0,
-      totalHasanat: progress?.totalHasanat || 0,
+      streakDays: refreshed?.streakDays ?? progress?.streakDays ?? 0,
+      totalHasanat: refreshed?.totalHasanat ?? progress?.totalHasanat ?? 0,
       completedCount: completedLessonIds.length,
-      lastActivityDate: progress?.lastActivityDate || null,
+      lastActivityDate: refreshed?.lastActivityDate ?? progress?.lastActivityDate ?? null,
       poNivou: completedByNivo,
       bedzevi,
     };

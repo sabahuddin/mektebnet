@@ -514,10 +514,27 @@ export default function KvizPage() {
           contentType: "kviz", contentId: kviz.id,
           zavrsen: true, bodovi, tacniOdgovori: score, ukupnoPitanja: pitanja.length,
         }, token).catch(() => {});
-        apiRequest("POST", "/content/kviz-rezultat", {
-          kvizId: kviz.id, kvizNaslov: kviz.naslov,
-          tacniOdgovori: score, ukupnoPitanja: pitanja.length,
-        }, token).catch((err: any) => {
+        apiRequest<{ hasanatEarned?: number; newBadges?: { id: string; naziv: string; opis: string; ikona: string }[] }>(
+          "POST", "/content/kviz-rezultat", {
+            kvizId: kviz.id, kvizNaslov: kviz.naslov,
+            tacniOdgovori: score, ukupnoPitanja: pitanja.length,
+          }, token
+        ).then(resp => {
+          const earned = resp?.hasanatEarned || 0;
+          if (earned > 0) {
+            toast({ title: `+${earned} hasanata! ⭐`, description: `Odlično si riješio/la kviz "${kviz.naslov}"` });
+          }
+          const newBadges = resp?.newBadges || [];
+          if (newBadges.length > 0) {
+            setTimeout(() => {
+              const first = newBadges[0];
+              toast({
+                title: `🎉 Osvojio si bedž!${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
+                description: `${first.ikona} ${first.naziv} — ${first.opis}`,
+              });
+            }, 900);
+          }
+        }).catch((err: any) => {
           if (err?.status === 429 || err?.message?.includes("429")) {
             toast({ title: "Već si radio/la ovaj kviz danas", description: "Pokušaj ponovo sutra!", variant: "destructive" });
           }
