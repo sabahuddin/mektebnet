@@ -16,6 +16,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { BADGE_CATALOG, buildProgressSnapshot, computeEarnedBadgeIds } from "../lib/badges.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
@@ -143,6 +144,28 @@ router.get("/dashboard/:ucenikId", async (req, res) => {
       zavrseneLekcije = napredak.length;
     }
 
+    // Bedževi — read-only snapshot za roditelja (bez perzistencije).
+    // Ako računanje padne, vraćamo bedzeviError: true tako da UI može pokazati
+    // degradirano stanje umjesto da lažno prikaže "0 osvojenih bedževa".
+    const bedzeviUkupno = Object.keys(BADGE_CATALOG).length;
+    let bedzevi: Array<{ id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean }> = [];
+    let bedzeviEarnedCount = 0;
+    let bedzeviError = false;
+    try {
+      const snap = await buildProgressSnapshot(ucenikId);
+      const earnedIds = new Set(computeEarnedBadgeIds(snap));
+      bedzevi = Object.values(BADGE_CATALOG).map(meta => ({
+        ...meta,
+        earned: earnedIds.has(meta.id),
+      }));
+      bedzeviEarnedCount = bedzevi.filter(b => b.earned).length;
+    } catch (e) {
+      console.error("[roditelj/dashboard] failed to compute badges for ucenikId", ucenikId, e);
+      bedzevi = Object.values(BADGE_CATALOG).map(meta => ({ ...meta, earned: false }));
+      bedzeviEarnedCount = 0;
+      bedzeviError = true;
+    }
+
     res.json({
       posljednjaOcjena: posljednja
         ? { ocjena: posljednja.ocjena, kategorija: posljednja.kategorija, datum: posljednja.datum, napomena: posljednja.napomena }
@@ -152,6 +175,10 @@ router.get("/dashboard/:ucenikId", async (req, res) => {
       zavrseneLekcije,
       streakDays,
       totalHasanat,
+      bedzevi,
+      bedzeviEarnedCount,
+      bedzeviUkupno,
+      bedzeviError,
     });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

@@ -4,9 +4,10 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
-import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Eye } from "lucide-react";
+import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Eye, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { MaskotaPrazanState } from "@/components/maskota";
 
@@ -40,6 +41,16 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 
 const OCJENA_COLOR = ["", "text-red-700 bg-red-100", "text-orange-700 bg-orange-100", "text-amber-700 bg-amber-100", "text-blue-700 bg-blue-100", "text-emerald-700 bg-emerald-100"];
 
+interface BedzInfo {
+  id: string;
+  naziv: string;
+  opis: string;
+  ikona: string;
+  bojaGradient: string;
+  uslov: string;
+  earned: boolean;
+}
+
 interface DashboardSummary {
   posljednjaOcjena: { ocjena: number; kategorija: string; datum: string; napomena?: string | null } | null;
   prisustvoOvajMjesec: number;
@@ -47,6 +58,10 @@ interface DashboardSummary {
   zavrseneLekcije: number;
   streakDays: number;
   totalHasanat: number;
+  bedzevi?: BedzInfo[];
+  bedzeviEarnedCount?: number;
+  bedzeviUkupno?: number;
+  bedzeviError?: boolean;
 }
 
 function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
@@ -138,6 +153,49 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
             </>
           )}
         </div>
+
+        {/* Bedževi (badges) */}
+        {summaryLoading ? (
+          <Skeleton className="h-24 rounded-xl mb-4" />
+        ) : summary?.bedzevi && summary.bedzevi.length > 0 ? (
+          <div className="bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50 border border-primary/15 rounded-xl p-3 mb-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Award className="w-4 h-4 text-primary" />
+              <h3 className="text-xs font-extrabold text-foreground">
+                {summary.bedzeviError
+                  ? "Bedževi: trenutno nedostupni"
+                  : `Bedževi: ${summary.bedzeviEarnedCount ?? 0} / ${summary.bedzeviUkupno ?? summary.bedzevi.length}`}
+              </h3>
+            </div>
+            <TooltipProvider delayDuration={150}>
+              <div className="grid grid-cols-8 sm:grid-cols-8 gap-1.5">
+                {summary.bedzevi.map(b => (
+                  <Tooltip key={b.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
+                        className="group relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
+                        data-testid={`badge-${dijete.id}-${b.id}`}
+                      >
+                        <div className={`aspect-square rounded-lg flex items-center justify-center shadow-sm transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-110 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
+                          <span className={`text-base ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
+                        </div>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-center">
+                      <div className="font-bold">{b.naziv}</div>
+                      <div className="opacity-90 mt-0.5">{b.opis}</div>
+                      {!b.earned && (
+                        <div className="opacity-80 mt-1 italic">Zaključan — uslov: {b.uslov}</div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </TooltipProvider>
+          </div>
+        ) : null}
 
         <button
           onClick={handleToggle}
