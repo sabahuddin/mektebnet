@@ -222,6 +222,8 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
   let newCompletion: boolean;
   let streakDays: number;
   let totalHasanat: number;
+  let previousStreakDays: number;
+  let previousHasanat: number;
 
   if (!existing) {
     await db.insert(studentProgressTable).values({
@@ -235,7 +237,12 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
     newCompletion = true;
     streakDays = 1;
     totalHasanat = hasanatEarned;
+    previousStreakDays = 0;
+    previousHasanat = 0;
   } else {
+    previousStreakDays = existing.streakDays;
+    previousHasanat = existing.totalHasanat;
+
     const rawLessons = existing.completedLessons as unknown;
     const completedLessons: number[] = Array.isArray(rawLessons) ? [...rawLessons as number[]] : [];
     newCompletion = !completedLessons.includes(lessonId);
@@ -256,8 +263,20 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
 
   const novelyEarned = await evaluateAndPersistBadges(userId);
   const novelyEarnedBadges = novelyEarned.map(b => b.id);
+  const hasanatGained = newCompletion ? hasanatEarned : 0;
+  const streakIncreased = streakDays > previousStreakDays;
 
-  return { newCompletion, streakDays, totalHasanat, novelyEarnedBadges, newBadges: novelyEarned };
+  return {
+    newCompletion,
+    streakDays,
+    totalHasanat,
+    previousStreakDays,
+    previousHasanat,
+    hasanatGained,
+    streakIncreased,
+    novelyEarnedBadges,
+    newBadges: novelyEarned,
+  };
 }
 
 // POST /api/content/napredak - save progress (bodovi only if >= 50%)
