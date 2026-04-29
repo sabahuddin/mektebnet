@@ -382,6 +382,45 @@ export default function UcenikProfilPage() {
                   })}
                 </motion.div>
 
+                {/* Moji bedževi — preview grid */}
+                {profil.napredak?.bedzevi && profil.napredak.bedzevi.length > 0 && (() => {
+                  const earnedCount = profil.napredak!.bedzevi!.filter(b => b.earned).length;
+                  const totalCount = profil.napredak!.bedzevi!.length;
+                  return (
+                    <motion.div
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                      className="bg-white border border-border/50 rounded-2xl p-5 mb-6"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-extrabold text-foreground flex items-center gap-2">
+                          <Award className="w-5 h-5 text-amber-500" /> Moji bedževi ({earnedCount}/{totalCount})
+                        </h3>
+                        <button
+                          onClick={() => setActiveTab("pregled")}
+                          className="text-xs font-bold text-primary hover:underline"
+                        >
+                          Vidi sve →
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                        {profil.napredak!.bedzevi!.map(b => (
+                          <div key={b.id} className="group relative" title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}>
+                            <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
+                              <span className={`text-2xl ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
+                            </div>
+                            <div className={`text-[10px] text-center font-bold mt-1 truncate ${b.earned ? "text-foreground/70" : "text-muted-foreground"}`}>{b.naziv}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-3 italic">
+                        Sivi bedževi su zaključani — nastavi učiti da ih osvojiš!
+                      </p>
+                    </motion.div>
+                  );
+                })()}
+
                 {/* CTA + last activity */}
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
