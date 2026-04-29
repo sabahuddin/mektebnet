@@ -6,7 +6,8 @@ import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
 import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
-  ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare
+  ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
+  Flame, Sparkles, Trophy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +20,13 @@ interface ProfilData {
   ocjene: { id: number; kategorija: string; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string }[];
   prisustvo: { id: number; datum: string; status: string }[];
   kvizovi: { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }[];
+  napredak?: {
+    streakDays: number;
+    totalHasanat: number;
+    completedCount: number;
+    lastActivityDate: string | null;
+    poNivou: Record<number, { ukupno: number; gotov: number }>;
+  };
 }
 
 interface KalendarEntry {
@@ -146,6 +154,50 @@ export default function UcenikProfilPage() {
 
             {activeTab === "pregled" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {profil.napredak && (
+                  <div className="mb-6 bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50 border border-primary/20 rounded-3xl p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Trophy className="w-5 h-5 text-primary" />
+                      <h2 className="text-lg font-extrabold text-foreground">Moj put učenja</h2>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                      <div className="bg-white border border-orange-200 rounded-2xl p-4 text-center">
+                        <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
+                        <div className="text-3xl font-extrabold text-orange-600">{profil.napredak.streakDays}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.streakDays === 1 ? "dan zaredom" : "dana zaredom"}</div>
+                      </div>
+                      <div className="bg-white border border-amber-200 rounded-2xl p-4 text-center">
+                        <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+                        <div className="text-3xl font-extrabold text-amber-600">{profil.napredak.totalHasanat}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">hasanata</div>
+                      </div>
+                      <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-center">
+                        <BookOpen className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
+                        <div className="text-3xl font-extrabold text-emerald-700">{profil.napredak.completedCount}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.completedCount === 1 ? "lekcija" : "lekcija završeno"}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-2.5">
+                      {[1, 2, 3].map(nivo => {
+                        const stats = profil.napredak!.poNivou[nivo];
+                        if (!stats || stats.ukupno === 0) return null;
+                        const procenat = stats.ukupno > 0 ? Math.round((stats.gotov / stats.ukupno) * 100) : 0;
+                        return (
+                          <div key={nivo}>
+                            <div className="flex justify-between text-xs font-bold text-foreground mb-1">
+                              <span>Ilmihal — Nivo {nivo}</span>
+                              <span className="text-primary">{stats.gotov}/{stats.ukupno} ({procenat}%)</span>
+                            </div>
+                            <div className="h-2.5 bg-white border border-primary/15 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-primary to-violet-500 transition-all duration-500" style={{ width: `${procenat}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   {[
                     { label: "Prosječna ocjena", value: prosjecnaOcjena, icon: Star, color: "text-amber-600", bg: "bg-amber-50" },

@@ -8,6 +8,7 @@ import {
   kvizRezultatiTable,
   prilozi,
   rjecnikTable,
+  studentProgressTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -171,6 +172,49 @@ router.get("/napredak", requireAuth, async (req, res) => {
   }
 });
 
+// Helper: ažurira student_progress (streak, hasanati, completedLessons) za ilmihal lekcije
+async function updateStudentProgressForLesson(userId: number, lessonId: number, hasanatEarned: number) {
+  const studentIdStr = String(userId);
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  const [existing] = await db.select().from(studentProgressTable)
+    .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
+
+  if (!existing) {
+    await db.insert(studentProgressTable).values({
+      studentId: studentIdStr,
+      totalHasanat: hasanatEarned,
+      completedLessons: [lessonId],
+      badges: [],
+      streakDays: 1,
+      lastActivityDate: today,
+    });
+    return { newCompletion: true, streakDays: 1, totalHasanat: hasanatEarned };
+  }
+
+  const rawLessons = existing.completedLessons as unknown;
+  const completedLessons: number[] = Array.isArray(rawLessons) ? [...rawLessons as number[]] : [];
+  const newCompletion = !completedLessons.includes(lessonId);
+  if (newCompletion) completedLessons.push(lessonId);
+
+  let streakDays = existing.streakDays;
+  if (existing.lastActivityDate !== today) {
+    if (existing.lastActivityDate === yesterdayStr) streakDays += 1;
+    else streakDays = 1;
+  }
+
+  const totalHasanat = existing.totalHasanat + (newCompletion ? hasanatEarned : 0);
+
+  await db.update(studentProgressTable)
+    .set({ totalHasanat, completedLessons, streakDays, lastActivityDate: today, updatedAt: new Date() })
+    .where(eq(studentProgressTable.studentId, studentIdStr));
+
+  return { newCompletion, streakDays, totalHasanat };
+}
+
 // POST /api/content/napredak - save progress (bodovi only if >= 50%)
 router.post("/napredak", requireAuth, async (req, res) => {
   try {
@@ -187,6 +231,7 @@ router.post("/napredak", requireAuth, async (req, res) => {
         eq(korisnikNapredakTable.contentId, contentId),
       ));
 
+    let result;
     if (existing.length > 0) {
       const current = existing[0];
       const [updated] = await db.update(korisnikNapredakTable)
@@ -199,7 +244,7 @@ router.post("/napredak", requireAuth, async (req, res) => {
         })
         .where(eq(korisnikNapredakTable.id, current.id))
         .returning();
-      res.json({ ...updated, procenat, bodoviBlokirani: procenat < 50 });
+      result = updated;
     } else {
       const [nova] = await db.insert(korisnikNapredakTable).values({
         userId,
@@ -209,8 +254,20 @@ router.post("/napredak", requireAuth, async (req, res) => {
         bodovi: stvarniBodovi,
         completedAt: zavrsen ? new Date() : undefined,
       }).returning();
-      res.json({ ...nova, procenat, bodoviBlokirani: procenat < 50 });
+      result = nova;
     }
+
+    // Mirror u student_progress (streak/hasanati) samo za ilmihal lekcije koje su završene
+    let progressDelta = null;
+    if (zavrsen && contentType === "ilmihal" && typeof contentId === "number") {
+      try {
+        progressDelta = await updateStudentProgressForLesson(userId, contentId, 15);
+      } catch (e) {
+        // Ne lomimo originalni request ako mirror padne
+      }
+    }
+
+    res.json({ ...result, procenat, bodoviBlokirani: procenat < 50, progressDelta });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
