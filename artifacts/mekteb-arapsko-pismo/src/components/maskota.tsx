@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
 
@@ -149,6 +150,91 @@ export function MaskotaCelebration({
           {podporuka}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Mala pčela koja pri svakoj promjeni rute "preleti" preko ekrana.
+ * - Ulazi sa lijeva, izlazi desno, sa blagim talasanjem gore-dolje.
+ * - Pojavi se samo jednom po promjeni rute, sa kratkim odgađanjem.
+ * - pointer-events: none — nikad ne blokira interakciju.
+ * - Poštuje prefers-reduced-motion (potpuno se ne renderuje).
+ */
+export function FlyingMaskota() {
+  const [location] = useLocation();
+  const [flightId, setFlightId] = useState(0);
+  const [active, setActive] = useState(false);
+  const [vw, setVw] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 1280);
+
+  const reduce =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  useEffect(() => {
+    if (reduce) return;
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [reduce]);
+
+  useEffect(() => {
+    if (reduce) return;
+    setActive(false);
+    const startTimer = setTimeout(() => {
+      setFlightId((id) => id + 1);
+      setActive(true);
+    }, 350);
+    return () => clearTimeout(startTimer);
+  }, [location, reduce]);
+
+  if (reduce) return null;
+
+  const size = 56;
+  const offscreenLeft = -120;
+  const offscreenRight = vw + 120;
+  const baseY = 80;
+
+  return (
+    <div
+      aria-hidden="true"
+      className="fixed inset-x-0 top-0 pointer-events-none z-30 overflow-hidden"
+      style={{ height: 220 }}
+      data-testid="flying-maskota-container"
+    >
+      <AnimatePresence>
+        {active && (
+          <motion.div
+            key={flightId}
+            initial={{ x: offscreenLeft, y: baseY, opacity: 0, rotate: -8 }}
+            animate={{
+              x: [offscreenLeft, vw * 0.25, vw * 0.55, vw * 0.8, offscreenRight],
+              y: [baseY, baseY - 35, baseY + 10, baseY - 25, baseY + 5],
+              opacity: [0, 1, 1, 1, 0],
+              rotate: [-8, -3, 4, -2, 6],
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 5.2, ease: "easeInOut", times: [0, 0.18, 0.5, 0.82, 1] }}
+            onAnimationComplete={() => setActive(false)}
+            style={{ position: "absolute", left: 0, top: 0, width: size, height: size }}
+          >
+            <motion.div
+              animate={{ y: [0, -3, 0, -3, 0] }}
+              transition={{ duration: 0.45, repeat: Infinity, ease: "easeInOut" }}
+              style={{ width: size, height: size }}
+            >
+              <img
+                src={SRC.pozdrav}
+                alt=""
+                draggable={false}
+                style={{ width: size, height: size }}
+                className="object-contain select-none drop-shadow-md"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

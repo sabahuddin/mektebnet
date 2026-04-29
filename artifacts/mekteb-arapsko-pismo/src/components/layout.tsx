@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
 import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FlyingMaskota } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LayoutProps { children: ReactNode; }
@@ -110,6 +111,7 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <FlyingMaskota />
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
