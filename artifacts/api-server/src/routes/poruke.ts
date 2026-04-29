@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { porukeTable, usersTable, ucenikProfiliTable, grupeTable } from "@workspace/db/schema";
+import { porukeTable, usersTable, ucenikProfiliTable, grupeTable, roditeljUcenikTable } from "@workspace/db/schema";
 import { eq, or, and, desc, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
@@ -115,7 +115,20 @@ router.post("/", async (req, res) => {
     } else if (role === "muallim") {
       allowed = ["roditelj", "admin", "ucenik"].includes(target.role);
     } else if (role === "roditelj") {
-      allowed = ["muallim", "admin"].includes(target.role);
+      if (target.role === "admin") {
+        allowed = true;
+      } else if (target.role === "muallim") {
+        // Roditelj smije pisati samo muallimima čije dijete ima dodano
+        const veze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
+          .from(roditeljUcenikTable).where(eq(roditeljUcenikTable.roditeljId, userId));
+        if (veze.length > 0) {
+          const ucenikIds = veze.map(v => v.ucenikId);
+          const profili = await db.select({ muallimId: ucenikProfiliTable.muallimId })
+            .from(ucenikProfiliTable)
+            .where(and(inArray(ucenikProfiliTable.userId, ucenikIds), eq(ucenikProfiliTable.muallimId, targetId)));
+          allowed = profili.length > 0;
+        }
+      }
     } else if (role === "ucenik") {
       const [profil] = await db.select({ muallimId: ucenikProfiliTable.muallimId })
         .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
@@ -155,7 +168,12 @@ router.get("/kontakti", async (req, res) => {
     const userId = req.user!.userId;
     const role = req.user!.role;
 
-    let contacts: { id: number; displayName: string; role: string; grupaId?: number; grupaNaziv?: string }[] = [];
+    type Contact = {
+      id: number; displayName: string; role: string;
+      grupaId?: number; grupaNaziv?: string;
+      grupeNazivi?: string[]; // sve grupe — za roditelje = grupe njihove djece
+    };
+    let contacts: Contact[] = [];
 
     if (role === "admin") {
       const muallimi = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
@@ -170,7 +188,9 @@ router.get("/kontakti", async (req, res) => {
         grupaId: ucenikProfiliTable.grupaId,
       }).from(ucenikProfiliTable).where(eq(ucenikProfiliTable.muallimId, userId));
 
-      let ucenikContacts: typeof contacts = [];
+      let ucenikContacts: Contact[] = [];
+      let roditeljContacts: Contact[] = [];
+
       if (mojiUcenici.length > 0) {
         const uIds = mojiUcenici.map(u => u.userId);
         const ucenikUsers = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
@@ -185,18 +205,68 @@ router.get("/kontakti", async (req, res) => {
 
         ucenikContacts = ucenikUsers.map(u => {
           const profil = mojiUcenici.find(p => p.userId === u.id);
-          return { ...u, grupaId: profil?.grupaId || undefined, grupaNaziv: profil?.grupaId ? grupeMap[profil.grupaId] : undefined };
+          const naziv = profil?.grupaId ? grupeMap[profil.grupaId] : undefined;
+          return {
+            ...u,
+            grupaId: profil?.grupaId || undefined,
+            grupaNaziv: naziv,
+            grupeNazivi: naziv ? [naziv] : [],
+          };
         });
+
+        // Roditelji svojih učenika (samo oni povezani sa muallimovim učenicima)
+        const veze = await db.select({
+          roditeljId: roditeljUcenikTable.roditeljId,
+          ucenikId: roditeljUcenikTable.ucenikId,
+        }).from(roditeljUcenikTable).where(inArray(roditeljUcenikTable.ucenikId, uIds));
+
+        if (veze.length > 0) {
+          const roditeljIds = [...new Set(veze.map(v => v.roditeljId))];
+          const roditeljUsers = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
+            .from(usersTable).where(inArray(usersTable.id, roditeljIds));
+
+          // Map: roditeljId → set grupe naziva
+          const ucenikGrupaMap: Record<number, number | null> = {};
+          for (const u of mojiUcenici) ucenikGrupaMap[u.userId] = u.grupaId ?? null;
+
+          const roditeljGrupeMap: Record<number, Set<string>> = {};
+          for (const v of veze) {
+            const grId = ucenikGrupaMap[v.ucenikId];
+            const naziv = grId ? grupeMap[grId] : undefined;
+            if (!naziv) continue;
+            if (!roditeljGrupeMap[v.roditeljId]) roditeljGrupeMap[v.roditeljId] = new Set();
+            roditeljGrupeMap[v.roditeljId].add(naziv);
+          }
+
+          roditeljContacts = roditeljUsers.map(r => ({
+            ...r,
+            grupeNazivi: Array.from(roditeljGrupeMap[r.id] || []),
+          }));
+        }
       }
 
-      const roditelji = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
-        .from(usersTable).where(eq(usersTable.role, "roditelj"));
-
-      contacts = [...admini, ...ucenikContacts, ...roditelji];
+      contacts = [...admini, ...ucenikContacts, ...roditeljContacts];
     } else if (role === "roditelj") {
-      const kontakti = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
-        .from(usersTable).where(or(eq(usersTable.role, "muallim"), eq(usersTable.role, "admin")));
-      contacts = kontakti;
+      // Admini uvijek
+      const admini = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
+        .from(usersTable).where(eq(usersTable.role, "admin"));
+
+      // Samo muallimi povezani sa svojom djecom
+      const veze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
+        .from(roditeljUcenikTable).where(eq(roditeljUcenikTable.roditeljId, userId));
+
+      let muallimContacts: Contact[] = [];
+      if (veze.length > 0) {
+        const ucenikIds = veze.map(v => v.ucenikId);
+        const profili = await db.select({ muallimId: ucenikProfiliTable.muallimId })
+          .from(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, ucenikIds));
+        const muallimIds = [...new Set(profili.map(p => p.muallimId).filter((x): x is number => x != null))];
+        if (muallimIds.length > 0) {
+          muallimContacts = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
+            .from(usersTable).where(inArray(usersTable.id, muallimIds));
+        }
+      }
+      contacts = [...muallimContacts, ...admini];
     } else if (role === "ucenik") {
       const [profil] = await db.select({ muallimId: ucenikProfiliTable.muallimId })
         .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));

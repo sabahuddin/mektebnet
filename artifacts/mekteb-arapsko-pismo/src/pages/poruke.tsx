@@ -15,6 +15,7 @@ interface Korisnik {
   role: string;
   grupaId?: number;
   grupaNaziv?: string;
+  grupeNazivi?: string[];
 }
 
 interface Poruka {
@@ -171,15 +172,29 @@ export default function PorukePage() {
     });
   };
 
-  const grupeNazivi = [...new Set(kontakti.filter(k => k.grupaNaziv).map(k => k.grupaNaziv!))];
+  const grupeNazivi = [...new Set(kontakti.flatMap(k => k.grupeNazivi || (k.grupaNaziv ? [k.grupaNaziv] : [])))].sort();
   const filteredKontakti = filterGrupa === "all" ? kontakti
     : kontakti.filter(k => {
       if (filterGrupa === "muallim") return k.role === "muallim";
-      if (filterGrupa === "roditelj") return k.role === "roditelj";
+      if (filterGrupa === "roditelj-svi") return k.role === "roditelj";
+      if (filterGrupa === "roditelj-grupa") return false; // placeholder, never used
       if (filterGrupa === "ucenik") return k.role === "ucenik";
       if (filterGrupa === "admin") return k.role === "admin";
-      return k.grupaNaziv === filterGrupa;
+      // Filter po nazivu grupe — uključuje učenike te grupe i roditelje djece iz te grupe
+      const lista = k.grupeNazivi && k.grupeNazivi.length > 0 ? k.grupeNazivi : (k.grupaNaziv ? [k.grupaNaziv] : []);
+      return lista.includes(filterGrupa);
     });
+
+  // Grupiraj filtrirane po roli za vizuelnu separaciju u bulk listi
+  const grupiranoPoRoli: Record<string, Korisnik[]> = {};
+  for (const k of filteredKontakti) {
+    if (!grupiranoPoRoli[k.role]) grupiranoPoRoli[k.role] = [];
+    grupiranoPoRoli[k.role].push(k);
+  }
+  const roleOrder = ["admin", "muallim", "roditelj", "ucenik"];
+  const sekcijeNazivi: Record<string, string> = {
+    admin: "Admini", muallim: "Muallimi", roditelj: "Roditelji", ucenik: "Učenici",
+  };
 
   if (!user || !["muallim", "roditelj", "admin", "ucenik"].includes(user.role)) {
     return (
@@ -267,7 +282,7 @@ export default function PorukePage() {
                   <p className="text-sm text-muted-foreground mb-4">Odaberite primatelje i napišite poruku</p>
 
                   <div className="flex flex-wrap gap-2 mb-3">
-                    <select value={filterGrupa} onChange={e => setFilterGrupa(e.target.value)}
+                    <select value={filterGrupa} onChange={e => { setFilterGrupa(e.target.value); setSelectedIds([]); }}
                       className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
                       <option value="all">Svi kontakti</option>
                       {user?.role === "admin" && <option value="muallim">Svi muallimi</option>}
@@ -275,8 +290,9 @@ export default function PorukePage() {
                         <>
                           <option value="admin">Admini</option>
                           <option value="ucenik">Svi učenici</option>
-                          <option value="roditelj">Svi roditelji</option>
-                          {grupeNazivi.map(g => <option key={g} value={g}>Grupa: {g}</option>)}
+                          <option value="roditelj-svi">Svi roditelji</option>
+                          {grupeNazivi.length > 0 && <option disabled>──────</option>}
+                          {grupeNazivi.map(g => <option key={g} value={g}>Grupa: {g} (učenici + roditelji)</option>)}
                         </>
                       )}
                     </select>
@@ -291,21 +307,46 @@ export default function PorukePage() {
                     )}
                   </div>
 
-                  <div className="max-h-40 overflow-y-auto border border-border/50 rounded-xl mb-4">
-                    {filteredKontakti.map(k => (
-                      <button key={k.id} onClick={() => toggleSelection(k.id)}
-                        className="w-full flex items-center gap-3 p-2.5 hover:bg-muted/30 text-left transition-colors border-b border-border/20 last:border-0">
-                        {selectedIds.includes(k.id) ?
-                          <CheckSquare className="w-4 h-4 text-primary shrink-0" /> :
-                          <Square className="w-4 h-4 text-muted-foreground shrink-0" />
-                        }
-                        <div className="flex-1 min-w-0">
-                          <span className="font-bold text-sm text-foreground">{k.displayName}</span>
-                          <span className="ml-2 text-xs text-muted-foreground">{roleLabel(k.role)}</span>
-                          {k.grupaNaziv && <span className="ml-1 text-xs text-primary/70">({k.grupaNaziv})</span>}
+                  <div className="max-h-64 overflow-y-auto border border-border/50 rounded-xl mb-4">
+                    {filteredKontakti.length === 0 ? (
+                      <p className="text-sm text-muted-foreground p-4 text-center">Nema kontakata u ovom filteru</p>
+                    ) : roleOrder.filter(r => grupiranoPoRoli[r]?.length).map(r => {
+                      const sekcija = grupiranoPoRoli[r];
+                      const sviOdabraniUSekciji = sekcija.every(k => selectedIds.includes(k.id));
+                      return (
+                        <div key={r}>
+                          <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5 sticky top-0 z-10 border-b border-border/30">
+                            <span className="text-xs font-extrabold text-foreground uppercase tracking-wide">
+                              {sekcijeNazivi[r] || r} <span className="text-muted-foreground font-normal">({sekcija.length})</span>
+                            </span>
+                            <button type="button" onClick={() => sviOdabraniUSekciji
+                                ? setSelectedIds(prev => prev.filter(id => !sekcija.find(k => k.id === id)))
+                                : selectAll(sekcija.map(k => k.id))}
+                              className="text-[11px] text-primary font-bold hover:underline">
+                              {sviOdabraniUSekciji ? "Poništi" : "Odaberi sve"}
+                            </button>
+                          </div>
+                          {sekcija.map(k => {
+                            const grupeLista = k.grupeNazivi && k.grupeNazivi.length > 0 ? k.grupeNazivi : (k.grupaNaziv ? [k.grupaNaziv] : []);
+                            return (
+                              <button key={k.id} onClick={() => toggleSelection(k.id)}
+                                className="w-full flex items-center gap-3 p-2.5 hover:bg-muted/30 text-left transition-colors border-b border-border/20 last:border-0">
+                                {selectedIds.includes(k.id) ?
+                                  <CheckSquare className="w-4 h-4 text-primary shrink-0" /> :
+                                  <Square className="w-4 h-4 text-muted-foreground shrink-0" />
+                                }
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-bold text-sm text-foreground">{k.displayName}</span>
+                                  {grupeLista.length > 0 && (
+                                    <span className="ml-1.5 text-xs text-primary/70">({grupeLista.join(", ")})</span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <form onSubmit={sendBulk} className="flex flex-col gap-3">
