@@ -1220,7 +1220,8 @@ router.get("/kviz-statistike", async (req, res) => {
     const sviKvizovi = await db.select({
       id: kvizoviTable.id,
       naslov: kvizoviTable.naslov,
-      kategorija: kvizoviTable.kategorija,
+      modul: kvizoviTable.modul,
+      nivo: kvizoviTable.nivo,
     }).from(kvizoviTable).orderBy(kvizoviTable.naslov);
 
     const rezultatiStats = await db.select({
@@ -1237,7 +1238,7 @@ router.get("/kviz-statistike", async (req, res) => {
     const combined = sviKvizovi.map(k => ({
       id: k.id,
       naslov: k.naslov,
-      kategorija: k.kategorija,
+      kategorija: k.nivo != null ? `${k.modul} · nivo ${k.nivo}` : k.modul,
       pokusaji: statsMap[k.id]?.pokusaji || 0,
       prosjecniProcenat: statsMap[k.id]?.prosjecniProcenat || 0,
       najvisiBodovi: statsMap[k.id]?.najvisiBodovi || 0,
