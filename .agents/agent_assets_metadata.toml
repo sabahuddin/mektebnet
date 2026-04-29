@@ -342,6 +342,30 @@ uri = "file://attached_assets/hero_images/ulazak-izlazak.png"
 type = "image"
 title = "entering home hero"
 
+[[generated]]
+id = "MWtMgP4RAUEv5hYfQ93Lc"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-bravo.png"
+type = "image"
+title = "bee thumbs up bravo"
+
+[[generated]]
+id = "FCofdpT_nn3pF_BST3ghI"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-pozdrav.png"
+type = "image"
+title = "bee waving hello"
+
+[[generated]]
+id = "RcRZsqxb6NpwOV_UDJN3L"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-knjiga.png"
+type = "image"
+title = "bee reading book"
+
+[[generated]]
+id = "_hEfzeR-6e_fkj7bc8SoF"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-prazno.png"
+type = "image"
+title = "bee gentle empty state"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
@@ -593,3 +617,27 @@ id = "rea6wkwu5_2aYaA1oiUzD"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/bs_test_amir_liam.mp3"
 type = "audio"
 title = "Amir (Liam) — dijalog"
+
+[[outputs]]
+id = "SZu3aJxxtWrmNSulLLF11"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-bravo.png"
+type = "image"
+title = "Pčela — Bravo / Thumbs up"
+
+[[outputs]]
+id = "XNK2YcldMsFXsY8m1dMvp"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-pozdrav.png"
+type = "image"
+title = "Pčela — Pozdrav"
+
+[[outputs]]
+id = "x1q6GRNpkhkyVoQSHMjQx"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-knjiga.png"
+type = "image"
+title = "Pčela — Sa knjigom"
+
+[[outputs]]
+id = "1T7Y-L2mbDuBYW6Epn-Na"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-prazno.png"
+type = "image"
+title = "Pčela — Empty state"

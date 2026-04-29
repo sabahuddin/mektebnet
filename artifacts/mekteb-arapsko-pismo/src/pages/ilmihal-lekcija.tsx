@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Maskota } from "@/components/maskota";
 import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
 
@@ -419,14 +420,27 @@ function CelebrationModal({ data, onClose }: { data: CelebrationData; onClose: (
         transition={{ type: "spring", stiffness: 320, damping: 22 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <motion.div
-          className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center shadow-lg shadow-amber-200"
-          initial={{ scale: 0, rotate: -45 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 14, delay: 0.1 }}
-        >
-          <Sparkles className="w-8 h-8 text-white" strokeWidth={2.5} />
-        </motion.div>
+        {(() => {
+          const reduce =
+            typeof window !== "undefined" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          return (
+            <motion.div
+              className="mx-auto"
+              initial={reduce ? false : { scale: 0, rotate: -25, y: -10 }}
+              animate={reduce ? undefined : { scale: 1, rotate: 0, y: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 14, delay: 0.1 }}
+            >
+              <motion.div
+                animate={reduce ? undefined : { y: [0, -5, 0] }}
+                transition={{ duration: 1.6, repeat: 1, ease: "easeInOut", delay: 0.4 }}
+              >
+                <Maskota varijanta={data.isRepeat ? "knjiga" : "bravo"} size={120} className="mx-auto drop-shadow-md" />
+              </motion.div>
+            </motion.div>
+          );
+        })()}
 
         {data.isRepeat ? (
           <>

@@ -8,6 +8,7 @@ import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, Che
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { MaskotaPrazanState } from "@/components/maskota";
 
 interface Dijete {
   id: number;
@@ -320,18 +321,21 @@ export default function RoditeljPage() {
         {isLoading ? (
           <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
         ) : djeca.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-border/50">
-            <Users className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-30" />
-            <p className="font-bold text-foreground mb-1">Nema povezane djece</p>
-            <p className="text-sm text-muted-foreground mb-5">Dodajte dijete ili povežite postojeći učenički račun</p>
-            <div className="flex gap-3 justify-center">
-              <Button onClick={() => { setShowDodaj(true); setShowLink(false); }} className="rounded-xl flex items-center gap-2">
-                <UserPlus className="w-4 h-4" /> Dodaj dijete
-              </Button>
-              <Button variant="outline" onClick={() => { setShowLink(true); setShowDodaj(false); }} className="rounded-xl flex items-center gap-2">
-                <Link2 className="w-4 h-4" /> Poveži dijete
-              </Button>
-            </div>
+          <div className="bg-white rounded-2xl border border-border/50">
+            <MaskotaPrazanState
+              naslov="Još nema povezane djece"
+              opis="Dodajte dijete ili povežite postojeći učenički račun da biste pratili napredak, prisustvo i ocjene."
+              akcija={
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button onClick={() => { setShowDodaj(true); setShowLink(false); }} className="rounded-xl flex items-center gap-2" data-testid="button-dodaj-dijete-empty">
+                    <UserPlus className="w-4 h-4" /> Dodaj dijete
+                  </Button>
+                  <Button variant="outline" onClick={() => { setShowLink(true); setShowDodaj(false); }} className="rounded-xl flex items-center gap-2" data-testid="button-povezi-dijete-empty">
+                    <Link2 className="w-4 h-4" /> Poveži dijete
+                  </Button>
+                </div>
+              }
+            />
           </div>
         ) : (
           <div className="flex flex-col gap-3">

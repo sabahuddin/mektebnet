@@ -6,6 +6,7 @@ import { useGetLessonById, useSaveExerciseSession } from "@workspace/api-client-
 import { getStudentId } from "@/lib/student";
 import { X, Star, Timer, AlertCircle, CheckCircle2, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Maskota } from "@/components/maskota";
 
 // Utilities for generating game data
 const ALL_LETTERS = ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش"];
@@ -281,9 +282,27 @@ export default function Exercise() {
               className="bg-white p-8 md:p-12 rounded-3xl shadow-xl border-4 border-yellow-400 text-center max-w-md w-full relative overflow-hidden"
             >
               <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500" />
-              <div className="w-24 h-24 bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                <Trophy className="w-12 h-12" />
-              </div>
+              {(() => {
+                const reduce =
+                  typeof window !== "undefined" &&
+                  typeof window.matchMedia === "function" &&
+                  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                return (
+                  <motion.div
+                    className="mx-auto mb-6"
+                    initial={reduce ? false : { scale: 0, rotate: -25, y: -10 }}
+                    animate={reduce ? undefined : { scale: 1, rotate: 0, y: 0 }}
+                    transition={{ type: "spring", stiffness: 320, damping: 14, delay: 0.15 }}
+                  >
+                    <motion.div
+                      animate={reduce ? undefined : { y: [0, -5, 0, -5, 0, -5, 0] }}
+                      transition={{ duration: 4.8, ease: "easeInOut", delay: 0.5 }}
+                    >
+                      <Maskota varijanta="bravo" size={140} className="mx-auto drop-shadow-md" />
+                    </motion.div>
+                  </motion.div>
+                );
+              })()}
               <h1 className="text-3xl font-black mb-2 text-foreground">Kraj igre!</h1>
               <p className="text-xl font-bold text-muted-foreground mb-8">Tvoj rezultat: <span className="text-primary text-3xl mx-2">{score}/{totalRounds}</span></p>
               

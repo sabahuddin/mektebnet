@@ -1,21 +1,24 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Maskota } from "@/components/maskota";
+import { Home } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">404 Page Not Found</h1>
-          </div>
-
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-teal-50 px-4">
+      <div className="text-center max-w-md">
+        <Maskota varijanta="prazno" size={180} className="mx-auto" />
+        <h1 className="mt-4 text-5xl font-black text-foreground">404</h1>
+        <p className="mt-2 text-lg font-bold text-foreground">Ova stranica ne postoji</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Mala pčela je tražila ali nije našla. Vrati se kući i nastavi učiti.
+        </p>
+        <Link href="/">
+          <Button className="mt-6 rounded-xl flex items-center gap-2 mx-auto" data-testid="button-nazad-kuci">
+            <Home className="w-4 h-4" /> Nazad na početnu
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
