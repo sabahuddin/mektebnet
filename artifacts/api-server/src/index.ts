@@ -53,6 +53,10 @@ async function runMigrations() {
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name DROP NOT NULL;`);
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name SET DEFAULT '';`);
 
+    // Kolone koje su dodane u shemu, ali nisu u setup.ts CREATE statementu
+    await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS lekcija_naziv VARCHAR(200);`);
+    await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS kviz_pitanja JSONB;`);
+
     // Tabele koje su dodane u shemu, ali nisu u setup.ts — kreiraj ih idempotentno
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS kviz_rezultati (
