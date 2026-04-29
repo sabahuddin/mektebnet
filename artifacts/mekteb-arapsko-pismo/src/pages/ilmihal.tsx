@@ -27,10 +27,10 @@ export default function IlmihalPage() {
     return n ? parseInt(n) : null;
   })();
 
-  const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; border: string; ring: string }> = {
-    1: { label: t("ilmihal.nivo1"), color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-300" },
-    2: { label: t("ilmihal.nivo2"), color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", ring: "ring-blue-300" },
-    3: { label: t("ilmihal.nivo3"), color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200", ring: "ring-violet-300" },
+  const NIVO_LABELS: Record<number, { label: string; color: string; bg: string; border: string; ring: string; fill: string; track: string }> = {
+    1: { label: t("ilmihal.nivo1"), color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-300", fill: "bg-emerald-500", track: "bg-emerald-100" },
+    2: { label: t("ilmihal.nivo2"), color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", ring: "ring-blue-300", fill: "bg-blue-500", track: "bg-blue-100" },
+    3: { label: t("ilmihal.nivo3"), color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200", ring: "ring-violet-300", fill: "bg-violet-500", track: "bg-violet-100" },
   };
 
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
@@ -161,6 +161,17 @@ export default function IlmihalPage() {
                     </div>
                     <ChevronDown className={`w-5 h-5 ${info.color} transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`} />
                   </button>
+
+                  {user && (
+                    <div className={`h-1.5 w-full ${info.track}`} aria-hidden="true">
+                      <motion.div
+                        initial={false}
+                        animate={{ width: `${items.length > 0 ? (zavrsenoCount / items.length) * 100 : 0}%` }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className={`h-full ${info.fill}`}
+                      />
+                    </div>
+                  )}
 
                   <AnimatePresence initial={false}>
                     {!isCollapsed && (
