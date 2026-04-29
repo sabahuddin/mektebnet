@@ -29,10 +29,37 @@ export default function Exercise() {
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
   const scoreRef = useRef(0);
+  const endedRef = useRef(false);
+  const roundsAnsweredRef = useRef(0);
+  const timeLeftRef = useRef(60);
+  const gameStateRef = useRef<'intro' | 'playing' | 'completed'>('intro');
 
   // Dynamic config based on type
   const config = lesson?.exercises.find(e => e.type === type) || { rounds: 5, hasanatReward: 10, title: "Vježba", timeLimit: 60 };
   const totalRounds = config.rounds;
+
+  // Snapshot of values needed by the unmount/unload save handler. Refs let us
+  // avoid stale closures when the user navigates away mid-game.
+  const sessionPayloadRef = useRef({
+    studentId,
+    lessonId,
+    exerciseType: type || "unknown",
+    totalRounds,
+    timeLimit: config.timeLimit ?? 0,
+  });
+  useEffect(() => {
+    sessionPayloadRef.current = {
+      studentId,
+      lessonId,
+      exerciseType: type || "unknown",
+      totalRounds,
+      timeLimit: config.timeLimit ?? 0,
+    };
+  }, [studentId, lessonId, type, totalRounds, config.timeLimit]);
+
+  // Mirror state into refs so the unload handler always sees the latest values.
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
   // Timer logic
   useEffect(() => {
@@ -47,8 +74,10 @@ export default function Exercise() {
 
   const handleAnswer = (isCorrect: boolean) => {
     if (feedback !== null) return; // Prevent multiple clicks
+    if (endedRef.current) return; // Game already ended (e.g. by timer)
 
     setFeedback(isCorrect ? 'correct' : 'wrong');
+    roundsAnsweredRef.current += 1;
     if (isCorrect) {
       scoreRef.current += 1;
       setScore(scoreRef.current);
@@ -65,6 +94,12 @@ export default function Exercise() {
   };
 
   const endGame = async () => {
+    // Idempotency guard — endGame may fire from both the timer expiry effect
+    // and the last-round handler. Without this, a session would be saved twice
+    // (and the celebration would re-trigger).
+    if (endedRef.current) return;
+    endedRef.current = true;
+
     setGameState('completed');
     const finalScore = scoreRef.current;
     const isPositive = finalScore > totalRounds / 2;
@@ -98,6 +133,55 @@ export default function Exercise() {
       console.error("Failed to save session", e);
     }
   };
+
+  // Save partial progress when user leaves mid-exercise (tab close, navigation,
+  // X button). Skips if endGame already ran or if no rounds were answered yet,
+  // so opening-and-immediately-closing won't pollute the streak.
+  useEffect(() => {
+    const savePartial = () => {
+      if (endedRef.current) return;
+      if (gameStateRef.current !== 'playing') return;
+      if (roundsAnsweredRef.current === 0) return;
+
+      endedRef.current = true;
+      const cfg = sessionPayloadRef.current;
+      const payload = {
+        studentId: cfg.studentId,
+        lessonId: cfg.lessonId,
+        exerciseType: cfg.exerciseType,
+        correctAnswers: scoreRef.current,
+        totalQuestions: cfg.totalRounds,
+        timeSpentSeconds: cfg.timeLimit
+          ? Math.max(1, cfg.timeLimit - timeLeftRef.current)
+          : 30,
+      };
+
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || "/api";
+        const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+        const ok = navigator.sendBeacon?.(`${apiBase}/exercises/session`, blob);
+        // Fallback if sendBeacon is unavailable or rejected (size limits, etc.)
+        if (!ok) {
+          fetch(`${apiBase}/exercises/session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            keepalive: true,
+          }).catch(() => {});
+        }
+      } catch {
+        // Best-effort; don't block unload
+      }
+    };
+
+    window.addEventListener("beforeunload", savePartial);
+    window.addEventListener("pagehide", savePartial);
+    return () => {
+      window.removeEventListener("beforeunload", savePartial);
+      window.removeEventListener("pagehide", savePartial);
+      savePartial();
+    };
+  }, []);
 
   const triggerConfetti = () => {
     const duration = 3 * 1000;
