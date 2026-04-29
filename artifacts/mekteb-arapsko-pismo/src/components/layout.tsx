@@ -7,6 +7,7 @@ import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, Lo
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
 
 interface LayoutProps { children: ReactNode; }
 
@@ -63,6 +64,7 @@ export function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
   const { t } = useLanguage();
+  const unreadPoruke = useUnreadPoruke();
   const [fontLevel, setFontLevel] = useState<number>(() => {
     try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
   });
@@ -129,8 +131,19 @@ export function Layout({ children }: LayoutProps) {
             ))}
             {extraLinks.map(link => (
               <Link key={link.href} href={link.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
-                <link.icon className="w-4 h-4" />
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
+                <span className="relative inline-flex">
+                  <link.icon className="w-4 h-4" />
+                  {link.href === "/poruke" && unreadPoruke > 0 && (
+                    <span
+                      data-testid="badge-poruke-desktop"
+                      aria-label={`${unreadPoruke} nepročitanih poruka`}
+                      className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center shadow-sm border border-white"
+                    >
+                      {unreadPoruke > 9 ? "9+" : unreadPoruke}
+                    </span>
+                  )}
+                </span>
                 {link.label}
               </Link>
             ))}
@@ -197,7 +210,16 @@ export function Layout({ children }: LayoutProps) {
                   <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}>
                     <link.icon className="w-5 h-5" />
-                    {link.label}
+                    <span className="flex-1">{link.label}</span>
+                    {link.href === "/poruke" && unreadPoruke > 0 && (
+                      <span
+                        data-testid="badge-poruke-mobile"
+                        aria-label={`${unreadPoruke} nepročitanih poruka`}
+                        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs leading-none font-extrabold flex items-center justify-center shadow-sm"
+                      >
+                        {unreadPoruke > 9 ? "9+" : unreadPoruke}
+                      </span>
+                    )}
                   </Link>
                 ))}
                 {user && (

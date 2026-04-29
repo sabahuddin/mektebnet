@@ -1,11 +1,25 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { porukeTable, usersTable, ucenikProfiliTable, grupeTable, roditeljUcenikTable } from "@workspace/db/schema";
-import { eq, or, and, desc, inArray } from "drizzle-orm";
+import { eq, or, and, desc, inArray, isNull, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 router.use(requireAuth);
+
+// GET /api/poruke/unread-count — lagani endpoint koji vraća samo broj nepročitanih poruka
+router.get("/unread-count", async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(porukeTable)
+      .where(and(eq(porukeTable.primateljId, userId), isNull(porukeTable.procitanoAt)));
+    res.json({ count: row?.count ?? 0 });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
 
 // GET /api/poruke — inbox: sve poruke za ili od trenutnog korisnika, grupirane po razgovoru
 router.get("/", async (req, res) => {

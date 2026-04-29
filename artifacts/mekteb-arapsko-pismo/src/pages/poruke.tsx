@@ -8,6 +8,7 @@ import { MessageSquare, Send, ChevronLeft, Loader2, InboxIcon, Users, CheckSquar
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { PORUKE_READ_EVENT } from "@/hooks/use-unread-poruke";
 
 interface Korisnik {
   id: number;
@@ -110,6 +111,7 @@ export default function PorukePage() {
       setRazgovori(prev => prev.map(r =>
         r.saKorisnikom.id === korisnik.id ? { ...r, neprocitano: 0 } : r
       ));
+      window.dispatchEvent(new CustomEvent(PORUKE_READ_EVENT));
     } catch {
       toast({ title: "Greška", description: "Nije moguće učitati razgovor", variant: "destructive" });
     } finally {
