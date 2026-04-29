@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +78,11 @@ export default function UcenikPage() {
   const [savingOcjena, setSavingOcjena] = useState(false);
   const [planLekcije, setPlanLekcije] = useState<{ id: number; lekcijaNaslov: string }[]>([]);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [customPassword, setCustomPassword] = useState("");
+  const [resettingPass, setResettingPass] = useState(false);
+  const [newPassword, setNewPassword] = useState<string | null>(null);
+  const [copiedPass, setCopiedPass] = useState(false);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -131,6 +136,36 @@ export default function UcenikPage() {
     }
   }
 
+  async function resetPassword(forceGenerate: boolean = false) {
+    if (!token || !id) return;
+    setResettingPass(true);
+    try {
+      const body = !forceGenerate && customPassword.trim() ? { password: customPassword.trim() } : {};
+      const res = await apiRequest<{ ok: boolean; newPassword: string; displayName: string; username: string }>(
+        "POST",
+        `/muallim/ucenik/${parseInt(id)}/reset-password`,
+        body,
+        token
+      );
+      setNewPassword(res.newPassword);
+      setCopiedPass(false);
+      toast({ title: "Šifra je promijenjena!", description: "Nova šifra je prikazana ispod." });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće resetovati šifru", variant: "destructive" });
+    } finally {
+      setResettingPass(false);
+    }
+  }
+
+  async function copyPassword() {
+    if (!newPassword) return;
+    try {
+      await navigator.clipboard.writeText(newPassword);
+      setCopiedPass(true);
+      setTimeout(() => setCopiedPass(false), 2000);
+    } catch {}
+  }
+
   const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
   const odsutnih = prisustvo.filter(p => p.status === "odsutan").length;
   const zakasnio = prisustvo.filter(p => p.status === "zakasnio").length;
@@ -173,15 +208,100 @@ export default function UcenikPage() {
           <div className="text-center py-20 text-muted-foreground">Učenik nije pronađen</div>
         ) : (
           <>
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
               <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md">
                 <User className="w-7 h-7 text-white" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-extrabold text-foreground">{ucenik.displayName}</h1>
                 <p className="text-muted-foreground text-sm font-mono">{ucenik.username}</p>
               </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  onClick={() => { setShowResetForm(s => !s); setNewPassword(null); setCustomPassword(""); }}
+                  variant="outline"
+                  className="rounded-xl font-bold text-sm flex items-center gap-1.5"
+                  data-testid="btn-toggle-reset-password"
+                >
+                  <KeyRound className="w-4 h-4" /> Šifra
+                </Button>
+                <Button
+                  onClick={() => setLocation(`/muallim/izvjestaj/ucenik/${ucenik.id}`)}
+                  variant="outline"
+                  className="rounded-xl font-bold text-sm flex items-center gap-1.5"
+                  data-testid="btn-izvjestaj-ucenik"
+                >
+                  <FileText className="w-4 h-4" /> Izvještaj
+                </Button>
+              </div>
             </div>
+
+            {showResetForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="bg-white border border-border/50 rounded-2xl p-5 mb-6 shadow-sm"
+                data-testid="form-reset-password"
+              >
+                <h3 className="font-extrabold text-foreground mb-2 flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-primary" /> Promijeni šifru za {ucenik.displayName}
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Generiši automatsku šifru u formatu <strong>Mekteb####</strong> ili unesi vlastitu (najmanje 4 karaktera) i klikni "Postavi".
+                </p>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    onClick={() => { setCustomPassword(""); resetPassword(true); }}
+                    disabled={resettingPass}
+                    className="rounded-xl font-bold flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 w-full sm:w-auto"
+                    data-testid="btn-generate-mekteb-sifra"
+                  >
+                    {resettingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                    Generiši Mekteb####
+                  </Button>
+                  <div className="flex gap-2 items-end flex-wrap">
+                    <div className="flex-1 min-w-[200px]">
+                      <label className="text-xs font-bold text-muted-foreground block mb-1">Ili unesi vlastitu šifru</label>
+                      <input
+                        type="text"
+                        value={customPassword}
+                        onChange={e => setCustomPassword(e.target.value)}
+                        placeholder="Npr. Mekteb2026"
+                        className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        data-testid="input-nova-sifra"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => resetPassword(false)}
+                      disabled={resettingPass || customPassword.trim().length < 4}
+                      variant="outline"
+                      className="rounded-xl font-bold flex items-center gap-1.5"
+                      data-testid="btn-confirm-reset-password"
+                    >
+                      {resettingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                      Postavi
+                    </Button>
+                  </div>
+                </div>
+                {newPassword && (
+                  <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4" data-testid="display-nova-sifra">
+                    <p className="text-xs text-emerald-700 font-bold mb-1">Nova šifra je postavljena. Predajte je učeniku:</p>
+                    <div className="flex gap-2 items-center flex-wrap">
+                      <code className="bg-white border border-emerald-300 rounded-lg px-3 py-2 text-base font-mono font-bold text-emerald-800 flex-1">{newPassword}</code>
+                      <Button
+                        onClick={copyPassword}
+                        variant="outline"
+                        className="rounded-xl font-bold text-sm flex items-center gap-1.5"
+                        data-testid="btn-copy-sifra"
+                      >
+                        {copiedPass ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                        {copiedPass ? "Kopirano" : "Kopiraj"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
               <div className={`border border-border/50 rounded-2xl p-4 ${prisustvoPct !== null && prisustvoPct >= 80 ? "bg-emerald-50" : prisustvoPct !== null && prisustvoPct >= 50 ? "bg-amber-50" : "bg-red-50"}`}>

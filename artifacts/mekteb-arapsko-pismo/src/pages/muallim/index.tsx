@@ -8,7 +8,7 @@ import {
   Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
-  Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star
+  Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -559,6 +559,37 @@ export default function MuallimPanel() {
                   ))}
                 </div>
 
+                {/* Izvještaji za štampu / PDF */}
+                <div className="bg-white border border-border/50 rounded-2xl p-5" data-testid="card-izvjestaji">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <h3 className="font-extrabold text-base text-foreground">Izvještaji za štampu / PDF</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Sastavlja izvještaj sa zaglavljem MEKTEB platforme — prisustvo, ocjene, kvizovi i napredak. Iz pregleda kliknite "Štampaj / Sačuvaj kao PDF".
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => setLocation("/muallim/izvjestaj/svi")}
+                      className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
+                      data-testid="btn-izvjestaj-svi"
+                    >
+                      <Printer className="w-4 h-4" /> Svi učenici ({ucenici.length})
+                    </Button>
+                    {grupe.map(g => (
+                      <Button
+                        key={g.id}
+                        onClick={() => setLocation(`/muallim/izvjestaj/grupa/${g.id}`)}
+                        variant="outline"
+                        className="rounded-xl font-bold text-sm flex items-center gap-2"
+                        data-testid={`btn-izvjestaj-grupa-${g.id}`}
+                      >
+                        <FileText className="w-4 h-4" /> Grupa: {g.naziv}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
                 {pendingRoditelji.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                     <div className="flex items-center gap-3 mb-4">
@@ -902,7 +933,12 @@ export default function MuallimPanel() {
                         <TrendingUp className="w-5 h-5 text-primary" />
                         {grupe.find(g => g.id === statGrupaId)?.naziv} — Izvještaji
                       </h3>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Button onClick={() => setLocation(`/muallim/izvjestaj/grupa/${statGrupaId}`)}
+                          className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
+                          data-testid="btn-stampaj-izvjestaj-grupe">
+                          <Printer className="w-4 h-4" /> Štampaj izvještaj
+                        </Button>
                         <Button onClick={() => exportExcel(statGrupaId!)} disabled={exportingExcel}
                           className="rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 flex items-center gap-2">
                           {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <><FileSpreadsheet className="w-4 h-4" /> Excel izvještaj</>}

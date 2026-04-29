@@ -283,7 +283,7 @@ export async function seedDemo() {
     for (const slug of r.linkSlugs) {
       const [child] = await db.select().from(usersTable).where(eq(usersTable.username, slug));
       if (child) {
-        await db.insert(roditeljUcenikTable).values({ roditeljId: u.id, ucenikId: child.id }).onConflictDoNothing();
+        await db.insert(roditeljUcenikTable).values({ roditeljId: u.id, ucenikId: child.id, status: "approved" }).onConflictDoNothing();
       }
     }
     console.log(`✅ Demo roditelj: ${r.username} / demo123 (${r.linkSlugs.length} djece)`);

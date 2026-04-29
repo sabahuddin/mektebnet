@@ -16,6 +16,7 @@ import {
   ilmihalLekcijeTable,
   zadaceTable,
   porukeTable,
+  mektebiTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, asc, sql, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -1241,6 +1242,180 @@ router.delete("/zadace/:id", async (req, res) => {
     await db.delete(zadaceTable).where(eq(zadaceTable.id, id));
     res.json({ ok: true });
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── RESET ŠIFRE 1 UČENIKA ──────────────────────────────────────────────────────
+
+// POST /api/muallim/ucenik/:id/reset-password
+router.post("/ucenik/:id/reset-password", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    if (!ucenikId) { res.status(400).json({ error: "id obavezan" }); return; }
+
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId)));
+    if (!profil && req.user!.role !== "admin") { res.status(403).json({ error: "Nije vaš učenik" }); return; }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, ucenikId));
+    if (!user || user.role !== "ucenik") { res.status(404).json({ error: "Učenik ne postoji" }); return; }
+
+    const customRaw = (req.body?.password as string | undefined)?.trim();
+    let newPassword: string;
+    if (customRaw && customRaw.length > 0) {
+      if (customRaw.length < 4) { res.status(400).json({ error: "Šifra mora imati najmanje 4 karaktera" }); return; }
+      newPassword = customRaw;
+    } else {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      newPassword = `Mekteb${rand}`;
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, ucenikId));
+
+    res.json({ ok: true, newPassword, displayName: user.displayName, username: user.username });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── IZVJEŠTAJI ─────────────────────────────────────────────────────────────────
+
+async function buildUcenikIzvjestaj(ucenikId: number, muallimId?: number) {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, ucenikId));
+  if (!user) return null;
+
+  const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+  let grupa = null as { id: number; naziv: string } | null;
+  if (profil?.grupaId) {
+    const [g] = await db.select().from(grupeTable).where(eq(grupeTable.id, profil.grupaId));
+    if (g) grupa = { id: g.id, naziv: g.naziv };
+  }
+
+  // Konstrasti po muallimId ako je dat (sprječava cross-muallim leak istorije ocjena/prisustva).
+  // Kvizovi su sistemski (nemaju muallimId) — uvijek po userId.
+  const prisustvoWhere = muallimId
+    ? and(eq(priustvoTable.ucenikId, ucenikId), eq(priustvoTable.muallimId, muallimId))
+    : eq(priustvoTable.ucenikId, ucenikId);
+  const ocjeneWhere = muallimId
+    ? and(eq(ocjeneTable.ucenikId, ucenikId), eq(ocjeneTable.muallimId, muallimId))
+    : eq(ocjeneTable.ucenikId, ucenikId);
+
+  const [prisustvo, ocjene, kvizRezultati, napredak] = await Promise.all([
+    db.select().from(priustvoTable).where(prisustvoWhere).orderBy(asc(priustvoTable.datum)),
+    db.select().from(ocjeneTable).where(ocjeneWhere).orderBy(desc(ocjeneTable.datum)),
+    db.select().from(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, ucenikId)).orderBy(desc(kvizRezultatiTable.completedAt)),
+    db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
+      .where(and(eq(korisnikNapredakTable.userId, ucenikId), eq(korisnikNapredakTable.zavrsen, true))),
+  ]);
+
+  return {
+    ucenik: { id: user.id, displayName: user.displayName, username: user.username },
+    grupaNaziv: grupa?.naziv || null,
+    grupaId: grupa?.id || null,
+    prisustvo,
+    ocjene,
+    kvizRezultati,
+    zavrseneLekcijeBroj: napredak.length,
+  };
+}
+
+async function buildMektebHeader(muallimId: number) {
+  const [muallim] = await db.select().from(usersTable).where(eq(usersTable.id, muallimId));
+  const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
+  let mektebNaziv: string | null = null;
+  if (profil?.mektebId) {
+    const [mekteb] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, profil.mektebId));
+    mektebNaziv = mekteb?.naziv || null;
+  }
+  return {
+    muallimDisplayName: muallim?.displayName || "Muallim",
+    mektebNaziv,
+    skolskaGodina: profil?.tekucaSkolskaGodina || null,
+  };
+}
+
+// GET /api/muallim/izvjestaj/ucenik/:id
+router.get("/izvjestaj/ucenik/:id", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    if (!ucenikId) { res.status(400).json({ error: "id obavezan" }); return; }
+
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId)));
+    if (!profil && req.user!.role !== "admin") { res.status(403).json({ error: "Nije vaš učenik" }); return; }
+
+    // Admin vidi sve istorije; muallim samo svoju (filtrira ocjene+prisustvo).
+    const filterMuallimId = req.user!.role === "admin" ? undefined : req.user!.userId;
+    const data = await buildUcenikIzvjestaj(ucenikId, filterMuallimId);
+    if (!data) { res.status(404).json({ error: "Učenik ne postoji" }); return; }
+
+    const header = await buildMektebHeader(req.user!.userId);
+    res.json({
+      ...header,
+      tip: "ucenik" as const,
+      naslov: data.ucenik.displayName,
+      podnaslov: data.grupaNaziv ? `Grupa: ${data.grupaNaziv}` : null,
+      ucenici: [data],
+    });
+  } catch (err) {
+    console.error("Izvjestaj ucenik error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/izvjestaj/grupa/:id
+router.get("/izvjestaj/grupa/:id", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    if (!grupaId) { res.status(400).json({ error: "id obavezan" }); return; }
+
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const profili = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.grupaId, grupaId));
+    // Filtriraj ocjene/prisustvo po vlasniku grupe (sprječava miks istorija drugih muallima).
+    const filterMuallimId = grupa.muallimId;
+    const izvjestaji = (await Promise.all(profili.map(p => buildUcenikIzvjestaj(p.userId, filterMuallimId))))
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const header = await buildMektebHeader(req.user!.userId);
+    res.json({
+      ...header,
+      tip: "grupa" as const,
+      naslov: `Grupa: ${grupa.naziv}`,
+      podnaslov: header.skolskaGodina,
+      grupaNaziv: grupa.naziv,
+      grupaId: grupa.id,
+      ucenici: izvjestaji,
+    });
+  } catch (err) {
+    console.error("Izvjestaj grupa error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/izvjestaj/svi
+router.get("/izvjestaj/svi", async (req, res) => {
+  try {
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.muallimId, req.user!.userId));
+    // Filtriraj ocjene/prisustvo samo na ovog muallima.
+    const izvjestaji = (await Promise.all(profili.map(p => buildUcenikIzvjestaj(p.userId, req.user!.userId))))
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const header = await buildMektebHeader(req.user!.userId);
+    res.json({
+      ...header,
+      tip: "svi" as const,
+      naslov: "Svi učenici",
+      podnaslov: header.skolskaGodina,
+      ucenici: izvjestaji,
+    });
+  } catch (err) {
+    console.error("Izvjestaj svi error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

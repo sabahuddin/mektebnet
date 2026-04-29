@@ -34,6 +34,7 @@ import CitaonicaKnjigaPage from "./pages/citaonica-knjiga";
 
 // Roditelj panel
 import RoditeljPage from "./pages/roditelj";
+import RoditeljKalendarPage from "./pages/roditelj/kalendar";
 
 // Poruke
 import PorukePage from "./pages/poruke";
@@ -53,6 +54,7 @@ import MuallimDodajUcenikaPage from "./pages/muallim/dodaj-ucenika";
 import MuallimDodajGrupuPage from "./pages/muallim/dodaj-grupu";
 import MuallimUcenikPage from "./pages/muallim/ucenik";
 import MuallimGrupaPage from "./pages/muallim/grupa";
+import MuallimIzvjestajPage from "./pages/muallim/izvjestaj";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,6 +92,7 @@ function Router() {
       <Route path="/citaonica/:slug" component={CitaonicaKnjigaPage} />
 
       {/* Roditelj panel */}
+      <Route path="/roditelj/kalendar" component={RoditeljKalendarPage} />
       <Route path="/roditelj" component={RoditeljPage} />
 
       {/* Učenik profil */}
@@ -104,6 +107,8 @@ function Router() {
       <Route path="/admin" component={AdminPage} />
 
       {/* Muallim panel */}
+      <Route path="/muallim/izvjestaj/svi" component={MuallimIzvjestajPage} />
+      <Route path="/muallim/izvjestaj/:tip/:id" component={MuallimIzvjestajPage} />
       <Route path="/muallim" component={MuallimPanel} />
       <Route path="/muallim/dodaj-ucenika" component={MuallimDodajUcenikaPage} />
       <Route path="/muallim/dodaj-grupu" component={MuallimDodajGrupuPage} />
