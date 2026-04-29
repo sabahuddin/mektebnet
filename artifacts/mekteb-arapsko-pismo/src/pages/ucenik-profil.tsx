@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -7,10 +7,46 @@ import { useLocation } from "wouter";
 import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
-  Flame, Sparkles, Trophy
+  Flame, Trophy, Sparkles, Target, Footprints
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+
+interface StudentProgress {
+  studentId: string;
+  totalHasanat: number;
+  completedLessons: number[];
+  badges: { id: string; name?: string; emoji?: string }[];
+  streakDays: number;
+  lastActivityDate: string | null;
+}
+
+interface IlmihalLekcija {
+  id: number;
+  nivo: number;
+  slug: string;
+  naslov: string;
+  redoslijed: number;
+}
+
+function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: number }) {
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (v) => Math.round(v).toLocaleString("bs-BA"));
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const controls = animate(count, value, { duration, ease: "easeOut" });
+    const unsubscribe = rounded.on("change", (v) => {
+      if (ref.current) ref.current.textContent = v;
+    });
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [value, duration]);
+
+  return <span ref={ref}>0</span>;
+}
 
 interface ProfilData {
   user: { id: number; displayName: string; username: string; createdAt: string };
@@ -60,8 +96,10 @@ export default function UcenikProfilPage() {
   const [profil, setProfil] = useState<ProfilData | null>(null);
   const [kalendar, setKalendar] = useState<KalendarEntry[]>([]);
   const [planLekcija, setPlanLekcija] = useState<PlanLekcija[]>([]);
+  const [progress, setProgress] = useState<StudentProgress | null>(null);
+  const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"pregled" | "ocjene" | "kalendar" | "kvizovi">("pregled");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "kvizovi">("moj-put");
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -79,6 +117,16 @@ export default function UcenikProfilPage() {
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    if (!user) return;
+    apiRequest<StudentProgress>("GET", `/progress?studentId=${encodeURIComponent(String(user.id))}`)
+      .then(setProgress)
+      .catch(() => setProgress(null));
+    apiRequest<IlmihalLekcija[]>("GET", "/content/ilmihal")
+      .then(data => setIlmihalLekcije(Array.isArray(data) ? data : []))
+      .catch(() => setIlmihalLekcije([]));
+  }, [user]);
 
   if (!user || user.role !== "ucenik") {
     return (
@@ -113,11 +161,29 @@ export default function UcenikProfilPage() {
   const prosjecnaOcjena = profil && profil.ocjene.length ? (profil.ocjene.reduce((s, o) => s + o.ocjena, 0) / profil.ocjene.length).toFixed(1) : "—";
 
   const TABS = [
+    { id: "moj-put", label: "Moj put", icon: Footprints },
     { id: "pregled", label: "Pregled", icon: User },
     { id: "ocjene", label: "Ocjene", icon: Star },
     { id: "kalendar", label: "Kalendar", icon: Calendar },
     { id: "kvizovi", label: "Kvizovi", icon: ClipboardList },
   ] as const;
+
+  const completedSet = new Set(progress?.completedLessons ?? []);
+  const totalLekcija = ilmihalLekcije.length;
+  const zavrsenoUkupno = ilmihalLekcije.filter(l => completedSet.has(l.id)).length;
+  const NIVO_META: Record<number, { label: string; bg: string; border: string; bar: string; text: string }> = {
+    1: { label: "Nivo 1", bg: "bg-emerald-50", border: "border-emerald-200", bar: "bg-emerald-500", text: "text-emerald-700" },
+    2: { label: "Nivo 2", bg: "bg-blue-50",    border: "border-blue-200",    bar: "bg-blue-500",    text: "text-blue-700"    },
+    3: { label: "Nivo 3", bg: "bg-violet-50",  border: "border-violet-200",  bar: "bg-violet-500",  text: "text-violet-700"  },
+  };
+  const nivoiBreakdown = [1, 2, 3].map(n => {
+    const all = ilmihalLekcije.filter(l => l.nivo === n);
+    const done = all.filter(l => completedSet.has(l.id)).length;
+    return { nivo: n, total: all.length, done, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
+  });
+  const ukupniProcenat = totalLekcija ? Math.round((zavrsenoUkupno / totalLekcija) * 100) : 0;
+  const streakDays = progress?.streakDays ?? 0;
+  const totalHasanat = progress?.totalHasanat ?? 0;
 
   return (
     <Layout>
@@ -152,6 +218,210 @@ export default function UcenikProfilPage() {
                 </button>
               ))}
             </div>
+
+            {activeTab === "moj-put" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {/* Hero stats — Duolingo style */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.05 }}
+                    className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-orange-400 via-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/20"
+                  >
+                    <div className="absolute -right-4 -top-4 opacity-20">
+                      <Flame className="w-32 h-32" />
+                    </div>
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Flame className="w-5 h-5 fill-current" />
+                        <span className="text-sm font-extrabold uppercase tracking-wider opacity-90">Niz dana</span>
+                      </div>
+                      <div className="text-5xl font-black leading-none">
+                        <AnimatedNumber value={streakDays} />
+                      </div>
+                      <div className="text-sm font-bold opacity-90 mt-1">
+                        {streakDays === 1 ? "dan zaredom" : "dana zaredom"} 🔥
+                      </div>
+                      <div className="text-xs opacity-80 mt-2">
+                        {streakDays === 0
+                          ? "Završi lekciju danas i započni svoj niz!"
+                          : streakDays < 3
+                          ? "Odličan početak — nastavi sutra!"
+                          : streakDays < 7
+                          ? "Bravo, ne staj sad!"
+                          : "Mašallah, pravi mudžahid znanja!"}
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                    className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 text-amber-900 shadow-lg shadow-amber-400/20"
+                  >
+                    <div className="absolute -right-4 -top-4 opacity-25">
+                      <Star className="w-32 h-32 fill-current" />
+                    </div>
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-5 h-5 fill-current" />
+                        <span className="text-sm font-extrabold uppercase tracking-wider">Hasanati</span>
+                      </div>
+                      <div className="text-5xl font-black leading-none">
+                        <AnimatedNumber value={totalHasanat} />
+                      </div>
+                      <div className="text-sm font-bold mt-1 opacity-80">ukupno sakupljeno</div>
+                      <div className="text-xs mt-2 opacity-75">
+                        Za svaku završenu lekciju zaradiš nove hasanate ⭐
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.25 }}
+                    className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/20"
+                  >
+                    <div className="absolute -right-4 -top-4 opacity-20">
+                      <BookOpen className="w-32 h-32" />
+                    </div>
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-2">
+                        <BookOpen className="w-5 h-5" />
+                        <span className="text-sm font-extrabold uppercase tracking-wider opacity-90">Lekcije</span>
+                      </div>
+                      <div className="text-5xl font-black leading-none">
+                        <AnimatedNumber value={zavrsenoUkupno} />
+                        <span className="text-2xl font-bold opacity-80">/{totalLekcija || "—"}</span>
+                      </div>
+                      <div className="text-sm font-bold opacity-90 mt-1">završeno</div>
+                      <div className="text-xs opacity-80 mt-2">
+                        {ukupniProcenat}% pređenog ilmihala
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Overall progress bar */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-white border border-border/50 rounded-2xl p-5 mb-6"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-extrabold text-foreground flex items-center gap-2">
+                      <Target className="w-5 h-5 text-primary" /> Ukupan napredak kroz ilmihal
+                    </h3>
+                    <span className="font-black text-primary">
+                      {zavrsenoUkupno}/{totalLekcija || "—"} lekcija
+                    </span>
+                  </div>
+                  <div className="relative h-4 bg-muted/40 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${ukupniProcenat}%` }}
+                      transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-teal-500 to-emerald-500 rounded-full shadow-inner"
+                    />
+                    {ukupniProcenat > 0 && (
+                      <motion.div
+                        initial={{ left: 0, opacity: 0 }}
+                        animate={{ left: `${ukupniProcenat}%`, opacity: 1 }}
+                        transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
+                        className="absolute -top-1 -translate-x-1/2 w-6 h-6 rounded-full bg-white border-2 border-primary shadow-md flex items-center justify-center"
+                      >
+                        <Sparkles className="w-3 h-3 text-primary" />
+                      </motion.div>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2 font-medium">
+                    {ukupniProcenat}% — nastavi tempom i bićeš pravi alim! 📚
+                  </div>
+                </motion.div>
+
+                {/* Per-level breakdown */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="grid md:grid-cols-3 gap-4 mb-6"
+                >
+                  {nivoiBreakdown.map((n, i) => {
+                    const meta = NIVO_META[n.nivo];
+                    return (
+                      <motion.div
+                        key={n.nivo}
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.45 + i * 0.08 }}
+                        className={`${meta.bg} border-2 ${meta.border} rounded-2xl p-4`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`font-extrabold ${meta.text}`}>{meta.label}</span>
+                          <span className={`text-xs font-bold ${meta.text}`}>
+                            {n.done}/{n.total || "—"}
+                          </span>
+                        </div>
+                        <div className="relative h-2.5 bg-white/70 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${n.pct}%` }}
+                            transition={{ duration: 1, ease: "easeOut", delay: 0.6 + i * 0.08 }}
+                            className={`absolute inset-y-0 left-0 ${meta.bar} rounded-full`}
+                          />
+                        </div>
+                        <div className={`text-xs ${meta.text} font-bold mt-2 opacity-80`}>
+                          {n.pct}% završeno
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+
+                {/* CTA + last activity */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.55 }}
+                  className="grid md:grid-cols-2 gap-4"
+                >
+                  <div className="bg-gradient-to-br from-primary/5 to-teal-50 border border-primary/20 rounded-2xl p-5 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0">
+                      <Trophy className="w-7 h-7 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-extrabold text-foreground">Nastavi učenje</div>
+                      <div className="text-xs text-muted-foreground mb-2">
+                        Završi sljedeću lekciju i zaradi +20 hasanata.
+                      </div>
+                      <Button size="sm" className="rounded-xl" onClick={() => setLocation("/ilmihal")}>
+                        <BookOpen className="w-4 h-4 mr-1" /> Otvori ilmihal
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-border/50 rounded-2xl p-5 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center shrink-0">
+                      <Award className="w-7 h-7 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-extrabold text-foreground">
+                        {progress?.badges?.length ? `${progress.badges.length} bedž${progress.badges.length === 1 ? "" : "eva"}` : "Još bez bedža"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {progress?.lastActivityDate
+                          ? `Posljednja aktivnost: ${progress.lastActivityDate}`
+                          : "Završi prvu lekciju da pokreneš svoj niz."}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
 
             {activeTab === "pregled" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

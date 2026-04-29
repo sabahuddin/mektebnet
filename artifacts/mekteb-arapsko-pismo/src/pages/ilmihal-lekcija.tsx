@@ -1179,6 +1179,23 @@ export default function IlmihalLekcijaPage() {
           bodovi: 10,
         }, token
       );
+
+      // Task #6: paralelno upiši i u studentProgress tabelu (za "Moj put" tab)
+      try {
+        await apiRequest(
+          "POST",
+          "/progress/lesson",
+          {
+            studentId: String(user.id),
+            lessonId: lekcija.id,
+            score: 10,
+            maxScore: 10,
+            timeSpentSeconds: 0,
+          },
+          token,
+        );
+      } catch {}
+
       const wasNew = !completed && resp?.progressDelta?.newCompletion === true;
       setCompleted(true);
       if (wasNew) {
