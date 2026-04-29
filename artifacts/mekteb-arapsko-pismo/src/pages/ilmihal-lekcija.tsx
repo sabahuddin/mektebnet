@@ -9,7 +9,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -725,33 +725,88 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
 // ──────────────────────────────────────────────────
 // AI-generated lekcija kviz accordion
 // ──────────────────────────────────────────────────
-function LekcijaKvizBox({ pitanja }: { pitanja: LekcijaKvizPitanje[] }) {
+function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved }: {
+  pitanja: LekcijaKvizPitanje[];
+  lekcijaId?: number;
+  isAdmin?: boolean;
+  token?: string | null;
+  onSaved?: (novaPitanja: LekcijaKvizPitanje[]) => void;
+}) {
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const reset = () => { setCurrent(0); setSelected(null); setScore(0); setDone(false); };
 
-  const q = pitanja[current];
+  // Hardening: izbaci malformed legacy zapise (nema teksta ili nedovoljno opcija)
+  const safePitanja: LekcijaKvizPitanje[] = (pitanja || [])
+    .map(p => ({
+      question: typeof p?.question === "string" ? p.question : "",
+      options: Array.isArray(p?.options) ? p.options.filter(o => typeof o === "string" && o.trim().length > 0) : [],
+      answer: typeof p?.answer === "string" ? p.answer : "",
+    }))
+    .filter(p => p.question.trim().length > 0 && p.options.length >= 2);
+
+  const safeIdx = Math.min(current, Math.max(0, safePitanja.length - 1));
+  const q = safePitanja[safeIdx];
+  const canEdit = !!(isAdmin && token && lekcijaId);
+
+  // Ako sva pitanja su malformed a nismo admin, ne renderiraj kviz
+  if (safePitanja.length === 0 && !canEdit) return null;
 
   return (
     <div className="ring-2 ring-inset rounded-2xl overflow-hidden bg-teal-50 ring-teal-200">
-      <button onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors bg-teal-500/10 hover:bg-teal-500/15">
-        <div className="flex items-center gap-3">
-          <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-teal-100 text-teal-700">
-            <HelpCircle className="w-4 h-4 shrink-0" />
-          </span>
-          <span className="font-extrabold text-sm tracking-wide uppercase text-teal-800">
-            Provjeri znanje
-          </span>
-        </div>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-5 h-5 text-teal-800 opacity-70" />
-        </motion.div>
-      </button>
+      <div className="w-full flex items-stretch bg-teal-500/10">
+        <button onClick={() => setOpen(v => !v)}
+          className="flex-1 flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-teal-500/15"
+          data-testid="button-toggle-kviz">
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-teal-100 text-teal-700">
+              <HelpCircle className="w-4 h-4 shrink-0" />
+            </span>
+            <span className="font-extrabold text-sm tracking-wide uppercase text-teal-800">
+              Provjeri znanje
+            </span>
+            {canEdit && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-200/80 text-teal-900">
+                {safePitanja.length} {safePitanja.length === 1 ? "pitanje" : "pitanja"}
+              </span>
+            )}
+          </div>
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className="w-5 h-5 text-teal-800 opacity-70" />
+          </motion.div>
+        </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+            className="px-3 sm:px-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-900 hover:bg-teal-500/20 border-l border-teal-300/60 transition-colors"
+            title="Uredi pitanja"
+            data-testid="button-uredi-pitanja"
+          >
+            <Pencil className="w-4 h-4" />
+            <span className="hidden sm:inline">Uredi</span>
+          </button>
+        )}
+      </div>
+
+      {canEdit && editOpen && (
+        <KvizEditModal
+          lekcijaId={lekcijaId!}
+          token={token!}
+          initialPitanja={pitanja}
+          onClose={() => setEditOpen(false)}
+          onSaved={(novaPitanja) => {
+            onSaved?.(novaPitanja);
+            setEditOpen(false);
+            reset();
+          }}
+        />
+      )}
 
       <AnimatePresence initial={false}>
         {open && (
@@ -762,16 +817,20 @@ function LekcijaKvizBox({ pitanja }: { pitanja: LekcijaKvizPitanje[] }) {
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
             <div className="px-5 pb-5 pt-4">
-              {done ? (
+              {safePitanja.length === 0 ? (
+                <div className="text-center text-sm text-muted-foreground py-4" data-testid="text-kviz-prazan">
+                  Nema pitanja. Klikni "Uredi" pa "Dodaj pitanje" da kreiraš.
+                </div>
+              ) : done ? (
                 <div className="text-center py-4">
                   <Trophy className="w-10 h-10 mx-auto mb-3 text-amber-500" />
-                  <p className="text-lg font-extrabold text-foreground">{score}/{pitanja.length} tačnih!</p>
+                  <p className="text-lg font-extrabold text-foreground">{score}/{safePitanja.length} tačnih!</p>
                   <p className="text-sm text-muted-foreground mt-1">Provjera za sebe — ne broji u bodove</p>
                   <Button size="sm" variant="outline" onClick={reset} className="mt-4 rounded-xl">Ponovi kviz</Button>
                 </div>
               ) : (
                 <div>
-                  <p className="text-xs text-muted-foreground font-bold mb-3">Pitanje {current + 1}/{pitanja.length}</p>
+                  <p className="text-xs text-muted-foreground font-bold mb-3">Pitanje {safeIdx + 1}/{safePitanja.length}</p>
                   <p className="font-bold text-foreground mb-4 leading-relaxed">{q.question}</p>
                   <div className="flex flex-col gap-2">
                     {q.options.map((opt) => (
@@ -796,10 +855,10 @@ function LekcijaKvizBox({ pitanja }: { pitanja: LekcijaKvizPitanje[] }) {
                   {selected && (
                     <div className="mt-4 flex justify-end">
                       <Button size="sm" onClick={() => {
-                        if (current + 1 >= pitanja.length) setDone(true);
-                        else { setCurrent(c => c + 1); setSelected(null); }
+                        if (safeIdx + 1 >= safePitanja.length) setDone(true);
+                        else { setCurrent(safeIdx + 1); setSelected(null); }
                       }} className="rounded-xl">
-                        {current + 1 >= pitanja.length ? "Završi ✓" : "Sljedeće →"}
+                        {safeIdx + 1 >= safePitanja.length ? "Završi ✓" : "Sljedeće →"}
                       </Button>
                     </div>
                   )}
@@ -809,6 +868,248 @@ function LekcijaKvizBox({ pitanja }: { pitanja: LekcijaKvizPitanje[] }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────
+// Admin: editor za pitanja "Provjeri znanje"
+// ──────────────────────────────────────────────────
+function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
+  lekcijaId: number;
+  token: string;
+  initialPitanja: LekcijaKvizPitanje[];
+  onClose: () => void;
+  onSaved: (pitanja: LekcijaKvizPitanje[]) => void;
+}) {
+  const { toast } = useToast();
+  const initial = useRef<LekcijaKvizPitanje[]>(
+    (initialPitanja && initialPitanja.length > 0)
+      ? initialPitanja.map(p => ({
+          question: p.question || "",
+          options: (p.options && p.options.length >= 2 ? p.options : ["", "", "", ""]).slice(),
+          answer: p.answer || "",
+        }))
+      : [{ question: "", options: ["", "", "", ""], answer: "" }]
+  );
+  const [pitanja, setPitanja] = useState<LekcijaKvizPitanje[]>(() => initial.current.map(p => ({ ...p, options: p.options.slice() })));
+  const [saving, setSaving] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const isDirty = useCallback(() => {
+    return JSON.stringify(pitanja) !== JSON.stringify(initial.current);
+  }, [pitanja]);
+
+  const requestClose = useCallback(() => {
+    if (isDirty() && !confirm("Imate nesačuvane izmjene. Zatvoriti i izgubiti ih?")) return;
+    onClose();
+  }, [isDirty, onClose]);
+
+  // Esc da zatvori (sa dirty-check), body scroll lock
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") requestClose(); };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [requestClose]);
+
+  const updateP = (idx: number, patch: Partial<LekcijaKvizPitanje>) => {
+    setPitanja(prev => prev.map((p, i) => i === idx ? { ...p, ...patch } : p));
+  };
+
+  const updateOption = (pIdx: number, oIdx: number, value: string) => {
+    setPitanja(prev => prev.map((p, i) => {
+      if (i !== pIdx) return p;
+      const opts = p.options.slice();
+      const old = opts[oIdx] ?? "";
+      opts[oIdx] = value;
+      // Ako je staro polje bilo trenutni "answer", premjesti answer na novu vrijednost
+      const newAnswer = p.answer === old ? value : p.answer;
+      return { ...p, options: opts, answer: newAnswer };
+    }));
+  };
+
+  const setAnswer = (pIdx: number, value: string) => updateP(pIdx, { answer: value });
+
+  const removeP = (idx: number) => {
+    if (!confirm("Obrisati ovo pitanje?")) return;
+    setPitanja(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const addP = () => {
+    setPitanja(prev => [...prev, { question: "", options: ["", "", "", ""], answer: "" }]);
+  };
+
+  const validate = (): string | null => {
+    if (pitanja.length === 0) return "Mora postojati barem jedno pitanje (ili otkažite za potpuno uklanjanje).";
+    for (let i = 0; i < pitanja.length; i++) {
+      const p = pitanja[i];
+      if (!p.question.trim()) return `Pitanje ${i + 1}: tekst pitanja ne smije biti prazan.`;
+      const opts = p.options.map(o => o.trim()).filter(Boolean);
+      if (opts.length < 2) return `Pitanje ${i + 1}: mora imati barem 2 opcije.`;
+      const set = new Set(opts);
+      if (set.size !== opts.length) return `Pitanje ${i + 1}: opcije moraju biti različite.`;
+      if (!p.answer || !opts.includes(p.answer.trim())) return `Pitanje ${i + 1}: označite tačan odgovor.`;
+    }
+    return null;
+  };
+
+  const save = async () => {
+    if (saving) return; // idempotency: spriječi duple PUT-ove
+    const err = validate();
+    if (err) { toast({ title: "Provjeri unos", description: err, variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      const cleaned = pitanja.map(p => ({
+        question: p.question.trim(),
+        options: p.options.map(o => o.trim()).filter(Boolean),
+        answer: p.answer.trim(),
+      }));
+      await apiRequest("PUT", `/admin/ilmihal/${lekcijaId}`, { kvizPitanja: cleaned }, token);
+      toast({ title: "Spremljeno", description: `Pitanja su ažurirana (${cleaned.length}).` });
+      onSaved(cleaned);
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Pokušajte ponovo", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
+      onClick={(e) => { if (e.target === e.currentTarget) requestClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kviz-edit-title"
+      data-testid="modal-uredi-pitanja"
+    >
+      <div
+        ref={dialogRef}
+        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 sticky top-0 bg-white rounded-t-2xl">
+          <h3 id="kviz-edit-title" className="font-extrabold text-foreground flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-teal-600" /> Uredi pitanja "Provjeri znanje"
+          </h3>
+          <button
+            type="button"
+            onClick={requestClose}
+            className="p-2 rounded-lg hover:bg-muted/60 text-muted-foreground"
+            aria-label="Zatvori"
+            data-testid="button-zatvori-modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {pitanja.length === 0 && (
+            <div className="text-center text-sm text-muted-foreground py-8">
+              Nema pitanja. Kliknite "Dodaj pitanje" ispod.
+            </div>
+          )}
+          {pitanja.map((p, idx) => (
+            <div key={idx} className="border border-border/60 rounded-xl p-4 bg-muted/10" data-testid={`card-pitanje-${idx}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+                  Pitanje {idx + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeP(idx)}
+                  className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1"
+                  data-testid={`button-obrisi-pitanje-${idx}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Obriši
+                </button>
+              </div>
+
+              <label className="block text-xs font-bold text-muted-foreground mb-1">Tekst pitanja</label>
+              <textarea
+                value={p.question}
+                onChange={e => updateP(idx, { question: e.target.value })}
+                rows={2}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/40 mb-3 resize-y"
+                placeholder="npr. Šta znači riječ 'Allah'?"
+                data-testid={`input-pitanje-${idx}`}
+              />
+
+              <label className="block text-xs font-bold text-muted-foreground mb-1">
+                Opcije <span className="font-normal">(označite tačan odgovor)</span>
+              </label>
+              <div className="space-y-2">
+                {p.options.map((opt, oIdx) => {
+                  const trimmed = opt.trim();
+                  const isAnswer = trimmed.length > 0 && p.answer === trimmed;
+                  return (
+                    <div key={oIdx} className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${isAnswer ? "border-emerald-400 bg-emerald-50" : "border-border bg-white"}`}>
+                      <input
+                        type="radio"
+                        name={`answer-${idx}`}
+                        checked={isAnswer}
+                        disabled={!trimmed}
+                        onChange={() => setAnswer(idx, trimmed)}
+                        className="w-4 h-4 accent-emerald-600 shrink-0"
+                        aria-label={`Označi opciju ${oIdx + 1} kao tačan odgovor`}
+                        data-testid={`radio-tacan-${idx}-${oIdx}`}
+                      />
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={e => updateOption(idx, oIdx, e.target.value)}
+                        className="flex-1 bg-transparent border-0 px-2 py-1 text-sm focus:outline-none"
+                        placeholder={`Opcija ${oIdx + 1}`}
+                        data-testid={`input-opcija-${idx}-${oIdx}`}
+                      />
+                      {isAnswer && (
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">
+                          Tačan
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {p.options.length < 6 && (
+                <button
+                  type="button"
+                  onClick={() => updateP(idx, { options: [...p.options, ""] })}
+                  className="mt-2 text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1"
+                  data-testid={`button-dodaj-opciju-${idx}`}
+                >
+                  <Plus className="w-3.5 h-3.5" /> Dodaj opciju
+                </button>
+              )}
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addP}
+            className="w-full border-2 border-dashed border-teal-300 rounded-xl py-3 text-sm font-bold text-teal-700 hover:bg-teal-50 hover:border-teal-400 transition-colors flex items-center justify-center gap-2"
+            data-testid="button-dodaj-pitanje"
+          >
+            <Plus className="w-4 h-4" /> Dodaj pitanje
+          </button>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border/60 bg-muted/20 rounded-b-2xl sticky bottom-0">
+          <Button variant="outline" onClick={requestClose} disabled={saving} className="rounded-xl" data-testid="button-otkazi-modal">
+            Otkaži
+          </Button>
+          <Button onClick={save} disabled={saving} className="rounded-xl flex items-center gap-2" data-testid="button-sacuvaj-pitanja">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Sačuvaj
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1658,10 +1959,46 @@ export default function IlmihalLekcijaPage() {
             {(() => {
               const kvizPitanja = lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 ? lekcija.kvizPitanja : null;
               const isMuallim = user?.role === "admin" || user?.role === "muallim";
+              const isAdmin = user?.role === "admin";
+              const onKvizSaved = (novaPitanja: LekcijaKvizPitanje[]) => {
+                setLekcija(prev => prev ? { ...prev, kvizPitanja: novaPitanja } : prev);
+              };
               const visibleSections = parsed.sections
                 .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim))
                 .slice()
                 .sort((a, b) => (a.type === "priprema" ? 1 : 0) - (b.type === "priprema" ? 1 : 0));
+
+              const renderKvizOrCta = () => {
+                if (kvizPitanja) {
+                  return (
+                    <LekcijaKvizBox
+                      key="lekcija-kviz"
+                      pitanja={kvizPitanja}
+                      lekcijaId={lekcija.id}
+                      isAdmin={isAdmin}
+                      token={token}
+                      onSaved={onKvizSaved}
+                    />
+                  );
+                }
+                if (isAdmin && token) {
+                  return (
+                    <button
+                      key="lekcija-kviz-cta"
+                      type="button"
+                      onClick={() => {
+                        // Inicijalno dodajemo prazno pitanje kao stub; modal se otvara klikom Uredi
+                        setLekcija(prev => prev ? { ...prev, kvizPitanja: [{ question: "", options: ["", "", "", ""], answer: "" }] } : prev);
+                      }}
+                      className="w-full ring-2 ring-inset ring-teal-200 bg-teal-50 hover:bg-teal-100 rounded-2xl px-5 py-4 flex items-center justify-center gap-2 text-sm font-bold text-teal-800 transition-colors"
+                      data-testid="button-dodaj-kviz"
+                    >
+                      <Plus className="w-4 h-4" /> Dodaj kviz "Provjeri znanje"
+                    </button>
+                  );
+                }
+                return null;
+              };
 
               const items: React.ReactNode[] = [];
               let kvizInserted = false;
@@ -1669,13 +2006,14 @@ export default function IlmihalLekcijaPage() {
                 items.push(
                   <SectionAccordion key={section.id} section={section} slug={slug!} nivo={lekcija.nivo} />
                 );
-                if (!kvizInserted && section.type === "ilmihal" && kvizPitanja) {
-                  items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
-                  kvizInserted = true;
+                if (!kvizInserted && section.type === "ilmihal") {
+                  const node = renderKvizOrCta();
+                  if (node) { items.push(node); kvizInserted = true; }
                 }
               }
-              if (!kvizInserted && kvizPitanja) {
-                items.push(<LekcijaKvizBox key="lekcija-kviz" pitanja={kvizPitanja} />);
+              if (!kvizInserted) {
+                const node = renderKvizOrCta();
+                if (node) items.push(node);
               }
               return items;
             })()}
