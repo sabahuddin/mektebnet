@@ -13,6 +13,7 @@ COPY lib/api-client-react/package.json ./lib/api-client-react/
 COPY lib/api-zod/package.json ./lib/api-zod/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 COPY artifacts/mekteb-arapsko-pismo/package.json ./artifacts/mekteb-arapsko-pismo/
+COPY scripts/package.json ./scripts/
 
 RUN pnpm install --frozen-lockfile
 

@@ -1,0 +1,454 @@
+2026-Apr-29 17:36:35.226059
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-Apr-29 17:36:35.444507
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-Apr-29 17:36:36.898839
+----------------------------------------
+2026-Apr-29 17:36:36.909053
+Importing sabahuddin/mektebnet:main (commit sha 69fb47f56ebf475e1e51e5b1f4c390085e9c81c1) to /artifacts/z800wwccwgk0cok8ckksg4s8.
+2026-Apr-29 17:36:50.918680
+Image not found (i8w884sgkkgogkwsokcwc0c4:69fb47f56ebf475e1e51e5b1f4c390085e9c81c1). Building new image.
+2026-Apr-29 17:36:53.121293
+----------------------------------------
+2026-Apr-29 17:36:53.126296
+Building docker image started.
+2026-Apr-29 17:36:53.130937
+To check the current progress, click on Show Debug Logs.
+2026-Apr-29 17:37:03.075464
+========================================
+2026-Apr-29 17:37:03.083937
+Deployment failed: Command execution failed (exit code 1): docker exec z800wwccwgk0cok8ckksg4s8 bash -c 'bash /artifacts/build.sh'
+2026-Apr-29 17:37:03.083937
+Error: #0 building with "default" instance using docker driver
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#1 [internal] load build definition from Dockerfile
+2026-Apr-29 17:37:03.083937
+#1 transferring dockerfile: 2.82kB done
+2026-Apr-29 17:37:03.083937
+#1 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#2 [internal] load metadata for docker.io/library/node:24-bookworm-slim
+2026-Apr-29 17:37:03.083937
+#2 DONE 0.6s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#3 [internal] load .dockerignore
+2026-Apr-29 17:37:03.083937
+#3 transferring context: 2B done
+2026-Apr-29 17:37:03.083937
+#3 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#4 [base  1/17] FROM docker.io/library/node:24-bookworm-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2
+2026-Apr-29 17:37:03.083937
+#4 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#5 [internal] load build context
+2026-Apr-29 17:37:03.083937
+#5 transferring context: 50.76MB 0.2s done
+2026-Apr-29 17:37:03.083937
+#5 DONE 0.3s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#6 [base  2/17] RUN npm install -g pnpm
+2026-Apr-29 17:37:03.083937
+#6 CACHED
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#7 [base  3/17] WORKDIR /app
+2026-Apr-29 17:37:03.083937
+#7 CACHED
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#8 [runner  2/10] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm
+2026-Apr-29 17:37:03.083937
+#8 CACHED
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#9 [runner  3/10] WORKDIR /app
+2026-Apr-29 17:37:03.083937
+#9 CACHED
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#10 [runner  4/10] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-Apr-29 17:37:03.083937
+#10 DONE 0.1s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#11 [base  4/17] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-Apr-29 17:37:03.083937
+#11 DONE 0.1s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#12 [runner  5/10] COPY lib/db/package.json ./lib/db/
+2026-Apr-29 17:37:03.083937
+#12 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#13 [base  5/17] COPY tsconfig.base.json tsconfig.json ./
+2026-Apr-29 17:37:03.083937
+#13 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#14 [runner  6/10] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-Apr-29 17:37:03.083937
+#14 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#15 [base  6/17] COPY lib/db/package.json ./lib/db/
+2026-Apr-29 17:37:03.083937
+#15 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#16 [base  7/17] COPY lib/api-spec/package.json ./lib/api-spec/
+2026-Apr-29 17:37:03.083937
+#16 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#17 [base  8/17] COPY lib/api-client-react/package.json ./lib/api-client-react/
+2026-Apr-29 17:37:03.083937
+#17 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#18 [base  9/17] COPY lib/api-zod/package.json ./lib/api-zod/
+2026-Apr-29 17:37:03.083937
+#18 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#19 [runner  7/10] RUN pnpm install --prod --frozen-lockfile
+2026-Apr-29 17:37:03.083937
+#19 ...
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#20 [base 10/17] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-Apr-29 17:37:03.083937
+#20 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#21 [base 11/17] COPY artifacts/mekteb-arapsko-pismo/package.json ./artifacts/mekteb-arapsko-pismo/
+2026-Apr-29 17:37:03.083937
+#21 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#22 [base 12/17] RUN pnpm install --frozen-lockfile
+2026-Apr-29 17:37:03.083937
+#22 0.425 Scope: all 7 workspace projects
+2026-Apr-29 17:37:03.083937
+#22 0.519 Lockfile is up to date, resolution step is skipped
+2026-Apr-29 17:37:03.083937
+#22 0.574 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-Apr-29 17:37:03.083937
+#22 0.663 Packages: +710
+2026-Apr-29 17:37:03.083937
+#22 0.663 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-Apr-29 17:37:03.083937
+#22 1.575 Progress: resolved 710, reused 0, downloaded 115, added 62
+2026-Apr-29 17:37:03.083937
+#22 2.581 Progress: resolved 710, reused 0, downloaded 331, added 331
+2026-Apr-29 17:37:03.083937
+#22 ...
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#19 [runner  7/10] RUN pnpm install --prod --frozen-lockfile
+2026-Apr-29 17:37:03.083937
+#19 0.436 Scope: all 3 workspace projects
+2026-Apr-29 17:37:03.083937
+#19 0.517 Lockfile is up to date, resolution step is skipped
+2026-Apr-29 17:37:03.083937
+#19 0.536 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-Apr-29 17:37:03.083937
+#19 0.605 Packages: +235
+2026-Apr-29 17:37:03.083937
+#19 0.605 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-Apr-29 17:37:03.083937
+#19 1.537 Progress: resolved 235, reused 0, downloaded 192, added 156
+2026-Apr-29 17:37:03.083937
+#19 2.031 Progress: resolved 235, reused 0, downloaded 235, added 235, done
+2026-Apr-29 17:37:03.083937
+#19 2.206
+2026-Apr-29 17:37:03.083937
+#19 2.206 dependencies:
+2026-Apr-29 17:37:03.083937
+#19 2.206 + adm-zip 0.5.16
+2026-Apr-29 17:37:03.083937
+#19 2.206 + pdfjs-dist 3.11.174
+2026-Apr-29 17:37:03.083937
+#19 2.206
+2026-Apr-29 17:37:03.083937
+#19 2.206 devDependencies: skipped
+2026-Apr-29 17:37:03.083937
+#19 2.206
+2026-Apr-29 17:37:03.083937
+#19 2.210 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-Apr-29 17:37:03.083937
+#19 2.237 . preinstall: Done
+2026-Apr-29 17:37:03.083937
+#19 2.254 ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2026-Apr-29 17:37:03.083937
+#19 2.254 │                                                                              │
+2026-Apr-29 17:37:03.083937
+#19 2.254 │   Ignored build scripts: canvas@2.11.2, sharp@0.34.5.                        │
+2026-Apr-29 17:37:03.083937
+#19 2.254 │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+2026-Apr-29 17:37:03.083937
+#19 2.254 │   to run scripts.                                                            │
+2026-Apr-29 17:37:03.083937
+#19 2.254 │                                                                              │
+2026-Apr-29 17:37:03.083937
+#19 2.254 ╰──────────────────────────────────────────────────────────────────────────────╯
+2026-Apr-29 17:37:03.083937
+#19 2.271 Done in 2.1s using pnpm v10.33.2
+2026-Apr-29 17:37:03.083937
+#19 DONE 2.7s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#22 [base 12/17] RUN pnpm install --frozen-lockfile
+2026-Apr-29 17:37:03.083937
+#22 3.582 Progress: resolved 710, reused 0, downloaded 508, added 505
+2026-Apr-29 17:37:03.083937
+#22 4.585 Progress: resolved 710, reused 0, downloaded 594, added 552
+2026-Apr-29 17:37:03.083937
+#22 5.331 Progress: resolved 710, reused 0, downloaded 710, added 710, done
+2026-Apr-29 17:37:03.083937
+#22 5.625 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-Apr-29 17:37:03.083937
+#22 5.689 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-Apr-29 17:37:03.083937
+#22 5.952
+2026-Apr-29 17:37:03.083937
+#22 5.952 dependencies:
+2026-Apr-29 17:37:03.083937
+#22 5.952 + adm-zip 0.5.16
+2026-Apr-29 17:37:03.083937
+#22 5.952 + pdfjs-dist 3.11.174
+2026-Apr-29 17:37:03.083937
+#22 5.952
+2026-Apr-29 17:37:03.083937
+#22 5.952 devDependencies:
+2026-Apr-29 17:37:03.083937
+#22 5.952 + jsdom 29.0.2
+2026-Apr-29 17:37:03.083937
+#22 5.952 + prettier 3.8.1
+2026-Apr-29 17:37:03.083937
+#22 5.952 + typescript 5.9.3
+2026-Apr-29 17:37:03.083937
+#22 5.952
+2026-Apr-29 17:37:03.083937
+#22 5.963 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-Apr-29 17:37:03.083937
+#22 5.992 . preinstall: Done
+2026-Apr-29 17:37:03.083937
+#22 6.103 ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2026-Apr-29 17:37:03.083937
+#22 6.103 │                                                                              │
+2026-Apr-29 17:37:03.083937
+#22 6.103 │   Ignored build scripts: canvas@2.11.2, sharp@0.34.5.                        │
+2026-Apr-29 17:37:03.083937
+#22 6.103 │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+2026-Apr-29 17:37:03.083937
+#22 6.103 │   to run scripts.                                                            │
+2026-Apr-29 17:37:03.083937
+#22 6.103 │                                                                              │
+2026-Apr-29 17:37:03.083937
+#22 6.103 ╰──────────────────────────────────────────────────────────────────────────────╯
+2026-Apr-29 17:37:03.083937
+#22 6.123 Done in 6s using pnpm v10.33.2
+2026-Apr-29 17:37:03.083937
+#22 DONE 6.7s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#23 [base 13/17] COPY lib/ ./lib/
+2026-Apr-29 17:37:03.083937
+#23 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#24 [base 14/17] COPY artifacts/ ./artifacts/
+2026-Apr-29 17:37:03.083937
+#24 DONE 0.2s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#25 [base 15/17] COPY scripts/ ./scripts/
+2026-Apr-29 17:37:03.083937
+#25 DONE 0.0s
+2026-Apr-29 17:37:03.083937
+2026-Apr-29 17:37:03.083937
+#26 [base 16/17] RUN pnpm --filter @workspace/api-server run build
+2026-Apr-29 17:37:03.083937
+#26 0.395
+2026-Apr-29 17:37:03.083937
+#26 0.395 > @workspace/api-server@0.0.0 build /app/artifacts/api-server
+2026-Apr-29 17:37:03.083937
+#26 0.395 > node ./build.mjs
+2026-Apr-29 17:37:03.083937
+#26 0.395
+2026-Apr-29 17:37:03.083937
+#26 0.669 ✘ [ERROR] Could not resolve "bcryptjs"
+2026-Apr-29 17:37:03.083937
+#26 0.669
+2026-Apr-29 17:37:03.083937
+#26 0.669     ../../scripts/src/seed-demo.ts:1:19:
+2026-Apr-29 17:37:03.083937
+#26 0.669       1 │ import bcrypt from "bcryptjs";
+2026-Apr-29 17:37:03.083937
+#26 0.669         ╵                    ~~~~~~~~~~
+2026-Apr-29 17:37:03.083937
+#26 0.669
+2026-Apr-29 17:37:03.083937
+#26 0.669   You can mark the path "bcryptjs" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
+2026-Apr-29 17:37:03.083937
+#26 0.669
+2026-Apr-29 17:37:03.083937
+#26 0.672 ✘ [ERROR] Could not resolve "@workspace/db"
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672     ../../scripts/src/seed-demo.ts:2:19:
+2026-Apr-29 17:37:03.083937
+#26 0.672       2 │ import { db } from "@workspace/db";
+2026-Apr-29 17:37:03.083937
+#26 0.672         ╵                    ~~~~~~~~~~~~~~~
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672   You can mark the path "@workspace/db" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672 ✘ [ERROR] Could not resolve "drizzle-orm"
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672     ../../scripts/src/seed-demo.ts:21:19:
+2026-Apr-29 17:37:03.083937
+#26 0.672       21 │ import { eq } from "drizzle-orm";
+2026-Apr-29 17:37:03.083937
+#26 0.672          ╵                    ~~~~~~~~~~~~~
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672   You can mark the path "drizzle-orm" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672 ✘ [ERROR] Could not resolve "@workspace/db"
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672     ../../scripts/src/clear-demo.ts:1:19:
+2026-Apr-29 17:37:03.083937
+#26 0.672       1 │ import { db } from "@workspace/db";
+2026-Apr-29 17:37:03.083937
+#26 0.672         ╵                    ~~~~~~~~~~~~~~~
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672   You can mark the path "@workspace/db" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672 ✘ [ERROR] Could not resolve "drizzle-orm"
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672     ../../scripts/src/clear-demo.ts:20:34:
+2026-Apr-29 17:37:03.083937
+#26 0.672       20 │ import { eq, like, inArray } from "drizzle-orm";
+2026-Apr-29 17:37:03.083937
+#26 0.672          ╵                                   ~~~~~~~~~~~~~
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.672   You can mark the path "drizzle-orm" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
+2026-Apr-29 17:37:03.083937
+#26 0.672
+2026-Apr-29 17:37:03.083937
+#26 0.851 5 errors
+2026-Apr-29 17:37:03.083937
+#26 0.853 Error: Build failed with 5 errors:
+2026-Apr-29 17:37:03.083937
+#26 0.853 ../../scripts/src/clear-demo.ts:1:19: ERROR: Could not resolve "@workspace/db"
+2026-Apr-29 17:37:03.083937
+#26 0.853 ../../scripts/src/clear-demo.ts:20:34: ERROR: Could not resolve "drizzle-orm"
+2026-Apr-29 17:37:03.083937
+#26 0.853 ../../scripts/src/seed-demo.ts:1:19: ERROR: Could not resolve "bcryptjs"
+2026-Apr-29 17:37:03.083937
+#26 0.853 ../../scripts/src/seed-demo.ts:2:19: ERROR: Could not resolve "@workspace/db"
+2026-Apr-29 17:37:03.083937
+#26 0.853 ../../scripts/src/seed-demo.ts:21:19: ERROR: Could not resolve "drizzle-orm"
+2026-Apr-29 17:37:03.083937
+#26 0.853     at failureErrorWithLog (/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1467:15)
+2026-Apr-29 17:37:03.083937
+#26 0.853     at /app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:926:25
+2026-Apr-29 17:37:03.083937
+#26 0.853     at /app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1345:9
+2026-Apr-29 17:37:03.083937
+#26 0.853     at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+2026-Apr-29 17:37:03.083937
+#26 0.853   errors: [Getter/Setter],
+2026-Apr-29 17:37:03.083937
+#26 0.853   warnings: [Getter/Setter]
+2026-Apr-29 17:37:03.083937
+#26 0.853 }
+2026-Apr-29 17:37:03.083937
+#26 0.870 /app/artifacts/api-server:
+2026-Apr-29 17:37:03.083937
+#26 0.870  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/api-server@0.0.0 build: `node ./build.mjs`
+2026-Apr-29 17:37:03.083937
+#26 0.870 Exit status 1
+2026-Apr-29 17:37:03.083937
+#26 ERROR: process "/bin/sh -c pnpm --filter @workspace/api-server run build" did not complete successfully: exit code: 1
+2026-Apr-29 17:37:03.083937
+------
+2026-Apr-29 17:37:03.083937
+> [base 16/17] RUN pnpm --filter @workspace/api-server run build:
+2026-Apr-29 17:37:03.083937
+0.853     at failureErrorWithLog (/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1467:15)
+2026-Apr-29 17:37:03.083937
+0.853     at /app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:926:25
+2026-Apr-29 17:37:03.083937
+0.853     at /app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1345:9
+2026-Apr-29 17:37:03.083937
+0.853     at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+2026-Apr-29 17:37:03.083937
+0.853   errors: [Getter/Setter],
+2026-Apr-29 17:37:03.083937
+0.853   warnings: [Getter/Setter]
+2026-Apr-29 17:37:03.083937
+0.853 }
+2026-Apr-29 17:37:03.083937
+0.870 /app/artifacts/api-server:
+2026-Apr-29 17:37:03.083937
+0.870  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/api-server@0.0.0 build: `node ./build.mjs`
+2026-Apr-29 17:37:03.083937
+0.870 Exit status 1
+2026-Apr-29 17:37:03.083937
+------
+2026-Apr-29 17:37:03.083937
+Dockerfile:34
+2026-Apr-29 17:37:03.083937
+--------------------
+2026-Apr-29 17:37:03.083937
+32 |
+2026-Apr-29 17:37:03.083937
+33 |     # Build API server and frontend
+2026-Apr-29 17:37:03.083937
+34 | >>> RUN pnpm --filter @workspace/api-server run build
+2026-Apr-29 17:37:03.083937
+35 |     ENV PORT=3000
+2026-Apr-29 17:37:03.083937
+36 |     ENV BASE_PATH=/
+2026-Apr-29 17:37:03.083937
+--------------------
+2026-Apr-29 17:37:03.083937
+ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm --filter @workspace/api-server run build" did not complete successfully: exit code: 1
+2026-Apr-29 17:37:03.083937
+exit status 1
+2026-Apr-29 17:37:03.189126
+========================================
+2026-Apr-29 17:37:03.203922
+Deployment failed. Removing the new version of your application.
+2026-Apr-29 17:37:03.700483
+Gracefully shutting down build container: z800wwccwgk0cok8ckksg4s8
