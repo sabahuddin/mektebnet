@@ -167,6 +167,8 @@ export const translations = {
       pretrazi: "Pretraži lekcije...",
       lekcija: "lekcija",
       nemaLekcija: "Nema lekcija za ovaj filter",
+      zavrseno: "Završeno",
+      sljedeca: "Sljedeća",
     },
     kviz: {
       naslov: "Kvizovi — Provjeri svoje znanje",
@@ -367,6 +369,8 @@ export const translations = {
       pretrazi: "Lektionen suchen...",
       lekcija: "Lektion",
       nemaLekcija: "Keine Lektionen für diesen Filter",
+      zavrseno: "Erledigt",
+      sljedeca: "Nächste",
     },
     kviz: {
       naslov: "Quiz — Teste dein Wissen",
@@ -567,6 +571,8 @@ export const translations = {
       pretrazi: "Search lessons...",
       lekcija: "lesson",
       nemaLekcija: "No lessons for this filter",
+      zavrseno: "Completed",
+      sljedeca: "Next up",
     },
     kviz: {
       naslov: "Quizzes — Test Your Knowledge",
@@ -767,6 +773,8 @@ export const translations = {
       pretrazi: "Ders ara...",
       lekcija: "ders",
       nemaLekcija: "Bu filtre için ders yok",
+      zavrseno: "Tamamlandı",
+      sljedeca: "Sıradaki",
     },
     kviz: {
       naslov: "Testler — Bilginizi Test Edin",
@@ -967,6 +975,8 @@ export const translations = {
       pretrazi: "ابحث عن دروس...",
       lekcija: "درس",
       nemaLekcija: "لا توجد دروس لهذا الفلتر",
+      zavrseno: "مكتمل",
+      sljedeca: "التالي",
     },
     kviz: {
       naslov: "اختبارات — اختبر معلوماتك",

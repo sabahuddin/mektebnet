@@ -73,9 +73,10 @@ interface LekcijaNav {
 // ──────────────────────────────────────────────────
 // Horizontal lesson strip
 // ──────────────────────────────────────────────────
-function LekcijeStrip({ lekcije, currentSlug, onNavigate }: {
+function LekcijeStrip({ lekcije, currentSlug, completedIds, onNavigate }: {
   lekcije: LekcijaNav[];
   currentSlug: string;
+  completedIds: Set<number>;
   onNavigate: (slug: string) => void;
 }) {
   const stripRef = useRef<HTMLDivElement>(null);
@@ -90,6 +91,7 @@ function LekcijeStrip({ lekcije, currentSlug, onNavigate }: {
 
   const prev = currentIdx > 0 ? lekcije[currentIdx - 1] : null;
   const next = currentIdx < lekcije.length - 1 ? lekcije[currentIdx + 1] : null;
+  const nextLessonId = lekcije.find(l => !completedIds.has(l.id))?.id ?? null;
 
   return (
     <div className="mb-5">
@@ -107,19 +109,28 @@ function LekcijeStrip({ lekcije, currentSlug, onNavigate }: {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {lekcije.map((l, i) => {
             const isActive = l.slug === currentSlug;
+            const isDone = completedIds.has(l.id);
+            const isNext = l.id === nextLessonId;
             return (
               <button
                 key={l.id}
                 ref={isActive ? activeRef : undefined}
                 onClick={() => onNavigate(l.slug)}
-                title={l.naslov}
-                className={`shrink-0 flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-xs font-bold transition-all min-w-[2.5rem]
+                title={`${l.naslov}${isDone ? " ✓" : isNext ? " (sljedeća)" : ""}`}
+                className={`relative shrink-0 flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-xs font-bold transition-all min-w-[2.5rem]
                   ${isActive
                     ? "bg-teal-500 text-white shadow-md shadow-teal-200 scale-105"
-                    : "bg-white border border-border/50 text-muted-foreground hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50"
+                    : isDone
+                      ? "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                      : isNext
+                        ? "bg-amber-50 border-2 border-amber-300 text-amber-700 ring-2 ring-amber-200/60 hover:bg-amber-100"
+                        : "bg-white border border-border/50 text-muted-foreground hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50"
                   }`}
               >
                 <span className="text-[10px] leading-none">{i + 1}</span>
+                {isDone && !isActive && (
+                  <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3 text-emerald-600 bg-white rounded-full" strokeWidth={3} />
+                )}
               </button>
             );
           })}
@@ -1561,6 +1572,7 @@ export default function IlmihalLekcijaPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [completed, setCompleted] = useState(false);
   const [lekcijeStrip, setLekcijeStrip] = useState<LekcijaNav[]>([]);
+  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
   const [showEditor, setShowEditor] = useState(false);
   const [editingNaslov, setEditingNaslov] = useState(false);
   const [naslovDraft, setNaslovDraft] = useState("");
@@ -1619,6 +1631,29 @@ export default function IlmihalLekcijaPage() {
       .catch(() => {});
   }, [lekcija]);
 
+  // Učitaj listu završenih lekcija da pokažemo ✓ na strip-u i sinhronizujemo "completed" state
+  useEffect(() => {
+    if (!user) {
+      setCompletedIds(new Set());
+      return;
+    }
+    apiRequest<{ completedLessons?: number[] }>(
+      "GET",
+      `/progress?studentId=${encodeURIComponent(String(user.id))}`,
+      undefined,
+      token || undefined,
+    )
+      .then(p => {
+        const ids = new Set(p.completedLessons ?? []);
+        setCompletedIds(ids);
+        // Sinhronizuj "completed" sa stvarnim stanjem za trenutnu lekciju.
+        // Korisno kad korisnik koristi strip i prelazi između lekcija — bez ovoga
+        // bi `completed=true` ostao "ljepak" iz prethodne završene lekcije.
+        if (lekcija) setCompleted(ids.has(lekcija.id));
+      })
+      .catch(() => setCompletedIds(new Set()));
+  }, [user, token, lekcija]);
+
   const prefersReducedMotion = () =>
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
@@ -1667,6 +1702,12 @@ export default function IlmihalLekcijaPage() {
 
       const wasNew = !completed && resp?.progressDelta?.newCompletion === true;
       setCompleted(true);
+      setCompletedIds(prev => {
+        if (prev.has(lekcija.id)) return prev;
+        const next = new Set(prev);
+        next.add(lekcija.id);
+        return next;
+      });
 
       const totalHasanat = resp.progressDelta?.totalHasanat ?? 0;
       const previousHasanat = resp.progressDelta?.previousHasanat ?? Math.max(0, totalHasanat - (resp.progressDelta?.hasanatGained ?? 0));
@@ -1949,6 +1990,7 @@ export default function IlmihalLekcijaPage() {
           <LekcijeStrip
             lekcije={lekcijeStrip}
             currentSlug={slug}
+            completedIds={completedIds}
             onNavigate={s => setLocation(`/ilmihal/${s}`)}
           />
         )}

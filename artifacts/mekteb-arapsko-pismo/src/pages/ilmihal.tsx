@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { BookOpen, ChevronRight, Search, ChevronDown, CheckCircle2 } from "lucide-react";
+import { BookOpen, ChevronRight, Search, ChevronDown, CheckCircle2, Play } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -41,13 +41,31 @@ export default function IlmihalPage() {
     urlNivo ? new Set([1, 2, 3].filter(n => n !== urlNivo)) : new Set()
   );
 
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
+
   useEffect(() => {
     apiRequest<Lekcija[]>("GET", "/content/ilmihal", undefined, token || undefined)
       .then(setLekcije)
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [token]);
+
+  // Učitaj listu završenih lekcija iz progress endpointa (Duolingo-style ✓ marker)
+  useEffect(() => {
+    if (!user) {
+      setCompletedIds(new Set());
+      return;
+    }
+    apiRequest<{ completedLessons?: number[] }>(
+      "GET",
+      `/progress?studentId=${encodeURIComponent(String(user.id))}`,
+      undefined,
+      token || undefined,
+    )
+      .then(p => setCompletedIds(new Set(p.completedLessons ?? [])))
+      .catch(() => setCompletedIds(new Set()));
+  }, [user, token]);
 
   const displayNivo = (l: Lekcija) => l.nivo;
 
@@ -125,6 +143,8 @@ export default function IlmihalPage() {
               const info = NIVO_LABELS[nivo];
               const isCollapsed = collapsed.has(nivo);
               const items = grouped[nivo];
+              const zavrsenoCount = items.filter(l => completedIds.has(l.id)).length;
+              const nextLessonId = items.find(l => !completedIds.has(l.id))?.id ?? null;
               return (
                 <div key={nivo} className={`rounded-2xl border-2 ${info.border} overflow-hidden`}>
                   <button
@@ -136,7 +156,7 @@ export default function IlmihalPage() {
                         {info.label}
                       </span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/70 ${info.color}`}>
-                        {items.length} {t("ilmihal.lekcija")}
+                        {user ? `${zavrsenoCount}/${items.length}` : items.length} {t("ilmihal.lekcija")}
                       </span>
                     </div>
                     <ChevronDown className={`w-5 h-5 ${info.color} transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`} />
@@ -152,24 +172,54 @@ export default function IlmihalPage() {
                         className="overflow-hidden"
                       >
                         <div className="divide-y divide-border/30 bg-white">
-                          {items.map((l, i) => (
-                            <motion.div key={l.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }}>
-                              <Link href={`/ilmihal/${l.slug}`}>
-                                <div className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors group ${l.zavrseno ? "bg-emerald-50/40 hover:bg-emerald-50/70" : "hover:bg-muted/40"}`}>
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <span className="text-muted-foreground text-xs font-mono w-6 shrink-0">{i + 1}.</span>
-                                    {l.zavrseno ? (
-                                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                                    ) : (
-                                      <span className="w-4 h-4 rounded-full border-2 border-border/50 shrink-0" />
-                                    )}
-                                    <span className={`font-semibold transition-all text-sm truncate ${l.zavrseno ? "text-emerald-800" : `text-foreground/80 group-hover:${info.color} group-hover:font-bold`}`}>{l.naslov}</span>
+                          {items.map((l, i) => {
+                            const isDone = completedIds.has(l.id);
+                            const isNext = user != null && l.id === nextLessonId;
+                            return (
+                              <motion.div key={l.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }}>
+                                <Link href={`/ilmihal/${l.slug}`}>
+                                  <div className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors group ${
+                                    isDone
+                                      ? "bg-emerald-50/40 hover:bg-emerald-50/70"
+                                      : isNext
+                                        ? `${info.bg} hover:brightness-95`
+                                        : "hover:bg-muted/40"
+                                  }`}>
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                      <span className={`text-xs font-mono w-6 shrink-0 ${isDone ? "text-emerald-600/70" : "text-muted-foreground"}`}>{i + 1}.</span>
+                                      {isDone ? (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                      ) : isNext ? (
+                                        <span className={`w-4 h-4 rounded-full ${info.bg} border-2 ${info.border} ${info.ring ? "ring-2 " + info.ring : ""} flex items-center justify-center shrink-0`}>
+                                          <Play className={`w-2.5 h-2.5 ${info.color} fill-current`} />
+                                        </span>
+                                      ) : (
+                                        <span className="w-4 h-4 rounded-full border-2 border-border/50 shrink-0" />
+                                      )}
+                                      <span className={`font-semibold transition-all text-sm truncate ${
+                                        isDone
+                                          ? "text-emerald-800/70 line-through decoration-emerald-400/40"
+                                          : isNext
+                                            ? `${info.color} font-bold`
+                                            : `text-foreground/80 group-hover:${info.color} group-hover:font-bold`
+                                      }`}>{l.naslov}</span>
+                                      {isNext && (
+                                        <span className={`shrink-0 hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${info.bg} ${info.color} border ${info.border}`}>
+                                          {t("ilmihal.sljedeca")}
+                                        </span>
+                                      )}
+                                      {isDone && (
+                                        <span className="shrink-0 hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                          {t("ilmihal.zavrseno")}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <ChevronRight className={`w-4 h-4 ${info.color} opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0`} />
                                   </div>
-                                  <ChevronRight className={`w-4 h-4 ${info.color} opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0`} />
-                                </div>
-                              </Link>
-                            </motion.div>
-                          ))}
+                                </Link>
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       </motion.div>
                     )}
