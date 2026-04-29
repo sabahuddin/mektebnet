@@ -145,7 +145,7 @@ router.post("/exercises/session", async (req, res) => {
       return;
     }
 
-    const accuracy = correctAnswers / totalQuestions;
+    const accuracy = totalQuestions > 0 ? correctAnswers / totalQuestions : 0;
     let hasanatEarned = Math.round(accuracy * 10);
     if (accuracy === 1) hasanatEarned += 5;
 
@@ -165,11 +165,33 @@ router.post("/exercises/session", async (req, res) => {
       .where(eq(studentProgressTable.studentId, studentId))
       .limit(1);
 
-    let newBadges: object[] = [];
-    let totalHasanat = hasanatEarned;
-    let streakBonus = 0;
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-    if (progress) {
+    let newBadges: object[] = [];
+    let previousHasanat = 0;
+    let totalHasanat = hasanatEarned;
+    let previousStreakDays = 0;
+    let streakDays = 1;
+
+    if (!progress) {
+      const [created] = await db
+        .insert(studentProgressTable)
+        .values({
+          studentId,
+          totalHasanat: hasanatEarned,
+          completedLessons: [],
+          badges: [],
+          streakDays: 1,
+          lastActivityDate: today,
+        })
+        .returning();
+      progress = created;
+    } else {
+      previousHasanat = progress.totalHasanat;
+      previousStreakDays = progress.streakDays;
       const newTotal = progress.totalHasanat + hasanatEarned;
       const badges = progress.badges as Array<{ id: string }>;
 
@@ -179,15 +201,39 @@ router.post("/exercises/session", async (req, res) => {
         badges.push(newBadge);
       }
 
+      streakDays = progress.streakDays;
+      if (progress.lastActivityDate !== today) {
+        if (progress.lastActivityDate === yesterdayStr) streakDays += 1;
+        else streakDays = 1;
+      }
+
       await db
         .update(studentProgressTable)
-        .set({ totalHasanat: newTotal, badges, updatedAt: new Date() })
+        .set({
+          totalHasanat: newTotal,
+          badges,
+          streakDays,
+          lastActivityDate: today,
+          updatedAt: new Date(),
+        })
         .where(eq(studentProgressTable.studentId, studentId));
 
       totalHasanat = newTotal;
     }
 
-    res.json({ hasanatEarned, newBadges, totalHasanat, streakBonus });
+    const streakIncreased = streakDays > previousStreakDays;
+    const streakBonus = 0;
+
+    res.json({
+      hasanatEarned,
+      newBadges,
+      totalHasanat,
+      streakBonus,
+      previousHasanat,
+      hasanatGained: hasanatEarned,
+      streakDays,
+      streakIncreased,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to save exercise session");
     res.status(500).json({ error: "internal_error", message: "Failed to save exercise session" });

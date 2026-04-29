@@ -397,9 +397,21 @@ components:
           type: integer
         streakBonus:
           type: integer
+        previousHasanat:
+          type: integer
+        hasanatGained:
+          type: integer
+        streakDays:
+          type: integer
+        streakIncreased:
+          type: boolean
       required:
         - hasanatEarned
         - newBadges
         - totalHasanat
         - streakBonus
+        - previousHasanat
+        - hasanatGained
+        - streakDays
+        - streakIncreased
 

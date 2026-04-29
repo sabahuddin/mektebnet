@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { useGetLessonById, useSaveExerciseSession } from "@workspace/api-client-react";
 import { getStudentId } from "@/lib/student";
-import { X, Star, Timer, AlertCircle, CheckCircle2, Volume2 } from "lucide-react";
+import { X, Star, Timer, AlertCircle, CheckCircle2, Volume2, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Maskota } from "@/components/maskota";
+import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
 
 // Utilities for generating game data
 const ALL_LETTERS = ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش"];
@@ -26,6 +27,8 @@ export default function Exercise() {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  const scoreRef = useRef(0);
 
   // Dynamic config based on type
   const config = lesson?.exercises.find(e => e.type === type) || { rounds: 5, hasanatReward: 10, title: "Vježba", timeLimit: 60 };
@@ -44,9 +47,12 @@ export default function Exercise() {
 
   const handleAnswer = (isCorrect: boolean) => {
     if (feedback !== null) return; // Prevent multiple clicks
-    
+
     setFeedback(isCorrect ? 'correct' : 'wrong');
-    if (isCorrect) setScore(s => s + 1);
+    if (isCorrect) {
+      scoreRef.current += 1;
+      setScore(scoreRef.current);
+    }
 
     setTimeout(() => {
       setFeedback(null);
@@ -60,21 +66,34 @@ export default function Exercise() {
 
   const endGame = async () => {
     setGameState('completed');
-    if (score > totalRounds / 2) {
+    const finalScore = scoreRef.current;
+    const isPositive = finalScore > totalRounds / 2;
+    if (isPositive) {
       triggerConfetti();
     }
-    
+
     try {
-      await saveSession({
+      const resp = await saveSession({
         data: {
           studentId,
           lessonId,
           exerciseType: type || "unknown",
-          correctAnswers: score,
+          correctAnswers: finalScore,
           totalQuestions: totalRounds,
           timeSpentSeconds: config.timeLimit ? config.timeLimit - timeLeft : 30
         }
       });
+
+      if (isPositive && resp) {
+        setCelebration({
+          isRepeat: false,
+          hasanatGained: resp.hasanatGained ?? resp.hasanatEarned ?? 0,
+          totalHasanat: resp.totalHasanat ?? 0,
+          previousHasanat: resp.previousHasanat ?? Math.max(0, (resp.totalHasanat ?? 0) - (resp.hasanatEarned ?? 0)),
+          streakDays: resp.streakDays ?? 0,
+          streakIncreased: resp.streakIncreased ?? false,
+        });
+      }
     } catch (e) {
       console.error("Failed to save session", e);
     }
@@ -212,6 +231,13 @@ export default function Exercise() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+      {/* Celebration modal — same reward animation as ilmihal lessons */}
+      <AnimatePresence>
+        {celebration && (
+          <CelebrationModal data={celebration} onClose={() => setCelebration(null)} />
+        )}
+      </AnimatePresence>
+
       {/* Decorative bg */}
       <div className="absolute inset-0 opacity-40 pointer-events-none" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/hero-bg.png)`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
 

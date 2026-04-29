@@ -190,5 +190,8 @@ export const SaveExerciseSessionResponse = zod.object({
   ),
   totalHasanat: zod.number(),
   streakBonus: zod.number(),
+  previousHasanat: zod.number(),
+  hasanatGained: zod.number(),
+  streakDays: zod.number(),
+  streakIncreased: zod.boolean(),
 });
-

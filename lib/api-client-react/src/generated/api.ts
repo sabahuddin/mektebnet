@@ -538,4 +538,3 @@ export const useSaveExerciseSession = <
 > => {
   return useMutation(getSaveExerciseSessionMutationOptions(options));
 };
-

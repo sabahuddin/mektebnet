@@ -141,6 +141,10 @@ export interface ExerciseSessionResult {
   newBadges: Badge[];
   totalHasanat: number;
   streakBonus: number;
+  previousHasanat: number;
+  hasanatGained: number;
+  streakDays: number;
+  streakIncreased: boolean;
 }
 
 export type GetProgressParams = {
