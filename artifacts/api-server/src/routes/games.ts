@@ -55,7 +55,7 @@ function computeAllowedSeconds(totalHasanat: number): number {
 }
 
 // GET /api/games/credits — koliko vremena ima i koliko je potrošio.
-router.get("/credits", requireAuth, async (req: Request, res: Response) => {
+router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const [totalHasanat, secondsSpent] = await Promise.all([
@@ -285,7 +285,7 @@ async function getUserScopeIds(userId: number): Promise<{ grupaId: number | null
   };
 }
 
-router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
+router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const scope = (String(req.query.scope || "global") as LbScope);
@@ -525,7 +525,7 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
 });
 
 // GET /api/games/quiz-questions?count=15 — random pitanja iz svih ilmihal lekcija.
-router.get("/quiz-questions", requireAuth, requireRole("ucenik", "muallim", "admin"), async (req: Request, res: Response) => {
+router.get("/quiz-questions", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const count = Math.max(5, Math.min(50, Number(req.query.count || 20)));
     const rows = await exec<{ kviz_pitanja: unknown }>(sql`
