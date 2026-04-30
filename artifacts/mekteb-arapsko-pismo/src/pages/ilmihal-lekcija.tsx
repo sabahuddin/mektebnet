@@ -391,7 +391,10 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
     // Button title: text without the span
     const iconSpan = btn.querySelector(".section-icon");
     if (iconSpan) iconSpan.remove();
-    const title = btn.textContent?.trim() || sectionId;
+    // Strip leading numbering ("1. ", "2.) ", "3 - " itd.) iz prikazanog naslova akordiona.
+    // Zahtijeva najmanje jedan delimiter nakon broja, pa "A1" / "1a" ostaju netaknuti.
+    const rawTitle = btn.textContent?.trim() || sectionId;
+    let title = rawTitle.replace(/^\s*\d+(?:\s*[.)\-:–])+\s*/, "").trim() || rawTitle;
 
     // Content div
     const contentDiv = accordion.querySelector(".lesson-content");
@@ -417,6 +420,11 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
     };
     // Classify by sectionId first, then by title for priprema
     type = classify(sid) || classify(titleCheck) || "other";
+
+    // Override naslov akordiona ilmihal sekcije: "Naučimo iz ilmihala" → "Ilmihal".
+    if (type === "ilmihal") {
+      title = "Ilmihal";
+    }
 
     const processedHtml = postProcessHtml(contentHtml);
     sections.push({ id: sectionId, title, html: processedHtml, defaultOpen: isActive, type });
