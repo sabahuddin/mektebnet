@@ -3,8 +3,9 @@ import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui/card";
 import { useGameCredits, formatSeconds } from "@/hooks/use-game-credits";
 import { useAuth } from "@/context/auth";
-import { Gamepad2, Clock, Star, Trophy, Sparkles, Brain, Zap } from "lucide-react";
+import { Gamepad2, Clock, Star, Trophy, Sparkles, Brain, Zap, Info } from "lucide-react";
 import { motion } from "framer-motion";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 export default function IgricePage() {
   const { user } = useAuth();
@@ -61,7 +62,28 @@ export default function IgricePage() {
           <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-amber-200">
             <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
             <div>
-              <p className="text-xs font-bold text-amber-800/70 uppercase">Hasanati</p>
+              <p className="text-xs font-bold text-amber-800/70 uppercase flex items-center gap-1">
+                Hasanati
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Kako hasanati otključavaju vrijeme"
+                        className="text-amber-600 hover:text-amber-700 cursor-help"
+                        data-testid="tooltip-hasanat-rule"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+                      Svakih <strong>{credits?.hasanatPerBlock || 100} hasanata</strong> otključava{" "}
+                      <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre.
+                      Hasanati se NE troše — ostaju ti zauvijek, samo otključavaju vrijeme.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </p>
               <p className="text-xl font-black text-yellow-600">{totalHas}</p>
               <p className="text-[10px] text-amber-700/70">{blocks} × {formatSeconds(credits?.secondsPerBlock || 600)}</p>
             </div>

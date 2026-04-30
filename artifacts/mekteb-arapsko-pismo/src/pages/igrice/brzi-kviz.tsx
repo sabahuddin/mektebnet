@@ -81,11 +81,12 @@ export default function BrziKviz() {
     }
   }, [token]);
 
-  const endGame = useCallback(async (finalCorrect: number, finalWrong: number) => {
+  const endGame = useCallback(async (finalCorrect: number, _finalWrong: number) => {
     if (!sessionId || !token || endingRef.current) return;
     endingRef.current = true;
-    // Bodovanje: score = broj tačnih, sa malim penalty-em na netačne (1 oduzima score po 3 promašaja).
-    const score = Math.max(0, finalCorrect - Math.floor(finalWrong / 3));
+    // Bodovanje: score = broj tačnih (max 60). Penalty za netačne se primjenjuje
+    // kroz timer (svaki netačan = -2s preostalog vremena), ne kroz score.
+    const score = Math.max(0, finalCorrect);
     try {
       const r = await apiRequest<{ ok: boolean; finalScore?: number }>(
         "POST", "/games/end", { sessionId, score }, token
@@ -120,6 +121,8 @@ export default function BrziKviz() {
     } else {
       setWrong(w => w + 1);
       setFeedback("wrong");
+      // Time penalty: skrati preostali timer za 2s na svaki netačan odgovor.
+      setAllowedDuration(d => Math.max(1, d - 2));
     }
     setTimeout(() => {
       setFeedback(null);
@@ -201,7 +204,7 @@ export default function BrziKviz() {
             <Sparkles className="w-6 h-6 text-orange-600 shrink-0" />
             <div>
               <p className="font-bold text-foreground mb-1">60 sekundi — koliko tačnih?</p>
-              <p className="text-sm text-muted-foreground">Score = broj tačnih odgovora. Pitanja iz svih ilmihal lekcija. Pokušaj pogoditi što više za 60 s.</p>
+              <p className="text-sm text-muted-foreground">Score = broj tačnih odgovora. Svaki netačan ti oduzme <strong className="text-red-600">2 sekunde</strong> vremena. Pitanja iz svih ilmihal lekcija. Pokušaj pogoditi što više za 60 s.</p>
               <p className="text-xs text-muted-foreground mt-2">
                 Preostalo vremena: <strong>{creditsLoading ? "…" : formatSeconds(credits?.secondsRemaining ?? 0)}</strong>
                 {!creditsLoading && (credits?.secondsRemaining ?? 0) > 0 && (credits?.secondsRemaining ?? 0) < 60 && (
@@ -288,8 +291,9 @@ export default function BrziKviz() {
               )}
               {feedback === "wrong" && (
                 <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                  className="absolute top-3 right-3">
+                  className="absolute top-3 right-3 flex items-center gap-1">
                   <XCircle className="w-10 h-10 text-red-500" />
+                  <span className="text-xs font-black text-red-600 bg-red-100 px-2 py-1 rounded-lg" data-testid="penalty-badge">−2s</span>
                 </motion.div>
               )}
             </AnimatePresence>

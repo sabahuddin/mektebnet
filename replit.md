@@ -205,9 +205,9 @@ Roditelji se registruju sami i mogu: a) "Poveži dijete" (link existing, muallim
 - `GET /quiz-questions?count=60` — **role-guard `ucenik`**. Random pitanja iz `ilmihal_lekcije.kviz_pitanja`. Frontend ih prikaže redom u 60s rundi.
 
 **Frontend stranice (učenik)**:
-- `/igrice` (hub) — preostalo vrijeme + 2 kartice + link na ljestvicu.
+- `/igrice` (hub) — preostalo vrijeme + 2 kartice + link na ljestvicu. Info-tooltip pored "Hasanati" labele objašnjava pravilo otključavanja vremena.
 - `/igrice/pamti-par` — 16 kartica = 8 parova **(arapski harf ↔ ime harfa)**, match po harfId. Bodovanje: `1000 - max(0,moves-8)*25 - min(300,elapsedSec*2)` (min 50). Timer = pun allowedDuration sa servera.
-- `/igrice/brzi-kviz` — 60s. **Score = broj tačnih − floor(netačnih/3)**, max 60. Start dozvoljen i ako učenik ima <60s credit-a (server skraćuje rundu).
+- `/igrice/brzi-kviz` — 60s. **Score = broj tačnih (max 60). Svaki netačan = −2s preostalog vremena** (penalty kroz timer, ne kroz score). Start dozvoljen i ako učenik ima <60s credit-a (server skraćuje rundu).
 - Završni card oba game-a pokazuje "Najbolji ikad" + "Tvoj prethodni najbolji" sa "novi rekord!" badge-om kad finalScore > previousBest.
 - `/igrice/ljestvica` — scope filter (grupa/mekteb/global) + game filter (sve/pamti-par/brzi-kviz), highlight prijavljenog korisnika, prikaz mekteb naziva ispod imena. Refresh dugme + auto-refresh na visibilitychange + pull-to-refresh za mobile (touch handler ≥70px).
 
