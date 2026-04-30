@@ -25,6 +25,32 @@ const ROUND_DURATION_SEC: Record<string, number | null> = {
 // Validni gameId enum.
 const VALID_GAMES = new Set(["memory", "quiz"]);
 
+// === RATE LIMITING ===
+// Per-user in-memory limiter za /start i /end (anti-automation guard).
+// Učenik realno ne pokreće > ~6 sesija/min, pa je 30/min prostran ali kapuje botove.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PER_USER = 30;
+const rateBuckets = new Map<number, number[]>();
+function checkRate(userId: number): boolean {
+  const now = Date.now();
+  const arr = (rateBuckets.get(userId) || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (arr.length >= RATE_MAX_PER_USER) {
+    rateBuckets.set(userId, arr);
+    return false;
+  }
+  arr.push(now);
+  rateBuckets.set(userId, arr);
+  // Periodic cleanup za stare ulaze (svakih 100 zahtjeva, lazy).
+  if (rateBuckets.size > 500 && Math.random() < 0.01) {
+    for (const [uid, ts] of rateBuckets.entries()) {
+      const fresh = ts.filter(t => now - t < RATE_WINDOW_MS);
+      if (fresh.length === 0) rateBuckets.delete(uid);
+      else rateBuckets.set(uid, fresh);
+    }
+  }
+  return true;
+}
+
 interface DbExecResult<T = Record<string, unknown>> { rows: T[]; }
 async function exec<T = Record<string, unknown>>(query: ReturnType<typeof sql>): Promise<DbExecResult<T>> {
   return (await db.execute(query)) as unknown as DbExecResult<T>;
@@ -98,6 +124,10 @@ router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, 
 router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
+    if (!checkRate(userId)) {
+      res.status(429).json({ error: "rate_limited", message: "Previše zahtjeva. Sačekaj malo." });
+      return;
+    }
     const gameId = String(req.body?.gameId || "");
     if (!VALID_GAMES.has(gameId)) {
       res.status(400).json({ error: "bad_request", message: "Nepoznata igra" });
@@ -200,6 +230,10 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
 router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
+    if (!checkRate(userId)) {
+      res.status(429).json({ error: "rate_limited", message: "Previše zahtjeva. Sačekaj malo." });
+      return;
+    }
     const sessionId = Number(req.body?.sessionId);
     const rawScore = Number(req.body?.score ?? 0);
     if (!Number.isFinite(sessionId) || sessionId <= 0) {

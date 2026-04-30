@@ -211,7 +211,7 @@ Roditelji se registruju sami i mogu: a) "Poveži dijete" (link existing, muallim
 - Završni card oba game-a pokazuje "Najbolji ikad" + "Tvoj prethodni najbolji" sa "novi rekord!" badge-om kad finalScore > previousBest.
 - `/igrice/ljestvica` — scope filter (grupa/mekteb/global) + game filter (sve/pamti-par/brzi-kviz), highlight prijavljenog korisnika, prikaz mekteb naziva ispod imena. Refresh dugme + auto-refresh na visibilitychange + pull-to-refresh za mobile (touch handler ≥70px).
 
-**Anti-cheat**: server clamp duration + score, partial unique index protiv paralelnih running sesija, atomic end UPDATE protiv lost-update, min duration → score cap protiv instant-submit cheat-a, role-guard `ucenik` na /start i /end (drugi role-ovi 403).
+**Anti-cheat**: server clamp duration + score, partial unique index protiv paralelnih running sesija, atomic end UPDATE protiv lost-update, min duration → score cap protiv instant-submit cheat-a, role-guard `ucenik` na /start i /end (drugi role-ovi 403), per-user rate limit 30/60s na /start i /end (vraća 429).
 
 **Roditelj UX**: u `/roditelj` svaka kartica djeteta dobiva purple "Igre" sekciju sa: Mjesto u grupi (X od Y), potrošeno/dozvoljeno vrijeme, ukupno hasanata, per-game best score + broj igara.
 
