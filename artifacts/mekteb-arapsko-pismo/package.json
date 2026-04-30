@@ -90,6 +90,7 @@
     "@tiptap/react": "^3.21.0",
     "@tiptap/starter-kit": "^3.21.0",
     "canvas-confetti": "^1.9.4",
+    "h5p-standalone": "^3.8.2",
     "uuid": "^13.0.0"
   }
 }

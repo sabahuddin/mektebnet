@@ -12,6 +12,7 @@ import ucenikRouter from "./ucenik";
 import setupRouter from "./setup";
 import importContentRouter from "./import-content";
 import gamesRouter from "./games";
+import h5pRouter from "./h5p";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,7 @@ router.use("/ucenik", ucenikRouter);
 router.use("/setup", setupRouter);
 router.use("/import-content", importContentRouter);
 router.use("/games", gamesRouter);
+router.use("/h5p", h5pRouter);
 
 export default router;
 

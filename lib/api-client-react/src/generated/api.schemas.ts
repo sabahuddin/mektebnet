@@ -171,6 +171,40 @@ export interface QuizResult {
   newBadges: Badge[];
 }
 
+export interface H5pResultRequest {
+  priloziId: number;
+  score: number;
+  maxScore: number;
+}
+
+export interface H5pResultResponse {
+  attemptNo: number;
+  score: number;
+  maxScore: number;
+  procenat: number;
+  multiplier: number;
+  hasanatGained: number;
+  totalHasanat: number;
+  previousHasanat: number;
+}
+
+export interface H5pAttempt {
+  attemptNo: number;
+  score: number;
+  maxScore: number;
+  procenat: number;
+  hasanatGained: number;
+  completedAt: string;
+}
+
+export interface H5pAttemptsResponse {
+  attempts: H5pAttempt[];
+  /** Redni broj sljedećeg pokušaja korisnika (length(attempts)+1) */
+  nextAttemptNo: number;
+  /** Anti-cheat multiplier koji se primjenjuje na sljedeći pokušaj (1.0 / 0.5 / 0) */
+  nextMultiplier: number;
+}
+
 export type GetProgressParams = {
   studentId?: string;
 };

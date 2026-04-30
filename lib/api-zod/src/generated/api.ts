@@ -230,3 +230,51 @@ export const SaveQuizResultResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary Save an H5P attempt; server computes hasanati with anti-cheat multiplier
+ */
+export const SaveH5pResultBody = zod.object({
+  priloziId: zod.number(),
+  score: zod.number(),
+  maxScore: zod.number(),
+});
+
+export const SaveH5pResultResponse = zod.object({
+  attemptNo: zod.number(),
+  score: zod.number(),
+  maxScore: zod.number(),
+  procenat: zod.number(),
+  multiplier: zod.number(),
+  hasanatGained: zod.number(),
+  totalHasanat: zod.number(),
+  previousHasanat: zod.number(),
+});
+
+/**
+ * @summary Get attempt history for the current user and a specific H5P prilog
+ */
+export const GetH5pAttemptsParams = zod.object({
+  priloziId: zod.coerce.number(),
+});
+
+export const GetH5pAttemptsResponse = zod.object({
+  attempts: zod.array(
+    zod.object({
+      attemptNo: zod.number(),
+      score: zod.number(),
+      maxScore: zod.number(),
+      procenat: zod.number(),
+      hasanatGained: zod.number(),
+      completedAt: zod.date(),
+    }),
+  ),
+  nextAttemptNo: zod
+    .number()
+    .describe("Redni broj sljedećeg pokušaja korisnika (length(attempts)+1)"),
+  nextMultiplier: zod
+    .number()
+    .describe(
+      "Anti-cheat multiplier koji se primjenjuje na sljedeći pokušaj (1.0 \/ 0.5 \/ 0)",
+    ),
+});

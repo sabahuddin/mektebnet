@@ -97,23 +97,37 @@ router.get("/ilmihal/:slug", async (req, res) => {
 
     const result: Record<string, unknown> = { ...lekcija, contentHtml: upgradedHtml };
 
+    // Dohvat priloga za sve autentifikovane korisnike. Pravila vidljivosti:
+    //   - admin/muallim: VIDE SVE priloge (file/url/h5p) — uključujući linkove
+    //     za download muallimskih materijala (PDF/PPT/...).
+    //   - učenik/roditelj: VIDE SAMO interaktivne (kind="h5p") + javne URL
+    //     priloge (kind="url" — npr. YouTube). Privatne fajlove (kind="file")
+    //     ne vide jer su to materijali za nastavnika.
     const authHeader = req.headers.authorization;
     if (authHeader) {
       try {
         const jwt = await import("jsonwebtoken");
         const token = authHeader.replace("Bearer ", "");
         const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
-        if (decoded.role === "admin" || decoded.role === "muallim") {
-          const attachments = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(desc(prilozi.createdAt));
-          result.prilozi = attachments.map(a => ({
+        const isStaff = decoded.role === "admin" || decoded.role === "muallim";
+        const all = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(desc(prilozi.createdAt));
+        const visible = isStaff ? all : all.filter(a => a.kind === "h5p" || a.kind === "url");
+        result.prilozi = visible.map(a => {
+          let url: string;
+          if (a.kind === "url") url = a.externalUrl || "";
+          else if (a.kind === "h5p") url = `/uploads/${a.storedName}`; // javno servirano
+          else url = `/api/admin/prilozi/download/${a.id}`; // admin auth required
+          return {
             id: a.id,
             originalName: a.originalName,
             fileSize: a.fileSize,
             mimeType: a.mimeType,
-            url: `/api/admin/prilozi/download/${a.id}`,
+            kind: a.kind,
+            externalUrl: a.externalUrl,
+            url,
             createdAt: a.createdAt,
-          }));
-        }
+          };
+        });
       } catch {}
     }
 

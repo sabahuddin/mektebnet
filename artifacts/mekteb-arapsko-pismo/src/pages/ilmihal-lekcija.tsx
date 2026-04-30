@@ -18,6 +18,7 @@ import { Maskota } from "@/components/maskota";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
 import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
+const H5PPlayerLazy = lazy(() => import("@/components/h5p-player").then(m => ({ default: m.H5PPlayer })));
 
 interface LekcijaKvizPitanje {
   question: string;
@@ -32,8 +33,9 @@ interface Prilog {
   mimeType: string;
   url: string;
   createdAt: string;
-  kind?: "file" | "url";
+  kind?: "file" | "url" | "h5p";
   externalUrl?: string | null;
+  h5pPath?: string | null;
 }
 
 interface Lekcija {
@@ -1155,15 +1157,29 @@ function getYoutubeEmbedUrl(url: string): string | null {
   } catch { return null; }
 }
 
-function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: string | null; isAdmin: boolean }) {
+function PriloziSection({
+  lekcija,
+  token,
+  isAdmin,
+  onH5pCelebration,
+}: {
+  lekcija: Lekcija;
+  token: string | null;
+  isAdmin: boolean;
+  onH5pCelebration?: (data: CelebrationData) => void;
+}) {
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   const [uploading, setUploading] = useState(false);
+  const [uploadingH5p, setUploadingH5p] = useState(false);
   const [showUrlForm, setShowUrlForm] = useState(false);
   const [urlValue, setUrlValue] = useState("");
   const [urlLabel, setUrlLabel] = useState("");
   const [savingUrl, setSavingUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const h5pInputRef = useRef<HTMLInputElement>(null);
+  const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
+  const [h5pSubmitting, setH5pSubmitting] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1183,6 +1199,64 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
+  const handleH5pUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !token) return;
+    setUploadingH5p(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/h5p`, fd, token, true);
+      const url = `/uploads/${(result as any).storedName || ""}`;
+      setAttachments(prev => [{ ...result, url }, ...prev]);
+      toast({ title: "H5P uploadovan", description: `"${file.name}" je dodan.` });
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingH5p(false);
+      if (h5pInputRef.current) h5pInputRef.current.value = "";
+    }
+  };
+
+  const handleH5pCompleted = useCallback(async (priloziId: number, score: number, maxScore: number) => {
+    if (!token) return;
+    if (h5pSubmitting[priloziId]) return;
+    setH5pSubmitting(prev => ({ ...prev, [priloziId]: true }));
+    try {
+      const res = await apiRequest<{
+        attemptNo: number;
+        score: number;
+        maxScore: number;
+        procenat: number;
+        multiplier: number;
+        hasanatGained: number;
+        totalHasanat: number;
+        previousHasanat: number;
+      }>("POST", `/h5p/result`, { priloziId, score, maxScore }, token);
+      if (res.hasanatGained > 0) {
+        onH5pCelebration?.({
+          isRepeat: false,
+          hasanatGained: res.hasanatGained,
+          totalHasanat: res.totalHasanat,
+          previousHasanat: res.previousHasanat,
+          streakDays: 0,
+          streakIncreased: false,
+        });
+      } else {
+        const reason = res.procenat < 50
+          ? `Tačnost ${res.procenat}% — potrebno je minimalno 50% za hasanate.`
+          : res.attemptNo >= 3
+            ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose hasanate.`
+            : `Pokušaj ${res.attemptNo}: ${res.procenat}%`;
+        toast({ title: "Vježba završena", description: reason });
+      }
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setH5pSubmitting(prev => ({ ...prev, [priloziId]: false }));
+    }
+  }, [token, h5pSubmitting, onH5pCelebration, toast]);
 
   const handleAddUrl = async () => {
     if (!urlValue.trim() || !token) return;
@@ -1271,6 +1345,13 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
                     onChange={handleUpload}
                     className="hidden"
                   />
+                  <input
+                    ref={h5pInputRef}
+                    type="file"
+                    accept=".h5p"
+                    onChange={handleH5pUpload}
+                    className="hidden"
+                  />
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={() => fileInputRef.current?.click()}
@@ -1291,8 +1372,20 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
                     >
                       <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? "Odustani" : "Dodaj link"}
                     </Button>
+                    <Button
+                      onClick={() => h5pInputRef.current?.click()}
+                      disabled={uploadingH5p}
+                      variant="outline"
+                      className="rounded-xl border-purple-300 text-purple-700 hover:bg-purple-100 font-bold"
+                    >
+                      {uploadingH5p ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploadujem H5P...</>
+                      ) : (
+                        <><Sparkles className="w-4 h-4 mr-2" /> Dodaj H5P vježbu</>
+                      )}
+                    </Button>
                   </div>
-                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB) ili YouTube/web link</p>
+                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB), YouTube/web link, ili .h5p arhiva (max 50MB)</p>
                   {showUrlForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-blue-200 flex flex-col gap-2">
                       <input
@@ -1327,22 +1420,33 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
                 <div className="flex flex-col gap-2">
                   {attachments.map(a => {
                     const isUrl = a.kind === "url";
+                    const isH5p = a.kind === "h5p";
                     const targetUrl = a.externalUrl || a.url;
                     const ytEmbed = isUrl ? getYoutubeEmbedUrl(targetUrl) : null;
+                    const h5pUrl = isH5p ? `${apiBase}${a.url}` : null;
+                    const attemptKey = h5pAttemptKey[a.id] ?? 0;
                     return (
                       <div key={a.id} className="flex flex-col gap-2 bg-white rounded-xl border border-blue-100 p-3 hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl flex-shrink-0">
-                            {isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
+                            {isH5p ? "🧩" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
                             <p className="text-sm text-gray-400 truncate">
-                              {isUrl ? targetUrl : formatFileSize(a.fileSize)}
+                              {isH5p ? "Interaktivna vježba (H5P)" : isUrl ? targetUrl : formatFileSize(a.fileSize)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            {isUrl ? (
+                            {isH5p ? (
+                              <button
+                                onClick={() => setH5pAttemptKey(prev => ({ ...prev, [a.id]: attemptKey + 1 }))}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
+                                title="Pokušaj ponovo"
+                              >
+                                <Sparkles className="w-4 h-4" /> Ponovi
+                              </button>
+                            ) : isUrl ? (
                               <a
                                 href={targetUrl}
                                 target="_blank"
@@ -1378,6 +1482,24 @@ function PriloziSection({ lekcija, token, isAdmin }: { lekcija: Lekcija; token: 
                             )}
                           </div>
                         </div>
+                        {isH5p && h5pUrl && (
+                          <div className="mt-2 rounded-lg overflow-hidden bg-white border border-purple-100">
+                            <Suspense fallback={
+                              <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
+                                <Loader2 className="w-4 h-4 animate-spin" /> Učitavam vježbu...
+                              </div>
+                            }>
+                              <H5PPlayerLazy
+                                h5pPath={h5pUrl}
+                                contentKey={`${a.id}-${attemptKey}`}
+                                onCompleted={(r) => handleH5pCompleted(a.id, r.score, r.maxScore)}
+                              />
+                            </Suspense>
+                            <p className="px-3 py-2 text-xs text-purple-500 bg-purple-50/60">
+                              Maks. 50 hasanata. 1. pokušaj: 100%, 2. pokušaj: 50%, 3+: bez nagrade. Min. tačnost 50%.
+                            </p>
+                          </div>
+                        )}
                         {ytEmbed && (
                           <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
                             <iframe
@@ -1451,14 +1573,17 @@ export default function IlmihalLekcijaPage() {
   useEffect(() => {
     if (!slug) return;
     setIsLoading(true);
-    apiRequest<Lekcija>("GET", `/content/ilmihal/${slug}`)
+    // Token je obavezan da bi backend uključio `prilozi` u response
+    // (učenici vide H5P/URL prilozi, muallim/admin sve). Bez tokena
+    // dobijemo lekciju ali bez priloga, što razbije H5P prikaz.
+    apiRequest<Lekcija>("GET", `/content/ilmihal/${slug}`, undefined, token)
       .then(data => {
         setLekcija(data);
         setParsed(parseSections(data.contentHtml));
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [slug]);
+  }, [slug, token]);
 
   // Fetch all lekcije for the same nivo to build the strip
   useEffect(() => {
@@ -1948,9 +2073,15 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {/* Prilozi / Materijali — visible to muallim & admin */}
-        {(user?.role === "admin" || user?.role === "muallim") && (
-          <PriloziSection lekcija={lekcija} token={token} isAdmin={user?.role === "admin"} />
+        {/* Prilozi / Materijali — backend već filtrira: učenici vide samo H5P
+            i URL prilozi (ne fajlove); muallim i admin vide sve. */}
+        {user && (
+          <PriloziSection
+            lekcija={lekcija}
+            token={token}
+            isAdmin={user.role === "admin"}
+            onH5pCelebration={setCelebration}
+          />
         )}
 
         {/* Complete button */}

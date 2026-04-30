@@ -17,6 +17,8 @@ tags:
     description: Exercise sessions
   - name: content
     description: Content (quizzes, lessons, etc.)
+  - name: h5p
+    description: H5P interaktivne vježbe (server-side scoring)
 
 paths:
   /healthz:
@@ -153,6 +155,56 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /h5p/result:
+    post:
+      operationId: saveH5pResult
+      tags: [h5p]
+      summary: Save an H5P attempt; server computes hasanati with anti-cheat multiplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/H5pResultRequest"
+      responses:
+        "200":
+          description: Attempt saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/H5pResultResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Prilog not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /h5p/attempts/{priloziId}:
+    get:
+      operationId: getH5pAttempts
+      tags: [h5p]
+      summary: Get attempt history for the current user and a specific H5P prilog
+      parameters:
+        - name: priloziId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: History
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/H5pAttemptsResponse"
 
 components:
   schemas:
@@ -500,3 +552,68 @@ components:
         - streakDays
         - streakIncreased
         - newBadges
+
+    H5pResultRequest:
+      type: object
+      required: [priloziId, score, maxScore]
+      properties:
+        priloziId:
+          type: integer
+        score:
+          type: number
+        maxScore:
+          type: number
+
+    H5pResultResponse:
+      type: object
+      required: [attemptNo, score, maxScore, procenat, multiplier, hasanatGained, totalHasanat, previousHasanat]
+      properties:
+        attemptNo:
+          type: integer
+        score:
+          type: integer
+        maxScore:
+          type: integer
+        procenat:
+          type: integer
+        multiplier:
+          type: number
+        hasanatGained:
+          type: integer
+        totalHasanat:
+          type: integer
+        previousHasanat:
+          type: integer
+
+    H5pAttempt:
+      type: object
+      required: [attemptNo, score, maxScore, procenat, hasanatGained, completedAt]
+      properties:
+        attemptNo:
+          type: integer
+        score:
+          type: integer
+        maxScore:
+          type: integer
+        procenat:
+          type: integer
+        hasanatGained:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+
+    H5pAttemptsResponse:
+      type: object
+      required: [attempts, nextAttemptNo, nextMultiplier]
+      properties:
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/H5pAttempt"
+        nextAttemptNo:
+          type: integer
+          description: Redni broj sljedećeg pokušaja korisnika (length(attempts)+1)
+        nextMultiplier:
+          type: number
+          description: Anti-cheat multiplier koji se primjenjuje na sljedeći pokušaj (1.0 / 0.5 / 0)

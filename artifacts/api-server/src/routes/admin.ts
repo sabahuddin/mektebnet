@@ -313,12 +313,107 @@ router.get("/prilozi/download/:id", async (req, res) => {
   }
 });
 
+// H5P upload: prima .h5p (zip) fajl, otpakira u uploads/h5p/<id>/.
+// Validira osnovnu strukturu (mora postojati h5p.json).
+const h5pUpload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (/\.h5p$/i.test(path.extname(file.originalname))) cb(null, true);
+    else cb(new Error("Dozvoljeni su samo .h5p fajlovi"));
+  },
+});
+
+router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
+  h5pUpload.single("file")(req, res, async (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? (err.code === "LIMIT_FILE_SIZE" ? "H5P fajl prevelik (max 50MB)" : err.message)
+        : err.message || "Greška pri uploadu";
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+
+    const tmpZipPath = req.file.path;
+    let extractDir: string | null = null;
+    let inserted: any = null;
+
+    try {
+      const lekcijaId = parseInt(req.params.lekcijaId);
+      if (isNaN(lekcijaId)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
+      const [exists] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
+      if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
+
+      // 1. Insert prazan h5p prilog (placeholder) da dobijemo ID za direktorij
+      const [pre] = await db.insert(prilozi).values({
+        lekcijaId,
+        originalName: req.file.originalname,
+        storedName: "h5p/pending",
+        fileSize: req.file.size,
+        mimeType: "application/x-h5p",
+        kind: "h5p",
+      }).returning();
+      inserted = pre;
+
+      // 2. Otpakiraj zip u uploads/h5p/<id>/
+      const h5pBaseDir = path.join(uploadsDir, "h5p");
+      if (!fs.existsSync(h5pBaseDir)) fs.mkdirSync(h5pBaseDir, { recursive: true });
+      extractDir = path.join(h5pBaseDir, String(inserted.id));
+      if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
+      fs.mkdirSync(extractDir, { recursive: true });
+
+      const AdmZip = (await import("adm-zip")).default;
+      const zip = new AdmZip(tmpZipPath);
+      // Sigurnosna provjera: zabrani path traversal (entry imena sa .. ili apsolutnim path-om)
+      for (const entry of zip.getEntries()) {
+        const name = entry.entryName;
+        if (name.includes("..") || path.isAbsolute(name) || name.startsWith("/")) {
+          throw new Error(`Sumnjiv path u .h5p arhivi: ${name}`);
+        }
+      }
+      zip.extractAllTo(extractDir, true);
+
+      // 3. Validacija: h5p.json mora postojati u root-u
+      const manifestPath = path.join(extractDir, "h5p.json");
+      if (!fs.existsSync(manifestPath)) {
+        throw new Error("Nevažeća H5P arhiva: nedostaje h5p.json u root-u");
+      }
+
+      // 4. Update storedName na finalni put
+      const storedRel = `h5p/${inserted.id}`;
+      const [final] = await db.update(prilozi)
+        .set({ storedName: storedRel })
+        .where(eq(prilozi.id, inserted.id))
+        .returning();
+
+      // 5. Brisanje tmp .h5p zip-a (otpakirani sadržaj je dovoljan)
+      try { fs.unlinkSync(tmpZipPath); } catch {}
+
+      res.json(final);
+    } catch (e: any) {
+      // Cleanup u slučaju greške
+      try { if (fs.existsSync(tmpZipPath)) fs.unlinkSync(tmpZipPath); } catch {}
+      try { if (extractDir && fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true }); } catch {}
+      if (inserted?.id) {
+        try { await db.delete(prilozi).where(eq(prilozi.id, inserted.id)); } catch {}
+      }
+      res.status(400).json({ error: e.message || "Greška pri obradi H5P arhive" });
+    }
+  });
+});
+
 router.delete("/prilozi/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
     if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
-    if (file.kind !== "url" && file.storedName) {
+    if (file.kind === "h5p" && file.storedName) {
+      // H5P: storedName je direktorij (h5p/<id>) — rekurzivni rmSync
+      const dirPath = path.join(uploadsDir, file.storedName);
+      if (fs.existsSync(dirPath)) {
+        try { fs.rmSync(dirPath, { recursive: true, force: true }); } catch {}
+      }
+    } else if (file.kind !== "url" && file.storedName) {
       const filePath = path.join(uploadsDir, file.storedName);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }

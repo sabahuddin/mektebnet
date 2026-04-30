@@ -185,7 +185,28 @@ async function runMigrations() {
     // Optimizacija leaderboard query-ja (filter status='ended' + group by user, sort by score).
     await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_ended_user_score_idx ON game_sessions (game_id, user_id, score DESC) WHERE status = 'ended';`);
 
-    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock + kviz_rezultati/posjete/mekteb_kalendar/plan_lekcija/zadace + zadace_ucenici + game_sessions ready");
+    // H5P pokušaji — interaktivne vježbe (Drag&Drop, Quiz, Fill-in-blanks, ...).
+    // Server-side scoring: klijent šalje SAMO xAPI score+maxScore iz iframe-a,
+    // server validira i računa hasanate sa multiplier-om (1.=100%, 2.=50%, 3+.=0%).
+    // Unique (user_id, prilozi_id, attempt_no) sprječava double-submit istog
+    // pokušaja kroz race conditions.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS h5p_pokusaji (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        prilozi_id INTEGER NOT NULL,
+        attempt_no INTEGER NOT NULL,
+        score INTEGER NOT NULL DEFAULT 0,
+        max_score INTEGER NOT NULL DEFAULT 0,
+        procenat INTEGER NOT NULL DEFAULT 0,
+        hasanat_gained INTEGER NOT NULL DEFAULT 0,
+        completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS h5p_pokusaji_unique_attempt_idx ON h5p_pokusaji (user_id, prilozi_id, attempt_no);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS h5p_pokusaji_user_prilog_idx ON h5p_pokusaji (user_id, prilozi_id);`);
+
+    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock + kviz_rezultati/posjete/mekteb_kalendar/plan_lekcija/zadace + zadace_ucenici + game_sessions + h5p_pokusaji ready");
 
     // BOOTSTRAP: if ilmihal_lekcije is completely empty (fresh prod DB),
     // import the full dataset (~232 lessons) + rjecnik (~314 entries).

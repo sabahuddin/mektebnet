@@ -117,6 +117,23 @@ export const rjecnikTable = pgTable("rjecnik", {
 
 export type Rjecnik = typeof rjecnikTable.$inferSelect;
 
+// H5P pokušaji — server-side scoring; klijent NIKAD ne šalje konačnu vrijednost
+// hasanata. Server čuva sve pokušaje (audit) i računa ih sa multiplier-om
+// po broju pokušaja: 1=100%, 2=50%, 3+=0%.
+export const h5pPokusajiTable = pgTable("h5p_pokusaji", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  priloziId: integer("prilozi_id").notNull(),
+  attemptNo: integer("attempt_no").notNull(),
+  score: integer("score").notNull().default(0),
+  maxScore: integer("max_score").notNull().default(0),
+  procenat: integer("procenat").notNull().default(0),
+  hasanatGained: integer("hasanat_gained").notNull().default(0),
+  completedAt: timestamp("completed_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type H5pPokusaj = typeof h5pPokusajiTable.$inferSelect;
+
 export const insertIlmihalLekcijaSchema = createInsertSchema(ilmihalLekcijeTable).omit({ id: true, createdAt: true });
 export const insertKvizSchema = createInsertSchema(kvizoviTable).omit({ id: true, createdAt: true });
 export const insertKnjigaSchema = createInsertSchema(knjige).omit({ id: true, createdAt: true });

@@ -21,6 +21,9 @@ import type {
   ExerciseSessionRequest,
   ExerciseSessionResult,
   GetProgressParams,
+  H5pAttemptsResponse,
+  H5pResultRequest,
+  H5pResultResponse,
   HealthStatus,
   Lesson,
   LessonDetail,
@@ -626,3 +629,177 @@ export const useSaveQuizResult = <
 > => {
   return useMutation(getSaveQuizResultMutationOptions(options));
 };
+
+/**
+ * @summary Save an H5P attempt; server computes hasanati with anti-cheat multiplier
+ */
+export const getSaveH5pResultUrl = () => {
+  return `/api/h5p/result`;
+};
+
+export const saveH5pResult = async (
+  h5pResultRequest: H5pResultRequest,
+  options?: RequestInit,
+): Promise<H5pResultResponse> => {
+  return customFetch<H5pResultResponse>(getSaveH5pResultUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(h5pResultRequest),
+  });
+};
+
+export const getSaveH5pResultMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveH5pResult>>,
+    TError,
+    { data: BodyType<H5pResultRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveH5pResult>>,
+  TError,
+  { data: BodyType<H5pResultRequest> },
+  TContext
+> => {
+  const mutationKey = ["saveH5pResult"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveH5pResult>>,
+    { data: BodyType<H5pResultRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveH5pResult(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveH5pResultMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveH5pResult>>
+>;
+export type SaveH5pResultMutationBody = BodyType<H5pResultRequest>;
+export type SaveH5pResultMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Save an H5P attempt; server computes hasanati with anti-cheat multiplier
+ */
+export const useSaveH5pResult = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveH5pResult>>,
+    TError,
+    { data: BodyType<H5pResultRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveH5pResult>>,
+  TError,
+  { data: BodyType<H5pResultRequest> },
+  TContext
+> => {
+  return useMutation(getSaveH5pResultMutationOptions(options));
+};
+
+/**
+ * @summary Get attempt history for the current user and a specific H5P prilog
+ */
+export const getGetH5pAttemptsUrl = (priloziId: number) => {
+  return `/api/h5p/attempts/${priloziId}`;
+};
+
+export const getH5pAttempts = async (
+  priloziId: number,
+  options?: RequestInit,
+): Promise<H5pAttemptsResponse> => {
+  return customFetch<H5pAttemptsResponse>(getGetH5pAttemptsUrl(priloziId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetH5pAttemptsQueryKey = (priloziId: number) => {
+  return [`/api/h5p/attempts/${priloziId}`] as const;
+};
+
+export const getGetH5pAttemptsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getH5pAttempts>>,
+  TError = ErrorType<unknown>,
+>(
+  priloziId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getH5pAttempts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetH5pAttemptsQueryKey(priloziId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getH5pAttempts>>> = ({
+    signal,
+  }) => getH5pAttempts(priloziId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!priloziId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getH5pAttempts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetH5pAttemptsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getH5pAttempts>>
+>;
+export type GetH5pAttemptsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get attempt history for the current user and a specific H5P prilog
+ */
+
+export function useGetH5pAttempts<
+  TData = Awaited<ReturnType<typeof getH5pAttempts>>,
+  TError = ErrorType<unknown>,
+>(
+  priloziId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getH5pAttempts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetH5pAttemptsQueryOptions(priloziId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
