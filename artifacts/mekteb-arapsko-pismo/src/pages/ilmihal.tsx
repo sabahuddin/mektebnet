@@ -111,6 +111,42 @@ export default function IlmihalPage() {
           </div>
         </div>
 
+        {user && lekcije.length > 0 && (() => {
+          // Ukupni napredak kroz cijeli Ilmihal (Nivo 1+2+3). Računato iz već
+          // dohvaćenih podataka — bez novog API poziva. completedIds dolazi iz
+          // GET /progress, lekcije iz /content/ilmihal. filter() koristimo da
+          // ne brojimo zastarjele ID-ove koji više ne postoje u katalogu.
+          const totalLekcija = lekcije.length;
+          const zavrsenoUkupno = lekcije.filter(l => completedIds.has(l.id)).length;
+          const procenat = totalLekcija > 0 ? Math.round((zavrsenoUkupno / totalLekcija) * 100) : 0;
+          return (
+            <div
+              className="mb-6 rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 sm:p-5"
+              data-testid="card-ukupni-napredak"
+            >
+              <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
+                <p className="text-sm sm:text-base font-bold text-foreground">
+                  Završio si <span className="text-emerald-700" data-testid="text-zavrseno-ukupno">{zavrsenoUkupno}</span>
+                  <span className="text-muted-foreground"> / {totalLekcija}</span> lekcija
+                </p>
+                <span
+                  className="text-xl sm:text-2xl font-black text-emerald-600 tabular-nums"
+                  data-testid="text-procenat-ukupno"
+                >
+                  {procenat}%
+                </span>
+              </div>
+              <div className="h-2.5 rounded-full bg-emerald-100 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500 ease-out"
+                  style={{ width: `${procenat}%` }}
+                  data-testid="bar-ukupni-napredak"
+                />
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
