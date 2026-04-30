@@ -7,10 +7,13 @@ import { GameTimer } from "@/components/game-timer";
 import { useGameCredits, formatSeconds } from "@/hooks/use-game-credits";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { ArrowLeft, RefreshCw, Trophy, Zap, Sparkles, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, RefreshCw, Trophy, Zap, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface QQ { question: string; options: string[]; answer: string; }
+// Pitanja iz /games/start (BEZ `answer` — server čuva tačan odgovor i sam
+// validira pri /games/end). `id` je session-scoped stabilni ključ.
+interface QQ { id: string; question: string; options: string[]; }
+interface AnswerRecord { questionId: string; optionIndex: number; }
 
 // Klijent ne forsira fiksni timer — server vraća allowedDurationSec
 // (po pravilu 60s za kviz, ili manje ako učenik ima manje credita).
@@ -27,9 +30,13 @@ export default function BrziKviz() {
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QQ[]>([]);
   const [qIndex, setQIndex] = useState(0);
-  const [correct, setCorrect] = useState(0);
-  const [wrong, setWrong] = useState(0);
-  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  // Server-side scoring: klijent ne zna real-time tačnost odgovora (anti-cheat).
+  // Tracking-amo samo izbore; pri /games/end server vraća finalScore (broj tačnih).
+  const [answers, setAnswers] = useState<AnswerRecord[]>([]);
+  // `feedback !== null` se koristi samo da se buttoni privremeno onemoguće
+  // tokom transition delay-a između pitanja (300ms). Više nema vizualnog
+  // tačno/netačno indikatora jer to bi tražilo da klijent zna odgovor.
+  const [feedback, setFeedback] = useState<"locked" | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
   const [bestEver, setBestEver] = useState<number | null>(null);
   const [previousBest, setPreviousBest] = useState<number | null>(null);
@@ -51,24 +58,23 @@ export default function BrziKviz() {
         setPreviousBest(q?.bestScore ?? 0);
       } catch { setPreviousBest(null); }
 
-      // Učitaj pitanja
-      const qRes = await apiRequest<{ questions: QQ[] }>("GET", "/games/quiz-questions?count=60", undefined, token);
-      if (!Array.isArray(qRes.questions) || qRes.questions.length < 5) {
+      // Pitanja sada generira server unutar /games/start (anti-cheat: server
+      // čuva tačne odgovore, klijent ih ne vidi). Jedan poziv = sesija + pitanja.
+      const res = await apiRequest<{ sessionId: number; startedAt: string; allowedDurationSec: number; questions?: QQ[] }>(
+        "POST", "/games/start", { gameId: "quiz" }, token
+      );
+      const qs = Array.isArray(res.questions) ? res.questions : [];
+      if (qs.length < 5) {
         setErrorMsg("Nema dovoljno pitanja u bazi.");
         setState("error");
         return;
       }
-      // Pokreni sesiju TEK NAKON što imamo pitanja (timer počinje server-side)
-      const res = await apiRequest<{ sessionId: number; startedAt: string; allowedDurationSec: number }>(
-        "POST", "/games/start", { gameId: "quiz" }, token
-      );
       setSessionId(res.sessionId);
       setStartedAt(res.startedAt);
       setAllowedDuration(res.allowedDurationSec);
-      setQuestions(qRes.questions);
+      setQuestions(qs);
       setQIndex(0);
-      setCorrect(0);
-      setWrong(0);
+      setAnswers([]);
       setFeedback(null);
       setFinalScore(null);
       setBestEver(null);
@@ -77,21 +83,21 @@ export default function BrziKviz() {
       const err = e as { status?: number; message?: string };
       if (err.status === 403) setState("no-credit");
       else if (err.status === 409) { setErrorMsg("Već imaš igru u toku — osvježi stranicu."); setState("error"); }
+      else if (err.status === 503) { setErrorMsg("Nema dovoljno pitanja u bazi."); setState("error"); }
       else { setErrorMsg(err.message || "Greška pri pokretanju"); setState("error"); }
     }
   }, [token]);
 
-  const endGame = useCallback(async (finalCorrect: number, _finalWrong: number) => {
+  // Klijent NE računa score; šalje samo izbore. Server vraća `finalScore`
+  // koji je validiran protiv pohranjene liste pitanja sa odgovorima.
+  const endGame = useCallback(async (finalAnswers: AnswerRecord[]) => {
     if (!sessionId || !token || endingRef.current) return;
     endingRef.current = true;
-    // Bodovanje: score = broj tačnih (max 60). Penalty za netačne se primjenjuje
-    // kroz timer (svaki netačan = -2s preostalog vremena), ne kroz score.
-    const score = Math.max(0, finalCorrect);
     try {
-      const r = await apiRequest<{ ok: boolean; finalScore?: number }>(
-        "POST", "/games/end", { sessionId, score }, token
+      const r = await apiRequest<{ ok: boolean; finalScore?: number; score?: number }>(
+        "POST", "/games/end", { sessionId, answers: finalAnswers }, token
       );
-      const accepted = typeof r.finalScore === "number" ? r.finalScore : score;
+      const accepted = typeof r.finalScore === "number" ? r.finalScore : (r.score ?? 0);
       setFinalScore(accepted);
       setState("ended");
       refetchCredits();
@@ -109,61 +115,56 @@ export default function BrziKviz() {
     }
   }, [sessionId, token, refetchCredits]);
 
-  const handleAnswer = (option: string) => {
+  const handleAnswer = (optionIndex: number) => {
     if (state !== "playing") return;
     if (feedback !== null) return;
     const q = questions[qIndex];
     if (!q) return;
-    const isCorrect = option === q.answer;
-    if (isCorrect) {
-      setCorrect(c => c + 1);
-      setFeedback("correct");
-    } else {
-      setWrong(w => w + 1);
-      setFeedback("wrong");
-      // Time penalty: skrati preostali timer za 2s na svaki netačan odgovor.
-      setAllowedDuration(d => Math.max(1, d - 2));
-    }
+    const option = q.options[optionIndex];
+    if (option === undefined) return;
+    // Optimistično UX računanje (server je autoritet za stvarni score). Mi ne
+    // znamo koji je tačan odgovor — UI pokazuje "tačno"/"netačno" tek pri
+    // /games/end response-u; ovdje tracking-am izbore ali bez vizualne potvrde
+    // koji je tačan. Kompromis: prikaz feedback-a baziran na quick-check protiv
+    // pretpostavljenih correct/wrong je nemoguć bez exposure-a odgovora. Stoga
+    // ovdje samo registriramo izbor i prelazimo na sljedeće pitanje.
+    setFeedback("locked"); // privremeno disable buttone tokom 250ms transition
+    const newAnswer: AnswerRecord = { questionId: q.id, optionIndex };
+    const updatedAnswers = [...answers, newAnswer];
+    setAnswers(updatedAnswers);
     setTimeout(() => {
       setFeedback(null);
       const nextIdx = qIndex + 1;
       if (nextIdx >= questions.length) {
-        // Nestalo pitanja
-        const fc = isCorrect ? correct + 1 : correct;
-        const fw = isCorrect ? wrong : wrong + 1;
-        void endGame(fc, fw);
+        void endGame(updatedAnswers);
       } else {
         setQIndex(nextIdx);
       }
-    }, 600);
+    }, 250);
   };
 
   const handleExpire = useCallback(() => {
     if (state !== "playing") return;
-    void endGame(correct, wrong);
-  }, [state, correct, wrong, endGame]);
+    void endGame(answers);
+  }, [state, answers, endGame]);
 
   // Refs prate najsvježije vrijednosti za cleanup (izbjegavamo stale closure
-  // u unmount handleru — bez ovoga partial score bi koristio correct/wrong = 0
-  // captured na mount-u, pa bi učenik dobio 0 bodova umjesto stvarnog rezultata).
+  // u unmount handleru — bez ovoga partial answers bi koristili snapshot
+  // od mount-a, pa bi učenik dobio 0 bodova umjesto stvarnog rezultata).
   const stateRef = useRef(state);
-  const correctRef = useRef(correct);
-  const wrongRef = useRef(wrong);
+  const answersRef = useRef(answers);
   const tokenRef = useRef(token);
   useEffect(() => { stateRef.current = state; }, [state]);
-  useEffect(() => { correctRef.current = correct; }, [correct]);
-  useEffect(() => { wrongRef.current = wrong; }, [wrong]);
+  useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { tokenRef.current = token; }, [token]);
 
-  // Cleanup: ako user napusti stranicu mid-game, end session sa current score.
-  // VAŽNO: score = broj tačnih (isti princip kao u-game scoring), ne stara formula.
+  // Cleanup: ako user napusti stranicu mid-game, end session sa current
+  // odgovorima. Server validira i čuva real score (parcijalan ali pošten).
   useEffect(() => {
     return () => {
       if (stateRef.current === "playing" && sessionId && tokenRef.current && !endingRef.current) {
-        const score = Math.max(0, correctRef.current);
         endingRef.current = true;
-        // Best-effort, no await
-        apiRequest("POST", "/games/end", { sessionId, score }, tokenRef.current).catch(() => {});
+        apiRequest("POST", "/games/end", { sessionId, answers: answersRef.current }, tokenRef.current).catch(() => {});
       }
     };
   }, [sessionId]);
@@ -215,7 +216,7 @@ export default function BrziKviz() {
             <Sparkles className="w-6 h-6 text-orange-600 shrink-0" />
             <div>
               <p className="font-bold text-foreground mb-1">60 sekundi — koliko tačnih?</p>
-              <p className="text-sm text-muted-foreground">Score = broj tačnih odgovora. Svaki netačan ti oduzme <strong className="text-red-600">2 sekunde</strong> vremena. Pitanja iz svih ilmihal lekcija. Pokušaj pogoditi što više za 60 s.</p>
+              <p className="text-sm text-muted-foreground">Score = broj tačnih odgovora. Pitanja iz svih ilmihal lekcija. Pokušaj odgovoriti što više za 60 s — rezultat saznaješ na kraju.</p>
               <p className="text-xs text-muted-foreground mt-2">
                 Preostalo vremena: <strong>{creditsLoading ? "…" : formatSeconds(credits?.secondsRemaining ?? 0)}</strong>
                 {!creditsLoading && (credits?.secondsRemaining ?? 0) > 0 && (credits?.secondsRemaining ?? 0) < 60 && (
@@ -263,51 +264,28 @@ export default function BrziKviz() {
 
       {state === "playing" && currentQ && (
         <>
+          {/* Server-side scoring: klijent ne zna real-time da li je odgovor
+              tačan (anti-cheat). Tokom igre prikazujemo samo broj odgovorenih
+              i indeks pitanja; rezultat (tačno/netačno) saznaje se na kraju. */}
           <div className="flex items-center justify-between gap-4 mb-4 text-sm font-bold">
-            <span className="text-emerald-600">Tačno: <span className="text-foreground">{correct}</span></span>
-            <span className="text-red-500">Netačno: <span className="text-foreground">{wrong}</span></span>
+            <span className="text-orange-600">Odgovoreno: <span className="text-foreground" data-testid="text-answered-count">{answers.length}</span></span>
             <span className="text-muted-foreground">Pitanje #{qIndex + 1}</span>
           </div>
           <Card className="p-6 mb-4 relative overflow-hidden">
             <p className="text-lg font-bold text-foreground mb-5" data-testid="text-question">{currentQ.question}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {currentQ.options.map((opt, i) => {
-                const isCorrectOpt = feedback !== null && opt === currentQ.answer;
-                const isWrongPick = feedback === "wrong" && opt !== currentQ.answer;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => handleAnswer(opt)}
-                    disabled={feedback !== null}
-                    data-testid={`button-answer-${i}`}
-                    className={`text-left p-4 rounded-2xl border-2 font-medium transition-all ${
-                      isCorrectOpt
-                        ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                        : isWrongPick
-                        ? "bg-muted border-border text-muted-foreground"
-                        : "bg-white border-border hover:border-orange-400 hover:bg-orange-50"
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                );
-              })}
+              {currentQ.options.map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleAnswer(i)}
+                  disabled={feedback !== null}
+                  data-testid={`button-answer-${i}`}
+                  className="text-left p-4 rounded-2xl border-2 font-medium transition-all bg-white border-border hover:border-orange-400 hover:bg-orange-50 disabled:opacity-60"
+                >
+                  {opt}
+                </button>
+              ))}
             </div>
-            <AnimatePresence>
-              {feedback === "correct" && (
-                <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                  className="absolute top-3 right-3">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-                </motion.div>
-              )}
-              {feedback === "wrong" && (
-                <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                  className="absolute top-3 right-3 flex items-center gap-1">
-                  <XCircle className="w-10 h-10 text-red-500" />
-                  <span className="text-xs font-black text-red-600 bg-red-100 px-2 py-1 rounded-lg" data-testid="penalty-badge">−2s</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </Card>
         </>
       )}
@@ -335,7 +313,7 @@ export default function BrziKviz() {
                 )}
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Tačno: <strong className="text-emerald-600">{correct}</strong> · Netačno: <strong className="text-red-500">{wrong}</strong>
+                Tačno: <strong className="text-emerald-600" data-testid="text-correct-count">{finalScore}</strong> · Netačno: <strong className="text-red-500" data-testid="text-wrong-count">{Math.max(0, answers.length - finalScore)}</strong>
               </p>
               <div className="flex gap-2 justify-center flex-wrap">
                 <Button onClick={() => { setState("idle"); refetchCredits(); }} className="rounded-2xl">

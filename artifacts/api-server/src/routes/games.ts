@@ -24,6 +24,51 @@ const ROUND_DURATION_SEC: Record<string, number | null> = {
 };
 // Validni gameId enum.
 const VALID_GAMES = new Set(["memory", "quiz"]);
+// Broj pitanja koje server generira za svaki quiz round. 60 daje dovoljno
+// materijala za 60s timer (≈1 pitanje/sec), ali stvaran broj pitanja je
+// limited time-boxed — max poened je MAX_SCORE.quiz neovisno o broju.
+const QUIZ_QUESTIONS_PER_SESSION = 60;
+
+// Učitaj sva validna pitanja iz svih objavljenih ilmihal lekcija (pool).
+// Svako pitanje mora imati: question (string), options (string[]), answer (string)
+// gdje answer mora biti u options. Filter je defenzivan jer su pitanja
+// authored u JSONB-u i mogu imati typo.
+async function loadQuizPool(): Promise<{ question: string; options: string[]; answer: string }[]> {
+  const rows = await exec<{ kviz_pitanja: unknown }>(sql`
+    SELECT kviz_pitanja FROM ilmihal_lekcije
+    WHERE is_published = true AND kviz_pitanja IS NOT NULL
+  `);
+  const pool: { question: string; options: string[]; answer: string }[] = [];
+  for (const r of rows.rows) {
+    const arr = r.kviz_pitanja as { question: string; options: string[]; answer: string }[] | null;
+    if (Array.isArray(arr)) {
+      for (const q of arr) {
+        if (
+          q && typeof q.question === "string" &&
+          Array.isArray(q.options) && q.options.length >= 2 &&
+          q.options.every(o => typeof o === "string") &&
+          typeof q.answer === "string" &&
+          q.options.includes(q.answer)
+        ) {
+          pool.push({ question: q.question, options: q.options, answer: q.answer });
+        }
+      }
+    }
+  }
+  return pool;
+}
+
+// Vrati N nasumično odabranih pitanja sa stabilnim per-session ID-em (q0..qN-1).
+// ID je samo session-scoped — služi da klijent vrati izbor po istom ključu.
+function pickQuizQuestions(pool: { question: string; options: string[]; answer: string }[], n: number): { id: string; question: string; options: string[]; answer: string }[] {
+  // Fisher-Yates shuffle (kopija pool-a, da ne mutamo izvor)
+  const shuffled = pool.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, n).map((q, i) => ({ id: `q${i}`, ...q }));
+}
 
 // === RATE LIMITING ===
 // Per-user in-memory limiter za /start i /end (anti-automation guard).
@@ -217,10 +262,29 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
     // koristi credit. Memory nema fiksni cap pa koristi puni credit do MAX_SESSION_DURATION_SEC.
     const roundCap = ROUND_DURATION_SEC[gameId] ?? MAX_SESSION_DURATION_SEC;
     const allowedDurationSec = Math.min(secondsRemaining, roundCap, MAX_SESSION_DURATION_SEC);
+
+    // Server-side question generation za quiz: izaberemo i sačuvamo pitanja
+    // PRIJE inserta sesije, da kasnije /games/end može authoritativno provjeriti
+    // odgovore. Klijent dobija pitanja BEZ `answer` polja (anti-cheat).
+    let serverQuizQuestions: { id: string; question: string; options: string[]; answer: string }[] | null = null;
+    let publicQuestions: { id: string; question: string; options: string[] }[] = [];
+    if (gameId === "quiz") {
+      const pool = await loadQuizPool();
+      if (pool.length < 5) {
+        res.status(503).json({ error: "no_questions", message: "Nema dovoljno pitanja u bazi." });
+        return;
+      }
+      serverQuizQuestions = pickQuizQuestions(pool, QUIZ_QUESTIONS_PER_SESSION);
+      publicQuestions = serverQuizQuestions.map(q => ({ id: q.id, question: q.question, options: q.options }));
+    }
+
     try {
       const inserted = await exec<{ id: number; started_at: string }>(sql`
-        INSERT INTO game_sessions (user_id, game_id, status, started_at, allowed_duration_sec)
-        VALUES (${userId}, ${gameId}, 'running', NOW(), ${allowedDurationSec})
+        INSERT INTO game_sessions (user_id, game_id, status, started_at, allowed_duration_sec, quiz_questions)
+        VALUES (
+          ${userId}, ${gameId}, 'running', NOW(), ${allowedDurationSec},
+          ${serverQuizQuestions ? sql`${JSON.stringify(serverQuizQuestions)}::jsonb` : sql`NULL`}
+        )
         RETURNING id, started_at
       `);
       const row = inserted.rows[0];
@@ -229,6 +293,7 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
         gameId,
         startedAt: toIso(row.started_at),
         allowedDurationSec,
+        ...(gameId === "quiz" ? { questions: publicQuestions } : {}),
       });
     } catch (insertErr) {
       // Partial unique index `game_sessions_one_running_idx` (user_id WHERE status='running')
@@ -257,7 +322,9 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
   }
 });
 
-// POST /api/games/end { sessionId, score } — zatvara sesiju.
+// POST /api/games/end
+//   - quiz:   { sessionId, answers: [{ questionId, optionIndex }] } → server računa score
+//   - memory: { sessionId, score }                                  → klijentski score sa cheatCap
 router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -266,15 +333,15 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
       return;
     }
     const sessionId = Number(req.body?.sessionId);
-    const rawScore = Number(req.body?.score ?? 0);
     if (!Number.isFinite(sessionId) || sessionId <= 0) {
       res.status(400).json({ error: "bad_request", message: "sessionId required" });
       return;
     }
 
     // Najprije fetchamo (ne-atomski) samo da znamo metadata — ali UPDATE niže je atomski.
-    const found = await exec<{ id: number; user_id: number; game_id: string; status: string; started_at: string; allowed_duration_sec: number }>(sql`
-      SELECT id, user_id, game_id, status, started_at, allowed_duration_sec
+    // Uključujemo `quiz_questions` (server-side authoritativna lista pitanja sa odgovorima).
+    const found = await exec<{ id: number; user_id: number; game_id: string; status: string; started_at: string; allowed_duration_sec: number; quiz_questions: unknown }>(sql`
+      SELECT id, user_id, game_id, status, started_at, allowed_duration_sec, quiz_questions
       FROM game_sessions
       WHERE id = ${sessionId}
       LIMIT 1
@@ -299,14 +366,79 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
     const allowedCap = Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC);
     const durationSec = Math.max(0, Math.min(elapsedSec, allowedCap));
 
-    // Score clamp + sanity (anti-cheat za score forgery: realan high-score traje neko vrijeme).
-    // Bez server-side scoringa, ovo je best-effort: ako je sesija završila prebrzo, smanji max score.
     const maxScore = MAX_SCORE[session.game_id] ?? 1000;
-    const minSecForFullScore = session.game_id === "quiz" ? 15 : 5;
-    const cheatCap = elapsedSec < minSecForFullScore
-      ? Math.floor(maxScore * (elapsedSec / minSecForFullScore))
-      : maxScore;
-    const score = Math.max(0, Math.min(Math.floor(rawScore), cheatCap));
+    let score = 0;
+
+    if (session.game_id === "quiz") {
+      // === SERVER-SIDE SCORING ===
+      // Klijent šalje { answers: [{ questionId, optionIndex }] }.
+      // Validiramo svako pitanje protiv `quiz_questions` JSONB iz baze.
+      const stored = session.quiz_questions as { id: string; question: string; options: string[]; answer: string }[] | null;
+
+      // Late-submission guard: odbij submit ako je istekao timer + grace (5s).
+      // Bez ovoga napadač može pokrenuti sesiju, mirno gledati pitanja u dev tools-u,
+      // pretražiti rješenja online i poslati answers nakon 20 minuta.
+      // (durationSec će biti clampan na allowed_duration_sec, ali score = svi tačni.)
+      const LATE_GRACE_SEC = 5;
+      const submitWindow = Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC) + LATE_GRACE_SEC;
+      if (elapsedSec > submitWindow) {
+        // Markiraj kao expired i vrati 0 (sesija je istekla server-side).
+        await db.execute(sql`
+          UPDATE game_sessions
+          SET status = 'expired', ended_at = NOW(),
+              duration_sec = ${Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC)},
+              score = 0
+          WHERE id = ${sessionId} AND user_id = ${userId} AND status = 'running'
+        `);
+        res.json({ ok: true, sessionId, gameId: "quiz", score: 0, finalScore: 0, durationSec: Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC), expired: true });
+        return;
+      }
+
+      if (Array.isArray(stored) && stored.length > 0) {
+        // Sesija je pokrenuta sa server-side scoringom — klijentski `score`
+        // se NIKAD ne prihvata (anti-cheat). Score = broj validnih tačnih
+        // odgovora. Ako klijent zaboravi poslati `answers`, score = 0.
+        // DoS guard: limit dužinu answers array-a (max 2× sample size).
+        const rawAnswers = Array.isArray(req.body?.answers)
+          ? req.body.answers.slice(0, QUIZ_QUESTIONS_PER_SESSION * 2)
+          : [];
+        const byId = new Map(stored.map(q => [q.id, q]));
+        const seen = new Set<string>();
+        let correct = 0;
+        for (const a of rawAnswers) {
+          if (!a || typeof a !== "object") continue;
+          const qid = typeof a.questionId === "string" ? a.questionId : null;
+          const optIdx = Number(a.optionIndex);
+          if (!qid || seen.has(qid)) continue;
+          seen.add(qid);
+          const q = byId.get(qid);
+          if (!q) continue; // nepoznat ID — ignoriraj
+          if (!Number.isInteger(optIdx) || optIdx < 0 || optIdx >= q.options.length) continue;
+          if (q.options[optIdx] === q.answer) correct++;
+        }
+        score = Math.max(0, Math.min(correct, maxScore));
+      } else {
+        // Legacy fallback: SAMO za sesije pokrenute prije migracije
+        // (stored = NULL u DB). Stari klijentski score sa cheatCap-om.
+        // Nakon par dana u prod-u ovaj branch postaje mrtav kod.
+        const rawScore = Number(req.body?.score ?? 0);
+        const minSecForFullScore = 15;
+        const cheatCap = elapsedSec < minSecForFullScore
+          ? Math.floor(maxScore * (elapsedSec / minSecForFullScore))
+          : maxScore;
+        score = Math.max(0, Math.min(Math.floor(rawScore), cheatCap));
+      }
+    } else {
+      // Memory i ostale igre: klijentski score sa cheatCap (kao i prije).
+      // Server-side scoring za memory bi tražio tracking moves po sesiji što je
+      // out-of-scope za task #44 — može u zaseban follow-up.
+      const rawScore = Number(req.body?.score ?? 0);
+      const minSecForFullScore = 5;
+      const cheatCap = elapsedSec < minSecForFullScore
+        ? Math.floor(maxScore * (elapsedSec / minSecForFullScore))
+        : maxScore;
+      score = Math.max(0, Math.min(Math.floor(rawScore), cheatCap));
+    }
 
     // Atomski UPDATE: status='running' u WHERE sprječava lost update i double-end race.
     const updated = await exec<{ id: number }>(sql`
@@ -604,35 +736,10 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
   }
 });
 
-// GET /api/games/quiz-questions?count=15 — random pitanja iz svih ilmihal lekcija.
-router.get("/quiz-questions", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
-  try {
-    const count = Math.max(5, Math.min(50, Number(req.query.count || 20)));
-    const rows = await exec<{ kviz_pitanja: unknown }>(sql`
-      SELECT kviz_pitanja FROM ilmihal_lekcije
-      WHERE is_published = true AND kviz_pitanja IS NOT NULL
-    `);
-    const pool: { question: string; options: string[]; answer: string }[] = [];
-    for (const r of rows.rows) {
-      const arr = r.kviz_pitanja as { question: string; options: string[]; answer: string }[] | null;
-      if (Array.isArray(arr)) {
-        for (const q of arr) {
-          if (q && typeof q.question === "string" && Array.isArray(q.options) && typeof q.answer === "string") {
-            pool.push(q);
-          }
-        }
-      }
-    }
-    // Fisher-Yates shuffle
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    res.json({ questions: pool.slice(0, count) });
-  } catch (err) {
-    req.log.error({ err }, "games/quiz-questions failed");
-    res.status(500).json({ error: "internal_error" });
-  }
-});
+// NAPOMENA: stari GET /api/games/quiz-questions endpoint (koji je vraćao
+// pitanja sa odgovorima direktno klijentu) je uklonjen u sklopu task-a #44.
+// Pitanja sada generira /games/start server-side i čuva ih u game_sessions
+// (BEZ izlaganja `answer` polja klijentu). To zatvara cheat surface gdje je
+// napadač mogao paralelno zovnuti /quiz-questions i pročitati tačne odgovore.
 
 export default router;

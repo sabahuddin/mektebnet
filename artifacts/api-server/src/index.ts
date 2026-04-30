@@ -168,6 +168,15 @@ async function runMigrations() {
         END IF;
       END $$;
     `);
+    // Server-side scoring za quiz: spremamo cjelokupna pitanja sesije
+    // (sa odgovorima) na strani servera. Klijent vraća samo izbor po questionId
+    // — server validira i računa score. Bez ovoga klijent može poslati bilo
+    // koji broj kao "score" i jedini guard je vremenski cheatCap.
+    // JSONB sadrži [{ id, question, options, answer }] generirano u /games/start
+    // (id je stabilan unutar sesije: q0, q1, ..., qN).
+    await db.execute(sql`
+      ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS quiz_questions JSONB
+    `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_user_idx ON game_sessions (user_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_user_status_idx ON game_sessions (user_id, status);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_game_score_idx ON game_sessions (game_id, score);`);
