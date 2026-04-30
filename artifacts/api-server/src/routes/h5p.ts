@@ -15,8 +15,6 @@ async function exec<T = Record<string, unknown>>(query: ReturnType<typeof sql>):
 
 // Maksimum hasanata po H5P vježbi pri 100% score-u na PRVOM pokušaju.
 const MAX_HASANATA_PER_H5P = 50;
-// Minimalni procenat za bilo kakav reward (mirror /content/napredak prag).
-const MIN_PROCENAT_ZA_HASANATE = 50;
 
 // Multiplier po broju pokušaja (anti-cheat: ne nagrađuj ponavljanje da bi
 // "farm-ao" hasanate). Treći+ pokušaj služi vježbi/učenju ali ne donosi nove
@@ -38,9 +36,8 @@ function multiplierForAttempt(attemptNo: number): number {
 // Mitigacije koje primjenjujemo (zato je farming neisplativ, a ne nemoguć):
 //   1) Multiplier po pokušaju: 1.=100%, 2.=50%, 3+=0% — nakon 2 pokušaja
 //      na istom prilogu nikakav score ne donosi hasanate.
-//   2) MAX 50 hasanata po vježbi (kapa upside).
-//   3) MIN 50% procenat za bilo kakvu nagradu (sprječava 1/100 farming).
-//   4) Atomski upsert hasanata (lost-update safe).
+//   2) MAX 50 hasanata po vježbi (kapa upside) — proporcionalno score-u.
+//   3) Atomski upsert hasanata (lost-update safe).
 //
 // Pravo server-side ocjenjivanje H5P-a zahtijeva H5P CMS server stack
 // koji ovaj projekat svjesno NE uključuje (out of scope za mekteb).
@@ -97,11 +94,9 @@ router.post("/result", requireAuth, async (req: Request, res: Response): Promise
     let inserted: typeof h5pPokusajiTable.$inferSelect | null = null;
     for (let retry = 0; retry < 5; retry++) {
       const multiplier = multiplierForAttempt(attemptNo);
-      // Hasanati: SAMO ako procenat ≥ MIN_PROCENAT_ZA_HASANATE — sprječava
-      // farmanje hasanata kroz "pokrenem pa odustanem sa 1/10".
-      const hasanatGained = procenat >= MIN_PROCENAT_ZA_HASANATE
-        ? Math.round((score / maxScore) * MAX_HASANATA_PER_H5P * multiplier)
-        : 0;
+      // Hasanati = round(score/maxScore × MAX × multiplier).
+      // Proporcionalno score-u (0/10 → 0, 5/10 → 12-13, 10/10 → 50 na 1. pokušaju).
+      const hasanatGained = Math.round((score / maxScore) * MAX_HASANATA_PER_H5P * multiplier);
       try {
         const [row] = await db.insert(h5pPokusajiTable).values({
           userId,

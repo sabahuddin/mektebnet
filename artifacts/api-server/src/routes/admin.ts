@@ -327,9 +327,11 @@ const h5pUpload = multer({
 router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
   h5pUpload.single("file")(req, res, async (err) => {
     if (err) {
-      const msg = err instanceof multer.MulterError
-        ? (err.code === "LIMIT_FILE_SIZE" ? "H5P fajl prevelik (max 50MB)" : err.message)
-        : err.message || "Greška pri uploadu";
+      // 413 Payload Too Large kad je multer odbio zbog veličine, 400 inače.
+      if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "H5P fajl prevelik (max 50MB)" });
+      }
+      const msg = err instanceof multer.MulterError ? err.message : (err.message || "Greška pri uploadu");
       return res.status(400).json({ error: msg });
     }
     if (!req.file) return res.status(400).json({ error: "Nema fajla" });
@@ -373,10 +375,16 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
       }
       zip.extractAllTo(extractDir, true);
 
-      // 3. Validacija: h5p.json mora postojati u root-u
+      // 3. Validacija H5P arhive po H5P specifikaciji:
+      //    - h5p.json (manifest sa libraries) MORA postojati u root-u
+      //    - content/content.json (parametri konkretnog content-a) MORA postojati
       const manifestPath = path.join(extractDir, "h5p.json");
       if (!fs.existsSync(manifestPath)) {
         throw new Error("Nevažeća H5P arhiva: nedostaje h5p.json u root-u");
+      }
+      const contentJsonPath = path.join(extractDir, "content", "content.json");
+      if (!fs.existsSync(contentJsonPath)) {
+        throw new Error("Nevažeća H5P arhiva: nedostaje content/content.json");
       }
 
       // 4. Update storedName na finalni put

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "@workspace/db";
@@ -15,6 +15,29 @@ import { signToken, requireAuth } from "../middlewares/auth.js";
 import { sendRegistrationNotification } from "../lib/email.js";
 
 const router = Router();
+
+// Postavlja http-only cookie sa JWT-om za autentifikaciju zahtjeva ka
+// statičkom H5P sadržaju (`/uploads/h5p/*`). H5P player u browseru čini
+// fetcheve do html/css/js/json fajlova bez prilike da nosi Authorization
+// header — cookie ovo rješava jer ga browser šalje automatski za same-origin.
+//
+// Sigurnost:
+//  - HttpOnly: nedostupan iz JS-a (sprječava XSS krađu).
+//  - SameSite=Lax: ne šalje se na cross-site POST-ove (CSRF mitigacija).
+//  - Secure se postavlja samo u prod (NODE_ENV=production); lokalno je dev http.
+//  - Max-Age 30 dana, isti kao JWT expiry.
+function setH5pSessionCookie(res: Response, token: string) {
+  const isProd = process.env["NODE_ENV"] === "production";
+  const parts = [
+    `mekteb_h5p_session=${token}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=2592000", // 30 dana
+  ];
+  if (isProd) parts.push("Secure");
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
 
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
@@ -50,6 +73,7 @@ router.post("/login", async (req, res) => {
       displayName: user.displayName,
     });
 
+    setH5pSessionCookie(res, token);
     res.json({
       token,
       user: {
@@ -100,6 +124,7 @@ router.post("/register-roditelj", async (req, res) => {
       displayName: newUser.displayName,
     });
 
+    setH5pSessionCookie(res, token);
     res.status(201).json({
       token,
       user: {
