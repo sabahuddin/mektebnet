@@ -105,11 +105,16 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
     }
 
     // Prvo expirej sve stare running sesije ovog usera (auto-expire >30min).
+    // VAŽNO: duration_sec mora biti realno protekao tijek (clamped na allowed_duration_sec),
+    // ne fiksno MAX_SESSION_DURATION_SEC. Inače napušteni 60s quiz oduzima 30 min credit-a.
     await db.execute(sql`
       UPDATE game_sessions
       SET status = 'expired',
           ended_at = NOW(),
-          duration_sec = ${MAX_SESSION_DURATION_SEC}
+          duration_sec = LEAST(
+            allowed_duration_sec,
+            GREATEST(0, EXTRACT(EPOCH FROM (NOW() - started_at))::int)
+          )
       WHERE user_id = ${userId}
         AND status = 'running'
         AND started_at < NOW() - INTERVAL '${sql.raw(String(MAX_SESSION_DURATION_SEC))} seconds'
