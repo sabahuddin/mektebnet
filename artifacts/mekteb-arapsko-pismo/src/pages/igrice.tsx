@@ -22,6 +22,17 @@ export default function IgricePage() {
       </Layout>
     );
   }
+  if (user.role !== "ucenik") {
+    return (
+      <Layout>
+        <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-igrice">
+          <Gamepad2 className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="font-bold text-foreground mb-1">Igrice su dostupne samo učeničkim nalozima</p>
+          <p className="text-sm text-muted-foreground">Tvoj nalog je <strong>{user.role}</strong>. Prijavi se kao učenik za pristup igricama.</p>
+        </Card>
+      </Layout>
+    );
+  }
 
   const remaining = credits?.secondsRemaining ?? 0;
   const allowed = credits?.secondsAllowed ?? 0;

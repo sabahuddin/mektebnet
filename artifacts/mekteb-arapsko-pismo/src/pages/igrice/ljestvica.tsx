@@ -109,6 +109,16 @@ export default function Ljestvica() {
       </Layout>
     );
   }
+  if (user.role !== "ucenik") {
+    return (
+      <Layout>
+        <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-ljestvica">
+          <p className="font-bold text-foreground mb-2">Ljestvica je dostupna samo učeničkim nalozima</p>
+          <Link href="/igrice" className="text-primary font-bold underline">Nazad</Link>
+        </Card>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

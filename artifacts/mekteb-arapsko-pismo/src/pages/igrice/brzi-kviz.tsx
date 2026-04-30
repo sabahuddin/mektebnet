@@ -178,6 +178,16 @@ export default function BrziKviz() {
       </Layout>
     );
   }
+  if (user.role !== "ucenik") {
+    return (
+      <Layout>
+        <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-brzi-kviz">
+          <p className="font-bold text-foreground mb-2">Igrice su dostupne samo učeničkim nalozima</p>
+          <Link href="/igrice" className="text-primary font-bold underline">Nazad</Link>
+        </Card>
+      </Layout>
+    );
+  }
 
   const currentQ = questions[qIndex];
 
