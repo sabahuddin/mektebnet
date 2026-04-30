@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { useGetProgress } from "@workspace/api-client-react";
-import { getStudentId } from "@/lib/student";
 import { Layout } from "@/components/layout";
 import { Star, Flame, Award, BookOpen, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,44 +28,47 @@ interface BedzInfo {
   earnedAt: string | null;
 }
 
+interface NapredakData {
+  streakDays: number;
+  totalHasanat: number;
+  completedCount: number;
+  bedzevi?: BedzInfo[];
+}
+
 interface ProfilData {
-  napredak?: {
-    bedzevi?: BedzInfo[];
-  };
+  napredak?: NapredakData;
 }
 
 export default function Progress() {
-  const studentId = getStudentId();
   const { token } = useAuth();
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [showAllKvizovi, setShowAllKvizovi] = useState(false);
-  const [bedzevi, setBedzevi] = useState<BedzInfo[]>([]);
-  const [bedzeviStatus, setBedzeviStatus] = useState<"loading" | "ready" | "error">("loading");
-
-  const { data: progress, isLoading } = useGetProgress({ studentId }, {
-    query: { retry: 1 }
-  });
+  const [napredak, setNapredak] = useState<NapredakData | null>(null);
+  const [profilStatus, setProfilStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     if (!token) {
-      setBedzeviStatus("error");
+      setProfilStatus("error");
       return;
     }
     apiRequest<KvizRezultat[]>("GET", "/content/kviz-rezultati", undefined, token)
       .then(data => { if (Array.isArray(data)) setKvizRezultati(data); })
       .catch(() => {});
-    setBedzeviStatus("loading");
+    setProfilStatus("loading");
     apiRequest<ProfilData>("GET", "/ucenik/profil", undefined, token)
       .then(data => {
-        if (data?.napredak?.bedzevi && Array.isArray(data.napredak.bedzevi)) {
-          setBedzevi(data.napredak.bedzevi);
-          setBedzeviStatus("ready");
+        if (data?.napredak) {
+          setNapredak(data.napredak);
+          setProfilStatus("ready");
         } else {
-          setBedzeviStatus("error");
+          setProfilStatus("error");
         }
       })
-      .catch(() => setBedzeviStatus("error"));
+      .catch(() => setProfilStatus("error"));
   }, [token]);
+
+  const bedzevi = napredak?.bedzevi ?? [];
+  const isLoading = profilStatus === "loading";
 
   const displayedKvizovi = showAllKvizovi ? kvizRezultati : kvizRezultati.slice(0, 5);
   const avgProcenat = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : 0;
@@ -107,7 +108,7 @@ export default function Progress() {
             </div>
             <div>
               <p className="text-sm font-bold uppercase tracking-wider text-yellow-800/70">Ukupno Hasanata</p>
-              <p className="text-4xl font-black text-yellow-600">{progress?.totalHasanat || 0}</p>
+              <p className="text-4xl font-black text-yellow-600">{napredak?.totalHasanat || 0}</p>
             </div>
           </Card>
         </motion.div>
@@ -119,7 +120,7 @@ export default function Progress() {
             </div>
             <div>
               <p className="text-sm font-bold uppercase tracking-wider text-orange-800/70">Vatreni Niz</p>
-              <p className="text-4xl font-black text-orange-600">{progress?.streakDays || 0} <span className="text-xl">dana</span></p>
+              <p className="text-4xl font-black text-orange-600">{napredak?.streakDays || 0} <span className="text-xl">dana</span></p>
             </div>
           </Card>
         </motion.div>
@@ -131,7 +132,7 @@ export default function Progress() {
             </div>
             <div>
               <p className="text-sm font-bold uppercase tracking-wider text-teal-800/70">Završeno Lekcija</p>
-              <p className="text-4xl font-black text-teal-600">{progress?.completedLessons?.length || 0}</p>
+              <p className="text-4xl font-black text-teal-600">{napredak?.completedCount || 0}</p>
             </div>
           </Card>
         </motion.div>
@@ -182,7 +183,7 @@ export default function Progress() {
       <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
         <Award className="w-6 h-6 text-primary" />
         Kolekcija Bedževa
-        {bedzeviStatus === "ready" && bedzevi.length > 0 && (
+        {profilStatus === "ready" && bedzevi.length > 0 && (
           <span className="ml-auto text-base font-medium text-muted-foreground">
             <span className="font-bold text-primary">{bedzevi.filter(b => b.earned).length}</span>
             <span className="text-muted-foreground">/{bedzevi.length}</span>
@@ -190,13 +191,7 @@ export default function Progress() {
         )}
       </h2>
 
-      {bedzeviStatus === "loading" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-44 rounded-2xl" />
-          ))}
-        </div>
-      ) : bedzeviStatus === "error" || bedzevi.length === 0 ? (
+      {profilStatus === "error" || bedzevi.length === 0 ? (
         <Card className="p-8 text-center bg-muted/30 border-dashed">
           <Award className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
           <p className="font-bold text-foreground mb-1">Nije moguće učitati bedževe</p>
