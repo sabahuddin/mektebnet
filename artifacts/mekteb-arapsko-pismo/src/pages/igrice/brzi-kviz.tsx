@@ -155,11 +155,12 @@ export default function BrziKviz() {
   useEffect(() => { wrongRef.current = wrong; }, [wrong]);
   useEffect(() => { tokenRef.current = token; }, [token]);
 
-  // Cleanup: ako user napusti stranicu mid-game, end session sa current score
+  // Cleanup: ako user napusti stranicu mid-game, end session sa current score.
+  // VAŽNO: score = broj tačnih (isti princip kao u-game scoring), ne stara formula.
   useEffect(() => {
     return () => {
       if (stateRef.current === "playing" && sessionId && tokenRef.current && !endingRef.current) {
-        const score = Math.max(0, correctRef.current - Math.floor(wrongRef.current / 3));
+        const score = Math.max(0, correctRef.current);
         endingRef.current = true;
         // Best-effort, no await
         apiRequest("POST", "/games/end", { sessionId, score }, tokenRef.current).catch(() => {});

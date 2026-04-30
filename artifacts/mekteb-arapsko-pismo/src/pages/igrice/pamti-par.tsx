@@ -13,20 +13,20 @@ import { motion, AnimatePresence } from "framer-motion";
 interface Harf { id: number; arabic: string; name: string; }
 
 const HARFOVI_POOL: Harf[] = [
-  { id: 1,  arabic: "ا", name: "Elif" }, { id: 2,  arabic: "ب", name: "Ba" },
-  { id: 3,  arabic: "ت", name: "Ta" },   { id: 4,  arabic: "ث", name: "Sa" },
-  { id: 5,  arabic: "ج", name: "Džim" }, { id: 6,  arabic: "ح", name: "Ha" },
-  { id: 7,  arabic: "خ", name: "Ha" },   { id: 8,  arabic: "د", name: "Dal" },
-  { id: 9,  arabic: "ذ", name: "Zal" },  { id: 10, arabic: "ر", name: "Ra" },
-  { id: 11, arabic: "ز", name: "Zejn" }, { id: 12, arabic: "س", name: "Sin" },
-  { id: 13, arabic: "ش", name: "Šin" },  { id: 14, arabic: "ص", name: "Sad" },
-  { id: 15, arabic: "ض", name: "Dad" },  { id: 16, arabic: "ط", name: "Ta" },
-  { id: 17, arabic: "ظ", name: "Za" },   { id: 18, arabic: "ع", name: "Ajn" },
-  { id: 19, arabic: "غ", name: "Gajn" }, { id: 20, arabic: "ف", name: "Fa" },
-  { id: 21, arabic: "ق", name: "Kaf" },  { id: 22, arabic: "ك", name: "Kef" },
-  { id: 23, arabic: "ل", name: "Lam" },  { id: 24, arabic: "م", name: "Mim" },
-  { id: 25, arabic: "ن", name: "Nun" },  { id: 26, arabic: "ه", name: "He" },
-  { id: 27, arabic: "و", name: "Waw" },  { id: 28, arabic: "ي", name: "Ja" },
+  { id: 1,  arabic: "ا", name: "Elif" },  { id: 2,  arabic: "ب", name: "Ba" },
+  { id: 3,  arabic: "ت", name: "Te" },    { id: 4,  arabic: "ث", name: "Se" },
+  { id: 5,  arabic: "ج", name: "Džim" },  { id: 6,  arabic: "ح", name: "Ha" },
+  { id: 7,  arabic: "خ", name: "Hâ" },    { id: 8,  arabic: "د", name: "Dal" },
+  { id: 9,  arabic: "ذ", name: "Zel" },   { id: 10, arabic: "ر", name: "Ra" },
+  { id: 11, arabic: "ز", name: "Ze" },    { id: 12, arabic: "س", name: "Sin" },
+  { id: 13, arabic: "ش", name: "Šin" },   { id: 14, arabic: "ص", name: "Sad" },
+  { id: 15, arabic: "ض", name: "Dad" },   { id: 16, arabic: "ط", name: "Tâ" },
+  { id: 17, arabic: "ظ", name: "Zâ" },    { id: 18, arabic: "ع", name: "Ajn" },
+  { id: 19, arabic: "غ", name: "Gajn" },  { id: 20, arabic: "ف", name: "Fa" },
+  { id: 21, arabic: "ق", name: "Kaf" },   { id: 22, arabic: "ك", name: "Kef" },
+  { id: 23, arabic: "ل", name: "Lam" },   { id: 24, arabic: "م", name: "Mim" },
+  { id: 25, arabic: "ن", name: "Nun" },   { id: 26, arabic: "ه", name: "He" },
+  { id: 27, arabic: "و", name: "Waw" },   { id: 28, arabic: "ي", name: "Ja" },
 ];
 
 // Svaki par = jedna arapska kartica + jedna kartica sa imenom harfa.
