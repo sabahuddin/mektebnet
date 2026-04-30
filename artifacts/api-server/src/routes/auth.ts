@@ -39,6 +39,22 @@ function setH5pSessionCookie(res: Response, token: string) {
   res.setHeader("Set-Cookie", parts.join("; "));
 }
 
+// Briše H5P session cookie pri logout-u tako da JWT ostatak vremena valjanosti
+// više ne može pristupiti H5P static sadržaju iz browser-a.
+function clearH5pSessionCookie(res: Response) {
+  const isProd = process.env["NODE_ENV"] === "production";
+  const parts = [
+    "mekteb_h5p_session=",
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=0",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+  ];
+  if (isProd) parts.push("Secure");
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
+
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
   try {
@@ -139,6 +155,14 @@ router.post("/register-roditelj", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Greška servera" });
   }
+});
+
+// POST /api/auth/logout — briše H5P session cookie. Nije strogo "logout" u JWT
+// smislu (token je stateless i traje do isteka), ali sprječava da browser
+// nakon klijentskog logout-a još uvijek može fetchati H5P static fajlove.
+router.post("/logout", (_req, res) => {
+  clearH5pSessionCookie(res);
+  res.json({ ok: true });
 });
 
 // GET /api/auth/me

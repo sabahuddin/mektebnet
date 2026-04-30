@@ -53,6 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    // Best-effort: tražimo backend da obriše HttpOnly H5P session cookie tako
+    // da browser nakon logout-a više ne može pristupiti H5P static fajlovima.
+    // Greška se ignorira (offline, network) — lokalni state se svakako briše.
+    apiRequest("POST", "/auth/logout").catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);
