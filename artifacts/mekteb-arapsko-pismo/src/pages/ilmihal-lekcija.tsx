@@ -1170,6 +1170,22 @@ function PriloziSection({
 }) {
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
+  // `lekcija.prilozi` može stići naknadno (npr. token postane dostupan tek
+  // nakon AuthProvider hidratacije, pa se GET re-issuea). useState() inicijalna
+  // vrijednost se NE primjenjuje na re-render — moramo ručno sync-ovati.
+  // Pravila:
+  //   - kad se lekcija PROMIJENI (drugi id), uvijek reset na server podatke;
+  //   - na istoj lekciji prihvati server podatke samo ako lokalna lista još
+  //     nije popunjena (čuva optimistic admin add/delete od overwrite-a).
+  const lastLekcijaIdRef = useRef(lekcija.id);
+  useEffect(() => {
+    if (lastLekcijaIdRef.current !== lekcija.id) {
+      lastLekcijaIdRef.current = lekcija.id;
+      setAttachments(lekcija.prilozi || []);
+      return;
+    }
+    setAttachments(prev => (prev.length > 0 ? prev : (lekcija.prilozi || [])));
+  }, [lekcija.id, lekcija.prilozi]);
   const [uploading, setUploading] = useState(false);
   const [uploadingH5p, setUploadingH5p] = useState(false);
   const [showUrlForm, setShowUrlForm] = useState(false);
@@ -1180,7 +1196,31 @@ function PriloziSection({
   const h5pInputRef = useRef<HTMLInputElement>(null);
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
   const [h5pSubmitting, setH5pSubmitting] = useState<Record<number, boolean>>({});
+  // Po-prilogu: koliko pokušaja je učenik već imao (određuje multiplier
+  // za sljedeći pokušaj — prikaz "možeš osvojiti do X hasenata").
+  const [h5pAttempts, setH5pAttempts] = useState<Record<number, { nextAttemptNo: number; nextMultiplier: number }>>({});
   const { toast } = useToast();
+
+  // Fetch attempts za sve H5P priloge na mount-u (i kad se attachments lista mijenja).
+  useEffect(() => {
+    if (!token) return;
+    const h5ps = attachments.filter(a => a.kind === "h5p");
+    if (h5ps.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const updates: Record<number, { nextAttemptNo: number; nextMultiplier: number }> = {};
+      for (const a of h5ps) {
+        try {
+          const res = await apiRequest<{ nextAttemptNo: number; nextMultiplier: number }>(
+            "GET", `/h5p/attempts/${a.id}`, undefined, token,
+          );
+          updates[a.id] = { nextAttemptNo: res.nextAttemptNo, nextMultiplier: res.nextMultiplier };
+        } catch { /* ignore — admin/muallim ne dobija; ucenik dobija */ }
+      }
+      if (!cancelled) setH5pAttempts(prev => ({ ...prev, ...updates }));
+    })();
+    return () => { cancelled = true; };
+  }, [token, attachments]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1208,7 +1248,8 @@ function PriloziSection({
       const fd = new FormData();
       fd.append("file", file);
       const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/h5p`, fd, token, true);
-      const url = `/uploads/${(result as any).storedName || ""}`;
+      // Prefiks `/api/uploads/...` je univerzalan (vidi backend napomenu u content.ts).
+      const url = `/api/uploads/${(result as any).storedName || ""}`;
       setAttachments(prev => [{ ...result, url }, ...prev]);
       toast({ title: "H5P uploadovan", description: `"${file.name}" je dodan.` });
     } catch (err: any) {
@@ -1244,13 +1285,18 @@ function PriloziSection({
           streakIncreased: false,
         });
       } else {
-        const reason = res.procenat < 50
-          ? `Tačnost ${res.procenat}% — potrebno je minimalno 50% za hasanate.`
-          : res.attemptNo >= 3
-            ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose hasanate.`
-            : `Pokušaj ${res.attemptNo}: ${res.procenat}%`;
+        const reason = res.attemptNo >= 3
+          ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose hasanate.`
+          : `Pokušaj ${res.attemptNo}: ${res.procenat}%`;
         toast({ title: "Vježba završena", description: reason });
       }
+      // Refresh attempts za ovaj prilog (smanji prikazani max za sljedeći put).
+      try {
+        const fresh = await apiRequest<{ nextAttemptNo: number; nextMultiplier: number }>(
+          "GET", `/h5p/attempts/${priloziId}`, undefined, token,
+        );
+        setH5pAttempts(prev => ({ ...prev, [priloziId]: { nextAttemptNo: fresh.nextAttemptNo, nextMultiplier: fresh.nextMultiplier } }));
+      } catch {/* ignore */}
     } catch (err: any) {
       toast({ title: "Greška", description: err.message, variant: "destructive" });
     } finally {
@@ -1423,8 +1469,16 @@ function PriloziSection({
                     const isH5p = a.kind === "h5p";
                     const targetUrl = a.externalUrl || a.url;
                     const ytEmbed = isUrl ? getYoutubeEmbedUrl(targetUrl) : null;
-                    const h5pUrl = isH5p ? `${apiBase}${a.url}` : null;
+                    // a.url backend već vraća kao apsolutnu putanju from origin (npr.
+                    // "/uploads/h5p/12"). NE prefixaj sa apiBase ("/api") — statički
+                    // sadržaj se servira iz "/uploads", ne "/api/uploads".
+                    const h5pUrl = isH5p ? a.url : null;
                     const attemptKey = h5pAttemptKey[a.id] ?? 0;
+                    // Attempt-aware nagrada: koliko hasanata je moguće osvojiti za
+                    // sljedeći pokušaj na ovoj vježbi (uzima u obzir prošle pokušaje).
+                    const att = isH5p ? h5pAttempts[a.id] : null;
+                    const nextMult = att?.nextMultiplier ?? 1;
+                    const maxNext = Math.round(50 * nextMult);
                     return (
                       <div key={a.id} className="flex flex-col gap-2 bg-white rounded-xl border border-blue-100 p-3 hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-3">
@@ -1484,6 +1538,17 @@ function PriloziSection({
                         </div>
                         {isH5p && h5pUrl && (
                           <div className="mt-2 rounded-lg overflow-hidden bg-white border border-purple-100">
+                            {/* Attempt-aware header — pokazuje učeniku koliko hasanata
+                                može osvojiti za sljedeći pokušaj (uzima u obzir prošlost). */}
+                            <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                              <p className="text-sm font-semibold text-purple-700">
+                                {maxNext > 0
+                                  ? <>Vježba — možeš osvojiti do <span className="text-purple-900">{maxNext} hasenata</span> ({att?.nextAttemptNo ?? 1}. pokušaj)</>
+                                  : <>Vježba — daljnji pokušaji ne donose hasanate (već {Math.max(0, (att?.nextAttemptNo ?? 1) - 1)} pokušaja)</>
+                                }
+                              </p>
+                            </div>
                             <Suspense fallback={
                               <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
                                 <Loader2 className="w-4 h-4 animate-spin" /> Učitavam vježbu...
@@ -1496,7 +1561,7 @@ function PriloziSection({
                               />
                             </Suspense>
                             <p className="px-3 py-2 text-xs text-purple-500 bg-purple-50/60">
-                              Maks. 50 hasanata. 1. pokušaj: 100%, 2. pokušaj: 50%, 3+: bez nagrade. Min. tačnost 50%.
+                              Maks. 50 hasanata. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
                             </p>
                           </div>
                         )}

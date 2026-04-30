@@ -115,7 +115,10 @@ router.get("/ilmihal/:slug", async (req, res) => {
         result.prilozi = visible.map(a => {
           let url: string;
           if (a.kind === "url") url = a.externalUrl || "";
-          else if (a.kind === "h5p") url = `/uploads/${a.storedName}`; // javno servirano
+          // H5P static fajlovi: koristimo `/api/uploads/...` jer je `/api`
+          // jedini prefix koji u Replit path routing-u sigurno pogađa api-server
+          // (a u prod-u behind nginx-u takođe). Auth (cookie ili Bearer) traje.
+          else if (a.kind === "h5p") url = `/api/uploads/${a.storedName}`;
           else url = `/api/admin/prilozi/download/${a.id}`; // admin auth required
           return {
             id: a.id,

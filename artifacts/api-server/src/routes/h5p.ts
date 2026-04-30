@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { prilozi, h5pPokusajiTable, studentProgressTable } from "@workspace/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -46,7 +46,9 @@ function multiplierForAttempt(attemptNo: number): number {
 //   - prilog postoji i kind='h5p'
 //   - maxScore > 0 i score u [0, maxScore]
 //   - attempt_no se računa preko DB unique indexa + retry petlje.
-router.post("/result", requireAuth, async (req: Request, res: Response): Promise<void> => {
+// SAMO učenici mogu submitati H5P pokušaj — admin/muallim/roditelj nemaju
+// pravo "skupljati" hasanate (i ionako nemaju studentski progress red).
+router.post("/result", requireAuth, requireRole("ucenik"), async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.userId;
     const body = (req.body || {}) as {

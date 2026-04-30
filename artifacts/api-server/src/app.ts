@@ -75,13 +75,19 @@ function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-app.use("/uploads", requireH5pAuth, express.static(uploadsDir, {
+// Mount na oba prefiksa: `/uploads` (direktan pristup unutar API kontejnera,
+// reverse proxy u prod-u) i `/api/uploads` (kroz Replit path routing — frontend
+// može direktno fetch-ovati H5P static fajlove preko `/api` koji je već mapiran
+// na ovaj servis). Tako H5P URL-ovi rade i u dev-u i u prod-u.
+const uploadsStatic = express.static(uploadsDir, {
   maxAge: "30d",
   immutable: true,
   setHeaders: (res) => {
     res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
   },
-}));
+});
+app.use("/uploads", requireH5pAuth, uploadsStatic);
+app.use("/api/uploads", requireH5pAuth, uploadsStatic);
 
 app.use(trackVisit);
 
