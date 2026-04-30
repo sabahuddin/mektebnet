@@ -56,6 +56,28 @@ async function exec<T = Record<string, unknown>>(query: ReturnType<typeof sql>):
   return (await db.execute(query)) as unknown as DbExecResult<T>;
 }
 
+// Normaliziraj timestamp iz Postgres-a u striktni ISO 8601 sa T i Z.
+// Postgres TIMESTAMPTZ stiže kao Date objekt ili kao "2026-04-30 20:02:07+00"
+// (zavisno od pg parsera). Safari odbija non-T format pa moramo eksplicitno ISO-irati.
+function toIso(v: unknown): string | null {
+  if (v == null) return null;
+  // Probaj Date direktno (TIMESTAMPTZ kroz pg defaultno stiže kao Date).
+  if (v instanceof Date) {
+    const ms = v.getTime();
+    return isNaN(ms) ? null : v.toISOString();
+  }
+  // Probaj string format: "2026-04-30 20:02:07.083545+00" → ISO 8601 sa T i Z.
+  const s = typeof v === "string" ? v : String(v);
+  // new Date(string) prihvata "+00" i prihvata razmak umjesto T u modernim
+  // browserima i Node-u, ali Safari je strožiji — eksplicitno zamjenjujemo.
+  const normalized = s.includes("T") ? s : s.replace(" ", "T");
+  const d = new Date(normalized);
+  if (!isNaN(d.getTime())) return d.toISOString();
+  // Fallback: pokušaj sirov string možda ima ms parser razlike.
+  const d2 = new Date(s);
+  return isNaN(d2.getTime()) ? null : d2.toISOString();
+}
+
 // Vrati spent sekunde (clamped sumom svih sesija) za usera.
 async function getSecondsSpent(userId: number): Promise<number> {
   const r = await exec<{ s: number }>(sql`
@@ -133,7 +155,7 @@ router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, 
       activeSession: activeSession ? {
         id: activeSession.id,
         gameId: activeSession.game_id,
-        startedAt: activeSession.started_at,
+        startedAt: toIso(activeSession.started_at),
       } : null,
     });
   } catch (err) {
@@ -205,7 +227,7 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
       res.json({
         sessionId: row.id,
         gameId,
-        startedAt: row.started_at,
+        startedAt: toIso(row.started_at),
         allowedDurationSec,
       });
     } catch (insertErr) {

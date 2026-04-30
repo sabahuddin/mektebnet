@@ -148,6 +148,26 @@ async function runMigrations() {
         ended_at TIMESTAMP
       );
     `);
+    // FIX: started_at/ended_at su izvorno bili TIMESTAMP (without time zone),
+    // pa ih je node-postgres vraćao bez TZ suffiksa ("2026-04-30 19:59:21.372402").
+    // Klijentski `new Date(...)` to parsira kao LOKALNO vrijeme, što je u svakom
+    // ne-UTC browseru pomicalo timer u prošlost (elapsed = TZ offset u sekundama)
+    // i odmah okidalo onExpire. Migriramo na TIMESTAMPTZ — postojeće naive
+    // vrijednosti tretiramo kao UTC (Postgres session TZ je GMT i u dev i u prod).
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='game_sessions' AND column_name='started_at'
+            AND data_type='timestamp without time zone'
+        ) THEN
+          ALTER TABLE game_sessions
+            ALTER COLUMN started_at TYPE TIMESTAMPTZ USING started_at AT TIME ZONE 'UTC',
+            ALTER COLUMN ended_at TYPE TIMESTAMPTZ USING ended_at AT TIME ZONE 'UTC';
+        END IF;
+      END $$;
+    `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_user_idx ON game_sessions (user_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_user_status_idx ON game_sessions (user_id, status);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_game_score_idx ON game_sessions (game_id, score);`);
