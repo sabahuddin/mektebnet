@@ -131,10 +131,12 @@ export default function LoginPage() {
                   {captcha.a} + {captcha.b} = ?
                 </div>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   required
                   value={captchaAnswer}
-                  onChange={e => setCaptchaAnswer(e.target.value)}
+                  onChange={e => setCaptchaAnswer(e.target.value.replace(/[^0-9]/g, ""))}
                   className="h-11 rounded-xl border-border/70 w-24 text-center font-bold"
                 />
               </div>

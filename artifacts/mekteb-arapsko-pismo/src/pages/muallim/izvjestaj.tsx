@@ -3,8 +3,9 @@ import { useLocation, useRoute } from "wouter";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpen } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpen, CheckSquare, Square, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Prisustvo { id: number; datum: string; status: string; napomena?: string }
@@ -73,6 +74,9 @@ export default function MuallimIzvjestajPage() {
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(true);
+  const [pickerSearch, setPickerSearch] = useState("");
 
   useEffect(() => {
     if (!token) return;
@@ -84,10 +88,37 @@ export default function MuallimIzvjestajPage() {
 
     setIsLoading(true);
     apiRequest<IzvjestajData>("GET", url, undefined, token)
-      .then(d => { setData(d); setError(null); })
+      .then(d => {
+        setData(d);
+        setError(null);
+        if (d.tip === "ucenik") {
+          setSelectedIds(new Set(d.ucenici.map(u => u.ucenik.id)));
+          setPickerOpen(false);
+        } else {
+          setSelectedIds(new Set());
+          setPickerOpen(true);
+        }
+      })
       .catch((e: any) => setError(e?.message || "Greška pri učitavanju"))
       .finally(() => setIsLoading(false));
   }, [token, matchUcenik, paramsUcenik?.id, matchGrupa, paramsGrupa?.id, matchSvi]);
+
+  const filteredUcenici = data ? data.ucenici.filter(u => selectedIds.has(u.ucenik.id)) : [];
+  const showPicker = !!data && data.tip !== "ucenik";
+
+  function toggleId(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function selectAllVisible(ids: number[]) {
+    setSelectedIds(prev => { const next = new Set(prev); ids.forEach(id => next.add(id)); return next; });
+  }
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
 
   function handlePrint() {
     window.print();
@@ -176,23 +207,96 @@ export default function MuallimIzvjestajPage() {
               </div>
             </div>
 
+            {/* Picker za odabir učenika (samo grupa/svi) */}
+            {showPicker && (
+              <div className="no-print bg-white border-2 border-primary/30 rounded-2xl p-5 mb-6 shadow-sm" data-testid="picker-ucenika">
+                <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                  <button onClick={() => setPickerOpen(o => !o)}
+                    className="flex items-center gap-2 font-extrabold text-foreground text-base hover:text-primary transition"
+                    data-testid="btn-toggle-picker">
+                    <Users className="w-5 h-5 text-primary" />
+                    Odaberi učenike za izvještaj
+                    <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      {selectedIds.size} / {data.ucenici.length}
+                    </span>
+                  </button>
+                  {pickerOpen && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="rounded-lg text-xs"
+                        onClick={() => selectAllVisible(data.ucenici.map(u => u.ucenik.id))}
+                        data-testid="btn-select-all">
+                        <CheckSquare className="w-3.5 h-3.5 mr-1" /> Označi sve
+                      </Button>
+                      <Button size="sm" variant="outline" className="rounded-lg text-xs"
+                        onClick={clearSelection}
+                        disabled={selectedIds.size === 0}
+                        data-testid="btn-clear-selection">
+                        <Square className="w-3.5 h-3.5 mr-1" /> Poništi
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {pickerOpen && (
+                  <>
+                    {data.ucenici.length > 6 && (
+                      <div className="relative mb-3">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)}
+                          placeholder="Pretraži učenike..."
+                          className="pl-9 h-10 rounded-xl"
+                          data-testid="input-picker-search" />
+                      </div>
+                    )}
+
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+                      {data.ucenici
+                        .filter(u => !pickerSearch || u.ucenik.displayName.toLowerCase().includes(pickerSearch.toLowerCase()))
+                        .map(u => {
+                          const checked = selectedIds.has(u.ucenik.id);
+                          return (
+                            <label key={u.ucenik.id}
+                              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition ${checked ? "bg-primary/5 border-primary/40" : "bg-white border-border hover:bg-muted/40"}`}
+                              data-testid={`picker-row-${u.ucenik.id}`}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleId(u.ucenik.id)}
+                                className="w-4 h-4 accent-primary cursor-pointer"
+                                data-testid={`picker-checkbox-${u.ucenik.id}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold text-foreground truncate">{u.ucenik.displayName}</div>
+                                {u.grupaNaziv && data.tip === "svi" && (
+                                  <div className="text-xs text-muted-foreground truncate">{u.grupaNaziv}</div>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Sumarni statistike za grupa/svi */}
-            {data.tip !== "ucenik" && data.ucenici.length > 0 && (
+            {data.tip !== "ucenik" && filteredUcenici.length > 0 && (
               <div className="bg-white border border-border/50 rounded-2xl p-5 sm:p-6 mb-6 shadow-sm print-card">
                 <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" /> Sumarni pregled
                 </h3>
-                <SumarniPregled ucenici={data.ucenici} />
+                <SumarniPregled ucenici={filteredUcenici} />
               </div>
             )}
 
             {/* Učenici — pojedinačni izvještaji */}
-            {data.ucenici.length === 0 ? (
+            {filteredUcenici.length === 0 ? (
               <div className="bg-white border border-border/50 rounded-2xl p-8 text-center print-card">
-                <p className="text-muted-foreground">Nema učenika za izvještaj.</p>
+                <p className="text-muted-foreground">
+                  {data.ucenici.length === 0
+                    ? "Nema učenika za izvještaj."
+                    : "Odaberi barem jednog učenika za pregled i štampu."}
+                </p>
               </div>
             ) : (
-              data.ucenici.map((u, idx) => (
+              filteredUcenici.map((u, idx) => (
                 <UcenikSekcija key={u.ucenik.id} ucenik={u} firstOnPage={idx > 0} />
               ))
             )}

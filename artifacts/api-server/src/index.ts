@@ -123,8 +123,18 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS zadace_ucenici (
+        id SERIAL PRIMARY KEY,
+        zadaca_id INTEGER NOT NULL REFERENCES zadace(id) ON DELETE CASCADE,
+        ucenik_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (zadaca_id, ucenik_id)
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS zadace_ucenici_ucenik_idx ON zadace_ucenici (ucenik_id);`);
 
-    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock + kviz_rezultati/posjete/mekteb_kalendar/plan_lekcija/zadace ready");
+    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock + kviz_rezultati/posjete/mekteb_kalendar/plan_lekcija/zadace + zadace_ucenici ready");
 
     // BOOTSTRAP: if ilmihal_lekcije is completely empty (fresh prod DB),
     // import the full dataset (~232 lessons) + rjecnik (~314 entries).

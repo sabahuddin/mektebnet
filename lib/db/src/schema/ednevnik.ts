@@ -76,6 +76,16 @@ export const zadaceTable = pgTable("zadace", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Targeting zadaće na specifične učenike (junction tabela).
+// Ako za zadaću NEMA unosa — zadaća pripada cijeloj grupi (backward compat).
+// Ako IMA — zadaća je vidljiva samo navedenim učenicima.
+export const zadaceUceniciTable = pgTable("zadace_ucenici", {
+  id: serial("id").primaryKey(),
+  zadacaId: integer("zadaca_id").notNull(),
+  ucenikId: integer("ucenik_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Certificates / Certifikati
 export const certifikatiTable = pgTable("certifikati", {
   id: serial("id").primaryKey(),

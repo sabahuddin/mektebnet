@@ -15,6 +15,7 @@ import {
   planLekcijaTable,
   ilmihalLekcijeTable,
   zadaceTable,
+  zadaceUceniciTable,
   porukeTable,
   mektebiTable,
 } from "@workspace/db/schema";
@@ -1190,7 +1191,19 @@ router.get("/zadace", async (req, res) => {
       ? and(eq(zadaceTable.muallimId, req.user!.userId), eq(zadaceTable.grupaId, grupaId))
       : eq(zadaceTable.muallimId, req.user!.userId);
     const zadace = await db.select().from(zadaceTable).where(where).orderBy(desc(zadaceTable.createdAt));
-    res.json(zadace);
+
+    if (zadace.length === 0) { res.json([]); return; }
+
+    const targets = await db.select().from(zadaceUceniciTable)
+      .where(inArray(zadaceUceniciTable.zadacaId, zadace.map(z => z.id)));
+    const targetMap = new Map<number, number[]>();
+    for (const t of targets) {
+      const arr = targetMap.get(t.zadacaId) || [];
+      arr.push(t.ucenikId);
+      targetMap.set(t.zadacaId, arr);
+    }
+
+    res.json(zadace.map(z => ({ ...z, ucenikIds: targetMap.get(z.id) || [] })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -1198,11 +1211,22 @@ router.get("/zadace", async (req, res) => {
 
 router.post("/zadace", async (req, res) => {
   try {
-    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaTip } = req.body;
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, ucenikIds } = req.body;
     if (!grupaId || !naslov) { res.status(400).json({ error: "grupaId i naslov su obavezni" }); return; }
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    let validUcenikIds: number[] = [];
+    if (Array.isArray(ucenikIds) && ucenikIds.length > 0) {
+      const numericIds = ucenikIds.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x));
+      if (numericIds.length > 0) {
+        const ucenici = await db.select({ userId: ucenikProfiliTable.userId })
+          .from(ucenikProfiliTable)
+          .where(and(eq(ucenikProfiliTable.grupaId, grupaId), inArray(ucenikProfiliTable.userId, numericIds)));
+        validUcenikIds = ucenici.map(u => u.userId);
+      }
+    }
 
     const [nova] = await db.insert(zadaceTable).values({
       grupaId,
@@ -1213,7 +1237,14 @@ router.post("/zadace", async (req, res) => {
       lekcijaNaslov: lekcijaNaslov || null,
       lekcijaTip: lekcijaTip || null,
     }).returning();
-    res.status(201).json(nova);
+
+    if (validUcenikIds.length > 0) {
+      await db.insert(zadaceUceniciTable).values(
+        validUcenikIds.map(uid => ({ zadacaId: nova.id, ucenikId: uid }))
+      );
+    }
+
+    res.status(201).json({ ...nova, ucenikIds: validUcenikIds });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -1222,13 +1253,35 @@ router.post("/zadace", async (req, res) => {
 router.put("/zadace/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, isActive } = req.body;
+    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, isActive, ucenikIds } = req.body;
+
+    const [existing] = await db.select().from(zadaceTable)
+      .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
+    if (!existing) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
+
     const [updated] = await db.update(zadaceTable)
       .set({ naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, isActive })
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)))
       .returning();
-    if (!updated) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
-    res.json(updated);
+
+    if (Array.isArray(ucenikIds)) {
+      await db.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
+      const numericIds = ucenikIds.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x));
+      if (numericIds.length > 0) {
+        const ucenici = await db.select({ userId: ucenikProfiliTable.userId })
+          .from(ucenikProfiliTable)
+          .where(and(eq(ucenikProfiliTable.grupaId, existing.grupaId), inArray(ucenikProfiliTable.userId, numericIds)));
+        const validIds = ucenici.map(u => u.userId);
+        if (validIds.length > 0) {
+          await db.insert(zadaceUceniciTable).values(
+            validIds.map(uid => ({ zadacaId: id, ucenikId: uid }))
+          );
+        }
+      }
+    }
+
+    const targets = await db.select().from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
+    res.json({ ...updated, ucenikIds: targets.map(t => t.ucenikId) });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

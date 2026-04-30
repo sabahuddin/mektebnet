@@ -131,6 +131,7 @@ interface Zadaca {
   lekcijaTip?: string;
   isActive: boolean;
   createdAt: string;
+  ucenikIds?: number[];
 }
 
 const TIP_COLORS: Record<string, { bg: string; border: string; text: string; label: string }> = {
@@ -192,6 +193,7 @@ export default function MuallimPanel() {
   const [zadOpis, setZadOpis] = useState("");
   const [zadRok, setZadRok] = useState("");
   const [zadLekcija, setZadLekcija] = useState("");
+  const [zadUcenikIds, setZadUcenikIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
 
   const loadPendingRoditelji = async () => {
@@ -368,9 +370,10 @@ export default function MuallimPanel() {
         opis: zadOpis.trim() || null,
         rokDo: zadRok || null,
         lekcijaNaslov: zadLekcija || null,
+        ucenikIds: zadUcenikIds.size > 0 ? Array.from(zadUcenikIds) : undefined,
       }, token);
       setZadace(prev => [nova, ...prev]);
-      setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija("");
+      setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadUcenikIds(new Set());
       setShowZadForm(false);
       toast({ title: "Zadaća dodana!" });
     } catch { toast({ title: "Greška", variant: "destructive" }); }
@@ -1252,7 +1255,7 @@ export default function MuallimPanel() {
                         Zadaće: {grupe.find(g => g.id === zadGrupaId)?.naziv}
                       </h3>
                       <div className="flex items-center gap-3">
-                        <button onClick={() => { setZadGrupaId(null); setZadace([]); }}
+                        <button onClick={() => { setZadGrupaId(null); setZadace([]); setZadUcenikIds(new Set()); setShowZadForm(false); }}
                           className="text-sm text-muted-foreground hover:text-foreground font-medium">← Promijeni grupu</button>
                         <Button onClick={() => setShowZadForm(true)} className="rounded-xl font-bold flex items-center gap-2">
                           <Plus className="w-4 h-4" /> Nova zadaća
@@ -1294,9 +1297,56 @@ export default function MuallimPanel() {
                               ))}
                             </select>
                           </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-sm font-bold text-muted-foreground block mb-1">
+                              Adresati {zadUcenikIds.size === 0 ? "(cijela grupa)" : `(${zadUcenikIds.size} učenik/a)`}
+                            </label>
+                            {(() => {
+                              const grupaUcenici = ucenici.filter(u => u.grupaId === zadGrupaId && u.aktivanStatus);
+                              if (grupaUcenici.length === 0) {
+                                return <p className="text-xs text-muted-foreground italic px-1">U ovoj grupi nema aktivnih učenika.</p>;
+                              }
+                              const allSelected = zadUcenikIds.size === grupaUcenici.length;
+                              return (
+                                <div className="border border-border rounded-xl p-3 bg-muted/20">
+                                  <div className="flex items-center justify-between mb-2 gap-2">
+                                    <p className="text-xs text-muted-foreground">
+                                      Ne označavaj nikoga = zadaća za cijelu grupu. Označi pojedince za individualnu zadaću.
+                                    </p>
+                                    <div className="flex gap-2 shrink-0">
+                                      <button type="button" onClick={() => setZadUcenikIds(allSelected ? new Set() : new Set(grupaUcenici.map(u => u.id)))}
+                                        className="text-xs font-bold text-primary hover:underline">
+                                        {allSelected ? "Poništi sve" : "Označi sve"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="grid sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
+                                    {grupaUcenici.map(u => {
+                                      const checked = zadUcenikIds.has(u.id);
+                                      return (
+                                        <label key={u.id}
+                                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${checked ? "bg-primary/15" : "hover:bg-muted/40"}`}>
+                                          <input type="checkbox" checked={checked}
+                                            onChange={() => {
+                                              setZadUcenikIds(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(u.id)) next.delete(u.id); else next.add(u.id);
+                                                return next;
+                                              });
+                                            }}
+                                            className="w-4 h-4 accent-primary" />
+                                          <span className="text-sm font-medium text-foreground truncate">{u.displayName}</span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                         <div className="flex gap-3 mt-4 justify-end">
-                          <button onClick={() => setShowZadForm(false)} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
+                          <button onClick={() => { setShowZadForm(false); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
                             Otkaži
                           </button>
                           <Button onClick={saveZadaca} disabled={savingZadaca || !zadNaslov.trim()} className="rounded-xl font-bold">
@@ -1323,6 +1373,13 @@ export default function MuallimPanel() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-extrabold text-foreground text-base">{z.naslov}</h4>
                                     {isExpired && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Isteklo</span>}
+                                    {z.ucenikIds && z.ucenikIds.length > 0 ? (
+                                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700" title={
+                                        z.ucenikIds.map(id => ucenici.find(u => u.id === id)?.displayName || `#${id}`).join(", ")
+                                      }>Pojedinačno · {z.ucenikIds.length}</span>
+                                    ) : (
+                                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Cijela grupa</span>
+                                    )}
                                   </div>
                                   {z.opis && <p className="text-sm text-muted-foreground mt-1">{z.opis}</p>}
                                   <div className="flex items-center gap-4 mt-2 flex-wrap">

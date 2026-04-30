@@ -35,6 +35,7 @@ import CitaonicaKnjigaPage from "./pages/citaonica-knjiga";
 // Roditelj panel
 import RoditeljPage from "./pages/roditelj";
 import RoditeljKalendarPage from "./pages/roditelj/kalendar";
+import RoditeljZadacePage from "./pages/roditelj/zadace";
 
 // Poruke
 import PorukePage from "./pages/poruke";
@@ -93,6 +94,7 @@ function Router() {
 
       {/* Roditelj panel */}
       <Route path="/roditelj/kalendar" component={RoditeljKalendarPage} />
+      <Route path="/roditelj/zadace" component={RoditeljZadacePage} />
       <Route path="/roditelj" component={RoditeljPage} />
 
       {/* Učenik profil */}

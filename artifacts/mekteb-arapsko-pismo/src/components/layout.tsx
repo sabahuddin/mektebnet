@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe, Calendar } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe, Calendar, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -96,6 +96,7 @@ export function Layout({ children }: LayoutProps) {
     roditelj: [
       { href: "/roditelj", label: t("nav.mojaDjeca"), icon: User },
       { href: "/roditelj/kalendar", label: "Kalendar", icon: Calendar },
+      { href: "/roditelj/zadace", label: "Zadaće", icon: ClipboardList },
       { href: "/poruke", label: t("nav.poruke"), icon: MessageSquare },
     ],
     ucenik: [

@@ -12,8 +12,9 @@ import {
   studentProgressTable,
   ilmihalLekcijeTable,
   zadaceTable,
+  zadaceUceniciTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, count } from "drizzle-orm";
+import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges } from "../lib/badges.js";
 
@@ -157,18 +158,37 @@ router.get("/plan-lekcija", async (req, res) => {
   }
 });
 
-// GET /api/ucenik/zadace — student sees active homework for their group
+// GET /api/ucenik/zadace — student sees active homework for their group.
+// Supports per-student targeting: if a zadaca has rows in zadace_ucenici,
+// it is visible only to the listed students. If no rows — visible to whole group.
 router.get("/zadace", async (req, res) => {
   try {
     const userId = req.user!.userId;
     const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
     if (!profil?.grupaId) { res.json([]); return; }
 
-    const zadace = await db.select().from(zadaceTable)
+    const allGroupZadace = await db.select().from(zadaceTable)
       .where(and(eq(zadaceTable.grupaId, profil.grupaId), eq(zadaceTable.isActive, true)))
       .orderBy(desc(zadaceTable.createdAt));
 
-    res.json(zadace);
+    if (allGroupZadace.length === 0) { res.json([]); return; }
+
+    const targets = await db.select().from(zadaceUceniciTable)
+      .where(inArray(zadaceUceniciTable.zadacaId, allGroupZadace.map(z => z.id)));
+
+    const targetMap = new Map<number, Set<number>>();
+    for (const t of targets) {
+      if (!targetMap.has(t.zadacaId)) targetMap.set(t.zadacaId, new Set());
+      targetMap.get(t.zadacaId)!.add(t.ucenikId);
+    }
+
+    const visible = allGroupZadace.filter(z => {
+      const targeted = targetMap.get(z.id);
+      if (!targeted) return true; // bez targeta = cijela grupa
+      return targeted.has(userId);
+    });
+
+    res.json(visible);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
