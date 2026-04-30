@@ -256,6 +256,13 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
                 <span className="text-[10px] text-purple-700/70 font-bold">
                   Vrijeme: <span data-testid={`game-spent-${dijete.id}`}>{fmtMinSec(gameStats.secondsSpent)}</span> / {fmtMinSec(gameStats.secondsAllowed)}
                 </span>
+                <span
+                  className="text-[10px] text-purple-700/70 font-bold"
+                  data-testid={`game-hasanat-${dijete.id}`}
+                  title="Ukupno hasanata — svakih 100 otključa 10 min vremena za igre"
+                >
+                  Hasanati: <span className="text-purple-800 font-extrabold">{gameStats.totalHasanat}</span>
+                </span>
               </div>
             </div>
             {gameStats.games.length > 0 ? (

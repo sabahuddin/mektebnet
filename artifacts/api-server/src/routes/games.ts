@@ -266,7 +266,7 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
 // === LEADERBOARD (60s in-memory cache) ===
 type LbScope = "group" | "mekteb" | "global";
 type LbGame = "memory" | "quiz" | "all";
-interface LbEntry { rank: number; userId: number; displayName: string; bestScore: number; totalGames: number; }
+interface LbEntry { rank: number; userId: number; displayName: string; mektebName: string | null; bestScore: number; totalGames: number; }
 const lbCache = new Map<string, { ts: number; data: LbEntry[] }>();
 const LB_TTL_MS = 60 * 1000;
 
@@ -329,8 +329,9 @@ router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
 
     // Za game="all": rank po SUMI najboljih per-game scoreova (sumiramo MAX(score) po game_id po useru).
     // Za jednu igru: rank po MAX(score). Limit 50 (top 50).
+    // LEFT JOIN ucenik_profili → mektebi za prikaz naziva mekteba (LbEntry.mektebName).
     const rows = game === "all"
-      ? await exec<{ user_id: number; display_name: string; best_score: number; total_games: number }>(sql`
+      ? await exec<{ user_id: number; display_name: string; mekteb_name: string | null; best_score: number; total_games: number }>(sql`
         WITH best_per_game AS (
           SELECT gs.user_id, gs.game_id, MAX(gs.score)::int AS best_in_game, COUNT(*)::int AS games_in_game
           FROM game_sessions gs
@@ -339,31 +340,37 @@ router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
         )
         SELECT bpg.user_id,
                u.display_name,
+               m.naziv AS mekteb_name,
                COALESCE(SUM(bpg.best_in_game), 0)::int AS best_score,
                COALESCE(SUM(bpg.games_in_game), 0)::int AS total_games
         FROM best_per_game bpg
         JOIN users u ON u.id = bpg.user_id
         ${scopeJoin}
+        LEFT JOIN ucenik_profili up_m ON up_m.user_id = u.id
+        LEFT JOIN mektebi m ON m.id = up_m.mekteb_id
         WHERE u.role = 'ucenik'
           ${scopeWhere}
-        GROUP BY bpg.user_id, u.display_name
+        GROUP BY bpg.user_id, u.display_name, m.naziv
         HAVING COALESCE(SUM(bpg.best_in_game), 0) > 0
         ORDER BY best_score DESC, total_games DESC
         LIMIT 50
       `)
-      : await exec<{ user_id: number; display_name: string; best_score: number; total_games: number }>(sql`
+      : await exec<{ user_id: number; display_name: string; mekteb_name: string | null; best_score: number; total_games: number }>(sql`
         SELECT gs.user_id,
                u.display_name,
+               m.naziv AS mekteb_name,
                MAX(gs.score)::int AS best_score,
                COUNT(*)::int AS total_games
         FROM game_sessions gs
         JOIN users u ON u.id = gs.user_id
         ${scopeJoin}
+        LEFT JOIN ucenik_profili up_m ON up_m.user_id = u.id
+        LEFT JOIN mektebi m ON m.id = up_m.mekteb_id
         WHERE gs.status = 'ended'
           AND u.role = 'ucenik'
           ${gameFilter}
           ${scopeWhere}
-        GROUP BY gs.user_id, u.display_name
+        GROUP BY gs.user_id, u.display_name, m.naziv
         HAVING MAX(gs.score) > 0
         ORDER BY best_score DESC, total_games DESC
         LIMIT 50
@@ -373,6 +380,7 @@ router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
       rank: idx + 1,
       userId: r.user_id,
       displayName: r.display_name,
+      mektebName: r.mekteb_name,
       bestScore: r.best_score,
       totalGames: r.total_games,
     }));

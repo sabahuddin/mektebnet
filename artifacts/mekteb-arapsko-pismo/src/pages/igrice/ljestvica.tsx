@@ -15,6 +15,7 @@ interface Entry {
   rank: number;
   userId: number;
   displayName: string;
+  mektebName: string | null;
   bestScore: number;
   totalGames: number;
 }
@@ -164,7 +165,15 @@ export default function Ljestvica() {
                       {e.displayName}
                       {isMe && <span className="ml-2 text-xs font-bold text-primary">(ja)</span>}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
+                      {e.mektebName ? (
+                        <>
+                          <span className="inline-flex items-center gap-1" data-testid={`mekteb-${e.userId}`}>
+                            <School className="w-3 h-3" /> {e.mektebName}
+                          </span>
+                          <span className="mx-1.5">·</span>
+                        </>
+                      ) : null}
                       {e.totalGames} {e.totalGames === 1 ? "igra" : "igara"}
                     </p>
                   </div>
