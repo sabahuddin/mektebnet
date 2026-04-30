@@ -174,6 +174,7 @@ PostgreSQL (via DATABASE_URL). Ključne tabele:
 - `POST /dodaj-dijete` — kreiranje dječjeg računa (max 4, Online Mekteb grupa, transakcija)
 - `PUT /dijete-lozinka` — promjena lozinke djeteta
 - `GET /dashboard/:ucenikId` — sažetak za karticu djeteta (posljednja ocjena, prisustvo ovaj mjesec, završene lekcije, streak); vraća 403 bez approved veze
+- `GET /djeca-summary` — kombinirani endpoint: vraća svu djecu + njihov dashboard sažetak + game stats u jednom JSON-u. Zamjena za N+1 (1 poziv umjesto 1 + 2N). Per-child compute pada gracefully: ako jedan dashboard ili gameStats padne, vraća null + error flag i ne ruši cijelu listu. Frontend `/roditelj.tsx` koristi ovaj endpoint, sa fallback-om na stari `/djeca` + per-child pozive.
 - `GET /prisustvo/:ucenikId`, `GET /ocjene/:ucenikId`, `GET /napredak/:ucenikId`
 
 ## Korisnici (test)

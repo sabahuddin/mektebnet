@@ -19,9 +19,102 @@ import {
 import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../lib/badges.js";
+import { computeGameStats } from "./games.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
+
+// Sažetak za jedno dijete — koristi se i u /dashboard/:ucenikId i u /djeca-summary.
+// Pretpostavlja da je pristup već provjeren prije poziva.
+async function computeChildDashboard(ucenikId: number): Promise<{
+  posljednjaOcjena: { ocjena: number; kategorija: string; datum: string; napomena?: string | null } | null;
+  prisustvoOvajMjesec: number;
+  ukupnoOvajMjesec: number;
+  zavrseneLekcije: number;
+  streakDays: number;
+  totalHasanat: number;
+  bedzevi: Array<{ id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean; earnedAt: string | null }>;
+  bedzeviEarnedCount: number;
+  bedzeviUkupno: number;
+  bedzeviError: boolean;
+}> {
+  const [posljednja] = await db.select().from(ocjeneTable)
+    .where(eq(ocjeneTable.ucenikId, ucenikId))
+    .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
+    .limit(1);
+
+  const sviPrisustvo = await db.select().from(priustvoTable)
+    .where(eq(priustvoTable.ucenikId, ucenikId));
+  const now = new Date();
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const ovajMjesec = sviPrisustvo.filter(p => typeof p.datum === "string" && p.datum.startsWith(yearMonth));
+  const prisutanOvajMjesec = ovajMjesec.filter(p => p.status === "prisutan").length;
+
+  const [progress] = await db.select().from(studentProgressTable)
+    .where(eq(studentProgressTable.studentId, String(ucenikId)))
+    .limit(1);
+  const completedLessons = (progress?.completedLessons as number[] | undefined) ?? [];
+  const streakDays = progress?.streakDays ?? 0;
+  const totalHasanat = progress?.totalHasanat ?? 0;
+
+  let zavrseneLekcije = completedLessons.length;
+  if (zavrseneLekcije === 0) {
+    const napredak = await db.select().from(korisnikNapredakTable)
+      .where(and(eq(korisnikNapredakTable.userId, ucenikId), eq(korisnikNapredakTable.zavrsen, true)));
+    zavrseneLekcije = napredak.length;
+  }
+
+  const bedzeviUkupno = Object.keys(BADGE_CATALOG).length;
+  let bedzevi: Array<{ id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean; earnedAt: string | null }> = [];
+  let bedzeviEarnedCount = 0;
+  let bedzeviError = false;
+  try {
+    if (progress) {
+      try {
+        await evaluateAndPersistBadges(ucenikId);
+      } catch (e) {
+        console.warn("[computeChildDashboard] evaluateAndPersistBadges failed for ucenikId", ucenikId, e);
+      }
+    }
+    const [refreshed] = await db.select().from(studentProgressTable)
+      .where(eq(studentProgressTable.studentId, String(ucenikId))).limit(1);
+
+    const rawBadges: unknown = refreshed?.badges;
+    const earned: EarnedBadge[] = (Array.isArray(rawBadges) ? rawBadges : [])
+      .filter((b): b is EarnedBadge =>
+        !!b && typeof b === "object"
+        && typeof (b as EarnedBadge).id === "string"
+        && typeof (b as EarnedBadge).earnedAt === "string");
+    const earnedMap = new Map(earned.map(b => [b.id, b.earnedAt] as const));
+
+    bedzevi = Object.values(BADGE_CATALOG).map(meta => ({
+      ...meta,
+      earned: earnedMap.has(meta.id),
+      earnedAt: earnedMap.get(meta.id) ?? null,
+    }));
+    bedzeviEarnedCount = bedzevi.filter(b => b.earned).length;
+  } catch (e) {
+    console.error("[computeChildDashboard] failed to compute badges for ucenikId", ucenikId, e);
+    bedzevi = Object.values(BADGE_CATALOG).map(meta => ({ ...meta, earned: false, earnedAt: null }));
+    bedzeviEarnedCount = 0;
+    bedzeviError = true;
+  }
+
+  return {
+    posljednjaOcjena: posljednja
+      ? { ocjena: posljednja.ocjena, kategorija: posljednja.kategorija, datum: posljednja.datum, napomena: posljednja.napomena }
+      : null,
+    prisustvoOvajMjesec: prisutanOvajMjesec,
+    ukupnoOvajMjesec: ovajMjesec.length,
+    zavrseneLekcije,
+    streakDays,
+    totalHasanat,
+    bedzevi,
+    bedzeviEarnedCount,
+    bedzeviUkupno,
+    bedzeviError,
+  };
+}
 
 // GET /api/roditelj/djeca - list children
 router.get("/djeca", async (req, res) => {
@@ -96,7 +189,8 @@ router.post("/link-dijete", async (req, res) => {
   }
 });
 
-// GET /api/roditelj/dashboard/:ucenikId — sažetak za karticu djeteta
+// GET /api/roditelj/dashboard/:ucenikId — sažetak za karticu djeteta (zadržano za
+// backwards compat; nova kombinirana ruta je /djeca-summary).
 router.get("/dashboard/:ucenikId", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.ucenikId);
@@ -116,95 +210,64 @@ router.get("/dashboard/:ucenikId", async (req, res) => {
       return;
     }
 
-    // Posljednja ocjena
-    const [posljednja] = await db.select().from(ocjeneTable)
-      .where(eq(ocjeneTable.ucenikId, ucenikId))
-      .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
-      .limit(1);
-
-    // Prisustvo ovaj mjesec — datum je text "YYYY-MM-DD", filtriramo lokalno
-    const sviPrisustvo = await db.select().from(priustvoTable)
-      .where(eq(priustvoTable.ucenikId, ucenikId));
-    const now = new Date();
-    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const ovajMjesec = sviPrisustvo.filter(p => typeof p.datum === "string" && p.datum.startsWith(yearMonth));
-    const prisutanOvajMjesec = ovajMjesec.filter(p => p.status === "prisutan").length;
-
-    // Završene lekcije + streak iz studentProgressTable (studentId je text)
-    const [progress] = await db.select().from(studentProgressTable)
-      .where(eq(studentProgressTable.studentId, String(ucenikId)))
-      .limit(1);
-    const completedLessons = (progress?.completedLessons as number[] | undefined) ?? [];
-    const streakDays = progress?.streakDays ?? 0;
-    const totalHasanat = progress?.totalHasanat ?? 0;
-
-    // Fallback: završene lekcije iz korisnik_napredak (ilmihal) ako student_progress nema zapis
-    let zavrseneLekcije = completedLessons.length;
-    if (zavrseneLekcije === 0) {
-      const napredak = await db.select().from(korisnikNapredakTable)
-        .where(and(eq(korisnikNapredakTable.userId, ucenikId), eq(korisnikNapredakTable.zavrsen, true)));
-      zavrseneLekcije = napredak.length;
-    }
-
-    // Bedževi — backfill perzistencije (idempotentno) pa pročitaj svjež snapshot
-    // iz student_progress.badges. Time osiguravamo da je SVAKI earned bedž praćen
-    // sa earnedAt timestampom (isti pattern koji koristi /ucenik ruta).
-    // Ako bilo šta padne, vraćamo bedzeviError: true tako da UI može pokazati
-    // degradirano stanje umjesto da lažno prikaže "0 osvojenih bedževa".
-    const bedzeviUkupno = Object.keys(BADGE_CATALOG).length;
-    let bedzevi: Array<{ id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean; earnedAt: string | null }> = [];
-    let bedzeviEarnedCount = 0;
-    let bedzeviError = false;
-    try {
-      if (progress) {
-        try {
-          await evaluateAndPersistBadges(ucenikId);
-        } catch (e) {
-          // Backfill je best-effort — ne padaj cijeli dashboard, ali zabilježi
-          // da bismo mogli detektovati zastarjele bedževe (earnedAt može biti
-          // null za nove zarade dok backfill ne uspije sljedeći put).
-          console.warn("[roditelj/dashboard] evaluateAndPersistBadges failed for ucenikId", ucenikId, e);
-        }
-      }
-      const [refreshed] = await db.select().from(studentProgressTable)
-        .where(eq(studentProgressTable.studentId, String(ucenikId))).limit(1);
-
-      const rawBadges: unknown = refreshed?.badges;
-      const earned: EarnedBadge[] = (Array.isArray(rawBadges) ? rawBadges : [])
-        .filter((b): b is EarnedBadge =>
-          !!b && typeof b === "object"
-          && typeof (b as EarnedBadge).id === "string"
-          && typeof (b as EarnedBadge).earnedAt === "string");
-      const earnedMap = new Map(earned.map(b => [b.id, b.earnedAt] as const));
-
-      bedzevi = Object.values(BADGE_CATALOG).map(meta => ({
-        ...meta,
-        earned: earnedMap.has(meta.id),
-        earnedAt: earnedMap.get(meta.id) ?? null,
-      }));
-      bedzeviEarnedCount = bedzevi.filter(b => b.earned).length;
-    } catch (e) {
-      console.error("[roditelj/dashboard] failed to compute badges for ucenikId", ucenikId, e);
-      bedzevi = Object.values(BADGE_CATALOG).map(meta => ({ ...meta, earned: false, earnedAt: null }));
-      bedzeviEarnedCount = 0;
-      bedzeviError = true;
-    }
-
-    res.json({
-      posljednjaOcjena: posljednja
-        ? { ocjena: posljednja.ocjena, kategorija: posljednja.kategorija, datum: posljednja.datum, napomena: posljednja.napomena }
-        : null,
-      prisustvoOvajMjesec: prisutanOvajMjesec,
-      ukupnoOvajMjesec: ovajMjesec.length,
-      zavrseneLekcije,
-      streakDays,
-      totalHasanat,
-      bedzevi,
-      bedzeviEarnedCount,
-      bedzeviUkupno,
-      bedzeviError,
-    });
+    const dashboard = await computeChildDashboard(ucenikId);
+    res.json(dashboard);
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/djeca-summary — kombinirani endpoint:
+// vraća svu djecu + njihov dashboard sažetak + game stats u jednom JSON-u.
+// Eliminira N+1 mrežne pozive (prije: 1 + 2N HTTP poziva za N djece).
+// Per-child compute pada gracefully — neuspjeh dashboard-a ili gameStats-a
+// jednog djeteta ne ruši cijelu listu (vraća null + error flag).
+router.get("/djeca-summary", async (req, res) => {
+  try {
+    const roditeljId = req.user!.userId;
+    const veze = await db.select().from(roditeljUcenikTable)
+      .where(and(eq(roditeljUcenikTable.roditeljId, roditeljId), eq(roditeljUcenikTable.status, "approved")));
+
+    if (veze.length === 0) { res.json([]); return; }
+
+    const ucenikIds = veze.map(v => v.ucenikId);
+    const [djeca, profili] = await Promise.all([
+      db.select().from(usersTable).where(inArray(usersTable.id, ucenikIds)),
+      db.select().from(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, ucenikIds)),
+    ]);
+
+    // Per-child compute u paraleli. Ako padne, ne rušimo cijelu listu.
+    const results = await Promise.all(djeca.map(async (d) => {
+      const profil = profili.find(p => p.userId === d.id);
+      const [summary, gameStats] = await Promise.all([
+        computeChildDashboard(d.id).catch((e) => {
+          console.error("[djeca-summary] dashboard failed for", d.id, e);
+          return null;
+        }),
+        computeGameStats(d.id).catch((e) => {
+          console.error("[djeca-summary] gameStats failed for", d.id, e);
+          return null;
+        }),
+      ]);
+      return {
+        dijete: {
+          id: d.id,
+          username: d.username,
+          displayName: d.displayName,
+          role: d.role,
+          createdAt: d.createdAt,
+          profil,
+        },
+        summary,
+        summaryError: summary === null,
+        gameStats,
+        gameStatsError: gameStats === null,
+      };
+    }));
+
+    res.json(results);
+  } catch (err) {
+    console.error("[djeca-summary] failed", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

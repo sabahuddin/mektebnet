@@ -440,6 +440,108 @@ router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Reque
   }
 });
 
+// Reusable: izračunaj kompletnu game statistiku za jednog usera (po targetId).
+// Ekstrahirano da bi /roditelj/djeca-summary mogao u paraleli pozivati ovo
+// za sve djece bez N+1 HTTP poziva.
+export async function computeGameStats(targetId: number): Promise<{
+  userId: number;
+  totalHasanat: number;
+  secondsAllowed: number;
+  secondsSpent: number;
+  secondsRemaining: number;
+  groupRank: number | null;
+  groupTotal: number | null;
+  games: { gameId: string; totalGames: number; bestScore: number; lastScore: number; totalSeconds: number }[];
+}> {
+  const [totalHasanat, secondsSpent] = await Promise.all([
+    getTotalHasanat(targetId),
+    getSecondsSpent(targetId),
+  ]);
+  const secondsAllowed = computeAllowedSeconds(totalHasanat);
+  const secondsRemaining = Math.max(0, secondsAllowed - secondsSpent);
+
+  const perGame = await exec<{ game_id: string; total_games: number; best_score: number; last_score: number; total_seconds: number }>(sql`
+    WITH ended AS (
+      SELECT game_id, score, duration_sec, ended_at,
+             ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY ended_at DESC) AS rn
+      FROM game_sessions
+      WHERE user_id = ${targetId} AND status = 'ended'
+    )
+    SELECT game_id,
+           COUNT(*)::int AS total_games,
+           COALESCE(MAX(score), 0)::int AS best_score,
+           COALESCE(MAX(score) FILTER (WHERE rn = 1), 0)::int AS last_score,
+           COALESCE(SUM(LEAST(duration_sec, ${MAX_SESSION_DURATION_SEC})), 0)::int AS total_seconds
+    FROM ended
+    GROUP BY game_id
+  `);
+
+  let groupRank: number | null = null;
+  let groupTotal: number | null = null;
+  const targetScope = await getUserScopeIds(targetId);
+  if (targetScope.grupaId) {
+    const myTotalRow = await exec<{ s: number }>(sql`
+      SELECT COALESCE(SUM(best_in_game), 0)::int AS s
+      FROM (
+        SELECT MAX(score)::int AS best_in_game
+        FROM game_sessions
+        WHERE user_id = ${targetId} AND status = 'ended'
+        GROUP BY game_id
+      ) x
+    `);
+    const myTotal = myTotalRow.rows[0]?.s ?? 0;
+
+    const totalRow = await exec<{ c: number }>(sql`
+      SELECT COUNT(DISTINCT up.user_id)::int AS c
+      FROM ucenik_profili up
+      JOIN users u ON u.id = up.user_id
+      WHERE up.grupa_id = ${targetScope.grupaId} AND u.role = 'ucenik'
+    `);
+    groupTotal = totalRow.rows[0]?.c ?? 0;
+
+    if (myTotal > 0) {
+      const rankRow = await exec<{ c: number }>(sql`
+        WITH best_per_game AS (
+          SELECT gs.user_id, MAX(gs.score)::int AS best_in_game
+          FROM game_sessions gs
+          JOIN ucenik_profili up ON up.user_id = gs.user_id
+          JOIN users u ON u.id = gs.user_id
+          WHERE up.grupa_id = ${targetScope.grupaId}
+            AND u.role = 'ucenik'
+            AND gs.status = 'ended'
+          GROUP BY gs.user_id, gs.game_id
+        ),
+        totals AS (
+          SELECT user_id, COALESCE(SUM(best_in_game), 0)::int AS total
+          FROM best_per_game
+          GROUP BY user_id
+        )
+        SELECT COUNT(*)::int AS c FROM totals WHERE total > ${myTotal}
+      `);
+      groupRank = (rankRow.rows[0]?.c ?? 0) + 1;
+    } else {
+      groupRank = null;
+    }
+  }
+
+  return {
+    userId: targetId,
+    totalHasanat,
+    secondsAllowed,
+    secondsSpent,
+    secondsRemaining,
+    groupRank,
+    groupTotal,
+    games: perGame.rows.map(r => ({
+      gameId: r.game_id,
+      totalGames: r.total_games,
+      bestScore: r.best_score,
+      lastScore: r.last_score,
+      totalSeconds: r.total_seconds,
+    })),
+  };
+}
+
 // GET /api/games/personal-stats — moja statistika (ili statistika djeteta za roditelja).
 // Optional ?ucenikId= — roditelj smije samo za svoju djecu, muallim za svoju grupu, admin sve, učenik samo sebe.
 router.get("/personal-stats", requireAuth, async (req: Request, res: Response) => {
@@ -472,95 +574,8 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
       }
     }
 
-    const [totalHasanat, secondsSpent] = await Promise.all([
-      getTotalHasanat(targetId),
-      getSecondsSpent(targetId),
-    ]);
-    const secondsAllowed = computeAllowedSeconds(totalHasanat);
-    const secondsRemaining = Math.max(0, secondsAllowed - secondsSpent);
-
-    const perGame = await exec<{ game_id: string; total_games: number; best_score: number; last_score: number; total_seconds: number }>(sql`
-      WITH ended AS (
-        SELECT game_id, score, duration_sec, ended_at,
-               ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY ended_at DESC) AS rn
-        FROM game_sessions
-        WHERE user_id = ${targetId} AND status = 'ended'
-      )
-      SELECT game_id,
-             COUNT(*)::int AS total_games,
-             COALESCE(MAX(score), 0)::int AS best_score,
-             COALESCE(MAX(score) FILTER (WHERE rn = 1), 0)::int AS last_score,
-             COALESCE(SUM(LEAST(duration_sec, ${MAX_SESSION_DURATION_SEC})), 0)::int AS total_seconds
-      FROM ended
-      GROUP BY game_id
-    `);
-
-    // Grupni rank: ako učenik pripada grupi, izračunaj njegovo mjesto po sumi best-per-game
-    // u odnosu na druge učenike u istoj grupi (ne otkrivamo tuđa imena, samo poziciju).
-    let groupRank: number | null = null;
-    let groupTotal: number | null = null;
-    const targetScope = await getUserScopeIds(targetId);
-    if (targetScope.grupaId) {
-      const myTotalRow = await exec<{ s: number }>(sql`
-        SELECT COALESCE(SUM(best_in_game), 0)::int AS s
-        FROM (
-          SELECT MAX(score)::int AS best_in_game
-          FROM game_sessions
-          WHERE user_id = ${targetId} AND status = 'ended'
-          GROUP BY game_id
-        ) x
-      `);
-      const myTotal = myTotalRow.rows[0]?.s ?? 0;
-
-      const totalRow = await exec<{ c: number }>(sql`
-        SELECT COUNT(DISTINCT up.user_id)::int AS c
-        FROM ucenik_profili up
-        JOIN users u ON u.id = up.user_id
-        WHERE up.grupa_id = ${targetScope.grupaId} AND u.role = 'ucenik'
-      `);
-      groupTotal = totalRow.rows[0]?.c ?? 0;
-
-      if (myTotal > 0) {
-        const rankRow = await exec<{ c: number }>(sql`
-          WITH best_per_game AS (
-            SELECT gs.user_id, MAX(gs.score)::int AS best_in_game
-            FROM game_sessions gs
-            JOIN ucenik_profili up ON up.user_id = gs.user_id
-            JOIN users u ON u.id = gs.user_id
-            WHERE up.grupa_id = ${targetScope.grupaId}
-              AND u.role = 'ucenik'
-              AND gs.status = 'ended'
-            GROUP BY gs.user_id, gs.game_id
-          ),
-          totals AS (
-            SELECT user_id, COALESCE(SUM(best_in_game), 0)::int AS total
-            FROM best_per_game
-            GROUP BY user_id
-          )
-          SELECT COUNT(*)::int AS c FROM totals WHERE total > ${myTotal}
-        `);
-        groupRank = (rankRow.rows[0]?.c ?? 0) + 1;
-      } else {
-        groupRank = null;
-      }
-    }
-
-    res.json({
-      userId: targetId,
-      totalHasanat,
-      secondsAllowed,
-      secondsSpent,
-      secondsRemaining,
-      groupRank,
-      groupTotal,
-      games: perGame.rows.map(r => ({
-        gameId: r.game_id,
-        totalGames: r.total_games,
-        bestScore: r.best_score,
-        lastScore: r.last_score,
-        totalSeconds: r.total_seconds,
-      })),
-    });
+    const stats = await computeGameStats(targetId);
+    res.json(stats);
   } catch (err) {
     req.log.error({ err }, "games/personal-stats failed");
     res.status(500).json({ error: "internal_error" });

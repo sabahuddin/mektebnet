@@ -90,28 +90,60 @@ function fmtMinSec(s: number): string {
   return m > 0 ? `${m} min` : `${s} s`;
 }
 
-function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
+function DijeteCard({
+  dijete,
+  token,
+  initialSummary,
+  initialGameStats,
+  initialLoading,
+}: {
+  dijete: Dijete;
+  token: string;
+  initialSummary?: DashboardSummary | null;
+  initialGameStats?: GameStatsResp | null;
+  initialLoading?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"prisustvo" | "ocjene">("prisustvo");
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [gameStats, setGameStats] = useState<GameStatsResp | null>(null);
+  // Ako su sažetak/game stats već prosljeđeni od roditelja (kroz /djeca-summary),
+  // koristimo ih direktno. Inače fallback na pojedinačne pozive (backwards compat).
+  const [summary, setSummary] = useState<DashboardSummary | null>(initialSummary ?? null);
+  const [summaryLoading, setSummaryLoading] = useState(initialLoading ?? (initialSummary === undefined));
+  const [gameStats, setGameStats] = useState<GameStatsResp | null>(initialGameStats ?? null);
 
   useEffect(() => {
+    // Sync iz parent kombiniranog endpointa kad stignu podaci.
+    if (initialSummary !== undefined) {
+      setSummary(initialSummary);
+      setSummaryLoading(initialLoading ?? false);
+    }
+    if (initialGameStats !== undefined) {
+      setGameStats(initialGameStats);
+    }
+  }, [initialSummary, initialGameStats, initialLoading]);
+
+  useEffect(() => {
+    // Fallback: ako roditelj nije prosljedio podatke (initial*===undefined),
+    // dovuci ih pojedinačno. Ovo se NE okida kad koristimo /djeca-summary.
+    if (initialSummary !== undefined && initialGameStats !== undefined) return;
     let cancelled = false;
-    setSummaryLoading(true);
-    apiRequest<DashboardSummary>("GET", `/roditelj/dashboard/${dijete.id}`, undefined, token)
-      .then(d => { if (!cancelled) setSummary(d); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setSummaryLoading(false); });
-    apiRequest<GameStatsResp>("GET", `/games/personal-stats?ucenikId=${dijete.id}`, undefined, token)
-      .then(d => { if (!cancelled) setGameStats(d); })
-      .catch(() => {});
+    if (initialSummary === undefined) {
+      setSummaryLoading(true);
+      apiRequest<DashboardSummary>("GET", `/roditelj/dashboard/${dijete.id}`, undefined, token)
+        .then(d => { if (!cancelled) setSummary(d); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setSummaryLoading(false); });
+    }
+    if (initialGameStats === undefined) {
+      apiRequest<GameStatsResp>("GET", `/games/personal-stats?ucenikId=${dijete.id}`, undefined, token)
+        .then(d => { if (!cancelled) setGameStats(d); })
+        .catch(() => {});
+    }
     return () => { cancelled = true; };
-  }, [dijete.id, token]);
+  }, [dijete.id, token, initialSummary, initialGameStats]);
 
   const loadData = async () => {
     if (isLoading || prisustvo.length > 0 || ocjene.length > 0) return;
@@ -371,6 +403,10 @@ export default function RoditeljPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [djeca, setDjeca] = useState<Dijete[]>([]);
+  // Pre-fetched summary i gameStats po ucenikId iz kombiniranog /djeca-summary
+  // endpointa. Map omogućava DijeteCard da renderuje odmah bez novog HTTP poziva.
+  const [summaryMap, setSummaryMap] = useState<Map<number, DashboardSummary | null>>(new Map());
+  const [gameStatsMap, setGameStatsMap] = useState<Map<number, GameStatsResp | null>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [showLink, setShowLink] = useState(false);
   const [showDodaj, setShowDodaj] = useState(false);
@@ -386,8 +422,29 @@ export default function RoditeljPage() {
 
   const loadDjeca = () => {
     if (!token) return;
-    apiRequest<Dijete[]>("GET", "/roditelj/djeca", undefined, token)
-      .then(setDjeca).catch(() => {}).finally(() => setIsLoading(false));
+    setIsLoading(true);
+    // Kombinirani endpoint: 1 HTTP poziv umjesto 1 + 2N (djeca + dashboard*N + gameStats*N).
+    apiRequest<Array<{
+      dijete: Dijete;
+      summary: DashboardSummary | null;
+      gameStats: GameStatsResp | null;
+    }>>("GET", "/roditelj/djeca-summary", undefined, token)
+      .then(rows => {
+        setDjeca(rows.map(r => r.dijete));
+        setSummaryMap(new Map(rows.map(r => [r.dijete.id, r.summary])));
+        setGameStatsMap(new Map(rows.map(r => [r.dijete.id, r.gameStats])));
+      })
+      .catch(async () => {
+        // Fallback: ako kombinirani endpoint padne, vrati se na stari /djeca
+        // (DijeteCard će onda sam dovući pojedinačne podatke).
+        try {
+          const list = await apiRequest<Dijete[]>("GET", "/roditelj/djeca", undefined, token);
+          setDjeca(list);
+          setSummaryMap(new Map());
+          setGameStatsMap(new Map());
+        } catch {}
+      })
+      .finally(() => setIsLoading(false));
   };
 
   useEffect(() => { loadDjeca(); }, [token]);
@@ -491,7 +548,12 @@ export default function RoditeljPage() {
           <div className="flex flex-col gap-3">
             {djeca.map(d => (
               <div key={d.id}>
-                <DijeteCard dijete={d} token={token!} />
+                <DijeteCard
+                  dijete={d}
+                  token={token!}
+                  initialSummary={summaryMap.has(d.id) ? summaryMap.get(d.id) ?? null : undefined}
+                  initialGameStats={gameStatsMap.has(d.id) ? gameStatsMap.get(d.id) ?? null : undefined}
+                />
                 <div className="flex justify-end px-2 pt-1.5">
                   <button onClick={() => { setPasswordChangeId(passwordChangeId === d.id ? null : d.id); setNewPw(""); }}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary font-bold transition-colors">
