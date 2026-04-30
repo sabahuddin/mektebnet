@@ -126,18 +126,23 @@ function DijeteCard({
   }, [initialSummary, initialGameStats, initialLoading]);
 
   useEffect(() => {
-    // Fallback: ako roditelj nije prosljedio podatke (initial*===undefined),
-    // dovuci ih pojedinačno. Ovo se NE okida kad koristimo /djeca-summary.
-    if (initialSummary !== undefined && initialGameStats !== undefined) return;
+    // Per-child fetch trigger:
+    //  - undefined  → roditelj NIJE dao podatke (nije pozvan kombinirani endpoint), dovuci.
+    //  - null       → kombinirani endpoint je dao null (compute pao za ovo dijete) — retry preko legacy.
+    //  - objekt     → već imamo, ne diraj.
+    const needSummary = initialSummary === undefined || initialSummary === null;
+    const needGameStats = initialGameStats === undefined || initialGameStats === null;
+    if (!needSummary && !needGameStats) return;
+
     let cancelled = false;
-    if (initialSummary === undefined) {
+    if (needSummary) {
       setSummaryLoading(true);
       apiRequest<DashboardSummary>("GET", `/roditelj/dashboard/${dijete.id}`, undefined, token)
         .then(d => { if (!cancelled) setSummary(d); })
         .catch(() => {})
         .finally(() => { if (!cancelled) setSummaryLoading(false); });
     }
-    if (initialGameStats === undefined) {
+    if (needGameStats) {
       apiRequest<GameStatsResp>("GET", `/games/personal-stats?ucenikId=${dijete.id}`, undefined, token)
         .then(d => { if (!cancelled) setGameStats(d); })
         .catch(() => {});
