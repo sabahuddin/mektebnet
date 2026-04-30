@@ -12,7 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface QQ { question: string; options: string[]; answer: string; }
 
-const ROUND_DURATION_SEC = 60;
+// Klijent ne forsira fiksni timer — server vraća allowedDurationSec
+// (po pravilu 60s za kviz, ili manje ako učenik ima manje credita).
 type GameState = "idle" | "loading" | "playing" | "ended" | "no-credit" | "error";
 
 export default function BrziKviz() {
@@ -30,6 +31,9 @@ export default function BrziKviz() {
   const [wrong, setWrong] = useState(0);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [finalScore, setFinalScore] = useState<number | null>(null);
+  const [bestEver, setBestEver] = useState<number | null>(null);
+  const [previousBest, setPreviousBest] = useState<number | null>(null);
+  const [allowedDuration, setAllowedDuration] = useState<number>(60);
   const endingRef = useRef(false);
 
   const startGame = useCallback(async () => {
@@ -38,8 +42,17 @@ export default function BrziKviz() {
     setState("loading");
     endingRef.current = false;
     try {
+      // Snimi prethodni best prije nove sesije (za prikaz na kraju)
+      try {
+        const prev = await apiRequest<{ games: { gameId: string; bestScore: number }[] }>(
+          "GET", "/games/personal-stats", undefined, token
+        );
+        const q = prev.games.find(g => g.gameId === "quiz");
+        setPreviousBest(q?.bestScore ?? 0);
+      } catch { setPreviousBest(null); }
+
       // Učitaj pitanja
-      const qRes = await apiRequest<{ questions: QQ[] }>("GET", "/games/quiz-questions?count=30", undefined, token);
+      const qRes = await apiRequest<{ questions: QQ[] }>("GET", "/games/quiz-questions?count=60", undefined, token);
       if (!Array.isArray(qRes.questions) || qRes.questions.length < 5) {
         setErrorMsg("Nema dovoljno pitanja u bazi.");
         setState("error");
@@ -51,12 +64,14 @@ export default function BrziKviz() {
       );
       setSessionId(res.sessionId);
       setStartedAt(res.startedAt);
+      setAllowedDuration(res.allowedDurationSec);
       setQuestions(qRes.questions);
       setQIndex(0);
       setCorrect(0);
       setWrong(0);
       setFeedback(null);
       setFinalScore(null);
+      setBestEver(null);
       setState("playing");
     } catch (e) {
       const err = e as { status?: number; message?: string };
@@ -69,13 +84,23 @@ export default function BrziKviz() {
   const endGame = useCallback(async (finalCorrect: number, finalWrong: number) => {
     if (!sessionId || !token || endingRef.current) return;
     endingRef.current = true;
-    // Bodovanje: tačan +10, netačan -3, min 0, max 200
-    const score = Math.max(0, Math.min(200, finalCorrect * 10 - finalWrong * 3));
+    // Bodovanje: score = broj tačnih, sa malim penalty-em na netačne (1 oduzima score po 3 promašaja).
+    const score = Math.max(0, finalCorrect - Math.floor(finalWrong / 3));
     try {
-      await apiRequest<{ ok: boolean }>("POST", "/games/end", { sessionId, score }, token);
-      setFinalScore(score);
+      const r = await apiRequest<{ ok: boolean; finalScore?: number }>(
+        "POST", "/games/end", { sessionId, score }, token
+      );
+      const accepted = typeof r.finalScore === "number" ? r.finalScore : score;
+      setFinalScore(accepted);
       setState("ended");
       refetchCredits();
+      try {
+        const stats = await apiRequest<{ games: { gameId: string; bestScore: number }[] }>(
+          "GET", "/games/personal-stats", undefined, token
+        );
+        const q = stats.games.find(g => g.gameId === "quiz");
+        setBestEver(q?.bestScore ?? accepted);
+      } catch { setBestEver(accepted); }
     } catch (e) {
       const err = e as { message?: string };
       setErrorMsg(err.message || "Greška pri završetku");
@@ -119,7 +144,7 @@ export default function BrziKviz() {
   useEffect(() => {
     return () => {
       if (state === "playing" && sessionId && token && !endingRef.current) {
-        const score = Math.max(0, Math.min(200, correct * 10 - wrong * 3));
+        const score = Math.max(0, correct - Math.floor(wrong / 3));
         endingRef.current = true;
         // Best-effort, no await
         apiRequest("POST", "/games/end", { sessionId, score }, token).catch(() => {});
@@ -154,7 +179,7 @@ export default function BrziKviz() {
         </h1>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           {state === "playing" && startedAt && (
-            <GameTimer startedAt={startedAt} allowedDurationSec={ROUND_DURATION_SEC} onExpire={handleExpire} />
+            <GameTimer startedAt={startedAt} allowedDurationSec={allowedDuration} onExpire={handleExpire} />
           )}
         </div>
       </div>
@@ -165,22 +190,25 @@ export default function BrziKviz() {
             <Sparkles className="w-6 h-6 text-orange-600 shrink-0" />
             <div>
               <p className="font-bold text-foreground mb-1">60 sekundi — koliko tačnih?</p>
-              <p className="text-sm text-muted-foreground">Tačan odgovor: <strong className="text-emerald-600">+10</strong> · Netačan: <strong className="text-red-500">−3</strong>. Pitanja iz svih ilmihal lekcija.</p>
+              <p className="text-sm text-muted-foreground">Score = broj tačnih odgovora. Pitanja iz svih ilmihal lekcija. Pokušaj pogoditi što više za 60 s.</p>
               <p className="text-xs text-muted-foreground mt-2">
                 Preostalo vremena: <strong>{creditsLoading ? "…" : formatSeconds(credits?.secondsRemaining ?? 0)}</strong>
+                {!creditsLoading && (credits?.secondsRemaining ?? 0) > 0 && (credits?.secondsRemaining ?? 0) < 60 && (
+                  <span className="ml-2 text-amber-600">— igra će trajati samo {credits!.secondsRemaining} s.</span>
+                )}
               </p>
             </div>
           </div>
           <Button
             onClick={startGame}
-            disabled={creditsLoading || (credits?.secondsRemaining ?? 0) < ROUND_DURATION_SEC}
+            disabled={creditsLoading || (credits?.secondsRemaining ?? 0) <= 0}
             data-testid="button-start-brzi-kviz"
             className="rounded-2xl font-bold bg-orange-500 hover:bg-orange-600"
           >
             {creditsLoading ? "Učitavam…" : "Pokreni igru"}
           </Button>
-          {!creditsLoading && (credits?.secondsRemaining ?? 0) < ROUND_DURATION_SEC && (
-            <p className="text-sm text-red-600 mt-3 font-medium">Treba ti najmanje 60 sekundi vremena za ovu igru.</p>
+          {!creditsLoading && (credits?.secondsRemaining ?? 0) <= 0 && (
+            <p className="text-sm text-red-600 mt-3 font-medium">Nemaš vremena za igre. Završi neku lekciju za nove hasanate.</p>
           )}
         </Card>
       )}
@@ -264,9 +292,22 @@ export default function BrziKviz() {
             <Card className="p-8 mt-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300 text-center">
               <Trophy className="w-12 h-12 text-amber-500 mx-auto mb-3" />
               <p className="text-2xl font-black text-foreground mb-1">Vrijeme isteklo!</p>
-              <p className="text-lg text-muted-foreground mb-4">
+              <p className="text-lg text-muted-foreground mb-2">
                 Rezultat: <span className="font-black text-3xl text-emerald-600" data-testid="text-final-score">{finalScore}</span>
               </p>
+              <div className="text-sm text-muted-foreground mb-2 space-y-0.5">
+                {bestEver !== null && (
+                  <p>
+                    Najbolji ikad: <span className="font-bold text-foreground" data-testid="text-best-ever">{bestEver}</span>
+                    {previousBest !== null && finalScore !== null && finalScore > previousBest && (
+                      <span className="ml-2 text-emerald-600 font-bold">novi rekord!</span>
+                    )}
+                  </p>
+                )}
+                {previousBest !== null && previousBest > 0 && (
+                  <p>Tvoj prethodni najbolji: <span className="font-bold text-foreground">{previousBest}</span></p>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground mb-4">
                 Tačno: <strong className="text-emerald-600">{correct}</strong> · Netačno: <strong className="text-red-500">{wrong}</strong>
               </p>

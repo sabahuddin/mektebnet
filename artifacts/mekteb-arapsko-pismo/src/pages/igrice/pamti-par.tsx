@@ -29,9 +29,12 @@ const HARFOVI_POOL: Harf[] = [
   { id: 27, arabic: "و", name: "Waw" },  { id: 28, arabic: "ي", name: "Ja" },
 ];
 
-interface Card { id: string; harfId: number; arabic: string; name: string; flipped: boolean; matched: boolean; }
+// Svaki par = jedna arapska kartica + jedna kartica sa imenom harfa.
+// Učenik mora spojiti harf sa njegovim imenom (ne dvije iste arapske kartice).
+type CardKind = "arabic" | "name";
+interface Card { id: string; harfId: number; kind: CardKind; display: string; flipped: boolean; matched: boolean; }
 
-const PAIRS = 8; // 16 kartica
+const PAIRS = 8; // 16 kartica (8 arapskih + 8 imena)
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -46,8 +49,8 @@ function buildBoard(): Card[] {
   const picks = shuffle(HARFOVI_POOL).slice(0, PAIRS);
   const cards: Card[] = [];
   picks.forEach((h, idx) => {
-    cards.push({ id: `${h.id}-a-${idx}`, harfId: h.id, arabic: h.arabic, name: h.name, flipped: false, matched: false });
-    cards.push({ id: `${h.id}-b-${idx}`, harfId: h.id, arabic: h.arabic, name: h.name, flipped: false, matched: false });
+    cards.push({ id: `${h.id}-arabic-${idx}`, harfId: h.id, kind: "arabic", display: h.arabic, flipped: false, matched: false });
+    cards.push({ id: `${h.id}-name-${idx}`,   harfId: h.id, kind: "name",   display: h.name,   flipped: false, matched: false });
   });
   return shuffle(cards);
 }
@@ -69,6 +72,8 @@ export default function PamtiPar() {
   const [moves, setMoves] = useState(0);
   const [matches, setMatches] = useState(0);
   const [finalScore, setFinalScore] = useState<number | null>(null);
+  const [bestEver, setBestEver] = useState<number | null>(null);
+  const [previousBest, setPreviousBest] = useState<number | null>(null);
   const sessionStartTimeRef = useRef<number | null>(null);
   const endingRef = useRef(false);
 
@@ -77,6 +82,15 @@ export default function PamtiPar() {
     setErrorMsg("");
     setState("loading");
     try {
+      // Snimi prethodni best prije nego pokreneš novu igru — koristi se za "tvoj zadnji best" prikaz na kraju.
+      try {
+        const prev = await apiRequest<{ games: { gameId: string; bestScore: number }[] }>(
+          "GET", "/games/personal-stats", undefined, token
+        );
+        const m = prev.games.find(g => g.gameId === "memory");
+        setPreviousBest(m?.bestScore ?? 0);
+      } catch { setPreviousBest(null); }
+
       const res = await apiRequest<{ sessionId: number; startedAt: string; allowedDurationSec: number }>(
         "POST", "/games/start", { gameId: "memory" }, token
       );
@@ -88,6 +102,7 @@ export default function PamtiPar() {
       setMoves(0);
       setMatches(0);
       setFinalScore(null);
+      setBestEver(null);
       sessionStartTimeRef.current = Date.now();
       endingRef.current = false;
       setState("playing");
@@ -103,10 +118,19 @@ export default function PamtiPar() {
     if (!sessionId || !token || endingRef.current) return;
     endingRef.current = true;
     try {
-      await apiRequest<{ ok: boolean }>("POST", "/games/end", { sessionId, score }, token);
-      setFinalScore(score);
+      const r = await apiRequest<{ ok: boolean; finalScore?: number }>("POST", "/games/end", { sessionId, score }, token);
+      const accepted = typeof r.finalScore === "number" ? r.finalScore : score;
+      setFinalScore(accepted);
       setState("ended");
       refetchCredits();
+      // Dohvati best-ever nakon snimanja (server ga već zna)
+      try {
+        const stats = await apiRequest<{ games: { gameId: string; bestScore: number }[] }>(
+          "GET", "/games/personal-stats", undefined, token
+        );
+        const m = stats.games.find(g => g.gameId === "memory");
+        setBestEver(m?.bestScore ?? accepted);
+      } catch { setBestEver(accepted); }
     } catch (e) {
       const err = e as { message?: string };
       setErrorMsg(err.message || "Greška pri završetku");
@@ -205,7 +229,7 @@ export default function PamtiPar() {
         </h1>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           {state === "playing" && startedAt && (
-            <GameTimer startedAt={startedAt} allowedDurationSec={Math.min(120, allowedDuration)} onExpire={handleExpire} />
+            <GameTimer startedAt={startedAt} allowedDurationSec={allowedDuration} onExpire={handleExpire} />
           )}
         </div>
       </div>
@@ -281,7 +305,9 @@ export default function PamtiPar() {
                 }`}
                 whileTap={{ scale: 0.95 }}
               >
-                {card.flipped || card.matched ? card.arabic : "؟"}
+                {card.flipped || card.matched ? (
+                  <span className={card.kind === "name" ? "text-base sm:text-lg font-bold" : ""}>{card.display}</span>
+                ) : "؟"}
               </motion.button>
             ))}
           </div>
@@ -294,9 +320,22 @@ export default function PamtiPar() {
             <Card className="p-8 mt-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300 text-center">
               <Trophy className="w-12 h-12 text-amber-500 mx-auto mb-3" />
               <p className="text-2xl font-black text-foreground mb-1">Bravo!</p>
-              <p className="text-lg text-muted-foreground mb-4">
+              <p className="text-lg text-muted-foreground mb-2">
                 Rezultat: <span className="font-black text-3xl text-emerald-600" data-testid="text-final-score">{finalScore}</span>
               </p>
+              <div className="text-sm text-muted-foreground mb-2 space-y-0.5">
+                {bestEver !== null && (
+                  <p>
+                    Najbolji ikad: <span className="font-bold text-foreground" data-testid="text-best-ever">{bestEver}</span>
+                    {previousBest !== null && finalScore !== null && finalScore > previousBest && (
+                      <span className="ml-2 text-emerald-600 font-bold">novi rekord!</span>
+                    )}
+                  </p>
+                )}
+                {previousBest !== null && previousBest > 0 && (
+                  <p>Tvoj prethodni najbolji: <span className="font-bold text-foreground">{previousBest}</span></p>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground mb-4">
                 Riješeno u {moves} poteza · {matches}/{PAIRS} parova
               </p>

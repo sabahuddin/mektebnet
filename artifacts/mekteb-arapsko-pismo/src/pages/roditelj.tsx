@@ -79,7 +79,9 @@ interface GameStatsResp {
   secondsAllowed: number;
   secondsSpent: number;
   secondsRemaining: number;
-  games: { gameId: string; totalGames: number; bestScore: number; totalSeconds: number }[];
+  groupRank: number | null;
+  groupTotal: number | null;
+  games: { gameId: string; totalGames: number; bestScore: number; lastScore: number; totalSeconds: number }[];
 }
 
 function fmtMinSec(s: number): string {
@@ -239,11 +241,22 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
             className="bg-purple-50 border border-purple-100 rounded-xl p-3 mb-4"
             data-testid={`game-stats-${dijete.id}`}
           >
-            <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
               <h3 className="text-xs font-extrabold text-purple-800 uppercase tracking-wide">Igre</h3>
-              <span className="text-[10px] text-purple-700/70 font-bold">
-                Vrijeme: <span data-testid={`game-spent-${dijete.id}`}>{fmtMinSec(gameStats.secondsSpent)}</span> / {fmtMinSec(gameStats.secondsAllowed)}
-              </span>
+              <div className="flex items-center gap-3 flex-wrap">
+                {gameStats.groupRank !== null && gameStats.groupTotal !== null && gameStats.groupTotal > 0 && (
+                  <span
+                    className="text-[10px] text-purple-800 font-extrabold bg-white border border-purple-200 rounded-md px-2 py-0.5"
+                    data-testid={`game-rank-${dijete.id}`}
+                    title="Mjesto u grupi po sumi najboljih rezultata"
+                  >
+                    Mjesto u grupi: {gameStats.groupRank} od {gameStats.groupTotal}
+                  </span>
+                )}
+                <span className="text-[10px] text-purple-700/70 font-bold">
+                  Vrijeme: <span data-testid={`game-spent-${dijete.id}`}>{fmtMinSec(gameStats.secondsSpent)}</span> / {fmtMinSec(gameStats.secondsAllowed)}
+                </span>
+              </div>
             </div>
             {gameStats.games.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">

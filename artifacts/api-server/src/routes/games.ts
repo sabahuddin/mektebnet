@@ -12,9 +12,15 @@ const SECONDS_PER_BLOCK = 600;
 // Maks. trajanje jedne sesije (auto-expire / clamp na ovo).
 const MAX_SESSION_DURATION_SEC = 30 * 60;
 // Maks. score po igri (anti-cheat).
+// quiz score = broj tačnih odgovora; cap od 60 daje slobodu za realan ritam (~1/sek).
 const MAX_SCORE: Record<string, number> = {
   memory: 1000,
-  quiz: 200,
+  quiz: 60,
+};
+// Maks. trajanje runde po igri (timer): quiz = 60s, memory koliko user ima credita.
+const ROUND_DURATION_SEC: Record<string, number | null> = {
+  quiz: 60,
+  memory: null,
 };
 // Validni gameId enum.
 const VALID_GAMES = new Set(["memory", "quiz"]);
@@ -89,7 +95,7 @@ router.get("/credits", requireAuth, async (req: Request, res: Response) => {
 });
 
 // POST /api/games/start { gameId } — kreira sesiju.
-router.post("/start", requireAuth, async (req: Request, res: Response) => {
+router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const gameId = String(req.body?.gameId || "");
@@ -141,7 +147,10 @@ router.post("/start", requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    const allowedDurationSec = Math.min(secondsRemaining, MAX_SESSION_DURATION_SEC);
+    // Per-game cap na trajanje runde (npr. quiz = 60s); ako učenik ima manje credita,
+    // koristi credit. Memory nema fiksni cap pa koristi puni credit do MAX_SESSION_DURATION_SEC.
+    const roundCap = ROUND_DURATION_SEC[gameId] ?? MAX_SESSION_DURATION_SEC;
+    const allowedDurationSec = Math.min(secondsRemaining, roundCap, MAX_SESSION_DURATION_SEC);
     try {
       const inserted = await exec<{ id: number; started_at: string }>(sql`
         INSERT INTO game_sessions (user_id, game_id, status, started_at, allowed_duration_sec)
@@ -183,7 +192,7 @@ router.post("/start", requireAuth, async (req: Request, res: Response) => {
 });
 
 // POST /api/games/end { sessionId, score } — zatvara sesiju.
-router.post("/end", requireAuth, async (req: Request, res: Response) => {
+router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const sessionId = Number(req.body?.sessionId);
@@ -247,7 +256,7 @@ router.post("/end", requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ ok: true, sessionId, gameId: session.game_id, score, durationSec });
+    res.json({ ok: true, sessionId, gameId: session.game_id, score, finalScore: score, durationSec });
   } catch (err) {
     req.log.error({ err }, "games/end failed");
     res.status(500).json({ error: "internal_error" });
@@ -318,23 +327,47 @@ router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    const rows = await exec<{ user_id: number; display_name: string; best_score: number; total_games: number }>(sql`
-      SELECT gs.user_id,
-             u.display_name,
-             MAX(gs.score)::int AS best_score,
-             COUNT(*)::int AS total_games
-      FROM game_sessions gs
-      JOIN users u ON u.id = gs.user_id
-      ${scopeJoin}
-      WHERE gs.status = 'ended'
-        AND u.role = 'ucenik'
-        ${gameFilter}
-        ${scopeWhere}
-      GROUP BY gs.user_id, u.display_name
-      HAVING MAX(gs.score) > 0
-      ORDER BY best_score DESC, total_games DESC
-      LIMIT 20
-    `);
+    // Za game="all": rank po SUMI najboljih per-game scoreova (sumiramo MAX(score) po game_id po useru).
+    // Za jednu igru: rank po MAX(score). Limit 50 (top 50).
+    const rows = game === "all"
+      ? await exec<{ user_id: number; display_name: string; best_score: number; total_games: number }>(sql`
+        WITH best_per_game AS (
+          SELECT gs.user_id, gs.game_id, MAX(gs.score)::int AS best_in_game, COUNT(*)::int AS games_in_game
+          FROM game_sessions gs
+          WHERE gs.status = 'ended'
+          GROUP BY gs.user_id, gs.game_id
+        )
+        SELECT bpg.user_id,
+               u.display_name,
+               COALESCE(SUM(bpg.best_in_game), 0)::int AS best_score,
+               COALESCE(SUM(bpg.games_in_game), 0)::int AS total_games
+        FROM best_per_game bpg
+        JOIN users u ON u.id = bpg.user_id
+        ${scopeJoin}
+        WHERE u.role = 'ucenik'
+          ${scopeWhere}
+        GROUP BY bpg.user_id, u.display_name
+        HAVING COALESCE(SUM(bpg.best_in_game), 0) > 0
+        ORDER BY best_score DESC, total_games DESC
+        LIMIT 50
+      `)
+      : await exec<{ user_id: number; display_name: string; best_score: number; total_games: number }>(sql`
+        SELECT gs.user_id,
+               u.display_name,
+               MAX(gs.score)::int AS best_score,
+               COUNT(*)::int AS total_games
+        FROM game_sessions gs
+        JOIN users u ON u.id = gs.user_id
+        ${scopeJoin}
+        WHERE gs.status = 'ended'
+          AND u.role = 'ucenik'
+          ${gameFilter}
+          ${scopeWhere}
+        GROUP BY gs.user_id, u.display_name
+        HAVING MAX(gs.score) > 0
+        ORDER BY best_score DESC, total_games DESC
+        LIMIT 50
+      `);
 
     const entries: LbEntry[] = rows.rows.map((r, idx) => ({
       rank: idx + 1,
@@ -390,15 +423,71 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
     const secondsAllowed = computeAllowedSeconds(totalHasanat);
     const secondsRemaining = Math.max(0, secondsAllowed - secondsSpent);
 
-    const perGame = await exec<{ game_id: string; total_games: number; best_score: number; total_seconds: number }>(sql`
+    const perGame = await exec<{ game_id: string; total_games: number; best_score: number; last_score: number; total_seconds: number }>(sql`
+      WITH ended AS (
+        SELECT game_id, score, duration_sec, ended_at,
+               ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY ended_at DESC) AS rn
+        FROM game_sessions
+        WHERE user_id = ${targetId} AND status = 'ended'
+      )
       SELECT game_id,
              COUNT(*)::int AS total_games,
              COALESCE(MAX(score), 0)::int AS best_score,
+             COALESCE(MAX(score) FILTER (WHERE rn = 1), 0)::int AS last_score,
              COALESCE(SUM(LEAST(duration_sec, ${MAX_SESSION_DURATION_SEC})), 0)::int AS total_seconds
-      FROM game_sessions
-      WHERE user_id = ${targetId} AND status = 'ended'
+      FROM ended
       GROUP BY game_id
     `);
+
+    // Grupni rank: ako učenik pripada grupi, izračunaj njegovo mjesto po sumi best-per-game
+    // u odnosu na druge učenike u istoj grupi (ne otkrivamo tuđa imena, samo poziciju).
+    let groupRank: number | null = null;
+    let groupTotal: number | null = null;
+    const targetScope = await getUserScopeIds(targetId);
+    if (targetScope.grupaId) {
+      const myTotalRow = await exec<{ s: number }>(sql`
+        SELECT COALESCE(SUM(best_in_game), 0)::int AS s
+        FROM (
+          SELECT MAX(score)::int AS best_in_game
+          FROM game_sessions
+          WHERE user_id = ${targetId} AND status = 'ended'
+          GROUP BY game_id
+        ) x
+      `);
+      const myTotal = myTotalRow.rows[0]?.s ?? 0;
+
+      const totalRow = await exec<{ c: number }>(sql`
+        SELECT COUNT(DISTINCT up.user_id)::int AS c
+        FROM ucenik_profili up
+        JOIN users u ON u.id = up.user_id
+        WHERE up.grupa_id = ${targetScope.grupaId} AND u.role = 'ucenik'
+      `);
+      groupTotal = totalRow.rows[0]?.c ?? 0;
+
+      if (myTotal > 0) {
+        const rankRow = await exec<{ c: number }>(sql`
+          WITH best_per_game AS (
+            SELECT gs.user_id, MAX(gs.score)::int AS best_in_game
+            FROM game_sessions gs
+            JOIN ucenik_profili up ON up.user_id = gs.user_id
+            JOIN users u ON u.id = gs.user_id
+            WHERE up.grupa_id = ${targetScope.grupaId}
+              AND u.role = 'ucenik'
+              AND gs.status = 'ended'
+            GROUP BY gs.user_id, gs.game_id
+          ),
+          totals AS (
+            SELECT user_id, COALESCE(SUM(best_in_game), 0)::int AS total
+            FROM best_per_game
+            GROUP BY user_id
+          )
+          SELECT COUNT(*)::int AS c FROM totals WHERE total > ${myTotal}
+        `);
+        groupRank = (rankRow.rows[0]?.c ?? 0) + 1;
+      } else {
+        groupRank = null;
+      }
+    }
 
     res.json({
       userId: targetId,
@@ -406,10 +495,13 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
       secondsAllowed,
       secondsSpent,
       secondsRemaining,
+      groupRank,
+      groupTotal,
       games: perGame.rows.map(r => ({
         gameId: r.game_id,
         totalGames: r.total_games,
         bestScore: r.best_score,
+        lastScore: r.last_score,
         totalSeconds: r.total_seconds,
       })),
     });
