@@ -204,32 +204,56 @@ export default function Progress() {
             Pokušaj ponovo kasnije ili osvježi stranicu.
           </p>
         </Card>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {bedzevi.map((badge, i) => {
-            const isEarned = badge.earned;
-            return (
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: Math.min(0.05 * i, 0.6) }}
-                key={badge.id}
-              >
-                <Card className={`p-6 flex flex-col items-center text-center h-full transition-all ${isEarned ? 'bg-white border-primary/30 shadow-md shadow-primary/5' : 'bg-muted/50 border-dashed opacity-60 grayscale'}`}>
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${isEarned ? `bg-gradient-to-br ${badge.bojaGradient} shadow-md` : 'bg-gray-200'}`}>
-                    <span className={`text-4xl ${isEarned ? 'drop-shadow-sm' : ''}`}>{badge.ikona}</span>
-                  </div>
-                  <h3 className={`font-bold leading-tight mb-2 ${isEarned ? 'text-foreground' : 'text-muted-foreground'}`}>{badge.naziv}</h3>
-                  <p className="text-xs text-muted-foreground mt-auto">{badge.opis}</p>
-                  {!isEarned && (
-                    <p className="text-[10px] text-muted-foreground/80 mt-2 italic">Uslov: {badge.uslov}</p>
-                  )}
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+      ) : (() => {
+        const earnedBedzevi = bedzevi.filter(b => b.earned);
+        const lockedBedzevi = bedzevi.filter(b => !b.earned);
+        const renderBadge = (badge: BedzInfo, i: number) => {
+          const isEarned = badge.earned;
+          return (
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: Math.min(0.05 * i, 0.6) }}
+              key={badge.id}
+            >
+              <Card className={`p-6 flex flex-col items-center text-center h-full transition-all ${isEarned ? 'bg-white border-primary/30 shadow-md shadow-primary/5' : 'bg-muted/50 border-dashed opacity-60 grayscale'}`}>
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${isEarned ? `bg-gradient-to-br ${badge.bojaGradient} shadow-md` : 'bg-gray-200'}`}>
+                  <span className={`text-4xl ${isEarned ? 'drop-shadow-sm' : ''}`}>{badge.ikona}</span>
+                </div>
+                <h3 className={`font-bold leading-tight mb-2 ${isEarned ? 'text-foreground' : 'text-muted-foreground'}`}>{badge.naziv}</h3>
+                <p className="text-xs text-muted-foreground mt-auto">{badge.opis}</p>
+                {!isEarned && (
+                  <p className="text-[10px] text-muted-foreground/80 mt-2 italic">Uslov: {badge.uslov}</p>
+                )}
+              </Card>
+            </motion.div>
+          );
+        };
+        return (
+          <div className="space-y-6">
+            {earnedBedzevi.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-primary mb-3">
+                  Osvojeni ({earnedBedzevi.length})
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {earnedBedzevi.map((badge, i) => renderBadge(badge, i))}
+                </div>
+              </div>
+            )}
+            {lockedBedzevi.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                  Još za osvojiti ({lockedBedzevi.length})
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {lockedBedzevi.map((badge, i) => renderBadge(badge, i))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </Layout>
   );
 }
