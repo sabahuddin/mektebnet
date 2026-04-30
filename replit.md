@@ -196,6 +196,24 @@ Roditelji se registruju sami i mogu: a) "Poveži dijete" (link existing, muallim
 - `POST /admin` — kreiranje admina
 - `POST /ucenik` — kreiranje učenika
 
+### Igrice / Gamifikacija (`/api/games`) — zahtijeva auth
+- `GET /credits` — koliko vremena učenik ima (floor(totalHasanat/100)*600 sec dnevno) i postoji li running sesija
+- `POST /start { gameId: "memory"|"quiz" }` — kreira `game_sessions` red, vraća sessionId. Atomski guard kroz partial unique index `(user_id) WHERE status='running'` — duplicate start vraća 409.
+- `POST /end { sessionId, score }` — atomski UPDATE sa `WHERE status='running'`. Score se clamp-uje na MAX (memory=1000, quiz=200) i sanity-cap (cheatCap = maxScore × elapsedSec/minSec) — instant submit vraća 0. Stare running sesije >30min se auto-expire pri sljedećem `/start`.
+- `GET /leaderboard?scope=group|mekteb|global&gameId=memory|quiz|all` — top 50, MAX(score) GROUP BY user, 60s in-memory cache. Vraća samo `displayName`, ne curi email/dob.
+- `GET /personal-stats?ucenikId=X` — agregat (totalHasanat, allowed/spent/remaining sec, per-game best+count). Učenik samo svoje, roditelj samo `roditelj_ucenik.status='approved'` djeca, muallim samo svoje učenike.
+- `GET /quiz-questions?count=30` — random pitanja iz `ilmihal_lekcije.kviz_pitanja`. Frontend ih prikaže redom u 60s rundi.
+
+**Frontend stranice (učenik)**:
+- `/igrice` (hub) — preostalo vrijeme + 2 kartice + link na ljestvicu
+- `/igrice/pamti-par` — 16 kartica (8 parova arapskih harfova). Bodovanje: `1000 - max(0,moves-8)*25 - min(300,elapsedSec*2)` (min 50).
+- `/igrice/brzi-kviz` — 60s, +10/-3, max 200.
+- `/igrice/ljestvica` — scope filter (grupa/mekteb/global), highlight prijavljenog korisnika.
+
+**Anti-cheat**: server clamp duration + score, partial unique index protiv paralelnih running sesija, atomic end UPDATE protiv lost-update, min duration → score cap protiv instant-submit cheat-a.
+
+**Roditelj UX**: u `/roditelj` svaka kartica djeteta dobiva purple "Igre" sekciju sa potrošenim vremenom i top score-om po igri.
+
 ## Sigurnosne zaštite
 - Captcha (a+b=?) na login i registraciji (client-side spam zaštita)
 - Registracije šalju email notifikaciju na info@mekteb.net (SMTP čeka konfiguraciju)

@@ -1,0 +1,151 @@
+import { Link } from "wouter";
+import { Layout } from "@/components/layout";
+import { Card } from "@/components/ui/card";
+import { useGameCredits, formatSeconds } from "@/hooks/use-game-credits";
+import { useAuth } from "@/context/auth";
+import { Gamepad2, Clock, Star, Trophy, Sparkles, Brain, Zap } from "lucide-react";
+import { motion } from "framer-motion";
+
+export default function IgricePage() {
+  const { user } = useAuth();
+  const { data: credits, loading, error } = useGameCredits();
+
+  if (!user) {
+    return (
+      <Layout>
+        <Card className="p-8 text-center bg-muted/30 border-dashed">
+          <Gamepad2 className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="font-bold text-foreground mb-1">Igrice su dostupne samo prijavljenim učenicima</p>
+          <Link href="/login" className="text-primary font-bold underline">Prijavi se</Link>
+        </Card>
+      </Layout>
+    );
+  }
+
+  const remaining = credits?.secondsRemaining ?? 0;
+  const allowed = credits?.secondsAllowed ?? 0;
+  const spent = credits?.secondsSpent ?? 0;
+  const totalHas = credits?.totalHasanat ?? 0;
+  const blocks = Math.floor(totalHas / (credits?.hasanatPerBlock || 100));
+  const noCredit = !loading && remaining <= 0;
+
+  return (
+    <Layout>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white shadow-md">
+          <Gamepad2 className="w-8 h-8" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-black text-foreground">Igrice</h1>
+          <p className="text-muted-foreground font-medium">Zarađuj hasanate kroz lekcije i kvizove — zatim se zabavi!</p>
+        </div>
+      </div>
+
+      {/* Vremenski budžet */}
+      <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center shadow-inner">
+              <Clock className="w-7 h-7" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-800/70">Vrijeme za igre danas (i ukupno)</p>
+              <p className="text-3xl font-black text-amber-700" data-testid="text-credit-remaining">
+                {loading ? "…" : formatSeconds(remaining)} <span className="text-base font-bold text-amber-600">preostalo</span>
+              </p>
+              <p className="text-xs text-amber-700/70 font-medium mt-1">
+                Otključano: {formatSeconds(allowed)} · Iskorišteno: <span data-testid="text-credit-spent">{formatSeconds(spent)}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-amber-200">
+            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+            <div>
+              <p className="text-xs font-bold text-amber-800/70 uppercase">Hasanati</p>
+              <p className="text-xl font-black text-yellow-600">{totalHas}</p>
+              <p className="text-[10px] text-amber-700/70">{blocks} × {formatSeconds(credits?.secondsPerBlock || 600)}</p>
+            </div>
+          </div>
+        </div>
+        {error && (
+          <p className="mt-3 text-sm text-red-600 font-medium">Greška pri učitavanju ({error}).</p>
+        )}
+      </Card>
+
+      {noCredit && (
+        <Card className="p-5 mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-6 h-6 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-foreground mb-1">Nema više vremena za igre</p>
+              <p className="text-sm text-muted-foreground">
+                Svakih <strong>{credits?.hasanatPerBlock || 100} hasanata</strong> otključava{" "}
+                <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre. Završi
+                lekciju ili pokušaj kviz da zaradiš još.
+              </p>
+              <div className="flex gap-2 mt-3 flex-wrap">
+                <Link href="/ilmihal" className="text-sm font-bold bg-primary text-primary-foreground px-4 py-2 rounded-xl hover:opacity-90">Ilmihal lekcije</Link>
+                <Link href="/kvizovi" className="text-sm font-bold bg-secondary text-secondary-foreground px-4 py-2 rounded-xl hover:opacity-90">Kvizovi</Link>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <h2 className="text-xl font-extrabold text-foreground mb-4 flex items-center gap-2">
+        <Gamepad2 className="w-5 h-5 text-primary" />
+        Odaberi igru
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.05 }}>
+          <Link href="/igrice/pamti-par">
+            <div data-testid="link-game-pamti-par" className="bg-purple-50 border-2 border-purple-200 rounded-3xl p-6 cursor-pointer hover:shadow-lg transition-all group hover:-translate-y-1 duration-200 h-full">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-xs font-bold text-purple-700 px-3 py-1 rounded-full border border-purple-200 bg-white/60">Pamćenje</span>
+              </div>
+              <h3 className="text-xl font-extrabold text-purple-700 mb-2">Pamti par</h3>
+              <p className="text-muted-foreground text-sm font-medium leading-relaxed">
+                Spoji parove arapskih harfova u što manje pokušaja. Klasična "Memory" igra.
+              </p>
+            </div>
+          </Link>
+        </motion.div>
+
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
+          <Link href="/igrice/brzi-kviz">
+            <div data-testid="link-game-brzi-kviz" className="bg-orange-50 border-2 border-orange-200 rounded-3xl p-6 cursor-pointer hover:shadow-lg transition-all group hover:-translate-y-1 duration-200 h-full">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-xs font-bold text-orange-700 px-3 py-1 rounded-full border border-orange-200 bg-white/60">60 sekundi</span>
+              </div>
+              <h3 className="text-xl font-extrabold text-orange-700 mb-2">Brzi kviz</h3>
+              <p className="text-muted-foreground text-sm font-medium leading-relaxed">
+                Što više tačnih odgovora u 60 sekundi. Pitanja iz svih ilmihal lekcija.
+              </p>
+            </div>
+          </Link>
+        </motion.div>
+      </div>
+
+      <Link href="/igrice/ljestvica">
+        <div data-testid="link-leaderboard" className="bg-white border-2 border-primary/20 rounded-3xl p-5 flex items-center justify-between gap-4 cursor-pointer hover:shadow-md transition-all">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-teal-600 rounded-2xl flex items-center justify-center shadow-md">
+              <Trophy className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="font-extrabold text-lg text-foreground">Ljestvica</p>
+              <p className="text-sm text-muted-foreground">Pogledaj najbolje rezultate u svojoj grupi, mektebu i globalno.</p>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </Layout>
+  );
+}

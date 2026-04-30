@@ -48,6 +48,12 @@ import AdminOrphanUploadsPage from "./pages/admin-orphan-uploads";
 // Učenik profil
 import UcenikProfilPage from "./pages/ucenik-profil";
 
+// Igrice (gamifikacija)
+import IgricePage from "./pages/igrice";
+import PamtiPar from "./pages/igrice/pamti-par";
+import BrziKviz from "./pages/igrice/brzi-kviz";
+import Ljestvica from "./pages/igrice/ljestvica";
+
 // Muallim panel
 import MuallimPanel from "./pages/muallim";
 import MuallimPrisustvoPage from "./pages/muallim/prisustvo";
@@ -99,6 +105,12 @@ function Router() {
 
       {/* Učenik profil */}
       <Route path="/ucenik" component={UcenikProfilPage} />
+
+      {/* Igrice */}
+      <Route path="/igrice/pamti-par" component={PamtiPar} />
+      <Route path="/igrice/brzi-kviz" component={BrziKviz} />
+      <Route path="/igrice/ljestvica" component={Ljestvica} />
+      <Route path="/igrice" component={IgricePage} />
 
       {/* Poruke */}
       <Route path="/poruke" component={PorukePage} />

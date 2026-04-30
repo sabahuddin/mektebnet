@@ -74,6 +74,20 @@ interface DashboardSummary {
   bedzeviError?: boolean;
 }
 
+interface GameStatsResp {
+  totalHasanat: number;
+  secondsAllowed: number;
+  secondsSpent: number;
+  secondsRemaining: number;
+  games: { gameId: string; totalGames: number; bestScore: number; totalSeconds: number }[];
+}
+
+function fmtMinSec(s: number): string {
+  if (s <= 0) return "0 min";
+  const m = Math.floor(s / 60);
+  return m > 0 ? `${m} min` : `${s} s`;
+}
+
 function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
   const [expanded, setExpanded] = useState(false);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
@@ -82,6 +96,7 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
   const [activeTab, setActiveTab] = useState<"prisustvo" | "ocjene">("prisustvo");
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [gameStats, setGameStats] = useState<GameStatsResp | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +105,9 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
       .then(d => { if (!cancelled) setSummary(d); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setSummaryLoading(false); });
+    apiRequest<GameStatsResp>("GET", `/games/personal-stats?ucenikId=${dijete.id}`, undefined, token)
+      .then(d => { if (!cancelled) setGameStats(d); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [dijete.id, token]);
 
@@ -214,6 +232,42 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
             </TooltipProvider>
           </div>
         ) : null}
+
+        {/* Igre — mini statistika */}
+        {gameStats && (gameStats.games.length > 0 || gameStats.secondsAllowed > 0) && (
+          <div
+            className="bg-purple-50 border border-purple-100 rounded-xl p-3 mb-4"
+            data-testid={`game-stats-${dijete.id}`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 className="text-xs font-extrabold text-purple-800 uppercase tracking-wide">Igre</h3>
+              <span className="text-[10px] text-purple-700/70 font-bold">
+                Vrijeme: <span data-testid={`game-spent-${dijete.id}`}>{fmtMinSec(gameStats.secondsSpent)}</span> / {fmtMinSec(gameStats.secondsAllowed)}
+              </span>
+            </div>
+            {gameStats.games.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {(["memory", "quiz"] as const).map(gid => {
+                  const g = gameStats.games.find(x => x.gameId === gid);
+                  const label = gid === "memory" ? "Pamti par" : "Brzi kviz";
+                  return (
+                    <div key={gid} className="bg-white rounded-lg p-2 border border-purple-100">
+                      <div className="text-[10px] font-bold text-purple-700/70 uppercase">{label}</div>
+                      <div className="text-sm font-extrabold text-purple-800">
+                        {g ? `${g.bestScore} pt` : "—"}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {g ? `${g.totalGames} ${g.totalGames === 1 ? "igra" : "igara"}` : "još nije igrao"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-purple-700/70 font-medium">Još nije pokrenuo nijednu igru.</p>
+            )}
+          </div>
+        )}
 
         <button
           onClick={handleToggle}

@@ -11,6 +11,7 @@ import porukeRouter from "./poruke";
 import ucenikRouter from "./ucenik";
 import setupRouter from "./setup";
 import importContentRouter from "./import-content";
+import gamesRouter from "./games";
 
 const router: IRouter = Router();
 
@@ -26,6 +27,7 @@ router.use("/poruke", porukeRouter);
 router.use("/ucenik", ucenikRouter);
 router.use("/setup", setupRouter);
 router.use("/import-content", importContentRouter);
+router.use("/games", gamesRouter);
 
 export default router;
 

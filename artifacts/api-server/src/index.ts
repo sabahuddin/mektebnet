@@ -134,7 +134,29 @@ async function runMigrations() {
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS zadace_ucenici_ucenik_idx ON zadace_ucenici (ucenik_id);`);
 
-    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock + kviz_rezultati/posjete/mekteb_kalendar/plan_lekcija/zadace + zadace_ucenici ready");
+    // GAMIFIKACIJA: sesije igara (Pamti par, Brzi kviz, ...)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS game_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        game_id VARCHAR(40) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'running',
+        score INTEGER NOT NULL DEFAULT 0,
+        duration_sec INTEGER NOT NULL DEFAULT 0,
+        allowed_duration_sec INTEGER NOT NULL DEFAULT 0,
+        started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        ended_at TIMESTAMP
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_user_idx ON game_sessions (user_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_user_status_idx ON game_sessions (user_id, status);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_game_score_idx ON game_sessions (game_id, score);`);
+    // Anti-cheat: jedna running sesija po korisniku — DB garancija (atomska).
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS game_sessions_one_running_idx ON game_sessions (user_id) WHERE status = 'running';`);
+    // Optimizacija leaderboard query-ja (filter status='ended' + group by user, sort by score).
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS game_sessions_ended_user_score_idx ON game_sessions (game_id, user_id, score DESC) WHERE status = 'ended';`);
+
+    logger.info("Auto-migration: prilozi + rjecnik + ilmihal_lekcije lock + kviz_rezultati/posjete/mekteb_kalendar/plan_lekcija/zadace + zadace_ucenici + game_sessions ready");
 
     // BOOTSTRAP: if ilmihal_lekcije is completely empty (fresh prod DB),
     // import the full dataset (~232 lessons) + rjecnik (~314 entries).
