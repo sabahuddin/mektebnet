@@ -49,6 +49,16 @@ interface BedzInfo {
   bojaGradient: string;
   uslov: string;
   earned: boolean;
+  earnedAt: string | null;
+}
+
+function formatEarnedDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}.${month}.${d.getFullYear()}`;
 }
 
 interface DashboardSummary {
@@ -169,29 +179,37 @@ function DijeteCard({ dijete, token }: { dijete: Dijete; token: string }) {
             </div>
             <TooltipProvider delayDuration={150}>
               <div className="grid grid-cols-8 sm:grid-cols-8 gap-1.5">
-                {summary.bedzevi.map(b => (
-                  <Tooltip key={b.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
-                        className="group relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
-                        data-testid={`badge-${dijete.id}-${b.id}`}
-                      >
-                        <div className={`aspect-square rounded-lg flex items-center justify-center shadow-sm transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-110 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
-                          <span className={`text-base ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
-                        </div>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[220px] text-center">
-                      <div className="font-bold">{b.naziv}</div>
-                      <div className="opacity-90 mt-0.5">{b.opis}</div>
-                      {!b.earned && (
-                        <div className="opacity-80 mt-1 italic">Zaključan — uslov: {b.uslov}</div>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
+                {summary.bedzevi.map(b => {
+                  const earnedAtFormatted = b.earned ? formatEarnedDate(b.earnedAt) : null;
+                  return (
+                    <Tooltip key={b.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
+                          className="group relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
+                          data-testid={`badge-${dijete.id}-${b.id}`}
+                        >
+                          <div className={`aspect-square rounded-lg flex items-center justify-center shadow-sm transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-110 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
+                            <span className={`text-base ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[220px] text-center">
+                        <div className="font-bold">{b.naziv}</div>
+                        <div className="opacity-90 mt-0.5">{b.opis}</div>
+                        {earnedAtFormatted && (
+                          <div className="opacity-90 mt-1" data-testid={`badge-earned-at-${dijete.id}-${b.id}`}>
+                            Osvojeno: {earnedAtFormatted}
+                          </div>
+                        )}
+                        {!b.earned && (
+                          <div className="opacity-80 mt-1 italic">Zaključan — uslov: {b.uslov}</div>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
               </div>
             </TooltipProvider>
           </div>

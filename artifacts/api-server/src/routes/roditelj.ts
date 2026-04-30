@@ -18,7 +18,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
-import { BADGE_CATALOG, buildProgressSnapshot, computeEarnedBadgeIds } from "../lib/badges.js";
+import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../lib/badges.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
@@ -146,24 +146,46 @@ router.get("/dashboard/:ucenikId", async (req, res) => {
       zavrseneLekcije = napredak.length;
     }
 
-    // Bedževi — read-only snapshot za roditelja (bez perzistencije).
-    // Ako računanje padne, vraćamo bedzeviError: true tako da UI može pokazati
+    // Bedževi — backfill perzistencije (idempotentno) pa pročitaj svjež snapshot
+    // iz student_progress.badges. Time osiguravamo da je SVAKI earned bedž praćen
+    // sa earnedAt timestampom (isti pattern koji koristi /ucenik ruta).
+    // Ako bilo šta padne, vraćamo bedzeviError: true tako da UI može pokazati
     // degradirano stanje umjesto da lažno prikaže "0 osvojenih bedževa".
     const bedzeviUkupno = Object.keys(BADGE_CATALOG).length;
-    let bedzevi: Array<{ id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean }> = [];
+    let bedzevi: Array<{ id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean; earnedAt: string | null }> = [];
     let bedzeviEarnedCount = 0;
     let bedzeviError = false;
     try {
-      const snap = await buildProgressSnapshot(ucenikId);
-      const earnedIds = new Set(computeEarnedBadgeIds(snap));
+      if (progress) {
+        try {
+          await evaluateAndPersistBadges(ucenikId);
+        } catch (e) {
+          // Backfill je best-effort — ne padaj cijeli dashboard, ali zabilježi
+          // da bismo mogli detektovati zastarjele bedževe (earnedAt može biti
+          // null za nove zarade dok backfill ne uspije sljedeći put).
+          console.warn("[roditelj/dashboard] evaluateAndPersistBadges failed for ucenikId", ucenikId, e);
+        }
+      }
+      const [refreshed] = await db.select().from(studentProgressTable)
+        .where(eq(studentProgressTable.studentId, String(ucenikId))).limit(1);
+
+      const rawBadges: unknown = refreshed?.badges;
+      const earned: EarnedBadge[] = (Array.isArray(rawBadges) ? rawBadges : [])
+        .filter((b): b is EarnedBadge =>
+          !!b && typeof b === "object"
+          && typeof (b as EarnedBadge).id === "string"
+          && typeof (b as EarnedBadge).earnedAt === "string");
+      const earnedMap = new Map(earned.map(b => [b.id, b.earnedAt] as const));
+
       bedzevi = Object.values(BADGE_CATALOG).map(meta => ({
         ...meta,
-        earned: earnedIds.has(meta.id),
+        earned: earnedMap.has(meta.id),
+        earnedAt: earnedMap.get(meta.id) ?? null,
       }));
       bedzeviEarnedCount = bedzevi.filter(b => b.earned).length;
     } catch (e) {
       console.error("[roditelj/dashboard] failed to compute badges for ucenikId", ucenikId, e);
-      bedzevi = Object.values(BADGE_CATALOG).map(meta => ({ ...meta, earned: false }));
+      bedzevi = Object.values(BADGE_CATALOG).map(meta => ({ ...meta, earned: false, earnedAt: null }));
       bedzeviEarnedCount = 0;
       bedzeviError = true;
     }
