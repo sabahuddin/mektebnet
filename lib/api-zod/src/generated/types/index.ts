@@ -22,5 +22,7 @@ export * from "./lessonStoryCharacter";
 export * from "./lessonStoryLinesItem";
 export * from "./letterData";
 export * from "./letterDataForms";
+export * from "./quizResult";
+export * from "./quizResultRequest";
 export * from "./saveLessonProgressRequest";
 export * from "./studentProgress";

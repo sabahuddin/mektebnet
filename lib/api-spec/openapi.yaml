@@ -15,6 +15,8 @@ tags:
     description: Student progress tracking
   - name: exercises
     description: Exercise sessions
+  - name: content
+    description: Content (quizzes, lessons, etc.)
 
 paths:
   /healthz:
@@ -126,6 +128,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExerciseSessionResult"
+
+  /content/kviz-rezultat:
+    post:
+      operationId: saveQuizResult
+      tags: [content]
+      summary: Save a quiz attempt and return progress delta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizResultRequest"
+      responses:
+        "200":
+          description: Quiz attempt saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+        "429":
+          description: Already attempted today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -415,3 +442,61 @@ components:
         - streakDays
         - streakIncreased
 
+
+    QuizResultRequest:
+      type: object
+      properties:
+        kvizId:
+          type: integer
+        kvizNaslov:
+          type: string
+        tacniOdgovori:
+          type: integer
+        ukupnoPitanja:
+          type: integer
+      required:
+        - kvizId
+        - tacniOdgovori
+        - ukupnoPitanja
+
+    QuizResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        kvizId:
+          type: integer
+        kvizNaslov:
+          type: string
+        tacniOdgovori:
+          type: integer
+        ukupnoPitanja:
+          type: integer
+        procenat:
+          type: integer
+        bodovi:
+          type: integer
+        hasanatEarned:
+          type: integer
+        hasanatGained:
+          type: integer
+        totalHasanat:
+          type: integer
+        previousHasanat:
+          type: integer
+        streakDays:
+          type: integer
+        streakIncreased:
+          type: boolean
+        newBadges:
+          type: array
+          items:
+            $ref: "#/components/schemas/Badge"
+      required:
+        - hasanatEarned
+        - hasanatGained
+        - totalHasanat
+        - previousHasanat
+        - streakDays
+        - streakIncreased
+        - newBadges

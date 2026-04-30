@@ -195,3 +195,38 @@ export const SaveExerciseSessionResponse = zod.object({
   streakDays: zod.number(),
   streakIncreased: zod.boolean(),
 });
+
+/**
+ * @summary Save a quiz attempt and return progress delta
+ */
+export const SaveQuizResultBody = zod.object({
+  kvizId: zod.number(),
+  kvizNaslov: zod.string().optional(),
+  tacniOdgovori: zod.number(),
+  ukupnoPitanja: zod.number(),
+});
+
+export const SaveQuizResultResponse = zod.object({
+  id: zod.number().optional(),
+  kvizId: zod.number().optional(),
+  kvizNaslov: zod.string().optional(),
+  tacniOdgovori: zod.number().optional(),
+  ukupnoPitanja: zod.number().optional(),
+  procenat: zod.number().optional(),
+  bodovi: zod.number().optional(),
+  hasanatEarned: zod.number(),
+  hasanatGained: zod.number(),
+  totalHasanat: zod.number(),
+  previousHasanat: zod.number(),
+  streakDays: zod.number(),
+  streakIncreased: zod.boolean(),
+  newBadges: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      emoji: zod.string(),
+      description: zod.string(),
+      earnedAt: zod.date(),
+    }),
+  ),
+});

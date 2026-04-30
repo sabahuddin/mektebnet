@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -8,6 +9,7 @@ import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
 
 interface Pitanje {
   type?: "radio" | "checkbox" | "truefalse" | "reorder" | "markWords" | "dragDrop";
@@ -358,6 +360,30 @@ export default function KvizPage() {
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+
+  const triggerConfetti = () => {
+    const duration = 3 * 1000;
+    const end = Date.now() + duration;
+    const frame = () => {
+      confetti({
+        particleCount: 5,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'],
+      });
+      confetti({
+        particleCount: 5,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'],
+      });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    };
+    frame();
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -514,14 +540,37 @@ export default function KvizPage() {
           contentType: "kviz", contentId: kviz.id,
           zavrsen: true, bodovi, tacniOdgovori: score, ukupnoPitanja: pitanja.length,
         }, token).catch(() => {});
-        apiRequest<{ hasanatEarned?: number; newBadges?: { id: string; naziv: string; opis: string; ikona: string }[] }>(
+        apiRequest<{
+          hasanatEarned?: number;
+          hasanatGained?: number;
+          totalHasanat?: number;
+          previousHasanat?: number;
+          streakDays?: number;
+          streakIncreased?: boolean;
+          newBadges?: { id: string; naziv: string; opis: string; ikona: string }[];
+        }>(
           "POST", "/content/kviz-rezultat", {
             kvizId: kviz.id, kvizNaslov: kviz.naslov,
             tacniOdgovori: score, ukupnoPitanja: pitanja.length,
           }, token
         ).then(resp => {
           const earned = resp?.hasanatEarned || 0;
-          if (earned > 0) {
+          // Show the shared CelebrationModal for "passing" attempts (>= 50%),
+          // matching the server-side bodovi threshold so we only celebrate
+          // attempts that actually awarded hasanat.
+          if (bodovi >= 50) {
+            triggerConfetti();
+            setCelebration({
+              isRepeat: earned === 0,
+              hasanatGained: resp?.hasanatGained ?? earned,
+              totalHasanat: resp?.totalHasanat ?? 0,
+              previousHasanat:
+                resp?.previousHasanat ??
+                Math.max(0, (resp?.totalHasanat ?? 0) - earned),
+              streakDays: resp?.streakDays ?? 0,
+              streakIncreased: resp?.streakIncreased ?? false,
+            });
+          } else if (earned > 0) {
             toast({ title: `+${earned} hasanata! ⭐`, description: `Odlično si riješio/la kviz "${kviz.naslov}"` });
           }
           const newBadges = resp?.newBadges || [];
@@ -587,6 +636,11 @@ export default function KvizPage() {
             </div>
           </motion.div>
         </div>
+        <AnimatePresence>
+          {celebration && (
+            <CelebrationModal data={celebration} onClose={() => setCelebration(null)} />
+          )}
+        </AnimatePresence>
       </Layout>
     );
   }

@@ -147,6 +147,30 @@ export interface ExerciseSessionResult {
   streakIncreased: boolean;
 }
 
+export interface QuizResultRequest {
+  kvizId: number;
+  kvizNaslov?: string;
+  tacniOdgovori: number;
+  ukupnoPitanja: number;
+}
+
+export interface QuizResult {
+  id?: number;
+  kvizId?: number;
+  kvizNaslov?: string;
+  tacniOdgovori?: number;
+  ukupnoPitanja?: number;
+  procenat?: number;
+  bodovi?: number;
+  hasanatEarned: number;
+  hasanatGained: number;
+  totalHasanat: number;
+  previousHasanat: number;
+  streakDays: number;
+  streakIncreased: boolean;
+  newBadges: Badge[];
+}
+
 export type GetProgressParams = {
   studentId?: string;
 };

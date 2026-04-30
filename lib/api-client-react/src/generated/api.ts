@@ -24,6 +24,8 @@ import type {
   HealthStatus,
   Lesson,
   LessonDetail,
+  QuizResult,
+  QuizResultRequest,
   SaveLessonProgressRequest,
   StudentProgress,
 } from "./api.schemas";
@@ -537,4 +539,90 @@ export const useSaveExerciseSession = <
   TContext
 > => {
   return useMutation(getSaveExerciseSessionMutationOptions(options));
+};
+
+/**
+ * @summary Save a quiz attempt and return progress delta
+ */
+export const getSaveQuizResultUrl = () => {
+  return `/api/content/kviz-rezultat`;
+};
+
+export const saveQuizResult = async (
+  quizResultRequest: QuizResultRequest,
+  options?: RequestInit,
+): Promise<QuizResult> => {
+  return customFetch<QuizResult>(getSaveQuizResultUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(quizResultRequest),
+  });
+};
+
+export const getSaveQuizResultMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveQuizResult>>,
+    TError,
+    { data: BodyType<QuizResultRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveQuizResult>>,
+  TError,
+  { data: BodyType<QuizResultRequest> },
+  TContext
+> => {
+  const mutationKey = ["saveQuizResult"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveQuizResult>>,
+    { data: BodyType<QuizResultRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveQuizResult(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveQuizResultMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveQuizResult>>
+>;
+export type SaveQuizResultMutationBody = BodyType<QuizResultRequest>;
+export type SaveQuizResultMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Save a quiz attempt and return progress delta
+ */
+export const useSaveQuizResult = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveQuizResult>>,
+    TError,
+    { data: BodyType<QuizResultRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveQuizResult>>,
+  TError,
+  { data: BodyType<QuizResultRequest> },
+  TContext
+> => {
+  return useMutation(getSaveQuizResultMutationOptions(options));
 };

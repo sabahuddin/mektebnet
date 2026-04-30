@@ -373,38 +373,75 @@ router.post("/kviz-rezultat", requireAuth, async (req, res) => {
       bodovi,
     }).returning();
 
-    // Dodaj hasanate u student_progress i evaluiraj nove bedževe (uključujući kviz-bedževe).
+    // Dodaj hasanate u student_progress, ažuriraj streak i evaluiraj nove
+    // bedževe — mirroring /api/exercises/session tako da klijent može pokazati
+    // istu CelebrationModal animaciju nakon kviza.
     let newBadges: Awaited<ReturnType<typeof evaluateAndPersistBadges>> = [];
-    let totalHasanat = 0;
+    let totalHasanat = bodovi;
+    let previousHasanat = 0;
+    let previousStreakDays = 0;
+    let streakDays = 1;
     try {
       const studentIdStr = String(userId);
-      const [existing] = await db.select().from(studentProgressTable)
+      const todayStr = new Date().toISOString().split("T")[0];
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterdayStr = yesterdayDate.toISOString().split("T")[0];
+
+      const [existingProgress] = await db.select().from(studentProgressTable)
         .where(eq(studentProgressTable.studentId, studentIdStr)).limit(1);
 
-      if (!existing) {
+      if (!existingProgress) {
         await db.insert(studentProgressTable).values({
           studentId: studentIdStr,
           totalHasanat: bodovi,
           completedLessons: [],
           badges: [],
-          streakDays: 0,
+          streakDays: 1,
+          lastActivityDate: todayStr,
         });
         totalHasanat = bodovi;
-      } else if (bodovi > 0) {
-        totalHasanat = existing.totalHasanat + bodovi;
-        await db.update(studentProgressTable)
-          .set({ totalHasanat, updatedAt: new Date() })
-          .where(eq(studentProgressTable.studentId, studentIdStr));
+        previousHasanat = 0;
+        previousStreakDays = 0;
+        streakDays = 1;
       } else {
-        totalHasanat = existing.totalHasanat;
+        previousHasanat = existingProgress.totalHasanat;
+        previousStreakDays = existingProgress.streakDays;
+        totalHasanat = existingProgress.totalHasanat + bodovi;
+
+        streakDays = existingProgress.streakDays;
+        if (existingProgress.lastActivityDate !== todayStr) {
+          if (existingProgress.lastActivityDate === yesterdayStr) streakDays += 1;
+          else streakDays = 1;
+        }
+
+        await db.update(studentProgressTable)
+          .set({
+            totalHasanat,
+            streakDays,
+            lastActivityDate: todayStr,
+            updatedAt: new Date(),
+          })
+          .where(eq(studentProgressTable.studentId, studentIdStr));
       }
 
       newBadges = await evaluateAndPersistBadges(userId);
     } catch (badgeErr) {
-      // Bedž evaluacija ne smije srušiti glavni odgovor
+      // Bedž evaluacija / streak update ne smije srušiti glavni odgovor
     }
 
-    res.status(201).json({ ...rezultat, hasanatEarned: bodovi, totalHasanat, newBadges });
+    const streakIncreased = streakDays > previousStreakDays;
+
+    res.status(200).json({
+      ...rezultat,
+      hasanatEarned: bodovi,
+      hasanatGained: bodovi,
+      totalHasanat,
+      previousHasanat,
+      streakDays,
+      streakIncreased,
+      newBadges,
+    });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
