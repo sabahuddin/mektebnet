@@ -21,23 +21,21 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, asc, sql, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
-import { sendEmail } from "../lib/email.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
 
-// Helper: pošalji in-app poruku (i opcionalno email) svim odobrenim
-// roditeljima datog učenika. Ne baca — sve greške se loguju.
+// Helper: pošalji in-app poruku svim odobrenim roditeljima datog
+// učenika. Email se NE šalje (in-app je dovoljno za ocjene/izostanke/
+// bedževe — vidi smjernice korisnika). Ne baca — sve greške se loguju.
 async function notifyApprovedRoditelji(opts: {
   ucenikId: number;
   posiljateljId: number;
   naslov: string;
   sadrzaj: string;
-  emailSubject?: string;
   logTag: string;
 }) {
   const { ucenikId, posiljateljId, naslov, sadrzaj, logTag } = opts;
-  const emailSubject = opts.emailSubject || naslov;
 
   try {
     const veze = await db
@@ -51,13 +49,6 @@ async function notifyApprovedRoditelji(opts: {
     if (veze.length === 0) return;
 
     const roditeljIds = veze.map(v => v.roditeljId);
-    const userIds = [...new Set([ucenikId, posiljateljId, ...roditeljIds])];
-    const users = await db
-      .select({ id: usersTable.id, displayName: usersTable.displayName, email: usersTable.email })
-      .from(usersTable)
-      .where(inArray(usersTable.id, userIds));
-    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
-    const muallimIme = userMap[posiljateljId]?.displayName || "Muallim";
 
     for (const roditeljId of roditeljIds) {
       const logCtx = { logTag, ucenikId, roditeljId };
@@ -70,27 +61,6 @@ async function notifyApprovedRoditelji(opts: {
         });
       } catch (err) {
         console.error(`[${logTag}] In-app poruka insert failed`, logCtx, err);
-        continue;
-      }
-
-      const roditelj = userMap[roditeljId];
-      if (roditelj?.email) {
-        const html = `
-          <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-            <div style="background:#0d9488;padding:20px;border-radius:12px 12px 0 0">
-              <h2 style="color:white;margin:0">${naslov}</h2>
-            </div>
-            <div style="padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px">
-              <p>Poštovani/a ${roditelj.displayName || ""},</p>
-              <p>${sadrzaj}</p>
-              <p style="color:#6b7280;font-size:14px;margin-top:16px">Muallim: ${muallimIme}</p>
-              <p style="color:#6b7280;font-size:14px">Ova poruka je automatski generisana sa mekteb.net</p>
-            </div>
-          </div>
-        `;
-        sendEmail(roditelj.email, `[Mekteb.net] ${emailSubject}`, html).catch(err => {
-          console.error(`[${logTag}] Email send failed`, logCtx, err);
-        });
       }
     }
   } catch (err) {
@@ -520,21 +490,20 @@ router.post("/approve-roditelj", async (req, res) => {
       })
       .where(eq(roditeljUcenikTable.id, roditeljUcenikId));
 
-    // Pošalji notifikaciju roditelju (in-app poruka + opcionalno email)
+    // Pošalji notifikaciju roditelju (samo in-app poruka — email se NE šalje)
     const logCtx = { roditeljUcenikId, roditeljId: request.roditeljId, ucenikId: request.ucenikId, approved };
-    let usersInfo: { id: number; displayName: string; email: string | null }[] = [];
+    let usersInfo: { id: number; displayName: string }[] = [];
     try {
       usersInfo = await db
-        .select({ id: usersTable.id, displayName: usersTable.displayName, email: usersTable.email })
+        .select({ id: usersTable.id, displayName: usersTable.displayName })
         .from(usersTable)
-        .where(inArray(usersTable.id, [request.ucenikId, request.roditeljId, req.user!.userId]));
+        .where(inArray(usersTable.id, [request.ucenikId, req.user!.userId]));
     } catch (lookupErr) {
       console.error("[approve-roditelj] User lookup failed", logCtx, lookupErr);
     }
 
     const userMap = Object.fromEntries(usersInfo.map(u => [u.id, u]));
     const ucenikIme = userMap[request.ucenikId]?.displayName || "vaše dijete";
-    const roditelj = userMap[request.roditeljId];
     const muallimIme = userMap[req.user!.userId]?.displayName || "Muallim";
 
     const naslov = approved
@@ -544,8 +513,7 @@ router.post("/approve-roditelj", async (req, res) => {
       ? `Vaš zahtjev za povezivanje s djetetom ${ucenikIme} je odobren. Sada možete pratiti napredak svog djeteta u roditeljskom portalu.`
       : `Vaš zahtjev za povezivanje s djetetom ${ucenikIme} je odbijen. Za više informacija obratite se muallimu (${muallimIme}).`;
 
-    // In-app poruka — primarni kanal notifikacije; pratimo uspjeh kako bismo
-    // u responseu označili partial-success ako insert ne uspije
+    // In-app poruka — jedini kanal notifikacije
     let notificationDelivered = true;
     try {
       await db.insert(porukeTable).values({
@@ -557,26 +525,6 @@ router.post("/approve-roditelj", async (req, res) => {
     } catch (porukaErr) {
       notificationDelivered = false;
       console.error("[approve-roditelj] In-app poruka insert failed", logCtx, porukaErr);
-    }
-
-    // Email — opcionalni dodatni kanal; ne blokira odgovor
-    if (roditelj?.email) {
-      const html = `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-          <div style="background:${approved ? '#0d9488' : '#dc2626'};padding:20px;border-radius:12px 12px 0 0">
-            <h2 style="color:white;margin:0">${naslov}</h2>
-          </div>
-          <div style="padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px">
-            <p>Poštovani/a ${roditelj.displayName || ""},</p>
-            <p>${sadrzaj}</p>
-            <p style="color:#6b7280;font-size:14px;margin-top:16px">Muallim: ${muallimIme}</p>
-            <p style="color:#6b7280;font-size:14px">Ova poruka je automatski generisana sa mekteb.net</p>
-          </div>
-        </div>
-      `;
-      sendEmail(roditelj.email, `[Mekteb.net] ${naslov}`, html).catch(err => {
-        console.error("[approve-roditelj] Email send failed", logCtx, err);
-      });
     }
 
     res.json({ success: true, notificationDelivered });
