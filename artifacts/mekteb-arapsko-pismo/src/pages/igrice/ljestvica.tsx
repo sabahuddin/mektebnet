@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { Trophy, ArrowLeft, Brain, Zap, Medal, Users, School, Globe } from "lucide-react";
+import { Trophy, ArrowLeft, Brain, Zap, Medal, Users, School, Globe, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Scope = "group" | "mekteb" | "global";
@@ -44,17 +44,60 @@ export default function Ljestvica() {
   const [gameFilter, setGameFilter] = useState<GameFilter>("all");
   const [data, setData] = useState<LBResp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  useEffect(() => {
+  const fetchLB = useCallback(async (silent: boolean) => {
     if (!token) { setLoading(false); return; }
-    setLoading(true);
+    if (silent) setRefreshing(true); else setLoading(true);
     setErrorMsg("");
-    apiRequest<LBResp>("GET", `/games/leaderboard?scope=${scope}&game=${gameFilter}`, undefined, token)
-      .then(res => setData(res))
-      .catch(e => setErrorMsg((e as Error).message || "Greška"))
-      .finally(() => setLoading(false));
+    try {
+      const res = await apiRequest<LBResp>("GET", `/games/leaderboard?scope=${scope}&game=${gameFilter}`, undefined, token);
+      setData(res);
+    } catch (e) {
+      setErrorMsg((e as Error).message || "Greška");
+    } finally {
+      if (silent) setRefreshing(false); else setLoading(false);
+    }
   }, [scope, gameFilter, token]);
+
+  useEffect(() => {
+    void fetchLB(false);
+  }, [fetchLB]);
+
+  // Mobile parity: pull-to-refresh + auto-refresh kad se tab vrati u fokus.
+  // (Native browser pull-to-refresh ne radi unutar SPA-a, pa koristimo touch handler.)
+  const touchStartY = useRef<number | null>(null);
+  const pullDistance = useRef<number>(0);
+  const PULL_THRESHOLD = 70;
+
+  useEffect(() => {
+    function onVis() {
+      if (document.visibilityState === "visible") void fetchLB(true);
+    }
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [fetchLB]);
+
+  function onTouchStart(e: React.TouchEvent) {
+    if (window.scrollY <= 0) {
+      touchStartY.current = e.touches[0].clientY;
+      pullDistance.current = 0;
+    } else {
+      touchStartY.current = null;
+    }
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (touchStartY.current == null) return;
+    pullDistance.current = e.touches[0].clientY - touchStartY.current;
+  }
+  function onTouchEnd() {
+    if (touchStartY.current != null && pullDistance.current > PULL_THRESHOLD && !loading && !refreshing) {
+      void fetchLB(true);
+    }
+    touchStartY.current = null;
+    pullDistance.current = 0;
+  }
 
   if (!user) {
     return (
@@ -69,6 +112,11 @@ export default function Ljestvica() {
 
   return (
     <Layout>
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <Link href="/igrice">
           <Button variant="ghost" size="sm" className="rounded-xl">
@@ -78,7 +126,21 @@ export default function Ljestvica() {
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
           <Trophy className="w-7 h-7 text-amber-500" /> Ljestvica
         </h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-xl ml-auto"
+          onClick={() => void fetchLB(true)}
+          disabled={loading || refreshing}
+          data-testid="btn-refresh-leaderboard"
+          aria-label="Osvježi ljestvicu"
+          title="Osvježi"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          <span className="ml-1.5 hidden sm:inline">Osvježi</span>
+        </Button>
       </div>
+      <p className="text-[11px] text-muted-foreground mb-3 sm:hidden">Povuci nadolje za osvježavanje</p>
 
       {/* Scope tabovi */}
       <div className="flex gap-2 mb-3 flex-wrap" role="tablist" aria-label="Opseg ljestvice">
@@ -190,6 +252,7 @@ export default function Ljestvica() {
           </div>
         </Card>
       )}
+      </div>
     </Layout>
   );
 }

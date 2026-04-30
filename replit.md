@@ -209,7 +209,7 @@ Roditelji se registruju sami i mogu: a) "Poveži dijete" (link existing, muallim
 - `/igrice/pamti-par` — 16 kartica = 8 parova **(arapski harf ↔ ime harfa)**, match po harfId. Bodovanje: `1000 - max(0,moves-8)*25 - min(300,elapsedSec*2)` (min 50). Timer = pun allowedDuration sa servera.
 - `/igrice/brzi-kviz` — 60s. **Score = broj tačnih − floor(netačnih/3)**, max 60. Start dozvoljen i ako učenik ima <60s credit-a (server skraćuje rundu).
 - Završni card oba game-a pokazuje "Najbolji ikad" + "Tvoj prethodni najbolji" sa "novi rekord!" badge-om kad finalScore > previousBest.
-- `/igrice/ljestvica` — scope filter (grupa/mekteb/global) + game filter (sve/pamti-par/brzi-kviz), highlight prijavljenog korisnika, prikaz mekteb naziva ispod imena.
+- `/igrice/ljestvica` — scope filter (grupa/mekteb/global) + game filter (sve/pamti-par/brzi-kviz), highlight prijavljenog korisnika, prikaz mekteb naziva ispod imena. Refresh dugme + auto-refresh na visibilitychange + pull-to-refresh za mobile (touch handler ≥70px).
 
 **Anti-cheat**: server clamp duration + score, partial unique index protiv paralelnih running sesija, atomic end UPDATE protiv lost-update, min duration → score cap protiv instant-submit cheat-a, role-guard `ucenik` na /start i /end (drugi role-ovi 403).
 
