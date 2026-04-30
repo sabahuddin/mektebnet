@@ -7,6 +7,9 @@ import {
   studentProgressTable,
   ilmihalLekcijeTable,
   kvizRezultatiTable,
+  roditeljUcenikTable,
+  porukeTable,
+  usersTable,
 } from "@workspace/db/schema";
 import { eq, and, gte } from "drizzle-orm";
 
@@ -269,6 +272,55 @@ export interface NovelyEarnedBadgeInfo extends BadgeMeta {
 }
 
 /**
+ * Pošalji in-app obavijest (poruku) svim odobrenim roditeljima učenika kad
+ * dijete osvoji nove bedževe. Best-effort: greške se logiraju, ne propagiraju.
+ * Posiljatelj poruke je sam učenik (jedini "user" s prirodnim semantičkim
+ * smislom za ovakvu obavijest — roditelj u inboxu vidi razgovor sa djetetom).
+ */
+async function notifyParentsOfNewBadges(
+  studentId: number,
+  novelyEarned: NovelyEarnedBadgeInfo[],
+): Promise<void> {
+  if (novelyEarned.length === 0) return;
+
+  try {
+    const veze = await db.select({ roditeljId: roditeljUcenikTable.roditeljId })
+      .from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.ucenikId, studentId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (veze.length === 0) return;
+
+    const [ucenik] = await db.select({ displayName: usersTable.displayName })
+      .from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
+    const ucenikIme = ucenik?.displayName || "Vaše dijete";
+
+    const naslov = novelyEarned.length === 1
+      ? `Novi bedž: ${novelyEarned[0].naziv}`
+      : `Novi bedževi (${novelyEarned.length})`;
+
+    const lista = novelyEarned
+      .map(b => `${b.ikona} ${b.naziv} — ${b.opis}`)
+      .join("\n");
+    const sadrzaj = novelyEarned.length === 1
+      ? `${ucenikIme} je osvojio/la novi bedž!\n\n${lista}`
+      : `${ucenikIme} je osvojio/la nove bedževe!\n\n${lista}`;
+
+    const values = veze.map(v => ({
+      posiljateljId: studentId,
+      primateljId: v.roditeljId,
+      naslov,
+      sadrzaj,
+    }));
+
+    await db.insert(porukeTable).values(values);
+  } catch (err) {
+    console.warn("[badges] notifyParentsOfNewBadges failed for studentId", studentId, err);
+  }
+}
+
+/**
  * Glavna funkcija: izračunaj nove bedževe i pohrani ih u student_progress.badges.
  * Vrati listu metapodataka za novo zarađene bedževe (za toast notifikaciju u UI).
  * Idempotentno — sigurno za pozivati nakon svake aktivnosti.
@@ -290,11 +342,17 @@ export async function evaluateAndPersistBadges(userId: number, overrides?: { tot
   }
 
   const now = new Date().toISOString();
-  return novelyEarned
+  const novelyEarnedInfo = novelyEarned
     .map(id => {
       const meta = BADGE_CATALOG[id];
       if (!meta) return null;
       return { ...meta, earnedAt: now };
     })
     .filter((b): b is NovelyEarnedBadgeInfo => b !== null);
+
+  if (novelyEarnedInfo.length > 0) {
+    await notifyParentsOfNewBadges(userId, novelyEarnedInfo);
+  }
+
+  return novelyEarnedInfo;
 }
