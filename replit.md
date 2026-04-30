@@ -1,64 +1,249 @@
 # Mekteb.net — Islamska edukativna platforma
 
-## Overview
+## Pregled
 
-Mekteb.net is an independent, gamified, and comprehensive Islamic educational platform designed to replace traditional WordPress-based solutions. It offers a structured learning environment for Arabic script, Islamic jurisprudence (Ilmihal), and Quranic stories, complemented by interactive quizzes and an e-diary system for tracking student progress. The platform aims to provide a rich educational experience for students, an efficient management system for teachers (muallims), and transparent oversight for parents. Key capabilities include:
+Samostalna platforma za islamsko obrazovanje koja zamjenjuje WordPress. Sadrži:
+- Arapsko pismo (28 harfova + hareketi, gamifikacija)
+- Ilmihal (231 lekcija u 4 nivoa)
+- Kvizovi (27/43 sa pitanjima — 1120 pitanja ukupno)
+- Čitaonica (14 knjiga — priče o poslanicima)
+- E-dnevnik (prisustvo + ocjene 1-6 + lekcija naziv)
+- Muallim panel (učenici, grupe, prisustvo, ocjene, kalendar, plan lekcija, profil, statistika/analitika, zadaće)
+- Statistika/Izvještaji (zbirni pregled, matrica prisustva po datumima, mjesečni pregled, Excel export)
+- Excel izvještaj (4 sheeta: Prisustvo, Prisustvo po mjesecu, Ocjene, Zbirni izvještaj)
+- Roditelj panel (pregled djece, prisustvo, ocjene)
+- Učenik profil (ocjene, prisustvo, kalendar, kvizovi)
+- Poruke (muallim↔roditelj, muallim↔učenik, admin↔svi)
+- Kviz daily limit (max 1x po kvizu dnevno)
 
--   **Gamified Arabic Script Learning:** Interactive lessons for the 28 Arabic letters and diacritics.
--   **Structured Islamic Curriculum:** 231 Ilmihal lessons across 4 levels.
--   **Extensive Quizzing:** 27 quizzes with over 1120 questions.
--   **Digital Library:** 14 books, primarily stories of prophets.
--   **E-Diary System:** For attendance tracking, grading (1-6 scale), and lesson logging.
--   **Role-Based Panels:** Dedicated interfaces for Muallims (teachers), Parents, and Students, each with tailored functionalities like group management, attendance, grades, calendar, lesson plans, statistics, and messaging.
--   **Reporting & Analytics:** Comprehensive reports, attendance matrices, monthly overviews, and Excel exports for administrative insights.
--   **Messaging System:** Secure communication channels between various user roles (muallim↔parent, muallim↔student, admin↔all).
--   **Gamification & Progress Tracking:** Quizzes with daily limits, progress tracking for lessons, and game-based learning with leaderboards and rewards (Hasanat).
+## Stack
 
-The project's vision is to become a leading platform for Islamic education, leveraging technology to make learning engaging and accessible.
+- **Monorepo**: pnpm workspaces
+- **Node.js**: 24
+- **API**: Express 5 + PostgreSQL + Drizzle ORM
+- **Frontend**: React + Vite + Tailwind CSS v4 + Framer Motion
+- **Auth**: JWT (cookie-based); JWT_SECRET env var (default: "mekteb-secret-change-in-production")
+- **Fontovi**: Nunito (UI), Noto Naskh Arabic (arapski tekst)
+- **Boje**: Teal/zelena (child-friendly dizajn)
 
-## User Preferences
+## Struktura
 
-I prefer concise and direct communication. When making changes, prioritize core functionalities and architectural improvements. Please ask for confirmation before implementing any major architectural shifts or adding new external dependencies. For code, I prefer clean, readable, and maintainable solutions. Do not make changes to files related to `rjecnik` unless specifically instructed.
+```text
+artifacts/
+├── api-server/             # Express API server (port iz PORT env)
+│   └── src/routes/
+│       ├── auth.ts         # POST /login, POST /register, POST /logout
+│       ├── content.ts      # GET/POST ilmihal, kvizovi, knjige, napredak
+│       ├── muallim.ts      # Muallim panel (grupe, učenici, prisustvo, ocjene, kalendar, plan lekcija, statistika, zadaće)
+│       ├── ucenik.ts       # Učenik panel (profil, kalendar, plan lekcija)
+│       ├── poruke.ts       # Poruke (messaging with role-based auth)
+│       ├── roditelj.ts     # Roditelj panel (djeca, prisustvo, ocjene)
+│       └── admin.ts        # Admin rute (korisnici CRUD, muallim-profili, licence edit, mektebi, statistike, image upload, prilozi/attachments)
+└── mekteb-arapsko-pismo/   # React frontend
+    └── src/pages/
+        ├── home.tsx
+        ├── login.tsx
+        ├── register-roditelj.tsx
+        ├── ilmihal.tsx / ilmihal-lekcija.tsx
+        ├── kvizovi.tsx / kviz.tsx
+        ├── citaonica.tsx / citaonica-knjiga.tsx
+        ├── roditelj.tsx    # Roditelj panel
+        ├── ucenik-profil.tsx  # Učenik profil (ocjene, prisustvo, kalendar, kvizovi)
+        ├── poruke.tsx     # Poruke (messaging)
+        └── muallim/
+            ├── index.tsx   # Muallim panel (pregled, učenici, grupe, prisustvo, kalendar, plan lekcija, statistika, zadaće)
+            ├── prisustvo.tsx  # Evidencija prisustva za grupu
+            ├── ucenik.tsx     # Detalji učenika (prisustvo + ocjene)
+            ├── dodaj-ucenika.tsx
+            └── dodaj-grupu.tsx
+lib/
+└── db/src/schema/
+    ├── users.ts        # users, muallim_profili, ucenik_profili, roditelj_profili
+    ├── mekteb.ts       # grupe, roditelj_ucenik, pretplate, mektebi
+    ├── ednevnik.ts     # prisustvo, ocjene, poruke
+    ├── content.ts      # ilmihal_lekcije, kvizovi, knjige, korisnik_napredak, kviz_rezultati, posjete
+    └── (kviz_rezultati = per-attempt tracking; posjete = visitor geo tracking)
+uploads/                    # Uploadovane slike (iz admin WYSIWYG editora)
+scripts/src/
+└── import-content.ts   # Import iz edu ZIP fajla (ilmihal, kvizovi, knjige)
+```
 
-## System Architecture
+## Rječnik (Glossary Tooltip)
 
-The platform is built as a monorepo using `pnpm workspaces`, ensuring a streamlined development workflow.
+- **314+ islamskih termina** pohranjeno u `rjecnik` tabeli u bazi podataka
+- Admin CRUD: `GET/POST/PUT/DELETE /api/admin/rjecnik` + `POST /api/admin/rjecnik/seed` (additive seed)
+- Javni endpoint: `GET /api/content/rjecnik` (vraća `{rijec: definicija}` objekat)
+- Frontend čita iz API-ja sa kešom (`fetchRjecnik`, `invalidateRjecnikCache` u `src/lib/rjecnik.ts`)
+- `processRjecnik(html, dict)` označava **prvi** pojavak svakog termina sa `<span class="rjecnik-rijec">`
+- Klik na termin prikazuje tooltip popup (komponenta `RjecnikContent`)
+- Admin stranica: `/admin/rjecnik` — pretraga, dodavanje, uređivanje, brisanje riječi
+- CSS stilovi: `.rjecnik-rijec` (dashed underline) + `.rjecnik-popup` (animated tooltip) u `index.css`
+- Seed fajl: `api-server/src/routes/rjecnik-seed.ts` (početnih 314 termina)
 
-**Technology Stack:**
--   **Node.js:** Version 24
--   **API:** Express 5 with PostgreSQL and Drizzle ORM for database interactions.
--   **Frontend:** React with Vite, styled using Tailwind CSS v4, and enhanced with Framer Motion for animations.
--   **Authentication:** JWT (JSON Web Tokens) with cookie-based storage.
--   **Fonts:** Nunito for UI and Noto Naskh Arabic for Arabic text.
--   **Color Scheme:** Teal/green palette for a child-friendly design.
+## Admin WYSIWYG Editor
 
-**Core Architectural Decisions & Features:**
+- **TipTap** vizuelni editor za lekcije (ilmihal-lekcija.tsx)
+- Dva moda: vizuelni (WYSIWYG) i HTML kod
+- Upload slika: `POST /api/admin/upload` (multer, max 10MB, jpg/png/gif/webp)
+- Statički serving: `/uploads/` servira uploadovane slike
+- Custom blokovi: zeleni box (ajet/hadis), žuti box (ZAPAMTI)
+- Formatiranje: bold, italic, underline, headings, liste, poravnanje, highlight, slike
+- Komponenta: `src/components/wysiwyg-editor.tsx`
 
--   **Modular Monorepo Structure:** Separates `api-server` and `mekteb-arapsko-pismo` (React frontend) within `artifacts/`.
--   **Role-Based Access Control:** Distinct routes and functionalities for `admin`, `muallim` (teacher), `roditelj` (parent), and `ucenik` (student) roles.
--   **Content Management:**
-    -   `ilmihal_lekcije`, `kvizovi`, and `knjige` tables manage educational content.
-    -   **Locked Lessons Principle:** Content marked as `locked` in `ilmihal_lekcije` is protected from accidental overwrites by import scripts or admin edits without explicit force-unlock. Slugs are immutable once created.
-    -   **WYSIWYG Editor:** Utilizes TipTap for rich text editing of lessons, supporting image uploads (`POST /api/admin/upload`), custom blocks, and comprehensive formatting.
--   **Gamification System:**
-    -   **Hasanat (Credits):** Students earn credits by completing tasks, which unlock game time.
-    -   **Game Sessions:** Managed via `game_sessions` table, preventing parallel game sessions and applying server-side duration/score clamping for anti-cheat. Quiz sessions store the generated question pool in `quiz_questions` JSONB column so scoring is fully server-authoritative — the client never sees correct answers and submits only `{questionId, optionIndex}` pairs which the server validates against stored questions. Late-submission attempts (past timer + grace) and oversized answer payloads are rejected.
-    -   **Leaderboards:** Scope-filtered (group, mekteb, global) leaderboards for `memory` and `quiz` games, accessible to students while respecting peer privacy.
-    -   **Games:** "Pamti Par" (memory game for Arabic letters, client-scored with cheat cap) and "Brzi Kviz" (fast quiz, fully server-scored — no real-time per-question feedback during play; final score revealed at end).
--   **Internationalization (i18n):** Supports BS (default), DE, EN, TR, AR languages. Features include `useLanguage()` hook, IP-based geo-detection for language, localStorage persistence, and automatic RTL support for Arabic.
--   **Admin Panel:** Centralized interface for managing muallims, users, analytics, quiz results, and student assignments.
--   **Security:** Implements CAPTCHA for login/registration, email notifications for new registrations, and robust server-side validation for game mechanics.
--   **Messaging:** A dedicated messaging system (`/api/poruke`) with role-based authorization ensuring secure communication.
--   **Database Schema:** Key tables include `users`, `muallim_profili`, `ucenik_profili`, `roditelj_ucenik`, `grupe`, `prisustvo`, `ocjene`, `poruke`, `mekteb_kalendar`, `plan_lekcija`, `ilmihal_lekcije`, `kvizovi`, `knjige`, `korisnik_napredak`, and `prilozi`.
+## Baza podataka
 
-## External Dependencies
+PostgreSQL (via DATABASE_URL). Ključne tabele:
+- `users` — svi korisnici (role: admin/muallim/roditelj/ucenik)
+- `muallim_profili` — profil muallima (licenceCount, licencesUsed)
+- `ucenik_profili` — profil učenika (muallimId, grupaId, isArchived)
+- `roditelj_ucenik` — veza roditelj↔dijete (status: pending/approved)
+- `grupe` — razredi/grupe (naziv, skolskaGodina, daniNastave, vrijemeNastave)
+- `prisustvo` — evidencija prisustva (status: prisutan/odsutan/zakasnio/opravdan)
+- `ocjene` — ocjene učenika (kategorija: usmeno/pismeno/domaci/aktivnost/vladanje, ocjena 1-6, lekcijaNaziv)
+- `poruke` — poruke (muallim↔roditelj, muallim↔učenik, admin↔svi; server-side auth)
+- `mekteb_kalendar` — kalendar grupe (tip: mekteb/ferije/vazan_datum, opis)
+- `plan_lekcija` — plan lekcija po danu (grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed)
+- `ilmihal_lekcije` — 228 lekcija (nivo 1/2/3); kolone `locked`, `locked_at`, `locked_note` za zaštitu sadržaja
+- `kvizovi` — 43 kviza (27 sa pitanjima = 1120 pitanja), modul: ilmihal/knjige
+- `knjige` — 14 knjiga (priče o poslanicima)
+- `korisnik_napredak` — praćenje napretka (zavrsen, bodovi)
+- `prilozi` — fajl-prilozi uz lekcije (lekcijaId, originalName, storedName, fileSize, mimeType) — vidljivi muallimima i adminu
 
--   **PostgreSQL:** Primary database.
--   **Drizzle ORM:** Object-Relational Mapper for PostgreSQL.
--   **Tailwind CSS v4:** Utility-first CSS framework.
--   **Framer Motion:** Animation library for React.
--   **Multer:** Node.js middleware for handling `multipart/form-data`, used for image uploads.
--   **ipapi.co:** API for IP geolocation used in i18n for language detection.
--   **Nodemailer:** Module for sending emails, pending SMTP configuration for `info@mekteb.net`.
--   **BuyMeACoffee:** Integrated for parent registration with multiple children (likely for subscription/donation linking, though not explicitly stated as payment processing).
--   **Stripe:** Planned for subscription management, but awaiting account setup.
+## 🔒 PRINCIP: Zaključane lekcije
+
+**Slug je nedodirljiv** — jednom kreiran, ne mijenja se nikad. Ručno verifikovan sadržaj je svet.
+
+- Tabela `ilmihal_lekcije` ima `locked BOOLEAN` kolonu
+- Admin može zaključati lekciju sa `POST /api/admin/ilmihal/:id/lock` (UI dugme na stranici lekcije)
+- Bulk: `POST /api/admin/ilmihal/lock-by-slug` sa `{slugs: [...]}`
+- **PUT /api/admin/ilmihal/:id sa `contentHtml` vraća 423 ako je locked=true** (treba `forceUnlock: true` za override)
+- **SVE BUDUĆE auto-skripte (seed, restore, backfill) MORAJU imati `WHERE locked = false`** — inače ručni rad nestaje
+- Vizuelno: zelena 🔒 ikona u headeru lekcije za admina kad je zaključana
+
+## API rute
+
+### Auth (`/api/auth`)
+- `POST /login` — prijava (username + password)
+- `GET /geo` — IP geolokacija (isBiH: true/false za prikaz KM/EUR cijena)
+- `POST /register-ucenik` — registracija odraslog (isActive: false, admin odobrava)
+- `POST /register-roditelj-v2` — registracija roditelja s brojem djece (1-4, BuyMeACoffee link)
+- `POST /register-mekteb` — zahtjev za registraciju mekteba (email, država, grad, naziv, paket, posebni zahtjevi)
+- `POST /register-roditelj` — stara registracija roditelja (legacy)
+- `POST /logout`
+- `GET /me` — trenutni korisnik
+
+### Content (`/api/content`)
+- `GET /ilmihal?nivo=X` — lista lekcija
+- `GET /ilmihal/:slug` — detalj lekcije
+- `GET /kvizovi?nivo=X&modul=ilmihal` — lista kvizova
+- `GET /kvizovi/:slug` — kviz s pitanjima
+- `GET /knjige?kategorija=prica` — lista knjiga
+- `GET /knjige/:slug` — detalj knjige
+- `POST /napredak` — bilježenje završetka (50% threshold za bodove)
+- `POST /kviz-rezultat` — čuvanje pojedinačnog pokušaja kviza
+- `GET /kviz-rezultati` — historija kvizova za prijavljenog korisnika
+
+### Muallim (`/api/muallim`) — zahtijeva role: muallim/admin
+- `GET /grupe`, `POST /grupe`, `PUT /grupe/:id`
+- `GET /ucenici`, `POST /ucenici`, `DELETE /ucenici/:id`
+- `GET /prisustvo?grupaId=X&datum=YYYY-MM-DD`, `POST /prisustvo`
+- `GET /prisustvo-ucenik/:ucenikId`
+- `GET /ocjene/:ucenikId`, `POST /ocjene` (lekcijaNaziv, ocjena 1-6)
+- `GET /pending-roditelji`, `POST /approve-roditelj`
+- `GET /ucenik-rezultati/:id` — rezultati kvizova za učenika
+- `GET/POST/DELETE /kalendar?grupaId=X` — kalendar grupe
+- `GET/POST/DELETE /plan-lekcija?grupaId=X&datum=Y` — plan lekcija po danu
+- `GET /lekcije-za-plan` — lista lekcija za odabir u planu
+- `PUT /profil` — ažuriranje displayName
+
+### Učenik (`/api/ucenik`) — zahtijeva role: ucenik
+- `GET /profil` — profil sa ocjenama, prisustvom, kvizovima
+- `GET /kalendar` — kalendar grupe učenika
+- `GET /plan-lekcija` — plan lekcija za grupu učenika
+
+### Poruke (`/api/poruke`) — zahtijeva auth
+- `GET /` — inbox (grupirano po razgovorima)
+- `GET /razgovor/:userId` — sve poruke s korisnikom
+- `POST /` — slanje poruke (server-side auth: ucenik→samo svoj muallim)
+- `POST /bulk` — grupno slanje (samo admin/muallim; validira primatelje)
+- `GET /kontakti` — dostupni kontakti po roli (admin→muallimi, muallim→admin+učenici+roditelji s grupom, roditelj→muallimi+admin, učenik→svoj muallim)
+
+### Roditelj (`/api/roditelj`) — zahtijeva role: roditelj/admin
+- `GET /djeca` — lista odobrene djece
+- `POST /link-dijete` — zahtjev za povezivanje uz korisničko ime djeteta (muallim odobrava). Pretraga djece po imenu je uklonjena radi privatnosti.
+- `POST /dodaj-dijete` — kreiranje dječjeg računa (max 4, Online Mekteb grupa, transakcija)
+- `PUT /dijete-lozinka` — promjena lozinke djeteta
+- `GET /dashboard/:ucenikId` — sažetak za karticu djeteta (posljednja ocjena, prisustvo ovaj mjesec, završene lekcije, streak); vraća 403 bez approved veze
+- `GET /djeca-summary` — kombinirani endpoint: vraća svu djecu + njihov dashboard sažetak + game stats u jednom JSON-u. Zamjena za N+1 (1 poziv umjesto 1 + 2N). Per-child compute pada gracefully: ako jedan dashboard ili gameStats padne, vraća null + error flag i ne ruši cijelu listu. Frontend `/roditelj.tsx` koristi ovaj endpoint, sa fallback-om na stari `/djeca` + per-child pozive.
+- `GET /prisustvo/:ucenikId`, `GET /ocjene/:ucenikId`, `GET /napredak/:ucenikId`
+
+## Korisnici (test)
+- `admin` / `admin123` — administrator
+- `muallim1` / `muallim123` — muallim
+
+## Format korisničkog imena učenika
+`ime.XXXX` format (samo prvo ime + 4 cifre, auto-generisano), bez emaila. Muallim kreira učenike.
+Roditelji se registruju sami i mogu: a) "Poveži dijete" (link existing, muallim odobrava), b) "Dodaj dijete" (kreira novi račun, dijete ide u "Online Mekteb" grupu, max 4 djece).
+
+## Kviz formati (za import-content.ts)
+- **Format 1**: `{type:'multiple', question:'...', options:[...], correct:'...'}` — single-quoted JS
+- **Format 2a**: `{question: '...', options:[...], answer: '...'}` — single-quoted, no type
+- **Format 2b**: `{"type":"checkbox",...}` — preskočeno (multiple correct)
+- **Format 3**: knjige kvizovi: `{q:"...", a:[...], c: index}` — short field names
+
+### Admin (`/api/admin`) — zahtijeva role: admin
+- `GET /analytics` — analitika (registracije, posjete, kviz statistike)
+- `GET /kviz-rezultati` — svi rezultati kvizova
+- `POST /admin` — kreiranje admina
+- `POST /ucenik` — kreiranje učenika
+
+### Igrice / Gamifikacija (`/api/games`) — zahtijeva auth
+- `GET /credits` — **role-guard `ucenik`**. Koliko vremena učenik ima (floor(totalHasanat/100)*600 sec dnevno) i postoji li running sesija.
+- `POST /start { gameId: "memory"|"quiz" }` — **role-guard `ucenik`**. Kreira `game_sessions` red, vraća sessionId, startedAt, allowedDurationSec. Za **quiz** dodatno: server generira 60 nasumičnih pitanja iz banke ilmihal lekcija, sprema ih u `game_sessions.quiz_questions` (JSONB) i vraća klijentu kao `questions` BEZ `answer` polja (anti-cheat). Trajanje runde cap-uje server: quiz=60s (ROUND_DURATION_SEC), memory bez fiksnog cap-a (cap = preostali credit, ali ≤30min). Atomski guard kroz partial unique index `(user_id) WHERE status='running'` — duplicate start vraća 409. Auto-expire stare running sesije clamp-uje `duration_sec = LEAST(allowed_duration_sec, NOW()-started_at)` (ne fiksno 1800).
+- `POST /end { sessionId, score?, answers? }` — **role-guard `ucenik`**. Atomski UPDATE sa `WHERE status='running'`. Server računa duration_sec iz NOW()-startedAt. **Quiz (server-side scoring):** klijent šalje `answers: [{questionId, optionIndex}]`, server validira protiv stored `quiz_questions` u DB. Klijentski `score` se NIKAD ne prihvata za quiz sesije sa stored questions. Late-submission (elapsedSec > timer + 5s grace) → score=0, status='expired'. DoS guard: answers se slice-uju na max 120. **Memory:** klijent-side score sa serverskim clampom na MAX (memory=1000) i sanity-cap (cheatCap = maxScore × elapsedSec/minSec; minSec=5). **Legacy fallback** (sesije sa quiz_questions=NULL pokrenute prije migracije): rawScore + cheatCap kao prije. Vraća `{ ok, score, finalScore, durationSec }`.
+- `GET /leaderboard?scope=group|mekteb|global&game=memory|quiz|all` — **role-guard `ucenik`** (peer privacy: roditelj/muallim/admin ne mogu vidjeti tuđa imena u listi). Top 50. Za `game=all` rank = SUM(MAX(score) per game) po useru (multi-game ranking). Za jednu igru = MAX(score). Vraća `{ rank, userId, displayName, mektebName, bestScore, totalGames }` (LEFT JOIN ucenik_profili → mektebi). 60s in-memory cache. Ne curi email/dob.
+- `GET /personal-stats?ucenikId=X` — **dostupno svima sa scope-om**: učenik samo svoje, roditelj samo `roditelj_ucenik.status='approved'` djeca, muallim samo svoje učenike. Agregat: totalHasanat, allowed/spent/remaining sec, **groupRank/groupTotal** (mjesto u grupi po sumi best-per-game), per-game (gameId, totalGames, bestScore, **lastScore**, totalSeconds).
+- ~~`GET /quiz-questions`~~ — **UKLONJEN**. Pitanja se sada vraćaju isključivo kroz `/start` (server-side scoring, anti-cheat).
+
+**Frontend stranice (učenik)**:
+- `/igrice` (hub) — preostalo vrijeme + 2 kartice + link na ljestvicu. Info-tooltip pored "Hasanati" labele objašnjava pravilo otključavanja vremena.
+- `/igrice/pamti-par` — 16 kartica = 8 parova **(arapski harf ↔ ime harfa)**, match po harfId. Bodovanje: `1000 - max(0,moves-8)*25 - min(300,elapsedSec*2)` (min 50). Timer = pun allowedDuration sa servera. (Klijent-side scoring + cheat cap.)
+- `/igrice/brzi-kviz` — 60s. **Server-side scoring**: pitanja stižu iz `/start` bez tačnih odgovora; klijent tracka `answers[]` i šalje ih u `/end`; final score otkriva server. Tokom igre prikazuje samo "Odgovoreno: N / Pitanje #M" — bez per-question feedback-a (klijent ne zna odgovore). Start dozvoljen i ako učenik ima <60s credit-a (server skraćuje rundu).
+- Završni card oba game-a pokazuje "Najbolji ikad" + "Tvoj prethodni najbolji" sa "novi rekord!" badge-om kad finalScore > previousBest.
+- `/igrice/ljestvica` — scope filter (grupa/mekteb/global) + game filter (sve/pamti-par/brzi-kviz), highlight prijavljenog korisnika, prikaz mekteb naziva ispod imena. Refresh dugme + auto-refresh na visibilitychange + pull-to-refresh za mobile (touch handler ≥70px).
+
+**Anti-cheat**: server clamp duration + score, partial unique index protiv paralelnih running sesija, atomic end UPDATE protiv lost-update, min duration → score cap protiv instant-submit cheat-a, role-guard `ucenik` na /start i /end (drugi role-ovi 403), per-user rate limit 30/60s na /start i /end (vraća 429). **Quiz dodatno**: pitanja se generiraju i čuvaju server-side (`game_sessions.quiz_questions` JSONB), klijent ne vidi tačne odgovore, late-submit (>timer + 5s grace) → score=0 expired.
+
+**Roditelj UX**: u `/roditelj` svaka kartica djeteta dobiva purple "Igre" sekciju sa: Mjesto u grupi (X od Y), potrošeno/dozvoljeno vrijeme, ukupno hasanata, per-game best score + broj igara.
+
+## Sigurnosne zaštite
+- Captcha (a+b=?) na login i registraciji (client-side spam zaštita)
+- Registracije šalju email notifikaciju na info@mekteb.net (SMTP čeka konfiguraciju)
+- Nodemailer setup: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS env vars
+
+## i18n (internacionalizacija)
+
+- **Jezici**: BS (default), DE, EN, TR, AR
+- **Fajlovi**: `src/lib/i18n.ts` (prijevodi), `src/context/language.tsx` (LanguageProvider)
+- **Hook**: `useLanguage()` → `{ lang, setLang, t, tr, isRTL }`
+- **Geolokacija**: ipapi.co API za auto-detekciju jezika prema državi (AbortController + setTimeout fallback)
+- **Persitencija**: localStorage `mekteb-lang`
+- **RTL**: automatski za AR jezik
+- **Prevedene stranice**: home, login, ilmihal, kvizovi, register-roditelj, arapsko-pismo (sufara)
+- **Jezički prekidač**: Globe ikona u headeru sa dropdown-om
+
+## Admin panel
+
+- **Tabovi**: Muallimi | Korisnici | Analitika | Kviz rezultati (default: Muallimi)
+- **Muallimi tab**: pregled svih muallima, grupe, broj učenika, expand za detalje
+- **Korisnici tab**: CRUD, toggle aktivnost, edit profil, reset lozinke, raspoređivanje učenika
+- **Analitika tab**: posjete, registracije, kviz uspješnost, korisnici po ulogama
+- **Kviz rezultati tab**: svi kvizovi sa statistikama (pokušaji, prosječna tačnost)
+- **Raspoređivanje učenika**: RasporediModal — admin može prebaciti učenika u drugu grupu/muallima
+- **API**: `/admin/muallim-pregled`, `/admin/grupe-all`, `/admin/ucenik/:id/rasporedi`
+
+## Preostalo za implementaciju
+- SMTP kredencijali za info@mekteb.net — potrebno od korisnika
+- Stripe pretplate — čeka Stripe nalog
+- Docker/Coolify deployment config
+
