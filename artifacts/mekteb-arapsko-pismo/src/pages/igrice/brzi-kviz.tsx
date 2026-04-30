@@ -140,17 +140,28 @@ export default function BrziKviz() {
     void endGame(correct, wrong);
   }, [state, correct, wrong, endGame]);
 
+  // Refs prate najsvježije vrijednosti za cleanup (izbjegavamo stale closure
+  // u unmount handleru — bez ovoga partial score bi koristio correct/wrong = 0
+  // captured na mount-u, pa bi učenik dobio 0 bodova umjesto stvarnog rezultata).
+  const stateRef = useRef(state);
+  const correctRef = useRef(correct);
+  const wrongRef = useRef(wrong);
+  const tokenRef = useRef(token);
+  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { correctRef.current = correct; }, [correct]);
+  useEffect(() => { wrongRef.current = wrong; }, [wrong]);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+
   // Cleanup: ako user napusti stranicu mid-game, end session sa current score
   useEffect(() => {
     return () => {
-      if (state === "playing" && sessionId && token && !endingRef.current) {
-        const score = Math.max(0, correct - Math.floor(wrong / 3));
+      if (stateRef.current === "playing" && sessionId && tokenRef.current && !endingRef.current) {
+        const score = Math.max(0, correctRef.current - Math.floor(wrongRef.current / 3));
         endingRef.current = true;
         // Best-effort, no await
-        apiRequest("POST", "/games/end", { sessionId, score }, token).catch(() => {});
+        apiRequest("POST", "/games/end", { sessionId, score }, tokenRef.current).catch(() => {});
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   if (!user) {

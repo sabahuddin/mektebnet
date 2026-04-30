@@ -138,16 +138,25 @@ export default function PamtiPar() {
     }
   }, [sessionId, token, refetchCredits]);
 
+  // Refs koji prate najsvježije vrijednosti za cleanup (izbjegavamo stale closure
+  // u unmount handleru — bez ovoga partial score bi bio = početne vrijednosti
+  // na mount-u, ne stvarno postignut score u trenutku napuštanja).
+  const stateRef = useRef(state);
+  const matchesRef = useRef(matches);
+  const tokenRef = useRef(token);
+  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { matchesRef.current = matches; }, [matches]);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+
   // Cleanup: ako user napusti stranicu mid-game, end session sa partial score
   useEffect(() => {
     return () => {
-      if (state === "playing" && sessionId && token && !endingRef.current) {
-        const partial = Math.max(10, matches * 60);
+      if (stateRef.current === "playing" && sessionId && tokenRef.current && !endingRef.current) {
+        const partial = Math.max(10, matchesRef.current * 60);
         endingRef.current = true;
-        apiRequest("POST", "/games/end", { sessionId, score: partial }, token).catch(() => {});
+        apiRequest("POST", "/games/end", { sessionId, score: partial }, tokenRef.current).catch(() => {});
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Auto-end on board complete
