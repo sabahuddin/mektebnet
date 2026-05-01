@@ -166,12 +166,26 @@ router.post("/logout", (_req, res) => {
 });
 
 // GET /api/auth/me
+//
+// Pored vraćanja korisnikovih podataka, ova ruta osvježava `mekteb_h5p_session`
+// HttpOnly cookie. Frontend zove /me pri svakom mount-u aplikacije (App.tsx),
+// pa ovo garantuje da svaki ulogovani korisnik uvijek ima validan H5P cookie —
+// čak i ako mu je cookie istekao, ako koristi novi browser ili je prijava
+// izvršena prije nego je cookie mehanizam uveden. Bez toga, fetch ka
+// /api/uploads/h5p/* vraća 401 i h5p-standalone player puca pri inicijalizaciji.
 router.get("/me", requireAuth, async (req, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
     if (!user) {
       res.status(404).json({ error: "Korisnik nije pronađen" });
       return;
+    }
+    // Re-issue H5P session cookie iz trenutnog Bearer tokena.
+    const bearer = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : null;
+    if (bearer) {
+      setH5pSessionCookie(res, bearer);
     }
     res.json({
       id: user.id,
