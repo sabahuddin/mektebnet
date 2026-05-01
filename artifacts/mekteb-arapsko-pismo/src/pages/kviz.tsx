@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
+import { aferimForm } from "@/lib/aferim";
 
 interface Pitanje {
   type?: "radio" | "checkbox" | "truefalse" | "reorder" | "markWords" | "dragDrop";
@@ -571,7 +572,7 @@ export default function KvizPage() {
               streakIncreased: resp?.streakIncreased ?? false,
             });
           } else if (earned > 0) {
-            toast({ title: `+${earned} hasanata! ⭐`, description: `Odlično si riješio/la kviz "${kviz.naslov}"` });
+            toast({ title: `+${earned} ${aferimForm(earned)}! ⭐`, description: `Odlično si riješio/la kviz "${kviz.naslov}"` });
           }
           const newBadges = resp?.newBadges || [];
           if (newBadges.length > 0) {
@@ -616,7 +617,7 @@ export default function KvizPage() {
             {pct >= 80 && (
               <div className="flex items-center gap-2 justify-center bg-yellow-50 text-yellow-700 rounded-2xl p-4 mb-6 border border-yellow-200">
                 <Star className="w-5 h-5 fill-yellow-500" />
-                <span className="font-bold">Odlično! Zaradio/la si hasanate</span>
+                <span className="font-bold">Odlično! Zaradio/la si Aferime</span>
               </div>
             )}
             <div className="flex gap-3 justify-center">

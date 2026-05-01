@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { aferimForm } from "@/lib/aferim";
 import {
   getSoundEffectsEnabled,
   setSoundEffectsEnabled,
@@ -310,14 +311,14 @@ export default function UcenikProfilPage() {
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-5 h-5 fill-current" />
-                        <span className="text-sm font-extrabold uppercase tracking-wider">Hasanati</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider">Aferimi</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={totalHasanat} />
                       </div>
                       <div className="text-sm font-bold mt-1 opacity-80">ukupno sakupljeno</div>
                       <div className="text-xs mt-2 opacity-75">
-                        Za svaku završenu lekciju zaradiš nove hasanate ⭐
+                        Za svaku završenu lekciju zaradiš nove Aferime ⭐
                       </div>
                     </div>
                   </motion.div>
@@ -478,7 +479,7 @@ export default function UcenikProfilPage() {
                     <div className="flex-1 min-w-0">
                       <div className="font-extrabold text-foreground">Nastavi učenje</div>
                       <div className="text-xs text-muted-foreground mb-2">
-                        Završi sljedeću lekciju i zaradi +20 hasanata.
+                        Završi sljedeću lekciju i zaradi +20 Aferima.
                       </div>
                       <Button size="sm" className="rounded-xl" onClick={() => setLocation("/ilmihal")}>
                         <BookOpen className="w-4 h-4 mr-1" /> Otvori ilmihal
@@ -522,7 +523,7 @@ export default function UcenikProfilPage() {
                       <div className="bg-white border border-amber-200 rounded-2xl p-4 text-center">
                         <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
                         <div className="text-3xl font-extrabold text-amber-600">{profil.napredak.totalHasanat}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">hasanata</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{aferimForm(profil.napredak.totalHasanat)}</div>
                       </div>
                       <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-center">
                         <BookOpen className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
@@ -927,7 +928,7 @@ export default function UcenikProfilPage() {
                             <p className="font-bold text-foreground truncate">{r.kvizNaslov}</p>
                             <p className="text-sm text-muted-foreground">
                               {r.tacniOdgovori}/{r.ukupnoPitanja} tačnih
-                              {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} hasanata</span>}
+                              {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} {aferimForm(r.bodovi)}</span>}
                             </p>
                           </div>
                           <div className="text-sm text-muted-foreground shrink-0">

@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Maskota } from "@/components/maskota";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
+import { aferimForm } from "@/lib/aferim";
 import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
 const H5PPlayerLazy = lazy(() => import("@/components/h5p-player").then(m => ({ default: m.H5PPlayer })));
@@ -1290,7 +1291,7 @@ function PriloziSection({
         });
       } else {
         const reason = res.attemptNo >= 3
-          ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose hasanate.`
+          ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose Aferime.`
           : `Pokušaj ${res.attemptNo}: ${res.procenat}%`;
         toast({ title: "Vježba završena", description: reason });
       }
@@ -1556,8 +1557,8 @@ function PriloziSection({
                               <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
                               <p className="text-sm font-semibold text-purple-700">
                                 {maxNext > 0
-                                  ? <>Vježba — možeš osvojiti do <span className="text-purple-900">{maxNext} hasenata</span> ({att?.nextAttemptNo ?? 1}. pokušaj)</>
-                                  : <>Vježba — daljnji pokušaji ne donose hasanate (već {Math.max(0, (att?.nextAttemptNo ?? 1) - 1)} pokušaja)</>
+                                  ? <>Vježba — možeš osvojiti do <span className="text-purple-900">{maxNext} {aferimForm(maxNext)}</span> ({att?.nextAttemptNo ?? 1}. pokušaj)</>
+                                  : <>Vježba — daljnji pokušaji ne donose Aferime (već {Math.max(0, (att?.nextAttemptNo ?? 1) - 1)} pokušaja)</>
                                 }
                               </p>
                             </div>
@@ -1573,7 +1574,7 @@ function PriloziSection({
                               />
                             </Suspense>
                             <p className="px-3 py-2 text-xs text-purple-500 bg-purple-50/60">
-                              Maks. 50 hasanata. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
+                              Maks. 50 Aferima. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
                             </p>
                           </div>
                         )}

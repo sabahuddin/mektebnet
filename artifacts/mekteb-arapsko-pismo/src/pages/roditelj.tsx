@@ -338,9 +338,9 @@ function DijeteCard({
                 <span
                   className="text-[10px] text-purple-700/70 font-bold"
                   data-testid={`game-hasanat-${dijete.id}`}
-                  title="Ukupno hasanata — svakih 100 otključa 10 min vremena za igre"
+                  title="Ukupno Aferima — svakih 100 otključa 10 min vremena za igre"
                 >
-                  Hasanati: <span className="text-purple-800 font-extrabold">{gameStats.totalHasanat}</span>
+                  Aferimi: <span className="text-purple-800 font-extrabold">{gameStats.totalHasanat}</span>
                 </span>
               </div>
             </div>

@@ -14,7 +14,7 @@ Mekteb.net is an independent, self-hosted Islamic educational platform designed 
 - **Parent Panel:** Overview of children's attendance and grades.
 - **Student Profile:** Access to grades, attendance, calendar, and quiz results.
 - **Messaging System:** Internal communication between muallims, parents, students, and administrators with role-based access.
-- **Gamification:** H5P exercises, daily quiz limits, and a game system with "Hasanat" credits for game time, leaderboards, and anti-cheat mechanisms.
+- **Gamification:** H5P exercises, daily quiz limits, and a game system with "Aferim" credits (BS UI; "Hasanat" in DE/EN/TR/AR) for game time, leaderboards, and anti-cheat mechanisms. Internal field/DB names retain `hasanat*` (e.g., `totalHasanat`, `hasanatGained`, `hasanatPerBlock`); only BS-language UI strings use Aferim with proper case forms (1 → "Aferim", 2+ → "Aferima") via `src/lib/aferim.ts` helper.
 - **Comprehensive Reporting:** Detailed attendance and grade reports, with Excel export functionality.
 - **Glossary:** Over 314 Islamic terms with interactive tooltips.
 

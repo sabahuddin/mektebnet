@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { Maskota } from "@/components/maskota";
 import { playRewardSound } from "@/lib/sound-prefs";
+import { aferimForm } from "@/lib/aferim";
 
 export interface CelebrationData {
   isRepeat: boolean;
@@ -131,7 +132,7 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/70 border border-amber-200 px-4 py-1.5">
               <Trophy className="w-4 h-4 text-amber-500" />
               <span className="text-sm font-bold text-foreground">
-                Ukupno {data.totalHasanat} hasanata
+                Ukupno {data.totalHasanat} {aferimForm(data.totalHasanat)}
               </span>
             </div>
           </>
@@ -152,7 +153,7 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
               <span className="text-3xl font-extrabold text-foreground tabular-nums">
                 {animatedHasanat}
               </span>
-              <span className="text-sm font-bold text-muted-foreground">hasanata</span>
+              <span className="text-sm font-bold text-muted-foreground">{aferimForm(animatedHasanat)}</span>
             </motion.div>
 
             <motion.div

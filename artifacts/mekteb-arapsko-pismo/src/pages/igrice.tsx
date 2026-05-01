@@ -49,7 +49,7 @@ export default function IgricePage() {
         </div>
         <div>
           <h1 className="text-3xl font-black text-foreground">Igrice</h1>
-          <p className="text-muted-foreground font-medium">Zarađuj hasanate kroz lekcije i kvizove — zatim se zabavi!</p>
+          <p className="text-muted-foreground font-medium">Zarađuj Aferime kroz lekcije i kvizove — zatim se zabavi!</p>
         </div>
       </div>
 
@@ -74,13 +74,13 @@ export default function IgricePage() {
             <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
             <div>
               <p className="text-xs font-bold text-amber-800/70 uppercase flex items-center gap-1">
-                Hasanati
+                Aferimi
                 <TooltipProvider delayDuration={150}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        aria-label="Kako hasanati otključavaju vrijeme"
+                        aria-label="Kako Aferimi otključavaju vrijeme"
                         className="text-amber-600 hover:text-amber-700 cursor-help"
                         data-testid="tooltip-hasanat-rule"
                       >
@@ -88,9 +88,9 @@ export default function IgricePage() {
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
-                      Svakih <strong>{credits?.hasanatPerBlock || 100} hasanata</strong> otključava{" "}
+                      Svakih <strong>{credits?.hasanatPerBlock || 100} Aferima</strong> otključava{" "}
                       <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre.
-                      Hasanati se NE troše — ostaju ti zauvijek, samo otključavaju vrijeme.
+                      Aferimi se NE troše — ostaju ti zauvijek, samo otključavaju vrijeme.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -112,7 +112,7 @@ export default function IgricePage() {
             <div>
               <p className="font-bold text-foreground mb-1">Nema više vremena za igre</p>
               <p className="text-sm text-muted-foreground">
-                Svakih <strong>{credits?.hasanatPerBlock || 100} hasanata</strong> otključava{" "}
+                Svakih <strong>{credits?.hasanatPerBlock || 100} Aferima</strong> otključava{" "}
                 <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre. Završi
                 lekciju ili pokušaj kviz da zaradiš još.
               </p>
