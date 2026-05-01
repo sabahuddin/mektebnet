@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { aferimForm } from "@/lib/aferim";
 import {
   getSoundEffectsEnabled,
@@ -56,6 +57,26 @@ function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: n
   return <span ref={ref}>0</span>;
 }
 
+interface BedzInfo {
+  id: string;
+  naziv: string;
+  opis: string;
+  ikona: string;
+  bojaGradient: string;
+  uslov: string;
+  earned: boolean;
+  earnedAt: string | null;
+}
+
+function formatEarnedDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}.${month}.${d.getFullYear()}`;
+}
+
 interface ProfilData {
   user: { id: number; displayName: string; username: string; createdAt: string };
   profil: { grupaId: number; muallimId: number } | null;
@@ -70,7 +91,7 @@ interface ProfilData {
     completedCount: number;
     lastActivityDate: string | null;
     poNivou: Record<number, { ukupno: number; gotov: number }>;
-    bedzevi?: { id: string; naziv: string; opis: string; ikona: string; bojaGradient: string; uslov: string; earned: boolean; earnedAt: string | null }[];
+    bedzevi?: BedzInfo[];
   };
 }
 
@@ -123,6 +144,8 @@ export default function UcenikProfilPage() {
   const reducedMotion = prefersReducedMotion();
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // Selected badge for tap-to-view detail dialog (mobile-friendly fallback for hover tooltip).
+  const [selectedBadge, setSelectedBadge] = useState<BedzInfo | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -450,12 +473,20 @@ export default function UcenikProfilPage() {
                       </div>
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                         {profil.napredak!.bedzevi!.map(b => (
-                          <div key={b.id} className="group relative" title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}>
-                            <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => setSelectedBadge(b)}
+                            aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
+                            title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}
+                            className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
+                            data-testid={`badge-moj-put-${b.id}`}
+                          >
+                            <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-pointer` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300 cursor-pointer"}`}>
                               <span className={`text-2xl ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
                             </div>
                             <div className={`text-[10px] text-center font-bold mt-1 truncate ${b.earned ? "text-foreground/70" : "text-muted-foreground"}`}>{b.naziv}</div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-3 italic">
@@ -561,12 +592,20 @@ export default function UcenikProfilPage() {
                           </div>
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                             {profil.napredak!.bedzevi!.map(b => (
-                              <div key={b.id} className="group relative" title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}>
-                                <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
+                              <button
+                                key={b.id}
+                                type="button"
+                                onClick={() => setSelectedBadge(b)}
+                                aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
+                                title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}
+                                className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
+                                data-testid={`badge-pregled-${b.id}`}
+                              >
+                                <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-pointer` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300 cursor-pointer"}`}>
                                   <span className={`text-2xl ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
                                 </div>
                                 <div className={`text-[10px] text-center font-bold mt-1 truncate ${b.earned ? "text-foreground/70" : "text-muted-foreground"}`}>{b.naziv}</div>
-                              </div>
+                              </button>
                             ))}
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-3 italic">
@@ -943,6 +982,45 @@ export default function UcenikProfilPage() {
             )}
           </>
         )}
+
+        <Dialog open={selectedBadge !== null} onOpenChange={(open) => { if (!open) setSelectedBadge(null); }}>
+          <DialogContent className="max-w-sm" data-testid="badge-detail-dialog">
+            {selectedBadge && (
+              <>
+                <DialogHeader>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ${selectedBadge.earned ? `bg-gradient-to-br ${selectedBadge.bojaGradient}` : "bg-gray-200 grayscale opacity-60 border border-dashed border-gray-300"}`}>
+                      <span className={`text-4xl ${selectedBadge.earned ? "filter drop-shadow-sm" : ""}`}>{selectedBadge.ikona}</span>
+                    </div>
+                    <DialogTitle className="text-center text-lg font-extrabold" data-testid="badge-detail-title">
+                      {selectedBadge.naziv}
+                    </DialogTitle>
+                  </div>
+                  <DialogDescription className="text-center text-sm pt-1" data-testid="badge-detail-desc">
+                    {selectedBadge.opis}
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedBadge.earned ? (
+                  <div
+                    className="text-center text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl py-2 px-3"
+                    data-testid="badge-detail-earned-at"
+                  >
+                    Osvojeno{formatEarnedDate(selectedBadge.earnedAt)
+                      ? `: ${formatEarnedDate(selectedBadge.earnedAt)}`
+                      : " (datum nedostupan)"}
+                  </div>
+                ) : (
+                  <div
+                    className="text-center text-sm bg-amber-50 text-amber-800 border border-amber-100 rounded-xl py-2 px-3"
+                    data-testid="badge-detail-uslov"
+                  >
+                    <span className="font-bold">Zaključan — uslov:</span> {selectedBadge.uslov}
+                  </div>
+                )}
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
