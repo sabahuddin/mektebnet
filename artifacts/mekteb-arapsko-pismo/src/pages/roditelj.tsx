@@ -8,6 +8,7 @@ import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, Che
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MaskotaPrazanState } from "@/components/maskota";
 
@@ -113,6 +114,8 @@ function DijeteCard({
   const [summary, setSummary] = useState<DashboardSummary | null>(initialSummary ?? null);
   const [summaryLoading, setSummaryLoading] = useState(initialLoading ?? (initialSummary === undefined));
   const [gameStats, setGameStats] = useState<GameStatsResp | null>(initialGameStats ?? null);
+  // Selected badge for tap-to-view detail dialog (mobile-friendly fallback for hover tooltip).
+  const [selectedBadge, setSelectedBadge] = useState<BedzInfo | null>(null);
 
   useEffect(() => {
     // Sync iz parent kombiniranog endpointa kad stignu podaci.
@@ -244,10 +247,11 @@ function DijeteCard({
                         <button
                           type="button"
                           aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
+                          onClick={() => setSelectedBadge(b)}
                           className="group relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
                           data-testid={`badge-${dijete.id}-${b.id}`}
                         >
-                          <div className={`aspect-square rounded-lg flex items-center justify-center shadow-sm transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-110 cursor-help` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300"}`}>
+                          <div className={`aspect-square rounded-lg flex items-center justify-center shadow-sm transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-110 cursor-pointer` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300 cursor-pointer"}`}>
                             <span className={`text-base ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
                           </div>
                         </button>
@@ -269,6 +273,44 @@ function DijeteCard({
                 })}
               </div>
             </TooltipProvider>
+            <Dialog open={selectedBadge !== null} onOpenChange={(open) => { if (!open) setSelectedBadge(null); }}>
+              <DialogContent className="max-w-sm" data-testid={`badge-detail-dialog-${dijete.id}`}>
+                {selectedBadge && (
+                  <>
+                    <DialogHeader>
+                      <div className="flex flex-col items-center gap-3">
+                        <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ${selectedBadge.earned ? `bg-gradient-to-br ${selectedBadge.bojaGradient}` : "bg-gray-200 grayscale opacity-60 border border-dashed border-gray-300"}`}>
+                          <span className={`text-4xl ${selectedBadge.earned ? "filter drop-shadow-sm" : ""}`}>{selectedBadge.ikona}</span>
+                        </div>
+                        <DialogTitle className="text-center text-lg font-extrabold" data-testid={`badge-detail-title-${dijete.id}`}>
+                          {selectedBadge.naziv}
+                        </DialogTitle>
+                      </div>
+                      <DialogDescription className="text-center text-sm pt-1" data-testid={`badge-detail-desc-${dijete.id}`}>
+                        {selectedBadge.opis}
+                      </DialogDescription>
+                    </DialogHeader>
+                    {selectedBadge.earned ? (
+                      <div
+                        className="text-center text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl py-2 px-3"
+                        data-testid={`badge-detail-earned-at-${dijete.id}`}
+                      >
+                        Osvojeno{formatEarnedDate(selectedBadge.earnedAt)
+                          ? `: ${formatEarnedDate(selectedBadge.earnedAt)}`
+                          : " (datum nedostupan)"}
+                      </div>
+                    ) : (
+                      <div
+                        className="text-center text-sm bg-amber-50 text-amber-800 border border-amber-100 rounded-xl py-2 px-3"
+                        data-testid={`badge-detail-uslov-${dijete.id}`}
+                      >
+                        <span className="font-bold">Zaključan — uslov:</span> {selectedBadge.uslov}
+                      </div>
+                    )}
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         ) : null}
 
