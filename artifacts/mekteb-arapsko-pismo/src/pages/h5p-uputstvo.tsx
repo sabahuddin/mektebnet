@@ -4,6 +4,12 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
 import {
+  Step1Illustration,
+  Step2Illustration,
+  Step3Illustration,
+  Step4Illustration,
+} from "@/components/h5p/StepIllustrations";
+import {
   ArrowLeft,
   Sparkles,
   Download,
@@ -111,15 +117,32 @@ const H5P_TIPOVI = [
   },
 ];
 
-// Lumi je open-source na GitHubu; oficijelni download su release assets uz svaki tag.
-// "releases/latest" uvijek vodi na najnoviji release sa Win/Mac/Linux installer-ima.
-const LUMI_RELEASES_URL = "https://github.com/Lumieducation/Lumi/releases/latest";
+// Lumi download: oficijelna stranica je lumi.education (open-source projekat).
+const LUMI_HOMEPAGE = "https://lumi.education/";
 
 const LUMI_DOWNLOADS = [
-  { Icon: Monitor, label: "Windows", href: LUMI_RELEASES_URL, note: ".exe" },
-  { Icon: Apple, label: "macOS", href: LUMI_RELEASES_URL, note: ".dmg" },
-  { Icon: Cog, label: "Linux", href: LUMI_RELEASES_URL, note: ".AppImage" },
+  { Icon: Monitor, label: "Windows", href: LUMI_HOMEPAGE, note: ".exe" },
+  { Icon: Apple, label: "macOS", href: LUMI_HOMEPAGE, note: ".dmg" },
+  { Icon: Cog, label: "Linux", href: LUMI_HOMEPAGE, note: ".AppImage" },
 ];
+
+// Inline SVG ilustracije (komponente uvezene gore): izbjegavaju HTTP/cache
+// probleme koje smo vidjeli sa spoljnim .svg fajlovima u Playwright e2e testovima.
+const STEP_ILLUSTRATIONS = [
+  Step1Illustration,
+  Step2Illustration,
+  Step3Illustration,
+  Step4Illustration,
+];
+
+function StepIllustration({ step }: { step: 1 | 2 | 3 | 4 }) {
+  const Illustration = STEP_ILLUSTRATIONS[step - 1];
+  return (
+    <div data-testid={`h5p-step-illustration-${step}`}>
+      <Illustration />
+    </div>
+  );
+}
 
 function StepCard({
   broj,
@@ -181,7 +204,7 @@ function TemplateCard({
         {status === "available" ? (
           <a
             href={`${TEMPLATES_BASE}/${template.fileName}`}
-            download
+            download={template.fileName}
             className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -328,9 +351,7 @@ export default function H5pUputstvoPage() {
             ))}
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            Klikom na bilo koje dugme otvara se zvanična GitHub Releases stranica —
-            preuzmi installer za svoj operativni sistem (Lumi-Setup-*.exe za Windows,
-            Lumi-*.dmg za macOS, Lumi-*.AppImage za Linux). Više informacija na{" "}
+            Klikom na bilo koje dugme otvara se zvanična{" "}
             <a
               href="https://lumi.education/"
               target="_blank"
@@ -338,8 +359,12 @@ export default function H5pUputstvoPage() {
               className="text-blue-600 underline hover:no-underline inline-flex items-center gap-1"
             >
               lumi.education <ExternalLink className="w-3 h-3" />
-            </a>
+            </a>{" "}
+            stranica — preuzmi installer za svoj operativni sistem
+            (Lumi-Setup-*.exe za Windows, Lumi-*.dmg za macOS, Lumi-*.AppImage
+            za Linux).
           </p>
+          <StepIllustration step={1} />
         </StepCard>
 
         {/* Korak 2 */}
@@ -352,6 +377,7 @@ export default function H5pUputstvoPage() {
           <p className="text-xs text-slate-500 mt-2">
             Savjet: ako ne znaš koji tip izabrati, pogledaj tabelu <em>Preporučeni tipovi</em> niže.
           </p>
+          <StepIllustration step={2} />
         </StepCard>
 
         {/* Korak 3 */}
@@ -370,6 +396,7 @@ export default function H5pUputstvoPage() {
             Pišeš na bosanskom — samo ostavi UI label-e Lumi-ja na engleskom (učenik
             ih neće vidjeti, vidjet će samo tvoj sadržaj).
           </p>
+          <StepIllustration step={3} />
         </StepCard>
 
         {/* Korak 4 */}
@@ -389,6 +416,7 @@ export default function H5pUputstvoPage() {
             <strong>Maksimalna veličina:</strong> 50MB po vježbi. Ako koristiš slike,
             kompresuj ih (npr. <a href="https://squoosh.app" target="_blank" rel="noopener noreferrer" className="underline">squoosh.app</a>) prije nego ih ubaciš u Lumi.
           </div>
+          <StepIllustration step={4} />
         </StepCard>
 
         {/* Tabela tipova */}
