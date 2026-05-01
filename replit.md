@@ -53,6 +53,7 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - **Messaging System:** Role-based access control for message visibility and sending capabilities.
 - **Internationalization (i18n):** Supports multiple languages (BS, DE, EN, TR, AR) with automatic RTL detection for Arabic, geolocation-based language detection, and persistent language selection.
 - **Admin Panel:** Provides comprehensive tools for managing muallims, users, analytics, quiz results, and student assignments.
+- **H5P Tutorial:** `/muallim/h5p-uputstvo` — guides muallims through creating their first H5P exercise using the free Lumi Education desktop app, with download links and starter templates served from `public/h5p-templates/`.
 - **Security:** Captcha for login/registration, email notifications for new registrations, and planned SMTP integration.
 
 ## External Dependencies

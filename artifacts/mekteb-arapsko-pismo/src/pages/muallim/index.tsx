@@ -8,7 +8,7 @@ import {
   Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
-  Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer
+  Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -504,6 +504,12 @@ export default function MuallimPanel() {
             <h1 className="text-2xl font-extrabold text-foreground">Muallim panel</h1>
             <p className="text-muted-foreground text-sm">Dobrodošao/la, {user.displayName}</p>
           </div>
+          <Link href="/muallim/h5p-uputstvo">
+            <button className="hidden sm:flex items-center gap-1.5 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors"
+              title="Vodič: kako napraviti H5P interaktivnu vježbu">
+              <Sparkles className="w-4 h-4" /> H5P uputstvo
+            </button>
+          </Link>
           <button onClick={() => { setEditDisplayName(user.displayName || ""); setShowProfileEdit(true); }}
             className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors">
             <Settings className="w-4 h-4" /> Profil
