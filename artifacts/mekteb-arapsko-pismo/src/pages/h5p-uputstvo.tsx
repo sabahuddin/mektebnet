@@ -61,16 +61,16 @@ const H5P_TEMPLATES: H5pTemplate[] = [
   },
   {
     fileName: "dijelovi-dzamije-hotspots.h5p",
-    naslov: "Dijelovi džamije",
+    naslov: "Dijelovi džamije (starter)",
     tip: "Multiple Choice",
-    opis: "Pitanja o dijelovima džamije (mihrab, minber, munara, mahfil). Muallim može u Lumi-ju dodati i Image Hotspot ako želi sliku.",
+    opis: "Starter pitanja o dijelovima džamije (mihrab, minber, munara, mahfil). Naziv fajla pominje 'hotspot' jer muallim može u Lumi-ju lako konvertovati u Image Hotspots dodavanjem slike džamije.",
     primjer: "Šta je mihrab? a) Niša okrenuta Kibli  b) Munara  c) Minber  d) Mahfil",
   },
   {
     fileName: "harf-izgovor-memory.h5p",
-    naslov: "Harf i izgovor — povuci par",
+    naslov: "Harf i izgovor — povuci par (starter)",
     tip: "Drag the Words",
-    opis: "Učenik povlači izgovor na pravo mjesto pored arapskog harfa (džim, ha, ha tačka, dal…). Muallim može dodati još parova.",
+    opis: "Starter vježba — učenik povlači izgovor na pravo mjesto pored arapskog harfa (džim, ha, ha tačka, dal…). Muallim u Lumi-ju može konvertovati u Memory Game dodavanjem slika harfova kao kartica.",
     primjer: "ج → džim,  ح → ha,  خ → ha (sa tačkom),  د → dal",
   },
 ];
