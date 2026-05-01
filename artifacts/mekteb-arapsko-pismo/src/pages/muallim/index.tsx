@@ -504,6 +504,12 @@ export default function MuallimPanel() {
             <h1 className="text-2xl font-extrabold text-foreground">Muallim panel</h1>
             <p className="text-muted-foreground text-sm">Dobrodošao/la, {user.displayName}</p>
           </div>
+          <Link href="/muallim/h5p-statistika">
+            <button className="hidden sm:flex items-center gap-1.5 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors"
+              title="Statistika H5P vježbi učenika">
+              <BarChart3 className="w-4 h-4" /> H5P statistika
+            </button>
+          </Link>
           <Link href="/muallim/h5p-uputstvo">
             <button className="hidden sm:flex items-center gap-1.5 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors"
               title="Vodič: kako napraviti H5P interaktivnu vježbu">

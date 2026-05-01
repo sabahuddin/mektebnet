@@ -55,6 +55,7 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - **Internationalization (i18n):** Supports multiple languages (BS, DE, EN, TR, AR) with automatic RTL detection for Arabic, geolocation-based language detection, and persistent language selection.
 - **Admin Panel:** Provides comprehensive tools for managing muallims, users, analytics, quiz results, and student assignments.
 - **H5P Tutorial:** `/muallim/h5p-uputstvo` — guides muallims through creating their first H5P exercise using the free Lumi Education desktop app, with download links and starter templates served from `public/h5p-templates/`.
+- **H5P Statistika (muallim):** `/muallim/h5p-statistika` — per-grupa aggregation of H5P attempts per prilog showing student count, total attempts, average %, and weakest student. Weakest-student link drills into the student profile with a query param (`?h5pPrilogId=X`) that auto-filters the new H5P attempts list on `/muallim/ucenik/:id` to that exercise. Backed by `GET /api/muallim/h5p-stats?grupaId=X` and `GET /api/muallim/ucenik/:id/h5p-pokusaji?priloziId=optional`.
 - **Security:** Captcha for login/registration, email notifications for new registrations, and planned SMTP integration.
 
 ## External Dependencies

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +53,26 @@ interface KvizRezultat {
   completedAt: string;
 }
 
+interface H5PPokusaj {
+  id: number;
+  priloziId: number;
+  attemptNo: number;
+  score: number;
+  maxScore: number;
+  procenat: number;
+  hasanatGained: number;
+  completedAt: string;
+}
+
+interface H5PPrilogInfo {
+  id: number;
+  originalName: string;
+  lekcijaId: number;
+  lekcijaNaslov: string | null;
+  lekcijaSlug: string | null;
+  lekcijaNivo: number | null;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   prisutan: "bg-emerald-100 text-emerald-700",
   odsutan: "bg-red-100 text-red-700",
@@ -72,6 +92,15 @@ export default function UcenikPage() {
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
+  const [h5pPokusaji, setH5pPokusaji] = useState<H5PPokusaj[]>([]);
+  const [h5pPrilozi, setH5pPrilozi] = useState<H5PPrilogInfo[]>([]);
+  const [h5pFilterPrilogId, setH5pFilterPrilogId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const sp = new URLSearchParams(window.location.search);
+    const v = sp.get("h5pPrilogId");
+    return v ? parseInt(v) : null;
+  });
+  const h5pSectionRef = useRef<HTMLDivElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showOcjenaForm, setShowOcjenaForm] = useState(false);
   const [newOcjena, setNewOcjena] = useState({ kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "", datum: new Date().toISOString().split("T")[0] });
@@ -94,7 +123,8 @@ export default function UcenikPage() {
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
       apiRequest<{ rezultati: KvizRezultat[] }>("GET", `/muallim/ucenik-rezultati/${ucenikId}`, undefined, token).catch(() => ({ rezultati: [] })),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije]) => {
+      apiRequest<{ pokusaji: H5PPokusaj[]; prilozi: H5PPrilogInfo[] }>("GET", `/muallim/ucenik/${ucenikId}/h5p-pokusaji`, undefined, token).catch(() => ({ pokusaji: [], prilozi: [] })),
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData]) => {
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
       setUcenik(found || null);
       setOcjene(oc);
@@ -102,6 +132,8 @@ export default function UcenikPage() {
       setGrupe(g);
       setKvizRezultati((kvizData as any).rezultati || []);
       setIlmihalLekcije(lekcije as IlmihalLekcija[]);
+      setH5pPokusaji((h5pData as any).pokusaji || []);
+      setH5pPrilozi((h5pData as any).prilozi || []);
       const gId = found?.profil?.grupaId || found?.grupaId;
       if (gId) {
         apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
@@ -174,6 +206,21 @@ export default function UcenikPage() {
   const prosjecnaOcjena = ocjene.length ? (ocjene.reduce((s, o) => s + o.ocjena, 0) / ocjene.length).toFixed(2) : null;
   const ukupnoBodova = kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
   const kvizProsjek = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : null;
+
+  const h5pPriloziMap = new Map<number, H5PPrilogInfo>(h5pPrilozi.map(p => [p.id, p]));
+  const filteredH5pPokusaji = h5pFilterPrilogId
+    ? h5pPokusaji.filter(p => p.priloziId === h5pFilterPrilogId)
+    : h5pPokusaji;
+  const h5pProsjek = filteredH5pPokusaji.length
+    ? Math.round(filteredH5pPokusaji.reduce((s, p) => s + p.procenat, 0) / filteredH5pPokusaji.length)
+    : null;
+  const h5pHasanat = filteredH5pPokusaji.reduce((s, p) => s + (p.hasanatGained || 0), 0);
+
+  useEffect(() => {
+    if (h5pFilterPrilogId && !isLoading && h5pSectionRef.current) {
+      h5pSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [h5pFilterPrilogId, isLoading]);
 
   const mjesecniPrisustvo = (() => {
     const map: Record<string, { prisutan: number; total: number }> = {};
@@ -348,6 +395,123 @@ export default function UcenikPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* H5P pokušaji — drilldown sa /muallim/h5p-statistika */}
+            <div
+              ref={h5pSectionRef}
+              className={`bg-white border rounded-2xl p-5 mb-6 ${h5pFilterPrilogId ? "border-primary/40 ring-2 ring-primary/15" : "border-border/50"}`}
+              data-testid="section-h5p-pokusaji"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h2 className="font-extrabold text-foreground flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" /> H5P vježbe
+                  {h5pPokusaji.length > 0 && (
+                    <span className="text-xs font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full" data-testid="badge-h5p-broj-pokusaja">
+                      {filteredH5pPokusaji.length}{h5pFilterPrilogId ? `/${h5pPokusaji.length}` : ""} pokušaja
+                    </span>
+                  )}
+                </h2>
+                {h5pProsjek !== null && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className={`font-extrabold px-2.5 py-0.5 rounded-full ${h5pProsjek >= 80 ? "bg-emerald-100 text-emerald-700" : h5pProsjek >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`} data-testid="stat-h5p-prosjek">
+                      Ø {h5pProsjek}%
+                    </span>
+                    {h5pHasanat > 0 && (
+                      <span className="flex items-center gap-1 text-amber-600 font-bold">
+                        <Award className="w-3.5 h-3.5" /> {h5pHasanat}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {h5pPokusaji.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Učenik još nije radio nijednu H5P vježbu</p>
+              ) : (
+                <>
+                  {(h5pPrilozi.length > 1 || h5pFilterPrilogId !== null) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3" data-testid="filter-h5p-prilozi">
+                      <Filter className="w-3.5 h-3.5 text-muted-foreground mr-1" />
+                      <button
+                        onClick={() => {
+                          setH5pFilterPrilogId(null);
+                          if (typeof window !== "undefined") {
+                            const url = new URL(window.location.href);
+                            url.searchParams.delete("h5pPrilogId");
+                            window.history.replaceState({}, "", url.toString());
+                          }
+                        }}
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${h5pFilterPrilogId === null ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
+                        data-testid="btn-h5p-filter-sve"
+                      >
+                        Sve
+                      </button>
+                      {h5pPrilozi.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            setH5pFilterPrilogId(p.id);
+                            if (typeof window !== "undefined") {
+                              const url = new URL(window.location.href);
+                              url.searchParams.set("h5pPrilogId", String(p.id));
+                              window.history.replaceState({}, "", url.toString());
+                            }
+                          }}
+                          className={`text-xs font-bold px-2.5 py-1 rounded-full border transition-colors max-w-[200px] truncate ${h5pFilterPrilogId === p.id ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
+                          title={p.originalName}
+                          data-testid={`btn-h5p-filter-prilog-${p.id}`}
+                        >
+                          {p.originalName.replace(/\.h5p$/i, "")}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="space-y-2 max-h-96 overflow-y-auto" data-testid="list-h5p-pokusaji">
+                    {filteredH5pPokusaji.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">Nema pokušaja za odabranu vježbu</p>
+                    ) : filteredH5pPokusaji.map(p => {
+                      const info = h5pPriloziMap.get(p.priloziId);
+                      return (
+                        <div key={p.id} className="bg-muted/20 rounded-xl p-3" data-testid={`row-h5p-pokusaj-${p.id}`}>
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-sm text-foreground truncate" title={info?.originalName}>
+                                {info ? info.originalName.replace(/\.h5p$/i, "") : `Vježba #${p.priloziId}`}
+                              </div>
+                              {info?.lekcijaNaslov && (
+                                <div className="text-xs text-muted-foreground truncate">
+                                  Lekcija: {info.lekcijaNaslov}
+                                  {info.lekcijaNivo != null && <span className="ml-1.5 inline-block bg-primary/10 text-primary px-1.5 rounded text-[10px] font-bold align-middle">Nivo {info.lekcijaNivo}</span>}
+                                </div>
+                              )}
+                            </div>
+                            <span className={`text-xs font-extrabold px-2 py-0.5 rounded-full shrink-0 ${p.procenat >= 80 ? "bg-emerald-100 text-emerald-700" : p.procenat >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                              {p.procenat}%
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Pokušaj #{p.attemptNo} · {p.score}/{p.maxScore}</span>
+                            <div className="flex items-center gap-2">
+                              {p.hasanatGained > 0 && (
+                                <span className="flex items-center gap-0.5 text-amber-600 font-bold">
+                                  <Award className="w-3 h-3" /> {p.hasanatGained}
+                                </span>
+                              )}
+                              <span>{p.completedAt ? new Date(p.completedAt).toLocaleDateString("bs-BA") : "-"}</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                            <div className={`h-1.5 rounded-full ${p.procenat >= 80 ? "bg-emerald-500" : p.procenat >= 50 ? "bg-amber-500" : "bg-red-400"}`}
+                              style={{ width: `${p.procenat}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

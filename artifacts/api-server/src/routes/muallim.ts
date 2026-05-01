@@ -18,6 +18,8 @@ import {
   zadaceUceniciTable,
   porukeTable,
   mektebiTable,
+  h5pPokusajiTable,
+  prilozi,
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, asc, sql, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -1015,6 +1017,238 @@ router.get("/grupa/:id/statistika", async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error("Statistika error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/h5p-stats?grupaId=X
+// Agregira H5P pokušaje učenika date grupe po (prilog × učenik). Za svaki H5P
+// prilog koji je makar jedan učenik iz grupe pokušao vraća: koliko učenika ga
+// je pokrenulo, ukupan broj pokušaja, prosječan procenat svih pokušaja, te
+// najslabijeg učenika (po prosjeku procenata) sa linkom na njegov profil.
+router.get("/h5p-stats", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.query.grupaId as string);
+    if (!grupaId) { res.status(400).json({ error: "grupaId obavezan" }); return; }
+
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    // Aktivni učenici grupe (preskačemo arhivirane).
+    const profili = await db.select({ userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(and(
+        eq(ucenikProfiliTable.grupaId, grupaId),
+        eq(ucenikProfiliTable.isArchived, false),
+      ));
+    const ucenikIds = profili.map(p => p.userId);
+    const ukupnoUcenika = ucenikIds.length;
+
+    if (ucenikIds.length === 0) {
+      res.json({ ukupnoUcenika: 0, vjezbe: [] });
+      return;
+    }
+
+    // Imena učenika (za prikaz najslabijih).
+    const ucenici = await db.select({
+      id: usersTable.id,
+      displayName: usersTable.displayName,
+    }).from(usersTable).where(inArray(usersTable.id, ucenikIds));
+    const imeMap = new Map<number, string>(ucenici.map(u => [u.id, u.displayName]));
+
+    // Svi H5P pokušaji ovih učenika.
+    const pokusaji = await db.select({
+      id: h5pPokusajiTable.id,
+      userId: h5pPokusajiTable.userId,
+      priloziId: h5pPokusajiTable.priloziId,
+      procenat: h5pPokusajiTable.procenat,
+      attemptNo: h5pPokusajiTable.attemptNo,
+      completedAt: h5pPokusajiTable.completedAt,
+    }).from(h5pPokusajiTable).where(inArray(h5pPokusajiTable.userId, ucenikIds));
+
+    if (pokusaji.length === 0) {
+      res.json({ ukupnoUcenika, vjezbe: [] });
+      return;
+    }
+
+    // Učitaj prilog + lekciju metadata samo za one koje su učenici stvarno radili.
+    const priloziIds = [...new Set(pokusaji.map(p => p.priloziId))];
+    const priloziInfo = await db.select({
+      id: prilozi.id,
+      lekcijaId: prilozi.lekcijaId,
+      originalName: prilozi.originalName,
+      kind: prilozi.kind,
+    }).from(prilozi).where(inArray(prilozi.id, priloziIds));
+    const priloziMap = new Map(priloziInfo.map(p => [p.id, p]));
+
+    const lekcijaIds = [...new Set(priloziInfo.map(p => p.lekcijaId))];
+    const lekcije = lekcijaIds.length > 0
+      ? await db.select({
+          id: ilmihalLekcijeTable.id,
+          naslov: ilmihalLekcijeTable.naslov,
+          slug: ilmihalLekcijeTable.slug,
+          nivo: ilmihalLekcijeTable.nivo,
+        }).from(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.id, lekcijaIds))
+      : [];
+    const lekcijaMap = new Map(lekcije.map(l => [l.id, l]));
+
+    // Agregacija: po prilog → po učenik → svi pokušaji.
+    type UcenikAgg = { userId: number; displayName: string; brojPokusaja: number; prosjekProcenat: number };
+    type PrilogAgg = {
+      priloziId: number;
+      priloziName: string;
+      lekcijaId: number;
+      lekcijaNaslov: string | null;
+      lekcijaSlug: string | null;
+      lekcijaNivo: number | null;
+      brojUcenika: number;
+      ukupnoPokusaja: number;
+      prosjekProcenat: number;
+      najslabijiUcenik: { id: number; displayName: string; prosjekProcenat: number; brojPokusaja: number } | null;
+    };
+
+    const perPrilog = new Map<number, { sumProcenat: number; brojPokusaja: number; perUcenik: Map<number, { sum: number; count: number }> }>();
+    for (const p of pokusaji) {
+      let entry = perPrilog.get(p.priloziId);
+      if (!entry) {
+        entry = { sumProcenat: 0, brojPokusaja: 0, perUcenik: new Map() };
+        perPrilog.set(p.priloziId, entry);
+      }
+      entry.sumProcenat += p.procenat;
+      entry.brojPokusaja += 1;
+      const u = entry.perUcenik.get(p.userId);
+      if (u) { u.sum += p.procenat; u.count += 1; }
+      else { entry.perUcenik.set(p.userId, { sum: p.procenat, count: 1 }); }
+    }
+
+    const vjezbe: PrilogAgg[] = [];
+    for (const [priloziId, agg] of perPrilog.entries()) {
+      const info = priloziMap.get(priloziId);
+      // Preskoči ako prilog više ne postoji ili nije H5P (čišći podaci).
+      if (!info || info.kind !== "h5p") continue;
+      const lek = lekcijaMap.get(info.lekcijaId) || null;
+
+      // Najslabiji učenik = najmanji prosjek %; tie-breaker više pokušaja.
+      let najslabiji: PrilogAgg["najslabijiUcenik"] = null;
+      for (const [userId, u] of agg.perUcenik.entries()) {
+        const avg = Math.round(u.sum / u.count);
+        const ime = imeMap.get(userId) || "Nepoznat";
+        if (
+          !najslabiji ||
+          avg < najslabiji.prosjekProcenat ||
+          (avg === najslabiji.prosjekProcenat && u.count > najslabiji.brojPokusaja)
+        ) {
+          najslabiji = { id: userId, displayName: ime, prosjekProcenat: avg, brojPokusaja: u.count };
+        }
+      }
+
+      vjezbe.push({
+        priloziId,
+        priloziName: info.originalName,
+        lekcijaId: info.lekcijaId,
+        lekcijaNaslov: lek?.naslov || null,
+        lekcijaSlug: lek?.slug || null,
+        lekcijaNivo: lek?.nivo ?? null,
+        brojUcenika: agg.perUcenik.size,
+        ukupnoPokusaja: agg.brojPokusaja,
+        prosjekProcenat: Math.round(agg.sumProcenat / agg.brojPokusaja),
+        najslabijiUcenik: najslabiji,
+      });
+    }
+
+    // Default sort: najpopularnije (najviše učenika) → najviše pokušaja → ime.
+    vjezbe.sort((a, b) => {
+      if (b.brojUcenika !== a.brojUcenika) return b.brojUcenika - a.brojUcenika;
+      if (b.ukupnoPokusaja !== a.ukupnoPokusaja) return b.ukupnoPokusaja - a.ukupnoPokusaja;
+      return a.priloziName.localeCompare(b.priloziName);
+    });
+
+    res.json({ ukupnoUcenika, vjezbe });
+  } catch (err) {
+    console.error("H5P stats error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/ucenik/:id/h5p-pokusaji?priloziId=optional
+// Vraća sve H5P pokušaje datog učenika (najnoviji prvi), opciono filtrirano
+// po jednom prilogu. Koristi se za drilldown sa /muallim/h5p-statistika
+// na profil učenika. Pristup imaju: muallim koji je zadužen za učenika i admin.
+router.get("/ucenik/:id/h5p-pokusaji", async (req, res) => {
+  try {
+    const muallimId = req.user!.userId;
+    const ucenikId = parseInt(req.params.id);
+    if (!ucenikId) { res.status(400).json({ error: "ID učenika nevalidan" }); return; }
+
+    const priloziIdParam = req.query.priloziId ? parseInt(req.query.priloziId as string) : null;
+
+    if (req.user!.role !== "admin") {
+      const profili = await db.select().from(ucenikProfiliTable)
+        .where(and(
+          eq(ucenikProfiliTable.userId, ucenikId),
+          eq(ucenikProfiliTable.muallimId, muallimId),
+        ));
+      if (profili.length === 0) {
+        res.status(403).json({ error: "Učenik nije vaš" });
+        return;
+      }
+    }
+
+    const baseConds = [eq(h5pPokusajiTable.userId, ucenikId)];
+    if (priloziIdParam) baseConds.push(eq(h5pPokusajiTable.priloziId, priloziIdParam));
+
+    const pokusaji = await db.select({
+      id: h5pPokusajiTable.id,
+      priloziId: h5pPokusajiTable.priloziId,
+      attemptNo: h5pPokusajiTable.attemptNo,
+      score: h5pPokusajiTable.score,
+      maxScore: h5pPokusajiTable.maxScore,
+      procenat: h5pPokusajiTable.procenat,
+      hasanatGained: h5pPokusajiTable.hasanatGained,
+      completedAt: h5pPokusajiTable.completedAt,
+    }).from(h5pPokusajiTable)
+      .where(and(...baseConds))
+      .orderBy(desc(h5pPokusajiTable.completedAt));
+
+    if (pokusaji.length === 0) {
+      res.json({ pokusaji: [], prilozi: [] });
+      return;
+    }
+
+    const priloziIds = [...new Set(pokusaji.map(p => p.priloziId))];
+    const priloziInfo = await db.select({
+      id: prilozi.id,
+      lekcijaId: prilozi.lekcijaId,
+      originalName: prilozi.originalName,
+      kind: prilozi.kind,
+    }).from(prilozi).where(inArray(prilozi.id, priloziIds));
+
+    const lekcijaIds = [...new Set(priloziInfo.map(p => p.lekcijaId))];
+    const lekcije = lekcijaIds.length > 0
+      ? await db.select({
+          id: ilmihalLekcijeTable.id,
+          naslov: ilmihalLekcijeTable.naslov,
+          slug: ilmihalLekcijeTable.slug,
+          nivo: ilmihalLekcijeTable.nivo,
+        }).from(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.id, lekcijaIds))
+      : [];
+    const lekcijaMap = new Map(lekcije.map(l => [l.id, l]));
+
+    const priloziOut = priloziInfo.map(p => {
+      const lek = lekcijaMap.get(p.lekcijaId) || null;
+      return {
+        id: p.id,
+        originalName: p.originalName,
+        lekcijaId: p.lekcijaId,
+        lekcijaNaslov: lek?.naslov || null,
+        lekcijaSlug: lek?.slug || null,
+        lekcijaNivo: lek?.nivo ?? null,
+      };
+    });
+
+    res.json({ pokusaji, prilozi: priloziOut });
+  } catch (err) {
+    console.error("Ucenik H5P pokusaji error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
