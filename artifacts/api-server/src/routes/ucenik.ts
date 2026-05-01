@@ -16,7 +16,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
-import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges } from "../lib/badges.js";
+import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges, buildProgressSnapshot, computeBadgeProgress } from "../lib/badges.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
@@ -98,10 +98,20 @@ router.get("/profil", async (req, res) => {
       .filter(b => b && typeof b.id === "string" && typeof b.earnedAt === "string");
     const earnedMap = new Map(earned.map(b => [b.id, b.earnedAt]));
 
+    // Napredak po bedžu (current/target) za "Još za osvojiti" prikaz.
+    let badgeProgress: Record<string, { current: number; target: number }> = {};
+    try {
+      const snap = await buildProgressSnapshot(userId);
+      badgeProgress = computeBadgeProgress(snap);
+    } catch (err) {
+      console.warn("[ucenik/profil] computeBadgeProgress failed for userId", userId, err);
+    }
+
     const bedzevi = Object.values(BADGE_CATALOG).map(meta => ({
       ...meta,
       earned: earnedMap.has(meta.id),
       earnedAt: earnedMap.get(meta.id) ?? null,
+      progress: badgeProgress[meta.id] ?? null,
     }));
 
     const napredak = {

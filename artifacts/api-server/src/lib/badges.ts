@@ -171,6 +171,46 @@ export interface ProgressSnapshot {
  * Vrati listu bedževa koje učenik treba imati na osnovu trenutnog napretka.
  * Idempotentno — može se zvati pri svakom updateu.
  */
+export interface BadgeProgress {
+  current: number;
+  target: number;
+}
+
+/**
+ * Vrati napredak (current/target) za svaki bedž koji ima mjerljiv prag.
+ * Bedževi bez mjerljivog praga se ne pojavljuju u rezultatu.
+ * Korisno za prikaz "7 / 10" ispod uslova zaključanih bedževa.
+ */
+export function computeBadgeProgress(snap: ProgressSnapshot): Record<string, BadgeProgress> {
+  const out: Record<string, BadgeProgress> = {};
+
+  out.prvi_korak = { current: Math.min(snap.completedCount, 1), target: 1 };
+  out.lekcije_10 = { current: Math.min(snap.completedCount, 10), target: 10 };
+  out.lekcije_30 = { current: Math.min(snap.completedCount, 30), target: 30 };
+  out.lekcije_50 = { current: Math.min(snap.completedCount, 50), target: 50 };
+  out.lekcije_100 = { current: Math.min(snap.completedCount, 100), target: 100 };
+
+  out.streak_3 = { current: Math.min(snap.streakDays, 3), target: 3 };
+  out.streak_7 = { current: Math.min(snap.streakDays, 7), target: 7 };
+  out.streak_30 = { current: Math.min(snap.streakDays, 30), target: 30 };
+
+  out.hasanati_500 = { current: Math.min(snap.totalHasanat, 500), target: 500 };
+  out.hasanati_1000 = { current: Math.min(snap.totalHasanat, 1000), target: 1000 };
+
+  out.prvi_kviz = { current: Math.min(snap.quizCount, 1), target: 1 };
+  out.kvizovi_10 = { current: Math.min(snap.quizCount, 10), target: 10 };
+  out.kviz_majstor = { current: Math.min(snap.quizPassedCount, 10), target: 10 };
+
+  for (const nivo of [1, 2, 3]) {
+    const n = snap.completedByNivo[nivo];
+    if (n && n.ukupno > 0) {
+      out[`nivo_${nivo}_complete`] = { current: Math.min(n.gotov, n.ukupno), target: n.ukupno };
+    }
+  }
+
+  return out;
+}
+
 export function computeEarnedBadgeIds(snap: ProgressSnapshot): string[] {
   const ids: string[] = [];
 

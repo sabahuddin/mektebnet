@@ -27,6 +27,7 @@ interface BedzInfo {
   uslov: string;
   earned: boolean;
   earnedAt: string | null;
+  progress?: { current: number; target: number } | null;
 }
 
 interface NapredakData {
@@ -219,7 +220,27 @@ export default function Progress() {
                 <h3 className={`font-bold leading-tight mb-2 ${isEarned ? 'text-foreground' : 'text-muted-foreground'}`}>{badge.naziv}</h3>
                 <p className="text-xs text-muted-foreground mt-auto">{badge.opis}</p>
                 {!isEarned && (
-                  <p className="text-[10px] text-muted-foreground/80 mt-2 italic">Uslov: {badge.uslov}</p>
+                  <div className="w-full mt-2 space-y-1.5">
+                    <p className="text-[10px] text-muted-foreground/80 italic">Uslov: {badge.uslov}</p>
+                    {badge.progress && badge.progress.target > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] font-bold">
+                          <span className="text-muted-foreground">Napredak</span>
+                          <span className="text-foreground/80 tabular-nums">
+                            {badge.progress.current} / {badge.progress.target}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r ${badge.bojaGradient}`}
+                            style={{
+                              width: `${Math.min(100, Math.round((badge.progress.current / badge.progress.target) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </Card>
             </motion.div>
