@@ -42,6 +42,10 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - **API Server (`api-server/`):** Handles authentication, content delivery, muallim, student, parent, and admin specific functionalities.
 - **Frontend (`mekteb-arapsko-pismo/`):** React application for user interface.
 - **Database Schema (`lib/db/src/schema/`):** Defines database tables for users, groups, content (lessons, quizzes, books), attendance, grades, messages, and game-related data.
+- **Schema Migrations:** Two parallel systems run at container startup (`artifacts/api-server/src/index.ts` → `startup()`):
+  1. **Official Drizzle migrations** (preferred): SQL files in `lib/db/drizzle/` generated via `pnpm --filter @workspace/db generate`. Applied via `migrate()` from `drizzle-orm/node-postgres/migrator`. Tracked in `drizzle.__drizzle_migrations`. Existing prod DBs get a no-op baseline (bootstrap fake-applies the hash without running SQL).
+  2. **Legacy `runMigrations()`** (backup): hand-maintained idempotent `IF NOT EXISTS` ALTER list in `index.ts`. Still runs in parallel as a safety net.
+  Workflow for new schema changes: edit `lib/db/src/schema/` → `pnpm --filter @workspace/db generate` → review the new `lib/db/drizzle/000N_*.sql` → commit + push. Coolify deploy applies it automatically.
 **Key Features Implementation:**
 - **Content Management:** Ilmihal lessons, quizzes, and books are managed through dedicated APIs. Lessons can be locked by admins to prevent accidental modifications.
 - **WYSIWYG Editor:** Utilizes TipTap for rich text editing of lessons, supporting image uploads and custom content blocks (e.g., Quranic verses/Hadith, 'REMEMBER' boxes).

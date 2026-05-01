@@ -307,7 +307,14 @@ lib/
 
 - **Production:** Coolify VPS, auto-deploy na svaki push u `main`.
 - **Repo:** `github.com/sabahuddin/mektebnet`
-- **Schema migracije:** Coolify pri deploy-u **NE radi** automatski schema migration — povuče samo novi kod. Nove kolone/tabele moraju ručno proći kroz `ALTER TABLE` na produkciji prije nego push prođe deploy, ili kroz Drizzle migration koja se izvršava pri startu kontejnera.
+- **Schema migracije:** Kontejner pri startu sam pokreće migracije kroz **dva paralelna sistema** (`artifacts/api-server/src/index.ts` → `startup()`):
+  1. **Zvanični Drizzle migration sistem** (preferirani put): SQL fajlovi u `lib/db/drizzle/`, generisani kroz `pnpm --filter @workspace/db generate`. Pri startu se pozove `migrate()` iz `drizzle-orm/node-postgres/migrator`. Drizzle prati šta je primijenjeno preko `drizzle.__drizzle_migrations` tabele. Postojeća produkcija dobija no-op pri prvoj primjeni baseline-a (bootstrap fake-applies hash bez izvršavanja SQL-a).
+  2. **Legacy `runMigrations()`** (backup): ručno održavan spisak idempotentnih `IF NOT EXISTS` ALTER linija u `index.ts` — i dalje radi paralelno dok se Drizzle put ne potvrdi na produkciji. Postoji da pokriva slučajeve gdje neko zaboravi da regeneriše Drizzle migration.
+
+  **Workflow za novu schema izmjenu (preporuka):**
+  1. Edituj fajl u `lib/db/src/schema/`.
+  2. `pnpm --filter @workspace/db generate` → kreira `lib/db/drizzle/000N_<naziv>.sql`.
+  3. Pregledaj generisani SQL, commit, push — Coolify deploy pokrene migraciju automatski.
 - **Sandbox specifika:** destruktivne git komande (`push`, `rebase`, `branch -D`) blokirane → idu kroz project taskove.
 
 ---
