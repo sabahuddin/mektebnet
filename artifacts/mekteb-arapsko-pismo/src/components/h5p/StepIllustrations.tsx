@@ -236,3 +236,143 @@ export function Step4Illustration() {
     </Frame>
   );
 }
+
+// ── H5P tip primjeri za "Šta je H5P?" sekciju ───────────────────────────
+// Tri male inline SVG ilustracije koje pokazuju kako izgledaju različiti
+// H5P tipovi (Drag the Words, Multiple Choice, Image Hotspots).
+
+function MiniFrame({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
+      <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-700">
+        {label}
+      </div>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 320 180"
+        role="img"
+        className="w-full h-auto block"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {children}
+      </svg>
+    </div>
+  );
+}
+
+export function DragWordsExample() {
+  return (
+    <MiniFrame label="Drag the Words">
+      <title>Primjer: Drag the Words — povuci rijec na pravo mjesto</title>
+      <rect width="320" height="180" fill="#f8fafc" />
+      <text x="16" y="28" fontFamily="system-ui,sans-serif" fontSize="11" fill="#475569">Spoji harf sa imenom:</text>
+      <g fontFamily="system-ui,sans-serif" fontSize="13" fontWeight="700">
+        <text x="40" y="68" fill="#0f172a">ا</text>
+        <rect x="60" y="52" width="70" height="22" rx="6" fill="#dbeafe" stroke="#3b82f6" strokeDasharray="4,3" />
+        <text x="95" y="68" textAnchor="middle" fill="#1e3a8a">elif</text>
+
+        <text x="40" y="100" fill="#0f172a">ب</text>
+        <rect x="60" y="84" width="70" height="22" rx="6" fill="#f1f5f9" stroke="#cbd5e1" strokeDasharray="4,3" />
+        <text x="95" y="100" textAnchor="middle" fill="#94a3b8" fontStyle="italic">...</text>
+
+        <text x="40" y="132" fill="#0f172a">ت</text>
+        <rect x="60" y="116" width="70" height="22" rx="6" fill="#f1f5f9" stroke="#cbd5e1" strokeDasharray="4,3" />
+        <text x="95" y="132" textAnchor="middle" fill="#94a3b8" fontStyle="italic">...</text>
+      </g>
+      <g transform="translate(170,55)">
+        <rect width="56" height="22" rx="6" fill="#fef3c7" stroke="#f59e0b" />
+        <text x="28" y="16" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="12" fontWeight="700" fill="#92400e">ba</text>
+      </g>
+      <g transform="translate(240,55)">
+        <rect width="56" height="22" rx="6" fill="#fef3c7" stroke="#f59e0b" />
+        <text x="28" y="16" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="12" fontWeight="700" fill="#92400e">ta</text>
+      </g>
+      <g transform="translate(170,90)">
+        <rect width="56" height="22" rx="6" fill="#fef3c7" stroke="#f59e0b" />
+        <text x="28" y="16" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="12" fontWeight="700" fill="#92400e">elif</text>
+      </g>
+      <g transform="translate(170,126)" opacity="0.6">
+        <line x1="0" y1="11" x2="-30" y2="-50" stroke="#10b981" strokeWidth="2" strokeDasharray="3,3" />
+        <polygon points="-30,-50 -22,-46 -26,-40" fill="#10b981" />
+      </g>
+      <text x="160" y="170" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="10" fill="#64748b" fontStyle="italic">Ucenik povlaci ime na ispravan harf</text>
+    </MiniFrame>
+  );
+}
+
+export function MultipleChoiceExample() {
+  return (
+    <MiniFrame label="Multiple Choice">
+      <title>Primjer: Multiple Choice — izaberi tacan odgovor</title>
+      <rect width="320" height="180" fill="#f8fafc" />
+      <text x="16" y="26" fontFamily="system-ui,sans-serif" fontSize="11" fontWeight="700" fill="#0f172a">Koliko ima sartova imana?</text>
+      <g fontFamily="system-ui,sans-serif" fontSize="11">
+        <g transform="translate(16,40)">
+          <rect width="288" height="26" rx="6" fill="#ffffff" stroke="#cbd5e1" />
+          <circle cx="16" cy="13" r="6" fill="#ffffff" stroke="#94a3b8" strokeWidth="2" />
+          <text x="32" y="17" fill="#334155">a) 5</text>
+        </g>
+        <g transform="translate(16,72)">
+          <rect width="288" height="26" rx="6" fill="#dcfce7" stroke="#16a34a" strokeWidth="2" />
+          <circle cx="16" cy="13" r="6" fill="#16a34a" stroke="#16a34a" strokeWidth="2" />
+          <circle cx="16" cy="13" r="2.5" fill="#ffffff" />
+          <text x="32" y="17" fontWeight="700" fill="#14532d">b) 6 (tacno)</text>
+          <text x="278" y="17" textAnchor="end" fill="#16a34a" fontWeight="700">v</text>
+        </g>
+        <g transform="translate(16,104)">
+          <rect width="288" height="26" rx="6" fill="#ffffff" stroke="#cbd5e1" />
+          <circle cx="16" cy="13" r="6" fill="#ffffff" stroke="#94a3b8" strokeWidth="2" />
+          <text x="32" y="17" fill="#334155">c) 7</text>
+        </g>
+        <g transform="translate(16,136)">
+          <rect width="120" height="28" rx="8" fill="#3b82f6" />
+          <text x="60" y="19" textAnchor="middle" fontWeight="700" fill="#ffffff">Provjeri</text>
+        </g>
+      </g>
+    </MiniFrame>
+  );
+}
+
+export function ImageHotspotsExample() {
+  return (
+    <MiniFrame label="Image Hotspots">
+      <title>Primjer: Image Hotspots — klikni na dio slike</title>
+      <rect width="320" height="180" fill="#fefce8" />
+      {/* sky */}
+      <rect x="0" y="0" width="320" height="120" fill="#fef9c3" />
+      {/* mosque body */}
+      <rect x="80" y="80" width="160" height="60" fill="#fde68a" stroke="#a16207" strokeWidth="1.5" />
+      {/* dome */}
+      <path d="M 90 80 Q 160 30 230 80 Z" fill="#fcd34d" stroke="#a16207" strokeWidth="1.5" />
+      {/* minaret left */}
+      <rect x="55" y="60" width="14" height="80" fill="#fde68a" stroke="#a16207" strokeWidth="1.5" />
+      <polygon points="55,60 62,40 69,60" fill="#a16207" />
+      {/* minaret right */}
+      <rect x="251" y="60" width="14" height="80" fill="#fde68a" stroke="#a16207" strokeWidth="1.5" />
+      <polygon points="251,60 258,40 265,60" fill="#a16207" />
+      {/* door (mihrab) */}
+      <path d="M 145 140 L 145 110 Q 160 95 175 110 L 175 140 Z" fill="#7c2d12" />
+      {/* ground */}
+      <rect x="0" y="140" width="320" height="40" fill="#fef3c7" />
+      {/* hotspot circles */}
+      <g>
+        <circle cx="62" cy="50" r="11" fill="#3b82f6" fillOpacity="0.9" stroke="#ffffff" strokeWidth="2.5" />
+        <text x="62" y="54" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="11" fontWeight="800" fill="#ffffff">1</text>
+      </g>
+      <g>
+        <circle cx="160" cy="55" r="11" fill="#3b82f6" fillOpacity="0.9" stroke="#ffffff" strokeWidth="2.5" />
+        <text x="160" y="59" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="11" fontWeight="800" fill="#ffffff">2</text>
+      </g>
+      <g>
+        <circle cx="160" cy="125" r="11" fill="#16a34a" fillOpacity="0.95" stroke="#ffffff" strokeWidth="2.5" />
+        <text x="160" y="129" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="11" fontWeight="800" fill="#ffffff">3</text>
+      </g>
+      {/* tooltip */}
+      <g transform="translate(180,108)">
+        <rect width="100" height="22" rx="6" fill="#0f172a" />
+        <text x="50" y="15" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="10" fontWeight="700" fill="#ffffff">3 = mihrab</text>
+      </g>
+      <text x="160" y="172" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="10" fill="#64748b" fontStyle="italic">Klikni na oznacene dijelove dzamije</text>
+    </MiniFrame>
+  );
+}

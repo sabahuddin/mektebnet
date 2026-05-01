@@ -24,6 +24,41 @@ const COMMON_L10N = {
   scoreBarLabel: "Rezultat: :num od :total",
 };
 
+// SVG generator za "vrijeme dana" karticu (ImagePair lijeva strana)
+function timeOfDaySvg(label, bgTop, bgBottom, sunY, sunColor) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" width="240" height="160">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${bgTop}"/>
+      <stop offset="100%" stop-color="${bgBottom}"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="160" fill="url(#g)"/>
+  <rect x="0" y="120" width="240" height="40" fill="#1f2937"/>
+  <circle cx="120" cy="${sunY}" r="26" fill="${sunColor}"/>
+  <text x="120" y="148" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="#f9fafb">${label}</text>
+</svg>`;
+}
+
+// SVG generator za "naziv namaza" karticu (ImagePair desna strana)
+function namazNameSvg(name) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" width="240" height="160">
+  <rect width="240" height="160" fill="#fef3c7"/>
+  <rect x="6" y="6" width="228" height="148" fill="none" stroke="#a16207" stroke-width="3" stroke-dasharray="6,4"/>
+  <text x="120" y="92" text-anchor="middle" font-family="system-ui,sans-serif" font-size="28" font-weight="800" fill="#7c2d12">${name}</text>
+</svg>`;
+}
+
+const VAKAT_PAIRS = [
+  { time: "izlazak sunca", name: "SABAH",    bgTop: "#fef3c7", bgBottom: "#f59e0b", sunY: 70,  sunColor: "#fde047" },
+  { time: "podne",         name: "PODNE",    bgTop: "#bae6fd", bgBottom: "#fbbf24", sunY: 40,  sunColor: "#facc15" },
+  { time: "popodne",       name: "IKINDIJA", bgTop: "#fbbf24", bgBottom: "#fb923c", sunY: 80,  sunColor: "#f97316" },
+  { time: "zalazak sunca", name: "AKŠAM",    bgTop: "#fb923c", bgBottom: "#7c2d12", sunY: 100, sunColor: "#dc2626" },
+  { time: "noć",           name: "JACIJA",   bgTop: "#1e293b", bgBottom: "#0f172a", sunY: 50,  sunColor: "#e0e7ff" },
+];
+
 const TEMPLATES = [
   // ─────────────────────────────────────────────
   // 1) Drag the Words: harfovi
@@ -123,53 +158,61 @@ const TEMPLATES = [
 
   // ─────────────────────────────────────────────
   // 3) Image Pairs: vakat namaza
+  //    H5P.ImagePair — pravi šablon, dolazi sa 5 SVG parova (vrijeme dana ↔ naziv namaza).
   // ─────────────────────────────────────────────
   {
     fileName: "vakat-namaza-pairs.h5p",
     h5p: {
       title: "Vakat namaza",
-      mainLibrary: "H5P.MultiChoice",
+      mainLibrary: "H5P.ImagePair",
       language: "bs",
       embedTypes: ["div"],
       defaultLanguage: "bs",
       license: "U",
       preloadedDependencies: [
-        { machineName: "H5P.MultiChoice", majorVersion: 1, minorVersion: 16 },
+        { machineName: "H5P.ImagePair", majorVersion: 1, minorVersion: 5 },
         { machineName: "FontAwesome", majorVersion: 4, minorVersion: 5 },
         { machineName: "H5P.JoubelUI", majorVersion: 1, minorVersion: 3 },
-        { machineName: "H5P.Question", majorVersion: 1, minorVersion: 5 },
       ],
     },
     content: {
-      question:
-        "<p><strong>Vakat namaza — primjer pitanja.</strong> Otvori u Lumi-ju i dodaj/zamijeni svojim pitanjima.</p><p>Koji namaz se klanja prije izlaska sunca?</p>",
-      answers: [
-        { text: "<p>Sabah</p>", correct: true, tipsAndFeedback: { tip: "", chosenFeedback: "Tačno!", notChosenFeedback: "" } },
-        { text: "<p>Podne</p>", correct: false, tipsAndFeedback: { tip: "", chosenFeedback: "Netačno.", notChosenFeedback: "" } },
-        { text: "<p>Akšam</p>", correct: false, tipsAndFeedback: { tip: "", chosenFeedback: "Netačno.", notChosenFeedback: "" } },
-        { text: "<p>Jacija</p>", correct: false, tipsAndFeedback: { tip: "", chosenFeedback: "Netačno.", notChosenFeedback: "" } },
-      ],
+      taskDescription:
+        "<p><strong>Vakat namaza.</strong> Spoji sliku doba dana sa nazivom namaza. Otvori u Lumi-ju da dodaš/zamijeniš parove ili svoje slike.</p>",
+      cards: VAKAT_PAIRS.map((p, i) => ({
+        image: {
+          path: `images/vakat-${i}-time.svg`,
+          mime: "image/svg+xml",
+          width: 240,
+          height: 160,
+        },
+        imageAlt: p.time,
+        match: {
+          path: `images/vakat-${i}-name.svg`,
+          mime: "image/svg+xml",
+          width: 240,
+          height: 160,
+        },
+        matchAlt: p.name,
+      })),
       behaviour: {
-        enableRetry: true,
-        enableSolutionsButton: true,
-        enableCheckButton: true,
-        type: "auto",
-        singlePoint: false,
-        randomAnswers: true,
-        showSolutionsRequiresInput: true,
-        confirmCheckDialog: false,
-        confirmRetryDialog: false,
-        autoCheck: false,
-        passPercentage: 100,
-        showScorePoints: true,
+        allowRetry: true,
       },
-      UI: {
-        checkAnswerButton: COMMON_L10N.checkAnswerButton,
-        showSolutionButton: COMMON_L10N.showSolutionButton,
-        tryAgainButton: COMMON_L10N.tryAgain,
-        scoreBarLabel: COMMON_L10N.scoreBarLabel,
+      l10n: {
+        checkAnswer: COMMON_L10N.checkAnswerButton,
+        tryAgain: COMMON_L10N.tryAgain,
+        showSolution: COMMON_L10N.showSolutionButton,
       },
     },
+    extraFiles: VAKAT_PAIRS.flatMap((p, i) => [
+      {
+        path: `content/images/vakat-${i}-time.svg`,
+        body: timeOfDaySvg(p.time, p.bgTop, p.bgBottom, p.sunY, p.sunColor),
+      },
+      {
+        path: `content/images/vakat-${i}-name.svg`,
+        body: namazNameSvg(p.name),
+      },
+    ]),
   },
 
   // ─────────────────────────────────────────────
@@ -272,6 +315,12 @@ for (const t of TEMPLATES) {
     "content/content.json",
     Buffer.from(JSON.stringify(t.content, null, 2), "utf8"),
   );
+  // Extra fajlovi (npr. SVG slike za H5P.ImagePair)
+  if (Array.isArray(t.extraFiles)) {
+    for (const f of t.extraFiles) {
+      zip.addFile(f.path, Buffer.from(f.body, "utf8"));
+    }
+  }
   // Dodaj README u sam .h5p koji objašnjava šta je ovo i kako se koristi.
   zip.addFile(
     "README.txt",

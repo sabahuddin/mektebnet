@@ -8,6 +8,9 @@ import {
   Step2Illustration,
   Step3Illustration,
   Step4Illustration,
+  DragWordsExample,
+  MultipleChoiceExample,
+  ImageHotspotsExample,
 } from "@/components/h5p/StepIllustrations";
 import {
   ArrowLeft,
@@ -52,9 +55,9 @@ const H5P_TEMPLATES: H5pTemplate[] = [
   {
     fileName: "vakat-namaza-pairs.h5p",
     naslov: "Vakat namaza",
-    tip: "Multiple Choice",
-    opis: "Pitanja o vremenima namaza (sabah, podne, ikindija, akšam, jacija) — primjer koji muallim popunjava svojim pitanjima.",
-    primjer: "Koji namaz se klanja prije izlaska sunca? a) Sabah  b) Podne  c) Akšam  d) Jacija",
+    tip: "Image Pairs",
+    opis: "5 parova kartica: doba dana ↔ naziv namaza (sabah, podne, ikindija, akšam, jacija). Šablon dolazi sa SVG ilustracijama — muallim u Lumi-ju može zamijeniti svojim slikama.",
+    primjer: "izlazak sunca ↔ SABAH,  podne ↔ PODNE,  zalazak sunca ↔ AKŠAM",
   },
   {
     fileName: "dijelovi-dzamije-hotspots.h5p",
@@ -322,6 +325,22 @@ export default function H5pUputstvoPage() {
               Mekteb prima gotov <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">.h5p</code> fajl
               i automatski ga prikazuje učenicima u lekciji. Ti samo kreiraš sadržaj
               i uploaduješ — sve ostalo radi platforma (bilježi rezultate u napredak učenika).
+            </p>
+          </div>
+
+          {/* 3 primjera kako H5P izgleda u praksi */}
+          <div className="mt-5">
+            <h3 className="text-sm font-bold text-slate-800 mb-2">
+              Tri najčešća tipa H5P vježbi:
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <DragWordsExample />
+              <MultipleChoiceExample />
+              <ImageHotspotsExample />
+            </div>
+            <p className="text-xs text-slate-500 mt-2 italic">
+              Sve tri vježbe učenik radi direktno u browseru — bez instalacije,
+              bez plugina. Mekteb pamti rezultat u napredak učenika.
             </p>
           </div>
         </section>
