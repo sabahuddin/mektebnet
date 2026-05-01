@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe, Calendar, ClipboardList, Gamepad2 } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe, Calendar, ClipboardList, Gamepad2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,9 +11,131 @@ import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
 
 interface LayoutProps { children: ReactNode; }
 
+type NavLink = {
+  href: string;
+  label: string;
+  icon: any;
+  /** Ako postoji, link se renderuje kao dropdown grupa; trigger linkuje na own href. */
+  children?: NavLink[];
+};
+
 const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
 
 const LANG_ORDER: Lang[] = ["bs", "de", "en", "tr", "ar"];
+
+/**
+ * Desktop dropdown grupa za nav linkove (npr. "Moj profil" → Moj profil / Moj napredak / Poruke).
+ * Trigger je dugme; klikom se otvara mali popover sa child linkovima. Badge sa brojem
+ * nepročitanih poruka pokazuje se i na trigger-u (kada je dropdown zatvoren) i pored
+ * "Poruke" stavke unutar dropdown-a, da korisnik ne propusti nove poruke.
+ */
+function NavDropdown({
+  link,
+  isActive,
+  unreadPoruke,
+}: {
+  link: NavLink;
+  isActive: (href: string) => boolean;
+  unreadPoruke: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [location] = useLocation();
+  const children = link.children ?? [];
+  const groupActive = children.some((c) => isActive(c.href));
+  const triggerBadge =
+    !open && children.some((c) => c.href === "/poruke") && unreadPoruke > 0;
+
+  // Zatvori dropdown ako se ruta promijeni iz nekog drugog razloga
+  // (npr. korisnik pritisne logo ili glavni meni dok je dropdown otvoren),
+  // da ne ostane stale-open popover.
+  useEffect(() => {
+    if (open) setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]);
+
+  // Escape key zatvara dropdown — A11y poboljšanje za keyboard korisnike.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-testid={`nav-dropdown-${link.href.replace(/\W+/g, "-")}`}
+        className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${
+          groupActive
+            ? "bg-secondary text-secondary-foreground"
+            : "text-secondary hover:bg-secondary/10"
+        }`}
+      >
+        <span className="relative inline-flex">
+          <link.icon className="w-4 h-4" />
+          {triggerBadge && (
+            <span
+              data-testid="badge-poruke-desktop"
+              aria-label={`${unreadPoruke} nepročitanih poruka`}
+              className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center shadow-sm border border-white"
+            >
+              {unreadPoruke > 9 ? "9+" : unreadPoruke}
+            </span>
+          )}
+        </span>
+        {link.label}
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -5, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -5, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-border/50 py-1 min-w-[200px]"
+              role="menu"
+            >
+              {children.map((c) => (
+                <Link
+                  key={c.href}
+                  href={c.href}
+                  onClick={() => setOpen(false)}
+                  role="menuitem"
+                  className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-colors ${
+                    isActive(c.href)
+                      ? "bg-secondary/10 text-secondary"
+                      : "text-foreground/70 hover:bg-muted"
+                  }`}
+                >
+                  <c.icon className="w-4 h-4 shrink-0" />
+                  <span className="flex-1">{c.label}</span>
+                  {c.href === "/poruke" && unreadPoruke > 0 && (
+                    <span
+                      aria-label={`${unreadPoruke} nepročitanih poruka`}
+                      className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center"
+                    >
+                      {unreadPoruke > 9 ? "9+" : unreadPoruke}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function LanguageSwitcher() {
   const { lang, setLang } = useLanguage();
@@ -76,7 +198,7 @@ export function Layout({ children }: LayoutProps) {
     try { localStorage.setItem("mekteb-fontsize", String(fontLevel)); } catch {}
   }, [fontLevel]);
 
-  const mainNavLinks = [
+  const mainNavLinks: NavLink[] = [
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
     { href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle },
@@ -84,7 +206,10 @@ export function Layout({ children }: LayoutProps) {
     { href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap },
   ];
 
-  const roleLinks: Record<string, { href: string; label: string; icon: any }[]> = {
+  // "Moj profil" za učenika je sada dropdown grupa: pod njim su Moj profil,
+  // Moj napredak i Poruke. Tako top-level meni ima samo 2 stavke ("Moj profil"
+  // i "Igrice") umjesto 4. Ostale uloge i dalje imaju flat listu.
+  const roleLinks: Record<string, NavLink[]> = {
     muallim: [
       { href: "/muallim", label: t("nav.muallimPanel"), icon: LayoutDashboard },
       { href: "/poruke", label: t("nav.poruke"), icon: MessageSquare },
@@ -100,14 +225,21 @@ export function Layout({ children }: LayoutProps) {
       { href: "/poruke", label: t("nav.poruke"), icon: MessageSquare },
     ],
     ucenik: [
-      { href: "/ucenik", label: t("nav.mojProfil"), icon: User },
-      { href: "/napredak", label: t("nav.mojNapredak"), icon: BookMarked },
+      {
+        href: "/ucenik",
+        label: t("nav.mojProfil"),
+        icon: User,
+        children: [
+          { href: "/ucenik", label: t("nav.mojProfil"), icon: User },
+          { href: "/napredak", label: t("nav.mojNapredak"), icon: BookMarked },
+          { href: "/poruke", label: t("nav.poruke"), icon: MessageSquare },
+        ],
+      },
       { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
-      { href: "/poruke", label: t("nav.poruke"), icon: MessageSquare },
     ],
   };
 
-  const extraLinks = user ? (roleLinks[user.role] || []) : [];
+  const extraLinks: NavLink[] = user ? (roleLinks[user.role] || []) : [];
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
@@ -133,22 +265,31 @@ export function Layout({ children }: LayoutProps) {
               </Link>
             ))}
             {extraLinks.map(link => (
-              <Link key={link.href} href={link.href}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
-                <span className="relative inline-flex">
-                  <link.icon className="w-4 h-4" />
-                  {link.href === "/poruke" && unreadPoruke > 0 && (
-                    <span
-                      data-testid="badge-poruke-desktop"
-                      aria-label={`${unreadPoruke} nepročitanih poruka`}
-                      className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center shadow-sm border border-white"
-                    >
-                      {unreadPoruke > 9 ? "9+" : unreadPoruke}
-                    </span>
-                  )}
-                </span>
-                {link.label}
-              </Link>
+              link.children && link.children.length > 0 ? (
+                <NavDropdown
+                  key={link.href}
+                  link={link}
+                  isActive={isActive}
+                  unreadPoruke={unreadPoruke}
+                />
+              ) : (
+                <Link key={link.href} href={link.href}
+                  className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
+                  <span className="relative inline-flex">
+                    <link.icon className="w-4 h-4" />
+                    {link.href === "/poruke" && unreadPoruke > 0 && (
+                      <span
+                        data-testid="badge-poruke-desktop"
+                        aria-label={`${unreadPoruke} nepročitanih poruka`}
+                        className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center shadow-sm border border-white"
+                      >
+                        {unreadPoruke > 9 ? "9+" : unreadPoruke}
+                      </span>
+                    )}
+                  </span>
+                  {link.label}
+                </Link>
+              )
             ))}
           </nav>
 
@@ -210,20 +351,56 @@ export function Layout({ children }: LayoutProps) {
                     className="px-3 py-1 rounded-lg bg-muted text-sm font-bold disabled:opacity-30">A+</button>
                 </div>
                 {[...mainNavLinks, ...extraLinks].map((link) => (
-                  <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}>
-                    <link.icon className="w-5 h-5" />
-                    <span className="flex-1">{link.label}</span>
-                    {link.href === "/poruke" && unreadPoruke > 0 && (
-                      <span
-                        data-testid="badge-poruke-mobile"
-                        aria-label={`${unreadPoruke} nepročitanih poruka`}
-                        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs leading-none font-extrabold flex items-center justify-center shadow-sm"
+                  link.children && link.children.length > 0 ? (
+                    // Grupa: parent kao mali naslov, children indentirane stavke ispod.
+                    // Tako mobile meni jasno prikazuje hijerarhiju bez dodatnog tap-a.
+                    <div key={link.href} className="mt-1">
+                      <div
+                        className="flex items-center gap-2 px-4 pt-2 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-secondary/70"
+                        data-testid={`nav-mobile-group-${link.href.replace(/\W+/g, "-")}`}
                       >
-                        {unreadPoruke > 9 ? "9+" : unreadPoruke}
-                      </span>
-                    )}
-                  </Link>
+                        <link.icon className="w-3.5 h-3.5" />
+                        {link.label}
+                      </div>
+                      {link.children.map((c) => (
+                        <Link
+                          key={c.href}
+                          href={c.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={`flex items-center gap-3 pl-7 pr-4 py-2.5 rounded-xl font-bold text-base transition-colors ${
+                            isActive(c.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
+                          }`}
+                        >
+                          <c.icon className="w-5 h-5" />
+                          <span className="flex-1">{c.label}</span>
+                          {c.href === "/poruke" && unreadPoruke > 0 && (
+                            <span
+                              data-testid="badge-poruke-mobile"
+                              aria-label={`${unreadPoruke} nepročitanih poruka`}
+                              className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs leading-none font-extrabold flex items-center justify-center shadow-sm"
+                            >
+                              {unreadPoruke > 9 ? "9+" : unreadPoruke}
+                            </span>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}>
+                      <link.icon className="w-5 h-5" />
+                      <span className="flex-1">{link.label}</span>
+                      {link.href === "/poruke" && unreadPoruke > 0 && (
+                        <span
+                          data-testid="badge-poruke-mobile"
+                          aria-label={`${unreadPoruke} nepročitanih poruka`}
+                          className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs leading-none font-extrabold flex items-center justify-center shadow-sm"
+                        >
+                          {unreadPoruke > 9 ? "9+" : unreadPoruke}
+                        </span>
+                      )}
+                    </Link>
+                  )
                 ))}
                 {user && (
                   <button onClick={() => { logout(); setMobileOpen(false); }}
