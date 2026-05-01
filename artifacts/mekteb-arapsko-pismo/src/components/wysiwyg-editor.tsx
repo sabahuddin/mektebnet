@@ -123,7 +123,7 @@ function parseAccordionSections(fullHtml: string): { beforeAccordions: string; s
   // before/after — accordioni se emit-uju fresh u reassembleHtml.
   const container = (doc.querySelector(".lesson-container") || doc.body) as HTMLElement;
   const findHostChild = (descendant: Element): Element | null => {
-    let node: Node | null = descendant;
+    let node: globalThis.Node | null = descendant;
     while (node && node.parentNode !== container) node = node.parentNode;
     return node as Element | null;
   };

@@ -1045,7 +1045,11 @@ export const translations = {
   },
 } as const;
 
-export type TranslationTree = typeof translations.bs;
+type WidenLeaves<T> = T extends string
+  ? string
+  : { readonly [K in keyof T]: WidenLeaves<T[K]> };
+
+export type TranslationTree = WidenLeaves<typeof translations.bs>;
 
 type FlattenKeys<T, Prefix extends string = ""> = T extends Record<string, unknown>
   ? { [K in keyof T & string]: T[K] extends Record<string, unknown> ? FlattenKeys<T[K], `${Prefix}${K}.`> : `${Prefix}${K}` }[keyof T & string]

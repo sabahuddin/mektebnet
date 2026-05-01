@@ -54,7 +54,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem("mekteb-lang", newLang); } catch {}
   }, []);
 
-  const tr = translations[lang] || translations.bs;
+  const tr: TranslationTree = translations[lang] || translations.bs;
 
   const t = useCallback((key: string, params?: Record<string, string>) => {
     let value = getNestedValue(tr, key);
