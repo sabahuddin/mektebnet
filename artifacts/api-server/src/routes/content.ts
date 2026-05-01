@@ -453,6 +453,11 @@ router.post("/napredak", requireAuth, async (req, res) => {
 
     res.json({ ...result, procenat, bodoviBlokirani: procenat < 50, progressDelta });
   } catch (err) {
+    // Logiraj puni error u Coolify/Pino logove tako da se 500 ne svodi
+    // samo na "Greška servera" kod debuggovanja produkcije. Bez ovoga je
+    // catch tihi i pravi uzrok (npr. nedostaje kolona, schema drift) ostaje
+    // skriven.
+    req.log.error({ err }, "POST /content/napredak failed");
     res.status(500).json({ error: "Greška servera" });
   }
 });
