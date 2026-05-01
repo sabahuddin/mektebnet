@@ -9,7 +9,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,6 +51,33 @@ interface Lekcija {
   locked?: boolean;
   lockedNote?: string | null;
   lockedAt?: string | null;
+  userProgress?: {
+    timeSpentSeconds: number;
+    zavrsen: boolean;
+  };
+}
+
+// Minimum aktivnog vremena (sekundi) koje učenik mora provesti čitajući
+// lekciju prije nego se "Označi kao završeno" otključa. Drži paralelno s
+// `MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION` u backendu.
+const MIN_ACTIVE_SECONDS = 300;
+// Koliko često (sekundi) šalje se update vremena na server. 30s je dobra
+// ravnoteža između trajnosti (gubimo max 30s ako učenik zatvori tab) i
+// broja HTTP poziva.
+const TIME_UPDATE_INTERVAL_S = 30;
+// Koliko mora biti skrolovano da se completion otključa (% ukupne visine
+// dokumenta). 85% omogućava bottom-padding/footer da ne blokira.
+const MIN_SCROLL_PERCENT = 0.85;
+
+// Formatira sekunde u kratku BS oznaku (npr. "5m 23s", "47s", "1h 12m").
+function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${sec}s`;
 }
 
 interface AccordionSection {
@@ -974,13 +1001,36 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
 // ──────────────────────────────────────────────────
 // Single accordion section
 // ──────────────────────────────────────────────────
-function SectionAccordion({ section, slug, nivo }: { section: AccordionSection; slug: string; nivo: number }) {
+function SectionAccordion({ section, slug, nivo, onOpened }: {
+  section: AccordionSection;
+  slug: string;
+  nivo: number;
+  /** Pozove se prvi put kad se sekcija otvori (uključujući i defaultOpen).
+   *  Glavna stranica koristi za praćenje "sve sekcije pregledane" gate-a. */
+  onOpened?: (sectionId: string) => void;
+}) {
   const [open, setOpen] = useState(section.defaultOpen);
   const cfg = SECTION_CONFIG[section.type];
 
+  // Ako sekcija krene otvorena (defaultOpen=true), odmah prijavi roditelju
+  // da je "viđena" — inače učenik ne bi morao kliknuti na već otvorenu STORY
+  // sekciju da bi gate prošao.
+  useEffect(() => {
+    if (section.defaultOpen && onOpened) onOpened(section.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleToggle = () => {
+    setOpen(v => {
+      const next = !v;
+      if (next && onOpened) onOpened(section.id);
+      return next;
+    });
+  };
+
   return (
     <div className={`ring-2 ring-inset rounded-2xl overflow-hidden ${cfg.bg} ${cfg.ring}`}>
-      <button onClick={() => setOpen(v => !v)}
+      <button onClick={handleToggle}
         className={`w-full flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors ${cfg.headerBg}`}>
         <div className="flex items-center gap-3">
           <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${cfg.iconBg}`}>
@@ -1622,6 +1672,29 @@ export default function IlmihalLekcijaPage() {
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
 
+  // Anti-cheat gate state — sve tri uslove moraju biti ispunjene da se
+  // dugme "Označi kao završeno" otključa za nezavršene lekcije:
+  //   1) timeSpent >= MIN_ACTIVE_SECONDS (300s aktivnog čitanja)
+  //   2) scrollPercent >= MIN_SCROLL_PERCENT (skrolovao bar 85%)
+  //   3) openedSectionIds pokriva sve vidljive sekcije
+  const [timeSpent, setTimeSpent] = useState(0);
+  const [scrollPercent, setScrollPercent] = useState(0);
+  const [openedSectionIds, setOpenedSectionIds] = useState<Set<string>>(new Set());
+  const lastSentTimeRef = useRef(0);
+  // Da bismo poslali finalni update vremena prije navigacije/zatvaranja taba,
+  // držimo svježi timeSpent u ref-u — beforeunload ne može da koristi state.
+  const timeSpentRef = useRef(0);
+  useEffect(() => { timeSpentRef.current = timeSpent; }, [timeSpent]);
+
+  const handleSectionOpened = useCallback((sectionId: string) => {
+    setOpenedSectionIds(prev => {
+      if (prev.has(sectionId)) return prev;
+      const next = new Set(prev);
+      next.add(sectionId);
+      return next;
+    });
+  }, []);
+
   const displayNivo = (nivo: number) => nivo;
 
   const handleSaveNaslov = async () => {
@@ -1651,6 +1724,12 @@ export default function IlmihalLekcijaPage() {
   useEffect(() => {
     if (!slug) return;
     setIsLoading(true);
+    // Reset gate state pri prelasku na novu lekciju (npr. preko strip-a) —
+    // inače bi vrijeme/skrol/sekcije iz prethodne lekcije ostali kao "ljepak".
+    setTimeSpent(0);
+    setScrollPercent(0);
+    setOpenedSectionIds(new Set());
+    lastSentTimeRef.current = 0;
     // Token je obavezan da bi backend uključio `prilozi` u response
     // (učenici vide H5P/URL prilozi, muallim/admin sve). Bez tokena
     // dobijemo lekciju ali bez priloga, što razbije H5P prikaz.
@@ -1658,10 +1737,79 @@ export default function IlmihalLekcijaPage() {
       .then(data => {
         setLekcija(data);
         setParsed(parseSections(data.contentHtml));
+        // Učitaj akumulirano vrijeme iz ranijih sesija — server vraća MAX
+        // od dosad provedenog. Tako npr. povratak učenika ne počne od 0.
+        const initial = data.userProgress?.timeSpentSeconds ?? 0;
+        setTimeSpent(initial);
+        lastSentTimeRef.current = initial;
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [slug, token]);
+
+  // Aktivni time tracker — povećava timeSpent svake sekunde, ali samo dok
+  // je tab vidljiv (Page Visibility API). Sprječava farmiranje vremena
+  // ostavljanjem stranice u pozadini.
+  useEffect(() => {
+    if (!lekcija || !user) return;
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        setTimeSpent(t => t + 1);
+      }
+    };
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [lekcija?.id, user?.id]);
+
+  // Periodični upload vremena na server (svakih TIME_UPDATE_INTERVAL_S).
+  // Šaljemo `zavrsen: false` — ovo je samo update vremena, ne pokušaj
+  // završetka. Server radi MAX(stari, novi) tako da retry/race ne može
+  // smanjiti vrijeme. Ne šaljemo ako se ništa nije promijenilo.
+  useEffect(() => {
+    if (!lekcija || !user || !token) return;
+    const id = window.setInterval(() => {
+      const current = timeSpentRef.current;
+      if (current <= lastSentTimeRef.current) return;
+      const toSend = current;
+      apiRequest("POST", "/content/napredak", {
+        contentType: "ilmihal",
+        contentId: lekcija.id,
+        zavrsen: false,
+        timeSpentSeconds: toSend,
+      }, token).then(() => {
+        lastSentTimeRef.current = toSend;
+      }).catch(() => {});
+    }, TIME_UPDATE_INTERVAL_S * 1000);
+    return () => window.clearInterval(id);
+  }, [lekcija?.id, user?.id, token]);
+
+  // Scroll progress tracker — koristi scroll na window-u jer sadržaj lekcije
+  // se renderira u glavnom toku stranice. Kad učenik dođe blizu dna (>=85%),
+  // gate se otključava sa te strane.
+  useEffect(() => {
+    if (!lekcija) return;
+    const update = () => {
+      const doc = document.documentElement;
+      const scrollTop = window.scrollY || doc.scrollTop;
+      const viewport = window.innerHeight || doc.clientHeight;
+      const total = doc.scrollHeight - viewport;
+      if (total <= 0) {
+        // Sadržaj kraći od viewporta — automatski zadovoljen scroll uslov.
+        setScrollPercent(prev => (prev < 1 ? 1 : prev));
+        return;
+      }
+      const pct = Math.max(0, Math.min(1, scrollTop / total));
+      // Monotono raste — ako učenik skroluje gore, gate ostaje otključan.
+      setScrollPercent(prev => (pct > prev ? pct : prev));
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [lekcija?.id, parsed?.sections.length]);
 
   // Fetch all lekcije for the same nivo to build the strip
   useEffect(() => {
@@ -1727,8 +1875,14 @@ export default function IlmihalLekcijaPage() {
           contentId: lekcija.id,
           zavrsen: true,
           bodovi: 10,
+          // Pošalji aktuelno aktivno vrijeme — backend GATE provjerava
+          // >= MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION (300s) prije nego
+          // dozvoli prvi completion. Server kontroliše truth.
+          timeSpentSeconds: timeSpentRef.current,
         }, token
       );
+      // Naš poslani vremenski snapshot je sada definitivno na serveru.
+      lastSentTimeRef.current = timeSpentRef.current;
 
       // Task #6: paralelno upiši i u studentProgress tabelu (za "Moj put" tab)
       try {
@@ -1740,7 +1894,7 @@ export default function IlmihalLekcijaPage() {
             lessonId: lekcija.id,
             score: 10,
             maxScore: 10,
-            timeSpentSeconds: 0,
+            timeSpentSeconds: timeSpentRef.current,
           },
           token,
         );
@@ -1798,8 +1952,49 @@ export default function IlmihalLekcijaPage() {
           streakIncreased: false,
         });
       }
-    } catch {}
+    } catch (e: any) {
+      // 422 = backend gate ("min_time_not_reached") — pokaži prijateljsku
+      // poruku sa preostalim sekundama umjesto generičke "Greška servera".
+      if (e?.status === 422 && e?.data?.error === "min_time_not_reached") {
+        const min = Number(e.data.minSeconds) || MIN_ACTIVE_SECONDS;
+        const cur = Number(e.data.currentSeconds) || timeSpentRef.current;
+        const remaining = Math.max(0, min - cur);
+        toast({
+          title: "Treba još malo čitanja",
+          description: `Provedi još ${formatDuration(remaining)} aktivnog čitanja prije nego označiš lekciju kao završenu.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Greška",
+          description: e?.message || "Ne mogu sačuvati napredak. Pokušaj ponovo.",
+          variant: "destructive",
+        });
+      }
+    }
   };
+
+  // Vidljive sekcije za TRENUTNOG korisnika (muallim/admin vidi priprema,
+  // učenik ne). Računa se izvan IIFE-a u JSX-u kako bismo gate logici dali
+  // pristup broju i ID-ovima sekcija.
+  const visibleSections = React.useMemo(() => {
+    if (!parsed) return [] as AccordionSection[];
+    const isMuallim = user?.role === "admin" || user?.role === "muallim";
+    return parsed.sections
+      .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim))
+      .slice()
+      .sort((a, b) => (a.type === "priprema" ? 1 : 0) - (b.type === "priprema" ? 1 : 0));
+  }, [parsed, user?.role]);
+
+  // Anti-cheat gate: tri uslova moraju biti true. `completed` se ne broji
+  // ovdje — već-završene lekcije imaju zaseban UI (vidi dugme dolje).
+  const timeOk = timeSpent >= MIN_ACTIVE_SECONDS;
+  const scrollOk = scrollPercent >= MIN_SCROLL_PERCENT;
+  const sectionsOk = visibleSections.length === 0
+    || visibleSections.every(s => openedSectionIds.has(s.id));
+  const canMarkComplete = timeOk && scrollOk && sectionsOk;
+  const remainingSeconds = Math.max(0, MIN_ACTIVE_SECONDS - timeSpent);
+  const remainingSections = visibleSections.filter(s => !openedSectionIds.has(s.id)).length;
 
   const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 3: "Nivo 3" };
   const backNivo = lekcija ? displayNivo(lekcija.nivo) : null;
@@ -2084,15 +2279,11 @@ export default function IlmihalLekcijaPage() {
           <div className="flex flex-col gap-3 mb-6">
             {(() => {
               const kvizPitanja = lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 ? lekcija.kvizPitanja : null;
-              const isMuallim = user?.role === "admin" || user?.role === "muallim";
               const isAdmin = user?.role === "admin";
               const onKvizSaved = (novaPitanja: LekcijaKvizPitanje[]) => {
                 setLekcija(prev => prev ? { ...prev, kvizPitanja: novaPitanja } : prev);
               };
-              const visibleSections = parsed.sections
-                .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim))
-                .slice()
-                .sort((a, b) => (a.type === "priprema" ? 1 : 0) - (b.type === "priprema" ? 1 : 0));
+              // `visibleSections` se izvan ovog IIFE-a računa preko useMemo.
 
               const renderKvizOrCta = () => {
                 if (kvizPitanja) {
@@ -2130,7 +2321,17 @@ export default function IlmihalLekcijaPage() {
               let kvizInserted = false;
               for (const section of visibleSections) {
                 items.push(
-                  <SectionAccordion key={section.id} section={section} slug={slug!} nivo={lekcija.nivo} />
+                  <SectionAccordion
+                    // Uključujemo slug u key kako bi React PRIMUSAO unmount/mount
+                    // kad učenik prelazi između lekcija (section.id="STORY" je
+                    // isti u svim lekcijama → bez slug-a komponenta bi se reuse-ovala
+                    // i useEffect za defaultOpen ne bi opet ispalio onOpened()).
+                    key={`${slug}-${section.id}`}
+                    section={section}
+                    slug={slug!}
+                    nivo={lekcija.nivo}
+                    onOpened={handleSectionOpened}
+                  />
                 );
                 if (!kvizInserted && section.type === "ilmihal") {
                   const node = renderKvizOrCta();
@@ -2162,13 +2363,77 @@ export default function IlmihalLekcijaPage() {
           />
         )}
 
-        {/* Complete button */}
+        {/* Complete button + anti-cheat gate UI */}
         {user && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex justify-end">
+            className="flex flex-col items-end gap-3">
+            {/* Gate pillovi — pokazuju se samo dok lekcija nije završena i
+                gate još nije zadovoljen. Učeniku pokazujemo šta još fali. */}
+            {!completed && !canMarkComplete && (
+              <div
+                className="flex flex-wrap gap-2 justify-end max-w-full"
+                data-testid="ilmihal-completion-gate"
+                aria-live="polite"
+              >
+                {!timeOk && (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 ring-1 ring-amber-200"
+                    data-testid="gate-time"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    Još {formatDuration(remainingSeconds)} čitanja
+                  </span>
+                )}
+                {!scrollOk && (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-50 text-sky-800 ring-1 ring-sky-200"
+                    data-testid="gate-scroll"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    Skrolaj do dna ({Math.round(scrollPercent * 100)}%)
+                  </span>
+                )}
+                {!sectionsOk && (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-50 text-purple-800 ring-1 ring-purple-200"
+                    data-testid="gate-sections"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Otvori još {remainingSections} {remainingSections === 1 ? "sekciju" : "sekcija"}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Status za već-završene lekcije: učenik se može vratiti i čitati
+                slobodno, vrijeme se i dalje akumulira (server radi MAX), ali
+                Aferime ne dobija opet. */}
+            {completed && (
+              <div
+                className="flex flex-wrap gap-2 justify-end items-center text-xs text-muted-foreground"
+                data-testid="ilmihal-already-completed-note"
+              >
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200">
+                  <Clock className="w-3.5 h-3.5" />
+                  Provedeno: {formatDuration(timeSpent)}
+                </span>
+                <span className="italic">
+                  Već završeno ✓ — ponovi koliko želiš, Aferime ne dobijaš opet.
+                </span>
+              </div>
+            )}
+
             <Button
               onClick={markComplete}
-              disabled={completed}
+              disabled={completed || !canMarkComplete}
+              data-testid="button-mark-complete"
+              title={
+                completed
+                  ? "Lekcija je već završena"
+                  : canMarkComplete
+                    ? "Označi lekciju kao završenu"
+                    : "Završi sve uslove iznad da otključaš dugme"
+              }
               className={`rounded-2xl px-8 py-3 font-bold text-base ${completed ? "bg-emerald-500 hover:bg-emerald-500" : ""}`}
             >
               {completed ? (

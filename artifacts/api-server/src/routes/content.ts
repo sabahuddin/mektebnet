@@ -10,7 +10,7 @@ import {
   rjecnikTable,
   studentProgressTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
@@ -109,6 +109,28 @@ router.get("/ilmihal/:slug", async (req, res) => {
         const jwt = await import("jsonwebtoken");
         const token = authHeader.replace("Bearer ", "");
         const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
+        const userId = decoded.userId;
+
+        // Dohvati napredak ovog korisnika za ovu lekciju (timeSpentSeconds + zavrsen).
+        // Frontend koristi za prikaz countdown-a i "Provedeno: Xm Ys" pored završene oznake.
+        if (userId) {
+          try {
+            const [napredak] = await db.select({
+              timeSpentSeconds: korisnikNapredakTable.timeSpentSeconds,
+              zavrsen: korisnikNapredakTable.zavrsen,
+            }).from(korisnikNapredakTable)
+              .where(and(
+                eq(korisnikNapredakTable.userId, userId),
+                eq(korisnikNapredakTable.contentType, "ilmihal"),
+                eq(korisnikNapredakTable.contentId, lekcija.id),
+              ));
+            result.userProgress = {
+              timeSpentSeconds: napredak?.timeSpentSeconds ?? 0,
+              zavrsen: napredak?.zavrsen ?? false,
+            };
+          } catch {}
+        }
+
         const isStaff = decoded.role === "admin" || decoded.role === "muallim";
         const all = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(desc(prilozi.createdAt));
         const visible = isStaff ? all : all.filter(a => a.kind === "h5p" || a.kind === "url");
@@ -296,15 +318,59 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
   };
 }
 
+// Minimum aktivnog vremena (sekundi) potrebnog za prvo označavanje ilmihal
+// lekcije kao završene. Sprječava klik-kroz-sve cheating. Vrijeme se mjeri
+// na frontendu samo dok je tab aktivan (Page Visibility API).
+const MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION = 300;
+
 // POST /api/content/napredak - save progress (bodovi only if >= 50%)
 router.post("/napredak", requireAuth, async (req, res) => {
   try {
-    const { contentType, contentId, zavrsen, bodovi, tacniOdgovori, ukupnoPitanja } = req.body;
+    const { contentType, contentId, zavrsen, bodovi, tacniOdgovori, ukupnoPitanja, timeSpentSeconds } = req.body;
     const userId = req.user!.userId;
+
+    // Osnovna validacija ulaza — bez ovoga može doći do prljavih insertova.
+    if (typeof contentType !== "string" || !contentType) {
+      res.status(400).json({ error: "invalid_content_type" });
+      return;
+    }
+    if (typeof contentId !== "number" || !Number.isFinite(contentId) || contentId <= 0) {
+      res.status(400).json({ error: "invalid_content_id" });
+      return;
+    }
+
+    // Anti-farm: za ilmihal completion potrebna je VALIDACIJA da lekcija
+    // stvarno postoji. Bez ovoga bi tehnički korisnik mogao slati proizvoljne
+    // contentId vrijednosti u POST i farmati Aferime preko mirror-a u
+    // student_progress. Validaciju radimo samo za ilmihal jer je samo to
+    // tip koji award path koristi.
+    if (contentType === "ilmihal") {
+      const [lekcijaRow] = await db
+        .select({ id: ilmihalLekcijeTable.id })
+        .from(ilmihalLekcijeTable)
+        .where(eq(ilmihalLekcijeTable.id, contentId))
+        .limit(1);
+      if (!lekcijaRow) {
+        res.status(404).json({ error: "lekcija_not_found" });
+        return;
+      }
+    }
 
     const procenat = ukupnoPitanja > 0 ? Math.round((tacniOdgovori / ukupnoPitanja) * 100) : 0;
     const stvarniBodovi = procenat >= 50 ? (bodovi || 0) : 0;
 
+    // Validiraj timeSpentSeconds — clamp negativne i ekstremno velike vrijednosti.
+    // Ako klijent ne pošalje, tretiraj kao 0 (legacy klijent).
+    // NAPOMENA: ovo je ipak klijentska vrijednost. Gate štiti od
+    // CASUAL "klikanja kroz sve" — tehnički napredan korisnik može poslati
+    // proizvoljnih 300 i proći gate. Gate se ne smije računati kao
+    // kriptografski siguran; svrha je usporiti farmanje.
+    const incomingTime = typeof timeSpentSeconds === "number" && Number.isFinite(timeSpentSeconds)
+      ? Math.max(0, Math.min(86400, Math.floor(timeSpentSeconds))) // max 24h jednostranog updatea
+      : 0;
+
+    // Pročitamo trenutni red SAMO za potrebe gate-a (zavrsen + max(time)).
+    // Stvarni write radimo atomski preko UPDATE ... GREATEST(...) — vidi dolje.
     const existing = await db.select().from(korisnikNapredakTable)
       .where(and(
         eq(korisnikNapredakTable.userId, userId),
@@ -312,15 +378,48 @@ router.post("/napredak", requireAuth, async (req, res) => {
         eq(korisnikNapredakTable.contentId, contentId),
       ));
 
+    const currentTime = existing.length > 0 ? existing[0].timeSpentSeconds : 0;
+    const wasAlreadyCompleted = existing.length > 0 && existing[0].zavrsen;
+    // Najveće vrijeme koje znamo TRENUTNO (kasniji UPDATE će uzeti GREATEST
+    // sa stvarnim DB redom — vidi dolje — pa je ovo samo procjena za gate).
+    const projectedTime = Math.max(currentTime, incomingTime);
+
+    // GATE: za prvo označavanje ilmihal lekcije kao završene zahtijevaj
+    // minimum 300 sekundi aktivnog čitanja. Već završene lekcije mogu se
+    // i dalje "potvrditi" bez vremenskog praga (samo updateuju vrijeme).
+    if (
+      zavrsen === true &&
+      contentType === "ilmihal" &&
+      !wasAlreadyCompleted &&
+      projectedTime < MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION
+    ) {
+      res.status(422).json({
+        error: "min_time_not_reached",
+        message: `Lekciju možeš označiti kao završenu nakon ${MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION} sekundi aktivnog čitanja.`,
+        minSeconds: MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION,
+        currentSeconds: projectedTime,
+      });
+      return;
+    }
+
     let result;
     if (existing.length > 0) {
       const current = existing[0];
+      // ATOMSKI UPDATE: koristimo SQL GREATEST/COALESCE da spriječimo race
+      // između paralelnih /napredak poziva (npr. periodic 30s POST + final
+      // markComplete). Bez ovoga read-then-write može upisati MANJI time
+      // i poništiti nedavno napredovanje.
       const [updated] = await db.update(korisnikNapredakTable)
         .set({
-          zavrsen: zavrsen || current.zavrsen,
-          bodovi: Math.max(stvarniBodovi, current.bodovi),
-          pokusaji: current.pokusaji + 1,
-          completedAt: zavrsen ? new Date() : current.completedAt,
+          // Boolean OR — kad jednom postane true, ne pada na false.
+          zavrsen: sql`${korisnikNapredakTable.zavrsen} OR ${!!zavrsen}`,
+          bodovi: sql`GREATEST(${korisnikNapredakTable.bodovi}, ${stvarniBodovi})`,
+          pokusaji: sql`${korisnikNapredakTable.pokusaji} + 1`,
+          timeSpentSeconds: sql`GREATEST(${korisnikNapredakTable.timeSpentSeconds}, ${incomingTime})`,
+          // completedAt: postavi tek prvi put kad postane završeno.
+          completedAt: zavrsen
+            ? (current.completedAt ?? new Date())
+            : current.completedAt,
           updatedAt: new Date(),
         })
         .where(eq(korisnikNapredakTable.id, current.id))
@@ -333,14 +432,18 @@ router.post("/napredak", requireAuth, async (req, res) => {
         contentId,
         zavrsen: !!zavrsen,
         bodovi: stvarniBodovi,
+        timeSpentSeconds: incomingTime,
         completedAt: zavrsen ? new Date() : undefined,
       }).returning();
       result = nova;
     }
 
-    // Mirror u student_progress (streak/hasanati) samo za ilmihal lekcije koje su završene
+    // Mirror u student_progress (streak/hasanati) samo za ilmihal lekcije
+    // koje su upravo završene PRVI put. `wasAlreadyCompleted` štiti od
+    // dvostrukog awarda kad učenik ponovo pritisne dugme na već završenoj
+    // lekciji (drugi sloj — prvi je `newCompletion` u updateStudentProgressForLesson).
     let progressDelta = null;
-    if (zavrsen && contentType === "ilmihal" && typeof contentId === "number") {
+    if (zavrsen && contentType === "ilmihal" && !wasAlreadyCompleted) {
       try {
         progressDelta = await updateStudentProgressForLesson(userId, contentId, 15);
       } catch (e) {

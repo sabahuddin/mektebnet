@@ -68,6 +68,10 @@ export const korisnikNapredakTable = pgTable("korisnik_napredak", {
   zavrsen: boolean("zavrsen").notNull().default(false),
   bodovi: integer("bodovi").notNull().default(0),
   pokusaji: integer("pokusaji").notNull().default(1),
+  // Ukupno aktivno vrijeme (u sekundama) koje je korisnik proveo na ovom
+  // sadržaju. Mjeri se samo dok je tab aktivan (Page Visibility API). Raste
+  // i nakon završetka ako se učenik vrati na lekciju ponovo da uči.
+  timeSpentSeconds: integer("time_spent_seconds").notNull().default(0),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

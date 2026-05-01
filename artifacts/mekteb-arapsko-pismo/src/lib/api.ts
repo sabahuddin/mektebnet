@@ -24,6 +24,10 @@ export async function apiRequest<T = unknown>(
     const error = new Error(fullMsg) as any;
     error.status = res.status;
     error.detail = err.detail;
+    // Cijelo tijelo greške proslijedi pozivaocu — strukturirane greške
+    // (npr. 422 sa `currentSeconds`/`minSeconds`) trebaju ovo da naprave
+    // bolji UX umjesto generičke poruke.
+    error.data = err;
     throw error;
   }
 
