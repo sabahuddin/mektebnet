@@ -56,6 +56,11 @@ async function runMigrations() {
     // Kolone koje su dodane u shemu, ali nisu u setup.ts CREATE statementu
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS lekcija_naziv VARCHAR(200);`);
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS kviz_pitanja JSONB;`);
+    // Anti-cheat gate (300s + scroll + sve sekcije): ukupno aktivno vrijeme
+    // koje je učenik proveo na lekciji. Server radi MAX(stored, incoming) na
+    // svakom POST /content/napredak. Bez ove kolone produkcija pada na 500
+    // svaki put kad učenik klikne "Označi kao završeno".
+    await db.execute(sql`ALTER TABLE korisnik_napredak ADD COLUMN IF NOT EXISTS time_spent_seconds INTEGER NOT NULL DEFAULT 0;`);
 
     // Unique index potreban za ON CONFLICT u /api/roditelj/link-dijete
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS roditelj_ucenik_unique_idx ON roditelj_ucenik (roditelj_id, ucenik_id);`);
