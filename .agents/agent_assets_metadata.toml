@@ -641,3 +641,9 @@ id = "1T7Y-L2mbDuBYW6Epn-Na"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-prazno.png"
 type = "image"
 title = "Pčela — Empty state"
+
+[[outputs]]
+id = "hdzf4hSFJYwNea1Zz43Xo"
+uri = "file://docs/PROJECT.md"
+type = "text"
+title = "Mekteb.net — Dokumentacija projekta (PROJECT.md)"
