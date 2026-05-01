@@ -52,23 +52,23 @@ const H5P_TEMPLATES: H5pTemplate[] = [
   {
     fileName: "vakat-namaza-pairs.h5p",
     naslov: "Vakat namaza",
-    tip: "Image Pairs",
-    opis: "Učenik spaja sliku doba dana sa imenom namaza (sabah, podne, ikindija…).",
-    primjer: "izlazak sunca ↔ sabah,  podne ↔ podne-namaz",
+    tip: "Multiple Choice",
+    opis: "Pitanja o vremenima namaza (sabah, podne, ikindija, akšam, jacija) — primjer koji muallim popunjava svojim pitanjima.",
+    primjer: "Koji namaz se klanja prije izlaska sunca? a) Sabah  b) Podne  c) Akšam  d) Jacija",
   },
   {
     fileName: "dijelovi-dzamije-hotspots.h5p",
     naslov: "Dijelovi džamije",
-    tip: "Find the Hotspot",
-    opis: "Učenik klikne na dio džamije (mihrab, minber, munara, mahfil) na slici.",
-    primjer: "Pronađi minber na slici džamije",
+    tip: "Multiple Choice",
+    opis: "Pitanja o dijelovima džamije (mihrab, minber, munara, mahfil). Muallim može u Lumi-ju dodati i Image Hotspot ako želi sliku.",
+    primjer: "Šta je mihrab? a) Niša okrenuta Kibli  b) Munara  c) Minber  d) Mahfil",
   },
   {
     fileName: "harf-izgovor-memory.h5p",
-    naslov: "Pamti par — harf i izgovor",
-    tip: "Memory Game",
-    opis: "6 parova kartica: arapski harf na jednoj, ime/izgovor na drugoj.",
-    primjer: "ج ↔ džim,  ح ↔ ha,  خ ↔ ha (sa tačkom)",
+    naslov: "Harf i izgovor — povuci par",
+    tip: "Drag the Words",
+    opis: "Učenik povlači izgovor na pravo mjesto pored arapskog harfa (džim, ha, ha tačka, dal…). Muallim može dodati još parova.",
+    primjer: "ج → džim,  ح → ha,  خ → ha (sa tačkom),  د → dal",
   },
 ];
 

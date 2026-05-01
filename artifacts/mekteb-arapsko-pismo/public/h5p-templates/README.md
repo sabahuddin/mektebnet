@@ -6,17 +6,24 @@ svojim sadržajem i ponovo eksportovati u .h5p za upload u Mekteb.
 
 ## Trenutni šabloni
 
-| Fajl | Tip | Tema |
+| Fajl | Tip (mainLibrary) | Tema |
 | --- | --- | --- |
-| `harfovi-drag-the-words.h5p` | Drag the Words | Spoji harf sa imenom (elif, ba, ta…) |
-| `ilmihal-sartovi-imana.h5p` | Multiple Choice | Šartovi imana — primjer pitanja |
-| `vakat-namaza-pairs.h5p` | Multiple Choice | Vakat namaza (pretvori u Image Pairs) |
-| `dijelovi-dzamije-hotspots.h5p` | Multiple Choice | Mihrab/minber/munara (pretvori u Find Hotspot) |
-| `harf-izgovor-memory.h5p` | Drag the Words | Harf-izgovor parovi (pretvori u Memory Game) |
+| `harfovi-drag-the-words.h5p` | H5P.DragText | Spoji harf sa imenom (elif, ba, ta…) |
+| `ilmihal-sartovi-imana.h5p` | H5P.MultiChoice | Šartovi imana — primjer pitanja |
+| `vakat-namaza-pairs.h5p` | H5P.MultiChoice | Vakat namaza — primjer pitanja |
+| `dijelovi-dzamije-hotspots.h5p` | H5P.MultiChoice | Dijelovi džamije — primjer pitanja |
+| `harf-izgovor-memory.h5p` | H5P.DragText | Harf↔izgovor parovi |
 
 Šabloni su **content-only** .h5p paketi (sadrže `h5p.json` + `content/content.json`).
 Lumi automatski preuzima nedostajuće H5P biblioteke iz H5P-Hub-a kad otvori paket
-prvi put — radi out-of-the-box.
+prvi put — radi out-of-the-box. Korisnik samo mijenja tekst i može odmah
+sačuvati novi .h5p za upload.
+
+> **Napomena**: trenutno isporučujemo samo `H5P.DragText` i `H5P.MultiChoice`
+> šablone jer su ti tipovi najjednostavniji za uređivanje teksta. Ostali tipovi
+> sa tabele "Preporučeni tipovi" (Image Hotspots, Memory Game, Image Pair) su
+> dostupni u Lumi-ju i muallim ih može sam kreirati po istom postupku
+> opisanom u uputstvu.
 
 Stranica `/muallim/h5p-uputstvo` pokazuje sve šablone — ako fajl postoji, dugme je
 **"Preuzmi šablon"**, ako ne postoji, **"Šablon dolazi uskoro"** (HEAD provjera).

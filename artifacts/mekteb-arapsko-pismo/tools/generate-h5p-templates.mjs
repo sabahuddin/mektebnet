@@ -142,7 +142,7 @@ const TEMPLATES = [
     },
     content: {
       question:
-        "<p>Šablon za vježbu o vaktovima namaza. Otvori u Lumi-ju i pretvori u Image Pairs ili dodaj svoja pitanja.</p><p>Koji namaz se klanja prije izlaska sunca?</p>",
+        "<p><strong>Vakat namaza — primjer pitanja.</strong> Otvori u Lumi-ju i dodaj/zamijeni svojim pitanjima.</p><p>Koji namaz se klanja prije izlaska sunca?</p>",
       answers: [
         { text: "<p>Sabah</p>", correct: true, tipsAndFeedback: { tip: "", chosenFeedback: "Tačno!", notChosenFeedback: "" } },
         { text: "<p>Podne</p>", correct: false, tipsAndFeedback: { tip: "", chosenFeedback: "Netačno.", notChosenFeedback: "" } },
@@ -194,7 +194,7 @@ const TEMPLATES = [
     },
     content: {
       question:
-        "<p><strong>Šablon za vježbu o dijelovima džamije.</strong> U Lumi-ju ovo možeš pretvoriti u <em>Find the Hotspot</em> dodavanjem slike džamije.</p><p>Šta je <strong>mihrab</strong>?</p>",
+        "<p><strong>Dijelovi džamije — primjer pitanja.</strong> Otvori u Lumi-ju i dodaj/zamijeni svojim pitanjima.</p><p>Šta je <strong>mihrab</strong>?</p>",
       answers: [
         { text: "<p>Niša u zidu okrenuta prema Kibli, gdje stoji imam.</p>", correct: true, tipsAndFeedback: { tip: "", chosenFeedback: "Tačno!", notChosenFeedback: "" } },
         { text: "<p>Visoka kula sa koje se uči ezan.</p>", correct: false, tipsAndFeedback: { tip: "", chosenFeedback: "Netačno — to je munara.", notChosenFeedback: "" } },
@@ -245,7 +245,7 @@ const TEMPLATES = [
     },
     content: {
       taskDescription:
-        "<p><strong>Šablon za pamćenje parova harf-izgovor.</strong> U Lumi-ju ovo možeš pretvoriti u <em>Memory Game</em> dodavanjem parova kartica sa slikama harfova.</p><p>Privremeno: povuci izgovor na pravo mjesto pored harfa.</p>",
+        "<p><strong>Harf i izgovor — povuci par.</strong> Učenik povlači izgovor na pravo mjesto pored arapskog harfa. Otvori u Lumi-ju da dodaš još parova.</p>",
       textField:
         "ج — *džim*\nح — *ha*\nخ — *ha (sa tačkom)*\nد — *dal*\nذ — *zal*\nر — *ra*",
       checkAnswer: COMMON_L10N.checkAnswerButton,
