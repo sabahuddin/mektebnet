@@ -1315,6 +1315,22 @@ function PriloziSection({
     }
   };
 
+  // Helper: ponovo dovuci broj pokušaja (i multiplier za sljedeći) za jedan
+  // prilog. Koristi se nakon završetka vježbe i pri klik-u na "Ponovi" kako bi
+  // badge iznad playera uvijek pokazivao tačan "Pokušaj X — Y% nagrade".
+  const refreshH5pAttempts = useCallback(async (priloziId: number) => {
+    if (!token) return;
+    try {
+      const fresh = await apiRequest<{ nextAttemptNo: number; nextMultiplier: number }>(
+        "GET", `/h5p/attempts/${priloziId}`, undefined, token,
+      );
+      setH5pAttempts(prev => ({
+        ...prev,
+        [priloziId]: { nextAttemptNo: fresh.nextAttemptNo, nextMultiplier: fresh.nextMultiplier },
+      }));
+    } catch {/* ignore — npr. admin/muallim ne dobija ovaj endpoint */}
+  }, [token]);
+
   const handleH5pCompleted = useCallback(async (priloziId: number, score: number, maxScore: number) => {
     if (!token) return;
     if (h5pSubmitting[priloziId]) return;
@@ -1346,18 +1362,13 @@ function PriloziSection({
         toast({ title: "Vježba završena", description: reason });
       }
       // Refresh attempts za ovaj prilog (smanji prikazani max za sljedeći put).
-      try {
-        const fresh = await apiRequest<{ nextAttemptNo: number; nextMultiplier: number }>(
-          "GET", `/h5p/attempts/${priloziId}`, undefined, token,
-        );
-        setH5pAttempts(prev => ({ ...prev, [priloziId]: { nextAttemptNo: fresh.nextAttemptNo, nextMultiplier: fresh.nextMultiplier } }));
-      } catch {/* ignore */}
+      await refreshH5pAttempts(priloziId);
     } catch (err: any) {
       toast({ title: "Greška", description: err.message, variant: "destructive" });
     } finally {
       setH5pSubmitting(prev => ({ ...prev, [priloziId]: false }));
     }
-  }, [token, h5pSubmitting, onH5pCelebration, toast]);
+  }, [token, h5pSubmitting, onH5pCelebration, toast, refreshH5pAttempts]);
 
   const handleAddUrl = async () => {
     if (!urlValue.trim() || !token) return;
@@ -1557,7 +1568,13 @@ function PriloziSection({
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {isH5p ? (
                               <button
-                                onClick={() => setH5pAttemptKey(prev => ({ ...prev, [a.id]: attemptKey + 1 }))}
+                                onClick={() => {
+                                  setH5pAttemptKey(prev => ({ ...prev, [a.id]: attemptKey + 1 }));
+                                  // Osvježi brojač pokušaja — ako je prethodni
+                                  // rezultat već stigao serveru, badge će sad
+                                  // pokazati tačan novi "Pokušaj X — Y%".
+                                  void refreshH5pAttempts(a.id);
+                                }}
                                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
                                 title="Pokušaj ponovo"
                               >
@@ -1601,14 +1618,27 @@ function PriloziSection({
                         </div>
                         {isH5p && h5pUrl && (
                           <div className="mt-2 rounded-lg overflow-hidden bg-white border border-purple-100">
-                            {/* Attempt-aware header — pokazuje učeniku koliko hasanata
-                                može osvojiti za sljedeći pokušaj (uzima u obzir prošlost). */}
+                            {/* Attempt-aware header — pokazuje učeniku unaprijed koji
+                                je ovo pokušaj, koliki je % nagrade i do koliko Aferima
+                                konkretno može dobiti (sve uzima u obzir prethodne
+                                pokušaje). Format: "Pokušaj X — Y% nagrade · do N Aferima". */}
                             <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center gap-2">
                               <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
                               <p className="text-sm font-semibold text-purple-700">
                                 {maxNext > 0
-                                  ? <>Vježba — možeš osvojiti do <span className="text-purple-900">{maxNext} {aferimForm(maxNext)}</span> ({att?.nextAttemptNo ?? 1}. pokušaj)</>
-                                  : <>Vježba — daljnji pokušaji ne donose Aferime (već {Math.max(0, (att?.nextAttemptNo ?? 1) - 1)} pokušaja)</>
+                                  ? <>
+                                      Pokušaj <span className="text-purple-900">{att?.nextAttemptNo ?? 1}</span>
+                                      {" — "}
+                                      <span className="text-purple-900">{Math.round(nextMult * 100)}% nagrade</span>
+                                      {" · možeš osvojiti do "}
+                                      <span className="text-purple-900">{maxNext} {aferimForm(maxNext)}</span>
+                                    </>
+                                  : <>
+                                      Pokušaj <span className="text-purple-900">{att?.nextAttemptNo ?? 1}</span>
+                                      {" — "}
+                                      <span className="text-purple-900">više pokušaja ne donosi Aferime</span>
+                                      {" (već "}{Math.max(0, (att?.nextAttemptNo ?? 1) - 1)} pokušaja{")"}
+                                    </>
                                 }
                               </p>
                             </div>
