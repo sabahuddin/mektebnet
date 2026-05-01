@@ -1160,14 +1160,18 @@ function getYoutubeEmbedUrl(url: string): string | null {
 function PriloziSection({
   lekcija,
   token,
-  isAdmin,
+  canManage,
   onH5pCelebration,
 }: {
   lekcija: Lekcija;
   token: string | null;
-  isAdmin: boolean;
+  /** Da li korisnik smije dodavati/brisati materijale (muallim ili admin). */
+  canManage: boolean;
   onH5pCelebration?: (data: CelebrationData) => void;
 }) {
+  // Lokalni alias za čitljivost — ranije su uvjeti pisali `isAdmin`, ali sada
+  // "upravljanje materijalima" obuhvata i muallim-a (vidi backend admin.ts).
+  const isAdmin = canManage;
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   // `lekcija.prilozi` može stići naknadno (npr. token postane dostupan tek
@@ -2152,7 +2156,7 @@ export default function IlmihalLekcijaPage() {
           <PriloziSection
             lekcija={lekcija}
             token={token}
-            isAdmin={user.role === "admin"}
+            canManage={user.role === "admin" || user.role === "muallim"}
             onH5pCelebration={setCelebration}
           />
         )}

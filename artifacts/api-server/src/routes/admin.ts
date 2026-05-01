@@ -33,10 +33,27 @@ import {
   exerciseSessionsTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
-router.use(requireAuth, requireRole("admin"));
+router.use(requireAuth);
+
+// Prilozi (materijali za nastavu) — i muallim i admin smiju upravljati;
+// sve ostale admin rute ostaju strogo admin-only.
+router.use((req, res, next) => {
+  const role = (req as unknown as { user?: { role?: string } }).user?.role;
+  // Boundary-safe prefix: točno "/prilozi" ili podruta "/prilozi/...".
+  // Sprječava buduće slučajeve gdje bi nova ruta tipa "/priloziXYZ" slučajno
+  // postala dostupna i muallim-u zbog naivnog startsWith-a.
+  const isPriloziRoute = req.path === "/prilozi" || req.path.startsWith("/prilozi/");
+  const allowed = isPriloziRoute
+    ? role === "admin" || role === "muallim"
+    : role === "admin";
+  if (!allowed) {
+    return res.status(403).json({ error: "Nemaš dozvolu za ovu radnju" });
+  }
+  next();
+});
 
 const __adminDirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = process.env["UPLOADS_DIR"]
