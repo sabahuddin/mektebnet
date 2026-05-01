@@ -132,6 +132,17 @@ export default function MuallimIzvjestajPage() {
         @media print {
           @page { margin: 1.5cm; size: A4; }
           body { background: white !important; }
+          /*
+            Override globalnog index.css koji postavlja #print-worksheet na
+            position:fixed (radi za 1-page Citaonica worksheet, ali blokira
+            paginaciju izvještaja koji se prelijeva preko više stranica).
+            Treba natural flow + width auto da margin @page ne bude duplo.
+          */
+          #print-worksheet {
+            position: static !important;
+            width: auto !important;
+            max-width: 100% !important;
+          }
           .no-print { display: none !important; }
           .print-card { box-shadow: none !important; border-color: #d1d5db !important; page-break-inside: avoid; }
           .print-page-break { page-break-before: always; }
@@ -145,7 +156,13 @@ export default function MuallimIzvjestajPage() {
         }
       `}</style>
 
-      <div className="max-w-4xl mx-auto print-root">
+      {/*
+        id="print-worksheet" je obavezan: globalni @media print u index.css
+        sakriva (visibility:hidden) sav body sadržaj OSIM elementa sa ovim id-om
+        i njegove djece. Bez njega štampa daje prazan list. Originalno je
+        pravljeno za Citaonica worksheet, sada se reuse-uje i ovdje.
+      */}
+      <div id="print-worksheet" className="max-w-4xl mx-auto print-root">
         <div className="no-print mb-6 flex items-center justify-between gap-3 flex-wrap">
           <button
             onClick={() => window.history.length > 1 ? window.history.back() : setLocation("/muallim")}
