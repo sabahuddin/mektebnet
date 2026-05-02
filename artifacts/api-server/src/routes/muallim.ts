@@ -23,6 +23,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { sendPushNotification } from "../lib/push.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
@@ -1646,6 +1647,18 @@ router.post("/zadace", async (req, res) => {
       await db.insert(zadaceUceniciTable).values(
         validUcenikIds.map(uid => ({ zadacaId: nova.id, ucenikId: uid }))
       );
+
+      // Best-effort push notifikacija učenicima — ne čekamo, ne propagiramo grešku
+      const opisPreview = opis && typeof opis === "string" && opis.trim()
+        ? (opis.trim().length > 80 ? opis.trim().slice(0, 80) + "…" : opis.trim())
+        : "Otvori da vidiš detalje.";
+      sendPushNotification({
+        userIds: validUcenikIds,
+        title: `Nova zadaća: ${naslov}`,
+        body: opisPreview,
+        url: "/ucenik/zadace",
+        data: { type: "zadaca", zadacaId: nova.id },
+      }).catch((err) => console.error("[Zadace push]", err));
     }
 
     res.status(201).json({ ...nova, ucenikIds: validUcenikIds });

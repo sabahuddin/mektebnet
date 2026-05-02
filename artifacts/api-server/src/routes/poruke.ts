@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { porukeTable, usersTable, ucenikProfiliTable, grupeTable, roditeljUcenikTable } from "@workspace/db/schema";
 import { eq, or, and, desc, inArray, isNull, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import { sendPushNotification } from "../lib/push.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -156,6 +157,19 @@ router.post("/", async (req, res) => {
       naslov: naslov || "Bez naslova",
       sadrzaj: sadrzaj.trim(),
     }).returning();
+
+    // Best-effort push notifikacija — ne čekamo, ne propagiramo grešku
+    const senderName = req.user!.displayName || "Mekteb";
+    const previewBody = sadrzaj.trim().length > 80
+      ? sadrzaj.trim().slice(0, 80) + "…"
+      : sadrzaj.trim();
+    sendPushNotification({
+      userIds: [targetId],
+      title: `Nova poruka od ${senderName}`,
+      body: previewBody,
+      url: "/poruke",
+      data: { type: "poruka", porukaId: nova.id, posiljateljId: userId },
+    }).catch((err) => console.error("[Poruke push]", err));
 
     res.status(201).json(nova);
   } catch (err) {

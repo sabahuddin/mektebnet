@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiRequest } from "@/lib/api";
+import { loginPushUser, logoutPushUser } from "@/lib/push";
 
 export interface AuthUser {
   id: number;
@@ -33,8 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem(USER_KEY);
     if (storedToken && storedUser) {
       try {
+        const parsedUser = JSON.parse(storedUser) as AuthUser;
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(parsedUser);
+        // Restore push alias za već-prijavljenog korisnika (npr. nakon refresh-a)
+        loginPushUser(parsedUser.id).catch(() => {});
       } catch {}
     }
     setIsLoading(false);
@@ -50,6 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     setToken(res.token);
     setUser(res.user);
+    // Poveži OneSignal subscription sa našim user ID-jem; ako je permission
+    // već dat, registruje token automatski. Greška ne smije blokirati login.
+    loginPushUser(res.user.id).catch(() => {});
   };
 
   const logout = () => {
@@ -57,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // da browser nakon logout-a više ne može pristupiti H5P static fajlovima.
     // Greška se ignorira (offline, network) — lokalni state se svakako briše.
     apiRequest("POST", "/auth/logout").catch(() => {});
+    // Skini OneSignal alias + obriši push token iz backend-a (best-effort)
+    logoutPushUser().catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);

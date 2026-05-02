@@ -45,6 +45,7 @@ export default defineConfig({
         "icons/apple-touch-icon-120.png",
         "icons/apple-touch-icon-152.png",
         "icons/apple-touch-icon-167.png",
+        "OneSignalSDKWorker.js",
       ],
       manifest: {
         id: `${basePath}?source=pwa`,
@@ -84,8 +85,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,woff,ttf,json}"],
+        // OneSignalSDKWorker.js mora ostati zaseban SW koji OneSignal sam
+        // registruje — ne smije ga Workbox uvući u svoj precache niti rute.
+        globIgnores: ["**/OneSignalSDKWorker.js"],
         navigateFallback: `${basePath.replace(/\/$/, "")}/offline.html`,
-        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /OneSignalSDKWorker\.js$/],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: false,

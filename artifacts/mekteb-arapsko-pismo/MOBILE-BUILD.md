@@ -139,3 +139,77 @@ HTTP. Mi koristimo isključivo HTTPS (`https://mekteb.net`) pa ne treba.
 
 **Android: `INSTALL_FAILED_UPDATE_INCOMPATIBLE`** pri reinstall-u na uređaj  
 → Uninstall stari APK prvo: `adb uninstall net.mektebnet.app`.
+
+---
+
+## Push notifikacije (OneSignal — Faza 3)
+
+Web push (browser/PWA) već radi automatski preko OneSignal Web SDK-a — vidi `src/lib/push.ts`. Za **native iOS i Android** push (Capacitor app), treba dodatni setup:
+
+### 1. Instaliraj OneSignal Capacitor plugin
+
+Iz `artifacts/mekteb-arapsko-pismo/`:
+
+```bash
+pnpm add onesignal-cordova-plugin @awesome-cordova-plugins/onesignal
+pnpm install
+npx cap sync
+```
+
+### 2. Native init (TODO za buduću iteraciju)
+
+Kreiraj `src/lib/native-push.ts` sličan webu — koristi `OneSignal` iz `onesignal-cordova-plugin`:
+
+```ts
+import OneSignal from "onesignal-cordova-plugin";
+
+export async function initNativePush() {
+  OneSignal.initialize("feaa5a2c-ded2-4ab0-b0b0-04d8bac560cd");
+  OneSignal.Notifications.requestPermission(true);
+  OneSignal.login(String(userId)); // kad se korisnik logira
+  const playerId = await OneSignal.User.pushSubscription.getIdAsync();
+  // POST /api/push/register sa { playerId, platform: "ios" | "android" }
+}
+```
+
+U `main.tsx` ili `auth.tsx` provjeri `Capacitor.isNativePlatform()` i pozovi `initNativePush()` umjesto `initOneSignal()`.
+
+### 3. iOS (APNs) setup u OneSignal dashboard-u
+
+1. **Apple Developer portal** (https://developer.apple.com/account/resources/authkeys):
+   - Keys → `+` → naziv "Mekteb APNs" → check **Apple Push Notifications service (APNs)** → Continue → Register
+   - Skini **.p8 file** (samo jednom — čuvaj ga!) i zapamti **Key ID** (npr. `ABC123DEFG`)
+   - Zapamti **Team ID** (gore desno u portalu, npr. `XYZ987WVUT`)
+2. **OneSignal dashboard** → Settings → Platforms → **Apple iOS (APNs)**:
+   - Choose Integration: **Token-based**
+   - Upload **.p8 file**
+   - Unesi **Key ID**, **Team ID**, **Bundle ID** (`net.mektebnet.app`)
+   - Save
+3. U Xcode (App target → Signing & Capabilities):
+   - **+ Capability → Push Notifications**
+   - **+ Capability → Background Modes → Remote notifications**
+
+### 4. Android (FCM) setup u OneSignal dashboard-u
+
+1. **Firebase Console** (https://console.firebase.google.com):
+   - Create project "Mekteb" (ili koristi postojeći)
+   - Project Settings → Cloud Messaging tab → kopiraj **Sender ID** i **Server Key** (legacy) ILI uradi **Service Account JSON** (preporučeno)
+   - Project Settings → Service accounts → Generate new private key → skini JSON
+2. **OneSignal dashboard** → Settings → Platforms → **Google Android (FCM)**:
+   - Upload **Service Account JSON**
+   - Save
+3. U `android/app/build.gradle` provjeri `applicationId "net.mektebnet.app"` (mora se poklapati sa Firebase appom).
+4. Dodaj `google-services.json` u `android/app/` (skini iz Firebase Console-a).
+
+### 5. Test
+
+Nakon prvog build-a:
+1. Otvori app na uređaju (simulator ne podržava push), prihvati permission prompt
+2. OneSignal dashboard → **Audience → All Users** → trebalo bi vidjeti uređaj
+3. Pošalji **Test Push** iz dashboarda → trebao bi stići
+
+### Trenutni status
+
+- ✅ Web push (mekteb.net) — radi
+- ✅ Backend trigger-i (nova poruka, nova zadaća)
+- ⏸ Native iOS/Android — plugin nije još instaliran (vidi korake gore)

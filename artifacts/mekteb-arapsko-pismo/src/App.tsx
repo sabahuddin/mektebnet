@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/auth";
 import { LanguageProvider } from "@/context/language";
 import { OfflineIndicator } from "@/components/offline-indicator";
+import { PushPrompt } from "@/components/push-prompt";
 
 // Auth pages
 import LoginPage from "./pages/login";
@@ -166,6 +167,7 @@ function App() {
               <Router />
             </WouterRouter>
             <OfflineIndicator />
+            <PushPrompt />
             <Toaster />
           </TooltipProvider>
         </AuthProvider>
