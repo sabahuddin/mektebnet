@@ -77,12 +77,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("mekteb-lang");
-      if (saved) {
-        // Prvi mount: ako spremljeni jezik nije bs i cookie ne odgovara,
-        // postavi cookie i pokušaj reload (uz guard koji spriječava petlju
-        // kad je cookie write blokiran).
-        if (saved !== "bs" && setGoogTransCookie(saved as Lang)) {
-          safeReloadForLang(saved as Lang);
+      // Defenzivno: validiraj da spremljena vrijednost odgovara podržanom
+      // jeziku prije postavljanja Google Translate cookie-a — invalidan
+      // localStorage entry ne smije izazvati nepotreban reload sa pogrešnim
+      // cookie-em.
+      if (saved && saved in translations) {
+        const savedLang = saved as Lang;
+        if (savedLang !== "bs" && setGoogTransCookie(savedLang)) {
+          safeReloadForLang(savedLang);
           return;
         }
         setGeoDetected(true);
