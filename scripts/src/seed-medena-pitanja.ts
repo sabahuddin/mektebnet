@@ -272,8 +272,15 @@ export async function seedMedenaPitanja(): Promise<{
   return { total, perKategorija };
 }
 
-// CLI entry point
-if (import.meta.url === `file://${process.argv[1]}`) {
+// CLI entry point — pokreni samo kada se skripta direktno izvršava preko tsx-a,
+// npr. `pnpm --filter @workspace/scripts run seed-medena-pitanja`. Kad je skripta
+// dinamički import-ovana iz bundle-ovanog API servera (await import(...)),
+// `import.meta.url` i `process.argv[1]` oboje ukazuju na bundle entrypoint
+// (dist/index.mjs) pa bi naivni `===` check pogrešno aktivirao process.exit(0)
+// nakon završetka seed-a, što bi srušilo cijeli API server.
+const __argv1 = process.argv[1] ?? "";
+const __isCliRun = /seed-medena-pitanja\.(ts|mjs|js)$/.test(__argv1);
+if (__isCliRun) {
   seedMedenaPitanja()
     .then((result) => {
       console.log(`✓ Medena staza seed gotov. Ukupno: ${result.total} pitanja.`);
