@@ -1,0 +1,100 @@
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+{"level":30,"time":1777754750506,"pid":1,"hostname":"054aa0e24f53","req":{"id":13,"method":"GET","url":"/manifest.webmanifest"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754750562,"pid":1,"hostname":"054aa0e24f53","req":{"id":14,"method":"GET","url":"/favicon.svg"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754753492,"pid":1,"hostname":"054aa0e24f53","req":{"id":15,"method":"GET","url":"/"},"res":{"statusCode":304},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754753527,"pid":1,"hostname":"054aa0e24f53","req":{"id":16,"method":"GET","url":"/assets/index-BQjQw67g.js"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:521:24)\n    at onFinish (node:_http_outgoing:1026:10)\n    at callback (node:internal/streams/writable:764:21)\n    at afterWrite (node:internal/streams/writable:708:5)\n    at afterWriteTick (node:internal/streams/writable:694:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)"},"responseTime":1,"msg":"request errored"}
+{"level":30,"time":1777754753529,"pid":1,"hostname":"054aa0e24f53","req":{"id":17,"method":"GET","url":"/assets/index-TJIr1yN7.css"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:521:24)\n    at onFinish (node:_http_outgoing:1026:10)\n    at callback (node:internal/streams/writable:764:21)\n    at afterWrite (node:internal/streams/writable:708:5)\n    at afterWriteTick (node:internal/streams/writable:694:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)"},"responseTime":0,"msg":"request errored"}
+{"level":30,"time":1777754753564,"pid":1,"hostname":"054aa0e24f53","req":{"id":18,"method":"GET","url":"/manifest.webmanifest"},"res":{"statusCode":304},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1777754753612,"pid":1,"hostname":"054aa0e24f53","req":{"id":19,"method":"GET","url":"/favicon.svg"},"res":{"statusCode":304},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1777754754003,"pid":1,"hostname":"054aa0e24f53","req":{"id":20,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1777754764092,"pid":1,"hostname":"054aa0e24f53","req":{"id":21,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754774161,"pid":1,"hostname":"054aa0e24f53","req":{"id":22,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754781067,"pid":1,"hostname":"054aa0e24f53","req":{"id":23,"method":"GET","url":"/"},"res":{"statusCode":304},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1777754781210,"pid":1,"hostname":"054aa0e24f53","req":{"id":24,"method":"GET","url":"/assets/index-BQjQw67g.js"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:521:24)\n    at onFinish (node:_http_outgoing:1026:10)\n    at callback (node:internal/streams/writable:764:21)\n    at afterWrite (node:internal/streams/writable:708:5)\n    at afterWriteTick (node:internal/streams/writable:694:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)"},"responseTime":1,"msg":"request errored"}
+{"level":30,"time":1777754781211,"pid":1,"hostname":"054aa0e24f53","req":{"id":25,"method":"GET","url":"/assets/index-TJIr1yN7.css"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:521:24)\n    at onFinish (node:_http_outgoing:1026:10)\n    at callback (node:internal/streams/writable:764:21)\n    at afterWrite (node:internal/streams/writable:708:5)\n    at afterWriteTick (node:internal/streams/writable:694:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)"},"responseTime":0,"msg":"request errored"}
+{"level":30,"time":1777754781231,"pid":1,"hostname":"054aa0e24f53","req":{"id":26,"method":"GET","url":"/manifest.webmanifest"},"res":{"statusCode":304},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1777754784209,"pid":1,"hostname":"054aa0e24f53","req":{"id":27,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754786087,"pid":1,"hostname":"054aa0e24f53","req":{"id":29,"method":"GET","url":"/manifest.webmanifest"},"res":{"statusCode":304},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1777754786088,"pid":1,"hostname":"054aa0e24f53","req":{"id":28,"method":"GET","url":"/assets/index-TJIr1yN7.css"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754793473,"pid":1,"hostname":"054aa0e24f53","req":{"id":30,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":6,"msg":"request completed"}
+{"level":30,"time":1777754794296,"pid":1,"hostname":"054aa0e24f53","req":{"id":31,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1777754804383,"pid":1,"hostname":"054aa0e24f53","req":{"id":32,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":3,"msg":"request completed"}
+{"level":30,"time":1777754814476,"pid":1,"hostname":"054aa0e24f53","req":{"id":33,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":4,"msg":"request completed"}
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+at loggingMiddleware (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:206:7)
+at result2 (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:90:12)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+Error: Origin nije dozvoljen: http://i8w884sgkkgogkwsokcwc0c4.91.98.234.55.sslip.io
+at origin (/app/artifacts/api-server/src/app.ts:59:16)
+at cb (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:219:13)
+at optionsCallback (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:199:9)
+at corsMiddleware (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:204:7)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+at loggingMiddleware (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:206:7)
+at result2 (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:90:12)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+Error: Origin nije dozvoljen: http://i8w884sgkkgogkwsokcwc0c4.91.98.234.55.sslip.io
+at origin (/app/artifacts/api-server/src/app.ts:59:16)
+at cb (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:219:13)
+at optionsCallback (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:199:9)
+at corsMiddleware (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:204:7)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+at loggingMiddleware (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:206:7)
+at result2 (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:90:12)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+Error: Origin nije dozvoljen: http://i8w884sgkkgogkwsokcwc0c4.91.98.234.55.sslip.io
+at origin (/app/artifacts/api-server/src/app.ts:59:16)
+at cb (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:219:13)
+at optionsCallback (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:199:9)
+at corsMiddleware (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:204:7)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+at loggingMiddleware (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:206:7)
+at result2 (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:90:12)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+Error: Origin nije dozvoljen: http://i8w884sgkkgogkwsokcwc0c4.91.98.234.55.sslip.io
+at origin (/app/artifacts/api-server/src/app.ts:59:16)
+at cb (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:219:13)
+at optionsCallback (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:199:9)
+at corsMiddleware (/app/node_modules/.pnpm/cors@2.8.6/node_modules/cors/lib/index.js:204:7)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
+at loggingMiddleware (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:206:7)
+at result2 (/app/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:90:12)
+at Layer.handleRequest (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:152:17)
+at trimPrefix (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:342:13)
+at  (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:297:9)
+at processParams (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:582:12)
+at next (/app/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:291:5)
