@@ -341,6 +341,90 @@ const h5pUpload = multer({
   },
 });
 
+// Lista content type-ova koji puca u našem h5p-standalone player-u (bez Drupal/Moodle
+// runtime-a). Ako h5p.json (mainLibrary ili preloadedDependencies) referencira jednu
+// od ovih biblioteka, upload odbacujemo da muallim ne snimi vježbu koja kasnije puca
+// na učeničkom uređaju.
+const UNSUPPORTED_H5P_LIBRARIES = new Set<string>([
+  "H5P.FindTheWords",
+  "H5P.Crossword",
+  "H5P.BranchingScenario",
+]);
+
+interface H5PDependency {
+  machineName: string;
+  majorVersion: number;
+  minorVersion: number;
+}
+
+/**
+ * Validira otpakirani H5P paket protiv naše playera:
+ *   1) h5p.json je validan JSON sa preloadedDependencies array-om
+ *   2) Nijedna referencirana biblioteka nije na crnoj listi nepodržanih content type-ova
+ *   3) Svaka biblioteka iz preloadedDependencies ima odgovarajući folder
+ *      `<machineName>-<major>.<minor>` u root-u arhive
+ *
+ * Baca Error sa porukom prilagođenom muallimu (Bosnian) na prvi neuspjeh.
+ */
+function validateH5PPackage(extractDir: string): void {
+  const manifestPath = path.join(extractDir, "h5p.json");
+  let manifest: { mainLibrary?: string; preloadedDependencies?: H5PDependency[] };
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+  } catch {
+    throw new Error("Nevažeća H5P arhiva: h5p.json nije ispravan JSON");
+  }
+
+  const deps = Array.isArray(manifest.preloadedDependencies) ? manifest.preloadedDependencies : [];
+  if (deps.length === 0) {
+    throw new Error("Nevažeća H5P arhiva: h5p.json nema preloadedDependencies");
+  }
+
+  // 1) Crna lista poznato problemskih content type-ova (mainLibrary + sve deps).
+  const referencedNames = new Set<string>(deps.map(d => d?.machineName).filter(Boolean) as string[]);
+  if (typeof manifest.mainLibrary === "string") referencedNames.add(manifest.mainLibrary);
+  for (const name of referencedNames) {
+    if (UNSUPPORTED_H5P_LIBRARIES.has(name)) {
+      throw new Error("Ovaj tip vježbe nije podržan, pogledaj listu preporučenih");
+    }
+  }
+
+  // 2) Svaka deklarisana biblioteka mora imati svoj folder u arhivi.
+  for (const dep of deps) {
+    if (
+      !dep ||
+      typeof dep.machineName !== "string" ||
+      typeof dep.majorVersion !== "number" ||
+      typeof dep.minorVersion !== "number"
+    ) {
+      throw new Error("Nevažeća H5P arhiva: neispravan format preloadedDependencies");
+    }
+    const folderName = `${dep.machineName}-${dep.majorVersion}.${dep.minorVersion}`;
+    const libDir = path.join(extractDir, folderName);
+    if (!fs.existsSync(libDir) || !fs.statSync(libDir).isDirectory()) {
+      throw new Error(`Nevažeća H5P arhiva: nedostaje biblioteka ${folderName}`);
+    }
+    // Provjeri library.json (ako postoji) — verzija u njemu mora odgovarati manifestu.
+    // H5P spec garantuje library.json u svakoj biblioteci; ako fali, paket je pokvaren.
+    const libJsonPath = path.join(libDir, "library.json");
+    if (!fs.existsSync(libJsonPath)) {
+      throw new Error(`Nevažeća H5P arhiva: nedostaje library.json u ${folderName}`);
+    }
+    let libJson: { majorVersion?: number; minorVersion?: number };
+    try {
+      libJson = JSON.parse(fs.readFileSync(libJsonPath, "utf-8"));
+    } catch {
+      throw new Error(`Nevažeća H5P arhiva: neispravan library.json u ${folderName}`);
+    }
+    if (libJson.majorVersion !== dep.majorVersion || libJson.minorVersion !== dep.minorVersion) {
+      throw new Error(
+        `Nevažeća H5P arhiva: verzija biblioteke ${dep.machineName} ne odgovara ` +
+        `(manifest: ${dep.majorVersion}.${dep.minorVersion}, library.json: ${libJson.majorVersion}.${libJson.minorVersion})`
+      );
+    }
+  }
+}
+
 router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
   h5pUpload.single("file")(req, res, async (err) => {
     if (err) {
@@ -403,6 +487,13 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
       if (!fs.existsSync(contentJsonPath)) {
         throw new Error("Nevažeća H5P arhiva: nedostaje content/content.json");
       }
+
+      // 3b. Stroga validacija: sve preloadedDependencies moraju imati svoje
+      //     library foldere unutar arhive, i nijedna referencirana biblioteka
+      //     ne smije biti na crnoj listi nepodržanih content type-ova.
+      //     Ovo radimo PRIJE update-a storedName-a tako da nevalidan paket
+      //     bude očišćen u catch bloku ispod (rmSync(extractDir) + delete row).
+      validateH5PPackage(extractDir);
 
       // 4. Update storedName na finalni put
       const storedRel = `h5p/${inserted.id}`;
