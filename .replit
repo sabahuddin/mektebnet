@@ -36,3 +36,15 @@ SMTP_PORT = "465"
 FROM_EMAIL = "info@mekteb.net"
 SMTP_USER = "info@mekteb.net"
 SMTP_PASS = "Kasariste*92"
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 25361
+externalPort = 3000

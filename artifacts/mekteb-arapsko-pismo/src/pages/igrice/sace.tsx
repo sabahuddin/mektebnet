@@ -642,14 +642,30 @@ export default function MektebskoSace() {
             </div>
           </div>
 
-          {/* GRID + Combo overlay */}
-          <div className="relative mx-auto" style={{ width: SVG_W, maxWidth: "100%" }}>
-            <div className="bg-gradient-to-b from-amber-50/60 to-yellow-100/40 border-2 border-amber-300/70 rounded-2xl p-1 shadow-inner overflow-hidden">
+          {/* PLAY AREA: lijeva dugmad | grid (rastegnut) | desna dugmad */}
+          <div className="flex items-stretch justify-center gap-2 sm:gap-3">
+            {/* LIJEVA KOLONA — Lijevo + Rotiraj */}
+            <div className="flex flex-col gap-2 sm:gap-3 justify-center shrink-0 w-14 sm:w-20">
+              <ControlBtn onClick={() => moveHoriz(-1)} testid="btn-sace-left" label="Lijevo" tall>
+                <ArrLeft className="w-7 h-7 sm:w-8 sm:h-8" />
+              </ControlBtn>
+              <ControlBtn onClick={rotatePiece} testid="btn-sace-rotate" label="Rotiraj" tall>
+                <RotateCw className="w-7 h-7 sm:w-8 sm:h-8" />
+              </ControlBtn>
+            </div>
+
+            {/* GRID + Combo overlay (širi se da popuni prostor između dugmadi) */}
+            <div className="relative flex-1 min-w-0 flex items-center justify-center">
+              <div className="bg-gradient-to-b from-amber-50/60 to-yellow-100/40 border-2 border-amber-300/70 rounded-2xl p-1 shadow-inner overflow-hidden inline-block">
               <svg
                 viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-                width="100%"
-                height="auto"
-                style={{ display: "block", maxHeight: "55vh" }}
+                preserveAspectRatio="xMidYMid meet"
+                style={{
+                  display: "block",
+                  height: "min(80vh, calc(100vh - 200px))",
+                  width: "auto",
+                  maxWidth: "100%",
+                }}
                 aria-label="Saće — igralište"
                 data-testid="svg-sace-grid"
               >
@@ -717,41 +733,37 @@ export default function MektebskoSace() {
                   </linearGradient>
                 </defs>
               </svg>
+              </div>
+
+              {/* Combo poruka */}
+              <AnimatePresence>
+                {comboMsg && (
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0, y: 0 }}
+                    animate={{ scale: 1.1, opacity: 1, y: -10 }}
+                    exit={{ scale: 1, opacity: 0, y: -30 }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    data-testid="combo-msg"
+                  >
+                    <span className="text-3xl font-black text-amber-600 drop-shadow-[0_2px_8px_rgba(245,158,11,0.6)] bg-white/80 px-4 py-1.5 rounded-2xl border-2 border-amber-300">
+                      {comboMsg}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Combo poruka */}
-            <AnimatePresence>
-              {comboMsg && (
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0, y: 0 }}
-                  animate={{ scale: 1.1, opacity: 1, y: -10 }}
-                  exit={{ scale: 1, opacity: 0, y: -30 }}
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  data-testid="combo-msg"
-                >
-                  <span className="text-3xl font-black text-amber-600 drop-shadow-[0_2px_8px_rgba(245,158,11,0.6)] bg-white/80 px-4 py-1.5 rounded-2xl border-2 border-amber-300">
-                    {comboMsg}
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* DESNA KOLONA — Desno + Spusti */}
+            <div className="flex flex-col gap-2 sm:gap-3 justify-center shrink-0 w-14 sm:w-20">
+              <ControlBtn onClick={() => moveHoriz(1)} testid="btn-sace-right" label="Desno" tall>
+                <ArrRight className="w-7 h-7 sm:w-8 sm:h-8" />
+              </ControlBtn>
+              <ControlBtn onClick={hardDrop} testid="btn-sace-drop" label="Spusti" highlight tall>
+                <ArrowDown className="w-7 h-7 sm:w-8 sm:h-8" />
+              </ControlBtn>
+            </div>
           </div>
 
-          {/* MOBILE KONTROLE (vidljive uvijek — i desktop ima kao alternative) */}
-          <div className="grid grid-cols-4 gap-2 mt-4 max-w-md mx-auto">
-            <ControlBtn onClick={() => moveHoriz(-1)} testid="btn-sace-left" label="Lijevo">
-              <ArrLeft className="w-6 h-6" />
-            </ControlBtn>
-            <ControlBtn onClick={rotatePiece} testid="btn-sace-rotate" label="Rotiraj">
-              <RotateCw className="w-6 h-6" />
-            </ControlBtn>
-            <ControlBtn onClick={() => moveHoriz(1)} testid="btn-sace-right" label="Desno">
-              <ArrRight className="w-6 h-6" />
-            </ControlBtn>
-            <ControlBtn onClick={hardDrop} testid="btn-sace-drop" label="Spusti" highlight>
-              <ArrowDown className="w-6 h-6" />
-            </ControlBtn>
-          </div>
           <p className="text-[10px] text-muted-foreground mt-2 text-center">
             Tipke: ← → pomjeri · ↑/Space rotiraj · ↓ ubrzaj · Enter spusti odmah
           </p>
@@ -809,15 +821,15 @@ export default function MektebskoSace() {
 // HELPER KOMPONENTE
 // =============================================================================
 
-function ControlBtn({ onClick, children, testid, label, highlight }: {
-  onClick: () => void; children: React.ReactNode; testid: string; label: string; highlight?: boolean;
+function ControlBtn({ onClick, children, testid, label, highlight, tall }: {
+  onClick: () => void; children: React.ReactNode; testid: string; label: string; highlight?: boolean; tall?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       // onTouchStart prevent default da izbjegnemo "ghost click" delay na mobilnim
       onTouchStart={(e) => { e.preventDefault(); onClick(); }}
-      className={`h-14 rounded-2xl font-bold flex items-center justify-center transition-all active:scale-95 ${
+      className={`${tall ? "min-h-[88px] sm:min-h-[120px] flex-1 w-full" : "h-14"} rounded-2xl font-bold flex items-center justify-center transition-all active:scale-95 ${
         highlight
           ? "bg-amber-500 text-white shadow-md hover:bg-amber-600"
           : "bg-white border-2 border-amber-200 text-amber-700 hover:bg-amber-50"
