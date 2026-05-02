@@ -128,6 +128,9 @@ export const igraPitanjaTable = pgTable("igra_pitanja", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => ({
   kategorijaAktivnoIdx: index("igra_pitanja_kategorija_aktivno_idx").on(t.kategorija, t.aktivno),
+  // UNIQUE(kategorija, pitanje) — osigurava idempotentnost seed-a (ON CONFLICT DO UPDATE)
+  // i sprječava nastanak duplikata kroz admin UI.
+  kategorijaPitanjeUnique: uniqueIndex("igra_pitanja_kategorija_pitanje_unique_idx").on(t.kategorija, t.pitanje),
 }));
 
 export type IgraPitanje = typeof igraPitanjaTable.$inferSelect;

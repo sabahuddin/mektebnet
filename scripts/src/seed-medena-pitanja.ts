@@ -10,7 +10,7 @@
  * Ili kroz admin endpoint POST /api/admin/system/seed-medena-pitanja.
  */
 import { db, igraPitanjaTable, MEDENA_KATEGORIJE, type MedenaKategorija } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 type SeedPitanje = {
   pitanje: string;
@@ -236,33 +236,11 @@ export async function seedMedenaPitanja(): Promise<{
     let existing = 0;
 
     for (const p of lista) {
-      // Provjeri postoji li već ovo pitanje (po tekstu) u toj kategoriji
-      const found = await db
-        .select({ id: igraPitanjaTable.id })
-        .from(igraPitanjaTable)
-        .where(
-          and(
-            eq(igraPitanjaTable.kategorija, kategorija),
-            eq(igraPitanjaTable.pitanje, p.pitanje),
-          ),
-        )
-        .limit(1);
-
-      if (found.length > 0 && found[0]) {
-        // Ažuriraj samo opcije/correctIndex/objasnjenje (zadržava admin izmjene id-a/aktivno polja)
-        await db
-          .update(igraPitanjaTable)
-          .set({
-            opcije: p.opcije,
-            correctIndex: p.correctIndex,
-            objasnjenje: p.objasnjenje,
-            tezina: p.tezina ?? 1,
-            updatedAt: new Date(),
-          })
-          .where(eq(igraPitanjaTable.id, found[0].id));
-        existing++;
-      } else {
-        await db.insert(igraPitanjaTable).values({
+      // Race-safe UPSERT preko UNIQUE(kategorija, pitanje) indexa.
+      // RETURNING xmax = 0 nam kaže da li je INSERT (novi red) ili UPDATE (postojeći).
+      const result = await db
+        .insert(igraPitanjaTable)
+        .values({
           kategorija,
           pitanje: p.pitanje,
           opcije: p.opcije,
@@ -270,9 +248,21 @@ export async function seedMedenaPitanja(): Promise<{
           objasnjenje: p.objasnjenje,
           tezina: p.tezina ?? 1,
           aktivno: true,
-        });
-        upserted++;
-      }
+        })
+        .onConflictDoUpdate({
+          target: [igraPitanjaTable.kategorija, igraPitanjaTable.pitanje],
+          set: {
+            opcije: p.opcije,
+            correctIndex: p.correctIndex,
+            objasnjenje: p.objasnjenje,
+            tezina: p.tezina ?? 1,
+            updatedAt: new Date(),
+          },
+        })
+        .returning({ id: igraPitanjaTable.id, xmax: sql<string>`xmax::text` });
+
+      if (result[0]?.xmax === "0") upserted++;
+      else existing++;
     }
 
     perKategorija[kategorija] = { upserted, existing };

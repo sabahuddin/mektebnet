@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "igra_pitanja_kategorija_pitanje_unique_idx" ON "igra_pitanja" USING btree ("kategorija","pitanje");
