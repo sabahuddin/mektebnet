@@ -20,16 +20,30 @@ const MAX_SCORE: Record<string, number> = {
   quiz: 60,
   gradovi: 60,
   zastave: 60,
+  // sace: hex Tetris klon (Mektebsko saće). Klijent-scored kao memory.
+  // Realna gornja granica je oko 30-50k poena za odlične igrače; cap na 99999.
+  sace: 99999,
 };
-// Maks. trajanje runde po igri (timer): quiz/gradovi/zastave = 60s, memory koliko user ima credita.
+// Maks. trajanje runde po igri (timer): quiz/gradovi/zastave = 60s, memory i sace koliko user ima credita.
 const ROUND_DURATION_SEC: Record<string, number | null> = {
   quiz: 60,
   gradovi: 60,
   zastave: 60,
   memory: null,
+  sace: null,
+};
+// Per-game per-second cap (anti-cheat za KLIJENT-SCORED igre).
+// Realan ritam za sace na najvišem levelu je oko 200 poena/s (kombinacija
+// hard-drop bonusa + line clear bonusa). Cap 350/s daje 1.75× rezervu za
+// izuzetne playthrough-e bez otvaranja scripted forgery surface-a sa
+// MAX_SCORE.sace = 99999. Memory ima MAX_SCORE = 1000 (jednokratno) pa nije
+// vrijedno extra kapiranja. Ako gameId nije ovdje, samo MAX_SCORE i opšti
+// minSecForFullScore cheatCap se primjenjuju.
+const PER_SEC_CAP: Record<string, number> = {
+  sace: 350,
 };
 // Validni gameId enum.
-const VALID_GAMES = new Set(["memory", "quiz", "gradovi", "zastave"]);
+const VALID_GAMES = new Set(["memory", "quiz", "gradovi", "zastave", "sace"]);
 // Igre koje koriste server-side scoring kroz quiz_questions JSONB
 // (multiple-choice format; klijent ne dobija `answer`, server validira na /end).
 const SERVER_SCORED_GAMES = new Set(["quiz", "gradovi", "zastave"]);
@@ -493,14 +507,36 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
         score = Math.max(0, Math.min(Math.floor(rawScore), cheatCap));
       }
     } else {
-      // Memory i ostale igre: klijentski score sa cheatCap (kao i prije).
-      // Server-side scoring za memory bi tražio tracking moves po sesiji što je
-      // out-of-scope za task #44 — može u zaseban follow-up.
+      // === KLIJENT-SCORED IGRE (memory, sace) ===
+      // Late-submission guard: ako je istekao timer + grace, sesija se markira
+      // kao expired (score=0). Inače napadač može startati sesiju, čekati
+      // proizvoljno dugo, pa scriptati visok score izvan window-a.
+      const submitWindow = Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC) + LATE_GRACE_SEC;
+      if (elapsedSec > submitWindow) {
+        await db.execute(sql`
+          UPDATE game_sessions
+          SET status = 'expired', ended_at = NOW(),
+              duration_sec = ${Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC)},
+              score = 0
+          WHERE id = ${sessionId} AND user_id = ${userId} AND status = 'running'
+        `);
+        res.json({ ok: true, sessionId, gameId: session.game_id, score: 0, finalScore: 0, durationSec: Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC), expired: true });
+        return;
+      }
+
       const rawScore = Number(req.body?.score ?? 0);
+      // Bazni cheatCap: skalira score sa elapsedSec za prvih 5s (sprječava
+      // instant-1000 nakon /start). Za sace dodajemo per-sec cap (350/s) jer
+      // MAX_SCORE.sace=99999 daje veliki forgery prostor.
       const minSecForFullScore = 5;
-      const cheatCap = elapsedSec < minSecForFullScore
+      const baseCap = elapsedSec < minSecForFullScore
         ? Math.floor(maxScore * (elapsedSec / minSecForFullScore))
         : maxScore;
+      const psc = PER_SEC_CAP[session.game_id];
+      const perSecCap = typeof psc === "number"
+        ? Math.min(maxScore, Math.floor(psc * Math.max(elapsedSec, 1)))
+        : maxScore;
+      const cheatCap = Math.min(baseCap, perSecCap);
       score = Math.max(0, Math.min(Math.floor(rawScore), cheatCap));
     }
 
@@ -531,8 +567,8 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
 
 // === LEADERBOARD (60s in-memory cache) ===
 type LbScope = "group" | "mekteb" | "global";
-type LbGame = "memory" | "quiz" | "gradovi" | "zastave" | "all";
-const LB_VALID_GAMES = new Set<string>(["memory", "quiz", "gradovi", "zastave", "all"]);
+type LbGame = "memory" | "quiz" | "gradovi" | "zastave" | "sace" | "all";
+const LB_VALID_GAMES = new Set<string>(["memory", "quiz", "gradovi", "zastave", "sace", "all"]);
 interface LbEntry { rank: number; userId: number; displayName: string; mektebName: string | null; bestScore: number; totalGames: number; }
 const lbCache = new Map<string, { ts: number; data: LbEntry[] }>();
 const LB_TTL_MS = 60 * 1000;

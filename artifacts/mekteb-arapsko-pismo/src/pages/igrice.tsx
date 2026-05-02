@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui/card";
 import { useGameCredits, formatSeconds } from "@/hooks/use-game-credits";
 import { useAuth } from "@/context/auth";
-import { Gamepad2, Clock, Star, Trophy, Sparkles, Brain, Zap, Info, MapPin, Flag } from "lucide-react";
+import { Gamepad2, Clock, Star, Trophy, Sparkles, Brain, Zap, Info, MapPin, Flag, Hexagon } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -194,6 +194,23 @@ export default function IgricePage() {
               <h3 className="text-xl font-extrabold text-sky-700 mb-2">Zastave svijeta</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
                 Pojavi se zastava — pogodi državu. Učimo zemlje umme i svijeta.
+              </p>
+            </div>
+          </Link>
+        </motion.div>
+
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
+          <Link href="/igrice/sace">
+            <div data-testid="link-game-sace" className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-6 cursor-pointer hover:shadow-lg transition-all group hover:-translate-y-1 duration-200 h-full">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <Hexagon className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-xs font-bold text-amber-700 px-3 py-1 rounded-full border border-amber-200 bg-white/60">Saće 🐝</span>
+              </div>
+              <h3 className="text-xl font-extrabold text-amber-700 mb-2">Mektebsko saće</h3>
+              <p className="text-muted-foreground text-sm font-medium leading-relaxed">
+                Slaži šestougaone ćelije saća kao u Tetrisu. Popuni cijeli red i nestaje. Igraj dok ne izgubiš!
               </p>
             </div>
           </Link>

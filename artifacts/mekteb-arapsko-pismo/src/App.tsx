@@ -54,6 +54,7 @@ import PamtiPar from "./pages/igrice/pamti-par";
 import BrziKviz from "./pages/igrice/brzi-kviz";
 import GlavniGradovi from "./pages/igrice/glavni-gradovi";
 import ZastaveSvijeta from "./pages/igrice/zastave";
+import MektebskoSace from "./pages/igrice/sace";
 import Ljestvica from "./pages/igrice/ljestvica";
 
 // Muallim panel
@@ -115,6 +116,7 @@ function Router() {
       <Route path="/igrice/brzi-kviz" component={BrziKviz} />
       <Route path="/igrice/glavni-gradovi" component={GlavniGradovi} />
       <Route path="/igrice/zastave" component={ZastaveSvijeta} />
+      <Route path="/igrice/sace" component={MektebskoSace} />
       <Route path="/igrice/ljestvica" component={Ljestvica} />
       <Route path="/igrice" component={IgricePage} />
 
