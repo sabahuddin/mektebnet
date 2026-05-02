@@ -36,6 +36,8 @@ SMTP_PORT = "465"
 FROM_EMAIL = "info@mekteb.net"
 SMTP_USER = "info@mekteb.net"
 SMTP_PASS = "Kasariste*92"
+ONESIGNAL_APP_ID = "feaa5a2c-ded2-4ab0-b0b0-04d8bac560cd"
+VITE_ONESIGNAL_APP_ID = "feaa5a2c-ded2-4ab0-b0b0-04d8bac560cd"
 
 [[ports]]
 localPort = 8080

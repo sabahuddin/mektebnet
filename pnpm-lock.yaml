@@ -342,6 +342,9 @@ importers:
       h5p-standalone:
         specifier: ^3.8.2
         version: 3.8.2
+      react-onesignal:
+        specifier: ^3.5.1
+        version: 3.5.1
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
@@ -5582,6 +5585,10 @@ packages:
 
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
+
+  react-onesignal@3.5.1:
+    resolution: {integrity: sha512-Pd3V/4yOfaD20o2aglJ+ernr9VO7FKNs20LJCmT81pkpkYNn+eCAAdLgLcaGocElLmM8sc9GiM2CCh2FzgYuaw==}
+    engines: {node: '>=14', npm: '>=6'}
 
   react-refresh@0.18.0:
     resolution: {integrity: sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==}
@@ -11989,6 +11996,8 @@ snapshots:
   react-is@16.13.1: {}
 
   react-is@18.3.1: {}
+
+  react-onesignal@3.5.1: {}
 
   react-refresh@0.18.0: {}
 
