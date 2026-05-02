@@ -109,6 +109,7 @@
     "@tiptap/starter-kit": "^3.21.0",
     "canvas-confetti": "^1.9.4",
     "h5p-standalone": "^3.8.2",
+    "onesignal-cordova-plugin": "^5.3.7",
     "react-onesignal": "^3.5.1",
     "uuid": "^13.0.0",
     "vite-plugin-pwa": "^1.2.0",

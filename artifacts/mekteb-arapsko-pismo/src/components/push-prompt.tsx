@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { useAuth } from "@/context/auth";
-import { requestPushPermission, hasBeenPrompted, markPrompted } from "@/lib/push";
+import { requestPushPermission, hasBeenPrompted, markPrompted, isCapacitorNative } from "@/lib/push";
 
 const DISMISS_KEY = "mekteb-push-dismissed";
 const APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) || "";
 
 function isAllowedOrigin(): boolean {
   if (typeof window === "undefined") return false;
+  // Native Capacitor shell uvijek smije tražiti push (origin je
+  // capacitor://localhost / https://localhost — origin allowlist se ne primjenjuje).
+  if (isCapacitorNative()) return true;
   const host = window.location.hostname;
   return host === "mekteb.net" || host.endsWith(".mekteb.net");
 }
 
 function isPushSupported(): boolean {
   if (typeof window === "undefined") return false;
+  // Na native shell-u OS-level push uvijek postoji — nema potrebe za web Notification API-jem.
+  if (isCapacitorNative()) return true;
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
 
@@ -41,8 +46,13 @@ export function PushPrompt() {
     if (dismissed) return;
     if (hasBeenPrompted()) return;
 
-    const perm = Notification.permission;
-    if (perm === "granted" || perm === "denied") return;
+    // Na native shell-u Notification API ne postoji u Cordova webview-u na isti
+    // način — preskačemo provjeru i prepuštamo native plugin-u da odbije ako
+    // permission već postoji (idempotent na iOS-u i Android 13+).
+    if (!isCapacitorNative() && typeof Notification !== "undefined") {
+      const perm = Notification.permission;
+      if (perm === "granted" || perm === "denied") return;
+    }
 
     // Mali delay da banner ne iskoči odmah na home — daje korisniku vremena
     // da se snađe nakon login-a.

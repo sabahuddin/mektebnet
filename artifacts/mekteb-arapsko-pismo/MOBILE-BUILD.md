@@ -125,7 +125,8 @@ defaultConfig {
 ✅ Backend CORS dozvoljava `capacitor://localhost` + `https://localhost`  
 ✅ Mobile build skripta sa `VITE_API_BASE_URL=https://mekteb.net/api`  
 
-⏳ **Phase 3 (next)**: Push notifikacije preko OneSignal-a  
+✅ Push notifikacije (web) — radi na produkciji  
+✅ Push notifikacije (native iOS/Android) — kod + plugin instalirani; treba još APNs/FCM ključeve uploadovati u OneSignal dashboard (vidi sekciju "Push notifikacije" niže)  
 ⏳ **Phase 4**: Submit na App Store + Google Play
 
 ## Troubleshooting
@@ -144,35 +145,33 @@ HTTP. Mi koristimo isključivo HTTPS (`https://mekteb.net`) pa ne treba.
 
 ## Push notifikacije (OneSignal — Faza 3)
 
-Web push (browser/PWA) već radi automatski preko OneSignal Web SDK-a — vidi `src/lib/push.ts`. Za **native iOS i Android** push (Capacitor app), treba dodatni setup:
+Web push (browser/PWA) radi automatski preko OneSignal Web SDK-a — vidi `src/lib/push.ts`. Native iOS/Android push isto je sad implementiran (`src/lib/native-push.ts`) i `push.ts` automatski rutira na native modul kad je `Capacitor.isNativePlatform() === true`. Plugin (`onesignal-cordova-plugin`) je već u `package.json`.
 
-### 1. Instaliraj OneSignal Capacitor plugin
+Za rad u produkciji ostaje samo dashboard setup (APNs ključ za iOS, FCM Service Account JSON za Android) i Xcode capabilities.
 
-Iz `artifacts/mekteb-arapsko-pismo/`:
+### 1. Instaliraj / sinhroniziraj plugin u native projekte
+
+Plugin je već u `dependencies` (`onesignal-cordova-plugin`). Nakon `pnpm install` na iMac-u, sinhroniziraj ga u native projekte:
 
 ```bash
-pnpm add onesignal-cordova-plugin @awesome-cordova-plugins/onesignal
-pnpm install
-npx cap sync
+pnpm --filter @workspace/mekteb-arapsko-pismo run cap:sync
 ```
 
-### 2. Native init (TODO za buduću iteraciju)
+`cap sync` automatski:
+- Linka `OneSignal.framework` u Xcode workspace (kroz CocoaPods)
+- Dodaje OneSignal Gradle dependency u Android projekt
+- Kopira plugin metadata u `ios/App/App/capacitor.config.json` i `android/app/src/main/assets/capacitor.config.json`
 
-Kreiraj `src/lib/native-push.ts` sličan webu — koristi `OneSignal` iz `onesignal-cordova-plugin`:
+### 2. Native init — već implementirano
 
-```ts
-import OneSignal from "onesignal-cordova-plugin";
+`src/lib/native-push.ts` (auto-init kroz `initOneSignal()` u `main.tsx`):
+- `OneSignal.initialize(VITE_ONESIGNAL_APP_ID)` na boot
+- `OneSignal.login(userId)` u `auth.tsx` nakon login-a (preko unified `loginPushUser`)
+- `OneSignal.Notifications.requestPermission(true)` kad korisnik klikne "Uključi" u `PushPrompt` banneru
+- `POST /api/push/register` sa `{ playerId, platform: "ios" | "android", userAgent }`
+- Subscription change listener auto-registruje token kad se permission tek prvi put dā
 
-export async function initNativePush() {
-  OneSignal.initialize("feaa5a2c-ded2-4ab0-b0b0-04d8bac560cd");
-  OneSignal.Notifications.requestPermission(true);
-  OneSignal.login(String(userId)); // kad se korisnik logira
-  const playerId = await OneSignal.User.pushSubscription.getIdAsync();
-  // POST /api/push/register sa { playerId, platform: "ios" | "android" }
-}
-```
-
-U `main.tsx` ili `auth.tsx` provjeri `Capacitor.isNativePlatform()` i pozovi `initNativePush()` umjesto `initOneSignal()`.
+Backend (`/push/register`) već prihvata `platform: "web" | "ios" | "android"`.
 
 ### 3. iOS (APNs) setup u OneSignal dashboard-u
 
@@ -212,4 +211,5 @@ Nakon prvog build-a:
 
 - ✅ Web push (mekteb.net) — radi
 - ✅ Backend trigger-i (nova poruka, nova zadaća)
-- ⏸ Native iOS/Android — plugin nije još instaliran (vidi korake gore)
+- ✅ Native iOS/Android — plugin (`onesignal-cordova-plugin`) instaliran, kod (`src/lib/native-push.ts`) gotov, `push.ts` rutira po `Capacitor.isNativePlatform()`
+- ⏸ Preostalo: iMac → `cap:sync`, OneSignal dashboard → upload APNs .p8 + FCM Service Account JSON, Xcode → enable Push Notifications + Background Modes capabilities, Firebase → `google-services.json` u `android/app/`

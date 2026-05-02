@@ -4,18 +4,34 @@ import { apiRequest } from "@/lib/api";
 const APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) || "";
 const SETTINGS_KEY = "mekteb-push-enabled";
 const PROMPTED_KEY = "mekteb-push-prompted";
+const TOKEN_KEY = "mekteb_token";
+
+/**
+ * `/push/register` i `/push/unregister` su iza `requireAuth` middleware-a u
+ * backend-u, pa apiRequest mora primiti Bearer token. Token držimo u
+ * localStorage pod istim ključem kao i `auth.tsx`. Ovaj helper se koristi i iz
+ * `native-push.ts` da se izbjegne dupliciranje.
+ */
+export function getStoredAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
 
 let initialized = false;
 let initPromise: Promise<void> | null = null;
 
-function isCapacitorNative(): boolean {
+export function isCapacitorNative(): boolean {
   return typeof (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor !== "undefined"
     && !!(window as unknown as { Capacitor: { isNativePlatform?: () => boolean } }).Capacitor.isNativePlatform?.();
 }
 
-function isPushSupported(): boolean {
+function isWebPushSupported(): boolean {
   if (typeof window === "undefined") return false;
-  if (isCapacitorNative()) return false; // mobile koristi native plugin (Phase 5)
+  if (isCapacitorNative()) return false;
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
 
@@ -34,12 +50,30 @@ function isAllowedOrigin(): boolean {
   return host === "mekteb.net" || host.endsWith(".mekteb.net");
 }
 
+/**
+ * Lazy-load native push modula samo kad smo zapravo na Capacitor native shell-u.
+ * Ovo sprječava da `onesignal-cordova-plugin` (koji očekuje native bridge) uđe
+ * u web bundle.
+ */
+async function getNative() {
+  if (!isCapacitorNative()) return null;
+  return await import("./native-push");
+}
+
 export async function initOneSignal(): Promise<void> {
   if (!APP_ID) {
     console.warn("[Push] VITE_ONESIGNAL_APP_ID nije postavljen");
     return;
   }
-  if (!isPushSupported()) return;
+
+  // Native (iOS/Android Capacitor): rutiraj na native modul.
+  const native = await getNative();
+  if (native) {
+    return native.initNativePush();
+  }
+
+  // Web/PWA tok ispod.
+  if (!isWebPushSupported()) return;
   if (!isAllowedOrigin()) {
     console.info("[Push] OneSignal disabled — origin nije mekteb.net (push radi samo na produkciji)");
     return;
@@ -75,7 +109,10 @@ export async function initOneSignal(): Promise<void> {
  * postavlja alias; permission prompt ide kroz `requestPushPermission()`.
  */
 export async function loginPushUser(userId: number): Promise<void> {
-  if (!isPushSupported()) return;
+  const native = await getNative();
+  if (native) return native.loginNativePushUser(userId);
+
+  if (!isWebPushSupported()) return;
   // Sačekaj da init završi (npr. ako je auth restore brži od init-a) — bez ovoga
   // bi pozivi nakon refresh-a često skipovali alias jer initialized=false još.
   if (!initialized) {
@@ -103,12 +140,15 @@ export async function loginPushUser(userId: number): Promise<void> {
 }
 
 export async function logoutPushUser(): Promise<void> {
-  if (!initialized || !isPushSupported()) return;
+  const native = await getNative();
+  if (native) return native.logoutNativePushUser();
+
+  if (!initialized || !isWebPushSupported()) return;
   try {
     const playerId = OneSignal.User.PushSubscription.id;
     if (playerId) {
       try {
-        await apiRequest("POST", "/push/unregister", { playerId });
+        await apiRequest("POST", "/push/unregister", { playerId }, getStoredAuthToken());
       } catch {}
     }
     await OneSignal.logout();
@@ -118,7 +158,14 @@ export async function logoutPushUser(): Promise<void> {
 }
 
 export function isPushOptedIn(): boolean {
-  if (!initialized || !isPushSupported()) return false;
+  if (isCapacitorNative()) {
+    // Native check je sinhroni getter na pluginu, ali da ne držimo top-level
+    // import, čitamo iz globala koji native-push održava preko event listener-a.
+    // Za jednostavnost: vraćamo false ovdje i prepuštamo native-specific UI da
+    // koristi `getNativePushOptedIn()` direktno ako treba.
+    return false;
+  }
+  if (!initialized || !isWebPushSupported()) return false;
   try {
     return OneSignal.User.PushSubscription.optedIn === true;
   } catch {
@@ -150,9 +197,17 @@ export function markPrompted(): void {
  * Traži permission od korisnika i, ako je dao, registruje token u backend-u.
  */
 export async function requestPushPermission(): Promise<boolean> {
-  if (!initialized || !isPushSupported()) return false;
+  markPrompted();
+
+  const native = await getNative();
+  if (native) {
+    const ok = await native.requestNativePushPermission();
+    if (ok) setPushEnabledLocally(true);
+    return ok;
+  }
+
+  if (!initialized || !isWebPushSupported()) return false;
   try {
-    markPrompted();
     await OneSignal.Notifications.requestPermission();
     if (OneSignal.User.PushSubscription.optedIn) {
       const playerId = OneSignal.User.PushSubscription.id;
@@ -170,12 +225,19 @@ export async function requestPushPermission(): Promise<boolean> {
 }
 
 export async function disablePush(): Promise<void> {
-  if (!initialized || !isPushSupported()) return;
+  const native = await getNative();
+  if (native) {
+    await native.disableNativePush();
+    setPushEnabledLocally(false);
+    return;
+  }
+
+  if (!initialized || !isWebPushSupported()) return;
   try {
     const playerId = OneSignal.User.PushSubscription.id;
     if (playerId) {
       try {
-        await apiRequest("POST", "/push/unregister", { playerId });
+        await apiRequest("POST", "/push/unregister", { playerId }, getStoredAuthToken());
       } catch {}
     }
     OneSignal.User.PushSubscription.optOut();
@@ -191,7 +253,7 @@ async function registerToken(playerId: string): Promise<void> {
       playerId,
       platform: "web",
       userAgent: navigator.userAgent,
-    });
+    }, getStoredAuthToken());
     console.log("[Push] Token registered");
   } catch (err) {
     console.error("[Push] register failed:", err);
@@ -201,9 +263,13 @@ async function registerToken(playerId: string): Promise<void> {
 /**
  * Listener — kad se subscription promijeni (npr. korisnik tek dao permission),
  * automatski registruj novi playerId u backend.
+ *
+ * Na native shell-u listener postavlja `native-push.ts` u `initNativePush()`,
+ * pa se ovdje samo no-op.
  */
 export function setupPushListeners(): void {
-  if (!initialized || !isPushSupported()) return;
+  if (isCapacitorNative()) return;
+  if (!initialized || !isWebPushSupported()) return;
   try {
     OneSignal.User.PushSubscription.addEventListener("change", (event: { current: { id?: string | null; optedIn?: boolean } }) => {
       const id = event.current?.id;
