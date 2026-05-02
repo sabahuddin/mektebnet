@@ -202,5 +202,15 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    watch: {
+      // Capacitor sync kopira dist/public u native projekte (ios/, android/) —
+      // Vite ne smije triggerati hot-reload na te kopije, inače dev server
+      // se zaduši reload-ovima svaki put kad se uradi `cap sync`.
+      ignored: [
+        "**/ios/**",
+        "**/android/**",
+        "**/dist/**",
+      ],
+    },
   },
 });

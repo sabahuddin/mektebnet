@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mekteb</string>
+    <string name="title_activity_main">Mekteb</string>
+    <string name="package_name">net.mektebnet.app</string>
+    <string name="custom_url_scheme">net.mektebnet.app</string>
+</resources>

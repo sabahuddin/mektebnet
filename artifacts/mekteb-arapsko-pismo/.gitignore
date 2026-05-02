@@ -1,0 +1,23 @@
+
+# Capacitor native projects — generišu se sa `cap add ios/android` na iMac-u.
+# Repo držimo lean: native fajlovi su izvedeni iz capacitor.config.ts +
+# dist/public bundle-a + assets/ logo-a, lako se regenerišu.
+ios/App/build/
+ios/App/Pods/
+ios/App/Podfile.lock
+ios/DerivedData/
+ios/.build/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/app/debug/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/captures/
+
+# Capacitor regenerirani bundled web assets (generišu se iz dist/public)
+ios/App/App/public/
+android/app/src/main/assets/public/

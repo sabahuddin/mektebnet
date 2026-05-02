@@ -31,7 +31,36 @@ app.use(
     },
   }),
 );
-app.use(cors());
+// CORS — eksplicitna lista origin-a:
+//  - https://mekteb.net + https://www.mekteb.net  → produkcijski web
+//  - http://localhost:* + Replit dev domeni        → dev environment
+//  - capacitor://localhost                          → iOS Capacitor app
+//  - https://localhost                              → Android Capacitor app
+//  - http://localhost                               → Capacitor live-reload na iOS sim
+// `credentials: true` jer login koristi i Bearer token i HttpOnly cookie za H5P.
+const STATIC_ALLOWED_ORIGINS = new Set([
+  "https://mekteb.net",
+  "https://www.mekteb.net",
+  "capacitor://localhost",
+  "https://localhost",
+  "http://localhost",
+]);
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Same-origin (curl, server-to-server) — origin je undefined, propusti.
+      if (!origin) return callback(null, true);
+      if (STATIC_ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+      // Replit dev/preview domeni — *.replit.dev, *.repl.co, *.picard.replit.dev
+      if (/^https:\/\/[a-z0-9-]+\.(replit\.dev|repl\.co|picard\.replit\.dev)$/i.test(origin))
+        return callback(null, true);
+      // Localhost na bilo kom portu (Vite dev server, Capacitor live-reload)
+      if (/^https?:\/\/localhost(:\d+)?$/i.test(origin)) return callback(null, true);
+      callback(new Error(`Origin nije dozvoljen: ${origin}`));
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ limit: "20mb", extended: true }));
 
