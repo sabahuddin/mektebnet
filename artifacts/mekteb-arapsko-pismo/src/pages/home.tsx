@@ -126,7 +126,10 @@ export default function Home() {
           const rows: typeof MODULES[] = [];
           for (let i = 0; i < MODULES.length; i += 2) rows.push(MODULES.slice(i, i + 2));
           return rows.map((row, ri) => {
-            const isOffset = ri % 2 === 1;
+            // Offset/preklop primjenjujemo SAMO kad red ima 2 kartice (puni honeycomb).
+            // Za neparan ukupni broj modula, zadnji "offset" red ima 1 karticu —
+            // bez ovog guarda izgleda pomjerena/necentirana (translateX 13% + negativni mt).
+            const isOffset = ri % 2 === 1 && row.length === 2;
             return (
               <div
                 key={ri}
