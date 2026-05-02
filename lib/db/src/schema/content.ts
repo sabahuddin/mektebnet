@@ -71,6 +71,9 @@ export const korisnikNapredakTable = pgTable("korisnik_napredak", {
   // Ukupno aktivno vrijeme (u sekundama) koje je korisnik proveo na ovom
   // sadržaju. Mjeri se samo dok je tab aktivan (Page Visibility API). Raste
   // i nakon završetka ako se učenik vrati na lekciju ponovo da uči.
+  // Za `ilmihal`: vrijednost rastu ISKLJUČIVO server-side heartbeat-i
+  // (POST /content/heartbeat) — klijent ne smije direktno povećavati ovo
+  // polje preko POST /napredak, jer to je glavni cheat vector.
   timeSpentSeconds: integer("time_spent_seconds").notNull().default(0),
   // Vrijeme kad je učenik USPJEŠNO riješio mini-kviz "Provjeri znanje" za
   // ovu lekciju (sva pitanja tačno). Koristi se kao 4. uslov gate-a za
@@ -78,6 +81,11 @@ export const korisnikNapredakTable = pgTable("korisnik_napredak", {
   // ne prolazi dok ovaj timestamp nije postavljen. Idempotentno: jednom
   // postavljen, ne mijenja se.
   quizPassedAt: timestamp("quiz_passed_at"),
+  // Vrijeme posljednjeg heartbeat-a od ovog korisnika za ovaj sadržaj.
+  // Server koristi razliku NOW() - lastHeartbeatAt (cap 15s) da inkrementira
+  // `timeSpentSeconds`. Tako stvarno akumulirano vrijeme nikad ne može
+  // premašiti realno proteklo vrijeme između prvog i posljednjeg heartbeat-a.
+  lastHeartbeatAt: timestamp("last_heartbeat_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

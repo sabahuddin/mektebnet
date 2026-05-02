@@ -65,10 +65,12 @@ interface Lekcija {
 // lekciju prije nego se "Označi kao završeno" otključa. Drži paralelno s
 // `MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION` u backendu.
 const MIN_ACTIVE_SECONDS = 300;
-// Koliko često (sekundi) šalje se update vremena na server. 30s je dobra
-// ravnoteža između trajnosti (gubimo max 30s ako učenik zatvori tab) i
-// broja HTTP poziva.
-const TIME_UPDATE_INTERVAL_S = 30;
+// Koliko često (sekundi) šalje se heartbeat na server. 10s je dobar balans:
+// dovoljno često da `delta = NOW() - last_hb` bude < 15s cap-a (ne gubimo
+// vrijeme), a ne tako često da generiše hrpu HTTP poziva. Heartbeat je sada
+// JEDINI način da `time_spent_seconds` raste server-side za ilmihal — POST
+// /napredak ignoriše klijentski timeSpentSeconds (anti-cheat fix).
+const HEARTBEAT_INTERVAL_S = 10;
 // Koliko mora biti skrolovano da se completion otključa (% ukupne visine
 // dokumenta). 85% omogućava bottom-padding/footer da ne blokira.
 const MIN_SCROLL_PERCENT = 0.85;
@@ -1762,9 +1764,9 @@ export default function IlmihalLekcijaPage() {
   const [scrollPercent, setScrollPercent] = useState(0);
   const [openedSectionIds, setOpenedSectionIds] = useState<Set<string>>(new Set());
   const [quizPassed, setQuizPassed] = useState(false);
-  const lastSentTimeRef = useRef(0);
-  // Da bismo poslali finalni update vremena prije navigacije/zatvaranja taba,
-  // držimo svježi timeSpent u ref-u — beforeunload ne može da koristi state.
+  // `timeSpent` u UI-u je server-truth — sinhronizuje se na svakom heartbeat
+  // odgovoru. Lokalni 1s/sec tick je samo "vizuelni glat" između heartbeat-a
+  // (svakih 10s), tako da brojač ne stoji nepomično ako tab ostane aktivan.
   const timeSpentRef = useRef(0);
   useEffect(() => { timeSpentRef.current = timeSpent; }, [timeSpent]);
 
@@ -1831,7 +1833,6 @@ export default function IlmihalLekcijaPage() {
     setScrollPercent(0);
     setOpenedSectionIds(new Set());
     setQuizPassed(false);
-    lastSentTimeRef.current = 0;
     // Token je obavezan da bi backend uključio `prilozi` u response
     // (učenici vide H5P/URL prilozi, muallim/admin sve). Bez tokena
     // dobijemo lekciju ali bez priloga, što razbije H5P prikaz.
@@ -1839,11 +1840,10 @@ export default function IlmihalLekcijaPage() {
       .then(data => {
         setLekcija(data);
         setParsed(parseSections(data.contentHtml));
-        // Učitaj akumulirano vrijeme iz ranijih sesija — server vraća MAX
-        // od dosad provedenog. Tako npr. povratak učenika ne počne od 0.
+        // Učitaj akumulirano vrijeme iz ranijih sesija — server vraća
+        // server-store time. Tako npr. povratak učenika ne počne od 0.
         const initial = data.userProgress?.timeSpentSeconds ?? 0;
         setTimeSpent(initial);
-        lastSentTimeRef.current = initial;
         // Ako je učenik već ranije položio mini-kviz (server čuva
         // `quizPassedAt`), 4. uslov gate-a je već zadovoljen — ne mora
         // ponovo rješavati pri svakom posjetu.
@@ -1853,9 +1853,14 @@ export default function IlmihalLekcijaPage() {
       .finally(() => setIsLoading(false));
   }, [slug, token]);
 
-  // Aktivni time tracker — povećava timeSpent svake sekunde, ali samo dok
-  // je tab vidljiv (Page Visibility API). Sprječava farmiranje vremena
-  // ostavljanjem stranice u pozadini.
+  // Lokalni "vizuelni" tick — povećava prikaz `timeSpent` svake sekunde dok
+  // je tab vidljiv. Ovo je SAMO za UX da brojač ne stoji između heartbeat-a
+  // (koji se šalju svakih 10s). Server-store vrijeme je TRUTH i postavlja se
+  // na svakom heartbeat odgovoru (vidi useEffect ispod).
+  //
+  // Page Visibility API: kad korisnik prebaci tab/minimizira, lokalni brojač
+  // staje. Server-side, ako prestaje slati hb, sljedeći hb će dodati max 15s
+  // (cap), tako da ostavljanje taba u pozadini ne farmuje vrijeme.
   useEffect(() => {
     if (!lekcija || !user) return;
     const tick = () => {
@@ -1867,25 +1872,36 @@ export default function IlmihalLekcijaPage() {
     return () => window.clearInterval(id);
   }, [lekcija?.id, user?.id]);
 
-  // Periodični upload vremena na server (svakih TIME_UPDATE_INTERVAL_S).
-  // Šaljemo `zavrsen: false` — ovo je samo update vremena, ne pokušaj
-  // završetka. Server radi MAX(stari, novi) tako da retry/race ne može
-  // smanjiti vrijeme. Ne šaljemo ako se ništa nije promijenilo.
+  // SERVER-SIDE HEARTBEAT — jedini path kojim time_spent_seconds raste
+  // server-side za ilmihal. Klijent samo signalizira "živ sam, čitam" — server
+  // izračuna deltu (NOW() - last_heartbeat_at, cap 15s) i doda u DB.
+  //
+  // Šalje se samo dok je tab vidljiv. Ako je tab u pozadini, server svejedno
+  // ima `last_heartbeat_at` iz ranije pa se prilikom povratka delta cap-uje
+  // na 15s.
+  //
+  // Sinhronizujemo lokalni `timeSpent` sa server-truth iz odgovora — tako se
+  // svaki "drift" lokalnog ticka (npr. tab je bio neaktivan) automatski
+  // ispravlja prema server-store vrijednosti.
   useEffect(() => {
     if (!lekcija || !user || !token) return;
-    const id = window.setInterval(() => {
-      const current = timeSpentRef.current;
-      if (current <= lastSentTimeRef.current) return;
-      const toSend = current;
-      apiRequest("POST", "/content/napredak", {
+    const sendHeartbeat = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      apiRequest<{ timeSpentSeconds: number }>("POST", "/content/heartbeat", {
         contentType: "ilmihal",
         contentId: lekcija.id,
-        zavrsen: false,
-        timeSpentSeconds: toSend,
-      }, token).then(() => {
-        lastSentTimeRef.current = toSend;
+      }, token).then(resp => {
+        if (typeof resp?.timeSpentSeconds === "number") {
+          // Sinhronizuj UI sa server-truth. `Math.max` da lokalni tick koji je
+          // možda otišao naprijed između hb-a ne skoči nazad.
+          setTimeSpent(prev => Math.max(prev, resp.timeSpentSeconds));
+        }
       }).catch(() => {});
-    }, TIME_UPDATE_INTERVAL_S * 1000);
+    };
+    // Pošalji prvi hb odmah da inicijalizujemo `last_heartbeat_at` server-side,
+    // pa onda interval. Bez ovoga prvi hb bi došao tek nakon 10s.
+    sendHeartbeat();
+    const id = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_S * 1000);
     return () => window.clearInterval(id);
   }, [lekcija?.id, user?.id, token]);
 
@@ -1981,14 +1997,12 @@ export default function IlmihalLekcijaPage() {
           contentId: lekcija.id,
           zavrsen: true,
           bodovi: 10,
-          // Pošalji aktuelno aktivno vrijeme — backend GATE provjerava
-          // >= MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION (300s) prije nego
-          // dozvoli prvi completion. Server kontroliše truth.
-          timeSpentSeconds: timeSpentRef.current,
+          // NE šaljemo `timeSpentSeconds` — backend ignoriše klijentsku vrijednost
+          // za ilmihal i koristi server-store time (akumuliran preko POST
+          // /content/heartbeat). Tako tehnički vješt korisnik ne može poslati
+          // `timeSpentSeconds: 300` curl-om i preskočiti gate.
         }, token
       );
-      // Naš poslani vremenski snapshot je sada definitivno na serveru.
-      lastSentTimeRef.current = timeSpentRef.current;
 
       // Task #6: paralelno upiši i u studentProgress tabelu (za "Moj put" tab)
       try {

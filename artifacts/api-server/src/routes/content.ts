@@ -324,8 +324,16 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
 
 // Minimum aktivnog vremena (sekundi) potrebnog za prvo označavanje ilmihal
 // lekcije kao završene. Sprječava klik-kroz-sve cheating. Vrijeme se mjeri
-// na frontendu samo dok je tab aktivan (Page Visibility API).
+// SERVER-SIDE preko heartbeat-a (POST /content/heartbeat) — klijent ne može
+// poslati lažni `timeSpentSeconds` jer se on ignoriše za ilmihal gate.
 const MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION = 300;
+
+// Maksimalno koliko sekundi jedan heartbeat može dodati u `time_spent_seconds`.
+// Pošto delta = min(MAX, NOW() - last_heartbeat_at), ukupno akumulirano vrijeme
+// nikad ne može premašiti realno proteklo vrijeme između prvog i posljednjeg
+// heartbeat-a. Cap od 15s sprječava da se idle/zatvoreni tab vrati i odjednom
+// "doda" sate čitanja jednim hb-om.
+const HEARTBEAT_MAX_DELTA_SECONDS = 15;
 
 // POST /api/content/napredak - save progress (bodovi only if >= 50%)
 router.post("/napredak", requireAuth, async (req, res) => {
@@ -377,16 +385,17 @@ router.post("/napredak", requireAuth, async (req, res) => {
 
     // Validiraj timeSpentSeconds — clamp negativne i ekstremno velike vrijednosti.
     // Ako klijent ne pošalje, tretiraj kao 0 (legacy klijent).
-    // NAPOMENA: ovo je ipak klijentska vrijednost. Gate štiti od
-    // CASUAL "klikanja kroz sve" — tehnički napredan korisnik može poslati
-    // proizvoljnih 300 i proći gate. Gate se ne smije računati kao
-    // kriptografski siguran; svrha je usporiti farmanje.
+    // VAŽNO: za `ilmihal` ova vrijednost se IGNORIŠE i za gate i za upis u DB.
+    // Vrijeme se za ilmihal akumulira isključivo preko POST /content/heartbeat
+    // (server-side delta sa cap-om 15s/hb). To je fiks za cheat: ranije je
+    // tehnički vješt korisnik mogao poslati `timeSpentSeconds: 300` direktno
+    // preko curl-a i otključati Aferime bez stvarnog čitanja.
+    // Za druge contentType (kviz, knjiga) i dalje prihvatamo (legacy ponašanje).
     const incomingTime = typeof timeSpentSeconds === "number" && Number.isFinite(timeSpentSeconds)
       ? Math.max(0, Math.min(86400, Math.floor(timeSpentSeconds))) // max 24h jednostranog updatea
       : 0;
 
-    // Pročitamo trenutni red SAMO za potrebe gate-a (zavrsen + max(time)).
-    // Stvarni write radimo atomski preko UPDATE ... GREATEST(...) — vidi dolje.
+    // Pročitamo trenutni red SAMO za potrebe gate-a (zavrsen + stored time).
     const existing = await db.select().from(korisnikNapredakTable)
       .where(and(
         eq(korisnikNapredakTable.userId, userId),
@@ -394,12 +403,9 @@ router.post("/napredak", requireAuth, async (req, res) => {
         eq(korisnikNapredakTable.contentId, contentId),
       ));
 
-    const currentTime = existing.length > 0 ? existing[0].timeSpentSeconds : 0;
+    const storedTime = existing.length > 0 ? existing[0].timeSpentSeconds : 0;
     const wasAlreadyCompleted = existing.length > 0 && existing[0].zavrsen;
     const existingQuizPassedAt = existing.length > 0 ? existing[0].quizPassedAt : null;
-    // Najveće vrijeme koje znamo TRENUTNO (kasniji UPDATE će uzeti GREATEST
-    // sa stvarnim DB redom — vidi dolje — pa je ovo samo procjena za gate).
-    const projectedTime = Math.max(currentTime, incomingTime);
     // Kviz je "položen" ako je već prije zabilježen ILI ako klijent u ovom
     // istom requestu šalje `quizPassed: true` (tipično: učenik u markComplete
     // već zna da je tačno odgovorio na sva pitanja). Drugi scenarij olakšava
@@ -408,18 +414,23 @@ router.post("/napredak", requireAuth, async (req, res) => {
 
     // GATE: za prvo označavanje ilmihal lekcije kao završene zahtijevaj
     // minimum 300 sekundi aktivnog čitanja. Već završene lekcije mogu se
-    // i dalje "potvrditi" bez vremenskog praga (samo updateuju vrijeme).
+    // i dalje "potvrditi" bez vremenskog praga.
+    // VAŽNO: gate koristi ISKLJUČIVO server-store vrijeme (storedTime), ne
+    // prihvata client-poslano `incomingTime`. Server-store vrijeme za ilmihal
+    // raste samo preko heartbeat endpoint-a (gdje delta računa server iz
+    // razlike NOW() - last_heartbeat_at, cap 15s). Tako klijent ne može
+    // jednim curl-om proći gate.
     if (
       zavrsen === true &&
       contentType === "ilmihal" &&
       !wasAlreadyCompleted &&
-      projectedTime < MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION
+      storedTime < MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION
     ) {
       res.status(422).json({
         error: "min_time_not_reached",
         message: `Lekciju možeš označiti kao završenu nakon ${MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION} sekundi aktivnog čitanja.`,
         minSeconds: MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION,
-        currentSeconds: projectedTime,
+        currentSeconds: storedTime,
       });
       return;
     }
@@ -442,11 +453,16 @@ router.post("/napredak", requireAuth, async (req, res) => {
       return;
     }
 
+    // Za ilmihal — NIKAD ne dozvoli `timeSpentSeconds` da raste preko ovog
+    // endpointa. Heartbeat je jedini path. Za ostale tipove (kviz, knjiga)
+    // ponašanje ostaje legacy GREATEST(stored, incoming).
+    const timeWriteValue = contentType === "ilmihal" ? 0 : incomingTime;
+
     let result;
     if (existing.length > 0) {
       const current = existing[0];
       // ATOMSKI UPDATE: koristimo SQL GREATEST/COALESCE da spriječimo race
-      // između paralelnih /napredak poziva (npr. periodic 30s POST + final
+      // između paralelnih /napredak poziva (npr. heartbeat + final
       // markComplete). Bez ovoga read-then-write može upisati MANJI time
       // i poništiti nedavno napredovanje.
       const [updated] = await db.update(korisnikNapredakTable)
@@ -455,7 +471,9 @@ router.post("/napredak", requireAuth, async (req, res) => {
           zavrsen: sql`${korisnikNapredakTable.zavrsen} OR ${!!zavrsen}`,
           bodovi: sql`GREATEST(${korisnikNapredakTable.bodovi}, ${stvarniBodovi})`,
           pokusaji: sql`${korisnikNapredakTable.pokusaji} + 1`,
-          timeSpentSeconds: sql`GREATEST(${korisnikNapredakTable.timeSpentSeconds}, ${incomingTime})`,
+          // Za ilmihal: timeWriteValue je 0, GREATEST ostavlja postojeći.
+          // Za kviz/knjiga: legacy GREATEST(stored, incoming).
+          timeSpentSeconds: sql`GREATEST(${korisnikNapredakTable.timeSpentSeconds}, ${timeWriteValue})`,
           // completedAt: postavi tek prvi put kad postane završeno.
           completedAt: zavrsen
             ? (current.completedAt ?? new Date())
@@ -478,7 +496,7 @@ router.post("/napredak", requireAuth, async (req, res) => {
         contentId,
         zavrsen: !!zavrsen,
         bodovi: stvarniBodovi,
-        timeSpentSeconds: incomingTime,
+        timeSpentSeconds: timeWriteValue,
         completedAt: zavrsen ? new Date() : undefined,
         quizPassedAt: quizPassed === true ? new Date() : undefined,
       }).returning();
@@ -505,6 +523,114 @@ router.post("/napredak", requireAuth, async (req, res) => {
     // catch tihi i pravi uzrok (npr. nedostaje kolona, schema drift) ostaje
     // skriven.
     req.log.error({ err }, "POST /content/napredak failed");
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/content/heartbeat — server-side mjerenje vremena čitanja.
+//
+// Klijent šalje "živ sam, čitam X" svakih ~10s. Server na svakom hb-u:
+//   delta = min(HEARTBEAT_MAX_DELTA_SECONDS, NOW() - last_heartbeat_at)
+//   time_spent_seconds += delta
+//   last_heartbeat_at = NOW()
+//
+// SIGURNOST: Pošto svaka delta je upper-bounded sa (NOW() - last_heartbeat_at),
+// suma svih delta ≤ realno proteklo vrijeme. Klijent NE MOŽE poslati lažni
+// timestamp — server koristi samo svoj sat. Cap od 15s sprječava da idle/zatvoreni
+// tab koji se vrati nakon sata "doda" sat čitanja jednim hb-om.
+//
+// Idle protection: ako klijent ne šalje hb (zatvoren tab, prebacio se na drugi),
+// stari `last_heartbeat_at` će biti dalek u prošlosti i sljedeći hb će dodati
+// max 15s. Aktivno čitanje sa hb svakih 10s daje ~10s po hb.
+//
+// First heartbeat: kreira red sa time=0 i lastHb=NOW(). Tek SLJEDEĆI hb dodaje
+// stvarno vrijeme. Tako prvi poziv ne dodaje ništa (ne znamo otkad korisnik
+// gleda stranicu).
+// Trenutno samo ilmihal koristi heartbeat (300s gate). Ostali tipovi
+// (kviz/knjiga) ne mjere vrijeme čitanja — ograničavamo allow-list da
+// smanjimo abuse surface (random POST-ovi sa bilo kojim contentType
+// ne mogu kreirati napredak redove).
+const HEARTBEAT_ALLOWED_CONTENT_TYPES = new Set(["ilmihal"]);
+
+router.post("/heartbeat", requireAuth, async (req, res) => {
+  try {
+    const { contentType, contentId } = req.body;
+    const userId = req.user!.userId;
+
+    if (typeof contentType !== "string" || !HEARTBEAT_ALLOWED_CONTENT_TYPES.has(contentType)) {
+      res.status(400).json({ error: "invalid_content_type" });
+      return;
+    }
+    if (typeof contentId !== "number" || !Number.isFinite(contentId) || contentId <= 0) {
+      res.status(400).json({ error: "invalid_content_id" });
+      return;
+    }
+
+    // Anti-farm: validacija da lekcija stvarno postoji.
+    const [lekcijaRow] = await db
+      .select({ id: ilmihalLekcijeTable.id })
+      .from(ilmihalLekcijeTable)
+      .where(eq(ilmihalLekcijeTable.id, contentId))
+      .limit(1);
+    if (!lekcijaRow) {
+      res.status(404).json({ error: "lekcija_not_found" });
+      return;
+    }
+
+    // Atomski INSERT ... ON CONFLICT DO UPDATE. Sva matematika u SQL-u —
+    // koristi NOW() i postojeći last_heartbeat_at iz konfliktnog reda. Tako:
+    //   - prvi heartbeat: INSERT sa time=0, last_hb=NOW(), delta=0 (init)
+    //   - svaki naredni: UPDATE sa time += LEAST(15, NOW() - last_hb),
+    //     last_hb = NOW(). Suma svih delta ≤ realno proteklo vrijeme.
+    //   - paralelni hb-i (npr. dva taba): drugi vidi svjež last_hb od prvog,
+    //     pa daje delta = ~0. Nema dvostrukog brojanja, nema duplih redova
+    //     (unique constraint + ON CONFLICT garantuju jedan red po ključu).
+    //
+    // COALESCE pokriva legacy redove gdje last_heartbeat_at = NULL (kreirani
+    // prije ove migracije preko /napredak): treti se kao da je hb upravo
+    // sada → delta = 0. Sljedeći hb daje pravu deltu.
+    //
+    // EXCLUDED.* referencira vrijednosti koje smo POKUŠALI insertovati;
+    // koristimo `korisnik_napredak.*` da pristupimo POSTOJEĆIM vrijednostima
+    // konfliktnog reda (npr. njegov last_heartbeat_at i time_spent_seconds).
+    const result = await db.execute(sql`
+      INSERT INTO korisnik_napredak (
+        user_id, content_type, content_id, zavrsen, bodovi, pokusaji,
+        time_spent_seconds, last_heartbeat_at, created_at, updated_at
+      )
+      VALUES (
+        ${userId}, ${contentType}, ${contentId}, false, 0, 1,
+        0, NOW(), NOW(), NOW()
+      )
+      ON CONFLICT (user_id, content_type, content_id) DO UPDATE SET
+        time_spent_seconds = korisnik_napredak.time_spent_seconds
+          + LEAST(
+              ${HEARTBEAT_MAX_DELTA_SECONDS}::int,
+              GREATEST(
+                0,
+                FLOOR(EXTRACT(EPOCH FROM (NOW() - COALESCE(korisnik_napredak.last_heartbeat_at, NOW()))))::int
+              )
+            ),
+        last_heartbeat_at = NOW(),
+        updated_at = NOW()
+      RETURNING
+        time_spent_seconds AS new_time,
+        (xmax = 0) AS inserted
+    `);
+
+    const row = (result as unknown as { rows: { new_time: number; inserted: boolean }[] }).rows[0];
+    const newTime = Number(row?.new_time ?? 0);
+    const inserted = !!row?.inserted;
+
+    res.json({
+      timeSpentSeconds: newTime,
+      // Deltu klijent može sam izračunati ako mu treba; vraćamo i radi UI feedbacka.
+      // Za prvi (init) heartbeat delta je 0 — ne računamo iz starog stanja jer
+      // upsert ne vraća prethodnu vrijednost atomski.
+      initialized: inserted,
+    });
+  } catch (err) {
+    req.log.error({ err }, "POST /content/heartbeat failed");
     res.status(500).json({ error: "Greška servera" });
   }
 });

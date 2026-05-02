@@ -37,6 +37,9 @@ if (Number.isNaN(port) || port <= 0) {
 //   • game_sessions table + indexes + TIMESTAMPTZ fix (not in Drizzle schema)
 //   • h5p_pokusaji indexes (table is in baseline, indexes are not)
 //   • zadace_ucenici_ucenik_idx (table is in baseline, this index is not)
+//   • korisnik_napredak.last_heartbeat_at + dedupe + unique index
+//     (Task #75: column added to schema after baseline 0000_*.sql was generated;
+//     unique index needed for ON CONFLICT in /api/content/heartbeat upsert).
 //
 // When these get added to the Drizzle schema and a new migration file is
 // generated, this whole function can disappear and only the data bootstrap
@@ -51,6 +54,33 @@ async function runResidualSchema() {
     // kolonu na boot-u. Kad se sljedeća Drizzle migracija generiše s ovom
     // kolonom, ovaj ALTER se može ukloniti.
     await db.execute(sql`ALTER TABLE korisnik_napredak ADD COLUMN IF NOT EXISTS quiz_passed_at TIMESTAMP;`);
+
+    // Task #75 — server-side heartbeat anti-cheat:
+    // Razlika NOW() - last_heartbeat_at (cap 15s) inkrementira time_spent_seconds.
+    // Klijentski timeSpentSeconds se više ne koristi za ilmihal gate (cheat fix).
+    await db.execute(sql`ALTER TABLE korisnik_napredak ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMP;`);
+
+    // Dedupe + unique index na (user_id, content_type, content_id):
+    // Ranije je read-then-write bez constraint-a teoretski mogao kreirati
+    // duplikate u racu. Heartbeat traffic (10s) povećava šanse za rac, pa
+    // čistimo postojeće duplikate (zadržavamo red sa najvećim time_spent_seconds,
+    // tie-breaker max id) i postavljamo unique index. ON CONFLICT u heartbeat
+    // upsertu tada radi atomski insert-or-update.
+    await db.execute(sql`
+      DELETE FROM korisnik_napredak a
+      USING korisnik_napredak b
+      WHERE a.user_id = b.user_id
+        AND a.content_type = b.content_type
+        AND a.content_id = b.content_id
+        AND (
+          a.time_spent_seconds < b.time_spent_seconds
+          OR (a.time_spent_seconds = b.time_spent_seconds AND a.id < b.id)
+        );
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS korisnik_napredak_user_content_unique_idx
+      ON korisnik_napredak (user_id, content_type, content_id);
+    `);
 
     // GAMIFIKACIJA: sesije igara (Pamti par, Brzi kviz, ...)
     await db.execute(sql`
