@@ -61,6 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
+    // Signaliziraj PWA sloju da obriše Workbox/Cache Storage cache-eve da
+    // sljedeći korisnik na shared device-u ne vidi stale podatke.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mekteb:logout"));
+    }
   };
 
   return (

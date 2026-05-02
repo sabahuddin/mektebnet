@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/auth";
 import { LanguageProvider } from "@/context/language";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 // Auth pages
 import LoginPage from "./pages/login";
@@ -164,6 +165,7 @@ function App() {
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
             </WouterRouter>
+            <OfflineIndicator />
             <Toaster />
           </TooltipProvider>
         </AuthProvider>
