@@ -4,7 +4,8 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
-import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Eye, Award } from "lucide-react";
+import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Eye, Award, Settings } from "lucide-react";
+import { PushToggle } from "@/components/push-toggle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -704,6 +705,16 @@ export default function RoditeljPage() {
             </form>
           </motion.div>
         )}
+
+        <div
+          className="mt-6 bg-white border border-border/50 rounded-2xl p-5"
+          data-testid="section-postavke"
+        >
+          <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
+            <Settings className="w-5 h-5 text-primary" /> Postavke
+          </h3>
+          <PushToggle />
+        </div>
       </div>
     </Layout>
   );

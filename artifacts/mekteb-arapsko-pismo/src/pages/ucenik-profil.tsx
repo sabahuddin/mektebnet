@@ -20,6 +20,7 @@ import {
   prefersReducedMotion,
   playRewardSound,
 } from "@/lib/sound-prefs";
+import { PushToggle } from "@/components/push-toggle";
 
 interface StudentProgress {
   studentId: string;
@@ -968,6 +969,10 @@ export default function UcenikProfilPage() {
                         )}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <PushToggle />
                   </div>
                 </div>
               </motion.div>
