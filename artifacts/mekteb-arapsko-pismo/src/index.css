@@ -488,32 +488,62 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   margin: 2em 0;
 }
 
-/* ── Print / PDF Worksheet ── */
+/* ── Print / PDF ── */
 @media print {
-  /* Sakrij sve sadržaje koristeći visibility — ne display:none (koji blokira djecu) */
-  body * {
+  @page {
+    size: A4;
+    margin: 15mm 12mm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /*
+    Layout chrome (header/footer iz src/components/layout.tsx + FlyingMaskota
+    overlay) je uvijek sakriven pri štampi. Tako svaka stranica može
+    jednostavno pozvati window.print() i dobiti ispravan rezultat — samo
+    glavni sadržaj — bez znanja o ikakvom magic id-u/klasi. Pojedinačne
+    stranice mogu dodatno koristiti `print:hidden` Tailwind utility ili
+    `.no-print` klasu da sakriju dugmad i druge UI elemente koji nisu
+    relevantni za štampani output.
+  */
+  header,
+  footer,
+  [data-testid="flying-maskota-container"],
+  .no-print {
+    display: none !important;
+  }
+
+  /*
+    OPT-IN "izolovani worksheet" mode: kada stranica označi neki element
+    klasom `.print-worksheet`, samo taj element je vidljiv pri štampi
+    (sve ostalo postaje visibility:hidden). Koristi se za radne listove
+    gdje je layout fundamentalno drugačiji od ekranske verzije (npr.
+    Citaonica worksheet, muallim izvještaj). Implementirano preko `:has()`
+    selektora na <body> — ako stranica nema `.print-worksheet`, ovo
+    pravilo se uopšte ne aktivira pa štampa radi normalno (gore navedeno
+    sakrivanje header/footer dovoljno je za većinu novih stranica).
+
+    Napomena: visibility:hidden, ne display:none — visibility čuva layout
+    djece elementa i omogućava da se sadržaj pravilno prikaže u
+    `position: fixed` worksheet kontejneru.
+  */
+  body:has(.print-worksheet) * {
     visibility: hidden !important;
   }
-  /* Prikaži samo worksheet i sav njegov sadržaj */
-  #print-worksheet,
-  #print-worksheet * {
+  body:has(.print-worksheet) .print-worksheet,
+  body:has(.print-worksheet) .print-worksheet * {
     visibility: visible !important;
   }
-  #print-worksheet {
+  body:has(.print-worksheet) .print-worksheet {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 100% !important;
     background: white !important;
     z-index: 9999 !important;
-  }
-  @page {
-    size: A4;
-    margin: 15mm 12mm;
-  }
-  body {
-    background: white !important;
-    color: black !important;
   }
 }
 

@@ -699,9 +699,12 @@ export default function LessonDetail() {
         />
       )}
 
-      {/* Print worksheet — invisible on screen, shows @media print */}
+      {/* Print worksheet — invisible on screen, shows @media print.
+          Klasa `print-worksheet` aktivira opt-in "izolovani worksheet"
+          mode iz src/index.css (sakriva sve ostalo na stranici i prikazuje
+          samo ovaj element). */}
       {isPrinting && (
-        <div id="print-worksheet" className="hidden print:block">
+        <div className="print-worksheet hidden print:block">
           <div style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
             {/* Header */}
             <div style={{ textAlign: "center", borderBottom: "3px solid #0d9488", paddingBottom: "12px", marginBottom: "16px" }}>

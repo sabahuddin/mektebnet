@@ -133,17 +133,22 @@ export default function MuallimIzvjestajPage() {
           @page { margin: 1.5cm; size: A4; }
           body { background: white !important; }
           /*
-            Override globalnog index.css koji postavlja #print-worksheet na
+            Override globalnog index.css koji postavlja .print-worksheet na
             position:fixed (radi za 1-page Citaonica worksheet, ali blokira
             paginaciju izvještaja koji se prelijeva preko više stranica).
             Treba natural flow + width auto da margin @page ne bude duplo.
+
+            Selektor MORA matchirati specifičnost globalnog pravila
+            (body:has(.print-worksheet) .print-worksheet) — inače globalno
+            !important pravilo pobjeđuje i izvještaj ostaje fixed (gubi
+            paginaciju). Ovaj stil je u source order POSLIJE globalnog,
+            pa kod jednake specifičnosti + !important pobjeđuje.
           */
-          #print-worksheet {
+          body:has(.print-worksheet) .print-worksheet {
             position: static !important;
             width: auto !important;
             max-width: 100% !important;
           }
-          .no-print { display: none !important; }
           .print-card { box-shadow: none !important; border-color: #d1d5db !important; page-break-inside: avoid; }
           .print-page-break { page-break-before: always; }
           .print-bg-emerald { background: #d1fae5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -157,12 +162,15 @@ export default function MuallimIzvjestajPage() {
       `}</style>
 
       {/*
-        id="print-worksheet" je obavezan: globalni @media print u index.css
-        sakriva (visibility:hidden) sav body sadržaj OSIM elementa sa ovim id-om
-        i njegove djece. Bez njega štampa daje prazan list. Originalno je
-        pravljeno za Citaonica worksheet, sada se reuse-uje i ovdje.
+        Klasa `print-worksheet` aktivira opt-in "izolovani worksheet" mode
+        iz src/index.css: sakriva sve ostalo na stranici (visibility:hidden)
+        i prikazuje samo ovaj element pri štampi. Bez nje bi se i sidebar/
+        header iz Layout-a štampali — globalno pravilo za .no-print sakriva
+        dugmad i kontrole. Layout chrome je već globalno sakriven u print
+        modu (vidi index.css), ova klasa dodatno izoluje izvještaj od
+        ostalih dijelova <main> kontejnera.
       */}
-      <div id="print-worksheet" className="max-w-4xl mx-auto print-root">
+      <div className="print-worksheet max-w-4xl mx-auto print-root">
         <div className="no-print mb-6 flex items-center justify-between gap-3 flex-wrap">
           <button
             onClick={() => window.history.length > 1 ? window.history.back() : setLocation("/muallim")}
