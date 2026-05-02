@@ -342,7 +342,10 @@ export function Layout({ children }: LayoutProps) {
 
           <div className="flex items-center gap-2">
 
-            <LanguageSwitcher />
+            {/* LanguageSwitcher PRIVREMENO SKRIVEN — app je locked na bosanski.
+                Vidi src/context/language.tsx za više konteksta. Komponenta je
+                ostavljena u fajlu (nije obrisana) da se lako vrati kad budemo
+                radili pravi multi-language. */}
 
             <div className="hidden sm:flex items-center gap-1 bg-muted/60 rounded-xl px-1 py-1">
               <button

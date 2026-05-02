@@ -37,17 +37,21 @@
     </script>
 
     <!--
-      Google Translate widget — koristi se za auto-prevod sadržaja
-      (lekcije, kvizovi, čitaonica) na jezik koji korisnik odabere
-      u našem language pickeru. UI stringovi su preveden kroz naš
-      i18n; widget pokriva ostali tekstualni sadržaj iz baze.
+      Multi-language podrška je PRIVREMENO ISKLJUČENA (samo bosanski).
+      Google Translate widget više se ne učitava. Ostavljamo defenzivni
+      CSS i runtime cookie cleanup ispod jer postojeći produkcijski
+      korisnici mogu imati keširan `googtrans` cookie sa npr. `/bs/en`,
+      što bi bez čišćenja prikazivalo prevedeni sadržaj sve dok ne
+      isteknu cookie/cache. Cleanup pokreće context/language.tsx
+      odmah na mount.
 
-      Žuta Google traka i tooltip su skriveni preko CSS-a ispod;
-      widget radi nevidljivo. Aktivacija ide preko googtrans cookie
-      koji postavi context/language.tsx prije reloada.
+      Kad budemo vraćali jezike, vrati Google Translate <script> i
+      `googleTranslateElementInit` ispod (vidi git history).
     -->
     <style>
-      /* Skriva žutu Google translate traku na vrhu (i sve njene artefakte). */
+      /* Defenzivno: ako Google Translate ipak učita (stari SW cache, browser
+         extension, itd.), traka i tooltip ostaju skriveni dok korisnik ne
+         dobije novi build. */
       iframe.goog-te-banner-frame,
       iframe.skiptranslate,
       .goog-te-banner-frame.skiptranslate,
@@ -68,58 +72,17 @@
         background: transparent !important;
         box-shadow: none !important;
       }
-      /* Google postavlja body { top: 40px } da ostavi mjesta za traku — anuliramo,
-         a NE diramo position (sticky header zavisi od default body position-a). */
       body {
         top: 0 !important;
         margin-top: 0 !important;
       }
-      /* Skriveni kontejner za sam widget. */
       #google_translate_element {
         display: none !important;
-        position: absolute !important;
-        top: -9999px !important;
       }
     </style>
-    <script type="text/javascript">
-      // Fallback: Google ponekad doda traku tek nakon load-a, pa MutationObserver
-      // uklanja banner i resetuje body.top kad god se pojavi.
-      (function() {
-        function clean() {
-          document.querySelectorAll('iframe.goog-te-banner-frame, iframe.skiptranslate').forEach(function(el) {
-            el.style.display = 'none';
-            el.style.height = '0';
-          });
-          if (document.body && document.body.style.top) {
-            document.body.style.top = '';
-          }
-        }
-        if (document.addEventListener) {
-          document.addEventListener('DOMContentLoaded', function() {
-            clean();
-            new MutationObserver(clean).observe(document.body, { childList: true, subtree: false });
-          });
-        }
-      })();
-    </script>
-    <script type="text/javascript">
-      function googleTranslateElementInit() {
-        // Source je bs (sav sadržaj u bazi je na bosanskom);
-        // widget zna prevesti na sve naše ciljne jezike.
-        new google.translate.TranslateElement({
-          pageLanguage: 'bs',
-          includedLanguages: 'bs,de,en,tr,ar',
-          autoDisplay: false,
-        }, 'google_translate_element');
-      }
-    </script>
-    <script type="text/javascript"
-      src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-      defer></script>
   </head>
   <body>
     <div id="root"></div>
-    <div id="google_translate_element" aria-hidden="true"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
