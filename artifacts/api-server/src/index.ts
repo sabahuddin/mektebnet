@@ -43,6 +43,15 @@ if (Number.isNaN(port) || port <= 0) {
 // below (a separate concern) will remain.
 async function runResidualSchema() {
   try {
+    // 4. uslov anti-cheat gate-a (mini-kviz "Provjeri znanje"): timestamp
+    // kada je učenik tačno odgovorio na sva pitanja iz `kvizPitanja` polja
+    // lekcije. Kolona je dodata u Drizzle schemu (`korisnikNapredakTable.quizPassedAt`)
+    // ali još nije u baseline migraciji (`lib/db/drizzle/0000_*.sql`), pa
+    // ovdje stoji idempotentni ALTER da postojeće baze (dev + prod) dobiju
+    // kolonu na boot-u. Kad se sljedeća Drizzle migracija generiše s ovom
+    // kolonom, ovaj ALTER se može ukloniti.
+    await db.execute(sql`ALTER TABLE korisnik_napredak ADD COLUMN IF NOT EXISTS quiz_passed_at TIMESTAMP;`);
+
     // GAMIFIKACIJA: sesije igara (Pamti par, Brzi kviz, ...)
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS game_sessions (

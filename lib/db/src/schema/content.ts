@@ -72,6 +72,12 @@ export const korisnikNapredakTable = pgTable("korisnik_napredak", {
   // sadržaju. Mjeri se samo dok je tab aktivan (Page Visibility API). Raste
   // i nakon završetka ako se učenik vrati na lekciju ponovo da uči.
   timeSpentSeconds: integer("time_spent_seconds").notNull().default(0),
+  // Vrijeme kad je učenik USPJEŠNO riješio mini-kviz "Provjeri znanje" za
+  // ovu lekciju (sva pitanja tačno). Koristi se kao 4. uslov gate-a za
+  // "Označi kao završeno" — ako lekcija ima `kvizPitanja`, completion
+  // ne prolazi dok ovaj timestamp nije postavljen. Idempotentno: jednom
+  // postavljen, ne mijenja se.
+  quizPassedAt: timestamp("quiz_passed_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

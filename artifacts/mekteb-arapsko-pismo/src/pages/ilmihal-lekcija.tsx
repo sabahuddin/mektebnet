@@ -54,6 +54,10 @@ interface Lekcija {
   userProgress?: {
     timeSpentSeconds: number;
     zavrsen: boolean;
+    /** ISO timestamp kad je učenik tačno odgovorio na sva pitanja iz mini-kviza
+     *  "Provjeri znanje". Null/undefined ako još nije položio. Koristi se kao
+     *  4. uslov gate-a za "Označi kao završeno". */
+    quizPassedAt?: string | null;
   };
 }
 
@@ -609,19 +613,31 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
 // ──────────────────────────────────────────────────
 // AI-generated lekcija kviz accordion
 // ──────────────────────────────────────────────────
-function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved }: {
+function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed, alreadyPassed, defaultOpen }: {
   pitanja: LekcijaKvizPitanje[];
   lekcijaId?: number;
   isAdmin?: boolean;
   token?: string | null;
   onSaved?: (novaPitanja: LekcijaKvizPitanje[]) => void;
+  /** Pozove se JEDNOM kad učenik tačno odgovori na SVA pitanja u jednom prolazu.
+   *  Koristi se za 4. uslov gate-a "Označi kao završeno". */
+  onPassed?: () => void;
+  /** Da li je učenik već ranije položio kviz (server kaže `quizPassedAt != null`).
+   *  Koristi za prikaz "već položeno ✓" u headeru — ne mijenja runtime ponašanje. */
+  alreadyPassed?: boolean;
+  /** Auto-otvori kviz kad se montira — npr. da gate pill može uputiti učenika
+   *  na vidljiv kviz. */
+  defaultOpen?: boolean;
 }) {
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!defaultOpen);
   const [editOpen, setEditOpen] = useState(false);
+  // Lokalni guard da onPassed pozovemo TAČNO jednom (i bez obzira što
+  // useEffect može opaliti više puta na re-renderima).
+  const passedFiredRef = useRef(false);
 
   const reset = () => { setCurrent(0); setSelected(null); setScore(0); setDone(false); };
 
@@ -637,6 +653,19 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved }: {
   const safeIdx = Math.min(current, Math.max(0, safePitanja.length - 1));
   const q = safePitanja[safeIdx];
   const canEdit = !!(isAdmin && token && lekcijaId);
+  const isPerfect = done && safePitanja.length > 0 && score === safePitanja.length;
+
+  // Fire onPassed TAČNO jednom kad učenik završi kviz sa svim tačnim odgovorima.
+  // Roditelj koristi ovo da: (a) POST-uje quizPassed u backend, (b) lokalno
+  // otključa 4. uslov gate-a za "Označi kao završeno". Koristimo ref-guard
+  // jer reset() kasnije postavlja done=false pa bi useEffect mogao opaliti
+  // ponovo na sljedeći prolaz; želimo samo prvi success da bude trigger.
+  useEffect(() => {
+    if (isPerfect && !passedFiredRef.current) {
+      passedFiredRef.current = true;
+      onPassed?.();
+    }
+  }, [isPerfect, onPassed]);
 
   // Ako sva pitanja su malformed a nismo admin, ne renderiraj kviz
   if (safePitanja.length === 0 && !canEdit) return null;
@@ -654,6 +683,16 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved }: {
             <span className="font-extrabold text-sm tracking-wide uppercase text-teal-800">
               Provjeri znanje
             </span>
+            {/* Indicator da je učenik već uspješno riješio kviz — gate je
+                zadovoljen i može mirno označiti lekciju kao završenu. */}
+            {(alreadyPassed || isPerfect) && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200"
+                data-testid="badge-kviz-polozen"
+              >
+                <CheckCircle2 className="w-3 h-3" strokeWidth={3} /> Položen
+              </span>
+            )}
             {canEdit && (
               <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-200/80 text-teal-900">
                 {safePitanja.length} {safePitanja.length === 1 ? "pitanje" : "pitanja"}
@@ -706,11 +745,19 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved }: {
                   Nema pitanja. Klikni "Uredi" pa "Dodaj pitanje" da kreiraš.
                 </div>
               ) : done ? (
-                <div className="text-center py-4">
-                  <Trophy className="w-10 h-10 mx-auto mb-3 text-amber-500" />
+                <div className="text-center py-4" data-testid="kviz-done-summary">
+                  <Trophy className={`w-10 h-10 mx-auto mb-3 ${isPerfect ? "text-emerald-500" : "text-amber-500"}`} />
                   <p className="text-lg font-extrabold text-foreground">{score}/{safePitanja.length} tačnih!</p>
-                  <p className="text-sm text-muted-foreground mt-1">Provjera za sebe — ne broji u bodove</p>
-                  <Button size="sm" variant="outline" onClick={reset} className="mt-4 rounded-xl">Ponovi kviz</Button>
+                  {isPerfect ? (
+                    <p className="text-sm font-bold text-emerald-700 mt-1">
+                      ✓ Sva pitanja tačna — sad možeš označiti lekciju kao završenu.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-amber-700 mt-1">
+                      Pokušaj ponovo — sva pitanja moraju biti tačna da otključaš "Označi kao završeno".
+                    </p>
+                  )}
+                  <Button size="sm" variant="outline" onClick={reset} className="mt-4 rounded-xl" data-testid="button-ponovi-kviz">Ponovi kviz</Button>
                 </div>
               ) : (
                 <div>
@@ -1703,14 +1750,18 @@ export default function IlmihalLekcijaPage() {
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
 
-  // Anti-cheat gate state — sve tri uslove moraju biti ispunjene da se
+  // Anti-cheat gate state — sva ČETIRI uslova moraju biti ispunjena da se
   // dugme "Označi kao završeno" otključa za nezavršene lekcije:
   //   1) timeSpent >= MIN_ACTIVE_SECONDS (300s aktivnog čitanja)
   //   2) scrollPercent >= MIN_SCROLL_PERCENT (skrolovao bar 85%)
   //   3) openedSectionIds pokriva sve vidljive sekcije
+  //   4) quizPassed — ako lekcija ima `kvizPitanja`, mora tačno na sva
+  //      odgovoriti u mini-kvizu "Provjeri znanje" (učitano iz
+  //      `userProgress.quizPassedAt` ili lokalno setovano nakon prolaza)
   const [timeSpent, setTimeSpent] = useState(0);
   const [scrollPercent, setScrollPercent] = useState(0);
   const [openedSectionIds, setOpenedSectionIds] = useState<Set<string>>(new Set());
+  const [quizPassed, setQuizPassed] = useState(false);
   const lastSentTimeRef = useRef(0);
   // Da bismo poslali finalni update vremena prije navigacije/zatvaranja taba,
   // držimo svježi timeSpent u ref-u — beforeunload ne može da koristi state.
@@ -1725,6 +1776,25 @@ export default function IlmihalLekcijaPage() {
       return next;
     });
   }, []);
+
+  // Pozove se kad učenik tačno odgovori na SVA pitanja u mini-kvizu
+  // "Provjeri znanje". Lokalno odmah otključavamo gate (UX) i šaljemo
+  // backend-u `quizPassed: true` da idempotentno setuje `quiz_passed_at` —
+  // tako sljedeći put kad učenik dođe na lekciju gate je već prošao.
+  // Greška u POST-u ne blokira UX (lokalni gate je otvoren) — backend
+  // gate u markComplete-u hvata `quiz_not_passed` i pretvara u prijateljski
+  // toast ako se desi race.
+  const handleQuizPassed = useCallback(() => {
+    setQuizPassed(true);
+    if (!lekcija || !token) return;
+    apiRequest("POST", "/content/napredak", {
+      contentType: "ilmihal",
+      contentId: lekcija.id,
+      zavrsen: false,
+      quizPassed: true,
+      timeSpentSeconds: timeSpentRef.current,
+    }, token).catch(() => {/* ignore — markComplete će ponovo poslati ako treba */});
+  }, [lekcija?.id, token]);
 
   const displayNivo = (nivo: number) => nivo;
 
@@ -1760,6 +1830,7 @@ export default function IlmihalLekcijaPage() {
     setTimeSpent(0);
     setScrollPercent(0);
     setOpenedSectionIds(new Set());
+    setQuizPassed(false);
     lastSentTimeRef.current = 0;
     // Token je obavezan da bi backend uključio `prilozi` u response
     // (učenici vide H5P/URL prilozi, muallim/admin sve). Bez tokena
@@ -1773,6 +1844,10 @@ export default function IlmihalLekcijaPage() {
         const initial = data.userProgress?.timeSpentSeconds ?? 0;
         setTimeSpent(initial);
         lastSentTimeRef.current = initial;
+        // Ako je učenik već ranije položio mini-kviz (server čuva
+        // `quizPassedAt`), 4. uslov gate-a je već zadovoljen — ne mora
+        // ponovo rješavati pri svakom posjetu.
+        if (data.userProgress?.quizPassedAt) setQuizPassed(true);
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -1984,8 +2059,8 @@ export default function IlmihalLekcijaPage() {
         });
       }
     } catch (e: any) {
-      // 422 = backend gate ("min_time_not_reached") — pokaži prijateljsku
-      // poruku sa preostalim sekundama umjesto generičke "Greška servera".
+      // 422 = backend gate — pokaži prijateljsku poruku zavisno od `error`
+      // koda umjesto generičke "Greška servera".
       if (e?.status === 422 && e?.data?.error === "min_time_not_reached") {
         const min = Number(e.data.minSeconds) || MIN_ACTIVE_SECONDS;
         const cur = Number(e.data.currentSeconds) || timeSpentRef.current;
@@ -1993,6 +2068,17 @@ export default function IlmihalLekcijaPage() {
         toast({
           title: "Treba još malo čitanja",
           description: `Provedi još ${formatDuration(remaining)} aktivnog čitanja prije nego označiš lekciju kao završenu.`,
+          variant: "destructive",
+        });
+      } else if (e?.status === 422 && e?.data?.error === "quiz_not_passed") {
+        // Race-case: lokalni gate je dozvolio klik ali server nema
+        // `quiz_passed_at` (npr. mreža je propustila prethodni POST iz
+        // handleQuizPassed). Sinhroniziraj lokalni state da gate ostane
+        // zaključan i uputi učenika na kviz.
+        setQuizPassed(false);
+        toast({
+          title: "Najprije riješi kviz",
+          description: 'Tačno odgovori na sva pitanja u "Provjeri znanje" pa onda označi lekciju kao završenu.',
           variant: "destructive",
         });
       } else {
@@ -2017,13 +2103,29 @@ export default function IlmihalLekcijaPage() {
       .sort((a, b) => (a.type === "priprema" ? 1 : 0) - (b.type === "priprema" ? 1 : 0));
   }, [parsed, user?.role]);
 
-  // Anti-cheat gate: tri uslova moraju biti true. `completed` se ne broji
+  // Anti-cheat gate: ČETIRI uslova moraju biti true. `completed` se ne broji
   // ovdje — već-završene lekcije imaju zaseban UI (vidi dugme dolje).
+  // `lekcijaHasQuiz` mirror-uje istu validaciju koju backend radi u
+  // POST /content/napredak (≥1 dobro formulisano pitanje sa ≥2 opcije i
+  // tačnim odgovorom u opcijama). Bez ovog filtra prazan/malformed kviz
+  // bi vječno blokirao učenika.
+  const lekcijaHasQuiz = React.useMemo(() => {
+    const arr = lekcija?.kvizPitanja;
+    if (!Array.isArray(arr)) return false;
+    return arr.some(p => {
+      if (!p || typeof p.question !== "string" || p.question.trim().length === 0) return false;
+      if (!Array.isArray(p.options)) return false;
+      const opts = p.options.filter(o => typeof o === "string" && o.trim().length > 0);
+      if (opts.length < 2) return false;
+      return typeof p.answer === "string" && opts.includes(p.answer);
+    });
+  }, [lekcija?.kvizPitanja]);
   const timeOk = timeSpent >= MIN_ACTIVE_SECONDS;
   const scrollOk = scrollPercent >= MIN_SCROLL_PERCENT;
   const sectionsOk = visibleSections.length === 0
     || visibleSections.every(s => openedSectionIds.has(s.id));
-  const canMarkComplete = timeOk && scrollOk && sectionsOk;
+  const quizOk = !lekcijaHasQuiz || quizPassed;
+  const canMarkComplete = timeOk && scrollOk && sectionsOk && quizOk;
   const remainingSeconds = Math.max(0, MIN_ACTIVE_SECONDS - timeSpent);
   const remainingSections = visibleSections.filter(s => !openedSectionIds.has(s.id)).length;
 
@@ -2326,6 +2428,12 @@ export default function IlmihalLekcijaPage() {
                       isAdmin={isAdmin}
                       token={token}
                       onSaved={onKvizSaved}
+                      onPassed={handleQuizPassed}
+                      alreadyPassed={quizPassed}
+                      // Auto-otvori kviz dok god gate uslov nije zadovoljen —
+                      // tako učenik vidi šta još treba uraditi bez dodatnog klika.
+                      // Već završene lekcije i položeni kvizovi ostaju zatvoreni.
+                      defaultOpen={lekcijaHasQuiz && !quizPassed && !completed}
                     />
                   );
                 }
@@ -2431,6 +2539,15 @@ export default function IlmihalLekcijaPage() {
                   >
                     <BookOpen className="w-3.5 h-3.5" />
                     Otvori još {remainingSections} {remainingSections === 1 ? "sekciju" : "sekcija"}
+                  </span>
+                )}
+                {!quizOk && (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-teal-50 text-teal-800 ring-1 ring-teal-200"
+                    data-testid="gate-quiz"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    Riješi kviz tačno
                   </span>
                 )}
               </div>

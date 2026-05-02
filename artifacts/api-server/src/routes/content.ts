@@ -118,6 +118,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
             const [napredak] = await db.select({
               timeSpentSeconds: korisnikNapredakTable.timeSpentSeconds,
               zavrsen: korisnikNapredakTable.zavrsen,
+              quizPassedAt: korisnikNapredakTable.quizPassedAt,
             }).from(korisnikNapredakTable)
               .where(and(
                 eq(korisnikNapredakTable.userId, userId),
@@ -127,6 +128,9 @@ router.get("/ilmihal/:slug", async (req, res) => {
             result.userProgress = {
               timeSpentSeconds: napredak?.timeSpentSeconds ?? 0,
               zavrsen: napredak?.zavrsen ?? false,
+              // ISO string ili null — frontend koristi za 4. uslov gate-a
+              // ("Provjeri znanje" mini-kviz). Samo prisutnost je važna.
+              quizPassedAt: napredak?.quizPassedAt ? napredak.quizPassedAt.toISOString() : null,
             };
           } catch {}
         }
@@ -326,7 +330,7 @@ const MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION = 300;
 // POST /api/content/napredak - save progress (bodovi only if >= 50%)
 router.post("/napredak", requireAuth, async (req, res) => {
   try {
-    const { contentType, contentId, zavrsen, bodovi, tacniOdgovori, ukupnoPitanja, timeSpentSeconds } = req.body;
+    const { contentType, contentId, zavrsen, bodovi, tacniOdgovori, ukupnoPitanja, timeSpentSeconds, quizPassed } = req.body;
     const userId = req.user!.userId;
 
     // Osnovna validacija ulaza — bez ovoga može doći do prljavih insertova.
@@ -343,10 +347,13 @@ router.post("/napredak", requireAuth, async (req, res) => {
     // stvarno postoji. Bez ovoga bi tehnički korisnik mogao slati proizvoljne
     // contentId vrijednosti u POST i farmati Aferime preko mirror-a u
     // student_progress. Validaciju radimo samo za ilmihal jer je samo to
-    // tip koji award path koristi.
+    // tip koji award path koristi. Ujedno čitamo `kvizPitanja` da znamo
+    // ima li lekcija mini-kviz "Provjeri znanje" — koristi se za 4. uslov
+    // gate-a niže.
+    let lekcijaHasQuiz = false;
     if (contentType === "ilmihal") {
       const [lekcijaRow] = await db
-        .select({ id: ilmihalLekcijeTable.id })
+        .select({ id: ilmihalLekcijeTable.id, kvizPitanja: ilmihalLekcijeTable.kvizPitanja })
         .from(ilmihalLekcijeTable)
         .where(eq(ilmihalLekcijeTable.id, contentId))
         .limit(1);
@@ -354,6 +361,15 @@ router.post("/napredak", requireAuth, async (req, res) => {
         res.status(404).json({ error: "lekcija_not_found" });
         return;
       }
+      // "Ima kviz" znači ≥1 validno pitanje (sa tekstom i ≥2 opcije i answer-om).
+      // Slabija provjera (samo length > 0) bi spriječila completion za legacy
+      // lekcije sa praznim/malformed pitanjima koja UI ionako ne renderira.
+      const pitanja = Array.isArray(lekcijaRow.kvizPitanja) ? lekcijaRow.kvizPitanja : [];
+      lekcijaHasQuiz = pitanja.some((p: any) =>
+        p && typeof p?.question === "string" && p.question.trim().length > 0
+        && Array.isArray(p?.options) && p.options.filter((o: any) => typeof o === "string" && o.trim().length > 0).length >= 2
+        && typeof p?.answer === "string" && p.answer.trim().length > 0
+      );
     }
 
     const procenat = ukupnoPitanja > 0 ? Math.round((tacniOdgovori / ukupnoPitanja) * 100) : 0;
@@ -380,9 +396,15 @@ router.post("/napredak", requireAuth, async (req, res) => {
 
     const currentTime = existing.length > 0 ? existing[0].timeSpentSeconds : 0;
     const wasAlreadyCompleted = existing.length > 0 && existing[0].zavrsen;
+    const existingQuizPassedAt = existing.length > 0 ? existing[0].quizPassedAt : null;
     // Najveće vrijeme koje znamo TRENUTNO (kasniji UPDATE će uzeti GREATEST
     // sa stvarnim DB redom — vidi dolje — pa je ovo samo procjena za gate).
     const projectedTime = Math.max(currentTime, incomingTime);
+    // Kviz je "položen" ako je već prije zabilježen ILI ako klijent u ovom
+    // istom requestu šalje `quizPassed: true` (tipično: učenik u markComplete
+    // već zna da je tačno odgovorio na sva pitanja). Drugi scenarij olakšava
+    // race kad klijent paralelno šalje quizPassed i zavrsen u jednom kliku.
+    const quizPassedNowOrBefore = !!existingQuizPassedAt || quizPassed === true;
 
     // GATE: za prvo označavanje ilmihal lekcije kao završene zahtijevaj
     // minimum 300 sekundi aktivnog čitanja. Već završene lekcije mogu se
@@ -398,6 +420,24 @@ router.post("/napredak", requireAuth, async (req, res) => {
         message: `Lekciju možeš označiti kao završenu nakon ${MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION} sekundi aktivnog čitanja.`,
         minSeconds: MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION,
         currentSeconds: projectedTime,
+      });
+      return;
+    }
+
+    // GATE: 4. uslov — mini-kviz "Provjeri znanje". Ako lekcija ima validna
+    // pitanja u `kvizPitanja`, učenik mora biti tačno odgovorio na sva
+    // (zabilježeno kao `quiz_passed_at`) prije nego se completion odobri.
+    // Već završene lekcije i lekcije bez pitanja prolaze automatski.
+    if (
+      zavrsen === true &&
+      contentType === "ilmihal" &&
+      !wasAlreadyCompleted &&
+      lekcijaHasQuiz &&
+      !quizPassedNowOrBefore
+    ) {
+      res.status(422).json({
+        error: "quiz_not_passed",
+        message: "Prvo tačno odgovori na sva pitanja u kvizu \"Provjeri znanje\" prije nego označiš lekciju kao završenu.",
       });
       return;
     }
@@ -420,6 +460,12 @@ router.post("/napredak", requireAuth, async (req, res) => {
           completedAt: zavrsen
             ? (current.completedAt ?? new Date())
             : current.completedAt,
+          // quizPassedAt: postavi tek prvi put kad učenik tačno odgovori na
+          // sva pitanja. Idempotentno — kasniji `quizPassed: true` requestovi
+          // ne mijenjaju već postojeći timestamp.
+          quizPassedAt: quizPassed === true
+            ? (current.quizPassedAt ?? new Date())
+            : current.quizPassedAt,
           updatedAt: new Date(),
         })
         .where(eq(korisnikNapredakTable.id, current.id))
@@ -434,6 +480,7 @@ router.post("/napredak", requireAuth, async (req, res) => {
         bodovi: stvarniBodovi,
         timeSpentSeconds: incomingTime,
         completedAt: zavrsen ? new Date() : undefined,
+        quizPassedAt: quizPassed === true ? new Date() : undefined,
       }).returning();
       result = nova;
     }
