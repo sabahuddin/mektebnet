@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
+import { useAuth } from "@/context/auth";
 import { BookOpen, Search, Volume2, Lock, PlayCircle } from "lucide-react";
 import { LESSONS } from "@/data/lessons";
 
@@ -66,8 +67,35 @@ function playHarf(file: string) {
 
 export default function ArapskoPismoPage() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+
+  // Sufara modul nije završen — pristup ima samo administrator za interni
+  // pregled. Direct URL za sve ostale (učenik, mualim, roditelj, gost)
+  // pokazuje poruku i dugme za povratak na početnu.
+  if (!user || user.role !== "admin") {
+    return (
+      <Layout>
+        <div className="text-center py-20 max-w-md mx-auto">
+          <div className="w-16 h-16 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-amber-600" />
+          </div>
+          <h1 className="text-xl font-extrabold text-foreground mb-2">Modul u izradi</h1>
+          <p className="text-muted-foreground font-medium mb-6">
+            Sufara još nije završena i trenutno nije dostupna.
+          </p>
+          <button
+            onClick={() => setLocation("/")}
+            className="bg-primary text-primary-foreground rounded-2xl px-6 py-3 font-bold hover:opacity-90 transition-opacity"
+          >
+            Nazad na početnu
+          </button>
+        </div>
+      </Layout>
+    );
+  }
 
   const filtered = HARFOVI.filter(h => {
     const q = search.toLowerCase();

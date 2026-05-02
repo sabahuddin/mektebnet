@@ -10,6 +10,7 @@ export default function Home() {
   const { user } = useAuth();
   const { t } = useLanguage();
 
+  // Sufara modul je u izradi — kartica se prikazuje samo administratoru.
   const MODULES = [
     {
       href: "/ilmihal",
@@ -44,17 +45,19 @@ export default function Home() {
       text: "text-violet-700",
       count: `14 ${t("home.prica")}`,
     },
-    {
-      href: "/arapsko-pismo",
-      icon: GraduationCap,
-      label: t("nav.sufara"),
-      desc: t("home.sufaraDesc"),
-      color: "from-primary to-teal-600",
-      bg: "bg-primary/5",
-      border: "border-primary/20",
-      text: "text-primary",
-      count: `6 ${t("home.lekcija6")}`,
-    },
+    ...(user?.role === "admin"
+      ? [{
+          href: "/arapsko-pismo",
+          icon: GraduationCap,
+          label: t("nav.sufara"),
+          desc: t("home.sufaraDesc"),
+          color: "from-primary to-teal-600",
+          bg: "bg-primary/5",
+          border: "border-primary/20",
+          text: "text-primary",
+          count: `6 ${t("home.lekcija6")}`,
+        }]
+      : []),
   ];
 
   const greeting = user

@@ -198,12 +198,16 @@ export function Layout({ children }: LayoutProps) {
     try { localStorage.setItem("mekteb-fontsize", String(fontLevel)); } catch {}
   }, [fontLevel]);
 
+  // Sufara modul nije završen — vidljiv samo administratoru za interni pregled
+  // i testiranje. Učenici, mualimi, roditelji i gosti ga ne vide u navigaciji.
   const mainNavLinks: NavLink[] = [
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
     { href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle },
     { href: "/citaonica", label: t("nav.citaonica"), icon: Library },
-    { href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap },
+    ...(user?.role === "admin"
+      ? [{ href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap } as NavLink]
+      : []),
   ];
 
   // "Moj profil" za učenika je sada dropdown grupa: pod njim su Moj profil,
