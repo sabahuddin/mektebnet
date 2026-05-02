@@ -37,7 +37,7 @@ export const translations = {
       muallimPanel: "Muallim panel",
       adminPanel: "Admin panel",
       mojaDjeca: "Moja djeca",
-      mojProfil: "Moj profil",
+      mojProfil: "Moja košnica",
       mojNapredak: "Moj napredak",
       igrice: "Igrice",
       poruke: "Poruke",

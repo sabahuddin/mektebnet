@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { FlyingMaskota } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
+import { useToast } from "@/hooks/use-toast";
+
+/** Inicijali iz displayName-a, max 2 slova (npr. "Tarik Avdić" → "TA"). */
+function getInitials(name?: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).map(p => p[0] ?? "").filter(Boolean);
+  return (parts.slice(0, 2).join("") || name.trim().slice(0, 2) || "?").toUpperCase();
+}
 
 interface LayoutProps { children: ReactNode; }
 
@@ -223,6 +231,7 @@ export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const unreadPoruke = useUnreadPoruke();
+  const { toast } = useToast();
   const [fontLevel, setFontLevel] = useState<number>(() => {
     try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
   });
@@ -234,16 +243,24 @@ export function Layout({ children }: LayoutProps) {
     try { localStorage.setItem("mekteb-fontsize", String(fontLevel)); } catch {}
   }, [fontLevel]);
 
-  // Sufara modul nije završen — vidljiv samo administratoru za interni pregled
-  // i testiranje. Učenici, mualimi, roditelji i gosti ga ne vide u navigaciji.
+  // Sufara modul je javno vidljiv u navigaciji za sve, ali je sadržaj još
+  // u izradi — non-admin korisnik klikom dobije "Uskoro" toast umjesto
+  // navigacije. Admin ide direktno na /arapsko-pismo radi internog pregleda.
+  const sufaraComingSoon = () => {
+    toast({
+      title: "Uskoro 🌸",
+      description: "Sufara modul stiže uskoro, inšaAllah.",
+    });
+  };
   const mainNavLinks: NavLink[] = [
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
     { href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle },
     { href: "/citaonica", label: t("nav.citaonica"), icon: Library },
-    ...(user?.role === "admin"
-      ? [{ href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap } as NavLink]
-      : []),
+    { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
+    user?.role === "admin"
+      ? { href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap }
+      : { href: "#sufara", label: t("nav.sufara"), icon: GraduationCap, onClick: sufaraComingSoon },
   ];
 
   // "Moj profil" je dropdown grupa za sve prijavljene uloge. Pod njim su
@@ -277,12 +294,11 @@ export function Layout({ children }: LayoutProps) {
     ],
     ucenik: [
       profileDropdown([
-        { href: "/ucenik", label: t("nav.mojProfil"), icon: User },
+        { href: "/ucenik", label: "Moj profil", icon: User },
         { href: "/napredak", label: t("nav.mojNapredak"), icon: BookMarked },
         { href: "/misije", label: "Misije", icon: Target },
+        { href: "/popravi-sace", label: "Popravi saće", icon: Wrench },
       ]),
-      { href: "/popravi-sace", label: "Popravi saće", icon: Wrench },
-      { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
     ],
   };
 
@@ -304,13 +320,25 @@ export function Layout({ children }: LayoutProps) {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1">
-            {mainNavLinks.map((link) => (
-              <Link key={link.href} href={link.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`}>
-                <link.icon className="w-4 h-4" />
-                {link.label}
-              </Link>
-            ))}
+            {mainNavLinks.map((link) => {
+              const cls = `flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`;
+              // Stavke sa onClick (npr. Sufara "Uskoro") renderuju se kao button
+              // jer ne navigiraju nigdje — samo trigger toast.
+              if (link.onClick) {
+                return (
+                  <button key={link.href} type="button" onClick={link.onClick} className={cls}>
+                    <link.icon className="w-4 h-4" />
+                    {link.label}
+                  </button>
+                );
+              }
+              return (
+                <Link key={link.href} href={link.href} className={cls}>
+                  <link.icon className="w-4 h-4" />
+                  {link.label}
+                </Link>
+              );
+            })}
             {extraLinks.map(link => (
               link.children && link.children.length > 0 ? (
                 <NavDropdown
@@ -368,12 +396,16 @@ export function Layout({ children }: LayoutProps) {
 
             {user ? (
               // Header više ne nosi posebnu LogOut ikonicu — odjava je premještena
-              // u "Moj profil" dropdown u glavnoj navigaciji. Ovdje ostaje samo
-              // diskretan prikaz imena i uloge da korisnik vidi pod kojim je
-              // računom prijavljen.
-              <div className="hidden sm:flex flex-col items-end leading-tight">
-                <span className="text-sm font-bold text-foreground">{user.displayName}</span>
-                <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
+              // u "Moja košnica" dropdown u glavnoj navigaciji. Ovdje pokazujemo
+              // samo inicijale (npr. "TA") radi diskretnog prikaza prijavljenog
+              // korisnika; puno ime + uloga su dostupni preko title tooltip-a.
+              <div
+                className="hidden sm:flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary font-extrabold text-sm tracking-tight select-none"
+                title={`${user.displayName} (${user.role})`}
+                aria-label={`${user.displayName}, ${user.role}`}
+                data-testid="header-user-initials"
+              >
+                {getInitials(user.displayName)}
               </div>
             ) : (
               <Link href="/login">
@@ -458,6 +490,18 @@ export function Layout({ children }: LayoutProps) {
                         );
                       })}
                     </div>
+                  ) : link.onClick ? (
+                    // Mobile: action stavka (npr. Sufara "Uskoro") — button koji
+                    // zatvara meni i triggeruje onClick (toast).
+                    <button
+                      key={link.href}
+                      type="button"
+                      onClick={() => { setMobileOpen(false); link.onClick!(); }}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors w-full text-left ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}
+                    >
+                      <link.icon className="w-5 h-5" />
+                      <span className="flex-1">{link.label}</span>
+                    </button>
                   ) : (
                     <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}>
