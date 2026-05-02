@@ -1651,6 +1651,7 @@ function PriloziSection({
                                 h5pPath={h5pUrl}
                                 contentKey={`${a.id}-${attemptKey}`}
                                 onCompleted={(r) => handleH5pCompleted(a.id, r.score, r.maxScore)}
+                                isManager={canManage}
                               />
                             </Suspense>
                             <p className="px-3 py-2 text-xs text-purple-500 bg-purple-50/60">
