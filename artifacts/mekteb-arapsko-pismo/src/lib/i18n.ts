@@ -69,6 +69,8 @@ export const translations = {
       lekcija6: "lekcija",
       hasanati: "Aferimi",
       dana: "dana",
+      igriceDesc: "Zabavne edukativne igre — sakupljaj Aferime kroz igru",
+      uskoro: "USKORO",
     },
     login: {
       naslov: "Prijava na mekteb.net",
@@ -273,6 +275,8 @@ export const translations = {
       lekcija6: "Lektionen",
       hasanati: "Hasanat",
       dana: "Tage",
+      igriceDesc: "Lustige Lernspiele — sammle Hasanat beim Spielen",
+      uskoro: "BALD",
     },
     login: {
       naslov: "Anmeldung auf mekteb.net",
@@ -476,6 +480,8 @@ export const translations = {
       lekcija6: "lessons",
       hasanati: "hasanat",
       dana: "days",
+      igriceDesc: "Fun educational games — collect Hasanat through play",
+      uskoro: "SOON",
     },
     login: {
       naslov: "Sign in to mekteb.net",
@@ -679,6 +685,8 @@ export const translations = {
       lekcija6: "ders",
       hasanati: "hasenat",
       dana: "gün",
+      igriceDesc: "Eğlenceli eğitici oyunlar — oynayarak hasenat topla",
+      uskoro: "YAKINDA",
     },
     login: {
       naslov: "mekteb.net'e giriş",
@@ -882,6 +890,8 @@ export const translations = {
       lekcija6: "دروس",
       hasanati: "حسنات",
       dana: "أيام",
+      igriceDesc: "ألعاب تعليمية ممتعة — اجمع الحسنات أثناء اللعب",
+      uskoro: "قريباً",
     },
     login: {
       naslov: "تسجيل الدخول إلى mekteb.net",

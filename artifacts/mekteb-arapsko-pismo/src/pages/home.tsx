@@ -4,14 +4,29 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { Layout } from "@/components/layout";
 import { Maskota } from "@/components/maskota";
-import { BookOpen, HelpCircle, Library, GraduationCap, Star, Flame, ChevronRight, BookMarked } from "lucide-react";
+import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, Star, Flame, ChevronRight, BookMarked } from "lucide-react";
+
+interface ModuleCard {
+  href: string;
+  icon: typeof BookOpen;
+  label: string;
+  desc: string;
+  color: string;
+  bg: string;
+  border: string;
+  text: string;
+  count: string;
+  comingSoon?: boolean;
+}
 
 export default function Home() {
   const { user } = useAuth();
   const { t } = useLanguage();
 
-  // Sufara modul je u izradi — kartica se prikazuje samo administratoru.
-  const MODULES = [
+  // Sufara modul je u izradi — kartica se prikazuje SVIMA, ali sa "USKORO"
+  // badge-om i nije klikabilna (link je onemogućen). Klasična /arapsko-pismo
+  // ruta i dalje radi za adminstratore (i muallime, ako bude trebalo testirati).
+  const MODULES: ModuleCard[] = [
     {
       href: "/ilmihal",
       icon: BookOpen,
@@ -45,19 +60,29 @@ export default function Home() {
       text: "text-violet-700",
       count: `14 ${t("home.prica")}`,
     },
-    ...(user?.role === "admin"
-      ? [{
-          href: "/arapsko-pismo",
-          icon: GraduationCap,
-          label: t("nav.sufara"),
-          desc: t("home.sufaraDesc"),
-          color: "from-primary to-teal-600",
-          bg: "bg-primary/5",
-          border: "border-primary/20",
-          text: "text-primary",
-          count: `6 ${t("home.lekcija6")}`,
-        }]
-      : []),
+    {
+      href: "/igrice",
+      icon: Gamepad2,
+      label: t("nav.igrice"),
+      desc: t("home.igriceDesc"),
+      color: "from-pink-500 to-rose-600",
+      bg: "bg-pink-50",
+      border: "border-pink-200",
+      text: "text-pink-700",
+      count: `6 ${t("nav.igrice").toLowerCase()}`,
+    },
+    {
+      href: "/arapsko-pismo",
+      icon: GraduationCap,
+      label: t("nav.sufara"),
+      desc: t("home.sufaraDesc"),
+      color: "from-primary to-teal-600",
+      bg: "bg-primary/5",
+      border: "border-primary/20",
+      text: "text-primary",
+      count: `6 ${t("home.lekcija6")}`,
+      comingSoon: true,
+    },
   ];
 
   const greeting = user
@@ -120,61 +145,61 @@ export default function Home() {
         {t("home.odaberiModul")}
       </h2>
 
-      <div className="mb-10" data-testid="home-honeycomb">
-        {(() => {
-          const HEX_CLIP = { clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" };
-          const rows: typeof MODULES[] = [];
-          for (let i = 0; i < MODULES.length; i += 2) rows.push(MODULES.slice(i, i + 2));
-          return rows.map((row, ri) => {
-            // Offset/preklop primjenjujemo SAMO kad red ima 2 kartice (puni honeycomb).
-            // Za neparan ukupni broj modula, zadnji "offset" red ima 1 karticu —
-            // bez ovog guarda izgleda pomjerena/necentirana (translateX 13% + negativni mt).
-            const isOffset = ri % 2 === 1 && row.length === 2;
-            return (
-              <div
-                key={ri}
-                className={`flex justify-center gap-2 sm:gap-4 ${isOffset ? "-mt-[12%] sm:-mt-[7%] md:-mt-[6%]" : ""}`}
-                style={isOffset ? { transform: "translateX(13%)" } : undefined}
-              >
-                {row.map((mod, ci) => (
-                  <motion.div
-                    key={mod.href}
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: (ri * 2 + ci) * 0.08, type: "spring", stiffness: 200, damping: 18 }}
-                    className="w-[46%] sm:w-[42%] md:w-[36%] lg:w-[28%]"
-                  >
-                    <Link href={mod.href}>
-                      <div
-                        className={`relative cursor-pointer transition-transform duration-200 hover:-translate-y-1 hover:drop-shadow-xl group`}
-                        style={{ aspectRatio: "1 / 1.1547" }}
-                      >
-                        <div
-                          className={`absolute inset-0 bg-gradient-to-br ${mod.color}`}
-                          style={HEX_CLIP}
-                        />
-                        <div
-                          className={`absolute inset-[3px] ${mod.bg} flex flex-col items-center justify-center text-center px-[14%] py-[10%] gap-1.5 sm:gap-2`}
-                          style={HEX_CLIP}
-                        >
-                          <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${mod.color} rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                            <mod.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                          <h3 className={`text-sm sm:text-base md:text-lg font-extrabold ${mod.text} leading-tight`}>
-                            {mod.label}
-                          </h3>
-                          <span className={`text-[10px] sm:text-xs font-bold ${mod.text} px-2 py-0.5 rounded-full bg-white/70 whitespace-nowrap`}>
-                            {mod.count}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10" data-testid="home-modules">
+        {MODULES.map((mod, i) => {
+          // Sadržaj kartice — koristi se i u Link i u "div" varijanti
+          // (za onemogućenu Sufara karticu sa USKORO badge-om).
+          const cardInner = (
+            <div
+              className={`${mod.bg} ${mod.border} border-2 rounded-3xl p-6 transition-all group h-full relative ${
+                mod.comingSoon
+                  ? "cursor-not-allowed opacity-75"
+                  : "cursor-pointer hover:shadow-lg hover:-translate-y-1 duration-200"
+              }`}
+              data-testid={`module-card-${mod.href.replace("/", "")}`}
+            >
+              {mod.comingSoon && (
+                <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full shadow-sm border border-amber-500/40 z-10">
+                  {t("home.uskoro")}
+                </div>
+              )}
+              <div className="flex items-start justify-between mb-4">
+                <div
+                  className={`w-12 h-12 bg-gradient-to-br ${mod.color} rounded-2xl flex items-center justify-center shadow-md ${
+                    mod.comingSoon ? "" : "group-hover:scale-110"
+                  } transition-transform`}
+                >
+                  <mod.icon className="w-6 h-6 text-white" />
+                </div>
+                <div
+                  className={`text-xs font-bold ${mod.text} px-3 py-1 rounded-full border ${mod.border} bg-white/60 ${
+                    mod.comingSoon ? "mr-16" : ""
+                  }`}
+                >
+                  {mod.count}
+                </div>
               </div>
-            );
-          });
-        })()}
+              <h3 className={`text-xl font-extrabold ${mod.text} mb-2`}>{mod.label}</h3>
+              <p className="text-muted-foreground text-sm font-medium leading-relaxed mb-4">{mod.desc}</p>
+              {!mod.comingSoon && (
+                <div className={`flex items-center gap-1 ${mod.text} font-bold text-sm`}>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              )}
+            </div>
+          );
+
+          return (
+            <motion.div
+              key={mod.href}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+            >
+              {mod.comingSoon ? cardInner : <Link href={mod.href}>{cardInner}</Link>}
+            </motion.div>
+          );
+        })}
       </div>
 
       {user?.role === "muallim" && (

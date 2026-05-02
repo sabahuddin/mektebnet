@@ -12,24 +12,47 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
 /**
- * Postavlja Google Translate `googtrans` cookie. Cookie ima format `/<src>/<dst>`,
- * gdje je <src> izvorni jezik (bs, jer je sav sadržaj u bazi na bosanskom) i
- * <dst> ciljni jezik na koji widget treba prevesti stranicu. Za bs (default,
- * bez prevoda) cookie brišemo (prazna vrijednost + max-age=0). Postavljamo i
- * `host` i `.host` varijantu jer Google čita oboje, zavisno od domene.
+ * Brisanje googtrans cookie-a — robusno preko svih varijanti koje Google
+ * može da je postavio. Bez ovog, vraćanje na bs (default, bez prevoda) NE
+ * radi pouzdano: max-age=0 sa praznim value-om često ne briše cookie ako
+ * je domain/path mismatch, pa Google widget i dalje čita stari `/bs/en`
+ * cookie i ponovo prevodi na engleski nakon reloada.
  *
- * Vraća true ako se cookie stvarno promijenio (znak da treba reload).
+ * Šaljemo expires u prošlosti (najpouzdaniji metod brisanja) za sve
+ * kombinacije: bez domena (host-only), sa hostname-om, sa .hostname-om.
+ */
+function clearGoogTransCookie(): void {
+  const PAST = "expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  const host = window.location.hostname;
+  const dotHost = host.startsWith(".") ? host : `.${host}`;
+  const domains = ["", `; domain=${host}`, `; domain=${dotHost}`];
+  for (const d of domains) {
+    document.cookie = `googtrans=; path=/; ${PAST}${d}`;
+  }
+}
+
+/**
+ * Postavlja Google Translate `googtrans` cookie za prijevod sa bs na <target>.
+ * Format: `/bs/<dst>`. Za bs (default, bez prevoda) zovemo robusno brisanje
+ * preko `clearGoogTransCookie()`. Postavljamo i `host` i `.host` varijantu
+ * jer Google čita oboje, zavisno od domene.
+ *
+ * Vraća true ako se efektivna vrijednost cookie-a promijenila (znak da
+ * treba reload da Google widget primijeni novo stanje).
  */
 function setGoogTransCookie(target: Lang): boolean {
   const value = target === "bs" ? "" : `/bs/${target}`;
   const current = (document.cookie.match(/(?:^|;\s*)googtrans=([^;]*)/)?.[1]) || "";
   if (current === value) return false;
 
+  if (target === "bs") {
+    clearGoogTransCookie();
+    return true;
+  }
+
   const host = window.location.hostname;
   const dotHost = host.startsWith(".") ? host : `.${host}`;
-  const expires = value
-    ? `expires=${new Date(Date.now() + 365 * 24 * 3600 * 1000).toUTCString()}`
-    : "max-age=0";
+  const expires = `expires=${new Date(Date.now() + 365 * 24 * 3600 * 1000).toUTCString()}`;
   document.cookie = `googtrans=${value}; path=/; ${expires}`;
   document.cookie = `googtrans=${value}; path=/; domain=${dotHost}; ${expires}`;
   return true;
@@ -86,6 +109,18 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         if (savedLang !== "bs" && setGoogTransCookie(savedLang)) {
           safeReloadForLang(savedLang);
           return;
+        }
+        // Defenzivno: ako je trenutni jezik bs, osiguraj da je cookie
+        // stvarno obrisan i da Google ne pokušava prevod sa starog cookie-a
+        // koji je možda zaostao iz prethodnog reload ciklusa. Bez reloada —
+        // samo cleanup; ako je cookie već prazan, no-op. Takođe brišemo
+        // reload-guard session key da stale guard iz prethodnog jezika ne
+        // bi blokirao kasniju potrebnu reload akciju u istom tabu.
+        if (savedLang === "bs") {
+          clearGoogTransCookie();
+          try {
+            sessionStorage.removeItem("mekteb-translate-reload-for");
+          } catch {}
         }
         setGeoDetected(true);
         return;
