@@ -3,6 +3,8 @@ import { db } from "@workspace/db";
 import {
   ilmihalLekcijeTable,
   kvizoviTable,
+  kvizPitanjaTable,
+  pitanjaBankaTable,
   knjige,
   korisnikNapredakTable,
   kvizRezultatiTable,
@@ -172,6 +174,10 @@ router.get("/ilmihal/:slug", async (req, res) => {
 router.get("/kvizovi", async (req, res) => {
   try {
     const { nivo, modul } = req.query;
+    // pitanjaCount: za migrirane kvizove pravi broj iz join tabele,
+    // za legacy kvizove fallback na length JSONB-a. Frontend (kvizovi.tsx)
+    // koristi ovo polje za prikaz "X pitanja" jer JSONB može biti prazan
+    // nakon migracije ka banci.
     const result = await db.select({
       id: kvizoviTable.id,
       nivo: kvizoviTable.nivo,
@@ -180,14 +186,23 @@ router.get("/kvizovi", async (req, res) => {
       modul: kvizoviTable.modul,
       variant: kvizoviTable.variant,
       pitanja: kvizoviTable.pitanja,
+      kategorija: kvizoviTable.kategorija,
+      lekcijaId: kvizoviTable.lekcijaId,
+      opis: kvizoviTable.opis,
       isPublished: kvizoviTable.isPublished,
+      pitanjaCount: sql<number>`(SELECT COUNT(*)::int FROM "kviz_pitanja" WHERE "kviz_pitanja"."kviz_id" = "kvizovi"."id")`,
     }).from(kvizoviTable).orderBy(asc(kvizoviTable.nivo), asc(kvizoviTable.id));
 
     const filtered = result.filter(k => {
       if (nivo && k.nivo !== parseInt(nivo as string)) return false;
       if (modul && k.modul !== modul) return false;
       return true;
-    });
+    }).map(k => ({
+      ...k,
+      pitanjaCount: (k.pitanjaCount ?? 0) > 0
+        ? k.pitanjaCount
+        : (Array.isArray(k.pitanja) ? k.pitanja.length : 0),
+    }));
     res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -195,10 +210,47 @@ router.get("/kvizovi", async (req, res) => {
 });
 
 // GET /api/content/kvizovi/:slug (with questions)
+// Read path je hibridan dok se sve migrira:
+//   1) prvo provjerimo `kviz_pitanja` join → ako ima redova, sastavimo `pitanja`
+//      iz banke u tom redoslijedu (kanonski izvor istine za nove kvizove),
+//   2) inače pada na `kvizovi.pitanja` JSONB (legacy fallback dok admin
+//      ne potvrdi da je sve OK i dok ne ugasimo kolonu).
+// Frontend dobija ISTI shape u oba slučaja: { question, options, answer, explanation, image }.
 router.get("/kvizovi/:slug", async (req, res) => {
   try {
     const [kviz] = await db.select().from(kvizoviTable).where(eq(kvizoviTable.slug, req.params.slug));
     if (!kviz) { res.status(404).json({ error: "Kviz nije pronađen" }); return; }
+
+    const linked = await db
+      .select({
+        pitanje: pitanjaBankaTable.pitanje,
+        opcije: pitanjaBankaTable.opcije,
+        correctIndex: pitanjaBankaTable.correctIndex,
+        objasnjenje: pitanjaBankaTable.objasnjenje,
+        slika: pitanjaBankaTable.slika,
+        redoslijed: kvizPitanjaTable.redoslijed,
+      })
+      .from(kvizPitanjaTable)
+      .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
+      .where(eq(kvizPitanjaTable.kvizId, kviz.id))
+      .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
+
+    if (linked.length > 0) {
+      const pitanja = linked.map((p) => {
+        const opcije = Array.isArray(p.opcije) ? (p.opcije as string[]) : [];
+        const idx = Math.min(Math.max(0, p.correctIndex ?? 0), Math.max(0, opcije.length - 1));
+        return {
+          question: p.pitanje,
+          options: opcije,
+          answer: opcije[idx] ?? "",
+          explanation: p.objasnjenje || undefined,
+          image: p.slika || undefined,
+        };
+      });
+      res.json({ ...kviz, pitanja });
+      return;
+    }
+
     res.json(kviz);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

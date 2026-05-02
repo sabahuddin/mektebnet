@@ -13,6 +13,9 @@ import {
   mektebiTable,
   pretplateTable,
   kvizoviTable,
+  kvizPitanjaTable,
+  pitanjaBankaTable,
+  KVIZ_KATEGORIJE,
   ilmihalLekcijeTable,
   kvizRezultatiTable,
   posjeteTable,
@@ -1332,16 +1335,329 @@ router.post("/ilmihal/delete-batch", async (req, res) => {
 // PUT /api/admin/kvizovi/:id — Update quiz questions/title
 router.put("/kvizovi/:id", async (req, res) => {
   try {
-    const { pitanja, naslov, isPublished } = req.body;
+    const { pitanja, naslov, isPublished, kategorija, lekcijaId, opis, modul, nivo, variant } = req.body;
     const updates: Record<string, any> = {};
     if (pitanja !== undefined) {
       updates.pitanja = typeof pitanja === "string" ? pitanja : JSON.stringify(pitanja);
     }
     if (naslov !== undefined) updates.naslov = naslov;
     if (isPublished !== undefined) updates.isPublished = isPublished;
+    if (kategorija !== undefined) updates.kategorija = kategorija || null;
+    if (lekcijaId !== undefined) updates.lekcijaId = lekcijaId || null;
+    if (opis !== undefined) updates.opis = opis || "";
+    if (modul !== undefined) updates.modul = modul;
+    if (nivo !== undefined) updates.nivo = nivo;
+    if (variant !== undefined) updates.variant = variant;
     await db.update(kvizoviTable).set(updates).where(eq(kvizoviTable.id, parseInt(req.params.id)));
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/kvizovi — Create new (empty) quiz. Pitanja se dodaju
+// posebno kroz POST /kvizovi/:id/dodaj-pitanja iz banke.
+router.post("/kvizovi", async (req, res) => {
+  try {
+    const { naslov, slug, modul, nivo, variant, kategorija, lekcijaId, opis, isPublished } = req.body || {};
+    if (!naslov || !slug) {
+      res.status(400).json({ error: "naslov i slug su obavezni" });
+      return;
+    }
+    const [created] = await db.insert(kvizoviTable).values({
+      naslov,
+      slug,
+      modul: modul || "ilmihal",
+      nivo: nivo ?? null,
+      variant: variant || "normal",
+      kategorija: kategorija || null,
+      lekcijaId: lekcijaId || null,
+      opis: opis || "",
+      isPublished: isPublished ?? true,
+      pitanja: [],
+    }).returning();
+    res.status(201).json(created);
+  } catch (err: any) {
+    if (String(err?.message || "").includes("unique")) {
+      res.status(409).json({ error: "Slug već postoji" });
+      return;
+    }
+    console.error("[POST /kvizovi]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/admin/kvizovi/:id — briše kviz. CASCADE briše kviz_pitanja
+// linkove (pitanja u banci ostaju). Rezultati ostaju (snapshot).
+router.delete("/kvizovi/:id", async (req, res) => {
+  try {
+    await db.delete(kvizoviTable).where(eq(kvizoviTable.id, parseInt(req.params.id)));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /kvizovi/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── BANKA PITANJA ──────────────────────────────────────────────────────────────
+// Centralizovana baza svih pitanja. Vidi schema komentar uz pitanjaBankaTable.
+// Sve rute admin-only (router.use guard iznad).
+
+// GET /api/admin/banka-pitanja?search=...&kategorija=...&lekcijaId=...&page=1&pageSize=50
+router.get("/banka-pitanja", async (req, res) => {
+  try {
+    const search = (req.query["search"] as string | undefined)?.trim() || "";
+    const kategorija = (req.query["kategorija"] as string | undefined) || "";
+    const lekcijaIdRaw = req.query["lekcijaId"] as string | undefined;
+    const lekcijaId = lekcijaIdRaw ? parseInt(lekcijaIdRaw) : undefined;
+    const page = Math.max(1, parseInt((req.query["page"] as string) || "1") || 1);
+    const pageSize = Math.min(200, Math.max(1, parseInt((req.query["pageSize"] as string) || "50") || 50));
+
+    const filters = [] as any[];
+    if (search) filters.push(sql`${pitanjaBankaTable.pitanje} ILIKE ${"%" + search + "%"}`);
+    if (kategorija) filters.push(eq(pitanjaBankaTable.kategorija, kategorija));
+    if (lekcijaId) filters.push(eq(pitanjaBankaTable.lekcijaId, lekcijaId));
+    const whereClause = filters.length ? and(...filters) : undefined;
+
+    const [{ total }] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(pitanjaBankaTable)
+      .where(whereClause as any);
+
+    const rows = await db
+      .select()
+      .from(pitanjaBankaTable)
+      .where(whereClause as any)
+      .orderBy(desc(pitanjaBankaTable.updatedAt), desc(pitanjaBankaTable.id))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    res.json({ total, page, pageSize, rows });
+  } catch (err) {
+    console.error("[GET /banka-pitanja]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/admin/banka-pitanja/kategorije — meta za UI dropdowns
+router.get("/banka-pitanja/kategorije", async (_req, res) => {
+  res.json({ kategorije: KVIZ_KATEGORIJE });
+});
+
+// GET /api/admin/banka-pitanja/:id
+router.get("/banka-pitanja/:id", async (req, res) => {
+  try {
+    const [row] = await db.select().from(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, parseInt(req.params.id)));
+    if (!row) { res.status(404).json({ error: "Pitanje nije pronađeno" }); return; }
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/admin/banka-pitanja/:id/usage — koje kvizove koristi
+router.get("/banka-pitanja/:id/usage", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const usage = await db
+      .select({
+        kvizId: kvizoviTable.id,
+        slug: kvizoviTable.slug,
+        naslov: kvizoviTable.naslov,
+        modul: kvizoviTable.modul,
+      })
+      .from(kvizPitanjaTable)
+      .innerJoin(kvizoviTable, eq(kvizoviTable.id, kvizPitanjaTable.kvizId))
+      .where(eq(kvizPitanjaTable.pitanjeId, id));
+    res.json({ count: usage.length, kvizovi: usage });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+function normalizePitanjeBody(body: any) {
+  const pitanje = String(body?.pitanje || "").trim();
+  const opcije = Array.isArray(body?.opcije) ? body.opcije.map((o: any) => String(o)) : [];
+  const correctIndex = Math.max(0, Math.min(opcije.length - 1, parseInt(body?.correctIndex ?? 0) || 0));
+  const objasnjenje = String(body?.objasnjenje || "").trim();
+  const slika = body?.slika ? String(body.slika) : null;
+  const vrsta = body?.vrsta && ["single", "multiple", "true_false"].includes(body.vrsta) ? body.vrsta : "single";
+  const kategorija = body?.kategorija ? String(body.kategorija) : null;
+  const lekcijaId = body?.lekcijaId ? parseInt(body.lekcijaId) || null : null;
+  const tezina = body?.tezina ? Math.max(1, Math.min(3, parseInt(body.tezina) || 1)) : 1;
+  return { pitanje, opcije, correctIndex, objasnjenje, slika, vrsta, kategorija, lekcijaId, tezina };
+}
+
+// POST /api/admin/banka-pitanja — kreira novo pitanje
+router.post("/banka-pitanja", async (req, res) => {
+  try {
+    const data = normalizePitanjeBody(req.body);
+    if (!data.pitanje) { res.status(400).json({ error: "Tekst pitanja je obavezan" }); return; }
+    if (data.opcije.length < 2) { res.status(400).json({ error: "Minimum 2 opcije" }); return; }
+    const userId = (req as any).user?.id;
+    const [created] = await db.insert(pitanjaBankaTable).values({
+      ...data,
+      createdBy: userId || null,
+    }).returning();
+    res.status(201).json(created);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Pitanje sa istim tekstom već postoji u banci" });
+      return;
+    }
+    console.error("[POST /banka-pitanja]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/banka-pitanja/:id
+router.put("/banka-pitanja/:id", async (req, res) => {
+  try {
+    const data = normalizePitanjeBody(req.body);
+    if (!data.pitanje) { res.status(400).json({ error: "Tekst pitanja je obavezan" }); return; }
+    if (data.opcije.length < 2) { res.status(400).json({ error: "Minimum 2 opcije" }); return; }
+    await db.update(pitanjaBankaTable).set({
+      ...data,
+      updatedAt: new Date(),
+    }).where(eq(pitanjaBankaTable.id, parseInt(req.params.id)));
+    res.json({ success: true });
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Drugo pitanje sa istim tekstom već postoji" });
+      return;
+    }
+    console.error("[PUT /banka-pitanja/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/admin/banka-pitanja/:id — CASCADE briše iz svih kvizova.
+// Rezultati u kviz_rezultati ostaju (snapshot vrijednosti).
+router.delete("/banka-pitanja/:id", async (req, res) => {
+  try {
+    await db.delete(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, parseInt(req.params.id)));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /banka-pitanja/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── KVIZ ↔ PITANJA management ───────────────────────────────────────────────
+// Sve rute pretpostavljaju da kviz već koristi banku (ili će prelaziti).
+
+// GET /api/admin/kvizovi/:id/pitanja — vrati pitanja kviza iz banke
+router.get("/kvizovi/:id/pitanja", async (req, res) => {
+  try {
+    const kvizId = parseInt(req.params.id);
+    const rows = await db
+      .select({
+        id: pitanjaBankaTable.id,
+        pitanje: pitanjaBankaTable.pitanje,
+        opcije: pitanjaBankaTable.opcije,
+        correctIndex: pitanjaBankaTable.correctIndex,
+        kategorija: pitanjaBankaTable.kategorija,
+        redoslijed: kvizPitanjaTable.redoslijed,
+        linkId: kvizPitanjaTable.id,
+      })
+      .from(kvizPitanjaTable)
+      .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
+      .where(eq(kvizPitanjaTable.kvizId, kvizId))
+      .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/kvizovi/:id/dodaj-pitanja  body: { pitanjeIds: number[] }
+// Bulk dodavanje. Postojeće linkove preskače (UNIQUE constraint).
+router.post("/kvizovi/:id/dodaj-pitanja", async (req, res) => {
+  try {
+    const kvizId = parseInt(req.params.id);
+    const ids: number[] = Array.isArray(req.body?.pitanjeIds) ? req.body.pitanjeIds.map((x: any) => parseInt(x)).filter(Boolean) : [];
+    if (ids.length === 0) { res.status(400).json({ error: "pitanjeIds je obavezan niz" }); return; }
+    // Atomski u transakciji — dva paralelna admin requestova ne smiju
+    // dodijeliti isti `redoslijed`. Lockujemo postojeće redove kviza FOR UPDATE
+    // da MAX(redoslijed) vidi konzistentnu sliku do COMMIT-a.
+    const dodano = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM ${kvizPitanjaTable} WHERE ${kvizPitanjaTable.kvizId} = ${kvizId} FOR UPDATE`);
+      const [{ maxR }] = await tx
+        .select({ maxR: sql<number>`COALESCE(MAX(${kvizPitanjaTable.redoslijed}), -1)::int` })
+        .from(kvizPitanjaTable)
+        .where(eq(kvizPitanjaTable.kvizId, kvizId));
+      let next = (maxR ?? -1) + 1;
+      const values = ids.map((pid) => ({ kvizId, pitanjeId: pid, redoslijed: next++ }));
+      await tx.insert(kvizPitanjaTable).values(values).onConflictDoNothing();
+      return values.length;
+    });
+    res.json({ success: true, dodano });
+  } catch (err) {
+    console.error("[POST /kvizovi/:id/dodaj-pitanja]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/admin/kvizovi/:id/pitanja/:pitanjeId — ukloni pitanje iz kviza
+router.delete("/kvizovi/:id/pitanja/:pitanjeId", async (req, res) => {
+  try {
+    await db.delete(kvizPitanjaTable).where(and(
+      eq(kvizPitanjaTable.kvizId, parseInt(req.params.id)),
+      eq(kvizPitanjaTable.pitanjeId, parseInt(req.params.pitanjeId)),
+    ));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/kvizovi/:id/premjesti-pitanje  body: { pitanjeId, ciljniKvizId }
+// Premještanje = ukloni iz izvornog + dodaj u ciljni (atomski po mogućnosti).
+router.post("/kvizovi/:id/premjesti-pitanje", async (req, res) => {
+  try {
+    const izvorniKvizId = parseInt(req.params.id);
+    const pitanjeId = parseInt(req.body?.pitanjeId);
+    const ciljniKvizId = parseInt(req.body?.ciljniKvizId);
+    if (!pitanjeId || !ciljniKvizId) { res.status(400).json({ error: "pitanjeId i ciljniKvizId su obavezni" }); return; }
+    if (izvorniKvizId === ciljniKvizId) { res.status(400).json({ error: "Izvorni i ciljni kviz su isti" }); return; }
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM ${kvizPitanjaTable} WHERE ${kvizPitanjaTable.kvizId} = ${ciljniKvizId} FOR UPDATE`);
+      const [{ maxR }] = await tx
+        .select({ maxR: sql<number>`COALESCE(MAX(${kvizPitanjaTable.redoslijed}), -1)::int` })
+        .from(kvizPitanjaTable)
+        .where(eq(kvizPitanjaTable.kvizId, ciljniKvizId));
+      await tx.insert(kvizPitanjaTable).values({
+        kvizId: ciljniKvizId,
+        pitanjeId,
+        redoslijed: (maxR ?? -1) + 1,
+      }).onConflictDoNothing();
+      await tx.delete(kvizPitanjaTable).where(and(
+        eq(kvizPitanjaTable.kvizId, izvorniKvizId),
+        eq(kvizPitanjaTable.pitanjeId, pitanjeId),
+      ));
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[POST /kvizovi/:id/premjesti-pitanje]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/kvizovi/:id/redoslijed  body: { pitanjeIds: number[] }
+// Postavlja redoslijed kviz_pitanja prema poslanom nizu ID-jeva pitanja.
+router.put("/kvizovi/:id/redoslijed", async (req, res) => {
+  try {
+    const kvizId = parseInt(req.params.id);
+    const ids: number[] = Array.isArray(req.body?.pitanjeIds) ? req.body.pitanjeIds.map((x: any) => parseInt(x)).filter(Boolean) : [];
+    for (let i = 0; i < ids.length; i++) {
+      await db.update(kvizPitanjaTable).set({ redoslijed: i }).where(and(
+        eq(kvizPitanjaTable.kvizId, kvizId),
+        eq(kvizPitanjaTable.pitanjeId, ids[i]!),
+      ));
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[PUT /kvizovi/:id/redoslijed]", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

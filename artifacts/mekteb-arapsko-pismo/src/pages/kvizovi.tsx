@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
-import { HelpCircle, ChevronRight, Trophy, BookOpen } from "lucide-react";
+import { HelpCircle, ChevronRight, Trophy, BookOpen, LayoutGrid, FolderTree } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Kviz {
@@ -15,7 +15,25 @@ interface Kviz {
   naslov: string;
   slug: string;
   pitanja: unknown[];
+  pitanjaCount?: number;
+  kategorija?: string | null;
+  lekcijaId?: number | null;
+  opis?: string;
 }
+
+const KATEGORIJE_LABELS: Record<string, string> = {
+  vjerovanje: "Vjerovanje",
+  namaz: "Namaz",
+  ahlak: "Ahlak",
+  historija: "Historija",
+  bosna: "Bosna",
+  sure: "Sure",
+  dove: "Dove",
+  halal_haram: "Halal/Haram",
+  kuran: "Kur'an",
+  sufara: "Sufara",
+  opce: "Opće",
+};
 
 function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
   const { t } = useLanguage();
@@ -28,22 +46,30 @@ function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
   const info = nivo !== null ? NIVO_INFO[nivo] : {
     label: t("nav.citaonica"), color: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200"
   };
-  const pitanjaCount = Array.isArray(k.pitanja) ? k.pitanja.length : 0;
+  const pitanjaCount = typeof k.pitanjaCount === "number"
+    ? k.pitanjaCount
+    : (Array.isArray(k.pitanja) ? k.pitanja.length : 0);
 
   const card = (
-    <div className={`${info.bg} ${info.border} border-2 rounded-2xl p-5 transition-all cursor-pointer hover:shadow-md group hover:-translate-y-0.5 duration-150`}>
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <h3 className={`font-bold ${info.color} leading-snug`}>{k.naslov}</h3>
-        <Trophy className={`w-5 h-5 ${info.color} opacity-50 shrink-0`} />
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className={`${info?.bg ?? "bg-white"} ${info?.border ?? "border-border"} border-2 rounded-2xl p-5 transition-all cursor-pointer hover:shadow-md group hover:-translate-y-0.5 duration-150 relative overflow-hidden`}>
+      <div className="absolute inset-0 bg-honeycomb opacity-30 pointer-events-none" />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 className={`font-bold ${info?.color ?? "text-foreground"} leading-snug`}>{k.naslov}</h3>
+          <Trophy className={`w-5 h-5 ${info?.color ?? "text-amber-600"} opacity-50 shrink-0`} />
+        </div>
+        {k.kategorija && KATEGORIJE_LABELS[k.kategorija] && (
+          <span className="inline-block text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 mb-2">
+            {KATEGORIJE_LABELS[k.kategorija]}
+          </span>
+        )}
+        <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">
             {pitanjaCount > 0 ? `${pitanjaCount} ${t("kviz.pitanja")}` : t("kviz.uPripremi")}
           </span>
-        </div>
-        <div className={`flex items-center gap-1 ${info.color} font-bold text-sm`}>
-          {t("kviz.pokreni")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+          <div className={`flex items-center gap-1 ${info?.color ?? "text-amber-700"} font-bold text-sm`}>
+            {t("kviz.pokreni")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+          </div>
         </div>
       </div>
     </div>
@@ -56,10 +82,14 @@ function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
   );
 }
 
+type GroupMode = "nivo" | "kategorija";
+
 export default function KvizoviPage() {
   const { t } = useLanguage();
   const [kvizovi, setKvizovi] = useState<Kviz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [groupMode, setGroupMode] = useState<GroupMode>("nivo");
+  const [filterKategorija, setFilterKategorija] = useState<string>("");
 
   const NIVO_INFO: Record<number, { label: string; color: string; bg: string; border: string }> = {
     1: { label: t("ilmihal.nivo1").split(" – ")[0], color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
@@ -74,11 +104,31 @@ export default function KvizoviPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const ilmihalKvizovi = kvizovi.filter(k => k.modul === "ilmihal" || !k.modul);
-  const knjigaKvizovi = kvizovi.filter(k => k.modul === "knjige");
+  // Set kategorija koje se zaista koriste — dropdown filter prikazuje samo
+  // kategorije koje imaju barem jedan kviz, da admin ne vidi prazne opcije.
+  const dostupneKategorije = useMemo(() => {
+    const s = new Set<string>();
+    kvizovi.forEach(k => k.kategorija && s.add(k.kategorija));
+    return Array.from(s);
+  }, [kvizovi]);
 
-  const grouped = ilmihalKvizovi.reduce((acc: Record<number, Kviz[]>, k) => {
+  const filtrirani = useMemo(
+    () => filterKategorija ? kvizovi.filter(k => k.kategorija === filterKategorija) : kvizovi,
+    [kvizovi, filterKategorija]
+  );
+
+  const ilmihalKvizovi = filtrirani.filter(k => k.modul === "ilmihal" || !k.modul);
+  const knjigaKvizovi = filtrirani.filter(k => k.modul === "knjige");
+
+  const groupedByNivo = ilmihalKvizovi.reduce((acc: Record<number, Kviz[]>, k) => {
     const key = k.nivo ?? 0;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(k);
+    return acc;
+  }, {});
+
+  const groupedByKategorija = filtrirani.reduce((acc: Record<string, Kviz[]>, k) => {
+    const key = k.kategorija || "_nesvrstano";
     if (!acc[key]) acc[key] = [];
     acc[key].push(k);
     return acc;
@@ -87,7 +137,7 @@ export default function KvizoviPage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-md shrink-0">
             <HelpCircle className="w-6 h-6 text-white" />
           </div>
@@ -99,15 +149,67 @@ export default function KvizoviPage() {
           </div>
         </div>
 
+        {/* Filter + grouping toggle. Sakriven dok ima 0 kategorija u podacima. */}
+        {dostupneKategorije.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <div className="inline-flex bg-muted rounded-xl p-1">
+              <button
+                onClick={() => setGroupMode("nivo")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupMode === "nivo" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground"}`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" /> Po nivou
+              </button>
+              <button
+                onClick={() => setGroupMode("kategorija")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupMode === "kategorija" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground"}`}
+              >
+                <FolderTree className="w-3.5 h-3.5" /> Po oblasti
+              </button>
+            </div>
+            <select
+              value={filterKategorija}
+              onChange={e => setFilterKategorija(e.target.value)}
+              className="px-3 py-2 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="">Sve oblasti</option>
+              {dostupneKategorije.map(k => <option key={k} value={k}>{KATEGORIJE_LABELS[k] || k}</option>)}
+            </select>
+            {filterKategorija && (
+              <button onClick={() => setFilterKategorija("")} className="text-sm text-muted-foreground hover:text-foreground underline">
+                Očisti filter
+              </button>
+            )}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
           </div>
+        ) : groupMode === "kategorija" ? (
+          <div className="flex flex-col gap-8">
+            {Object.entries(groupedByKategorija)
+              .sort(([a], [b]) => a === "_nesvrstano" ? 1 : b === "_nesvrstano" ? -1 : a.localeCompare(b))
+              .map(([kat, list]) => (
+                <div key={kat}>
+                  <h2 className="text-sm font-extrabold uppercase tracking-wider text-amber-700 mb-4">
+                    {kat === "_nesvrstano" ? "Nesvrstano" : (KATEGORIJE_LABELS[kat] || kat)} — {list.length} {t("home.kviza")}
+                  </h2>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {list.map((k, i) => (
+                      <motion.div key={k.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                        <KvizCard k={k} nivo={k.nivo} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </div>
         ) : (
           <div className="flex flex-col gap-8">
-            {([1, 2, 3] as number[]).filter(n => grouped[n]?.length > 0).map(nivo => {
-              const info = NIVO_INFO[nivo];
-              const nivoKvizovi = grouped[nivo];
+            {([1, 2, 3] as number[]).filter(n => groupedByNivo[n]?.length > 0).map(nivo => {
+              const info = NIVO_INFO[nivo]!;
+              const nivoKvizovi = groupedByNivo[nivo]!;
               return (
                 <div key={nivo}>
                   <h2 className={`text-sm font-extrabold uppercase tracking-wider ${info.color} mb-4`}>
@@ -115,12 +217,7 @@ export default function KvizoviPage() {
                   </h2>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {nivoKvizovi.map((k, i) => (
-                      <motion.div
-                        key={k.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.04 }}
-                      >
+                      <motion.div key={k.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                         <KvizCard k={k} nivo={k.nivo} />
                       </motion.div>
                     ))}
@@ -139,12 +236,7 @@ export default function KvizoviPage() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {knjigaKvizovi.map((k, i) => (
-                    <motion.div
-                      key={k.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                    >
+                    <motion.div key={k.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                       <KvizCard k={k} nivo={null} />
                     </motion.div>
                   ))}

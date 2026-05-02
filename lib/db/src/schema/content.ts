@@ -1,6 +1,49 @@
-import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+// Centralna banka pitanja — kategorije i vrste pitanja koje admin koristi pri
+// kreiranju pitanja u banci. `KVIZ_KATEGORIJE` je pedagoški širok set:
+// vjerovanje (akida), namaz/ibadet, ahlak (lijepo ponašanje), historija,
+// Bosna i njena baština, sure i ajeti, dove i zikrovi, halal/haram, Kuran,
+// Sufara (osnove arapskog), opće znanje. Admin može ostaviti `null` ako
+// pitanje ne pripada nijednoj jasnoj kategoriji.
+export const KVIZ_KATEGORIJE = [
+  "vjerovanje",
+  "namaz",
+  "ahlak",
+  "historija",
+  "bosna",
+  "sure",
+  "dove",
+  "halal_haram",
+  "kuran",
+  "sufara",
+  "opce",
+] as const;
+export type KvizKategorija = (typeof KVIZ_KATEGORIJE)[number];
+
+export const KVIZ_KATEGORIJE_META: Record<KvizKategorija, { naziv: string; ikona: string }> = {
+  vjerovanje: { naziv: "Vjerovanje (Akida)", ikona: "⭐" },
+  namaz: { naziv: "Namaz i ibadeti", ikona: "🕌" },
+  ahlak: { naziv: "Lijepo ponašanje (Ahlak)", ikona: "💝" },
+  historija: { naziv: "Islamska historija", ikona: "📜" },
+  bosna: { naziv: "Bosna i naša baština", ikona: "🇧🇦" },
+  sure: { naziv: "Sure i ajeti", ikona: "📖" },
+  dove: { naziv: "Dove i zikrovi", ikona: "🤲" },
+  halal_haram: { naziv: "Halal i haram", ikona: "⚖️" },
+  kuran: { naziv: "Kur'an", ikona: "📕" },
+  sufara: { naziv: "Sufara — arapsko pismo", ikona: "ﺃ" },
+  opce: { naziv: "Opće znanje", ikona: "💡" },
+};
+
+// Vrsta pitanja u banci. Trenutno aplikacija renderuje samo single-choice
+// (jedan tačan odgovor među 4 opcije), ali shema je proširiva za buduće
+// tipove (multiple choice, true/false, fill-in-blank). `correctIndex` se
+// za true_false interpretira kao 0=tačno, 1=netačno; opcije za true_false
+// nisu obavezne (ako su prazne, UI prikaže standardno "Tačno/Netačno").
+export const PITANJE_VRSTE = ["single", "multiple", "true_false"] as const;
+export type PitanjeVrsta = (typeof PITANJE_VRSTE)[number];
 
 // Ilmihal lessons (3 nivoa)
 export interface LekcijaKvizPitanje {
@@ -41,10 +84,90 @@ export const kvizoviTable = pgTable("kvizovi", {
   naslov: text("naslov").notNull(),
   modul: varchar("modul", { length: 50 }).notNull().default("ilmihal"),
   variant: varchar("variant", { length: 20 }).default("normal"),
+  // LEGACY: pitanja ugrađena u kviz kao JSONB. Zadržava se kao fallback
+  // dok se svi kvizovi ne migriraju u banku pitanja (vidi `pitanjaBankaTable`
+  // i `kvizPitanjaTable`). Read path prvo provjerava join tabelu, pa ako je
+  // prazna pada na ovaj jsonb. Novi kvizovi pravljeni preko admin UI-ja
+  // odmah koriste banku i ovo polje ostaje prazno (default []).
   pitanja: jsonb("pitanja").$type<QuizQuestion[]>().notNull().default([]),
+  // Vezivanje kviza za pedagoške oblasti. Kategorija = široka oblast
+  // (vidi KVIZ_KATEGORIJE), lekcijaId = opciona veza za konkretnu Ilmihal
+  // lekciju. Oboje opciono — postojeći kvizovi nakon migracije će imati NULL
+  // dok ih admin ne kategorizuje.
+  kategorija: varchar("kategorija", { length: 60 }),
+  lekcijaId: integer("lekcija_id"),
+  opis: text("opis").notNull().default(""),
   isPublished: boolean("is_published").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// === BANKA PITANJA — centralizovana baza svih pitanja za kvizove ================
+// Sva pitanja koja se mogu pojaviti u bilo kojem kvizu žive u ovoj tabeli.
+// Kviz NE drži pitanja sam, već referencira ID-jeve preko join tabele
+// `kvizPitanjaTable`. Tako:
+//   - isto pitanje može biti u više kvizova istovremeno (M:N),
+//   - edit pitanja u banci automatski mijenja sve kvizove gdje stoji,
+//   - brisanje pitanja iz banke (ON DELETE CASCADE) tiho ga uklanja iz
+//     svih kvizova, bez gubitka istorije rezultata (jer `kviz_rezultati`
+//     već čuva snapshot `kvizNaslov` + brojeve).
+//
+// `pitanje` je UNIQUE po normalizovanom (lower+trim) tekstu da se izbjegne
+// duplo dodavanje istog pitanja kroz admin formu. Migracioni script koristi
+// to za dedup pri prelasku iz JSONB-a u banku.
+export const pitanjaBankaTable = pgTable("pitanja_banka", {
+  id: serial("id").primaryKey(),
+  pitanje: text("pitanje").notNull(),
+  opcije: jsonb("opcije").$type<string[]>().notNull().default([]),
+  // 0-based indeks tačnog odgovora unutar `opcije`. Za `vrsta='multiple'`
+  // (buduće), koristit će se `correctIndexes` jsonb (još nije dodano —
+  // ostavljamo `correctIndex` kao primarni; kasnije dodati nullable kolonu).
+  correctIndex: integer("correct_index").notNull().default(0),
+  objasnjenje: text("objasnjenje").notNull().default(""),
+  // URL slike (relativan, npr. /uploads/xyz.png). Renderira se iznad pitanja.
+  slika: varchar("slika", { length: 500 }),
+  vrsta: varchar("vrsta", { length: 20 }).notNull().default("single"),
+  kategorija: varchar("kategorija", { length: 60 }),
+  // Veza za konkretnu Ilmihal lekciju (opciono). Kasnije se može koristiti
+  // za "predloži pitanje za ovu lekciju" UX.
+  lekcijaId: integer("lekcija_id"),
+  tezina: integer("tezina").notNull().default(1), // 1=lako, 2=srednje, 3=teško
+  createdBy: integer("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  // UNIQUE po normalizovanom tekstu pitanja — sprječava duplikate kroz
+  // admin UI i osigurava idempotentnost migracije iz JSONB-a.
+  pitanjeUnique: uniqueIndex("pitanja_banka_pitanje_unique_idx").on(t.pitanje),
+  kategorijaIdx: index("pitanja_banka_kategorija_idx").on(t.kategorija),
+  lekcijaIdx: index("pitanja_banka_lekcija_idx").on(t.lekcijaId),
+}));
+
+export type PitanjeBanka = typeof pitanjaBankaTable.$inferSelect;
+export type InsertPitanjeBanka = typeof pitanjaBankaTable.$inferInsert;
+
+// === KVIZ ↔ PITANJE (M:N join) ==================================================
+// Veže pitanja iz banke za konkretne kvizove. Isto pitanje može biti u više
+// kvizova; isti kviz može imati isto pitanje samo jednom (UNIQUE). `redoslijed`
+// kontroliše redoslijed prikaza unutar kviza. ON DELETE CASCADE na obje strane:
+//   - brisanje kviza briše sve njegove veze (pitanja u banci ostaju),
+//   - brisanje pitanja iz banke uklanja ga iz svih kvizova (rezultati ostaju
+//     netaknuti jer žive u kviz_rezultati sa snapshot vrijednostima).
+export const kvizPitanjaTable = pgTable("kviz_pitanja", {
+  id: serial("id").primaryKey(),
+  kvizId: integer("kviz_id").notNull(),
+  pitanjeId: integer("pitanje_id").notNull(),
+  redoslijed: integer("redoslijed").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  kvizPitanjeUnique: uniqueIndex("kviz_pitanja_kviz_pitanje_unique_idx")
+    .on(t.kvizId, t.pitanjeId),
+  kvizRedoslijedIdx: index("kviz_pitanja_kviz_redoslijed_idx")
+    .on(t.kvizId, t.redoslijed),
+  pitanjeIdx: index("kviz_pitanja_pitanje_idx").on(t.pitanjeId),
+}));
+
+export type KvizPitanje = typeof kvizPitanjaTable.$inferSelect;
+export type InsertKvizPitanje = typeof kvizPitanjaTable.$inferInsert;
 
 // Books / Čitaonica (stories about prophets etc.)
 export const knjige = pgTable("knjige", {
@@ -154,6 +277,8 @@ export type H5pPokusaj = typeof h5pPokusajiTable.$inferSelect;
 
 export const insertIlmihalLekcijaSchema = createInsertSchema(ilmihalLekcijeTable).omit({ id: true, createdAt: true });
 export const insertKvizSchema = createInsertSchema(kvizoviTable).omit({ id: true, createdAt: true });
+export const insertPitanjeBankaSchema = createInsertSchema(pitanjaBankaTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertKvizPitanjeSchema = createInsertSchema(kvizPitanjaTable).omit({ id: true, createdAt: true });
 export const insertKnjigaSchema = createInsertSchema(knjige).omit({ id: true, createdAt: true });
 export const insertKorisnikNapredakSchema = createInsertSchema(korisnikNapredakTable).omit({ id: true, createdAt: true, updatedAt: true });
 

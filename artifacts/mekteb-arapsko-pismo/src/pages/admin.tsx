@@ -1333,6 +1333,12 @@ export default function AdminPage() {
           <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">
             <BookOpen className="w-4 h-4" /> Rječnik pojmova
           </button>
+          <button onClick={() => setLocation("/admin/banka-pitanja")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+            <ClipboardList className="w-4 h-4" /> Banka pitanja
+          </button>
+          <button onClick={() => setLocation("/admin/kviz-novi")} className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl font-semibold hover:bg-orange-100 transition text-sm">
+            <Plus className="w-4 h-4" /> Novi kviz
+          </button>
           <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
             <BookOpen className="w-4 h-4" /> Slike bez lekcije
           </button>
@@ -1579,7 +1585,7 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border/40 bg-muted/30">
-                      {["Naziv kviza", "Kategorija", "Pokušaji", "Prosj. tačnost", "Najviši %", "Najniži %"].map(h => (
+                      {["Naziv kviza", "Kategorija", "Pokušaji", "Prosj. tačnost", "Najviši %", "Najniži %", ""].map(h => (
                         <th key={h} className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground">{h}</th>
                       ))}
                     </tr>
@@ -1606,6 +1612,15 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3 font-bold text-emerald-600">{k.pokusaji > 0 ? `${k.najvisiBodovi}%` : "—"}</td>
                         <td className="px-4 py-3 font-bold text-red-500">{k.pokusaji > 0 ? `${k.najniziBodovi}%` : "—"}</td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => setLocation(`/admin/kviz/${k.id}`)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition flex items-center gap-1"
+                            title="Uredi kviz"
+                          >
+                            <Pencil className="w-3 h-3" /> Uredi
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
