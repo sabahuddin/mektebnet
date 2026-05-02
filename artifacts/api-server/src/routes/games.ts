@@ -193,6 +193,32 @@ async function expireStaleSessions(userId: number): Promise<void> {
   `);
 }
 
+// Sace ima allowed_duration_sec = secondsRemaining (do 30min), pa ga normalan
+// expireStaleSessions() ne bi diralo prije 30min. Ako učenik napusti igru bez
+// /games/end (tab close, network drop, browser crash), sesija ostaje 'running'
+// u DB i blokira sve druge igre — što je loš UX. Ovaj helper expirej-uje stale
+// sace sesije > STALE_SACE_SEC (60s) sa score=0. Frontend cleanup useEffect
+// uvijek šalje /games/end fire-and-forget pri unmount-u; 60s grace daje mreži
+// vremena da to dostavi. Ako ne stigne, sesija se oslobađa sa score=0
+// (legitiman gubitak je nemoguć — igrač koji aktivno igra šalje /end u <1s).
+const STALE_SACE_SEC = 60;
+async function expireStaleSaceSessions(userId: number): Promise<void> {
+  await db.execute(sql`
+    UPDATE game_sessions
+    SET status = 'expired',
+        ended_at = NOW(),
+        duration_sec = LEAST(
+          allowed_duration_sec,
+          GREATEST(0, EXTRACT(EPOCH FROM (NOW() - started_at))::int)
+        ),
+        score = 0
+    WHERE user_id = ${userId}
+      AND status = 'running'
+      AND game_id = 'sace'
+      AND NOW() - started_at > ${STALE_SACE_SEC} * INTERVAL '1 second'
+  `);
+}
+
 // GET /api/games/credits — koliko vremena ima i koliko je potrošio.
 router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
@@ -200,6 +226,9 @@ router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, 
     // Auto-expire stare running sesije i ovdje (ne samo u /start) — UI ne smije
     // pokazati zastari activeSession kao "još uvijek igraš".
     await expireStaleSessions(userId);
+    // Sace ima poseban kraći prag (60s) da napuštena sace igra ne blokira
+    // pokretanje drugih igrica čekajući puni allowed_duration_sec.
+    await expireStaleSaceSessions(userId);
     const [totalHasanat, secondsSpent] = await Promise.all([
       getTotalHasanat(userId),
       getSecondsSpent(userId),
@@ -252,6 +281,9 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
 
     // Prvo expirej sve stare running sesije ovog usera (auto-expire po allowed_duration_sec).
     await expireStaleSessions(userId);
+    // Sace specifično: napuštena sace > 60s se otpušta sa score=0 da ne blokira
+    // pokretanje druge igre. (Frontend cleanup ima šansu poslati /end u tom roku.)
+    await expireStaleSaceSessions(userId);
 
     // Dodatno: ako postoji bilo koja running SERVER-SCORED sesija (quiz/gradovi/zastave)
     // koju korisnik nije eksplicitno završio sa /games/end, formaliziraj je kao expired
