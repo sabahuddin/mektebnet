@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Layout } from "@/components/layout";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,64 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
   const [pitanja, setPitanja] = useState<Pitanje[]>(JSON.parse(JSON.stringify(kviz.pitanja)));
   const [isLoading, setIsLoading] = useState(false);
   const [activePitanje, setActivePitanje] = useState(0);
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<{name:string;url:string;size:number;modified:string}[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [gallerySearch, setGallerySearch] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadGallery = useCallback(async () => {
+    setGalleryLoading(true);
+    try {
+      const resp = await fetch(`${getApiBase()}/admin/uploads`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await resp.json();
+      setGalleryImages(Array.isArray(data) ? data : data.files || []);
+    } catch {
+      toast({ title: "Greška", description: "Ne mogu učitati galeriju", variant: "destructive" });
+    }
+    setGalleryLoading(false);
+  }, [token, toast]);
+
+  const openGallery = useCallback(() => {
+    setShowGallery(true);
+    setGallerySearch("");
+    loadGallery();
+  }, [loadGallery]);
+
+  const selectImage = useCallback((url: string) => {
+    updatePitanje(activePitanje, "slika", url);
+    updatePitanje(activePitanje, "image", undefined);
+    setShowGallery(false);
+  }, [activePitanje]);
+
+  const onUploadFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const resp = await fetch(`${getApiBase()}/admin/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        toast({ title: "Greška pri uploadu", description: data.error || "Nepoznata greška", variant: "destructive" });
+      } else if (data.url) {
+        selectImage(data.url);
+        toast({ title: "Slika uploadovana ✓" });
+      }
+    } catch {
+      toast({ title: "Upload nije uspio", variant: "destructive" });
+    }
+    setUploading(false);
+  }, [token, toast, selectImage]);
 
   const updatePitanje = (idx: number, field: keyof Pitanje, value: any) => {
     setPitanja(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
@@ -179,16 +237,59 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
 
               {/* Ilustracija */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono — samo naziv fajla, npr. <span className="font-mono text-primary">slika.jpg</span>)</label>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground font-mono shrink-0">/edu/assets/images/pitanja/</span>
-                  <input value={(p.slika || "").replace(/^\/?(edu\/)?assets\/images\/pitanja\/?/, "")} onChange={e => {
-                    const filename = e.target.value.trim();
-                    updatePitanje(activePitanje, "slika", filename ? `/edu/assets/images/pitanja/${filename}` : "");
-                  }}
-                    placeholder="naziv.jpg"
-                    className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                </div>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono)</label>
+                {(() => {
+                  const currentImg = p.slika || p.image || "";
+                  const previewSrc = currentImg
+                    ? (currentImg.startsWith("http") || currentImg.startsWith("/uploads/")
+                        ? currentImg
+                        : currentImg.startsWith("/edu") ? currentImg : `/edu${currentImg.startsWith("/") ? "" : "/"}${currentImg}`)
+                    : "";
+                  if (currentImg) {
+                    return (
+                      <div className="flex items-center gap-3 p-2 border border-border rounded-xl bg-white">
+                        <img src={previewSrc} alt="" className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                          onError={e => {
+                            const img = e.target as HTMLImageElement;
+                            if (!img.dataset.fb) {
+                              img.dataset.fb = "1";
+                              const path = currentImg.startsWith("/") ? currentImg : "/" + currentImg;
+                              img.src = `https://mekteb.net${path.startsWith("/edu") ? path : "/edu" + path}`;
+                            } else {
+                              img.style.display = "none";
+                            }
+                          }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground truncate font-mono">{currentImg}</p>
+                          <div className="flex gap-2 mt-2">
+                            <button type="button" onClick={openGallery}
+                              className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                              <FolderOpen className="w-3 h-3" /> Promijeni
+                            </button>
+                            <button type="button" onClick={() => { updatePitanje(activePitanje, "slika", ""); updatePitanje(activePitanje, "image", undefined); }}
+                              className="text-xs font-bold text-red-500 hover:underline flex items-center gap-1">
+                              <X className="w-3 h-3" /> Ukloni
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="flex gap-2">
+                      <button type="button" onClick={openGallery}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-border text-xs font-bold text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                        <FolderOpen className="w-4 h-4" /> Odaberi iz galerije
+                      </button>
+                      <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors disabled:opacity-60">
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        Upload
+                      </button>
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={onUploadFile} className="hidden" />
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* ── RADIO / CHECKBOX ── */}
@@ -327,6 +428,60 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
           </Button>
         </div>
       </motion.div>
+
+      {showGallery && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowGallery(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-4xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+              <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-primary" /> Odaberi sliku za pitanje
+              </h3>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-60">
+                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  Upload nove
+                </button>
+                <button type="button" onClick={() => setShowGallery(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="px-5 py-2 border-b border-gray-100">
+              <input value={gallerySearch} onChange={e => setGallerySearch(e.target.value)}
+                placeholder="Pretraga po nazivu fajla..."
+                className="w-full border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {galleryLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : (() => {
+                const filtered = galleryImages.filter(img => !gallerySearch || img.name.toLowerCase().includes(gallerySearch.toLowerCase()));
+                if (filtered.length === 0) {
+                  return <p className="text-center text-gray-400 py-12 text-sm">{gallerySearch ? "Nema rezultata za pretragu" : "Nema uploadovanih slika. Klikni 'Upload nove' gore."}</p>;
+                }
+                return (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {filtered.map(img => (
+                      <button key={img.url} type="button" onClick={() => selectImage(img.url)}
+                        className="group relative w-full aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-primary transition-colors bg-gray-50">
+                        <img src={img.url} alt={img.name} className="w-full h-full object-cover"
+                          onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>" }} />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <p className="text-[10px] text-white truncate">{img.name}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={onUploadFile} className="hidden" />
+        </div>
+      )}
     </div>
   );
 }
@@ -743,8 +898,16 @@ export default function KvizPage() {
 
             {(pitanje.image || pitanje.slika) && (() => {
               const imgRaw = pitanje.image || pitanje.slika!;
+              // Tri formata podržana:
+              //  - Apsolutni URL (http/https) → koristi kako jeste
+              //  - /uploads/... → nove slike sa našeg servera (api-server static), koristi kako jeste
+              //  - /edu/... ili legacy filename → stari WordPress put, fallback na mekteb.net
               const imgPath = imgRaw.startsWith("/") ? imgRaw : "/" + imgRaw;
-              const imgSrc = imgPath.startsWith("/edu") ? imgPath : `/edu${imgPath}`;
+              const isAbsolute = /^https?:\/\//.test(imgRaw);
+              const isNewUpload = imgPath.startsWith("/uploads/");
+              const imgSrc = isAbsolute || isNewUpload
+                ? imgRaw
+                : (imgPath.startsWith("/edu") ? imgPath : `/edu${imgPath}`);
               return (
                 <div className="rounded-2xl overflow-hidden mb-5 shadow-sm border-2 border-[rgb(36,143,146)]">
                   <img
@@ -753,7 +916,7 @@ export default function KvizPage() {
                     className="w-full h-auto aspect-[3/2] object-cover"
                     onError={e => {
                       const img = e.target as HTMLImageElement;
-                      if (!img.dataset.fallback) {
+                      if (!img.dataset.fallback && !isAbsolute && !isNewUpload) {
                         img.dataset.fallback = "1";
                         img.src = `https://mekteb.net${imgPath.startsWith("/edu") ? imgPath : "/edu" + imgPath}`;
                       } else {
