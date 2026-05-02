@@ -69,7 +69,7 @@ export default function Home() {
       bg: "bg-pink-50",
       border: "border-pink-200",
       text: "text-pink-700",
-      count: `6 ${t("nav.igrice").toLowerCase()}`,
+      count: `7 ${t("nav.igrice").toLowerCase()}`,
     },
     {
       href: "/arapsko-pismo",
