@@ -1,0 +1,89 @@
+/ # psql -U mekteb -d mekteb
+psql (17.9)
+Type "help" for help.
+
+mekteb=# CREATE TABLE IF NOT EXISTS "misija_definicija" (
+mekteb(#   "id" serial PRIMARY KEY NOT NULL,
+mekteb(#   "kod" varchar(60) NOT NULL,
+mekteb(#   "naziv" text NOT NULL,
+mekteb(#   "opis" text DEFAULT '' NOT NULL,
+mekteb(#   "tip" varchar(20) NOT NULL,
+mekteb(#   "uvjet_tip" varchar(40) NOT NULL,
+mekteb(#   "uvjet_param" jsonb DEFAULT '{}'::jsonb,
+mekteb(#   "cilj" integer DEFAULT 1 NOT NULL,
+mekteb(#   "nagrada_aferim" integer DEFAULT 0 NOT NULL,
+mekteb(#   "nagrada_med" integer DEFAULT 0 NOT NULL,
+mekteb(#   "ikona" varchar(30) DEFAULT '🎯' NOT NULL,
+mekteb(#   "aktivna" boolean DEFAULT true NOT NULL,
+mekteb(#   "created_at" timestamp DEFAULT now() NOT NULL,
+mekteb(#   CONSTRAINT "misija_definicija_kod_unique" UNIQUE("kod")
+mekteb(# );
+CREATE TABLE
+mekteb=# 
+mekteb=# CREATE TABLE IF NOT EXISTS "misija_progress" (
+mekteb(#   "id" serial PRIMARY KEY NOT NULL,
+mekteb(#   "user_id" integer NOT NULL,
+mekteb(#   "misija_id" integer NOT NULL,
+mekteb(#   "period_key" varchar(20) NOT NULL,
+mekteb(#   "trenutno" integer DEFAULT 0 NOT NULL,
+mekteb(#   "completed_at" timestamp,
+mekteb(#   "claimed_at" timestamp,
+mekteb(#   "created_at" timestamp DEFAULT now() NOT NULL,
+mekteb(#   "updated_at" timestamp DEFAULT now() NOT NULL
+mekteb(# );
+CREATE TABLE
+mekteb=# 
+mekteb=# CREATE TABLE IF NOT EXISTS "pogresni_odgovori" (
+mekteb(#   "id" serial PRIMARY KEY NOT NULL,
+mekteb(#   "user_id" integer NOT NULL,
+mekteb(#   "source_type" varchar(20) NOT NULL,
+mekteb(#   "source_id" integer NOT NULL,
+mekteb(#   "source_naslov" text DEFAULT '' NOT NULL,
+mekteb(#   "question_index" integer NOT NULL,
+mekteb(#   "question_text" text NOT NULL,
+mekteb(#   "options" jsonb NOT NULL,
+mekteb(#   "correct_index" integer NOT NULL,
+mekteb(#   "last_wrong_index" integer NOT NULL,
+mekteb(#   "attempts" integer DEFAULT 1 NOT NULL,
+mekteb(#   "resolved_at" timestamp,
+mekteb(#   "created_at" timestamp DEFAULT now() NOT NULL,
+mekteb(#   "updated_at" timestamp DEFAULT now() NOT NULL
+mekteb(# );
+CREATE TABLE
+mekteb=# 
+mekteb=# ALTER TABLE "student_progress" ADD COLUMN IF NOT EXISTS "total_med" integer DEFAULT 0 NOT NULL;
+ALTER TABLE
+mekteb=# ALTER TABLE "korisnik_napredak" ADD COLUMN IF NOT EXISTS "quiz_passed_at" timestamp;
+NOTICE:  column "quiz_passed_at" of relation "korisnik_napredak" already exists, skipping
+ALTER TABLE
+mekteb=# ALTER TABLE "korisnik_napredak" ADD COLUMN IF NOT EXISTS "last_heartbeat_at" timestamp;
+NOTICE:  column "last_heartbeat_at" of relation "korisnik_napredak" already exists, skipping
+ALTER TABLE
+mekteb=# 
+mekteb=# CREATE UNIQUE INDEX IF NOT EXISTS "misija_progress_user_misija_period_unique_idx" ON "misija_progress" USING btree ("user_id","misija_id","period_key");
+CREATE INDEX
+mekteb=# CREATE INDEX IF NOT EXISTS "misija_progress_user_period_idx" ON "misija_progress" USING btree ("user_id","period_key");
+CREATE INDEX
+mekteb=# CREATE UNIQUE INDEX IF NOT EXISTS "pogresni_odgovori_user_question_unique_idx" ON "pogresni_odgovori" USING btree ("user_id","source_type","source_id","question_index");
+CREATE INDEX
+mekteb=# CREATE INDEX IF NOT EXISTS "pogresni_odgovori_user_open_idx" ON "pogresni_odgovori" USING btree ("user_id","resolved_at");
+CREATE INDEX
+mekteb=# SELECT id, student_id, total_hasanat, total_med FROM student_progress LIMIT 1;
+ id |              student_id              | total_hasanat | total_med 
+----+--------------------------------------+---------------+-----------
+  1 | 0deb5d99-911c-4e4c-bde9-8e3ae392c9e1 |             0 |         0
+(1 row)
+
+mekteb=# SELECT COUNT(*) FROM misija_definicija;
+ count 
+-------
+     0
+(1 row)
+
+mekteb=# SELECT COUNT(*) FROM pogresni_odgovori;
+ count 
+-------
+     0
+(1 row)
+
+mekteb=# 
