@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
@@ -8,9 +8,10 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getApiBase } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
@@ -240,6 +241,9 @@ function IgraPitanjaEditor({ token }: { token: string }) {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<IgraPitanje | "new" | null>(null);
   const [seedingMedena, setSeedingMedena] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<null | { inserted: number; updated: number; errorsCount: number; errors: Array<{ red: number; razlog: string }> }>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadStats = async () => {
     try {
@@ -277,6 +281,55 @@ function IgraPitanjaEditor({ token }: { token: string }) {
     }
   };
 
+  const handleExportCsv = async () => {
+    try {
+      const res = await fetch(`${getApiBase()}/admin/igra-pitanja/export.csv`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Greška pri izvozu" }));
+        throw new Error(err.error || "Greška pri izvozu");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.download = `igra-pitanja-${stamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "Izvezeno", description: "CSV preuzet" });
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Izvoz neuspio", variant: "destructive" });
+    }
+  };
+
+  const handleImportCsv = async (file: File) => {
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await apiRequest<{ inserted: number; updated: number; errorsCount: number; errors: Array<{ red: number; razlog: string }> }>(
+        "POST", "/admin/igra-pitanja/import", fd, token, true,
+      );
+      setImportResult({
+        inserted: res.inserted ?? 0,
+        updated: res.updated ?? 0,
+        errorsCount: res.errorsCount ?? 0,
+        errors: res.errors ?? [],
+      });
+      loadStats();
+      loadPitanja(activeKat);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Uvoz neuspio", variant: "destructive" });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleSeedMedena = async () => {
     if (!confirm("Učitati početni set od 160 pitanja (8 kategorija × 20)? Postojeća pitanja sa istim tekstom će se ažurirati.")) return;
     setSeedingMedena(true);
@@ -310,6 +363,35 @@ function IgraPitanjaEditor({ token }: { token: string }) {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <Button
+              onClick={handleExportCsv}
+              variant="outline"
+              data-testid="button-export-csv"
+              className="rounded-xl text-sky-700 border-sky-300 hover:bg-sky-50"
+            >
+              <Download className="w-4 h-4 mr-2" /> Izvezi CSV
+            </Button>
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              variant="outline"
+              data-testid="button-import-csv"
+              className="rounded-xl text-sky-700 border-sky-300 hover:bg-sky-50"
+            >
+              {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+              Uvezi CSV
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              data-testid="input-csv-file"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImportCsv(f);
+              }}
+            />
             <Button
               onClick={handleSeedMedena}
               disabled={seedingMedena}
@@ -418,6 +500,66 @@ function IgraPitanjaEditor({ token }: { token: string }) {
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); loadPitanja(activeKat); loadStats(); }}
         />
+      )}
+
+      {importResult && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          onClick={() => setImportResult(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-xl shadow-xl my-4"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="modal-import-rezultat"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-extrabold text-foreground">Rezultat uvoza CSV-a</h3>
+              <button onClick={() => setImportResult(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-center">
+                <div className="text-2xl font-extrabold text-emerald-700" data-testid="text-import-inserted">{importResult.inserted}</div>
+                <div className="text-xs text-emerald-700 font-medium">Dodano</div>
+              </div>
+              <div className="rounded-xl bg-sky-50 border border-sky-200 p-3 text-center">
+                <div className="text-2xl font-extrabold text-sky-700" data-testid="text-import-updated">{importResult.updated}</div>
+                <div className="text-xs text-sky-700 font-medium">Ažurirano</div>
+              </div>
+              <div className={[
+                "rounded-xl border p-3 text-center",
+                importResult.errorsCount > 0 ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200",
+              ].join(" ")}>
+                <div className={["text-2xl font-extrabold", importResult.errorsCount > 0 ? "text-red-700" : "text-gray-500"].join(" ")} data-testid="text-import-errors">
+                  {importResult.errorsCount}
+                </div>
+                <div className={["text-xs font-medium", importResult.errorsCount > 0 ? "text-red-700" : "text-gray-500"].join(" ")}>Grešaka</div>
+              </div>
+            </div>
+            {importResult.errors.length > 0 && (
+              <div className="border border-red-200 rounded-xl overflow-hidden">
+                <div className="bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+                  Greške (prvih {importResult.errors.length}):
+                </div>
+                <div className="max-h-64 overflow-y-auto divide-y divide-red-100">
+                  {importResult.errors.map((e, i) => (
+                    <div key={i} className="px-3 py-2 text-xs" data-testid={`row-import-error-${i}`}>
+                      <span className="font-bold text-red-700">Red {e.red}:</span>{" "}
+                      <span className="text-foreground">{e.razlog}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <Button onClick={() => setImportResult(null)} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
+                U redu
+              </Button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </>
   );

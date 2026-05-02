@@ -1947,6 +1947,231 @@ router.delete("/igra-pitanja/:id", async (req, res) => {
   }
 });
 
+// === CSV import/export pitanja ================================================
+// CSV format (UTF-8 + BOM za Excel):
+//   kategorija,pitanje,opcija1,opcija2,opcija3,opcija4,correctIndex,objasnjenje,tezina,aktivno
+// Vrijednosti u dvostrukim navodnicima, navodnik se escape-uje kao "" (RFC 4180).
+
+const CSV_COLUMNS = [
+  "kategorija", "pitanje", "opcija1", "opcija2", "opcija3", "opcija4",
+  "correctIndex", "objasnjenje", "tezina", "aktivno",
+] as const;
+
+function csvEscape(val: string): string {
+  if (/[",\n\r]/.test(val)) return `"${val.replace(/"/g, '""')}"`;
+  return val;
+}
+
+function rowsToCsv(rows: Array<Record<string, string>>): string {
+  const lines: string[] = [];
+  lines.push(CSV_COLUMNS.join(","));
+  for (const r of rows) {
+    lines.push(CSV_COLUMNS.map((c) => csvEscape(r[c] ?? "")).join(","));
+  }
+  // \r\n + UTF-8 BOM tako da Excel ispravno otvori dijakritike (š, č, ž).
+  return "\uFEFF" + lines.join("\r\n") + "\r\n";
+}
+
+// Parser RFC 4180 CSV-a. Vraća array redova (svaki red je array stringova).
+function parseCsv(text: string): string[][] {
+  // Skini opcioni BOM
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows: string[][] = [];
+  let cur: string[] = [];
+  let field = "";
+  let i = 0;
+  let inQuotes = false;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    }
+    if (c === '"') { inQuotes = true; i++; continue; }
+    if (c === ",") { cur.push(field); field = ""; i++; continue; }
+    if (c === "\r") { i++; continue; }
+    if (c === "\n") { cur.push(field); rows.push(cur); cur = []; field = ""; i++; continue; }
+    field += c; i++;
+  }
+  // Zadnji red bez terminatora
+  if (field.length > 0 || cur.length > 0) { cur.push(field); rows.push(cur); }
+  // Ukloni potpuno prazne redove (npr. trailing newline)
+  return rows.filter((r) => r.length > 1 || (r.length === 1 && r[0].trim() !== ""));
+}
+
+// GET /admin/igra-pitanja/export.csv — sva pitanja kao CSV
+router.get("/igra-pitanja/export.csv", async (_req, res) => {
+  try {
+    const rows = await db
+      .select()
+      .from(igraPitanjaTable)
+      .orderBy(asc(igraPitanjaTable.kategorija), asc(igraPitanjaTable.id));
+    const out = rows.map((p) => {
+      const opcije = Array.isArray(p.opcije) ? p.opcije : [];
+      return {
+        kategorija: p.kategorija,
+        pitanje: p.pitanje,
+        opcija1: opcije[0] ?? "",
+        opcija2: opcije[1] ?? "",
+        opcija3: opcije[2] ?? "",
+        opcija4: opcije[3] ?? "",
+        correctIndex: String(p.correctIndex),
+        objasnjenje: p.objasnjenje ?? "",
+        tezina: String(p.tezina),
+        aktivno: p.aktivno ? "1" : "0",
+      };
+    });
+    const csv = rowsToCsv(out);
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="igra-pitanja-${stamp}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error("[admin/igra-pitanja/export] greška:", err);
+    res.status(500).json({ error: "Greška pri izvozu CSV-a" });
+  }
+});
+
+// POST /admin/igra-pitanja/import — multipart CSV upload
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (/\.csv$/i.test(file.originalname)) cb(null, true);
+    else cb(new Error("Dozvoljen je samo .csv fajl"));
+  },
+});
+
+router.post("/igra-pitanja/import", (req, res) => {
+  csvUpload.single("file")(req, res, async (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? (err.code === "LIMIT_FILE_SIZE" ? "CSV prevelik (max 5MB)" : err.message)
+        : err.message || "Greška pri uploadu";
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+
+    try {
+      const text = req.file.buffer.toString("utf-8");
+      const rows = parseCsv(text);
+      if (rows.length === 0) return res.status(400).json({ error: "CSV je prazan" });
+
+      const header = rows[0].map((h) => h.trim().toLowerCase());
+      const idx: Record<string, number> = {};
+      for (const col of CSV_COLUMNS) {
+        const found = header.indexOf(col.toLowerCase());
+        if (found === -1) {
+          return res.status(400).json({ error: `Nedostaje kolona u CSV-u: ${col}` });
+        }
+        idx[col] = found;
+      }
+
+      let inserted = 0;
+      let updated = 0;
+      const errors: Array<{ red: number; razlog: string }> = [];
+
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        const lineNum = r + 1; // 1-based + header
+        const get = (c: string) => (row[idx[c]] ?? "").trim();
+
+        const kategorija = get("kategorija");
+        const pitanje = get("pitanje");
+        const opcije = [get("opcija1"), get("opcija2"), get("opcija3"), get("opcija4")];
+        const correctIndexStr = get("correctIndex");
+        const objasnjenje = get("objasnjenje");
+        const tezinaStr = get("tezina");
+        const aktivnoStr = get("aktivno").toLowerCase();
+
+        // Preskoči potpuno prazan red
+        if (!kategorija && !pitanje && opcije.every((o) => !o)) continue;
+
+        if (!KATEGORIJE_SET.has(kategorija)) {
+          errors.push({ red: lineNum, razlog: `Neispravna kategorija "${kategorija}" (dozvoljene: ${MEDENA_KATEGORIJE.join(", ")})` });
+          continue;
+        }
+        if (pitanje.length < 3 || pitanje.length > 500) {
+          errors.push({ red: lineNum, razlog: "Pitanje mora imati 3–500 znakova" });
+          continue;
+        }
+        if (opcije.some((o) => o.length === 0)) {
+          errors.push({ red: lineNum, razlog: "Sve 4 opcije moraju biti popunjene" });
+          continue;
+        }
+        if (opcije.some((o) => o.length > 200)) {
+          errors.push({ red: lineNum, razlog: "Opcija je preduga (max 200 znakova)" });
+          continue;
+        }
+        const correctIndex = Number(correctIndexStr);
+        if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+          errors.push({ red: lineNum, razlog: "correctIndex mora biti 0–3" });
+          continue;
+        }
+        let tezina = Number(tezinaStr);
+        if (!Number.isInteger(tezina) || tezina < 1 || tezina > 3) tezina = 1;
+        const aktivno = aktivnoStr === "" ? true : ["1", "true", "da", "yes"].includes(aktivnoStr);
+
+        const values = {
+          kategorija: kategorija as MedenaKategorija,
+          pitanje,
+          opcije,
+          correctIndex,
+          objasnjenje: objasnjenje.slice(0, 1000),
+          tezina,
+          aktivno,
+        };
+
+        try {
+          // Deterministički: prvo provjeri postoji li red sa (kategorija, pitanje),
+          // pa eksplicitno INSERT ili UPDATE — tako precizno brojimo dodano/ažurirano.
+          const existing = await db
+            .select({ id: igraPitanjaTable.id })
+            .from(igraPitanjaTable)
+            .where(and(
+              eq(igraPitanjaTable.kategorija, values.kategorija),
+              eq(igraPitanjaTable.pitanje, values.pitanje),
+            ))
+            .limit(1);
+          if (existing.length > 0) {
+            await db
+              .update(igraPitanjaTable)
+              .set({
+                opcije: values.opcije,
+                correctIndex: values.correctIndex,
+                objasnjenje: values.objasnjenje,
+                tezina: values.tezina,
+                aktivno: values.aktivno,
+                updatedAt: new Date(),
+              })
+              .where(eq(igraPitanjaTable.id, existing[0].id));
+            updated++;
+          } else {
+            await db.insert(igraPitanjaTable).values(values);
+            inserted++;
+          }
+        } catch (e: any) {
+          errors.push({ red: lineNum, razlog: `DB greška: ${e?.message ?? String(e)}` });
+        }
+      }
+
+      res.json({
+        ok: true,
+        inserted,
+        updated,
+        errorsCount: errors.length,
+        errors: errors.slice(0, 50), // ograniči odgovor
+      });
+    } catch (e: any) {
+      console.error("[admin/igra-pitanja/import] greška:", e);
+      res.status(500).json({ error: "Greška pri obradi CSV-a", detail: e?.message ?? String(e) });
+    }
+  });
+});
+
 // POST /admin/system/seed-medena-pitanja — pokreni seed (160 pitanja)
 router.post("/system/seed-medena-pitanja", async (_req, res) => {
   try {
