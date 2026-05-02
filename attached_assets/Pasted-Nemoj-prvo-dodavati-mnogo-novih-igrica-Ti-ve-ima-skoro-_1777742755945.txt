@@ -1,0 +1,180 @@
+Nemoj prvo dodavati mnogo novih igrica.
+Ti već imaš skoro sve temelje ozbiljne platforme: lekcije, kvizove, knjige, H5P, rječnik, profil učenika, Aferime, streak, bedževe, igrice, ljestvice, roditeljski i muallimski panel. Dokument pokazuje da platforma već ima 231 lekciju, 43 kviza, 1120+ pitanja, 14 knjiga, H5P pokušaje, rječnik i praćenje napretka učenika.
+Zato bih sada išao na povezivanje svega u jedan jasan dječiji doživljaj, a ne na gomilanje novih funkcija.
+Moja preporuka: napravi “Moj put” kao centralno dječije iskustvo
+Trenutno imaš dosta dobrih modula, ali dijete mora imati osjećaj:
+“Ovo je moj put kroz mekteb. Znam gdje sam, šta sam završio, šta mi fali i šta mogu otključati.”
+Zato bih napravio centralnu dječiju stranicu:
+Moj put kroz mekteb
+Na toj stranici dijete vidi:
+današnju misiju
+sedmičnu misiju
+zadnju lekciju koju treba nastaviti
+“Popravi greške”
+otključane igre
+najbliži bedž
+Aferime
+napredak po oblastima
+poruku maskote pčele
+Ti već imaš progress.tsx, ucenik-profil.tsx, igrice.tsx, kvizovi.tsx, ilmihal-lekcija.tsx, celebration modal, maskotu, bedževe i progress barove. Znači, ne treba graditi sve od nule — treba ih samo bolje spojiti u jedan glavni dashboard za dijete.
+Prioritet 1: “Popravi saće”
+Ovo bih stavio prije novih igrica.
+Kad dijete pogriješi pitanje u kvizu ili H5P vježbi, to pitanje ide u posebnu sekciju:
+Popravi saće
+Poruka djetetu:
+Pčelica je pronašla 5 rupa u tvom saću znanja. Popravi ih tačnim odgovorima.
+Zašto je ovo dobro?
+Jer nije samo zabava, nego direktno poboljšava znanje. Dijete ne ide dalje samo zato što je kliknulo kviz, nego se vraća na ono što nije znalo.
+Tehnički bi trebalo proširiti postojeće kviz_rezultati ili dodati tabelu tipa:
+pogresni_odgovori
+- user_id
+- pitanje_id
+- kviz_id
+- wrong_answer
+- correct_answer
+- resolved_at
+- attempts
+Onda napraviš stranicu:
+/ucenik/popravisaće
+ili:
+/igrice/popravisaće
+Ali ja bih to više tretirao kao učenje kroz igru, ne kao običnu igru.
+Prioritet 2: dnevne i sedmične misije
+Ovo je lakše od novih igara, a djeci može biti jako motivirajuće.
+Primjer na dashboardu:
+Današnja misija
+1. Završi jednu lekciju
+2. Uradi jedan kviz
+3. Popravi 3 greške
+Nagrada: 20 Aferima + 1 kap meda
+Sedmična misija
+Ove sedmice:
+- Budi prisutan na času
+- Završi 3 lekcije
+- Osvoji 80% u dva kviza
+- Popravi 10 grešaka
+Ti već imaš prisustvo, plan lekcija, zadatke, kvizove, H5P, progress i Aferime. To znači da misije mogu koristiti postojeće podatke, bez ogromnog novog sistema.
+Prioritet 3: mapa znanja kao “Saće znanja”
+Ovo je možda najljepši vizuelni dodatak.
+Umjesto da dijete samo vidi listu lekcija, napraviš mapu od šestouglova:
+Saće znanja
+Svaki šestougao je jedna oblast:
+Šehadet
+Namaz
+Abdest
+Sure
+Dove
+Ahlak
+Ramazan
+Kur’an
+Prijateljstvo
+Ekologija
+Boje:
+sivo = zaključano
+bijelo = dostupno
+zeleno = završeno
+zlatno/medeno = završeno sa odličnim rezultatom
+crveno/narandžasto = treba ponoviti
+Ovo bi se savršeno uklopilo s tvojom maskotom pčele i idejom “Saća”.
+Važno: ovo ne mora odmah biti komplikovana igra. Prvo neka bude vizuelna mapa napretka. Kasnije iz toga može nastati igra “Saće znanja”.
+Prioritet 4: bolje urediti ekonomiju Aferima
+Već imaš Aferime/hasanate, H5P ekonomiju, igre koje troše kredite i server-side scoring za igre. Dokument navodi da igre imaju /credits, /start, /end, leaderboard i personal stats, a H5P ima sistem nagrade: prvi pokušaj 100%, drugi 50%, treći i dalje 0%.
+To je dobro. Ali treba paziti da djeca ne počnu “loviti bodove” umjesto učiti.
+Moj prijedlog:
+Aktivnost	Nagrada
+Završena lekcija	15 Aferima
+Kviz 80–100%	10–20 Aferima
+H5P prvi pokušaj	puna nagrada
+Popravljena greška	mala nagrada
+Igrica	ne daje puno Aferima, nego daje “med”
+Prisustvo u mektebu	poseban bedž / streak
+Drugim riječima:
+Aferimi = učenje
+Med = igre i zabava
+Tako nećeš miješati ozbiljan napredak s igranjem.
+Prioritet 5: Avatar / Pčelin profil
+Ovo bi djeci bilo zanimljivo, a nije preteško.
+Dijete ima pčelu-maskotu i može otključati:
+krila
+boju pčele
+ruksak
+knjigu
+okvir profila
+pozadinu profila
+bedž na profilu
+Ali ne bih još pravio veliki “shop”. Prvo samo:
+“Uredi svoju pčelicu”
+Otključavanje može biti po bedževima:
+Završi 5 lekcija → otključaj zelena krila
+Završi 10 kvizova → otključaj zlatni okvir
+Budi redovan 4 sedmice → otključaj posebni bedž
+To je bolje nego da dijete “troši” bodove na sve. Neka avatar bude nagrada za trud.
+Prioritet 6: dodaj samo 2 nove igre
+Pošto već imaš brzi-kviz, pamti-par, ljestvica i postojeći games backend, ne bih odmah dodavao 5 novih igara.
+Dodao bih samo ove dvije:
+1. Pčelin let
+Zabavna, kratka igra.
+Nije previše edukativna, ali je dobra kao nagrada.
+Pravila:
+traje 90 sekundi
+troši 1 žeton ili 10 Aferima
+najviše 3 partije dnevno
+ne daje velike bodove
+skuplja “med”
+2. Medena staza
+Ovo je edukativnija igra.
+Pčela ide od cvijeta do cvijeta, a svaki cvijet je pitanje. Ovo može koristiti postojeća pitanja iz kvizova.
+Pravila:
+8–10 pitanja
+pogrešan odgovor skida život
+tačan odgovor otvara cvijet
+završetak daje mali bonus
+Ovo je bolje od običnog kviza jer ima priču i vizuelni napredak.
+Šta bih ostavio za kasnije
+Saće igra sa šestouglovima
+Odlična ideja, ali bih je ostavio za kasnije. To je već ozbiljnija igra i traži više razvoja.
+Ne bih sada pravio:
+kompleksan Tetris od šestouglova
+veliki avatar shop
+previše ljestvica
+komplikovanu ekonomiju
+previše mini-igara
+Prvo treba da djeca imaju jasan put i razlog za korištenje platforme.
+Najbolji redoslijed razvoja
+Faza 1 — odmah najkorisnije
+Redizajnirati dječiji dashboard u Moj put
+Dodati dnevne/sedmične misije
+Dodati Popravi saće
+Bolje prikazati najbliži bedž
+Uvezati postojeće igrice s kreditima i dnevnim limitom
+Faza 2 — zabava i identitet
+Dodati Pčelin let
+Dodati Medenu stazu
+Dodati pčelin avatar
+Dodati “med” kao posebnu valutu za igre
+Dodati sezonske izazove: Ramazan, Bajram, mjesec namaza
+Faza 3 — veći sistem
+Saće znanja kao mapa svih oblasti
+Album kartica
+Mektebski dućan
+Napredna igra sa šestouglovima
+Timski izazovi po grupama/mektebima
+Moja najkonkretnija preporuka
+Ne bih sada rekao: “treba ti još igrica.”
+Rekao bih:
+Treba ti centralni dječiji sistem motivacije.
+Naziv:
+Moj put — Saće znanja
+Unutra:
+Moja pčelica
+Današnja misija
+Sedmična misija
+Popravi saće
+Moji Aferimi
+Moj med
+Najbliži bedž
+Nastavi lekciju
+Otključane igre
+To bi tvoju platformu iz “ima puno sadržaja” pretvorilo u:
+“Dijete svaki put zna šta treba uraditi i osjeća da napreduje.”
+To je sada važnije od još jedne igre.
