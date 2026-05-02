@@ -175,30 +175,43 @@ Backend (`/push/register`) već prihvata `platform: "web" | "ios" | "android"`.
 
 ### 3. iOS (APNs) setup u OneSignal dashboard-u
 
+> ✅ **Već automatski u repo-u** (sve sam ti pripremio):
+> - `ios/App/App/Info.plist` — `UIBackgroundModes → remote-notification`
+> - `ios/App/App/App.entitlements` — `aps-environment = development` (Xcode automatski mijenja u `production` pri Archive-u za App Store)
+> - `ios/App/App.xcodeproj/project.pbxproj` — `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` u Debug i Release config-u
+>
+> Ovo znači da **NE moraš ručno klikati "+ Capability" u Xcode-u** — kad otvoriš `App.xcworkspace`, Xcode će već pokazati **Push Notifications** i **Background Modes → Remote notifications** kao aktivne. Ako ipak ne vidiš, klikni Signing & Capabilities tab → ako je crveni warning oko provisioning profila, klikni "Try Again" da Xcode regeneriše profil sa Push Notifications entitlement-om vezanim za tvoj Apple Team.
+
+Tvoji koraci na Apple-u i u OneSignal-u:
+
 1. **Apple Developer portal** (https://developer.apple.com/account/resources/authkeys):
    - Keys → `+` → naziv "Mekteb APNs" → check **Apple Push Notifications service (APNs)** → Continue → Register
    - Skini **.p8 file** (samo jednom — čuvaj ga!) i zapamti **Key ID** (npr. `ABC123DEFG`)
    - Zapamti **Team ID** (gore desno u portalu, npr. `XYZ987WVUT`)
-2. **OneSignal dashboard** → Settings → Platforms → **Apple iOS (APNs)**:
-   - Choose Integration: **Token-based**
+2. **OneSignal dashboard** (https://app.onesignal.com → Mekteb app) → Settings → Platforms → **Apple iOS (APNs)**:
+   - Choose Integration: **Token-based** (preporučeno; .p8 ne istječe za razliku od .p12)
    - Upload **.p8 file**
    - Unesi **Key ID**, **Team ID**, **Bundle ID** (`net.mektebnet.app`)
    - Save
-3. U Xcode (App target → Signing & Capabilities):
-   - **+ Capability → Push Notifications**
-   - **+ Capability → Background Modes → Remote notifications**
+3. U Xcode-u nakon `cap sync` — provjeri Signing & Capabilities da je **Push Notifications** capability prisutan (trebao bi biti automatski jer je entitlements file već linkovan). Ako fali, klikni `+ Capability → Push Notifications`.
 
 ### 4. Android (FCM) setup u OneSignal dashboard-u
 
+> ✅ **Već automatski u repo-u**:
+> - `android/app/src/main/AndroidManifest.xml` — `POST_NOTIFICATIONS` (Android 13+ runtime permission), `WAKE_LOCK`, `VIBRATE`, `RECEIVE_BOOT_COMPLETED`
+> - `android/app/build.gradle` — `applicationId "net.mektebnet.app"` (mora se poklapati sa Firebase appom)
+> - `android/build.gradle` — `com.google.gms:google-services:4.4.4` Gradle plugin (aktivira se SAMO ako `google-services.json` postoji — pogledaj `android/app/build.gradle` red 47-54)
+
+Tvoji koraci u Firebase-u i OneSignal-u:
+
 1. **Firebase Console** (https://console.firebase.google.com):
-   - Create project "Mekteb" (ili koristi postojeći)
-   - Project Settings → Cloud Messaging tab → kopiraj **Sender ID** i **Server Key** (legacy) ILI uradi **Service Account JSON** (preporučeno)
-   - Project Settings → Service accounts → Generate new private key → skini JSON
+   - Create project "Mekteb" (ili koristi postojeći ako imaš)
+   - **Add app → Android** → Package name: `net.mektebnet.app` → App nickname: "Mekteb" → Register
+   - Skini **`google-services.json`** → spasi u `artifacts/mekteb-arapsko-pismo/android/app/google-services.json`
+   - Project Settings (zupčanik gore) → **Service accounts** tab → **Generate new private key** → potvrdi → skini JSON (ovo je za OneSignal, NE isti fajl kao google-services.json)
 2. **OneSignal dashboard** → Settings → Platforms → **Google Android (FCM)**:
-   - Upload **Service Account JSON**
+   - Upload **Service Account JSON** (onaj iz Service accounts taba)
    - Save
-3. U `android/app/build.gradle` provjeri `applicationId "net.mektebnet.app"` (mora se poklapati sa Firebase appom).
-4. Dodaj `google-services.json` u `android/app/` (skini iz Firebase Console-a).
 
 ### 5. Test
 
@@ -212,4 +225,12 @@ Nakon prvog build-a:
 - ✅ Web push (mekteb.net) — radi
 - ✅ Backend trigger-i (nova poruka, nova zadaća)
 - ✅ Native iOS/Android — plugin (`onesignal-cordova-plugin`) instaliran, kod (`src/lib/native-push.ts`) gotov, `push.ts` rutira po `Capacitor.isNativePlatform()`
-- ⏸ Preostalo: iMac → `cap:sync`, OneSignal dashboard → upload APNs .p8 + FCM Service Account JSON, Xcode → enable Push Notifications + Background Modes capabilities, Firebase → `google-services.json` u `android/app/`
+- ✅ iOS native config — `Info.plist` (UIBackgroundModes), `App.entitlements` (aps-environment), `project.pbxproj` (CODE_SIGN_ENTITLEMENTS u Debug + Release)
+- ✅ Android native config — `AndroidManifest.xml` (POST_NOTIFICATIONS + WAKE_LOCK + VIBRATE + RECEIVE_BOOT_COMPLETED)
+- ⏸ **Preostalo TEBI** (na iMac-u i u browser-u, ne mogu ja iz Replita):
+  1. Apple Developer portal → generiši APNs `.p8` ključ
+  2. Firebase Console → kreiraj projekat za `net.mektebnet.app`, skini `google-services.json` u `android/app/`, generiši Service Account JSON
+  3. OneSignal dashboard → upload APNs .p8 (iOS) + Service Account JSON (Android)
+  4. iMac: `pnpm install` (da povuče `onesignal-cordova-plugin@5.3.7`) → `pnpm run cap:sync` → `cap open ios` / `cap open android`
+  5. Xcode → odaberi Apple Team u Signing & Capabilities (Push Notifications capability je već u entitlements-u)
+  6. Build na fizički iPhone i Android telefon → testiraj push iz OneSignal dashboard "New Message → All Users"
