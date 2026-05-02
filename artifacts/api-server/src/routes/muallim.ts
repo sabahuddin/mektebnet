@@ -21,7 +21,7 @@ import {
   h5pPokusajiTable,
   prilozi,
 } from "@workspace/db/schema";
-import { eq, and, inArray, desc, asc, sql, count } from "drizzle-orm";
+import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
@@ -1166,6 +1166,94 @@ router.get("/h5p-stats", async (req, res) => {
     res.json({ ukupnoUcenika, vjezbe });
   } catch (err) {
     console.error("H5P stats error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/h5p-stats/trends?grupaId=X&weeks=N
+// Vraća sedmične bucket-e H5P pokušaja za zadnjih N sedmica (default 8).
+// Za svaku sedmicu: weekStart (ponedjeljak, ISO datum), brojPokusaja, prosjekProcenat.
+// Sedmice se računaju u UTC, ponedjeljak kao prvi dan, da bude konzistentno
+// nezavisno od korisnikove vremenske zone.
+router.get("/h5p-stats/trends", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.query.grupaId as string);
+    if (!grupaId) { res.status(400).json({ error: "grupaId obavezan" }); return; }
+
+    const weeksRaw = parseInt(req.query.weeks as string);
+    const weeks = Number.isFinite(weeksRaw) && weeksRaw >= 1 && weeksRaw <= 52 ? weeksRaw : 8;
+
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    // Aktivni učenici grupe
+    const profili = await db.select({ userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(and(
+        eq(ucenikProfiliTable.grupaId, grupaId),
+        eq(ucenikProfiliTable.isArchived, false),
+      ));
+    const ucenikIds = profili.map(p => p.userId);
+
+    // Pripremi N bucket-a, ponedjeljak UTC, najstariji prvi.
+    // currentMonday = ponedjeljak ove sedmice u UTC.
+    const now = new Date();
+    const dow = now.getUTCDay(); // 0=Sun..6=Sat
+    const daysSinceMonday = (dow + 6) % 7; // 0 if Monday
+    const currentMonday = new Date(Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday,
+    ));
+    const rangeStart = new Date(currentMonday.getTime() - (weeks - 1) * 7 * 24 * 60 * 60 * 1000);
+
+    type Bucket = { weekStart: string; brojPokusaja: number; prosjekProcenat: number; sumProcenat: number };
+    const buckets: Bucket[] = [];
+    for (let i = 0; i < weeks; i++) {
+      const ws = new Date(rangeStart.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+      buckets.push({
+        weekStart: ws.toISOString().slice(0, 10),
+        brojPokusaja: 0,
+        prosjekProcenat: 0,
+        sumProcenat: 0,
+      });
+    }
+
+    if (ucenikIds.length === 0) {
+      res.json({ weeks, rangeStart: rangeStart.toISOString().slice(0, 10), buckets });
+      return;
+    }
+
+    const pokusaji = await db.select({
+      procenat: h5pPokusajiTable.procenat,
+      completedAt: h5pPokusajiTable.completedAt,
+    }).from(h5pPokusajiTable)
+      .where(and(
+        inArray(h5pPokusajiTable.userId, ucenikIds),
+        gte(h5pPokusajiTable.completedAt, rangeStart),
+      ));
+
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    for (const p of pokusaji) {
+      const t = new Date(p.completedAt).getTime();
+      const idx = Math.floor((t - rangeStart.getTime()) / weekMs);
+      if (idx < 0 || idx >= weeks) continue;
+      const b = buckets[idx];
+      b.brojPokusaja += 1;
+      b.sumProcenat += p.procenat;
+    }
+
+    for (const b of buckets) {
+      b.prosjekProcenat = b.brojPokusaja > 0 ? Math.round(b.sumProcenat / b.brojPokusaja) : 0;
+      // sumProcenat je interni helper — ne šaljemo ga klijentu
+      delete (b as Partial<Bucket>).sumProcenat;
+    }
+
+    res.json({
+      weeks,
+      rangeStart: rangeStart.toISOString().slice(0, 10),
+      buckets,
+    });
+  } catch (err) {
+    console.error("H5P trends error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

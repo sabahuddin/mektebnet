@@ -9,8 +9,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Sparkles, Users, BarChart3, Loader2,
-  ChevronRight, BookOpen, AlertTriangle,
+  ChevronRight, BookOpen, AlertTriangle, TrendingUp,
 } from "lucide-react";
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 
 interface Grupa {
   id: number;
@@ -40,6 +44,28 @@ interface VjezbaStat {
 interface StatsResponse {
   ukupnoUcenika: number;
   vjezbe: VjezbaStat[];
+}
+
+interface TrendBucket {
+  weekStart: string;
+  brojPokusaja: number;
+  prosjekProcenat: number;
+}
+
+interface TrendsResponse {
+  weeks: number;
+  rangeStart: string;
+  buckets: TrendBucket[];
+}
+
+const WEEK_OPTIONS = [4, 8, 12] as const;
+type WeeksOption = (typeof WEEK_OPTIONS)[number];
+
+function formatWeekLabel(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const day = d.getUTCDate().toString().padStart(2, "0");
+  const month = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+  return `${day}.${month}.`;
 }
 
 type SortKey = "popularnost" | "tacnost-najveca" | "tacnost-najmanja" | "pokusaja";
@@ -91,6 +117,9 @@ export default function MuallimH5pStatistikaPage() {
   const [loadingGrupe, setLoadingGrupe] = useState(true);
   const [loadingStats, setLoadingStats] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("popularnost");
+  const [weeks, setWeeks] = useState<WeeksOption>(8);
+  const [trends, setTrends] = useState<TrendsResponse | null>(null);
+  const [loadingTrends, setLoadingTrends] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -112,6 +141,36 @@ export default function MuallimH5pStatistikaPage() {
       .catch(() => toast({ title: "Greška pri učitavanju statistike", variant: "destructive" }))
       .finally(() => setLoadingStats(false));
   }, [token, grupaId]);
+
+  useEffect(() => {
+    if (!token || !grupaId) return;
+    setLoadingTrends(true);
+    setTrends(null);
+    apiRequest<TrendsResponse>(
+      "GET",
+      `/muallim/h5p-stats/trends?grupaId=${grupaId}&weeks=${weeks}`,
+      undefined,
+      token,
+    )
+      .then(setTrends)
+      .catch(() => toast({ title: "Greška pri učitavanju trendova", variant: "destructive" }))
+      .finally(() => setLoadingTrends(false));
+  }, [token, grupaId, weeks]);
+
+  const trendChartData = useMemo(() => {
+    if (!trends) return [];
+    return trends.buckets.map(b => ({
+      label: formatWeekLabel(b.weekStart),
+      weekStart: b.weekStart,
+      pokusaji: b.brojPokusaja,
+      prosjek: b.brojPokusaja > 0 ? b.prosjekProcenat : null,
+    }));
+  }, [trends]);
+
+  const trendUkupnoPokusaja = useMemo(
+    () => trends?.buckets.reduce((a, b) => a + b.brojPokusaja, 0) ?? 0,
+    [trends],
+  );
 
   const sorted = useMemo(() => (data ? sortVjezbe(data.vjezbe, sortKey) : []), [data, sortKey]);
 
@@ -216,6 +275,122 @@ export default function MuallimH5pStatistikaPage() {
                 </div>
                 <div className="text-xs font-bold text-amber-700/80">Prosječna tačnost</div>
               </div>
+            </div>
+
+            {/* Trends chart */}
+            <div className="bg-white border border-border/50 rounded-2xl p-4 md:p-5 mb-6" data-testid="card-trendovi">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <TrendingUp className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-foreground">Trend kroz vrijeme</h3>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Pokušaji po sedmici i prosječna tačnost.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-muted-foreground">Period:</span>
+                  {WEEK_OPTIONS.map(w => (
+                    <button
+                      key={w}
+                      data-testid={`button-weeks-${w}`}
+                      onClick={() => setWeeks(w)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${
+                        weeks === w
+                          ? "bg-primary/10 text-primary border-primary/30"
+                          : "bg-white text-muted-foreground border-border/60 hover:bg-muted"
+                      }`}
+                    >
+                      {w} sedmica
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {loadingTrends ? (
+                <Skeleton className="h-56 rounded-xl" />
+              ) : trendUkupnoPokusaja === 0 ? (
+                <div
+                  className="text-center py-8 text-sm text-muted-foreground font-medium"
+                  data-testid="text-trendovi-prazno"
+                >
+                  Nema H5P pokušaja u zadnjih {weeks} sedmica.
+                </div>
+              ) : (
+                <div className="h-56 sm:h-64" data-testid="chart-trendovi">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={trendChartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 11, fill: "#6b7280" }}
+                        axisLine={{ stroke: "#e5e7eb" }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        allowDecimals={false}
+                        tick={{ fontSize: 11, fill: "#6b7280" }}
+                        axisLine={{ stroke: "#e5e7eb" }}
+                        tickLine={false}
+                        width={32}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        domain={[0, 100]}
+                        tick={{ fontSize: 11, fill: "#6b7280" }}
+                        axisLine={{ stroke: "#e5e7eb" }}
+                        tickLine={false}
+                        width={36}
+                        tickFormatter={(v: number) => `${v}%`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: "1px solid #e5e7eb",
+                          fontSize: 12,
+                        }}
+                        formatter={(value, name) => {
+                          if (value === null || value === undefined) return ["—", name as string];
+                          if (name === "Prosječna tačnost") return [`${value}%`, name as string];
+                          return [value as number, name as string];
+                        }}
+                        labelFormatter={(label, items) => {
+                          const ws = (items?.[0]?.payload as { weekStart?: string } | undefined)?.weekStart;
+                          return ws ? `Sedmica od ${formatWeekLabel(ws)}` : label;
+                        }}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
+                        iconType="circle"
+                      />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="pokusaji"
+                        name="Pokušaji"
+                        fill="#a78bfa"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={48}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="prosjek"
+                        name="Prosječna tačnost"
+                        stroke="#0ea5e9"
+                        strokeWidth={2.5}
+                        dot={{ r: 3, fill: "#0ea5e9" }}
+                        activeDot={{ r: 5 }}
+                        connectNulls
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
 
             {/* Sort */}
