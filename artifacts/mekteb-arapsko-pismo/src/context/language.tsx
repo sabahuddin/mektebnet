@@ -120,7 +120,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           clearGoogTransCookie();
           try {
             sessionStorage.removeItem("mekteb-translate-reload-for");
-          } catch {}
+          } catch {
+            // sessionStorage može throw-ati u Safari private mode / kad
+            // je storage onemogućen — guard cleanup je best-effort, nije
+            // kritičan za korektnost (samo defenzivni reset).
+          }
         }
         setGeoDetected(true);
         return;
