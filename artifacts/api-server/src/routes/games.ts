@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { pickGradoviQuestions, pickZastaveQuestions, type KvizPitanjeFlag } from "../data/zemlje.js";
 
 const router: IRouter = Router();
 
@@ -13,17 +14,25 @@ const SECONDS_PER_BLOCK = 600;
 const MAX_SESSION_DURATION_SEC = 30 * 60;
 // Maks. score po igri (anti-cheat).
 // quiz score = broj tačnih odgovora; cap od 60 daje slobodu za realan ritam (~1/sek).
+// "gradovi" i "zastave" su isti format kao quiz (multiple-choice u 60s rundi).
 const MAX_SCORE: Record<string, number> = {
   memory: 1000,
   quiz: 60,
+  gradovi: 60,
+  zastave: 60,
 };
-// Maks. trajanje runde po igri (timer): quiz = 60s, memory koliko user ima credita.
+// Maks. trajanje runde po igri (timer): quiz/gradovi/zastave = 60s, memory koliko user ima credita.
 const ROUND_DURATION_SEC: Record<string, number | null> = {
   quiz: 60,
+  gradovi: 60,
+  zastave: 60,
   memory: null,
 };
 // Validni gameId enum.
-const VALID_GAMES = new Set(["memory", "quiz"]);
+const VALID_GAMES = new Set(["memory", "quiz", "gradovi", "zastave"]);
+// Igre koje koriste server-side scoring kroz quiz_questions JSONB
+// (multiple-choice format; klijent ne dobija `answer`, server validira na /end).
+const SERVER_SCORED_GAMES = new Set(["quiz", "gradovi", "zastave"]);
 // Broj pitanja koje server generira za svaki quiz round. 60 daje dovoljno
 // materijala za 60s timer (≈1 pitanje/sec), ali stvaran broj pitanja je
 // limited time-boxed — max poened je MAX_SCORE.quiz neovisno o broju.
@@ -147,10 +156,14 @@ function computeAllowedSeconds(totalHasanat: number): number {
   return Math.floor(totalHasanat / HASANAT_PER_BLOCK) * SECONDS_PER_BLOCK;
 }
 
-// Auto-expire stare running sesije ovog usera (>30min). Clamp duration_sec
-// na realno protekao interval (LEAST allowed_duration_sec, NOW()-started_at)
-// — bez ovoga napušteni 60s quiz oduzima cijelih 30 min credit-a.
-// Pozivamo iz /credits I /start za konzistentnost (UI ne pokazuje stari activeSession).
+// Auto-expire stare running sesije ovog usera. Sesija je "stara" kad je prošlo
+// više od (allowed_duration_sec + LATE_GRACE_SEC) sekundi od started_at — tj.
+// timer je sigurno istekao i klijent je imao priliku poslati /end. Server-scored
+// igre traju 60s, memory može trajati duže (do MAX_SESSION_DURATION_SEC).
+// Bez ovoga, učenik koji napusti 60s igru ne može pokrenuti novu sve do 30min.
+// Clamp duration_sec na realno protekao interval — bez toga napušteni 60s quiz
+// oduzima cijelih `allowed_duration_sec` credit-a. Pozivamo iz /credits I /start.
+const LATE_GRACE_SEC = 5;
 async function expireStaleSessions(userId: number): Promise<void> {
   await db.execute(sql`
     UPDATE game_sessions
@@ -162,7 +175,7 @@ async function expireStaleSessions(userId: number): Promise<void> {
         )
     WHERE user_id = ${userId}
       AND status = 'running'
-      AND started_at < NOW() - INTERVAL '${sql.raw(String(MAX_SESSION_DURATION_SEC))} seconds'
+      AND NOW() - started_at > (allowed_duration_sec + ${LATE_GRACE_SEC}) * INTERVAL '1 second'
   `);
 }
 
@@ -223,8 +236,46 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
       return;
     }
 
-    // Prvo expirej sve stare running sesije ovog usera (auto-expire >30min).
+    // Prvo expirej sve stare running sesije ovog usera (auto-expire po allowed_duration_sec).
     await expireStaleSessions(userId);
+
+    // Dodatno: ako postoji bilo koja running SERVER-SCORED sesija (quiz/gradovi/zastave)
+    // koju korisnik nije eksplicitno završio sa /games/end, formaliziraj je kao expired
+    // sa score=0. Server-scored igre se boduju isključivo u /games/end pa "running"
+    // sesija bez /end-a ima ekvivalentno score=0 (nije izgubljen legitiman rezultat).
+    // Ovo eliminira race kad učenik brzo prelazi iz jedne server-scored igre u drugu —
+    // bez čekanja punog 60s timeout-a iz expireStaleSessions. Memory NE diramo jer
+    // ima dug 30min timer i score se računa client-side tokom igre.
+    //
+    // ANTI-RACE: prije nego što expirej-uemo, pričekamo 500ms da PRETHODNI /games/end
+    // (fire-and-forget iz cleanup useEffect-a prethodne igre) stigne kompletirati i
+    // postavi status='completed' sa stvarnim score-om. Bez ovoga moglo bi se desiti da
+    // /start expirej-uje sesiju score=0 PRIJE nego što /end stigne sa stvarnim score=N,
+    // čime bi se gubili legitimni rezultati. Klijentski cleanup u praksi stigne na
+    // server <200ms, pa je 500ms dovoljno generozan grace bez vidljivog UX kašnjenja.
+    if (SERVER_SCORED_GAMES.has(gameId)) {
+      const existingRunning = await exec<{ id: number }>(sql`
+        SELECT id FROM game_sessions
+        WHERE user_id = ${userId} AND status = 'running' AND game_id IN ('quiz', 'gradovi', 'zastave')
+        LIMIT 1
+      `);
+      if (existingRunning.rows.length > 0) {
+        await new Promise(r => setTimeout(r, 500));
+        await db.execute(sql`
+          UPDATE game_sessions
+          SET status = 'expired',
+              ended_at = NOW(),
+              duration_sec = LEAST(
+                allowed_duration_sec,
+                GREATEST(0, EXTRACT(EPOCH FROM (NOW() - started_at))::int)
+              ),
+              score = 0
+          WHERE user_id = ${userId}
+            AND status = 'running'
+            AND game_id IN ('quiz', 'gradovi', 'zastave')
+        `);
+      }
+    }
 
     // Provjeri ima li credit
     const [totalHasanat, secondsSpent] = await Promise.all([
@@ -263,19 +314,33 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
     const roundCap = ROUND_DURATION_SEC[gameId] ?? MAX_SESSION_DURATION_SEC;
     const allowedDurationSec = Math.min(secondsRemaining, roundCap, MAX_SESSION_DURATION_SEC);
 
-    // Server-side question generation za quiz: izaberemo i sačuvamo pitanja
-    // PRIJE inserta sesije, da kasnije /games/end može authoritativno provjeriti
-    // odgovore. Klijent dobija pitanja BEZ `answer` polja (anti-cheat).
-    let serverQuizQuestions: { id: string; question: string; options: string[]; answer: string }[] | null = null;
-    let publicQuestions: { id: string; question: string; options: string[] }[] = [];
+    // Server-side question generation za quiz/gradovi/zastave: izaberemo i sačuvamo
+    // pitanja PRIJE inserta sesije, da kasnije /games/end može authoritativno
+    // provjeriti odgovore. Klijent dobija pitanja BEZ `answer` polja (anti-cheat).
+    // Za zastave dodatno prosljeđujemo flagEmoji (vizualni dio pitanja). NAPOMENA:
+    // flagIso2 NE šaljemo klijentu — ISO2 je deterministički identifikator države,
+    // pa bi njegovo curenje u DOM omogućilo skripti da automatizirano pogađa tačno.
+    let serverQuizQuestions: (KvizPitanjeFlag & { id: string })[] | null = null;
+    let publicQuestions: { id: string; question: string; options: string[]; flagEmoji?: string }[] = [];
     if (gameId === "quiz") {
       const pool = await loadQuizPool();
       if (pool.length < 5) {
         res.status(503).json({ error: "no_questions", message: "Nema dovoljno pitanja u bazi." });
         return;
       }
-      serverQuizQuestions = pickQuizQuestions(pool, QUIZ_QUESTIONS_PER_SESSION);
+      serverQuizQuestions = pickQuizQuestions(pool, QUIZ_QUESTIONS_PER_SESSION).map(q => ({ ...q }));
       publicQuestions = serverQuizQuestions.map(q => ({ id: q.id, question: q.question, options: q.options }));
+    } else if (gameId === "gradovi") {
+      const picked = pickGradoviQuestions(QUIZ_QUESTIONS_PER_SESSION);
+      serverQuizQuestions = picked.map((q, i) => ({ id: `q${i}`, ...q }));
+      publicQuestions = serverQuizQuestions.map(q => ({ id: q.id, question: q.question, options: q.options }));
+    } else if (gameId === "zastave") {
+      const picked = pickZastaveQuestions(QUIZ_QUESTIONS_PER_SESSION);
+      serverQuizQuestions = picked.map((q, i) => ({ id: `q${i}`, ...q }));
+      publicQuestions = serverQuizQuestions.map(q => ({
+        id: q.id, question: q.question, options: q.options,
+        ...(q.flagEmoji ? { flagEmoji: q.flagEmoji } : {}),
+      }));
     }
 
     try {
@@ -293,7 +358,7 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
         gameId,
         startedAt: toIso(row.started_at),
         allowedDurationSec,
-        ...(gameId === "quiz" ? { questions: publicQuestions } : {}),
+        ...(SERVER_SCORED_GAMES.has(gameId) ? { questions: publicQuestions } : {}),
       });
     } catch (insertErr) {
       // Partial unique index `game_sessions_one_running_idx` (user_id WHERE status='running')
@@ -369,7 +434,7 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
     const maxScore = MAX_SCORE[session.game_id] ?? 1000;
     let score = 0;
 
-    if (session.game_id === "quiz") {
+    if (SERVER_SCORED_GAMES.has(session.game_id)) {
       // === SERVER-SIDE SCORING ===
       // Klijent šalje { answers: [{ questionId, optionIndex }] }.
       // Validiramo svako pitanje protiv `quiz_questions` JSONB iz baze.
@@ -379,7 +444,6 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
       // Bez ovoga napadač može pokrenuti sesiju, mirno gledati pitanja u dev tools-u,
       // pretražiti rješenja online i poslati answers nakon 20 minuta.
       // (durationSec će biti clampan na allowed_duration_sec, ali score = svi tačni.)
-      const LATE_GRACE_SEC = 5;
       const submitWindow = Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC) + LATE_GRACE_SEC;
       if (elapsedSec > submitWindow) {
         // Markiraj kao expired i vrati 0 (sesija je istekla server-side).
@@ -390,7 +454,7 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
               score = 0
           WHERE id = ${sessionId} AND user_id = ${userId} AND status = 'running'
         `);
-        res.json({ ok: true, sessionId, gameId: "quiz", score: 0, finalScore: 0, durationSec: Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC), expired: true });
+        res.json({ ok: true, sessionId, gameId: session.game_id, score: 0, finalScore: 0, durationSec: Math.min(session.allowed_duration_sec, MAX_SESSION_DURATION_SEC), expired: true });
         return;
       }
 
@@ -467,7 +531,8 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
 
 // === LEADERBOARD (60s in-memory cache) ===
 type LbScope = "group" | "mekteb" | "global";
-type LbGame = "memory" | "quiz" | "all";
+type LbGame = "memory" | "quiz" | "gradovi" | "zastave" | "all";
+const LB_VALID_GAMES = new Set<string>(["memory", "quiz", "gradovi", "zastave", "all"]);
 interface LbEntry { rank: number; userId: number; displayName: string; mektebName: string | null; bestScore: number; totalGames: number; }
 const lbCache = new Map<string, { ts: number; data: LbEntry[] }>();
 const LB_TTL_MS = 60 * 1000;
@@ -491,7 +556,7 @@ router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Reque
       res.status(400).json({ error: "bad_scope" });
       return;
     }
-    if (!["memory", "quiz", "all"].includes(game)) {
+    if (!LB_VALID_GAMES.has(game)) {
       res.status(400).json({ error: "bad_game" });
       return;
     }

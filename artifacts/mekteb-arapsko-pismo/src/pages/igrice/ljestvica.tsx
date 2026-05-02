@@ -5,11 +5,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { Trophy, ArrowLeft, Brain, Zap, Medal, Users, School, Globe, RefreshCw } from "lucide-react";
+import { Trophy, ArrowLeft, Brain, Zap, Medal, Users, School, Globe, RefreshCw, MapPin, Flag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Scope = "group" | "mekteb" | "global";
-type GameFilter = "all" | "memory" | "quiz";
+type GameFilter = "all" | "memory" | "quiz" | "gradovi" | "zastave";
 
 interface Entry {
   rank: number;
@@ -36,6 +36,8 @@ const GAME_TABS: { id: GameFilter; label: string; icon: typeof Brain }[] = [
   { id: "all", label: "Sve igre", icon: Trophy },
   { id: "memory", label: "Pamti par", icon: Brain },
   { id: "quiz", label: "Brzi kviz", icon: Zap },
+  { id: "gradovi", label: "Glavni gradovi", icon: MapPin },
+  { id: "zastave", label: "Zastave", icon: Flag },
 ];
 
 export default function Ljestvica() {
