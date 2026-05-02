@@ -4,6 +4,8 @@ import { useAuth } from "@/context/auth";
 
 export interface GameCredits {
   totalHasanat: number;
+  /** Razdvojena valuta — zarađuje se igrajući igrice (1 score = 1 med). */
+  totalMed: number;
   secondsAllowed: number;
   secondsSpent: number;
   secondsRemaining: number;

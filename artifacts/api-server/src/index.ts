@@ -264,6 +264,15 @@ async function startup() {
   await runResidualSchema();
   await runDataBootstrap();
 
+  // Misije seed: ubaci default dnevne/sedmične misije ako tabela prazna.
+  // Idempotentno preko UNIQUE (kod) — postojeće misije se NE prepisuju.
+  try {
+    const { seedMisije } = await import("./routes/misije.js");
+    await seedMisije();
+  } catch (e) {
+    logger.error({ err: e }, "Misije seed import failed");
+  }
+
   app.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

@@ -32,6 +32,7 @@ router.get("/progress", async (req, res) => {
     res.json({
       studentId: progress.studentId,
       totalHasanat: progress.totalHasanat,
+      totalMed: progress.totalMed,
       completedLessons: progress.completedLessons,
       badges: progress.badges,
       streakDays: progress.streakDays,

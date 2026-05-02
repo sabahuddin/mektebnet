@@ -13,6 +13,8 @@ import setupRouter from "./setup";
 import importContentRouter from "./import-content";
 import gamesRouter from "./games";
 import h5pRouter from "./h5p";
+import popraviSaceRouter from "./popravi-sace";
+import misijeRouter from "./misije";
 
 const router: IRouter = Router();
 
@@ -30,6 +32,8 @@ router.use("/setup", setupRouter);
 router.use("/import-content", importContentRouter);
 router.use("/games", gamesRouter);
 router.use("/h5p", h5pRouter);
+router.use("/popravi-sace", popraviSaceRouter);
+router.use("/misije", misijeRouter);
 
 export default router;
 

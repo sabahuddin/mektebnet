@@ -24,6 +24,7 @@ import {
 interface StudentProgress {
   studentId: string;
   totalHasanat: number;
+  totalMed: number;
   completedLessons: number[];
   badges: { id: string; name?: string; emoji?: string }[];
   streakDays: number;
@@ -242,6 +243,7 @@ export default function UcenikProfilPage() {
   const ukupniProcenat = totalLekcija ? Math.round((zavrsenoUkupno / totalLekcija) * 100) : 0;
   const streakDays = progress?.streakDays ?? 0;
   const totalHasanat = progress?.totalHasanat ?? 0;
+  const totalMed = progress?.totalMed ?? 0;
 
   return (
     <Layout>
@@ -342,6 +344,29 @@ export default function UcenikProfilPage() {
                       <div className="text-sm font-bold mt-1 opacity-80">ukupno sakupljeno</div>
                       <div className="text-xs mt-2 opacity-75">
                         Za svaku završenu lekciju zaradiš nove Aferime ⭐
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-orange-300 via-orange-400 to-amber-500 text-orange-950 shadow-lg shadow-orange-400/20"
+                    data-testid="card-med"
+                  >
+                    <div className="absolute -right-4 -top-4 opacity-25 text-9xl leading-none select-none" aria-hidden>🍯</div>
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg" aria-hidden>🍯</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider">Med</span>
+                      </div>
+                      <div className="text-5xl font-black leading-none">
+                        <AnimatedNumber value={totalMed} />
+                      </div>
+                      <div className="text-sm font-bold mt-1 opacity-80">slatka nagrada</div>
+                      <div className="text-xs mt-2 opacity-75">
+                        Med se zarađuje samo igranjem igrica.
                       </div>
                     </div>
                   </motion.div>

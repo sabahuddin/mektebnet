@@ -180,6 +180,19 @@ async function getTotalHasanat(userId: number): Promise<number> {
   return Number(r.rows[0]?.h ?? 0);
 }
 
+// Razdvojena valuta "Med" — zarađuje se ISKLJUČIVO igricama (games.ts /end).
+// Aferimi (totalHasanat) i dalje regulišu vrijeme za igru i nagrađuju učenje;
+// Med je posebna gamifikacijska valuta.
+async function getTotalMed(userId: number): Promise<number> {
+  const r = await exec<{ m: number }>(sql`
+    SELECT COALESCE(total_med, 0)::int AS m
+    FROM student_progress
+    WHERE student_id = ${String(userId)}
+    LIMIT 1
+  `);
+  return Number(r.rows[0]?.m ?? 0);
+}
+
 function computeAllowedSeconds(totalHasanat: number): number {
   return Math.floor(totalHasanat / HASANAT_PER_BLOCK) * SECONDS_PER_BLOCK;
 }
@@ -243,8 +256,9 @@ router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, 
     // Sace ima poseban kraći prag (60s) da napuštena sace igra ne blokira
     // pokretanje drugih igrica čekajući puni allowed_duration_sec.
     await expireStaleSaceSessions(userId);
-    const [totalHasanat, secondsSpent] = await Promise.all([
+    const [totalHasanat, totalMed, secondsSpent] = await Promise.all([
       getTotalHasanat(userId),
+      getTotalMed(userId),
       getSecondsSpent(userId),
     ]);
     const secondsAllowed = computeAllowedSeconds(totalHasanat);
@@ -262,6 +276,7 @@ router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, 
 
     res.json({
       totalHasanat,
+      totalMed,
       secondsAllowed,
       secondsSpent,
       secondsRemaining,
@@ -604,7 +619,30 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
       return;
     }
 
-    res.json({ ok: true, sessionId, gameId: session.game_id, score, finalScore: score, durationSec });
+    // Med = score (1:1 mapping). Aferim/Med razdvajanje znači da igrice
+    // više ne hrane Aferim ekonomiju (koja kupuje vrijeme za igru) — Med je
+    // čista gamifikacijska valuta. Idempotentno upis je gore u UPDATE
+    // game_sessions (samo jedan UPDATE uspijeva po sessionId), pa ovaj awarding
+    // se izvrši TAČNO jednom po sesiji. Mali score (>0) preskaču INSERT da
+    // ne pravimo prazne redove za 0-poena partije.
+    if (score > 0) {
+      const studentIdStr = String(userId);
+      try {
+        await db.execute(sql`
+          INSERT INTO student_progress (student_id, total_hasanat, total_med, completed_lessons, badges, streak_days, last_activity_date, created_at, updated_at)
+          VALUES (${studentIdStr}, 0, ${score}, '[]'::jsonb, '[]'::jsonb, 0, NULL, NOW(), NOW())
+          ON CONFLICT (student_id) DO UPDATE
+            SET total_med = student_progress.total_med + ${score},
+                updated_at = NOW()
+        `);
+      } catch (medErr) {
+        // Greška u med-awarding-u ne smije srušiti /end response — sesija je
+        // već zatvorena u DB. Logiramo i nastavljamo.
+        req.log.error({ err: medErr, sessionId, score }, "med award failed");
+      }
+    }
+
+    res.json({ ok: true, sessionId, gameId: session.game_id, score, finalScore: score, durationSec, medEarned: score > 0 ? score : 0 });
   } catch (err) {
     req.log.error({ err }, "games/end failed");
     res.status(500).json({ error: "internal_error" });

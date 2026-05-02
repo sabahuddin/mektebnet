@@ -38,6 +38,7 @@ export default function IgricePage() {
   const allowed = credits?.secondsAllowed ?? 0;
   const spent = credits?.secondsSpent ?? 0;
   const totalHas = credits?.totalHasanat ?? 0;
+  const totalMed = credits?.totalMed ?? 0;
   const blocks = Math.floor(totalHas / (credits?.hasanatPerBlock || 100));
   const noCredit = !loading && remaining <= 0;
 
@@ -97,6 +98,14 @@ export default function IgricePage() {
               </p>
               <p className="text-xl font-black text-yellow-600">{totalHas}</p>
               <p className="text-[10px] text-amber-700/70">{blocks} × {formatSeconds(credits?.secondsPerBlock || 600)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-orange-200">
+            <span className="text-2xl leading-none" aria-hidden>🍯</span>
+            <div>
+              <p className="text-xs font-bold text-orange-800/70 uppercase">Med</p>
+              <p className="text-xl font-black text-orange-600" data-testid="text-total-med">{totalMed}</p>
+              <p className="text-[10px] text-orange-700/70">zarađen igrajući</p>
             </div>
           </div>
         </div>

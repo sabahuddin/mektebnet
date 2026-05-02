@@ -359,6 +359,18 @@ export default function KvizPage() {
   const [wordBank, setWordBank] = useState<string[]>([]);
   const [answered, setAnswered] = useState(false);
   const [score, setScore] = useState(0);
+  // Greške koje će se na kraju kviza poslati u "Popravi saće" sistem.
+  // Trakiramo SAMO single-correct tipove (radio/truefalse) jer schema
+  // pogresni_odgovori ima `correctIndex` (jedan integer); checkbox/reorder
+  // ne mapira čisto. Limit ~20 grešaka po kvizu (cap u backendu je 50, ali
+  // držimo manje da ne pravimo spam).
+  const [wrongAnswers, setWrongAnswers] = useState<Array<{
+    questionIndex: number;
+    questionText: string;
+    options: string[];
+    correctIndex: number;
+    wrongIndex: number;
+  }>>([]);
   const [finished, setFinished] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
@@ -469,7 +481,41 @@ export default function KvizPage() {
     } else {
       setSelected(opt);
       setAnswered(true);
-      if (opt === pitanje.answer) setScore(s => s + 1);
+      if (opt === pitanje.answer) {
+        setScore(s => s + 1);
+      } else if (qType === "radio" || qType === "truefalse") {
+        // Track grešku za "Popravi saće". Samo single-correct tipovi
+        // (correct se nalazi u pitanje.answer kao tačno jedan string).
+        // questionIndex MORA biti stabilan između sesija — ne smije ovisiti
+        // o trenutnom shuffleu/sliceu (`current`). Koristimo originalni
+        // index iz kviz.pitanja po jedinstvenom textu pitanja, da UNIQUE
+        // (user_id, source_type, source_id, question_index) u DB ne pravi
+        // duplikate za isto pitanje koje se pojavi na drugoj poziciji.
+        const opts = pitanje.options || [];
+        const correctIndex = opts.indexOf(pitanje.answer ?? "");
+        const wrongIndex = opts.indexOf(opt);
+        const stableIndex = kviz.pitanja.findIndex(p => p.question === pitanje.question);
+        if (
+          correctIndex >= 0 &&
+          wrongIndex >= 0 &&
+          correctIndex !== wrongIndex &&
+          stableIndex >= 0
+        ) {
+          setWrongAnswers(prev => {
+            if (prev.length >= 20) return prev;
+            // Dedup unutar iste sesije — ako učenik pogrijesi dva puta isto
+            // pitanje (re-attempt nakon "Ponovi"), samo jednom šaljemo.
+            if (prev.some(w => w.questionIndex === stableIndex)) return prev;
+            return [...prev, {
+              questionIndex: stableIndex,
+              questionText: pitanje.question,
+              options: opts,
+              correctIndex,
+              wrongIndex,
+            }];
+          });
+        }
+      }
     }
   };
 
@@ -537,6 +583,17 @@ export default function KvizPage() {
     if (isLast) {
       const bodovi = Math.round((score / pitanja.length) * 100);
       if (user && token) {
+        // Pošalji greške u "Popravi saće" sistem (fire-and-forget; ne blokira
+        // kviz flow ako server ne odgovori). Idempotentno preko UNIQUE
+        // (user, source_type, source_id, question_index).
+        if (wrongAnswers.length > 0) {
+          apiRequest("POST", "/popravi-sace/zabiljezi", {
+            sourceType: "kviz",
+            sourceId: kviz.id,
+            sourceNaslov: kviz.naslov,
+            items: wrongAnswers,
+          }, token).catch(() => {});
+        }
         apiRequest("POST", "/content/napredak", {
           contentType: "kviz", contentId: kviz.id,
           zavrsen: true, bodovi, tacniOdgovori: score, ukupnoPitanja: pitanja.length,
@@ -635,6 +692,16 @@ export default function KvizPage() {
                 Ponovi
               </Button>
             </div>
+            {wrongAnswers.length > 0 && (
+              <div className="mt-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl text-sm text-amber-900 text-left">
+                <p className="font-bold mb-1">🍯 Saće s rupama!</p>
+                <p>
+                  Imaš <strong>{wrongAnswers.length}</strong>{" "}
+                  {wrongAnswers.length === 1 ? "grešku" : "grešaka"} za popraviti.
+                  Idi u <button onClick={() => setLocation("/popravi-sace")} className="underline font-bold">Popravi saće</button> i zaradi po 5 Aferima za svaku.
+                </p>
+              </div>
+            )}
           </motion.div>
         </div>
         <AnimatePresence>

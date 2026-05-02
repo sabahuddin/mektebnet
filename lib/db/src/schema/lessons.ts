@@ -24,6 +24,11 @@ export const studentProgressTable = pgTable("student_progress", {
   id: serial("id").primaryKey(),
   studentId: varchar("student_id", { length: 100 }).notNull().unique(),
   totalHasanat: integer("total_hasanat").notNull().default(0),
+  // Razdvajanje od Aferim ekonomije (T#NN ChatGPT preporuka): "med" se zarađuje
+  // ISKLJUČIVO igranjem igrica (server-side scoring u games.ts /end), dok
+  // Aferimi ostaju nagrada za stvarno učenje (lekcije, kvizovi, H5P, Popravi
+  // saće). Ova razdvojenost sprječava da djeca "love bodove" igricama.
+  totalMed: integer("total_med").notNull().default(0),
   completedLessons: jsonb("completed_lessons").notNull().$type<number[]>().default([]),
   badges: jsonb("badges").notNull().$type<object[]>().default([]),
   streakDays: integer("streak_days").notNull().default(0),

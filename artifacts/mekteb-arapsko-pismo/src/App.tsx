@@ -50,6 +50,8 @@ import UcenikProfilPage from "./pages/ucenik-profil";
 
 // Igrice (gamifikacija)
 import IgricePage from "./pages/igrice";
+import PopraviSacePage from "./pages/popravi-sace";
+import MisijePage from "./pages/misije";
 import PamtiPar from "./pages/igrice/pamti-par";
 import BrziKviz from "./pages/igrice/brzi-kviz";
 import GlavniGradovi from "./pages/igrice/glavni-gradovi";
@@ -123,6 +125,10 @@ function Router() {
       <Route path="/igrice/pcelin-let" component={PcelinLet} />
       <Route path="/igrice/ljestvica" component={Ljestvica} />
       <Route path="/igrice" component={IgricePage} />
+
+      {/* Popravi saće + Misije */}
+      <Route path="/popravi-sace" component={PopraviSacePage} />
+      <Route path="/misije" component={MisijePage} />
 
       {/* Poruke */}
       <Route path="/poruke" component={PorukePage} />
