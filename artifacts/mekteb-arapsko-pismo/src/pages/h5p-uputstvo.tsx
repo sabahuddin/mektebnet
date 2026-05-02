@@ -27,6 +27,9 @@ import {
   Image as ImageIcon,
   Layers,
   ArrowRight,
+  XCircle,
+  ShieldCheck,
+  AlertTriangle,
 } from "lucide-react";
 
 interface H5pTemplate {
@@ -117,6 +120,74 @@ const H5P_TIPOVI = [
     bg: "bg-teal-100",
     tip: "Sequencing",
     primjena: "Redosljed namaza, koraci uzimanja abdesta, dijelovi rukna",
+  },
+];
+
+// Tipovi koje naš h5p-standalone player pouzdano renderuje.
+// Provjereno na produkciji — ovi tipovi koriste osnovne H5P biblioteke
+// koje su uključene u player bundle.
+const H5P_PREPORUCENI = [
+  {
+    tip: "Multiple Choice",
+    opis: "kviz pitanje sa nekoliko ponuđenih odgovora (jedan ili više tačnih)",
+  },
+  {
+    tip: "True/False",
+    opis: "tvrdnja na koju učenik odgovara tačno ili netačno",
+  },
+  {
+    tip: "Fill in the Blanks",
+    opis: "rečenica sa praznim mjestom koje učenik popunjava ukucavanjem",
+  },
+  {
+    tip: "Drag the Words",
+    opis: "učenik povlači riječi na pravo mjesto u rečenici",
+  },
+  {
+    tip: "Mark the Words",
+    opis: "učenik klikom označava tražene riječi unutar teksta",
+  },
+  {
+    tip: "Single Choice Set",
+    opis: "niz pitanja sa po jednim tačnim odgovorom (brzi kviz)",
+  },
+  {
+    tip: "Question Set",
+    opis: "kombinacija raznih tipova pitanja u jednom kvizu",
+  },
+  {
+    tip: "Flashcards",
+    opis: "kartice za učenje pojmova — pitanje, pa odgovor",
+  },
+  {
+    tip: "Dialog Cards",
+    opis: "kartice sa dvije strane — npr. arapski harf i njegov izgovor",
+  },
+];
+
+// Tipovi koje naš player NE renderuje — traže dodatne biblioteke ili
+// JavaScript API koji h5p-standalone ne podržava. Ako muallim napravi
+// ovakvu vježbu i uploaduje je, učenik će vidjeti praznu stranicu ili grešku.
+const H5P_IZBJEGAVAJ = [
+  {
+    tip: "Find the Words",
+    opis: "puzzle sa traženjem riječi u mreži slova — ne učitava se u našem player-u",
+  },
+  {
+    tip: "Crossword",
+    opis: "ukrštene riječi — ne učitava se u našem player-u",
+  },
+  {
+    tip: "Branching Scenario",
+    opis: "razgranati scenarij sa više putanja — traži dodatne biblioteke koje player ne podržava",
+  },
+  {
+    tip: "Course Presentation",
+    opis: "interaktivna prezentacija sa slajdovima — ne učitava se u našem player-u",
+  },
+  {
+    tip: "Interactive Video",
+    opis: "video sa pitanjima ubačenim u određenim trenucima — traži biblioteke koje player ne podržava",
   },
 ];
 
@@ -437,6 +508,67 @@ export default function H5pUputstvoPage() {
           </div>
           <StepIllustration step={4} />
         </StepCard>
+
+        {/* Preporučeni tipovi vježbi (kompatibilnost sa playerom) */}
+        <section
+          data-testid="h5p-preporuceni-tipovi"
+          className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5 md:p-6 shadow-sm"
+        >
+          <h2 className="flex items-center gap-2 text-xl font-extrabold text-emerald-900 mb-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            Preporučeni tipovi vježbi
+          </h2>
+          <p className="text-sm text-emerald-800/80 mb-4 leading-relaxed">
+            Ovi tipovi pouzdano rade u našem player-u — ako koristiš njih, učenici
+            će uvijek moći otvoriti vježbu u browseru.
+          </p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {H5P_PREPORUCENI.map(({ tip, opis }) => (
+              <li
+                key={tip}
+                data-testid={`h5p-preporuceni-${tip.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                className="flex items-start gap-3 p-3 rounded-xl bg-white border border-emerald-100"
+              >
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="min-w-0 text-sm leading-relaxed">
+                  <span className="font-extrabold text-slate-900">{tip}</span>
+                  <span className="text-slate-600"> — {opis}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Tipovi koje treba izbjegavati */}
+        <section
+          data-testid="h5p-izbjegavaj-tipovi"
+          className="bg-rose-50/60 border border-rose-200 rounded-2xl p-5 md:p-6 shadow-sm"
+        >
+          <h2 className="flex items-center gap-2 text-xl font-extrabold text-rose-900 mb-2">
+            <AlertTriangle className="w-5 h-5 text-rose-600" />
+            Izbjegavaj — ne rade u našem player-u
+          </h2>
+          <p className="text-sm text-rose-800/80 mb-4 leading-relaxed">
+            Ovi tipovi se mogu napraviti u Lumi-ju, ali se <strong>ne prikazuju</strong> u
+            našem player-u. Ako ih uploaduješ, učenik će vidjeti praznu stranicu
+            ili grešku. Bolje izaberi nešto iz spiska iznad.
+          </p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {H5P_IZBJEGAVAJ.map(({ tip, opis }) => (
+              <li
+                key={tip}
+                data-testid={`h5p-izbjegavaj-${tip.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                className="flex items-start gap-3 p-3 rounded-xl bg-white border border-rose-100"
+              >
+                <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="min-w-0 text-sm leading-relaxed">
+                  <span className="font-extrabold text-slate-900">{tip}</span>
+                  <span className="text-slate-600"> — {opis}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {/* Tabela tipova */}
         <section className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-sm">
