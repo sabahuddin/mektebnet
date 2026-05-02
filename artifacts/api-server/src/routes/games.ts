@@ -23,6 +23,12 @@ const MAX_SCORE: Record<string, number> = {
   // sace: hex Tetris klon (Mektebsko saće). Klijent-scored kao memory.
   // Realna gornja granica je oko 30-50k poena za odlične igrače; cap na 99999.
   sace: 99999,
+  // medena: 8 pitanja × 10 meda = 80 max. Cap je egzaktan jer je broj pitanja fiksan.
+  medena: 80,
+  // pcelin: Flappy-style let, 90s timer, ~10 honey/s peak. Realno 200-500;
+  // cap 1500 daje 3× rezervu za pristrasno igranje bez otvaranja velikog
+  // forgery surface-a (per-sec cap dodatno limituje).
+  pcelin: 1500,
 };
 // Maks. trajanje runde po igri (timer): quiz/gradovi/zastave = 60s, memory i sace koliko user ima credita.
 const ROUND_DURATION_SEC: Record<string, number | null> = {
@@ -31,6 +37,10 @@ const ROUND_DURATION_SEC: Record<string, number | null> = {
   zastave: 60,
   memory: null,
   sace: null,
+  // medena nije timer-based (učenik razmišlja po pitanju) — koristi credit do 30min.
+  medena: null,
+  // pcelin: 90s fiksni timer (klijentska game logika sama završava na 0).
+  pcelin: 90,
 };
 // Per-game per-second cap (anti-cheat za KLIJENT-SCORED igre).
 // Realan ritam za sace na najvišem levelu je oko 200 poena/s (kombinacija
@@ -39,11 +49,15 @@ const ROUND_DURATION_SEC: Record<string, number | null> = {
 // MAX_SCORE.sace = 99999. Memory ima MAX_SCORE = 1000 (jednokratno) pa nije
 // vrijedno extra kapiranja. Ako gameId nije ovdje, samo MAX_SCORE i opšti
 // minSecForFullScore cheatCap se primjenjuju.
+//
+// pcelin: ~10 honey/s je realan peak (drop spawn ~1.05s, +burst windows).
+// Cap 25/s daje 2.5× rezervu i sprečava scripted dump npr. 1500 nakon 2s.
 const PER_SEC_CAP: Record<string, number> = {
   sace: 350,
+  pcelin: 25,
 };
 // Validni gameId enum.
-const VALID_GAMES = new Set(["memory", "quiz", "gradovi", "zastave", "sace"]);
+const VALID_GAMES = new Set(["memory", "quiz", "gradovi", "zastave", "sace", "medena", "pcelin"]);
 // Igre koje koriste server-side scoring kroz quiz_questions JSONB
 // (multiple-choice format; klijent ne dobija `answer`, server validira na /end).
 const SERVER_SCORED_GAMES = new Set(["quiz", "gradovi", "zastave"]);
@@ -214,7 +228,7 @@ async function expireStaleSaceSessions(userId: number): Promise<void> {
         score = 0
     WHERE user_id = ${userId}
       AND status = 'running'
-      AND game_id = 'sace'
+      AND game_id IN ('sace', 'medena')
       AND NOW() - started_at > ${STALE_SACE_SEC} * INTERVAL '1 second'
   `);
 }
@@ -599,8 +613,8 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
 
 // === LEADERBOARD (60s in-memory cache) ===
 type LbScope = "group" | "mekteb" | "global";
-type LbGame = "memory" | "quiz" | "gradovi" | "zastave" | "sace" | "all";
-const LB_VALID_GAMES = new Set<string>(["memory", "quiz", "gradovi", "zastave", "sace", "all"]);
+type LbGame = "memory" | "quiz" | "gradovi" | "zastave" | "sace" | "medena" | "pcelin" | "all";
+const LB_VALID_GAMES = new Set<string>(["memory", "quiz", "gradovi", "zastave", "sace", "medena", "pcelin", "all"]);
 interface LbEntry { rank: number; userId: number; displayName: string; mektebName: string | null; bestScore: number; totalGames: number; }
 const lbCache = new Map<string, { ts: number; data: LbEntry[] }>();
 const LB_TTL_MS = 60 * 1000;
