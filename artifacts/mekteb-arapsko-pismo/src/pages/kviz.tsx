@@ -67,8 +67,13 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
       const resp = await fetch(`${getApiBase()}/admin/uploads`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await resp.json();
-      setGalleryImages(Array.isArray(data) ? data : data.files || []);
+      if (!resp.ok) {
+        toast({ title: "Greška", description: `Ne mogu učitati galeriju (${resp.status})`, variant: "destructive" });
+        setGalleryImages([]);
+      } else {
+        const data = await resp.json();
+        setGalleryImages(Array.isArray(data) ? data : data.files || []);
+      }
     } catch {
       toast({ title: "Greška", description: "Ne mogu učitati galeriju", variant: "destructive" });
     }
