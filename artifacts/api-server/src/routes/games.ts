@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { igraPitanjaTable, MEDENA_KATEGORIJE, type MedenaKategorija } from "@workspace/db";
+import { igraPitanjaTable, medenaVidjenaPitanjaTable, MEDENA_KATEGORIJE, type MedenaKategorija } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { pickGradoviQuestions, pickZastaveQuestions, type KvizPitanjeFlag } from "../data/zemlje.js";
@@ -934,8 +934,13 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
 // pitanje. Redoslijed kategorija je randomiziran po runi (Fisher-Yates).
 // Ako neka kategorija nema nijedno aktivno pitanje, ona se izostavlja iz outputa
 // (degraded mode — bolje vratiti 7 nego 0). Klijent prikaže koliko god dođe.
-router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (_req: Request, res: Response) => {
+// Anti-rote learning: koliko zadnjih VIĐENIH pitanja po kategoriji izostavljamo
+// iz random selekcije za istog učenika. Ako kategorija ima ≤ N aktivnih pitanja,
+// fallback (vidi niže) ignorira historiju kako se igra ne bi blokirala.
+const MEDENA_RECENT_EXCLUDE = 10;
+router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.userId;
     type Output = {
       id: number;
       kategorija: MedenaKategorija;
@@ -955,9 +960,36 @@ router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (_req: R
       kategorije[j] = tmp;
     }
 
-    // Za svaku kategoriju povuci jedno random aktivno pitanje
+    // Za svaku kategoriju povuci jedno random aktivno pitanje, ali izostavi
+    // zadnjih K viđenih pitanja gdje je K = min(MEDENA_RECENT_EXCLUDE, broj
+    // aktivnih u kategoriji - 1). Ovo "klizeći prozor" pristup garantuje:
+    //   (a) bar 1 kandidat uvijek ostane (ne ulazimo u zero-candidate state),
+    //   (b) i u maloj banci (npr. 5 pitanja) nikad ne odaberemo pitanje koje
+    //       je upravo bilo zadnje viđeno — uvijek imamo "reset prozor"
+    //       efekt jer se prozor automatski skuplja na (activeCount - 1).
+    // Time se izbjegava bug gdje bi mala banka stalno padala u "no-exclude"
+    // fallback i dozvoljavala iste odgovore u uzastopnim partijama.
     const prazneKategorije: string[] = [];
+    const odabraniIds: { id: number; kategorija: MedenaKategorija }[] = [];
     for (const kat of kategorije) {
+      const cntRow = await db.execute(sql`
+        SELECT COUNT(*)::int AS c FROM ${igraPitanjaTable}
+        WHERE kategorija = ${kat} AND aktivno = true
+      `) as unknown as { rows: { c: number }[] };
+      const activeCount = Number(cntRow.rows[0]?.c ?? 0);
+      if (activeCount === 0) {
+        prazneKategorije.push(kat);
+        continue;
+      }
+      const excludeN = Math.max(0, Math.min(MEDENA_RECENT_EXCLUDE, activeCount - 1));
+
+      const recentSubquery = sql`(
+        SELECT pitanje_id FROM ${medenaVidjenaPitanjaTable}
+        WHERE user_id = ${userId} AND kategorija = ${kat}
+        ORDER BY vidjeno_at DESC
+        LIMIT ${excludeN}
+      )`;
+
       const rows = await db
         .select({
           id: igraPitanjaTable.id,
@@ -968,7 +1000,15 @@ router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (_req: R
           objasnjenje: igraPitanjaTable.objasnjenje,
         })
         .from(igraPitanjaTable)
-        .where(and(eq(igraPitanjaTable.kategorija, kat), eq(igraPitanjaTable.aktivno, true)))
+        .where(and(
+          eq(igraPitanjaTable.kategorija, kat),
+          eq(igraPitanjaTable.aktivno, true),
+          // Kad je excludeN = 0, NOT IN (empty) je u Postgresu uvijek true,
+          // ali drizzle-ova prazna lista bi bila syntax greška. Naša
+          // recentSubquery je SUBSELECT (ne lista), pa je sintaksički OK
+          // čak i kad LIMIT 0 vrati nula redova.
+          sql`${igraPitanjaTable.id} NOT IN ${recentSubquery}`,
+        ))
         .orderBy(sql`random()`)
         .limit(1);
 
@@ -981,6 +1021,7 @@ router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (_req: R
           correctIndex: rows[0].correctIndex,
           objasnjenje: rows[0].objasnjenje,
         });
+        odabraniIds.push({ id: rows[0].id, kategorija: rows[0].kategorija as MedenaKategorija });
       } else {
         prazneKategorije.push(kat);
       }
@@ -995,6 +1036,38 @@ router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (_req: R
         prazneKategorije,
       });
       return;
+    }
+
+    // Bilježi viđena pitanja u tracker (anti-rote learning) i prune-aj stare
+    // ulaze tako da po (user, kategorija) zadržimo samo zadnjih
+    // MEDENA_RECENT_EXCLUDE redova — dovoljno za exclude prozor, a tabela
+    // ostaje ograničena u rastu (max ~80 redova po učeniku).
+    // Ovo radimo POSLIJE odgovora bi bilo brže, ali konzistentnost je važnija
+    // — ako insert padne, sljedeća partija bi mogla ponoviti pitanja.
+    if (odabraniIds.length > 0) {
+      try {
+        await db.insert(medenaVidjenaPitanjaTable).values(
+          odabraniIds.map(o => ({ userId, pitanjeId: o.id, kategorija: o.kategorija })),
+        );
+        // Prune po kategoriji: zadrži samo zadnjih MEDENA_RECENT_EXCLUDE redova.
+        const dotaknuteKategorije = Array.from(new Set(odabraniIds.map(o => o.kategorija)));
+        for (const kat of dotaknuteKategorije) {
+          await db.execute(sql`
+            DELETE FROM ${medenaVidjenaPitanjaTable}
+            WHERE user_id = ${userId} AND kategorija = ${kat}
+              AND id NOT IN (
+                SELECT id FROM ${medenaVidjenaPitanjaTable}
+                WHERE user_id = ${userId} AND kategorija = ${kat}
+                ORDER BY vidjeno_at DESC
+                LIMIT ${MEDENA_RECENT_EXCLUDE}
+              )
+          `);
+        }
+      } catch (trackerErr) {
+        // Ne padaj odgovor zbog tracker greške — pitanja su već odabrana i
+        // klijent treba dobiti igru. Samo logiraj.
+        req.log.warn({ err: trackerErr, userId }, "medena vidjena tracker insert failed");
+      }
     }
 
     res.json({ pitanja: rezultat });

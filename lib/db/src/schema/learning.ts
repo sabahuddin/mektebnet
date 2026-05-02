@@ -135,6 +135,31 @@ export const igraPitanjaTable = pgTable("igra_pitanja", {
 
 export type IgraPitanje = typeof igraPitanjaTable.$inferSelect;
 
+// === MEDENA STAZA — anti-rote learning tracker ==================================
+// Bilježi koja je pitanja učenik nedavno vidio u Medenoj stazi, da
+// /api/games/medena/pitanja može iz random selekcije izostaviti zadnjih N
+// (default 10) pitanja po kategoriji per-učenik. Bez ovoga, ako kategorija
+// ima samo ~20 pitanja a učenik odigra 5 partija zaredom, statistički bi se
+// ista pitanja ponavljala — što degradira pedagoški benefit.
+//
+// `kategorija` se denormalizuje (umjesto join-a sa igra_pitanja) jer bismo
+// inače imali skup query za svaku od 8 kategorija po pokretanju igre.
+// Per-(user, kategorija) zadnjih N redova se proverava u jednom indeksiranom
+// rangu, a stari redovi se prune-aju nakon svakog inserta da tabela ne raste
+// neograničeno.
+export const medenaVidjenaPitanjaTable = pgTable("medena_vidjena_pitanja", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  pitanjeId: integer("pitanje_id").notNull(),
+  kategorija: varchar("kategorija", { length: 40 }).notNull(),
+  vidjenoAt: timestamp("vidjeno_at").defaultNow().notNull(),
+}, (t) => ({
+  userKategorijaVidjenoIdx: index("medena_vidjena_user_kategorija_vidjeno_idx")
+    .on(t.userId, t.kategorija, t.vidjenoAt),
+}));
+
+export type MedenaVidjenoPitanje = typeof medenaVidjenaPitanjaTable.$inferSelect;
+
 export const insertPogresniOdgovorSchema = createInsertSchema(pogresniOdgovoriTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMisijaDefinicijaSchema = createInsertSchema(misijaDefinicijaTable).omit({ id: true, createdAt: true });
 export const insertMisijaProgressSchema = createInsertSchema(misijaProgressTable).omit({ id: true, createdAt: true, updatedAt: true });

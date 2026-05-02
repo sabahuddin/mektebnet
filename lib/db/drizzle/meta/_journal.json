@@ -36,6 +36,13 @@
       "when": 1777758180686,
       "tag": "0004_flaky_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777759221976,
+      "tag": "0005_hot_mister_fear",
+      "breakpoints": true
     }
   ]
 }
