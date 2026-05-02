@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import {
   ArrowLeft, Sparkles, Users, BarChart3, Loader2,
-  ChevronRight, BookOpen, AlertTriangle, TrendingUp,
+  ChevronRight, BookOpen, AlertTriangle, TrendingUp, UserX, Trophy, Clock,
 } from "lucide-react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
@@ -68,6 +71,85 @@ function formatWeekLabel(iso: string): string {
   return `${day}.${month}.`;
 }
 
+interface PrilogInfo {
+  id: number;
+  originalName: string;
+  kind: string;
+  lekcijaId: number;
+  lekcijaNaslov: string | null;
+  lekcijaSlug: string | null;
+  lekcijaNivo: number | null;
+}
+
+interface UcenikRow {
+  id: number;
+  displayName: string;
+  username: string;
+  brojPokusaja: number;
+  najboljiProcenat: number | null;
+  prosjekProcenat: number | null;
+  zadnjiPokusajAt: string | null;
+}
+
+interface DetailResponse {
+  prilog: PrilogInfo;
+  ucenici: UcenikRow[];
+}
+
+type DetailSortKey = "najslabiji" | "najbolji" | "ime" | "pokusaja" | "zadnji";
+
+const DETAIL_SORT_LABELS: Record<DetailSortKey, string> = {
+  najslabiji: "Najslabiji prvi",
+  najbolji: "Najbolji prvi",
+  ime: "Ime (A–Ž)",
+  pokusaja: "Najviše pokušaja",
+  zadnji: "Najnoviji pokušaj",
+};
+
+function sortUcenike(rows: UcenikRow[], key: DetailSortKey): UcenikRow[] {
+  const arr = [...rows];
+  const noAttempts = (r: UcenikRow) => r.brojPokusaja === 0;
+  arr.sort((a, b) => {
+    if (key !== "ime") {
+      if (noAttempts(a) && !noAttempts(b)) return 1;
+      if (!noAttempts(a) && noAttempts(b)) return -1;
+    }
+    switch (key) {
+      case "najslabiji":
+        return (a.najboljiProcenat ?? 0) - (b.najboljiProcenat ?? 0)
+          || a.displayName.localeCompare(b.displayName);
+      case "najbolji":
+        return (b.najboljiProcenat ?? 0) - (a.najboljiProcenat ?? 0)
+          || a.displayName.localeCompare(b.displayName);
+      case "pokusaja":
+        return b.brojPokusaja - a.brojPokusaja
+          || a.displayName.localeCompare(b.displayName);
+      case "zadnji": {
+        const ta = a.zadnjiPokusajAt ? new Date(a.zadnjiPokusajAt).getTime() : 0;
+        const tb = b.zadnjiPokusajAt ? new Date(b.zadnjiPokusajAt).getTime() : 0;
+        return tb - ta || a.displayName.localeCompare(b.displayName);
+      }
+      case "ime":
+      default:
+        return a.displayName.localeCompare(b.displayName);
+    }
+  });
+  return arr;
+}
+
+function formatRelativeDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const diffMs = Date.now() - d.getTime();
+  const day = 24 * 60 * 60 * 1000;
+  const days = Math.floor(diffMs / day);
+  if (days < 1) return "Danas";
+  if (days < 2) return "Juče";
+  if (days < 7) return `Prije ${days} dana`;
+  return d.toLocaleDateString("bs-BA", { day: "numeric", month: "short", year: "numeric" });
+}
+
 type SortKey = "popularnost" | "tacnost-najveca" | "tacnost-najmanja" | "pokusaja";
 
 const SORT_LABELS: Record<SortKey, string> = {
@@ -120,6 +202,28 @@ export default function MuallimH5pStatistikaPage() {
   const [weeks, setWeeks] = useState<WeeksOption>(8);
   const [trends, setTrends] = useState<TrendsResponse | null>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detail, setDetail] = useState<DetailResponse | null>(null);
+  const [detailSummary, setDetailSummary] = useState<VjezbaStat | null>(null);
+  const [detailSortKey, setDetailSortKey] = useState<DetailSortKey>("najslabiji");
+
+  function openDetail(v: VjezbaStat) {
+    if (!token || !grupaId) return;
+    setDetailSummary(v);
+    setDetail(null);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    apiRequest<DetailResponse>(
+      "GET",
+      `/muallim/h5p-stats/${v.priloziId}?grupaId=${grupaId}`,
+      undefined,
+      token,
+    )
+      .then(setDetail)
+      .catch(() => toast({ title: "Greška pri učitavanju detalja", variant: "destructive" }))
+      .finally(() => setDetailLoading(false));
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -443,8 +547,17 @@ export default function MuallimH5pStatistikaPage() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(idx, 8) * 0.03 }}
-                    className="bg-white border border-border/50 rounded-2xl p-4 md:p-5"
+                    className="bg-white border border-border/50 rounded-2xl p-4 md:p-5 hover:border-primary/40 hover:shadow-sm cursor-pointer transition-all group"
                     data-testid={`row-vjezba-${v.priloziId}`}
+                    onClick={() => openDetail(v)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openDetail(v);
+                      }
+                    }}
                   >
                     <div className="flex flex-col md:flex-row md:items-start gap-4">
                       <div className="flex-1 min-w-0">
@@ -458,7 +571,7 @@ export default function MuallimH5pStatistikaPage() {
                             {v.lekcijaNaslov || `Lekcija #${v.lekcijaId}`}
                           </span>
                         </div>
-                        <h3 className="text-base md:text-lg font-extrabold text-foreground break-words">
+                        <h3 className="text-base md:text-lg font-extrabold text-foreground break-words group-hover:text-primary transition-colors">
                           {v.priloziName}
                         </h3>
                       </div>
@@ -483,11 +596,15 @@ export default function MuallimH5pStatistikaPage() {
                         <div className={`text-center px-3 py-1.5 rounded-xl border font-extrabold text-base ${procenatBoja(v.prosjekProcenat)}`}>
                           {v.prosjekProcenat}%
                         </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all hidden md:block" />
                       </div>
                     </div>
 
                     {v.najslabijiUcenik && (
-                      <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-3">
+                      <div
+                        className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex items-center gap-2 text-sm min-w-0">
                           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                           <span className="text-muted-foreground font-medium truncate">
@@ -508,14 +625,14 @@ export default function MuallimH5pStatistikaPage() {
                             ({v.najslabijiUcenik.brojPokusaja} pokušaj{v.najslabijiUcenik.brojPokusaja === 1 ? "" : "a"})
                           </span>
                         </div>
-                        <Link href={`/muallim/ucenik/${v.najslabijiUcenik.id}?h5pPrilogId=${v.priloziId}`}>
-                          <button
-                            data-testid={`link-najslabiji-profil-${v.priloziId}`}
-                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                          >
-                            Profil <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </Link>
+                        <button
+                          type="button"
+                          data-testid={`button-detalji-${v.priloziId}`}
+                          onClick={(e) => { e.stopPropagation(); openDetail(v); }}
+                          className="text-xs font-bold text-primary hover:underline flex items-center gap-1 flex-shrink-0"
+                        >
+                          Svi učenici <ChevronRight className="w-3 h-3" />
+                        </button>
                       </div>
                     )}
                   </motion.div>
@@ -531,6 +648,201 @@ export default function MuallimH5pStatistikaPage() {
           </div>
         )}
       </div>
+
+      <DetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        loading={detailLoading}
+        detail={detail}
+        summary={detailSummary}
+        sortKey={detailSortKey}
+        setSortKey={setDetailSortKey}
+        ukupnoUcenika={data?.ukupnoUcenika ?? 0}
+      />
     </Layout>
+  );
+}
+
+interface DetailDialogProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  loading: boolean;
+  detail: DetailResponse | null;
+  summary: VjezbaStat | null;
+  sortKey: DetailSortKey;
+  setSortKey: (k: DetailSortKey) => void;
+  ukupnoUcenika: number;
+}
+
+function DetailDialog({
+  open, onOpenChange, loading, detail, summary, sortKey, setSortKey, ukupnoUcenika,
+}: DetailDialogProps) {
+  const ucenici = useMemo(() => (detail ? sortUcenike(detail.ucenici, sortKey) : []), [detail, sortKey]);
+  const sBezPokusaja = ucenici.filter(u => u.brojPokusaja === 0).length;
+  const sSaPokusajima = ucenici.length - sBezPokusaja;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        data-testid="dialog-h5p-detalji"
+      >
+        <DialogHeader>
+          <DialogTitle className="text-base md:text-lg font-extrabold pr-6 break-words">
+            {detail?.prilog.originalName || summary?.priloziName || "H5P vježba"}
+          </DialogTitle>
+          <DialogDescription className="text-xs font-medium text-muted-foreground flex items-center gap-2 flex-wrap">
+            {(detail?.prilog.lekcijaNivo ?? summary?.lekcijaNivo) !== null &&
+              (detail?.prilog.lekcijaNivo ?? summary?.lekcijaNivo) !== undefined && (
+              <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-md font-bold">
+                Nivo {detail?.prilog.lekcijaNivo ?? summary?.lekcijaNivo}
+              </span>
+            )}
+            <span>
+              {detail?.prilog.lekcijaNaslov || summary?.lekcijaNaslov ||
+                `Lekcija #${detail?.prilog.lekcijaId ?? summary?.lekcijaId ?? "?"}`}
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="space-y-2 py-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 rounded-xl" />
+            ))}
+          </div>
+        ) : !detail ? (
+          <div className="text-center text-sm text-muted-foreground py-8">
+            Nema podataka za prikaz.
+          </div>
+        ) : (
+          <div>
+            {/* Summary chips */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2 text-center">
+                <div className="text-xl font-extrabold text-emerald-900" data-testid="detalji-stat-sa-pokusajima">
+                  {sSaPokusajima}
+                </div>
+                <div className="text-[11px] font-bold text-emerald-700/80 leading-tight">
+                  Probali vježbu
+                </div>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-2 text-center">
+                <div className="text-xl font-extrabold text-amber-900" data-testid="detalji-stat-bez-pokusaja">
+                  {sBezPokusaja}
+                </div>
+                <div className="text-[11px] font-bold text-amber-700/80 leading-tight">
+                  Bez pokušaja
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-2 text-center">
+                <div className="text-xl font-extrabold text-blue-900">
+                  {ucenici.length}
+                  {ukupnoUcenika > 0 && (
+                    <span className="text-xs font-bold text-blue-700/70">/{ukupnoUcenika}</span>
+                  )}
+                </div>
+                <div className="text-[11px] font-bold text-blue-700/80 leading-tight">
+                  Ukupno učenika
+                </div>
+              </div>
+            </div>
+
+            {/* Sort */}
+            {detail.ucenici.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                <span className="text-xs font-bold text-muted-foreground mr-1">Sortiraj:</span>
+                {(Object.keys(DETAIL_SORT_LABELS) as DetailSortKey[]).map(k => (
+                  <button
+                    key={k}
+                    data-testid={`button-detalji-sort-${k}`}
+                    onClick={() => setSortKey(k)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                      sortKey === k
+                        ? "bg-primary/10 text-primary border-primary/30"
+                        : "bg-white text-muted-foreground border-border/60 hover:bg-muted"
+                    }`}
+                  >
+                    {DETAIL_SORT_LABELS[k]}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* List */}
+            {ucenici.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <Users className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                Nema aktivnih učenika u grupi.
+              </div>
+            ) : (
+              <div className="space-y-1.5" data-testid="detalji-list-ucenika">
+                {ucenici.map(u => {
+                  const noAttempts = u.brojPokusaja === 0;
+                  return (
+                    <Link
+                      key={u.id}
+                      href={`/muallim/ucenik/${u.id}${detail.prilog.id ? `?h5pPrilogId=${detail.prilog.id}` : ""}`}
+                    >
+                      <button
+                        type="button"
+                        data-testid={`detalji-row-ucenik-${u.id}`}
+                        className={`w-full text-left flex items-center gap-3 p-2.5 rounded-xl border transition-all hover:shadow-sm ${
+                          noAttempts
+                            ? "bg-amber-50/50 border-amber-200 hover:border-amber-400"
+                            : "bg-white border-border/60 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-extrabold text-sm text-foreground truncate flex items-center gap-1.5">
+                            {noAttempts && <UserX className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />}
+                            {u.displayName}
+                          </div>
+                          {noAttempts ? (
+                            <div className="text-[11px] font-bold text-amber-700">
+                              Nije još uradio/la vježbu
+                            </div>
+                          ) : (
+                            <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
+                              <span className="flex items-center gap-0.5">
+                                <Trophy className="w-3 h-3 text-emerald-600" />
+                                Najbolje <b className="text-foreground">{u.najboljiProcenat}%</b>
+                              </span>
+                              <span className="text-muted-foreground/50">•</span>
+                              <span>
+                                Prosjek <b className="text-foreground">{u.prosjekProcenat}%</b>
+                              </span>
+                              <span className="text-muted-foreground/50">•</span>
+                              <span>
+                                {u.brojPokusaja} pokušaj{u.brojPokusaja === 1 ? "" : "a"}
+                              </span>
+                              {u.zadnjiPokusajAt && (
+                                <>
+                                  <span className="text-muted-foreground/50">•</span>
+                                  <span className="flex items-center gap-0.5">
+                                    <Clock className="w-3 h-3" />
+                                    {formatRelativeDate(u.zadnjiPokusajAt)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {!noAttempts && (
+                          <div className={`px-2.5 py-1 rounded-lg border text-sm font-extrabold ${procenatBoja(u.najboljiProcenat ?? 0)}`}>
+                            {u.najboljiProcenat}%
+                          </div>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
