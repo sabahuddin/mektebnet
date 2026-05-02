@@ -9,12 +9,15 @@ import { apiRequest } from "@/lib/api";
 import { ArrowLeft, RefreshCw, Trophy, Sparkles, Flower2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Server-side oblik pitanja iz GET /games/medena/pitanja.
+// `kategorija` je interni kod (npr. "namaz"), prikazni naziv + ikona dolaze iz mape ispod.
 type Question = {
-  category: string;
-  question: string;
-  options: string[];
+  id: number;
+  kategorija: string;
+  pitanje: string;
+  opcije: string[];
   correctIndex: number;
-  explanation: string;
+  objasnjenje: string;
 };
 
 type Feedback = {
@@ -22,69 +25,21 @@ type Feedback = {
   text: string;
 };
 
-const questions: Question[] = [
-  {
-    category: "Namaz",
-    question: "Koji namaz se klanja prije izlaska sunca?",
-    options: ["Sabah", "Podne", "Akšam", "Jacija"],
-    correctIndex: 0,
-    explanation: "Sabah se klanja prije izlaska sunca.",
-  },
-  {
-    category: "Abdest",
-    question: "Šta se uzima prije namaza kada nemamo abdest?",
-    options: ["Abdest", "Zekat", "Post", "Hadž"],
-    correctIndex: 0,
-    explanation: "Abdest je čišćenje prije namaza.",
-  },
-  {
-    category: "Kur'an",
-    question: "Kako se zove Allahova Knjiga objavljena Muhammedu, a.s.?",
-    options: ["Tevrat", "Zebur", "Indžil", "Kur'an"],
-    correctIndex: 3,
-    explanation: "Kur'an je posljednja Allahova objava.",
-  },
-  {
-    category: "Dova",
-    question: "Šta je dova?",
-    options: [
-      "Obraćanje Allahu",
-      "Ime jednog namaza",
-      "Naziv mjeseca",
-      "Vrsta hrane",
-    ],
-    correctIndex: 0,
-    explanation: "Dova je obraćanje Allahu i traženje dobra od Njega.",
-  },
-  {
-    category: "Lijepo ponašanje",
-    question: "Šta je lijepo reći kada sretnemo muslimana?",
-    options: ["Doviđenja", "Esselamu alejkum", "Laku noć", "Izvini"],
-    correctIndex: 1,
-    explanation: "Selam je lijep islamski pozdrav i dova za mir.",
-  },
-  {
-    category: "Ramazan",
-    question: "Kako se zove mjesec u kojem muslimani poste?",
-    options: ["Ševval", "Muharrem", "Ramazan", "Redžeb"],
-    correctIndex: 2,
-    explanation: "Ramazan je mjesec posta, Kur'ana i ibadeta.",
-  },
-  {
-    category: "Dobra djela",
-    question: "Koje od ovoga je dobro djelo?",
-    options: ["Ruganje", "Laž", "Pomoć roditeljima", "Svađa"],
-    correctIndex: 2,
-    explanation: "Pomoć roditeljima je veliko i lijepo dobro djelo.",
-  },
-  {
-    category: "Imanski šarti",
-    question: "Koliko ima imanskih šarta?",
-    options: ["Četiri", "Pet", "Šest", "Sedam"],
-    correctIndex: 2,
-    explanation: "Imanskih šarta ima šest.",
-  },
-];
+// Klijentska kopija MEDENA_KATEGORIJE_META (mora se sinkronizirati sa lib/db/schema/learning.ts).
+// Frontend ne smije importati iz @workspace/db (drizzle runtime) pa je ovo duplicirano.
+const KATEGORIJE_META: Record<string, { naziv: string; ikona: string }> = {
+  sarti: { naziv: "Imanski i islamski šarti", ikona: "⭐" },
+  sure: { naziv: "Sure i ajeti", ikona: "📖" },
+  dove: { naziv: "Dove i zikrovi", ikona: "🤲" },
+  namaz: { naziv: "Namaz i ibadeti", ikona: "🕌" },
+  ponasanje: { naziv: "Lijepo ponašanje", ikona: "💝" },
+  halal_haram: { naziv: "Halal i haram", ikona: "⚖️" },
+  historija: { naziv: "Islamska historija", ikona: "📜" },
+  bosna: { naziv: "Bosna i njena baština", ikona: "🇧🇦" },
+};
+function metaFor(kat: string): { naziv: string; ikona: string } {
+  return KATEGORIJE_META[kat] ?? { naziv: kat, ikona: "❓" };
+}
 
 const MAX_LIVES = 3;
 const HONEY_PER_CORRECT = 10;
@@ -99,6 +54,7 @@ export default function MedenaStaza() {
   const [state, setState] = useState<GameState>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
 
   const timeoutRef = useRef<number | null>(null);
   const endingRef = useRef(false);
@@ -186,12 +142,24 @@ export default function MedenaStaza() {
         setPreviousBest(m?.bestScore ?? 0);
       } catch { setPreviousBest(null); }
 
+      // Prvo povuci pitanja sa servera (8 random kategorija). Bitno: ako pitanja
+      // ne stignu, NE smijemo pozvati /games/start jer bismo trošili credit bez igre.
+      const pitanjaRes = await apiRequest<{ pitanja: Question[] }>(
+        "GET", "/games/medena/pitanja", undefined, token
+      );
+      if (!Array.isArray(pitanjaRes.pitanja) || pitanjaRes.pitanja.length === 0) {
+        setErrorMsg("Banka pitanja je prazna. Obavijesti učitelja da napuni pitanja.");
+        setState("error");
+        return;
+      }
+
       const res = await apiRequest<{ sessionId: number }>(
         "POST", "/games/start", { gameId: "medena" }, token
       );
       setSessionId(res.sessionId);
       // Reset game state
       clearPendingTimeout();
+      setQuestions(pitanjaRes.pitanja);
       setStep(0);
       setHoney(0);
       setLives(MAX_LIVES);
@@ -216,13 +184,14 @@ export default function MedenaStaza() {
 
     setSelectedIndex(optionIndex);
 
+    if (!currentQuestion) return;
     const isCorrect = optionIndex === currentQuestion.correctIndex;
 
     if (isCorrect) {
       setHoney((prev) => prev + HONEY_PER_CORRECT);
       setFeedback({
         type: "correct",
-        text: `Tačno. ${currentQuestion.explanation}`,
+        text: `Tačno. ${currentQuestion.objasnjenje}`,
       });
 
       timeoutRef.current = window.setTimeout(() => {
@@ -247,7 +216,7 @@ export default function MedenaStaza() {
       type: "wrong",
       text:
         nextLives <= 0
-          ? `Netačno. Tačan odgovor je: ${currentQuestion.options[currentQuestion.correctIndex]}.`
+          ? `Netačno. Tačan odgovor je: ${currentQuestion.opcije[currentQuestion.correctIndex]}.`
           : "Netačno. Pokušaj još jednom.",
     });
 
@@ -405,10 +374,11 @@ export default function MedenaStaza() {
               {questions.map((question, index) => {
                 const isDone = index < step;
                 const isCurrent = index === step && !finished && !failed;
+                const meta = metaFor(question.kategorija);
 
                 return (
                   <div
-                    key={`${question.category}-${index}`}
+                    key={`${question.id}-${index}`}
                     className={[
                       "flex min-h-24 flex-col items-center justify-center rounded-3xl p-3 text-center shadow-sm ring-1 transition",
                       isDone
@@ -418,8 +388,8 @@ export default function MedenaStaza() {
                           : "bg-emerald-50 text-emerald-900 ring-emerald-100",
                     ].join(" ")}
                   >
-                    <div className="text-2xl">{isDone ? "🍯" : isCurrent ? "🐝" : "🌼"}</div>
-                    <p className="mt-1 text-xs font-bold">{question.category}</p>
+                    <div className="text-2xl">{isDone ? "🍯" : isCurrent ? "🐝" : meta.ikona}</div>
+                    <p className="mt-1 text-[10px] font-bold leading-tight line-clamp-2">{meta.naziv}</p>
                   </div>
                 );
               })}
@@ -430,15 +400,15 @@ export default function MedenaStaza() {
             <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-emerald-100">
               <div className="mb-4">
                 <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">
-                  Cvijet {step + 1}: {currentQuestion.category}
+                  {metaFor(currentQuestion.kategorija).ikona} Cvijet {step + 1}: {metaFor(currentQuestion.kategorija).naziv}
                 </p>
                 <h2 className="mt-2 text-xl font-bold text-emerald-950 sm:text-2xl" data-testid="text-question">
-                  {currentQuestion.question}
+                  {currentQuestion.pitanje}
                 </h2>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                {currentQuestion.options.map((option, index) => {
+                {currentQuestion.opcije.map((option, index) => {
                   const isSelected = selectedIndex === index;
                   const isCorrect = index === currentQuestion.correctIndex;
 

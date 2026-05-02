@@ -31,6 +31,9 @@ import {
   rjecnikTable,
   studentProgressTable,
   exerciseSessionsTable,
+  igraPitanjaTable,
+  MEDENA_KATEGORIJE,
+  type MedenaKategorija,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -1800,6 +1803,165 @@ router.post("/rjecnik/seed", async (_req, res) => {
   } catch (err: any) {
     console.error("Seed error:", err);
     res.status(500).json({ error: "Greška pri seedanju rječnika" });
+  }
+});
+
+// === MEDENA STAZA — admin CRUD za pitanja ======================================
+const KATEGORIJE_SET = new Set<string>(MEDENA_KATEGORIJE);
+
+// GET /admin/igra-pitanja/stats — broj aktivnih + ukupno po kategoriji
+router.get("/igra-pitanja/stats", async (_req, res) => {
+  try {
+    const rows = await db
+      .select({
+        kategorija: igraPitanjaTable.kategorija,
+        ukupno: sql<number>`count(*)::int`,
+        aktivnih: sql<number>`count(*) filter (where ${igraPitanjaTable.aktivno} = true)::int`,
+      })
+      .from(igraPitanjaTable)
+      .groupBy(igraPitanjaTable.kategorija);
+    const byKat: Record<string, { ukupno: number; aktivnih: number }> = {};
+    for (const k of MEDENA_KATEGORIJE) byKat[k] = { ukupno: 0, aktivnih: 0 };
+    for (const r of rows) byKat[r.kategorija] = { ukupno: r.ukupno, aktivnih: r.aktivnih };
+    res.json({ kategorije: MEDENA_KATEGORIJE, stats: byKat });
+  } catch (err) {
+    console.error("[admin/igra-pitanja/stats] greška:", err);
+    res.status(500).json({ error: "Greška pri učitavanju statistike" });
+  }
+});
+
+// GET /admin/igra-pitanja?kategorija=X — lista (do 200)
+router.get("/igra-pitanja", async (req, res) => {
+  try {
+    const kat = String(req.query.kategorija || "");
+    if (!KATEGORIJE_SET.has(kat)) {
+      res.status(400).json({ error: "Neispravna kategorija", validne: MEDENA_KATEGORIJE });
+      return;
+    }
+    const rows = await db
+      .select()
+      .from(igraPitanjaTable)
+      .where(eq(igraPitanjaTable.kategorija, kat))
+      .orderBy(desc(igraPitanjaTable.id))
+      .limit(200);
+    res.json({ pitanja: rows });
+  } catch (err) {
+    console.error("[admin/igra-pitanja list] greška:", err);
+    res.status(500).json({ error: "Greška pri učitavanju pitanja" });
+  }
+});
+
+function validatePitanjeBody(body: unknown): { ok: true; data: {
+  kategorija: MedenaKategorija; pitanje: string; opcije: string[];
+  correctIndex: number; objasnjenje: string; tezina: number; aktivno: boolean;
+} } | { ok: false; error: string } {
+  const b = body as Record<string, unknown> | null;
+  if (!b || typeof b !== "object") return { ok: false, error: "Nedostaje body" };
+  const kategorija = String(b.kategorija || "");
+  if (!KATEGORIJE_SET.has(kategorija)) return { ok: false, error: "Neispravna kategorija" };
+  const pitanje = String(b.pitanje || "").trim();
+  if (pitanje.length < 3) return { ok: false, error: "Pitanje je prekratko (min 3 znaka)" };
+  if (pitanje.length > 500) return { ok: false, error: "Pitanje je predugo (max 500 znakova)" };
+  const opcijeRaw = b.opcije;
+  if (!Array.isArray(opcijeRaw) || opcijeRaw.length !== 4) return { ok: false, error: "Mora biti tačno 4 opcije" };
+  const opcije: string[] = [];
+  for (const o of opcijeRaw) {
+    const s = String(o ?? "").trim();
+    if (s.length === 0) return { ok: false, error: "Sve 4 opcije moraju imati tekst" };
+    if (s.length > 200) return { ok: false, error: "Opcija je preduga (max 200)" };
+    opcije.push(s);
+  }
+  const correctIndex = Number(b.correctIndex);
+  if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+    return { ok: false, error: "correctIndex mora biti 0-3" };
+  }
+  const objasnjenje = String(b.objasnjenje || "").trim().slice(0, 1000);
+  let tezina = Number(b.tezina);
+  if (!Number.isInteger(tezina) || tezina < 1 || tezina > 3) tezina = 1;
+  const aktivno = b.aktivno === undefined ? true : Boolean(b.aktivno);
+  return { ok: true, data: { kategorija: kategorija as MedenaKategorija, pitanje, opcije, correctIndex, objasnjenje, tezina, aktivno } };
+}
+
+// POST /admin/igra-pitanja — kreiraj
+router.post("/igra-pitanja", async (req, res) => {
+  try {
+    const v = validatePitanjeBody(req.body);
+    if (!v.ok) {
+      res.status(400).json({ error: v.error });
+      return;
+    }
+    const inserted = await db.insert(igraPitanjaTable).values(v.data).returning();
+    res.json({ ok: true, pitanje: inserted[0] });
+  } catch (err) {
+    console.error("[admin/igra-pitanja create] greška:", err);
+    res.status(500).json({ error: "Greška pri kreiranju pitanja" });
+  }
+});
+
+// PUT /admin/igra-pitanja/:id — update
+router.put("/igra-pitanja/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Neispravan id" });
+      return;
+    }
+    const v = validatePitanjeBody(req.body);
+    if (!v.ok) {
+      res.status(400).json({ error: v.error });
+      return;
+    }
+    const updated = await db
+      .update(igraPitanjaTable)
+      .set({ ...v.data, updatedAt: new Date() })
+      .where(eq(igraPitanjaTable.id, id))
+      .returning();
+    if (updated.length === 0) {
+      res.status(404).json({ error: "Pitanje nije pronađeno" });
+      return;
+    }
+    res.json({ ok: true, pitanje: updated[0] });
+  } catch (err) {
+    console.error("[admin/igra-pitanja update] greška:", err);
+    res.status(500).json({ error: "Greška pri ažuriranju pitanja" });
+  }
+});
+
+// DELETE /admin/igra-pitanja/:id — hard delete
+router.delete("/igra-pitanja/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Neispravan id" });
+      return;
+    }
+    const deleted = await db.delete(igraPitanjaTable).where(eq(igraPitanjaTable.id, id)).returning();
+    if (deleted.length === 0) {
+      res.status(404).json({ error: "Pitanje nije pronađeno" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[admin/igra-pitanja delete] greška:", err);
+    res.status(500).json({ error: "Greška pri brisanju pitanja" });
+  }
+});
+
+// POST /admin/system/seed-medena-pitanja — pokreni seed (160 pitanja)
+router.post("/system/seed-medena-pitanja", async (_req, res) => {
+  try {
+    const { seedMedenaPitanja } = await import("@workspace/scripts/seed-medena-pitanja");
+    const result = await seedMedenaPitanja();
+    res.json({
+      ok: true,
+      message: `Učitano ${result.total} pitanja u banku.`,
+      total: result.total,
+      perKategorija: result.perKategorija,
+    });
+  } catch (err) {
+    const e = err as Error;
+    console.error("[admin/system/seed-medena-pitanja] greška:", err);
+    res.status(500).json({ error: "Greška pri seed-u pitanja", detail: e?.message ?? String(err) });
   }
 });
 

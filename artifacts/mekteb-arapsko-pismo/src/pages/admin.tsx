@@ -207,6 +207,395 @@ function SistemAlati({ token }: { token: string }) {
   );
 }
 
+const MEDENA_KATEGORIJE_META: Record<string, { naziv: string; ikona: string }> = {
+  sarti: { naziv: "Imanski i islamski šarti", ikona: "🌷" },
+  sure: { naziv: "Sure i ajeti", ikona: "📖" },
+  dove: { naziv: "Dove i zikrovi", ikona: "🤲" },
+  namaz: { naziv: "Namaz i ibadeti", ikona: "🕌" },
+  ponasanje: { naziv: "Lijepo ponašanje", ikona: "💛" },
+  halal_haram: { naziv: "Halal i haram", ikona: "✅" },
+  historija: { naziv: "Islamska historija", ikona: "📜" },
+  bosna: { naziv: "Bosna i njena baština", ikona: "🌿" },
+};
+const MEDENA_KAT_REDOSLIJED = ["sarti", "sure", "dove", "namaz", "ponasanje", "halal_haram", "historija", "bosna"] as const;
+
+type IgraPitanje = {
+  id: number;
+  kategorija: string;
+  pitanje: string;
+  opcije: string[];
+  correctIndex: number;
+  objasnjenje: string | null;
+  tezina: number;
+  aktivno: boolean;
+};
+
+type KatStats = { ukupno: number; aktivnih: number };
+
+function IgraPitanjaEditor({ token }: { token: string }) {
+  const { toast } = useToast();
+  const [stats, setStats] = useState<Record<string, KatStats>>({});
+  const [activeKat, setActiveKat] = useState<string>("sarti");
+  const [pitanja, setPitanja] = useState<IgraPitanje[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<IgraPitanje | "new" | null>(null);
+  const [seedingMedena, setSeedingMedena] = useState(false);
+
+  const loadStats = async () => {
+    try {
+      const data = await apiRequest<{ stats: Record<string, KatStats> }>("GET", "/admin/igra-pitanja/stats", undefined, token);
+      setStats(data.stats || {});
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Ne mogu učitati statistiku", variant: "destructive" });
+    }
+  };
+
+  const loadPitanja = async (kat: string) => {
+    setLoading(true);
+    try {
+      const data = await apiRequest<{ pitanja: IgraPitanje[] }>("GET", `/admin/igra-pitanja?kategorija=${kat}`, undefined, token);
+      setPitanja(data.pitanja || []);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Ne mogu učitati pitanja", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadStats(); }, []);
+  useEffect(() => { loadPitanja(activeKat); }, [activeKat]);
+
+  const handleDelete = async (p: IgraPitanje) => {
+    if (!confirm(`Obrisati pitanje?\n\n"${p.pitanje}"`)) return;
+    try {
+      await apiRequest("DELETE", `/admin/igra-pitanja/${p.id}`, undefined, token);
+      toast({ title: "Obrisano", description: "Pitanje uklonjeno" });
+      loadPitanja(activeKat);
+      loadStats();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Brisanje neuspjelo", variant: "destructive" });
+    }
+  };
+
+  const handleSeedMedena = async () => {
+    if (!confirm("Učitati početni set od 160 pitanja (8 kategorija × 20)? Postojeća pitanja sa istim tekstom će se ažurirati.")) return;
+    setSeedingMedena(true);
+    try {
+      const res = await apiRequest<{ inserted?: number; updated?: number; total?: number; message?: string }>(
+        "POST", "/admin/system/seed-medena-pitanja", {}, token,
+      );
+      toast({
+        title: "Gotovo!",
+        description: res.message || `Dodato: ${res.inserted ?? 0}, ažurirano: ${res.updated ?? 0}, ukupno: ${res.total ?? 0}`,
+      });
+      loadStats();
+      loadPitanja(activeKat);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Seed neuspješan", variant: "destructive" });
+    } finally {
+      setSeedingMedena(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="mt-8 bg-white border border-border/50 rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-border/50 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-extrabold text-foreground flex items-center gap-2">
+              🍯 Medena staza — pitanja
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Banka pitanja za igricu. U svakoj partiji djeca dobiju po jedno nasumično pitanje iz svake kategorije.
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              onClick={handleSeedMedena}
+              disabled={seedingMedena}
+              variant="outline"
+              data-testid="button-seed-medena"
+              className="rounded-xl text-amber-700 border-amber-300 hover:bg-amber-50"
+            >
+              {seedingMedena ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+              Učitaj početni set (160)
+            </Button>
+            <Button onClick={() => setEditing("new")} data-testid="button-novo-pitanje" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="w-4 h-4 mr-2" /> Novo pitanje
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-4 border-b border-border/50 bg-amber-50/40">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+            {MEDENA_KAT_REDOSLIJED.map((kat) => {
+              const meta = MEDENA_KATEGORIJE_META[kat];
+              const s = stats[kat] ?? { ukupno: 0, aktivnih: 0 };
+              const aktivan = activeKat === kat;
+              const upozori = s.aktivnih === 0;
+              return (
+                <button
+                  key={kat}
+                  onClick={() => setActiveKat(kat)}
+                  data-testid={`tab-kat-${kat}`}
+                  className={[
+                    "rounded-xl p-2 text-left transition border",
+                    aktivan
+                      ? "bg-emerald-600 text-white border-emerald-700"
+                      : upozori
+                        ? "bg-red-50 text-foreground border-red-300 hover:border-red-400"
+                        : "bg-white text-foreground border-border/60 hover:border-emerald-300",
+                  ].join(" ")}
+                >
+                  <div className="text-lg leading-none">{meta.ikona}</div>
+                  <div className="text-[11px] font-bold leading-tight mt-1">{meta.naziv}</div>
+                  <div className={["text-[10px] mt-0.5 font-medium", aktivan ? "text-emerald-50" : upozori ? "text-red-700" : "text-muted-foreground"].join(" ")}>
+                    {s.aktivnih} / {s.ukupno}{upozori ? " ⚠️" : ""}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4">
+          {loading ? (
+            <div className="py-10 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin inline mr-2" /> Učitavam...</div>
+          ) : pitanja.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Nema pitanja u ovoj kategoriji. Klikni <strong>Novo pitanje</strong> ili <strong>Učitaj početni set</strong>.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {pitanja.map((p) => (
+                <div key={p.id} data-testid={`row-pitanje-${p.id}`} className="flex items-start justify-between gap-3 p-3 rounded-xl border border-border/40 hover:bg-amber-50/40">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={["text-[10px] font-bold px-2 py-0.5 rounded-full", p.aktivno ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"].join(" ")}>
+                        {p.aktivno ? "AKTIVNO" : "NEAKTIVNO"}
+                      </span>
+                      <span className="text-[10px] font-medium text-muted-foreground">težina {p.tezina}</span>
+                    </div>
+                    <div className="font-bold text-sm text-foreground">{p.pitanje}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {p.opcije.map((o, i) => (
+                        <span key={i} className={i === p.correctIndex ? "text-emerald-700 font-bold" : ""}>
+                          {i === p.correctIndex ? "✓ " : ""}{o}{i < p.opcije.length - 1 ? "  •  " : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => setEditing(p)}
+                      data-testid={`button-edit-${p.id}`}
+                      className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-700"
+                      title="Uredi"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p)}
+                      data-testid={`button-delete-${p.id}`}
+                      className="p-2 rounded-lg hover:bg-red-100 text-red-600"
+                      title="Obriši"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {editing && (
+        <PitanjeModal
+          token={token}
+          kategorija={activeKat}
+          pitanje={editing === "new" ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); loadPitanja(activeKat); loadStats(); }}
+        />
+      )}
+    </>
+  );
+}
+
+function PitanjeModal({
+  token, kategorija, pitanje, onClose, onSaved,
+}: {
+  token: string;
+  kategorija: string;
+  pitanje: IgraPitanje | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    kategorija: pitanje?.kategorija ?? kategorija,
+    pitanje: pitanje?.pitanje ?? "",
+    opcije: pitanje?.opcije ?? ["", "", "", ""],
+    correctIndex: pitanje?.correctIndex ?? 0,
+    objasnjenje: pitanje?.objasnjenje ?? "",
+    tezina: pitanje?.tezina ?? 1,
+    aktivno: pitanje?.aktivno ?? true,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const setOpcija = (i: number, val: string) => {
+    setForm((f) => ({ ...f, opcije: f.opcije.map((o, idx) => (idx === i ? val : o)) }));
+  };
+
+  const handleSave = async () => {
+    if (!form.pitanje.trim()) { toast({ title: "Pitanje je obavezno", variant: "destructive" }); return; }
+    if (form.opcije.some((o) => !o.trim())) { toast({ title: "Sve 4 opcije moraju biti popunjene", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      const body = {
+        kategorija: form.kategorija,
+        pitanje: form.pitanje.trim(),
+        opcije: form.opcije.map((o) => o.trim()),
+        correctIndex: form.correctIndex,
+        objasnjenje: form.objasnjenje.trim() || null,
+        tezina: form.tezina,
+        aktivno: form.aktivno,
+      };
+      if (pitanje) {
+        await apiRequest("PUT", `/admin/igra-pitanja/${pitanje.id}`, body, token);
+        toast({ title: "Sačuvano", description: "Pitanje ažurirano" });
+      } else {
+        await apiRequest("POST", "/admin/igra-pitanja", body, token);
+        toast({ title: "Dodano", description: "Novo pitanje sačuvano" });
+      }
+      onSaved();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Spremanje neuspjelo", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={() => !saving && onClose()}>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl my-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-extrabold text-foreground">
+            {pitanje ? "Uredi pitanje" : "Novo pitanje"}
+          </h3>
+          <button onClick={onClose} disabled={saving} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">Kategorija</label>
+            <select
+              value={form.kategorija}
+              onChange={(e) => setForm((f) => ({ ...f, kategorija: e.target.value }))}
+              data-testid="select-kategorija"
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm"
+            >
+              {MEDENA_KAT_REDOSLIJED.map((k) => (
+                <option key={k} value={k}>{MEDENA_KATEGORIJE_META[k].ikona} {MEDENA_KATEGORIJE_META[k].naziv}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">Pitanje</label>
+            <textarea
+              value={form.pitanje}
+              onChange={(e) => setForm((f) => ({ ...f, pitanje: e.target.value }))}
+              data-testid="input-pitanje"
+              rows={2}
+              placeholder="Npr. Koliko ima imanskih šarta?"
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">Opcije (označi tačnu)</label>
+            <div className="space-y-2">
+              {form.opcije.map((opt, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="correct"
+                    checked={form.correctIndex === i}
+                    onChange={() => setForm((f) => ({ ...f, correctIndex: i }))}
+                    data-testid={`radio-correct-${i}`}
+                    className="w-4 h-4 accent-emerald-600"
+                  />
+                  <input
+                    type="text"
+                    value={opt}
+                    onChange={(e) => setOpcija(i, e.target.value)}
+                    data-testid={`input-opcija-${i}`}
+                    placeholder={`Opcija ${i + 1}`}
+                    className="flex-1 border border-border rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">Objašnjenje (opciono)</label>
+            <textarea
+              value={form.objasnjenje}
+              onChange={(e) => setForm((f) => ({ ...f, objasnjenje: e.target.value }))}
+              data-testid="input-objasnjenje"
+              rows={2}
+              placeholder="Kratko objašnjenje koje se prikaže nakon odgovora"
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-muted-foreground mb-1">Težina (1–3)</label>
+              <select
+                value={form.tezina}
+                onChange={(e) => setForm((f) => ({ ...f, tezina: parseInt(e.target.value) }))}
+                data-testid="select-tezina"
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm"
+              >
+                <option value={1}>1 — lako</option>
+                <option value={2}>2 — srednje</option>
+                <option value={3}>3 — teško</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-muted-foreground mb-1">Status</label>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, aktivno: !f.aktivno }))}
+                data-testid="toggle-aktivno"
+                className={["w-full px-3 py-2 rounded-xl text-sm font-bold border transition",
+                  form.aktivno ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-100 border-gray-300 text-gray-600"].join(" ")}
+              >
+                {form.aktivno ? "✓ Aktivno" : "Neaktivno"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1 rounded-xl">Odustani</Button>
+          <Button onClick={handleSave} disabled={saving} data-testid="button-save-pitanje" className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (pitanje ? "Sačuvaj" : "Dodaj")}
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function DodajMuallimModal({ token, onClose, onCreated }: { token: string; onClose: () => void; onCreated: () => void }) {
   const { toast } = useToast();
   const [form, setForm] = useState({ username: "", password: "", displayName: "", email: "", licenceCount: "30" });
@@ -1213,6 +1602,7 @@ export default function AdminPage() {
         )}
 
         <SistemAlati token={token!} />
+        <IgraPitanjaEditor token={token!} />
       </div>
 
       {showDodajAdmina && (

@@ -84,10 +84,60 @@ export const misijaProgressTable = pgTable("misija_progress", {
 
 export type MisijaProgress = typeof misijaProgressTable.$inferSelect;
 
+// === MEDENA STAZA — pitanja po kategorijama =====================================
+// Banka pitanja za igricu "Medena staza". Igrač uvijek dobije 8 pitanja:
+// jedno random iz svake od 8 kategorija (redoslijed kategorija isto se randomizira
+// po runi). Admin dodaje/uređuje pitanja kroz admin panel.
+//
+// Kategorije su fiksne (vidi MEDENA_KATEGORIJE niže) — koristimo varchar umjesto
+// enuma jer admin može lakše filtrirati i validirati u aplikacijskom kodu.
+export const MEDENA_KATEGORIJE = [
+  "sarti",
+  "sure",
+  "dove",
+  "namaz",
+  "ponasanje",
+  "halal_haram",
+  "historija",
+  "bosna",
+] as const;
+export type MedenaKategorija = (typeof MEDENA_KATEGORIJE)[number];
+
+// Lijepi prikaz + ikona, koriste i frontend igre i admin UI.
+export const MEDENA_KATEGORIJE_META: Record<MedenaKategorija, { naziv: string; ikona: string }> = {
+  sarti: { naziv: "Imanski i islamski šarti", ikona: "⭐" },
+  sure: { naziv: "Sure i ajeti", ikona: "📖" },
+  dove: { naziv: "Dove i zikrovi", ikona: "🤲" },
+  namaz: { naziv: "Namaz i ibadeti", ikona: "🕌" },
+  ponasanje: { naziv: "Lijepo ponašanje", ikona: "💝" },
+  halal_haram: { naziv: "Halal i haram", ikona: "⚖️" },
+  historija: { naziv: "Islamska historija", ikona: "📜" },
+  bosna: { naziv: "Bosna i njena baština", ikona: "🇧🇦" },
+};
+
+export const igraPitanjaTable = pgTable("igra_pitanja", {
+  id: serial("id").primaryKey(),
+  kategorija: varchar("kategorija", { length: 40 }).notNull(),
+  pitanje: text("pitanje").notNull(),
+  opcije: jsonb("opcije").$type<string[]>().notNull(),
+  correctIndex: integer("correct_index").notNull(),
+  objasnjenje: text("objasnjenje").notNull().default(""),
+  tezina: integer("tezina").notNull().default(1), // 1=lako, 2=srednje, 3=teško
+  aktivno: boolean("aktivno").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  kategorijaAktivnoIdx: index("igra_pitanja_kategorija_aktivno_idx").on(t.kategorija, t.aktivno),
+}));
+
+export type IgraPitanje = typeof igraPitanjaTable.$inferSelect;
+
 export const insertPogresniOdgovorSchema = createInsertSchema(pogresniOdgovoriTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMisijaDefinicijaSchema = createInsertSchema(misijaDefinicijaTable).omit({ id: true, createdAt: true });
 export const insertMisijaProgressSchema = createInsertSchema(misijaProgressTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertIgraPitanjeSchema = createInsertSchema(igraPitanjaTable).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertPogresniOdgovor = z.infer<typeof insertPogresniOdgovorSchema>;
 export type InsertMisijaDefinicija = z.infer<typeof insertMisijaDefinicijaSchema>;
 export type InsertMisijaProgress = z.infer<typeof insertMisijaProgressSchema>;
+export type InsertIgraPitanje = z.infer<typeof insertIgraPitanjeSchema>;

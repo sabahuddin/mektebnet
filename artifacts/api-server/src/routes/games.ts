@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { igraPitanjaTable, MEDENA_KATEGORIJE, type MedenaKategorija } from "@workspace/db";
+import { and, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { pickGradoviQuestions, pickZastaveQuestions, type KvizPitanjeFlag } from "../data/zemlje.js";
 
@@ -926,5 +927,81 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
 // Pitanja sada generira /games/start server-side i čuva ih u game_sessions
 // (BEZ izlaganja `answer` polja klijentu). To zatvara cheat surface gdje je
 // napadač mogao paralelno zovnuti /quiz-questions i pročitati tačne odgovore.
+
+// === MEDENA STAZA — public endpoint za pitanja =================================
+// GET /api/games/medena/pitanja
+// Vraća array od 8 pitanja: za svaku od MEDENA_KATEGORIJE jedno random aktivno
+// pitanje. Redoslijed kategorija je randomiziran po runi (Fisher-Yates).
+// Ako neka kategorija nema nijedno aktivno pitanje, ona se izostavlja iz outputa
+// (degraded mode — bolje vratiti 7 nego 0). Klijent prikaže koliko god dođe.
+router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (_req: Request, res: Response) => {
+  try {
+    type Output = {
+      id: number;
+      kategorija: MedenaKategorija;
+      pitanje: string;
+      opcije: string[];
+      correctIndex: number;
+      objasnjenje: string;
+    };
+    const rezultat: Output[] = [];
+
+    // Fisher-Yates shuffle kategorija
+    const kategorije = [...MEDENA_KATEGORIJE];
+    for (let i = kategorije.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = kategorije[i]!;
+      kategorije[i] = kategorije[j]!;
+      kategorije[j] = tmp;
+    }
+
+    // Za svaku kategoriju povuci jedno random aktivno pitanje
+    const prazneKategorije: string[] = [];
+    for (const kat of kategorije) {
+      const rows = await db
+        .select({
+          id: igraPitanjaTable.id,
+          kategorija: igraPitanjaTable.kategorija,
+          pitanje: igraPitanjaTable.pitanje,
+          opcije: igraPitanjaTable.opcije,
+          correctIndex: igraPitanjaTable.correctIndex,
+          objasnjenje: igraPitanjaTable.objasnjenje,
+        })
+        .from(igraPitanjaTable)
+        .where(and(eq(igraPitanjaTable.kategorija, kat), eq(igraPitanjaTable.aktivno, true)))
+        .orderBy(sql`random()`)
+        .limit(1);
+
+      if (rows.length > 0 && rows[0]) {
+        rezultat.push({
+          id: rows[0].id,
+          kategorija: rows[0].kategorija as MedenaKategorija,
+          pitanje: rows[0].pitanje,
+          opcije: rows[0].opcije,
+          correctIndex: rows[0].correctIndex,
+          objasnjenje: rows[0].objasnjenje,
+        });
+      } else {
+        prazneKategorije.push(kat);
+      }
+    }
+
+    // Igra zahtjeva tačno 8 pitanja (po jedno iz svake kategorije).
+    // Ako ijedna kategorija nema aktivno pitanje, vraćamo 503 — ne degradiramo igru.
+    if (prazneKategorije.length > 0 || rezultat.length !== MEDENA_KATEGORIJE.length) {
+      res.status(503).json({
+        error: "no_questions",
+        message: `Banka pitanja je nepotpuna. Nedostaju aktivna pitanja u kategorijama: ${prazneKategorije.join(", ") || "?"}. Admin treba dodati pitanja.`,
+        prazneKategorije,
+      });
+      return;
+    }
+
+    res.json({ pitanja: rezultat });
+  } catch (err) {
+    console.error("[games/medena/pitanja] greška:", err);
+    res.status(500).json({ error: "Greška pri učitavanju pitanja" });
+  }
+});
 
 export default router;

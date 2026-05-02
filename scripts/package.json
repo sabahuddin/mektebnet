@@ -5,13 +5,15 @@
   "type": "module",
   "exports": {
     "./seed-demo": "./src/seed-demo.ts",
-    "./clear-demo": "./src/clear-demo.ts"
+    "./clear-demo": "./src/clear-demo.ts",
+    "./seed-medena-pitanja": "./src/seed-medena-pitanja.ts"
   },
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-lessons": "tsx ./src/seed-lessons.ts",
     "seed-admin": "tsx ./src/seed-admin.ts",
     "seed-demo": "tsx ./src/seed-demo.ts",
+    "seed-medena-pitanja": "tsx ./src/seed-medena-pitanja.ts",
     "clear-demo": "tsx ./src/clear-demo.ts",
     "prod-reset": "tsx ./src/prod-reset.ts",
     "import-content": "tsx ./src/import-content.ts",
