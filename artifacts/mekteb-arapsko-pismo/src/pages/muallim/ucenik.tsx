@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +73,21 @@ interface H5PPrilogInfo {
   lekcijaNivo: number | null;
 }
 
+interface RoditeljVeza {
+  id: number;
+  displayName: string;
+  username: string;
+  status: string;
+  approvedAt: string | null;
+}
+
+interface KreiraniRoditelj {
+  id: number;
+  displayName: string;
+  username: string;
+  generatedPassword: string;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   prisutan: "bg-emerald-100 text-emerald-700",
   odsutan: "bg-red-100 text-red-700",
@@ -113,6 +128,14 @@ export default function UcenikPage() {
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [copiedPass, setCopiedPass] = useState(false);
 
+  // Roditelji
+  const [roditelji, setRoditelji] = useState<RoditeljVeza[]>([]);
+  const [showRoditeljForm, setShowRoditeljForm] = useState(false);
+  const [novoRoditeljIme, setNovoRoditeljIme] = useState("");
+  const [savingRoditelj, setSavingRoditelj] = useState(false);
+  const [kreiraniRoditelj, setKreiraniRoditelj] = useState<KreiraniRoditelj | null>(null);
+  const [copiedRoditelj, setCopiedRoditelj] = useState(false);
+
   useEffect(() => {
     if (!token || !id) return;
     const ucenikId = parseInt(id);
@@ -124,7 +147,9 @@ export default function UcenikPage() {
       apiRequest<{ rezultati: KvizRezultat[] }>("GET", `/muallim/ucenik-rezultati/${ucenikId}`, undefined, token).catch(() => ({ rezultati: [] })),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<{ pokusaji: H5PPokusaj[]; prilozi: H5PPrilogInfo[] }>("GET", `/muallim/ucenik/${ucenikId}/h5p-pokusaji`, undefined, token).catch(() => ({ pokusaji: [], prilozi: [] })),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData]) => {
+      apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, rod]) => {
+      setRoditelji((rod as RoditeljVeza[]) || []);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
       setUcenik(found || null);
       setOcjene(oc);
@@ -195,6 +220,46 @@ export default function UcenikPage() {
       await navigator.clipboard.writeText(newPassword);
       setCopiedPass(true);
       setTimeout(() => setCopiedPass(false), 2000);
+    } catch {}
+  }
+
+  async function addRoditelj() {
+    if (!token || !id || !novoRoditeljIme.trim()) {
+      toast({ title: "Unesite ime roditelja", variant: "destructive" });
+      return;
+    }
+    setSavingRoditelj(true);
+    try {
+      const created = await apiRequest<KreiraniRoditelj>(
+        "POST",
+        `/muallim/ucenici/${parseInt(id)}/roditelj`,
+        { displayName: novoRoditeljIme.trim() },
+        token,
+      );
+      setKreiraniRoditelj(created);
+      setRoditelji(prev => [...prev, {
+        id: created.id,
+        displayName: created.displayName,
+        username: created.username,
+        status: "approved",
+        approvedAt: new Date().toISOString(),
+      }]);
+      setNovoRoditeljIme("");
+      toast({ title: "Roditelj kreiran!", description: "Proslijedi kredencijale roditelju." });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće kreirati roditelja", variant: "destructive" });
+    } finally {
+      setSavingRoditelj(false);
+    }
+  }
+
+  async function copyRoditeljKredencijale() {
+    if (!kreiraniRoditelj) return;
+    try {
+      const txt = `Roditelj: ${kreiraniRoditelj.displayName}\nKorisničko ime: ${kreiraniRoditelj.username}\nLozinka: ${kreiraniRoditelj.generatedPassword}`;
+      await navigator.clipboard.writeText(txt);
+      setCopiedRoditelj(true);
+      setTimeout(() => setCopiedRoditelj(false), 2000);
     } catch {}
   }
 
@@ -273,6 +338,19 @@ export default function UcenikPage() {
                   <KeyRound className="w-4 h-4" /> Šifra
                 </Button>
                 <Button
+                  onClick={() => { setShowRoditeljForm(s => !s); setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
+                  variant="outline"
+                  className="rounded-xl font-bold text-sm flex items-center gap-1.5"
+                  data-testid="btn-toggle-roditelji"
+                >
+                  <Users className="w-4 h-4" /> Roditelji
+                  {roditelji.length > 0 && (
+                    <span className="ml-0.5 inline-flex items-center justify-center bg-primary/10 text-primary rounded-full text-[10px] font-extrabold w-4 h-4">
+                      {roditelji.length}
+                    </span>
+                  )}
+                </Button>
+                <Button
                   onClick={() => setLocation(`/muallim/izvjestaj/ucenik/${ucenik.id}`)}
                   variant="outline"
                   className="rounded-xl font-bold text-sm flex items-center gap-1.5"
@@ -343,6 +421,122 @@ export default function UcenikPage() {
                       >
                         {copiedPass ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                         {copiedPass ? "Kopirano" : "Kopiraj"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {showRoditeljForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="bg-white border border-border/50 rounded-2xl p-5 mb-6 shadow-sm"
+                data-testid="form-roditelji"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-extrabold text-foreground flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" /> Roditelji za {ucenik.displayName}
+                  </h3>
+                  <button
+                    onClick={() => { setShowRoditeljForm(false); setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
+                    className="p-1 hover:bg-muted rounded-lg"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Postojeći roditelji */}
+                {roditelji.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-muted-foreground mb-2">Povezani roditelji ({roditelji.length}):</p>
+                    <div className="space-y-1.5">
+                      {roditelji.map(r => (
+                        <div key={r.id} className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2 text-sm">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <span className="font-bold text-foreground truncate">{r.displayName}</span>
+                            <span className="font-mono text-xs text-muted-foreground shrink-0">{r.username}</span>
+                          </div>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                            r.status === "approved" ? "bg-emerald-100 text-emerald-700" :
+                            r.status === "pending" ? "bg-amber-100 text-amber-700" :
+                            "bg-gray-100 text-gray-700"
+                          }`}>
+                            {r.status === "approved" ? "Odobren" : r.status === "pending" ? "Na čekanju" : r.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mb-4">Učenik još nema povezanog roditelja.</p>
+                )}
+
+                {/* Forma za novog */}
+                {!kreiraniRoditelj ? (
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground mb-2">Dodaj novi nalog za roditelja:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <input
+                        type="text"
+                        value={novoRoditeljIme}
+                        onChange={e => setNovoRoditeljIme(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" && novoRoditeljIme.trim() && !savingRoditelj) addRoditelj(); }}
+                        placeholder="Ime i prezime roditelja"
+                        className="flex-1 min-w-[200px] border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        data-testid="input-roditelj-ime"
+                      />
+                      <Button
+                        onClick={addRoditelj}
+                        disabled={savingRoditelj || !novoRoditeljIme.trim()}
+                        className="rounded-xl font-bold flex items-center gap-1.5"
+                        data-testid="btn-dodaj-roditelja"
+                      >
+                        {savingRoditelj ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                        Dodaj
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Kreiraće se nalog s automatskom šifrom <strong>Mekteb####</strong>. Roditelj se odmah povezuje s učenikom i NE ulazi u kvotu licenci.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                    <h4 className="font-extrabold text-blue-900 mb-2 flex items-center gap-1.5">
+                      <Check className="w-4 h-4" /> Roditelj kreiran!
+                    </h4>
+                    <p className="text-blue-800 text-xs mb-3">Proslijedi ove podatke roditelju:</p>
+                    <div className="bg-white rounded-lg p-3 space-y-1.5 text-sm mb-3">
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Ime:</span>
+                        <span className="font-bold text-foreground">{kreiraniRoditelj.displayName}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Korisničko ime:</span>
+                        <span className="font-mono font-bold text-foreground">{kreiraniRoditelj.username}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Lozinka:</span>
+                        <span className="font-mono font-bold text-foreground">{kreiraniRoditelj.generatedPassword}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        variant="outline"
+                        onClick={copyRoditeljKredencijale}
+                        className="rounded-xl flex items-center gap-1.5"
+                        data-testid="btn-copy-roditelj"
+                      >
+                        {copiedRoditelj ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                        {copiedRoditelj ? "Kopirano!" : "Kopiraj kredencijale"}
+                      </Button>
+                      <Button
+                        onClick={() => { setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
+                        className="rounded-xl flex items-center gap-1.5"
+                      >
+                        <PlusCircle className="w-4 h-4" /> Dodaj još jednog
                       </Button>
                     </div>
                   </div>

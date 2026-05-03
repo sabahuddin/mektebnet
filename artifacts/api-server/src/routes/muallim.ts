@@ -29,6 +29,49 @@ import { sendPushNotification } from "../lib/push.js";
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
 
+// ── KORISNIK HELPERI ────────────────────────────────────────────────────────
+// Kreiranje korisnika (učenik/roditelj) sa retry-em na koliziju username-a.
+// Koriste se u POST /ucenici (single), POST /ucenici/bulk (više) i POST
+// /ucenici/:id/roditelj (postojeći učenik).
+
+type NewUserRow = typeof usersTable.$inferSelect;
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+function generateUsername(name: string) {
+  const firstName = name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "") || "korisnik";
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return { username: `${firstName}.${rand}`, rand };
+}
+
+function generateMektebPassword() {
+  return `Mekteb${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+async function insertWithUniqueUsername(
+  tx: Tx,
+  baseName: string,
+  passwordHash: string,
+  displayNameVal: string,
+  role: "ucenik" | "roditelj",
+): Promise<NewUserRow> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { username } = generateUsername(baseName);
+    try {
+      const [row] = await tx.insert(usersTable).values({
+        username,
+        passwordHash,
+        displayName: displayNameVal,
+        role,
+      }).returning();
+      return row;
+    } catch (e: any) {
+      const isUniqueViolation = e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
+      if (attempt === 4 || !isUniqueViolation) throw e;
+    }
+  }
+  throw new Error("USERNAME_COLLISION");
+}
+
 // Helper: pošalji in-app poruku svim odobrenim roditeljima datog
 // učenika. Email se NE šalje (in-app je dovoljno za ocjene/izostanke/
 // bedževe — vidi smjernice korisnika). Ne baca — sve greške se loguju.
@@ -219,47 +262,14 @@ router.post("/ucenici", async (req, res) => {
 
     const muallimId = req.user!.userId;
 
-    function generateUsername(name: string) {
-      const firstName = name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "") || "korisnik";
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      return { username: `${firstName}.${rand}`, rand };
-    }
-
-    const ucenikPass = password || `Mekteb${Math.floor(1000 + Math.random() * 9000)}`;
+    const ucenikPass = password || generateMektebPassword();
     const ucenikPasswordHash = await bcrypt.hash(ucenikPass, 10);
 
     let roditeljPass: string | null = null;
     let roditeljPasswordHash: string | null = null;
     if (roditeljZahtjev) {
-      roditeljPass = `Mekteb${Math.floor(1000 + Math.random() * 9000)}`;
+      roditeljPass = generateMektebPassword();
       roditeljPasswordHash = await bcrypt.hash(roditeljPass, 10);
-    }
-
-    type NewUserRow = typeof usersTable.$inferSelect;
-
-    async function insertWithUniqueUsername(
-      tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-      baseName: string,
-      passwordHash: string,
-      displayNameVal: string,
-      role: "ucenik" | "roditelj",
-    ): Promise<NewUserRow> {
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const { username } = generateUsername(baseName);
-        try {
-          const [row] = await tx.insert(usersTable).values({
-            username,
-            passwordHash,
-            displayName: displayNameVal,
-            role,
-          }).returning();
-          return row;
-        } catch (e: any) {
-          const isUniqueViolation = e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
-          if (attempt === 4 || !isUniqueViolation) throw e;
-        }
-      }
-      throw new Error("USERNAME_COLLISION");
     }
 
     const result = await db.transaction(async (tx) => {
@@ -319,52 +329,203 @@ router.post("/ucenici", async (req, res) => {
   }
 });
 
-// POST /api/muallim/ucenici/bulk - create multiple students at once
+// POST /api/muallim/ucenici/bulk - create multiple students at once,
+// optionally each with a parent.
+// Body shape (preferirano): { entries: Array<{ ucenik: string; roditelj?: string }>, grupaId? }
+// Back-compat: { imena: string[], grupaId? } — bez roditelja.
+// Roditelji NE ulaze u kvotu licenci.
 router.post("/ucenici/bulk", async (req, res) => {
   try {
-    const { imena, grupaId } = req.body as { imena: string[]; grupaId?: number };
-    if (!imena || !Array.isArray(imena) || imena.length === 0) {
-      res.status(400).json({ error: "Listu imena je obavezno poslati" });
+    const body = req.body as {
+      entries?: Array<{ ucenik?: string; roditelj?: string | null }>;
+      imena?: string[];
+      grupaId?: number;
+    };
+
+    let normalized: Array<{ ucenik: string; roditelj: string | null }> = [];
+    if (Array.isArray(body.entries) && body.entries.length > 0) {
+      normalized = body.entries
+        .map(e => ({
+          ucenik: (e?.ucenik || "").trim(),
+          roditelj: e?.roditelj ? String(e.roditelj).trim() : null,
+        }))
+        .filter(e => e.ucenik.length > 0)
+        .map(e => ({ ucenik: e.ucenik, roditelj: e.roditelj && e.roditelj.length > 0 ? e.roditelj : null }));
+    } else if (Array.isArray(body.imena) && body.imena.length > 0) {
+      normalized = body.imena
+        .map(n => ({ ucenik: (n || "").trim(), roditelj: null }))
+        .filter(e => e.ucenik.length > 0);
+    }
+
+    if (normalized.length === 0) {
+      res.status(400).json({ error: "Lista učenika je obavezna" });
       return;
     }
 
-    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, req.user!.userId));
+    const muallimId = req.user!.userId;
+    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
     const remaining = profil ? profil.licenceCount - profil.licencesUsed : 999;
-    if (imena.length > remaining) {
+    if (normalized.length > remaining) {
       res.status(403).json({ error: `Možete dodati još ${remaining} učenika (limit licenci)` });
       return;
     }
 
-    const results = [];
-    for (const ime of imena) {
-      const trimmed = ime.trim();
-      if (!trimmed) continue;
-      const firstName = trimmed.split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      const username = `${firstName}.${rand}`;
-      const pass = `Mekteb${rand}`;
-      const passwordHash = await bcrypt.hash(pass, 10);
+    const grupaId = body.grupaId;
 
-      const [newUser] = await db.insert(usersTable).values({
-        username, passwordHash, displayName: trimmed, role: "ucenik",
-      }).returning();
+    // Pre-hash sve lozinke izvan transakcije (bcrypt je sporo) — onda jedna
+    // transakcija po učeniku-paru da koliziju username-a hendlamo lokalno.
+    const prepared = await Promise.all(normalized.map(async (e) => {
+      const ucenikPass = generateMektebPassword();
+      const ucenikHash = await bcrypt.hash(ucenikPass, 10);
+      let roditeljPass: string | null = null;
+      let roditeljHash: string | null = null;
+      if (e.roditelj) {
+        roditeljPass = generateMektebPassword();
+        roditeljHash = await bcrypt.hash(roditeljPass, 10);
+      }
+      return { ...e, ucenikPass, ucenikHash, roditeljPass, roditeljHash };
+    }));
 
-      await db.insert(ucenikProfiliTable).values({
-        userId: newUser.id, muallimId: req.user!.userId, grupaId: grupaId || null,
+    const results: Array<{
+      id: number; displayName: string; username: string; generatedPassword: string;
+      roditelj: { id: number; displayName: string; username: string; generatedPassword: string } | null;
+    }> = [];
+
+    let kreiranoUcenika = 0;
+    for (const p of prepared) {
+      const created = await db.transaction(async (tx) => {
+        const newUcenik = await insertWithUniqueUsername(tx, p.ucenik, p.ucenikHash, p.ucenik, "ucenik");
+        await tx.insert(ucenikProfiliTable).values({
+          userId: newUcenik.id, muallimId, grupaId: grupaId || null,
+        });
+
+        let newRoditelj: NewUserRow | null = null;
+        if (p.roditelj && p.roditeljHash) {
+          newRoditelj = await insertWithUniqueUsername(tx, p.roditelj, p.roditeljHash, p.roditelj, "roditelj");
+          await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
+          await tx.insert(roditeljUcenikTable).values({
+            roditeljId: newRoditelj.id,
+            ucenikId: newUcenik.id,
+            status: "approved",
+            approvedAt: new Date(),
+            approvedBy: muallimId,
+          });
+        }
+        return { newUcenik, newRoditelj };
       });
 
-      results.push({ id: newUser.id, displayName: trimmed, username, generatedPassword: pass });
+      kreiranoUcenika++;
+      results.push({
+        id: created.newUcenik.id,
+        displayName: created.newUcenik.displayName,
+        username: created.newUcenik.username,
+        generatedPassword: p.ucenikPass,
+        roditelj: created.newRoditelj && p.roditeljPass
+          ? {
+              id: created.newRoditelj.id,
+              displayName: created.newRoditelj.displayName,
+              username: created.newRoditelj.username,
+              generatedPassword: p.roditeljPass,
+            }
+          : null,
+      });
     }
 
-    if (profil && results.length > 0) {
+    if (profil && kreiranoUcenika > 0) {
       await db.update(muallimProfiliTable)
-        .set({ licencesUsed: profil.licencesUsed + results.length })
-        .where(eq(muallimProfiliTable.userId, req.user!.userId));
+        .set({ licencesUsed: profil.licencesUsed + kreiranoUcenika })
+        .where(eq(muallimProfiliTable.userId, muallimId));
     }
 
     res.status(201).json(results);
+  } catch (err: any) {
+    console.error("[POST /muallim/ucenici/bulk]", err);
+    if (err?.message === "USERNAME_COLLISION") {
+      res.status(409).json({ error: "Nije moguće generisati jedinstveno korisničko ime — pokušajte ponovo" });
+      return;
+    }
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/ucenici/:id/roditelji — lista roditelja postojećeg učenika.
+router.get("/ucenici/:id/roditelji", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const muallimId = req.user!.userId;
+
+    // Provjera vlasništva — učenik mora pripadati ovom muallimu.
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+    if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
+
+    const veze = await db
+      .select({
+        id: usersTable.id,
+        displayName: usersTable.displayName,
+        username: usersTable.username,
+        status: roditeljUcenikTable.status,
+        approvedAt: roditeljUcenikTable.approvedAt,
+      })
+      .from(roditeljUcenikTable)
+      .innerJoin(usersTable, eq(usersTable.id, roditeljUcenikTable.roditeljId))
+      .where(eq(roditeljUcenikTable.ucenikId, ucenikId))
+      .orderBy(asc(roditeljUcenikTable.id));
+
+    res.json(veze);
   } catch (err) {
-    console.error(err);
+    console.error("[GET /muallim/ucenici/:id/roditelji]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/ucenici/:id/roditelj — kreira roditelja za POSTOJEĆEG
+// učenika i odmah ga povezuje (status='approved'). Roditelj NE ulazi u kvotu.
+// Body: { displayName: string }
+router.post("/ucenici/:id/roditelj", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const muallimId = req.user!.userId;
+    const displayName = String((req.body?.displayName ?? "")).trim();
+
+    if (!displayName) {
+      res.status(400).json({ error: "Ime roditelja je obavezno" });
+      return;
+    }
+
+    // Provjera vlasništva
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+    if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
+
+    const roditeljPass = generateMektebPassword();
+    const roditeljHash = await bcrypt.hash(roditeljPass, 10);
+
+    const result = await db.transaction(async (tx) => {
+      const newRoditelj = await insertWithUniqueUsername(tx, displayName, roditeljHash, displayName, "roditelj");
+      await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
+      await tx.insert(roditeljUcenikTable).values({
+        roditeljId: newRoditelj.id,
+        ucenikId,
+        status: "approved",
+        approvedAt: new Date(),
+        approvedBy: muallimId,
+      });
+      return newRoditelj;
+    });
+
+    res.status(201).json({
+      id: result.id,
+      displayName: result.displayName,
+      username: result.username,
+      generatedPassword: roditeljPass,
+    });
+  } catch (err: any) {
+    console.error("[POST /muallim/ucenici/:id/roditelj]", err);
+    if (err?.message === "USERNAME_COLLISION") {
+      res.status(409).json({ error: "Nije moguće generisati jedinstveno korisničko ime — pokušajte ponovo" });
+      return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });

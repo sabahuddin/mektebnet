@@ -31,6 +31,12 @@ interface CreatedUcenik {
   displayName: string;
   username: string;
   generatedPassword: string;
+  roditelj?: {
+    id: number;
+    displayName: string;
+    username: string;
+    generatedPassword: string;
+  } | null;
 }
 
 export default function GrupaPage() {
@@ -83,17 +89,33 @@ export default function GrupaPage() {
     }).catch(() => {});
   }
 
+  // Parsira textarea: jedan red = jedan učenik. Opciono "Učenik | Roditelj"
+  // (pipe odvaja roditelja). Vraća strukturirane entries.
+  function parseBulkEntries(text: string) {
+    return text.split("\n").map(line => {
+      const [u, r] = line.split("|");
+      return {
+        ucenik: (u || "").trim(),
+        roditelj: r ? r.trim() : null,
+      };
+    }).filter(e => e.ucenik.length > 0);
+  }
+
   async function handleBulkAdd() {
     if (!token || !bulkNames.trim()) return;
     setBulkLoading(true);
     try {
-      const imena = bulkNames.split("\n").map(n => n.trim()).filter(Boolean);
-      if (imena.length === 0) { toast({ title: "Unesite barem jedno ime" }); return; }
+      const entries = parseBulkEntries(bulkNames);
+      if (entries.length === 0) { toast({ title: "Unesite barem jedno ime" }); return; }
       const results = await apiRequest<CreatedUcenik[]>("POST", "/muallim/ucenici/bulk", {
-        imena, grupaId
+        entries, grupaId
       }, token);
       setCreatedStudents(results);
-      toast({ title: `${results.length} učenika dodano!` });
+      const sRoditelja = results.filter(r => r.roditelj).length;
+      toast({
+        title: `${results.length} učenika dodano!`,
+        description: sRoditelja > 0 ? `${sRoditelja} sa nalogom za roditelja` : undefined,
+      });
       refreshStudents();
     } catch (err: any) {
       toast({ title: "Greška", description: err?.message || "Neuspješno dodavanje", variant: "destructive" });
@@ -283,14 +305,25 @@ export default function GrupaPage() {
               <div>
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
                   <p className="font-bold text-emerald-800 mb-3">{createdStudents.length} učenika uspješno kreirano!</p>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {createdStudents.map(s => (
-                      <div key={s.id} className="bg-white rounded-lg p-3 flex items-center justify-between text-sm border border-emerald-100">
-                        <div>
-                          <span className="font-bold text-foreground">{s.displayName}</span>
-                          <span className="text-muted-foreground ml-2 font-mono text-xs">{s.username}</span>
+                      <div key={s.id} className="space-y-1">
+                        <div className="bg-white rounded-lg p-3 flex items-center justify-between text-sm border border-emerald-100">
+                          <div>
+                            <span className="font-bold text-foreground">Učenik: {s.displayName}</span>
+                            <span className="text-muted-foreground ml-2 font-mono text-xs">{s.username}</span>
+                          </div>
+                          <span className="font-mono font-bold text-primary">{s.generatedPassword}</span>
                         </div>
-                        <span className="font-mono font-bold text-primary">{s.generatedPassword}</span>
+                        {s.roditelj && (
+                          <div className="bg-blue-50 rounded-lg p-3 flex items-center justify-between text-sm border border-blue-200 ml-4">
+                            <div>
+                              <span className="font-bold text-blue-900">Roditelj: {s.roditelj.displayName}</span>
+                              <span className="text-blue-700/70 ml-2 font-mono text-xs">{s.roditelj.username}</span>
+                            </div>
+                            <span className="font-mono font-bold text-blue-700">{s.roditelj.generatedPassword}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -305,19 +338,33 @@ export default function GrupaPage() {
               </div>
             ) : (
               <div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Unesite imena učenika, svako ime u novi red:
+                <p className="text-sm text-muted-foreground mb-2">
+                  Unesite imena učenika, svako u novi red. Ako želite kreirati i nalog za roditelja,
+                  upišite ga iza znaka <code className="bg-muted px-1.5 py-0.5 rounded text-xs">|</code>:
                 </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 text-xs text-blue-900">
+                  <div className="font-bold mb-1">Primjer:</div>
+                  <code className="block whitespace-pre-wrap font-mono leading-relaxed">
+                    Amina Hasić | Senad Hasić{"\n"}Ahmed Begović{"\n"}Merjem Hadžić | Edina Hadžić
+                  </code>
+                  <p className="mt-2 text-blue-800">Roditelj ne ulazi u kvotu licenci.</p>
+                </div>
                 <textarea value={bulkNames} onChange={e => setBulkNames(e.target.value)}
-                  rows={8} placeholder={"Amina Hasić\nAhmed Begović\nMerjem Hadžić\n..."}
-                  className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20 resize-none font-medium" />
-                <p className="text-xs text-muted-foreground mt-1 mb-4">
-                  {bulkNames.split("\n").filter(n => n.trim()).length} imena uneseno
-                </p>
+                  rows={8} placeholder={"Amina Hasić | Senad Hasić\nAhmed Begović\nMerjem Hadžić | Edina Hadžić"}
+                  className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20 resize-none font-medium font-mono text-sm" />
+                {(() => {
+                  const entries = parseBulkEntries(bulkNames);
+                  const sRoditelja = entries.filter(e => e.roditelj).length;
+                  return (
+                    <p className="text-xs text-muted-foreground mt-1 mb-4">
+                      {entries.length} učenika{sRoditelja > 0 ? ` · ${sRoditelja} sa roditeljem` : ""}
+                    </p>
+                  );
+                })()}
                 <Button onClick={handleBulkAdd} disabled={bulkLoading || !bulkNames.trim()}
                   className="w-full rounded-xl font-bold py-3">
                   {bulkLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                  {bulkLoading ? "Kreiranje..." : `Kreiraj ${bulkNames.split("\n").filter(n => n.trim()).length} učenika`}
+                  {bulkLoading ? "Kreiranje..." : `Kreiraj ${parseBulkEntries(bulkNames).length} učenika`}
                 </Button>
               </div>
             )}
