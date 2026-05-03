@@ -118,10 +118,15 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   id: serial("id").primaryKey(),
   pitanje: text("pitanje").notNull(),
   opcije: jsonb("opcije").$type<string[]>().notNull().default([]),
-  // 0-based indeks tačnog odgovora unutar `opcije`. Za `vrsta='multiple'`
-  // (buduće), koristit će se `correctIndexes` jsonb (još nije dodano —
-  // ostavljamo `correctIndex` kao primarni; kasnije dodati nullable kolonu).
+  // 0-based indeks tačnog odgovora unutar `opcije`. Za `vrsta='single'` ovo je
+  // primarni izvor istine. Za `vrsta='multiple'` postavlja se na prvi indeks
+  // iz `correctIndexes` (radi back-compata sa starim read path-om).
   correctIndex: integer("correct_index").notNull().default(0),
+  // Lista 0-based indeksa tačnih odgovora za `vrsta='multiple'`. Za 'single'
+  // ostaje `null` (tada se koristi samo `correctIndex`). Frontend renderira
+  // multi-select kad ima više od jednog elementa; read path slaže
+  // `answer = opcije[i].join('|||')` za backward kompatibilnost sa kviz UI.
+  correctIndexes: jsonb("correct_indexes").$type<number[] | null>(),
   objasnjenje: text("objasnjenje").notNull().default(""),
   // URL slike (relativan, npr. /uploads/xyz.png). Renderira se iznad pitanja.
   slika: varchar("slika", { length: 500 }),

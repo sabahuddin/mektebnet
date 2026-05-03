@@ -32,6 +32,9 @@ lines.push("-- POKRENI: psql -U mekteb -d mekteb -f prod-restore-pitanja.sql");
 lines.push("");
 lines.push("BEGIN;");
 lines.push("");
+lines.push("-- 0. Dodaj correct_indexes kolonu ako fali (multi-select podrška)");
+lines.push("ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS correct_indexes jsonb;");
+lines.push("");
 lines.push("-- 1. Obriši stare veze za kvizove čije pitanje overwriteamo");
 lines.push("--    (regenerišu se na kraju kroz migraciju)");
 
@@ -50,17 +53,22 @@ lines.push(`);`);
 lines.push("");
 lines.push("-- 2. UPDATE JSONB pitanja iz seed-a (samo ako je seed verzija veća)");
 
+// Dollar-quoted strings su sigurni za bilo koji JSON sadržaj (single quotes,
+// backslashes, unicode...). Tag $jsonpit$ je odabran tako da se sigurno ne pojavi
+// u podacima (verifikacija ispod).
+const TAG = "$jsonpit$";
 for (const k of kvizoviSaPitanjima) {
   const pit = (k.pitanja ?? k.questions ?? []) as unknown[];
-  const json = JSON.stringify(pit).replace(/'/g, "''");
+  const json = JSON.stringify(pit);
+  if (json.includes(TAG)) throw new Error(`Tag konflikt u kvizu ${k.slug} — promijeni TAG`);
   const slugEscaped = k.slug.replace(/'/g, "''");
   lines.push(
-    `UPDATE kvizovi SET pitanja = '${json}'::jsonb WHERE slug = '${slugEscaped}' AND jsonb_array_length(pitanja) < ${pit.length};`
+    `UPDATE kvizovi SET pitanja = ${TAG}${json}${TAG}::jsonb WHERE slug = '${slugEscaped}' AND jsonb_array_length(pitanja) < ${pit.length};`
   );
 }
 
 lines.push("");
-lines.push("-- 3. Populiši pitanja_banka (ON CONFLICT — idempotent)");
+lines.push("-- 3. Populiši pitanja_banka (UPSERT — idempotent, hendla multi-select)");
 lines.push(`WITH unnested AS (
   SELECT
     k.id AS kviz_id,
@@ -75,34 +83,61 @@ prepared AS (
     kviz_id, redoslijed,
     regexp_replace(btrim(p->>'question'), '\\s+', ' ', 'g') AS pitanje,
     p->'options' AS opcije,
-    regexp_replace(btrim(p->>'answer'), '\\s+', ' ', 'g') AS answer_norm,
+    p->>'answer' AS answer_raw,
     COALESCE(p->>'explanation', '') AS objasnjenje,
     NULLIF(p->>'image', '') AS slika
   FROM unnested
   WHERE p->>'question' IS NOT NULL
     AND jsonb_typeof(p->'options') = 'array'
     AND jsonb_array_length(p->'options') > 0
+    AND p->>'answer' IS NOT NULL
+    AND length(btrim(p->>'answer')) > 0
 ),
-with_correct AS (
-  SELECT pp.*,
-    (SELECT (o.idx - 1)::int
-       FROM jsonb_array_elements_text(pp.opcije) WITH ORDINALITY o(opt, idx)
-      WHERE regexp_replace(btrim(o.opt), '\\s+', ' ', 'g') = pp.answer_norm
-      LIMIT 1) AS correct_index
-  FROM prepared pp
+-- Razdvoji odgovor po '|||' (multi-select), normalizuj svaki dio
+answer_parts AS (
+  SELECT pp.kviz_id, pp.redoslijed, pp.pitanje, pp.opcije, pp.objasnjenje, pp.slika,
+    array_remove(
+      array_agg(DISTINCT regexp_replace(btrim(part), '\\s+', ' ', 'g')) FILTER (WHERE length(btrim(part)) > 0),
+      NULL
+    ) AS parts
+  FROM prepared pp,
+       LATERAL unnest(string_to_array(pp.answer_raw, '|||')) AS s(part)
+  GROUP BY pp.kviz_id, pp.redoslijed, pp.pitanje, pp.opcije, pp.objasnjenje, pp.slika
+),
+-- Za svako pitanje, nađi indekse svih tačnih opcija
+with_indexes AS (
+  SELECT ap.*,
+    (SELECT array_agg((o.idx - 1)::int ORDER BY o.idx)
+     FROM jsonb_array_elements_text(ap.opcije) WITH ORDINALITY o(opt, idx)
+     WHERE regexp_replace(btrim(o.opt), '\\s+', ' ', 'g') = ANY(ap.parts)
+    ) AS correct_indexes
+  FROM answer_parts ap
 ),
 valid AS (
-  SELECT * FROM with_correct WHERE correct_index IS NOT NULL AND length(pitanje) > 0
+  SELECT * FROM with_indexes
+  WHERE correct_indexes IS NOT NULL
+    AND array_length(correct_indexes, 1) > 0
+    AND length(pitanje) > 0
 ),
 to_insert AS (
-  SELECT DISTINCT ON (pitanje) pitanje, opcije, correct_index, objasnjenje, slika
+  SELECT DISTINCT ON (pitanje)
+    pitanje, opcije, correct_indexes, objasnjenje, slika,
+    correct_indexes[1] AS correct_index,
+    CASE WHEN array_length(correct_indexes, 1) > 1 THEN 'multiple' ELSE 'single' END AS vrsta
   FROM valid
   ORDER BY pitanje, kviz_id, redoslijed
 )
-INSERT INTO pitanja_banka (pitanje, opcije, correct_index, objasnjenje, slika, vrsta)
-SELECT pitanje, opcije, correct_index, objasnjenje, slika, 'single'
+INSERT INTO pitanja_banka (pitanje, opcije, correct_index, correct_indexes, objasnjenje, slika, vrsta)
+SELECT pitanje, opcije, correct_index,
+  CASE WHEN vrsta = 'multiple' THEN to_jsonb(correct_indexes) ELSE NULL END,
+  objasnjenje, slika, vrsta
 FROM to_insert
-ON CONFLICT (pitanje) DO NOTHING;`);
+ON CONFLICT (pitanje) DO UPDATE SET
+  opcije = EXCLUDED.opcije,
+  correct_index = EXCLUDED.correct_index,
+  correct_indexes = EXCLUDED.correct_indexes,
+  vrsta = EXCLUDED.vrsta,
+  updated_at = now();`);
 
 lines.push("");
 lines.push("-- 4. Generiši veze kviz↔pitanje");

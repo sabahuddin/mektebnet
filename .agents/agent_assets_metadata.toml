@@ -671,3 +671,9 @@ id = "hdzf4hSFJYwNea1Zz43Xo"
 uri = "file://docs/PROJECT.md"
 type = "text"
 title = "Mekteb.net — Dokumentacija projekta (PROJECT.md)"
+
+[[outputs]]
+id = "lr69cphhS70fYOOoj5zXU"
+uri = "file://scripts/prod-restore-pitanja.tar.gz"
+type = "unspecified"
+title = "prod-restore-pitanja.tar.gz — SQL skripta za vraćanje pitanja"

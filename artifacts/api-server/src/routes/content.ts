@@ -230,32 +230,62 @@ router.get("/kvizovi/:slug", async (req, res) => {
     const [kviz] = await db.select().from(kvizoviTable).where(eq(kvizoviTable.slug, req.params.slug));
     if (!kviz) { res.status(404).json({ error: "Kviz nije pronađen" }); return; }
 
+    // STRATEGIJA: JSONB je primarni izvor istine za REDOSLIJED i za interaktivna
+    // pitanja (markWords, dragDrop, reorder, true_false, ...). Banka pitanja sadrži
+    // samo standardna single/multiple-choice pitanja. Za svako JSONB pitanje koje
+    // ima match u banci (po normalizovanom tekstu), koristi se banka verzija
+    // (admin može uređivati u banci). Pitanja koja nisu u banci se vraćaju kakva
+    // jesu iz JSONB-a (legacy/interactive).
+    const jsonbPitanja = Array.isArray(kviz.pitanja) ? (kviz.pitanja as Record<string, unknown>[]) : [];
+
     const linked = await db
       .select({
         pitanje: pitanjaBankaTable.pitanje,
         opcije: pitanjaBankaTable.opcije,
         correctIndex: pitanjaBankaTable.correctIndex,
+        correctIndexes: pitanjaBankaTable.correctIndexes,
+        vrsta: pitanjaBankaTable.vrsta,
         objasnjenje: pitanjaBankaTable.objasnjenje,
         slika: pitanjaBankaTable.slika,
-        redoslijed: kvizPitanjaTable.redoslijed,
       })
       .from(kvizPitanjaTable)
       .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
-      .where(eq(kvizPitanjaTable.kvizId, kviz.id))
-      .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
+      .where(eq(kvizPitanjaTable.kvizId, kviz.id));
 
-    if (linked.length > 0) {
-      const pitanja = linked.map((p) => {
-        const opcije = Array.isArray(p.opcije) ? (p.opcije as string[]) : [];
-        const idx = Math.min(Math.max(0, p.correctIndex ?? 0), Math.max(0, opcije.length - 1));
-        return {
-          question: p.pitanje,
-          options: opcije,
-          answer: opcije[idx] ?? "",
-          explanation: p.objasnjenje || undefined,
-          image: p.slika || undefined,
-        };
+    const norm = (s: string) => s.trim().replace(/\s+/g, " ");
+    const bankaMap = new Map(linked.map((p) => [norm(p.pitanje), p]));
+
+    const fromBank = (p: typeof linked[number]) => {
+      const opcije = Array.isArray(p.opcije) ? (p.opcije as string[]) : [];
+      const idxs = Array.isArray(p.correctIndexes) && p.correctIndexes.length > 0
+        ? (p.correctIndexes as number[])
+        : [Math.min(Math.max(0, p.correctIndex ?? 0), Math.max(0, opcije.length - 1))];
+      const answer = idxs.map((i) => opcije[i] ?? "").filter((s) => s.length > 0).join("|||");
+      return {
+        question: p.pitanje,
+        options: opcije,
+        answer,
+        explanation: p.objasnjenje || undefined,
+        image: p.slika || undefined,
+      };
+    };
+
+    if (jsonbPitanja.length > 0) {
+      const pitanja = jsonbPitanja.map((p) => {
+        const q = typeof p?.question === "string" ? p.question : null;
+        if (q) {
+          const fromBankRow = bankaMap.get(norm(q));
+          if (fromBankRow) return fromBank(fromBankRow);
+        }
+        return p; // interaktivna pitanja (markWords/dragDrop/reorder) ostaju kako jesu
       });
+      res.json({ ...kviz, pitanja });
+      return;
+    }
+
+    // Edge case: nema JSONB-a, ali postoje veze u banci → vrati banku po redoslijedu insert-a
+    if (linked.length > 0) {
+      const pitanja = linked.map(fromBank);
       res.json({ ...kviz, pitanja });
       return;
     }

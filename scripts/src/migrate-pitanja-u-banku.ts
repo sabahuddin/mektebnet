@@ -68,48 +68,60 @@ async function main() {
       }
 
       const pitanjeText = normalize(p.question);
-      const correctIndex = p.options.findIndex(
-        (o) => normalize(o) === normalize(p.answer)
-      );
-      if (correctIndex < 0) {
+
+      // Multi-select: odgovor ima '|||' separator. Split, traži svaku opciju.
+      const answerParts = (p.answer ?? "").includes("|||")
+        ? p.answer.split("|||").map(normalize).filter((s) => s.length > 0)
+        : [normalize(p.answer ?? "")];
+
+      const correctIndexes: number[] = [];
+      for (const part of answerParts) {
+        const idx = p.options.findIndex((o) => normalize(o) === part);
+        if (idx >= 0 && !correctIndexes.includes(idx)) correctIndexes.push(idx);
+      }
+
+      if (correctIndexes.length === 0) {
         console.warn(
           `  [${kviz.slug}] pitanje "${pitanjeText.slice(0, 40)}..." — odgovor "${p.answer}" nije u opcijama, preskačem`
         );
         continue;
       }
 
-      // 1. UPSERT u banku — ako tekst već postoji, vrati postojeći id
+      const isMulti = correctIndexes.length > 1;
+      const correctIndex = correctIndexes[0]!;
+
+      // 1. UPSERT u banku — ako tekst već postoji, ažuriraj correct_indexes/vrsta
+      // (ovo popravlja stare redove koji su bili spremljeni kao 'single' iako su multi).
       const inserted = await db
         .insert(pitanjaBankaTable)
         .values({
           pitanje: pitanjeText,
           opcije: p.options,
           correctIndex,
+          correctIndexes: isMulti ? correctIndexes : null,
           objasnjenje: p.explanation ?? "",
           slika: p.image ?? null,
-          vrsta: "single",
+          vrsta: isMulti ? "multiple" : "single",
         })
-        .onConflictDoNothing({ target: pitanjaBankaTable.pitanje })
+        .onConflictDoUpdate({
+          target: pitanjaBankaTable.pitanje,
+          set: {
+            opcije: p.options,
+            correctIndex,
+            correctIndexes: isMulti ? correctIndexes : null,
+            vrsta: isMulti ? "multiple" : "single",
+            updatedAt: new Date(),
+          },
+        })
         .returning({ id: pitanjaBankaTable.id });
 
-      let pitanjeId: number;
-      if (inserted.length > 0) {
-        pitanjeId = inserted[0]!.id;
-        bankaInserted++;
-      } else {
-        // Već postoji — selektuj
-        const existing = await db
-          .select({ id: pitanjaBankaTable.id })
-          .from(pitanjaBankaTable)
-          .where(sql`${pitanjaBankaTable.pitanje} = ${pitanjeText}`)
-          .limit(1);
-        if (existing.length === 0) {
-          console.warn(`  [${kviz.slug}] FAIL — ON CONFLICT ali nema postojećeg reda?`);
-          continue;
-        }
-        pitanjeId = existing[0]!.id;
-        bankaSkipped++;
+      // onConflictDoUpdate uvijek vraća red (insert ili update)
+      if (inserted.length === 0) {
+        console.warn(`  [${kviz.slug}] FAIL — UPSERT nije vratio red?`);
+        continue;
       }
+      const pitanjeId = inserted[0]!.id;
+      bankaInserted++; // brojimo sve obrađene (insert+update zajedno)
 
       // 2. INSERT veza kviz↔pitanje
       const linked = await db
