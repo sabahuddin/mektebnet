@@ -89,7 +89,7 @@ export default defineConfig({
         // registruje — ne smije ga Workbox uvući u svoj precache niti rute.
         globIgnores: ["**/OneSignalSDKWorker.js"],
         navigateFallback: `${basePath.replace(/\/$/, "")}/offline.html`,
-        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /OneSignalSDKWorker\.js$/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/vaktija\//, /^\/edu\//, /OneSignalSDKWorker\.js$/],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: false,
