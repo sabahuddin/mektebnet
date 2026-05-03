@@ -613,6 +613,69 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
 }
 
 // ──────────────────────────────────────────────────
+// Vezani kvizovi za ovu lekciju (kvizovi.lekcija_id = lekcijaId)
+// Sakriva se ako nema vezanih kvizova (graceful degradation).
+// ──────────────────────────────────────────────────
+function VezaniKvizovi({ lekcijaId }: { lekcijaId: number }) {
+  const [, setLocation] = useLocation();
+  const [kvizovi, setKvizovi] = useState<Array<{
+    id: number;
+    slug: string;
+    naslov: string;
+    opis?: string | null;
+    pitanjaCount?: number;
+  }> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest<any[]>("GET", `/content/kvizovi?lekcijaId=${lekcijaId}`)
+      .then(data => {
+        if (cancelled) return;
+        setKvizovi(Array.isArray(data) ? data : []);
+      })
+      .catch(() => { if (!cancelled) setKvizovi([]); });
+    return () => { cancelled = true; };
+  }, [lekcijaId]);
+
+  if (!kvizovi || kvizovi.length === 0) return null;
+
+  return (
+    <div className="mb-6 rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-emerald-50 p-5 shadow-sm" data-testid="vezani-kvizovi">
+      <div className="flex items-center gap-2 mb-3">
+        <HelpCircle className="w-5 h-5 text-teal-700" />
+        <h3 className="text-base font-extrabold text-teal-900">Kvizovi za ovu lekciju</h3>
+      </div>
+      <div className="flex flex-col gap-2">
+        {kvizovi.map(k => (
+          <button
+            key={k.id}
+            type="button"
+            onClick={() => setLocation(`/kvizovi/${k.slug}`)}
+            className="w-full text-left bg-white hover:bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 transition-colors"
+            data-testid={`vezani-kviz-${k.slug}`}
+          >
+            <div className="min-w-0">
+              <p className="font-bold text-foreground truncate">{k.naslov}</p>
+              {k.opis ? (
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{k.opis}</p>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {typeof k.pitanjaCount === "number" && k.pitanjaCount > 0 && (
+                <span className="text-xs font-bold text-teal-800 bg-teal-100 rounded-full px-2 py-0.5">
+                  {k.pitanjaCount} {k.pitanjaCount === 1 ? "pitanje" : "pitanja"}
+                </span>
+              )}
+              <ChevronRight className="w-4 h-4 text-teal-600" />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────
 // AI-generated lekcija kviz accordion
 // ──────────────────────────────────────────────────
 function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed, alreadyPassed, defaultOpen }: {
@@ -2515,6 +2578,9 @@ export default function IlmihalLekcijaPage() {
             onH5pCelebration={setCelebration}
           />
         )}
+
+        {/* Vezani kvizovi (kvizovi.lekcija_id = lekcija.id) — sakriveno ako nema rezultata */}
+        <VezaniKvizovi lekcijaId={lekcija.id} />
 
         {/* Complete button + anti-cheat gate UI */}
         {user && (

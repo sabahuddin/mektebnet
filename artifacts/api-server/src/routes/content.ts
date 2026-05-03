@@ -173,7 +173,15 @@ router.get("/ilmihal/:slug", async (req, res) => {
 // GET /api/content/kvizovi?nivo=1&modul=ilmihal
 router.get("/kvizovi", async (req, res) => {
   try {
-    const { nivo, modul } = req.query;
+    const { nivo, modul, lekcijaId } = req.query;
+    const lekcijaIdNum = lekcijaId !== undefined ? parseInt(lekcijaId as string, 10) : undefined;
+    // Ako klijent pošalje lekcijaId koji nije validan integer, vrati praznu
+    // listu umjesto svih kvizova — sprječava nehotičan "fall-through" na
+    // nefiltriranu listu kad frontend pogriješi sa parametrom.
+    if (lekcijaId !== undefined && (lekcijaIdNum === undefined || !Number.isFinite(lekcijaIdNum))) {
+      res.json([]);
+      return;
+    }
     // pitanjaCount: za migrirane kvizove pravi broj iz join tabele,
     // za legacy kvizove fallback na length JSONB-a. Frontend (kvizovi.tsx)
     // koristi ovo polje za prikaz "X pitanja" jer JSONB može biti prazan
@@ -196,6 +204,7 @@ router.get("/kvizovi", async (req, res) => {
     const filtered = result.filter(k => {
       if (nivo && k.nivo !== parseInt(nivo as string)) return false;
       if (modul && k.modul !== modul) return false;
+      if (lekcijaIdNum !== undefined && Number.isFinite(lekcijaIdNum) && k.lekcijaId !== lekcijaIdNum) return false;
       return true;
     }).map(k => ({
       ...k,
