@@ -1494,40 +1494,26 @@ export default function AdminPage() {
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <Globe className="w-5 h-5 text-purple-600" /> Posjete po državama
+                      <Globe className="w-5 h-5 text-purple-600" /> Posjete po državama (top 10)
                     </h3>
                     {analytics.posjetePoDrzavi.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={220}>
-                        <PieChart>
-                          <Pie data={analytics.posjetePoDrzavi} dataKey="broj" nameKey="country" cx="50%" cy="50%" outerRadius={80} label={({ country, percent }) => `${country} ${(percent * 100).toFixed(0)}%`}>
-                            {analytics.posjetePoDrzavi.map((_, i) => (
-                              <Cell key={i} fill={["#0d9488", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981", "#6366f1", "#ec4899"][i % 8]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o posjetama</p>
-                    )}
-                  </div>
-
-                  <div className="bg-white border border-border/50 rounded-2xl p-5">
-                    <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <Award className="w-5 h-5 text-amber-600" /> Uspješnost po kvizovima
-                    </h3>
-                    {analytics.kvizRezultati.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={analytics.kvizRezultati} layout="vertical">
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart
+                          data={[...analytics.posjetePoDrzavi]
+                            .sort((a, b) => b.broj - a.broj)
+                            .slice(0, 10)}
+                          layout="vertical"
+                          margin={{ left: 8, right: 24 }}
+                        >
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                          <YAxis dataKey="kvizNaslov" type="category" width={120} tick={{ fontSize: 10 }} />
-                          <Tooltip formatter={(value: number) => `${value}%`} />
-                          <Bar dataKey="prosjecniProcenat" fill="#f59e0b" radius={[0, 6, 6, 0]} name="Prosječni %" />
+                          <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <YAxis dataKey="country" type="category" width={80} tick={{ fontSize: 11 }} />
+                          <Tooltip formatter={(value: number) => `${value} posjeta`} />
+                          <Bar dataKey="broj" fill="#8b5cf6" radius={[0, 6, 6, 0]} name="Broj posjeta" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">Nema rezultata kvizova</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o posjetama</p>
                     )}
                   </div>
                 </div>

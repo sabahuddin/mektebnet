@@ -146,7 +146,29 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace">("pregled");
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace" | "izvjestaji" | "h5p" | "h5p-vodic" | "profil";
+  const [activeTab, setActiveTab] = useState<TabId>("pregled");
+
+  // Otvara odgovarajući tab kad URL sadrži ?tab=… (npr. iz Panel dropdown
+  // linka "Profil" → /muallim?tab=profil). Pokreće se na svakoj promjeni
+  // location-a da omogući in-app navigaciju iz header dropdown-a.
+  const [locationPath] = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab");
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","zadace","izvjestaji","h5p","h5p-vodic","profil"].includes(t)) {
+      setActiveTab(t as TabId);
+    }
+  }, [locationPath]);
+
+  // Inicijalizuj polje za uređivanje imena kad korisnik otvori Profil tab —
+  // bez ovoga editDisplayName ostaje prazan, pa klik na "Sačuvaj" prije bilo
+  // kakvog unosa može obrisati postojeće displayName.
+  useEffect(() => {
+    if (activeTab === "profil" && user?.displayName) {
+      setEditDisplayName(prev => prev || user.displayName);
+    }
+  }, [activeTab, user?.displayName]);
   const [ucenici, setUcenici] = useState<Ucenik[]>([]);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -491,6 +513,10 @@ export default function MuallimPanel() {
     { id: "plan", label: "Plan lekcija", icon: BookOpen },
     { id: "statistika", label: "Statistika", icon: TrendingUp },
     { id: "zadace", label: "Zadaće", icon: ClipboardList },
+    { id: "izvjestaji", label: "Izvještaji", icon: FileText },
+    { id: "h5p", label: "H5P statistika", icon: Sparkles },
+    { id: "h5p-vodic", label: "H5P uputstvo", icon: BookOpen },
+    { id: "profil", label: "Profil", icon: Settings },
   ] as const;
 
   return (
@@ -504,43 +530,10 @@ export default function MuallimPanel() {
             <h1 className="text-2xl font-extrabold text-foreground">Muallim panel</h1>
             <p className="text-muted-foreground text-sm">Dobrodošao/la, {user.displayName}</p>
           </div>
-          <Link href="/muallim/h5p-statistika">
-            <button className="hidden sm:flex items-center gap-1.5 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors"
-              title="Statistika H5P vježbi učenika">
-              <BarChart3 className="w-4 h-4" /> H5P statistika
-            </button>
-          </Link>
-          <Link href="/muallim/h5p-uputstvo">
-            <button className="hidden sm:flex items-center gap-1.5 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors"
-              title="Vodič: kako napraviti H5P interaktivnu vježbu">
-              <Sparkles className="w-4 h-4" /> H5P uputstvo
-            </button>
-          </Link>
-          <button onClick={() => { setEditDisplayName(user.displayName || ""); setShowProfileEdit(true); }}
-            className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors">
-            <Settings className="w-4 h-4" /> Profil
-          </button>
         </div>
 
-        {showProfileEdit && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-            className="bg-white border border-border/50 rounded-2xl p-5 mb-6">
-            <h3 className="font-extrabold text-foreground mb-3">Uredi profil</h3>
-            <div className="flex gap-3 items-end">
-              <div className="flex-1">
-                <label className="text-sm font-bold text-muted-foreground block mb-1">Ime i prezime</label>
-                <input type="text" value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)}
-                  className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
-              </div>
-              <Button onClick={saveProfile} disabled={savingProfile} className="rounded-xl">
-                {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> Sačuvaj</>}
-              </Button>
-              <button onClick={() => setShowProfileEdit(false)} className="text-muted-foreground hover:text-foreground p-2">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
-        )}
+        {/* H5P statistika, H5P uputstvo i Profil su sada tabovi (ne više
+            zasebne stranice/dugmad u headeru) — vidjeti TABS niže. */}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
@@ -575,35 +568,7 @@ export default function MuallimPanel() {
                 </div>
 
                 {/* Izvještaji za štampu / PDF */}
-                <div className="bg-white border border-border/50 rounded-2xl p-5" data-testid="card-izvjestaji">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="w-5 h-5 text-primary" />
-                    <h3 className="font-extrabold text-base text-foreground">Izvještaji za štampu / PDF</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Sastavlja izvještaj sa zaglavljem MEKTEB platforme — prisustvo, ocjene, kvizovi i napredak. Iz pregleda kliknite "Štampaj / Sačuvaj kao PDF".
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => setLocation("/muallim/izvjestaj/svi")}
-                      className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
-                      data-testid="btn-izvjestaj-svi"
-                    >
-                      <Printer className="w-4 h-4" /> Svi učenici ({ucenici.length})
-                    </Button>
-                    {grupe.map(g => (
-                      <Button
-                        key={g.id}
-                        onClick={() => setLocation(`/muallim/izvjestaj/grupa/${g.id}`)}
-                        variant="outline"
-                        className="rounded-xl font-bold text-sm flex items-center gap-2"
-                        data-testid={`btn-izvjestaj-grupa-${g.id}`}
-                      >
-                        <FileText className="w-4 h-4" /> Grupa: {g.naziv}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+                {/* Izvještaji za štampu/PDF su premješteni u zasebni tab "Izvještaji". */}
 
                 {pendingRoditelji.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
@@ -1653,6 +1618,112 @@ export default function MuallimPanel() {
                     </div>
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {/* IZVJEŠTAJI — premješteni iz Pregled-a u svoj tab radi preglednosti. */}
+            {activeTab === "izvjestaji" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="bg-white border border-border/50 rounded-2xl p-5" data-testid="card-izvjestaji">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <h3 className="font-extrabold text-base text-foreground">Izvještaji za štampu / PDF</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Sastavlja izvještaj sa zaglavljem MEKTEB platforme — prisustvo, ocjene, kvizovi i napredak. Iz pregleda kliknite "Štampaj / Sačuvaj kao PDF".
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => setLocation("/muallim/izvjestaj/svi")}
+                      className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
+                      data-testid="btn-izvjestaj-svi"
+                    >
+                      <Printer className="w-4 h-4" /> Svi učenici ({ucenici.length})
+                    </Button>
+                    {grupe.map(g => (
+                      <Button
+                        key={g.id}
+                        onClick={() => setLocation(`/muallim/izvjestaj/grupa/${g.id}`)}
+                        variant="outline"
+                        className="rounded-xl font-bold text-sm flex items-center gap-2"
+                        data-testid={`btn-izvjestaj-grupa-${g.id}`}
+                      >
+                        <FileText className="w-4 h-4" /> Grupa: {g.naziv}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* H5P STATISTIKA — CTA kartica vodi na full-page (izbjegavamo
+                duplikat 800-line komponente). Ranije je bila link u headeru. */}
+            {activeTab === "h5p" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-2xl p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-6 h-6 text-purple-600" />
+                    <h3 className="font-extrabold text-lg text-foreground">H5P statistika učenika</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
+                    Pregled napretka učenika kroz H5P interaktivne vježbe — najslabiji rezultati, prosjek po vježbi, mjesečni trendovi.
+                  </p>
+                  <Link href="/muallim/h5p-statistika">
+                    <Button className="rounded-xl font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2" data-testid="btn-otvori-h5p-statistiku">
+                      <BarChart3 className="w-4 h-4" /> Otvori H5P statistiku
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
+            {/* H5P UPUTSTVO */}
+            {activeTab === "h5p-vodic" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen className="w-6 h-6 text-amber-600" />
+                    <h3 className="font-extrabold text-lg text-foreground">H5P uputstvo — kako napraviti vježbu</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
+                    Korak po korak vodič kroz instalaciju Lumi alata, izradu drag-words / multiple-choice / image-hotspots vježbi i ubacivanje u Mekteb lekcije.
+                  </p>
+                  <Link href="/muallim/h5p-uputstvo">
+                    <Button className="rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2" data-testid="btn-otvori-h5p-uputstvo">
+                      <Sparkles className="w-4 h-4" /> Otvori H5P uputstvo
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
+            {/* PROFIL — uređivanje display name-a, premješteno iz inline header dugmeta. */}
+            {activeTab === "profil" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="bg-white border border-border/50 rounded-2xl p-5">
+                  <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-primary" /> Uredi profil
+                  </h3>
+                  <div className="space-y-4 max-w-md">
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground block mb-1">Korisničko ime</label>
+                      <input type="text" value={user.username} disabled
+                        className="w-full border border-border rounded-xl px-3 py-2 text-base bg-muted/30 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground block mb-1">Ime i prezime</label>
+                      <input type="text"
+                        value={editDisplayName || user.displayName || ""}
+                        onChange={e => setEditDisplayName(e.target.value)}
+                        className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        data-testid="input-profil-display-name" />
+                    </div>
+                    <Button onClick={saveProfile} disabled={savingProfile || !editDisplayName.trim()} className="rounded-xl" data-testid="btn-sacuvaj-profil">
+                      {savingProfile ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                      Sačuvaj promjene
+                    </Button>
+                  </div>
+                </div>
               </motion.div>
             )}
           </>

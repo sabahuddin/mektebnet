@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe, Calendar, ClipboardList, Gamepad2, ChevronDown, Wrench, Target } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe, Calendar, ClipboardList, Gamepad2, ChevronDown, Wrench, Target, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -263,42 +263,76 @@ export function Layout({ children }: LayoutProps) {
       : { href: "#sufara", label: t("nav.sufara"), icon: GraduationCap, onClick: sufaraComingSoon },
   ];
 
-  // "Moj profil" je dropdown grupa za sve prijavljene uloge. Pod njim su
-  // role-specifične stavke (npr. Moj napredak za učenika), Poruke i Odjava.
-  // Header više nema posebnu LogOut ikonicu — odjava živi unutar dropdown-a.
-  const profileDropdown = (extraChildren: NavLink[] = []): NavLink => ({
-    href: "/moj-profil", // placeholder; trigger samo otvara popover
-    label: t("nav.mojProfil"),
-    icon: User,
+  // Jedinstveni "Panel" dropdown po ulozi. Trigger je rolespecifičan
+  // (Muallim panel / Admin panel / Roditeljski panel / Moja košnica) i
+  // u sebi sadrži sve što korisnik treba: brze linkove unutar role,
+  // Poruke (sa badge-om za nepročitano), Profil, i Odjavu na dnu.
+  // Notifikacijski badge se prikazuje i na samom trigger-u kada postoji
+  // nepročitana poruka, da bude vidljiv bez otvaranja menija.
+  const buildPanelDropdown = (
+    panelHref: string,
+    panelLabel: string,
+    panelIcon: any,
+    roleQuickLinks: NavLink[],
+    profilHref: string,
+  ): NavLink => ({
+    href: panelHref,
+    label: panelLabel,
+    icon: panelIcon,
     children: [
-      ...extraChildren,
+      // Prva stavka: direktan ulaz u panel.
+      { href: panelHref, label: t("nav.otvoriPanel"), icon: panelIcon },
+      ...roleQuickLinks,
       { href: "/poruke", label: t("nav.poruke"), icon: MessageSquare },
+      { href: profilHref, label: t("nav.profil"), icon: Settings },
       { href: "#odjava", label: t("nav.odjaviSe"), icon: LogOut, onClick: logout, variant: "danger" },
     ],
   });
 
   const roleLinks: Record<string, NavLink[]> = {
     muallim: [
-      { href: "/muallim", label: t("nav.muallimPanel"), icon: LayoutDashboard },
-      profileDropdown(),
+      buildPanelDropdown(
+        "/muallim",
+        t("nav.muallimPanel"),
+        LayoutDashboard,
+        [],
+        "/muallim?tab=profil",
+      ),
     ],
     admin: [
-      { href: "/admin", label: t("nav.adminPanel"), icon: Shield },
-      profileDropdown(),
+      buildPanelDropdown(
+        "/admin",
+        t("nav.adminPanel"),
+        Shield,
+        [],
+        "/admin?tab=profil",
+      ),
     ],
     roditelj: [
-      { href: "/roditelj", label: t("nav.mojaDjeca"), icon: User },
-      { href: "/roditelj/kalendar", label: "Kalendar", icon: Calendar },
-      { href: "/roditelj/zadace", label: "Zadaće", icon: ClipboardList },
-      profileDropdown(),
+      buildPanelDropdown(
+        "/roditelj",
+        t("nav.roditeljPanel"),
+        LayoutDashboard,
+        [
+          { href: "/roditelj", label: t("nav.mojaDjeca"), icon: User },
+          { href: "/roditelj/kalendar", label: "Kalendar", icon: Calendar },
+          { href: "/roditelj/zadace", label: "Zadaće", icon: ClipboardList },
+        ],
+        "/roditelj?tab=profil",
+      ),
     ],
     ucenik: [
-      profileDropdown([
-        { href: "/ucenik", label: "Moj profil", icon: User },
-        { href: "/napredak", label: t("nav.mojNapredak"), icon: BookMarked },
-        { href: "/misije", label: "Misije", icon: Target },
-        { href: "/popravi-sace", label: "Popravi saće", icon: Wrench },
-      ]),
+      buildPanelDropdown(
+        "/ucenik",
+        t("nav.mojaKosnica"),
+        LayoutDashboard,
+        [
+          { href: "/napredak", label: t("nav.mojNapredak"), icon: BookMarked },
+          { href: "/misije", label: "Misije", icon: Target },
+          { href: "/popravi-sace", label: "Popravi saće", icon: Wrench },
+        ],
+        "/ucenik",
+      ),
     ],
   };
 
@@ -321,20 +355,21 @@ export function Layout({ children }: LayoutProps) {
 
           <nav className="hidden lg:flex items-center gap-1">
             {mainNavLinks.map((link) => {
-              // Samo ikone u desktop meniju (bez teksta) — naslov modula ostaje
-              // u `title` atributu kao tooltip pri hover-u radi accessibility-ja.
-              // Veća ikonica (w-5 h-5) i kvadratni padding kompenzuju gubitak teksta.
-              const cls = `flex items-center justify-center w-11 h-11 rounded-full font-bold transition-all ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`;
+              // Glavna navigacija sa ikonom i nazivom modula (ranije bila samo
+              // ikona, ali korisnici nisu prepoznavali šta je šta).
+              const cls = `flex items-center gap-1.5 px-3 py-2 rounded-full font-bold text-sm transition-all whitespace-nowrap ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`;
               if (link.onClick) {
                 return (
                   <button key={link.href} type="button" onClick={link.onClick} className={cls} title={link.label} aria-label={link.label}>
-                    <link.icon className="w-5 h-5" />
+                    <link.icon className="w-4 h-4" />
+                    <span>{link.label}</span>
                   </button>
                 );
               }
               return (
                 <Link key={link.href} href={link.href} className={cls} title={link.label} aria-label={link.label}>
-                  <link.icon className="w-5 h-5" />
+                  <link.icon className="w-4 h-4" />
+                  <span>{link.label}</span>
                 </Link>
               );
             })}
@@ -393,20 +428,11 @@ export function Layout({ children }: LayoutProps) {
               </button>
             </div>
 
-            {user ? (
-              // Header više ne nosi posebnu LogOut ikonicu — odjava je premještena
-              // u "Moja košnica" dropdown u glavnoj navigaciji. Ovdje pokazujemo
-              // samo inicijale (npr. "TA") radi diskretnog prikaza prijavljenog
-              // korisnika; puno ime + uloga su dostupni preko title tooltip-a.
-              <div
-                className="hidden sm:flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary font-extrabold text-sm tracking-tight select-none"
-                title={`${user.displayName} (${user.role})`}
-                aria-label={`${user.displayName}, ${user.role}`}
-                data-testid="header-user-initials"
-              >
-                {getInitials(user.displayName)}
-              </div>
-            ) : (
+            {!user && (
+              // Inicijali korisnika (TA) i indikator uloge su uklonjeni iz
+              // headera — nisu imali interaktivnu funkciju, a Panel dropdown
+              // u glavnoj navigaciji već jasno pokazuje da je korisnik prijavljen.
+              // Prijavi-se dugme se zadržava samo za neulogovane korisnike.
               <Link href="/login">
                 <Button className="rounded-full font-bold shadow-sm" size="sm">{t("nav.prijava")}</Button>
               </Link>
