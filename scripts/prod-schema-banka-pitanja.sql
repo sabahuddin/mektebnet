@@ -23,10 +23,15 @@
 
 BEGIN;
 
--- 1) Nove kolone na `kvizovi` (kategorija/lekcija/opis)
+-- 1) Nove kolone na `kvizovi` (kategorija/lekcija/opis/is_published)
 ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS kategorija varchar(60);
 ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS lekcija_id integer;
 ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS opis text NOT NULL DEFAULT '';
+-- is_published: API SELECT ovu kolonu uvijek vraća; bez nje cijela
+-- /content/kvizovi ruta puca i frontend dobija praznu listu.
+ALTER TABLE kvizovi         ADD COLUMN IF NOT EXISTS is_published boolean NOT NULL DEFAULT true;
+ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS is_published boolean NOT NULL DEFAULT true;
+ALTER TABLE knjige          ADD COLUMN IF NOT EXISTS is_published boolean NOT NULL DEFAULT true;
 
 -- 2) Banka pitanja
 CREATE TABLE IF NOT EXISTS pitanja_banka (
