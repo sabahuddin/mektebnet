@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, UserPlus, Copy, Check } from "lucide-react";
+import { ArrowLeft, UserPlus, Copy, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -12,12 +12,22 @@ interface Grupa {
   naziv: string;
 }
 
-interface CreatedUcenik {
+interface CreatedRoditelj {
   id: number;
   displayName: string;
   username: string;
   generatedPassword: string;
 }
+
+interface CreatedUcenik {
+  id: number;
+  displayName: string;
+  username: string;
+  generatedPassword: string;
+  roditelj: CreatedRoditelj | null;
+}
+
+type CopyTarget = "ucenik" | "roditelj" | "oba";
 
 export default function DodajUcenikaPage() {
   const [, setLocation] = useLocation();
@@ -26,9 +36,11 @@ export default function DodajUcenikaPage() {
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [displayName, setDisplayName] = useState("");
   const [grupaId, setGrupaId] = useState<string>("");
+  const [dodajRoditelja, setDodajRoditelja] = useState(false);
+  const [roditeljIme, setRoditeljIme] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [created, setCreated] = useState<CreatedUcenik | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedTarget, setCopiedTarget] = useState<CopyTarget | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -39,12 +51,20 @@ export default function DodajUcenikaPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token || !displayName.trim()) return;
+    if (dodajRoditelja && !roditeljIme.trim()) {
+      toast({ title: "Nedostaje ime roditelja", variant: "destructive" });
+      return;
+    }
     setIsLoading(true);
     try {
-      const result = await apiRequest<CreatedUcenik>("POST", "/muallim/ucenici", {
+      const body: Record<string, unknown> = {
         displayName: displayName.trim(),
         grupaId: grupaId ? parseInt(grupaId) : undefined,
-      }, token);
+      };
+      if (dodajRoditelja) {
+        body.roditelj = { displayName: roditeljIme.trim() };
+      }
+      const result = await apiRequest<CreatedUcenik>("POST", "/muallim/ucenici", body, token);
       setCreated(result);
     } catch (err: any) {
       toast({
@@ -57,13 +77,39 @@ export default function DodajUcenikaPage() {
     }
   }
 
-  function copyCredentials() {
-    if (!created) return;
-    const text = `Korisničko ime: ${created.username}\nLozinka: ${created.generatedPassword}`;
+  function copyText(text: string, target: CopyTarget) {
     navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedTarget(target);
+      setTimeout(() => setCopiedTarget(null), 2000);
     });
+  }
+
+  function copyUcenik() {
+    if (!created) return;
+    copyText(`Učenik: ${created.displayName}\nKorisničko ime: ${created.username}\nLozinka: ${created.generatedPassword}`, "ucenik");
+  }
+
+  function copyRoditelj() {
+    if (!created?.roditelj) return;
+    const r = created.roditelj;
+    copyText(`Roditelj: ${r.displayName}\nKorisničko ime: ${r.username}\nLozinka: ${r.generatedPassword}`, "roditelj");
+  }
+
+  function copyOba() {
+    if (!created) return;
+    let text = `Učenik: ${created.displayName}\nKorisničko ime: ${created.username}\nLozinka: ${created.generatedPassword}`;
+    if (created.roditelj) {
+      text += `\n\nRoditelj: ${created.roditelj.displayName}\nKorisničko ime: ${created.roditelj.username}\nLozinka: ${created.roditelj.generatedPassword}`;
+    }
+    copyText(text, "oba");
+  }
+
+  function reset() {
+    setCreated(null);
+    setDisplayName("");
+    setGrupaId("");
+    setDodajRoditelja(false);
+    setRoditeljIme("");
   }
 
   return (
@@ -84,36 +130,72 @@ export default function DodajUcenikaPage() {
         </div>
 
         {created ? (
-          <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-6">
-            <h2 className="text-lg font-extrabold text-emerald-800 mb-1">Učenik kreiran! ✓</h2>
-            <p className="text-emerald-700 text-sm mb-5">Proslijedi ove podatke učeniku ili roditelju:</p>
+          <div className="space-y-4">
+            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-6">
+              <h2 className="text-lg font-extrabold text-emerald-800 mb-1">Učenik kreiran! ✓</h2>
+              <p className="text-emerald-700 text-sm mb-4">Proslijedi ove podatke učeniku:</p>
 
-            <div className="bg-white rounded-xl border border-emerald-200 p-4 font-mono text-sm space-y-2 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Ime:</span>
-                <span className="font-bold text-foreground">{created.displayName}</span>
+              <div className="bg-white rounded-xl border border-emerald-200 p-4 font-mono text-sm space-y-2 mb-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Ime:</span>
+                  <span className="font-bold text-foreground">{created.displayName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Korisničko ime:</span>
+                  <span className="font-bold text-foreground">{created.username}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Lozinka:</span>
+                  <span className="font-bold text-foreground">{created.generatedPassword}</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Korisničko ime:</span>
-                <span className="font-bold text-foreground">{created.username}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Lozinka:</span>
-                <span className="font-bold text-foreground">{created.generatedPassword}</span>
-              </div>
+
+              <Button variant="outline" onClick={copyUcenik} className="w-full rounded-xl flex items-center gap-2">
+                {copiedTarget === "ucenik" ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                {copiedTarget === "ucenik" ? "Kopirano!" : "Kopiraj podatke učenika"}
+              </Button>
             </div>
 
+            {created.roditelj && (
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+                <h2 className="text-lg font-extrabold text-blue-800 mb-1">Roditelj kreiran! ✓</h2>
+                <p className="text-blue-700 text-sm mb-4">Proslijedi ove podatke roditelju:</p>
+
+                <div className="bg-white rounded-xl border border-blue-200 p-4 font-mono text-sm space-y-2 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Ime:</span>
+                    <span className="font-bold text-foreground">{created.roditelj.displayName}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Korisničko ime:</span>
+                    <span className="font-bold text-foreground">{created.roditelj.username}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Lozinka:</span>
+                    <span className="font-bold text-foreground">{created.roditelj.generatedPassword}</span>
+                  </div>
+                </div>
+
+                <Button variant="outline" onClick={copyRoditelj} className="w-full rounded-xl flex items-center gap-2">
+                  {copiedTarget === "roditelj" ? <Check className="w-4 h-4 text-blue-600" /> : <Copy className="w-4 h-4" />}
+                  {copiedTarget === "roditelj" ? "Kopirano!" : "Kopiraj podatke roditelja"}
+                </Button>
+              </div>
+            )}
+
             <div className="flex gap-3">
-              <Button variant="outline" onClick={copyCredentials} className="flex-1 rounded-xl flex items-center gap-2">
-                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                {copied ? "Kopirano!" : "Kopiraj podatke"}
-              </Button>
-              <Button onClick={() => { setCreated(null); setDisplayName(""); setGrupaId(""); }} className="flex-1 rounded-xl">
+              {created.roditelj && (
+                <Button variant="outline" onClick={copyOba} className="flex-1 rounded-xl flex items-center gap-2">
+                  {copiedTarget === "oba" ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  {copiedTarget === "oba" ? "Kopirano!" : "Kopiraj oboje"}
+                </Button>
+              )}
+              <Button onClick={reset} className="flex-1 rounded-xl">
                 Dodaj još
               </Button>
             </div>
 
-            <button onClick={() => setLocation("/muallim")} className="w-full mt-3 text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
+            <button onClick={() => setLocation("/muallim")} className="w-full text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
               Nazad na panel
             </button>
           </div>
@@ -121,7 +203,7 @@ export default function DodajUcenikaPage() {
           <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-6 space-y-5">
             <div>
               <label className="text-sm font-bold text-foreground mb-1.5 block">
-                Ime i prezime <span className="text-red-500">*</span>
+                Ime i prezime učenika <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -148,9 +230,45 @@ export default function DodajUcenikaPage() {
               </select>
             </div>
 
-            <Button type="submit" disabled={isLoading || !displayName.trim()} className="w-full rounded-xl font-bold py-3 flex items-center justify-center gap-2">
+            <div className="border-t border-border pt-5">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dodajRoditelja}
+                  onChange={e => setDodajRoditelja(e.target.checked)}
+                  className="mt-1 w-5 h-5 rounded border-border text-primary focus:ring-primary/40"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-bold text-foreground">Dodaj i nalog za roditelja</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Roditelj dobije zaseban nalog i automatski se poveže s djetetom. Ne ulazi u kvotu licenci.
+                  </p>
+                </div>
+              </label>
+
+              {dodajRoditelja && (
+                <div className="mt-4 ml-8">
+                  <label className="text-sm font-bold text-foreground mb-1.5 block">
+                    Ime i prezime roditelja <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required={dodajRoditelja}
+                    value={roditeljIme}
+                    onChange={e => setRoditeljIme(e.target.value)}
+                    placeholder="npr. Mirsad Hasić"
+                    className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
+                  />
+                </div>
+              )}
+            </div>
+
+            <Button type="submit" disabled={isLoading || !displayName.trim() || (dodajRoditelja && !roditeljIme.trim())} className="w-full rounded-xl font-bold py-3 flex items-center justify-center gap-2">
               <UserPlus className="w-4 h-4" />
-              {isLoading ? "Kreiranje..." : "Kreiraj učenika"}
+              {isLoading ? "Kreiranje..." : (dodajRoditelja ? "Kreiraj učenika i roditelja" : "Kreiraj učenika")}
             </Button>
           </form>
         )}

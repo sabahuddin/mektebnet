@@ -5,6 +5,7 @@ import {
   usersTable,
   muallimProfiliTable,
   ucenikProfiliTable,
+  roditeljProfiliTable,
   grupeTable,
   roditeljUcenikTable,
   priustvoTable,
@@ -187,48 +188,133 @@ router.get("/ucenici", async (req, res) => {
   }
 });
 
-// POST /api/muallim/ucenici - create a new student
+// POST /api/muallim/ucenici - create a new student (optionally with parent)
 router.post("/ucenici", async (req, res) => {
   try {
-    const { displayName, grupaId, password } = req.body;
+    const { displayName, grupaId, password, roditelj } = req.body as {
+      displayName: string;
+      grupaId?: number;
+      password?: string;
+      roditelj?: { displayName: string };
+    };
 
-    // Check licence limit
+    if (!displayName?.trim()) {
+      res.status(400).json({ error: "Ime i prezime učenika je obavezno" });
+      return;
+    }
+
+    // Roditelj (ako je poslan) ne ulazi u kvotu — broji se samo učenik
+    const roditeljZahtjev = roditelj?.displayName?.trim();
+    if (roditelj && !roditeljZahtjev) {
+      res.status(400).json({ error: "Ime roditelja je obavezno kada se dodaje roditelj" });
+      return;
+    }
+
+    // Check licence limit (samo učenik se broji)
     const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, req.user!.userId));
     if (profil && profil.licencesUsed >= profil.licenceCount) {
       res.status(403).json({ error: "Dostigli ste maksimalan broj učenika (limit licenci)" });
       return;
     }
 
-    const firstName = displayName.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    const username = `${firstName}.${rand}`;
+    const muallimId = req.user!.userId;
 
-    const pass = password || `Mekteb${rand}`;
-    const passwordHash = await bcrypt.hash(pass, 10);
-
-    const [newUser] = await db.insert(usersTable).values({
-      username,
-      passwordHash,
-      displayName: displayName.trim(),
-      role: "ucenik",
-    }).returning();
-
-    await db.insert(ucenikProfiliTable).values({
-      userId: newUser.id,
-      muallimId: req.user!.userId,
-      grupaId: grupaId || null,
-    });
-
-    // Increment licences used
-    if (profil) {
-      await db.update(muallimProfiliTable)
-        .set({ licencesUsed: profil.licencesUsed + 1 })
-        .where(eq(muallimProfiliTable.userId, req.user!.userId));
+    function generateUsername(name: string) {
+      const firstName = name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "") || "korisnik";
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      return { username: `${firstName}.${rand}`, rand };
     }
 
-    res.status(201).json({ ...newUser, passwordHash: undefined, generatedPassword: pass });
-  } catch (err) {
+    const ucenikPass = password || `Mekteb${Math.floor(1000 + Math.random() * 9000)}`;
+    const ucenikPasswordHash = await bcrypt.hash(ucenikPass, 10);
+
+    let roditeljPass: string | null = null;
+    let roditeljPasswordHash: string | null = null;
+    if (roditeljZahtjev) {
+      roditeljPass = `Mekteb${Math.floor(1000 + Math.random() * 9000)}`;
+      roditeljPasswordHash = await bcrypt.hash(roditeljPass, 10);
+    }
+
+    type NewUserRow = typeof usersTable.$inferSelect;
+
+    async function insertWithUniqueUsername(
+      tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+      baseName: string,
+      passwordHash: string,
+      displayNameVal: string,
+      role: "ucenik" | "roditelj",
+    ): Promise<NewUserRow> {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { username } = generateUsername(baseName);
+        try {
+          const [row] = await tx.insert(usersTable).values({
+            username,
+            passwordHash,
+            displayName: displayNameVal,
+            role,
+          }).returning();
+          return row;
+        } catch (e: any) {
+          const isUniqueViolation = e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
+          if (attempt === 4 || !isUniqueViolation) throw e;
+        }
+      }
+      throw new Error("USERNAME_COLLISION");
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const newUcenik = await insertWithUniqueUsername(tx, displayName, ucenikPasswordHash, displayName.trim(), "ucenik");
+
+      await tx.insert(ucenikProfiliTable).values({
+        userId: newUcenik.id,
+        muallimId,
+        grupaId: grupaId || null,
+      });
+
+      let newRoditelj: NewUserRow | null = null;
+      if (roditeljZahtjev && roditeljPasswordHash) {
+        newRoditelj = await insertWithUniqueUsername(tx, roditeljZahtjev, roditeljPasswordHash, roditeljZahtjev, "roditelj");
+
+        await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
+
+        await tx.insert(roditeljUcenikTable).values({
+          roditeljId: newRoditelj.id,
+          ucenikId: newUcenik.id,
+          status: "approved",
+          approvedAt: new Date(),
+          approvedBy: muallimId,
+        });
+      }
+
+      // Increment licences used (samo učenik, roditelj je freebie)
+      if (profil) {
+        await tx.update(muallimProfiliTable)
+          .set({ licencesUsed: profil.licencesUsed + 1 })
+          .where(eq(muallimProfiliTable.userId, muallimId));
+      }
+
+      return { newUcenik, newRoditelj };
+    });
+
+    res.status(201).json({
+      ...result.newUcenik,
+      passwordHash: undefined,
+      generatedPassword: ucenikPass,
+      roditelj: result.newRoditelj
+        ? {
+            id: result.newRoditelj.id,
+            displayName: result.newRoditelj.displayName,
+            username: result.newRoditelj.username,
+            generatedPassword: roditeljPass,
+          }
+        : null,
+    });
+  } catch (err: any) {
     console.error(err);
+    if (err?.message === "USERNAME_COLLISION") {
+      res.status(409).json({ error: "Nije moguće generisati jedinstveno korisničko ime — pokušajte ponovo" });
+      return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });
