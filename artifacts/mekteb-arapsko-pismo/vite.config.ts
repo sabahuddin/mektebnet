@@ -88,11 +88,18 @@ export default defineConfig({
         // OneSignalSDKWorker.js mora ostati zaseban SW koji OneSignal sam
         // registruje — ne smije ga Workbox uvući u svoj precache niti rute.
         globIgnores: ["**/OneSignalSDKWorker.js"],
-        navigateFallback: `${basePath.replace(/\/$/, "")}/offline.html`,
+        // SPA shell — F5/refresh na bilo koji client-side route mora vratiti
+        // index.html iz precache-a (ne offline.html!), inače Workbox prikaže
+        // offline stranicu i kad korisnik IMA internet. offline.html ostaje
+        // dostupan kao public asset za stvarnu offline situaciju.
+        navigateFallback: `${basePath.replace(/\/$/, "")}/index.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/vaktija\//, /^\/edu\//, /OneSignalSDKWorker\.js$/],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: false,
+        // Aktiviraj novi SW odmah da popravke (npr. F5 fallback bug, flag
+        // emoji polyfill) stignu do korisnika čim otvore app, bez čekanja
+        // da zatvore sve tabove.
+        skipWaiting: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -169,7 +176,7 @@ export default defineConfig({
       devOptions: {
         enabled: false,
         type: "module",
-        navigateFallback: `${basePath.replace(/\/$/, "")}/offline.html`,
+        navigateFallback: `${basePath.replace(/\/$/, "")}/index.html`,
       },
     }),
     ...(process.env.NODE_ENV !== "production" &&
