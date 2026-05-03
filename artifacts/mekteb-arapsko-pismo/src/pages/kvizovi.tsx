@@ -3,9 +3,11 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
+import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { HelpCircle, ChevronRight, Trophy, BookOpen, LayoutGrid, FolderTree } from "lucide-react";
+import { HelpCircle, ChevronRight, Trophy, BookOpen, LayoutGrid, FolderTree, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface Kviz {
   id: number;
@@ -35,7 +37,7 @@ const KATEGORIJE_LABELS: Record<string, string> = {
   opce: "Opće",
 };
 
-function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
+function KvizCard({ k, nivo, locked, onLockedClick }: { k: Kviz; nivo: number | null; locked?: boolean; onLockedClick?: () => void }) {
   const { t } = useLanguage();
   const NIVO_INFO: Record<number, { label: string; color: string; bg: string; border: string }> = {
     1: { label: `${t("ilmihal.nivo1").split(" – ")[0]}`, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
@@ -51,15 +53,18 @@ function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
     : (Array.isArray(k.pitanja) ? k.pitanja.length : 0);
 
   const card = (
-    <div className={`${info?.bg ?? "bg-white"} ${info?.border ?? "border-border"} border-2 rounded-2xl p-5 transition-all cursor-pointer hover:shadow-md group hover:-translate-y-0.5 duration-150 relative overflow-hidden`}>
+    <div className={`${locked ? "bg-muted/30 border-border" : `${info?.bg ?? "bg-white"} ${info?.border ?? "border-border"}`} border-2 rounded-2xl p-5 transition-all cursor-pointer hover:shadow-md group hover:-translate-y-0.5 duration-150 relative overflow-hidden ${locked ? "grayscale-[40%]" : ""}`}>
       <div className="absolute inset-0 bg-honeycomb opacity-30 pointer-events-none" />
       <div className="relative">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className={`font-bold ${info?.color ?? "text-foreground"} leading-snug`}>{k.naslov}</h3>
-          <Trophy className={`w-5 h-5 ${info?.color ?? "text-amber-600"} opacity-50 shrink-0`} />
+          <h3 className={`font-bold ${locked ? "text-muted-foreground" : info?.color ?? "text-foreground"} leading-snug`}>{k.naslov}</h3>
+          {locked
+            ? <Lock className="w-5 h-5 text-muted-foreground/70 shrink-0" />
+            : <Trophy className={`w-5 h-5 ${info?.color ?? "text-amber-600"} opacity-50 shrink-0`} />
+          }
         </div>
         {k.kategorija && KATEGORIJE_LABELS[k.kategorija] && (
-          <span className="inline-block text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 mb-2">
+          <span className={`inline-block text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full mb-2 ${locked ? "bg-muted text-muted-foreground" : "bg-amber-100 text-amber-800"}`}>
             {KATEGORIJE_LABELS[k.kategorija]}
           </span>
         )}
@@ -67,14 +72,31 @@ function KvizCard({ k, nivo }: { k: Kviz; nivo: number | null }) {
           <span className="text-xs font-medium text-muted-foreground">
             {pitanjaCount > 0 ? `${pitanjaCount} ${t("kviz.pitanja")}` : t("kviz.uPripremi")}
           </span>
-          <div className={`flex items-center gap-1 ${info?.color ?? "text-amber-700"} font-bold text-sm`}>
-            {t("kviz.pokreni")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+          <div className={`flex items-center gap-1 ${locked ? "text-muted-foreground" : info?.color ?? "text-amber-700"} font-bold text-sm`}>
+            {locked ? "Zaključano" : t("kviz.pokreni")}
+            {locked
+              ? <Lock className="w-3 h-3" />
+              : <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+            }
           </div>
         </div>
       </div>
     </div>
   );
 
+  if (locked) {
+    return (
+      <button
+        type="button"
+        onClick={onLockedClick}
+        aria-label={`${k.naslov} — zaključano, samo za registrirane korisnike`}
+        aria-disabled="true"
+        className="w-full text-left"
+      >
+        {card}
+      </button>
+    );
+  }
   return (
     <Link href={`/kvizovi/${k.slug}`}>
       {card}
@@ -86,10 +108,19 @@ type GroupMode = "nivo" | "kategorija";
 
 export default function KvizoviPage() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [kvizovi, setKvizovi] = useState<Kviz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [groupMode, setGroupMode] = useState<GroupMode>("nivo");
   const [filterKategorija, setFilterKategorija] = useState<string>("");
+
+  const showLockedToast = () => {
+    toast({
+      title: "🔒 Samo za registrirane korisnike",
+      description: "Prijavite se ili registrujte da biste pristupili svim kvizovima.",
+    });
+  };
 
   const NIVO_INFO: Record<number, { label: string; color: string; bg: string; border: string }> = {
     1: { label: t("ilmihal.nivo1").split(" – ")[0], color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
@@ -133,6 +164,25 @@ export default function KvizoviPage() {
     acc[key].push(k);
     return acc;
   }, {});
+
+  // Guest gating: prvi kviz svakog nivoa (1, 2, 3) javno otvoren. Računamo iz PUNE
+  // `kvizovi` liste (ne `filtrirani`/`ilmihalKvizovi`) da kategorija filter ne mijenja
+  // koji je kviz otključan (architect F7 nalaz #2). Knjige kvizovi su zaključani za guesta.
+  const unlockedSlugs = useMemo(() => {
+    const set = new Set<string>();
+    if (!user) {
+      const ilmihalSvi = kvizovi
+        .filter(k => k.modul === "ilmihal" || !k.modul)
+        .sort((a, b) => a.id - b.id);
+      [1, 2, 3].forEach(n => {
+        const first = ilmihalSvi.find(k => k.nivo === n);
+        if (first) set.add(first.slug);
+      });
+    }
+    return set;
+  }, [user, kvizovi]);
+
+  const isLocked = (k: Kviz) => !user && !unlockedSlugs.has(k.slug);
 
   return (
     <Layout>
@@ -198,7 +248,7 @@ export default function KvizoviPage() {
                   <div className="grid sm:grid-cols-2 gap-3">
                     {list.map((k, i) => (
                       <motion.div key={k.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                        <KvizCard k={k} nivo={k.nivo} />
+                        <KvizCard k={k} nivo={k.nivo} locked={isLocked(k)} onLockedClick={showLockedToast} />
                       </motion.div>
                     ))}
                   </div>
@@ -218,7 +268,7 @@ export default function KvizoviPage() {
                   <div className="grid sm:grid-cols-2 gap-3">
                     {nivoKvizovi.map((k, i) => (
                       <motion.div key={k.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                        <KvizCard k={k} nivo={k.nivo} />
+                        <KvizCard k={k} nivo={k.nivo} locked={isLocked(k)} onLockedClick={showLockedToast} />
                       </motion.div>
                     ))}
                   </div>
@@ -237,7 +287,7 @@ export default function KvizoviPage() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   {knjigaKvizovi.map((k, i) => (
                     <motion.div key={k.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                      <KvizCard k={k} nivo={null} />
+                      <KvizCard k={k} nivo={null} locked={isLocked(k)} onLockedClick={showLockedToast} />
                     </motion.div>
                   ))}
                 </div>

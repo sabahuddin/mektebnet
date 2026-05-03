@@ -88,7 +88,9 @@ export async function initOneSignal(): Promise<void> {
         allowLocalhostAsSecureOrigin: true,
         serviceWorkerPath: "OneSignalSDKWorker.js",
         serviceWorkerParam: { scope: "/" },
-        notifyButton: { enable: false },
+        // OneSignal type expects full notifyButton text dict even when disabled —
+        // cast to any since we explicitly set enable:false (button never renders).
+        notifyButton: { enable: false } as any,
       });
       initialized = true;
       console.log("[Push] OneSignal initialized");

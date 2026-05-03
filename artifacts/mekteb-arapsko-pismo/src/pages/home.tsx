@@ -18,6 +18,7 @@ interface ModuleCard {
   count: string;
   comingSoon?: boolean;
   beePose?: string;
+  beeAlt?: string;
 }
 
 const POSES_BASE = `${import.meta.env.BASE_URL}images/maskota/poses`;

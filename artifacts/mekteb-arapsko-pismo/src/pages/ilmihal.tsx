@@ -1,13 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { BookOpen, ChevronRight, Search, ChevronDown, CheckCircle2, Play } from "lucide-react";
+import { BookOpen, ChevronRight, Search, ChevronDown, CheckCircle2, Play, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+
+// Koliko prvih lekcija po nivou je otvoreno za neulogovane posjetioce.
+// Ostale lekcije zahtijevaju prijavu — klikom dobiju toast.
+const GUEST_FREE_LESSONS_PER_NIVO = 5;
 
 interface Lekcija {
   id: number;
@@ -42,7 +47,16 @@ export default function IlmihalPage() {
   );
 
   const { token, user } = useAuth();
+  const { toast } = useToast();
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
+
+  // Toast koji se prikaže kad neulogovan posjetilac klikne zaključanu stavku.
+  const showLockedToast = () => {
+    toast({
+      title: "🔒 Samo za registrirane korisnike",
+      description: "Prijavite se ili registrujte da biste pristupili svim lekcijama.",
+    });
+  };
 
   useEffect(() => {
     apiRequest<Lekcija[]>("GET", "/content/ilmihal", undefined, token || undefined)
@@ -88,6 +102,25 @@ export default function IlmihalPage() {
   for (const n of Object.keys(grouped)) {
     grouped[Number(n)].sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
   }
+
+  // Guest unlocked set: računamo iz PUNE liste lekcija (nezavisno od search/filter),
+  // sortirano po redoslijedu unutar nivoa, pa uzimamo prvih GUEST_FREE_LESSONS_PER_NIVO
+  // ID-jeva po nivou. Ovo sprječava bypass kroz pretragu (architect F7 nalaz #1).
+  const guestUnlockedIds = useMemo(() => {
+    if (user) return new Set<number>();
+    const set = new Set<number>();
+    const byNivo: Record<number, Lekcija[]> = {};
+    lekcije.forEach(l => {
+      const dn = displayNivo(l);
+      if (!byNivo[dn]) byNivo[dn] = [];
+      byNivo[dn].push(l);
+    });
+    Object.values(byNivo).forEach(arr => {
+      arr.sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
+      arr.slice(0, GUEST_FREE_LESSONS_PER_NIVO).forEach(l => set.add(l.id));
+    });
+    return set;
+  }, [user, lekcije]);
 
   const toggleCollapse = (nivo: number) => {
     setCollapsed(prev => {
@@ -222,48 +255,73 @@ export default function IlmihalPage() {
                           {items.map((l, i) => {
                             const isDone = completedIds.has(l.id);
                             const isNext = user != null && l.id === nextLessonId;
+                            // Guest gating: računato iz pune liste, ne iz lokalnog
+                            // indeksa (pretraga ne smije otključati lekcije).
+                            const isLocked = !user && !guestUnlockedIds.has(l.id);
+                            const innerRow = (
+                              <div className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors group ${
+                                isLocked
+                                  ? "bg-muted/20 hover:bg-muted/40"
+                                  : isDone
+                                    ? "bg-emerald-50/40 hover:bg-emerald-50/70"
+                                    : isNext
+                                      ? `${info.bg} hover:brightness-95`
+                                      : "hover:bg-muted/40"
+                              }`}>
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <span className={`text-xs font-mono w-6 shrink-0 ${isLocked ? "text-muted-foreground/60" : isDone ? "text-emerald-600/70" : "text-muted-foreground"}`}>{i + 1}.</span>
+                                  {isLocked ? (
+                                    <Lock className="w-4 h-4 text-muted-foreground/70 shrink-0" />
+                                  ) : isDone ? (
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  ) : isNext ? (
+                                    <span className={`w-4 h-4 rounded-full ${info.bg} border-2 ${info.border} ${info.ring ? "ring-2 " + info.ring : ""} flex items-center justify-center shrink-0`}>
+                                      <Play className={`w-2.5 h-2.5 ${info.color} fill-current`} />
+                                    </span>
+                                  ) : (
+                                    <span className="w-4 h-4 rounded-full border-2 border-border/50 shrink-0" />
+                                  )}
+                                  <span className={`font-semibold transition-all text-sm truncate ${
+                                    isLocked
+                                      ? "text-muted-foreground/80"
+                                      : isDone
+                                        ? "text-emerald-800/70 line-through decoration-emerald-400/40"
+                                        : isNext
+                                          ? `${info.color} font-bold`
+                                          : `text-foreground/80 group-hover:${info.color} group-hover:font-bold`
+                                  }`}>{l.naslov}</span>
+                                  {isNext && !isLocked && (
+                                    <span className={`shrink-0 hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${info.bg} ${info.color} border ${info.border}`}>
+                                      {t("ilmihal.sljedeca")}
+                                    </span>
+                                  )}
+                                  {isDone && !isLocked && (
+                                    <span className="shrink-0 hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                      {t("ilmihal.zavrseno")}
+                                    </span>
+                                  )}
+                                </div>
+                                {isLocked
+                                  ? <Lock className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                                  : <ChevronRight className={`w-4 h-4 ${info.color} opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0`} />
+                                }
+                              </div>
+                            );
                             return (
                               <motion.div key={l.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }}>
-                                <Link href={`/ilmihal/${l.slug}`}>
-                                  <div className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors group ${
-                                    isDone
-                                      ? "bg-emerald-50/40 hover:bg-emerald-50/70"
-                                      : isNext
-                                        ? `${info.bg} hover:brightness-95`
-                                        : "hover:bg-muted/40"
-                                  }`}>
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                      <span className={`text-xs font-mono w-6 shrink-0 ${isDone ? "text-emerald-600/70" : "text-muted-foreground"}`}>{i + 1}.</span>
-                                      {isDone ? (
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                                      ) : isNext ? (
-                                        <span className={`w-4 h-4 rounded-full ${info.bg} border-2 ${info.border} ${info.ring ? "ring-2 " + info.ring : ""} flex items-center justify-center shrink-0`}>
-                                          <Play className={`w-2.5 h-2.5 ${info.color} fill-current`} />
-                                        </span>
-                                      ) : (
-                                        <span className="w-4 h-4 rounded-full border-2 border-border/50 shrink-0" />
-                                      )}
-                                      <span className={`font-semibold transition-all text-sm truncate ${
-                                        isDone
-                                          ? "text-emerald-800/70 line-through decoration-emerald-400/40"
-                                          : isNext
-                                            ? `${info.color} font-bold`
-                                            : `text-foreground/80 group-hover:${info.color} group-hover:font-bold`
-                                      }`}>{l.naslov}</span>
-                                      {isNext && (
-                                        <span className={`shrink-0 hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${info.bg} ${info.color} border ${info.border}`}>
-                                          {t("ilmihal.sljedeca")}
-                                        </span>
-                                      )}
-                                      {isDone && (
-                                        <span className="shrink-0 hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                          {t("ilmihal.zavrseno")}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <ChevronRight className={`w-4 h-4 ${info.color} opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0`} />
-                                  </div>
-                                </Link>
+                                {isLocked ? (
+                                  <button
+                                    type="button"
+                                    onClick={showLockedToast}
+                                    aria-label={`${l.naslov} — zaključano, samo za registrirane korisnike`}
+                                    aria-disabled="true"
+                                    className="w-full text-left"
+                                  >
+                                    {innerRow}
+                                  </button>
+                                ) : (
+                                  <Link href={`/ilmihal/${l.slug}`}>{innerRow}</Link>
+                                )}
                               </motion.div>
                             );
                           })}
