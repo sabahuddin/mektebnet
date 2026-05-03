@@ -21,6 +21,7 @@
     "fix-lesson-order": "tsx ./src/fix-lesson-order.ts",
     "generate-kviz": "tsx ./src/generate-kviz.ts",
     "export-kviz-pitanja": "tsx ./src/export-kviz-pitanja.ts",
+    "categorize-migrated-kvizovi": "tsx ./src/categorize-migrated-kvizovi.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
