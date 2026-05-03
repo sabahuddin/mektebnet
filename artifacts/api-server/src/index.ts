@@ -157,7 +157,13 @@ async function runResidualSchema() {
       END $$;
     `);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints) ready");
+    // pitanja_banka.meta — jsonb kolona za interaktivne tipove (dragDrop, markWords).
+    // Definisana je u Drizzle schema/content.ts, ali nije generisan novi migration
+    // file (banka tabela nije u Drizzle baseline-u — kreirana ranije van Drizzle-a).
+    // Stoga ovdje idempotentno dodajemo kolonu da se produkcija auto-update-a.
+    await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS meta jsonb;`);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }
