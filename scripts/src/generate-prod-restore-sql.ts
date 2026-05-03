@@ -63,7 +63,7 @@ for (const k of kvizoviSaPitanjima) {
   if (json.includes(TAG)) throw new Error(`Tag konflikt u kvizu ${k.slug} — promijeni TAG`);
   const slugEscaped = k.slug.replace(/'/g, "''");
   lines.push(
-    `UPDATE kvizovi SET pitanja = ${TAG}${json}${TAG}::jsonb WHERE slug = '${slugEscaped}' AND (pitanja IS NULL OR jsonb_typeof(pitanja) <> 'array' OR jsonb_array_length(pitanja) < ${pit.length});`
+    `UPDATE kvizovi SET pitanja = ${TAG}${json}${TAG}::jsonb WHERE slug = '${slugEscaped}' AND (CASE WHEN pitanja IS NULL THEN TRUE WHEN jsonb_typeof(pitanja) <> 'array' THEN TRUE ELSE jsonb_array_length(pitanja) < ${pit.length} END);`
   );
 }
 
