@@ -127,6 +127,17 @@ if (process.env["SERVE_STATIC"] === "true") {
   const eduDir = path.resolve(__dirname, "../../../edu");
   app.use("/edu", express.static(eduDir));
 
+  // Serve legacy /vaktija static HTML files iz mountovanog WordPress volumea
+  // (stari mekteb.net je imao statične HTML stranice po gradovima — gam.html, sa.html itd.)
+  // Coolify volume mount: /var/lib/docker/volumes/vwk8cwco0w080wo408wg84wc_wordpress-files/_data/vaktija → /app/vaktija-files
+  const vaktijaDir = process.env["VAKTIJA_DIR"] ?? "/app/vaktija-files";
+  app.use("/vaktija", express.static(vaktijaDir, {
+    maxAge: "1d",
+    setHeaders: (res) => {
+      res.setHeader("Cache-Control", "public, max-age=86400");
+    },
+  }));
+
   app.use(express.static(frontendDist));
   app.get("/{*path}", (_req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
