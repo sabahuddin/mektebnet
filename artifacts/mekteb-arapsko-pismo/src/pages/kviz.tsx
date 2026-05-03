@@ -44,6 +44,7 @@ const QUESTION_TYPES = [
   { value: "truefalse", label: "Da / Ne" },
   { value: "markWords", label: "Pronađi grešku (označi pogrešne riječi)" },
   { value: "reorder",   label: "Poredaj redom" },
+  { value: "dragDrop",  label: "Dopuni (drag & drop)" },
 ];
 
 function AdminEditModal({ kviz, token, onClose, onSaved }: {
@@ -133,6 +134,8 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
         return { ...p, type: "markWords" as any, text: p.text || "", words: p.words || [], incorrect: p.incorrect || [], options: undefined, answer: undefined, correct: undefined, items: undefined };
       if (newType === "reorder")
         return { ...p, type: "reorder" as any, items: p.items?.length ? p.items : [{ text: "", order: 1 }, { text: "", order: 2 }, { text: "", order: 3 }], options: undefined, answer: undefined, correct: undefined, text: undefined, words: undefined, incorrect: undefined };
+      if (newType === "dragDrop")
+        return { ...p, type: "dragDrop" as any, template: p.template || [], words: p.words || [], correct: p.correct || [], options: undefined, answer: undefined, text: undefined, incorrect: undefined, items: undefined };
       return p;
     }));
   };
@@ -414,6 +417,20 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                 </div>
               )}
 
+              {/* ── DRAG DROP (read-only pregled) ── */}
+              {pType === "dragDrop" && (
+                <div className="flex flex-col gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-xs font-bold text-blue-900">
+                    Ovaj tip pitanja se uređuje u <strong>Admin → Banka pitanja</strong>.
+                  </p>
+                  <div className="text-xs text-blue-800 space-y-1">
+                    <div><strong>Tekst sa prazninama:</strong> {(p.template || []).map((t, i) => t === "DROP" ? <span key={i} className="inline-block px-2 mx-0.5 bg-white border border-dashed border-blue-400 rounded">___</span> : <span key={i}>{t} </span>)}</div>
+                    <div><strong>Riječi:</strong> {(p.words || []).join(", ")}</div>
+                    <div><strong>Tačan redoslijed:</strong> {(p.correct || []).join(" → ")}</div>
+                  </div>
+                </div>
+              )}
+
               {/* Objašnjenje */}
               <div>
                 <label className="text-xs font-bold text-muted-foreground mb-1 block">Objašnjenje (opciono)</label>
@@ -607,9 +624,16 @@ export default function KvizPage() {
   const pitanje = pitanja[current];
   const isLast = current === pitanja.length - 1;
 
-  // Auto-detect checkbox if pitanje has multiple correct answers, regardless of stored type
-  const hasMultiCorrect = (pitanje?.correct && pitanje.correct.length > 1)
-    || (pitanje?.answer?.includes("|||"));
+  // Auto-detect checkbox if pitanje has multiple correct answers, regardless of stored type.
+  // VAŽNO: ne primijeniti override na nove tipove (dragDrop/markWords/reorder/truefalse) —
+  // dragDrop ima `correct` niz sa više stavki (po jedna za svaku DROP poziciju), pa bi
+  // heuristika pogrešno tretirala dragDrop kao checkbox i renderovala prazno.
+  const NEW_TYPES = new Set(["dragDrop", "markWords", "reorder", "truefalse"]);
+  const isNewType = pitanje?.type && NEW_TYPES.has(pitanje.type);
+  const hasMultiCorrect = !isNewType && (
+    (pitanje?.correct && pitanje.correct.length > 1)
+    || (pitanje?.answer?.includes("|||"))
+  );
   const qType = pitanje?.type === "checkbox" || hasMultiCorrect
     ? "checkbox"
     : pitanje?.type || "radio";
