@@ -321,21 +321,20 @@ export function Layout({ children }: LayoutProps) {
 
           <nav className="hidden lg:flex items-center gap-1">
             {mainNavLinks.map((link) => {
-              const cls = `flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`;
-              // Stavke sa onClick (npr. Sufara "Uskoro") renderuju se kao button
-              // jer ne navigiraju nigdje — samo trigger toast.
+              // Samo ikone u desktop meniju (bez teksta) — naslov modula ostaje
+              // u `title` atributu kao tooltip pri hover-u radi accessibility-ja.
+              // Veća ikonica (w-5 h-5) i kvadratni padding kompenzuju gubitak teksta.
+              const cls = `flex items-center justify-center w-11 h-11 rounded-full font-bold transition-all ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`;
               if (link.onClick) {
                 return (
-                  <button key={link.href} type="button" onClick={link.onClick} className={cls}>
-                    <link.icon className="w-4 h-4" />
-                    {link.label}
+                  <button key={link.href} type="button" onClick={link.onClick} className={cls} title={link.label} aria-label={link.label}>
+                    <link.icon className="w-5 h-5" />
                   </button>
                 );
               }
               return (
-                <Link key={link.href} href={link.href} className={cls}>
-                  <link.icon className="w-4 h-4" />
-                  {link.label}
+                <Link key={link.href} href={link.href} className={cls} title={link.label} aria-label={link.label}>
+                  <link.icon className="w-5 h-5" />
                 </Link>
               );
             })}
