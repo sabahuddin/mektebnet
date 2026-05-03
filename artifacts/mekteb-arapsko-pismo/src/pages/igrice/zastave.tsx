@@ -283,7 +283,12 @@ export default function ZastaveSvijeta() {
                 rjedak slučaj jer su učenici primarno na mobilnim uređajima. */}
             <div
               className="text-center mb-6 leading-none select-none"
-              style={{ fontSize: "9rem" }}
+              style={{
+                fontSize: "9rem",
+                // "Twemoji Country Flags" je polyfill font (vidi main.tsx) —
+                // koristi se prvi kao fallback za Windows Chrome/Edge.
+                fontFamily: '"Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif',
+              }}
               aria-label="Zastava"
               data-testid="flag-emoji"
             >

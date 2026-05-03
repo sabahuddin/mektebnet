@@ -108,6 +108,7 @@
     "@tiptap/react": "^3.21.0",
     "@tiptap/starter-kit": "^3.21.0",
     "canvas-confetti": "^1.9.4",
+    "country-flag-emoji-polyfill": "^0.1.8",
     "h5p-standalone": "^3.8.2",
     "onesignal-cordova-plugin": "^5.3.7",
     "react-onesignal": "^3.5.1",
