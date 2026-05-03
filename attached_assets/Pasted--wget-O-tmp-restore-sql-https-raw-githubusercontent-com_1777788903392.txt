@@ -1,0 +1,57 @@
+/ # wget -O /tmp/restore.sql https://raw.githubusercontent.com/sabahuddin/mekteb
+net/main/scripts/prod-restore-pitanja.sql && psql -U mekteb -d mekteb -f /tmp/re
+store.sql
+Connecting to raw.githubusercontent.com (185.199.110.133:443)
+saving to '/tmp/restore.sql'
+restore.sql          100% |********************************|  696k  0:00:00 ETA
+'/tmp/restore.sql' saved
+BEGIN
+DELETE 0
+psql:/tmp/restore.sql:16: ERROR:  cannot get array length of a scalar
+psql:/tmp/restore.sql:17: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:18: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:19: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:20: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:21: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:22: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:23: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:24: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:25: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:26: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:27: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:28: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:29: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:30: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:31: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:32: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:33: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:34: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:35: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:36: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:37: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:38: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:39: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:40: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:41: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:42: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:43: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:44: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:45: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:46: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:47: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:48: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:49: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:50: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:51: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:52: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:53: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:54: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:55: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:56: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:57: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:58: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:102: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+psql:/tmp/restore.sql:124: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK
+psql:/tmp/restore.sql:133: ERROR:  cannot get array length of a scalar
+/ # 

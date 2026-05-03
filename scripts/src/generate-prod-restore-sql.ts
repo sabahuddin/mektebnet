@@ -63,7 +63,7 @@ for (const k of kvizoviSaPitanjima) {
   if (json.includes(TAG)) throw new Error(`Tag konflikt u kvizu ${k.slug} — promijeni TAG`);
   const slugEscaped = k.slug.replace(/'/g, "''");
   lines.push(
-    `UPDATE kvizovi SET pitanja = ${TAG}${json}${TAG}::jsonb WHERE slug = '${slugEscaped}' AND jsonb_array_length(pitanja) < ${pit.length};`
+    `UPDATE kvizovi SET pitanja = ${TAG}${json}${TAG}::jsonb WHERE slug = '${slugEscaped}' AND (pitanja IS NULL OR jsonb_typeof(pitanja) <> 'array' OR jsonb_array_length(pitanja) < ${pit.length});`
   );
 }
 
@@ -76,7 +76,7 @@ lines.push(`WITH unnested AS (
     elem.value AS p
   FROM kvizovi k,
        LATERAL jsonb_array_elements(k.pitanja) WITH ORDINALITY AS elem(value, ord)
-  WHERE jsonb_array_length(k.pitanja) > 0
+  WHERE jsonb_typeof(k.pitanja) = 'array' AND jsonb_array_length(k.pitanja) > 0
 ),
 prepared AS (
   SELECT
@@ -148,7 +148,7 @@ lines.push(`WITH unnested AS (
     elem.value AS p
   FROM kvizovi k,
        LATERAL jsonb_array_elements(k.pitanja) WITH ORDINALITY AS elem(value, ord)
-  WHERE jsonb_array_length(k.pitanja) > 0
+  WHERE jsonb_typeof(k.pitanja) = 'array' AND jsonb_array_length(k.pitanja) > 0
 ),
 valid AS (
   SELECT kviz_id, redoslijed,
@@ -170,7 +170,7 @@ lines.push(`SELECT
   (SELECT COUNT(*) FROM pitanja_banka) AS ukupno_u_banci,
   (SELECT COUNT(*) FROM kviz_pitanja) AS ukupno_veza,
   (SELECT COUNT(DISTINCT kviz_id) FROM kviz_pitanja) AS broj_kvizova_sa_vezama,
-  (SELECT SUM(jsonb_array_length(pitanja)) FROM kvizovi) AS suma_pitanja_u_jsonb;`);
+  (SELECT SUM(jsonb_array_length(pitanja)) FROM kvizovi WHERE jsonb_typeof(pitanja) = 'array') AS suma_pitanja_u_jsonb;`);
 
 writeFileSync(outPath, lines.join("\n"));
 console.log(`Generirano: ${outPath}`);
