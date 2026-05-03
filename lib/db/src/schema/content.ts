@@ -37,12 +37,18 @@ export const KVIZ_KATEGORIJE_META: Record<KvizKategorija, { naziv: string; ikona
   opce: { naziv: "Opće znanje", ikona: "💡" },
 };
 
-// Vrsta pitanja u banci. Trenutno aplikacija renderuje samo single-choice
-// (jedan tačan odgovor među 4 opcije), ali shema je proširiva za buduće
-// tipove (multiple choice, true/false, fill-in-blank). `correctIndex` se
-// za true_false interpretira kao 0=tačno, 1=netačno; opcije za true_false
-// nisu obavezne (ako su prazne, UI prikaže standardno "Tačno/Netačno").
-export const PITANJE_VRSTE = ["single", "multiple", "true_false"] as const;
+// Vrsta pitanja u banci.
+// - "single":    jedan tačan odgovor među opcijama (correctIndex)
+// - "multiple":  više tačnih odgovora (correctIndexes)
+// - "truefalse": Da/Ne pitanje — opcije su uvijek ["Da","Ne"], correctIndex=0|1.
+//                Frontend renderira identično kao single ali sa 2 dugmeta.
+// - "reorder":   poredaj stavke pravilnim redoslijedom — opcije su tekstovi
+//                stavki u redoslijedu kako se PRIKAZUJU učeniku (može i kao
+//                izvorni redoslijed iz banke), a `correctOrder` je niz pozicija
+//                (1-based) koji govori koja stavka je 1., koja 2., itd.
+//                Primjer: opcije=["A","B","C"], correctOrder=[3,1,2] znači
+//                "A treba biti 3., B 1., C 2.".
+export const PITANJE_VRSTE = ["single", "multiple", "truefalse", "reorder"] as const;
 export type PitanjeVrsta = (typeof PITANJE_VRSTE)[number];
 
 // Ilmihal lessons (3 nivoa)
@@ -127,6 +133,9 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   // multi-select kad ima više od jednog elementa; read path slaže
   // `answer = opcije[i].join('|||')` za backward kompatibilnost sa kviz UI.
   correctIndexes: jsonb("correct_indexes").$type<number[] | null>(),
+  // Za vrsta='reorder': niz 1-based pozicija koji preslikava `opcije[i]` u
+  // tačnu poziciju. Dužina mora biti ista kao `opcije`. Za ostale tipove NULL.
+  correctOrder: jsonb("correct_order").$type<number[] | null>(),
   objasnjenje: text("objasnjenje").notNull().default(""),
   // URL slike (relativan, npr. /uploads/xyz.png). Renderira se iznad pitanja.
   slika: varchar("slika", { length: 500 }),

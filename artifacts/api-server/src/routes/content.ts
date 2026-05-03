@@ -246,6 +246,7 @@ router.get("/kvizovi/:slug", async (req, res) => {
         opcije: pitanjaBankaTable.opcije,
         correctIndex: pitanjaBankaTable.correctIndex,
         correctIndexes: pitanjaBankaTable.correctIndexes,
+        correctOrder: pitanjaBankaTable.correctOrder,
         vrsta: pitanjaBankaTable.vrsta,
         objasnjenje: pitanjaBankaTable.objasnjenje,
         slika: pitanjaBankaTable.slika,
@@ -257,19 +258,35 @@ router.get("/kvizovi/:slug", async (req, res) => {
     const norm = (s: string) => s.trim().replace(/\s+/g, " ");
     const bankaMap = new Map(linked.map((p) => [norm(p.pitanje), p]));
 
+    // Rekonstruiše originalni JSONB shape za kviz UI iz banka reda. Frontend
+    // (kviz.tsx) hendla 4 tipa: single/checkbox = options+answer (|||), truefalse =
+    // options=["Da","Ne"]+answer, reorder = items=[{text, order}].
     const fromBank = (p: typeof linked[number]) => {
       const opcije = Array.isArray(p.opcije) ? (p.opcije as string[]) : [];
+      const base = {
+        question: p.pitanje,
+        explanation: p.objasnjenje || undefined,
+        image: p.slika || undefined,
+      };
+
+      if (p.vrsta === "reorder") {
+        const order = Array.isArray(p.correctOrder) ? (p.correctOrder as number[]) : [];
+        const items = opcije.map((text, i) => ({ text, order: order[i] ?? (i + 1) }));
+        return { ...base, type: "reorder", items };
+      }
+
+      if (p.vrsta === "truefalse") {
+        const opts = opcije.length === 2 ? opcije : ["Da", "Ne"];
+        const idx = Math.min(Math.max(0, p.correctIndex ?? 0), 1);
+        return { ...base, type: "truefalse", options: opts, answer: opts[idx] };
+      }
+
+      // single / multiple
       const idxs = Array.isArray(p.correctIndexes) && p.correctIndexes.length > 0
         ? (p.correctIndexes as number[])
         : [Math.min(Math.max(0, p.correctIndex ?? 0), Math.max(0, opcije.length - 1))];
       const answer = idxs.map((i) => opcije[i] ?? "").filter((s) => s.length > 0).join("|||");
-      return {
-        question: p.pitanje,
-        options: opcije,
-        answer,
-        explanation: p.objasnjenje || undefined,
-        image: p.slika || undefined,
-      };
+      return { ...base, options: opcije, answer };
     };
 
     if (jsonbPitanja.length > 0) {

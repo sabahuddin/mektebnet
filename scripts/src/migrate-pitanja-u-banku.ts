@@ -21,10 +21,13 @@ import { sql } from "drizzle-orm";
 
 type LegacyPitanje = {
   question: string;
-  options: string[];
-  answer: string;
+  options?: string[];
+  answer?: string;
   explanation?: string;
   image?: string;
+  type?: string;
+  // reorder
+  items?: { text: string; order: number }[];
 };
 
 function normalize(s: string): string {
@@ -62,54 +65,92 @@ async function main() {
 
     for (let i = 0; i < pitanja.length; i++) {
       const p = pitanja[i];
-      if (!p?.question || !Array.isArray(p.options) || p.options.length === 0) {
+      if (!p?.question) {
         console.warn(`  [${kviz.slug}] preskačem nevažeće pitanje #${i}`);
         continue;
       }
 
       const pitanjeText = normalize(p.question);
+      const tipRaw = (p.type ?? "").toLowerCase();
 
-      // Multi-select: odgovor ima '|||' separator. Split, traži svaku opciju.
-      const answerParts = (p.answer ?? "").includes("|||")
-        ? p.answer.split("|||").map(normalize).filter((s) => s.length > 0)
-        : [normalize(p.answer ?? "")];
+      // Pripremi vrijednosti za insert — različito po tipu
+      let vrsta: "single" | "multiple" | "truefalse" | "reorder";
+      let opcije: string[];
+      let correctIndex = 0;
+      let correctIndexes: number[] | null = null;
+      let correctOrder: number[] | null = null;
 
-      const correctIndexes: number[] = [];
-      for (const part of answerParts) {
-        const idx = p.options.findIndex((o) => normalize(o) === part);
-        if (idx >= 0 && !correctIndexes.includes(idx)) correctIndexes.push(idx);
-      }
-
-      if (correctIndexes.length === 0) {
-        console.warn(
-          `  [${kviz.slug}] pitanje "${pitanjeText.slice(0, 40)}..." — odgovor "${p.answer}" nije u opcijama, preskačem`
-        );
+      if (tipRaw === "reorder") {
+        // reorder: items=[{text, order}]. Spremi opcije u redoslijedu kako su u
+        // seedu (može biti tačan redoslijed već), a correctOrder = order vrijednosti.
+        if (!Array.isArray(p.items) || p.items.length < 2) {
+          console.warn(`  [${kviz.slug}] reorder #${i} bez items, preskačem`);
+          continue;
+        }
+        vrsta = "reorder";
+        opcije = p.items.map((it) => normalize(it.text ?? ""));
+        correctOrder = p.items.map((it) => Number(it.order) || 0);
+        if (opcije.some((o) => o === "") || correctOrder.some((o) => o <= 0)) {
+          console.warn(`  [${kviz.slug}] reorder #${i} ima prazne stavke ili invalidne order vrijednosti, preskačem`);
+          continue;
+        }
+      } else if (tipRaw === "truefalse") {
+        // truefalse: opcije=["Da","Ne"]. answer = "Da"/"Ne" (ili "Tačno"/"Netačno").
+        const a = normalize(p.answer ?? "").toLowerCase();
+        const yesVariants = ["da", "tačno", "tacno", "true", "yes", "ispravno"];
+        const idx = yesVariants.includes(a) ? 0 : 1;
+        vrsta = "truefalse";
+        opcije = ["Da", "Ne"];
+        correctIndex = idx;
+      } else if (tipRaw === "markwords" || tipRaw === "dragdrop") {
+        // markWords i dragDrop ostaju samo u JSONB-u — banka ih ne podržava
         continue;
+      } else {
+        // single / multiple / radio / checkbox / nothing → klasično
+        if (!Array.isArray(p.options) || p.options.length === 0) {
+          console.warn(`  [${kviz.slug}] preskačem nevažeće pitanje #${i}`);
+          continue;
+        }
+        const answerParts = (p.answer ?? "").includes("|||")
+          ? p.answer!.split("|||").map(normalize).filter((s) => s.length > 0)
+          : [normalize(p.answer ?? "")];
+        const idxs: number[] = [];
+        for (const part of answerParts) {
+          const idx = p.options.findIndex((o) => normalize(o) === part);
+          if (idx >= 0 && !idxs.includes(idx)) idxs.push(idx);
+        }
+        if (idxs.length === 0) {
+          console.warn(`  [${kviz.slug}] "${pitanjeText.slice(0, 40)}…" — odgovor "${p.answer}" nije u opcijama, preskačem`);
+          continue;
+        }
+        const isMulti = idxs.length > 1;
+        vrsta = isMulti ? "multiple" : "single";
+        opcije = p.options;
+        correctIndex = idxs[0]!;
+        correctIndexes = isMulti ? idxs : null;
       }
 
-      const isMulti = correctIndexes.length > 1;
-      const correctIndex = correctIndexes[0]!;
-
-      // 1. UPSERT u banku — ako tekst već postoji, ažuriraj correct_indexes/vrsta
-      // (ovo popravlja stare redove koji su bili spremljeni kao 'single' iako su multi).
+      // 1. UPSERT u banku
       const inserted = await db
         .insert(pitanjaBankaTable)
         .values({
           pitanje: pitanjeText,
-          opcije: p.options,
+          opcije,
           correctIndex,
-          correctIndexes: isMulti ? correctIndexes : null,
+          correctIndexes,
+          correctOrder,
           objasnjenje: p.explanation ?? "",
           slika: p.image ?? null,
-          vrsta: isMulti ? "multiple" : "single",
+          vrsta,
         })
         .onConflictDoUpdate({
           target: pitanjaBankaTable.pitanje,
           set: {
-            opcije: p.options,
+            opcije,
             correctIndex,
-            correctIndexes: isMulti ? correctIndexes : null,
-            vrsta: isMulti ? "multiple" : "single",
+            correctIndexes,
+            correctOrder,
+            vrsta,
             updatedAt: new Date(),
           },
         })

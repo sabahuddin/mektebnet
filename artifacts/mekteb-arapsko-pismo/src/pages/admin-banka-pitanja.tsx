@@ -23,6 +23,8 @@ interface PitanjeBanka {
   pitanje: string;
   opcije: string[];
   correctIndex: number;
+  correctIndexes: number[] | null;
+  correctOrder: number[] | null;
   objasnjenje: string;
   slika: string | null;
   vrsta: string;
@@ -32,6 +34,13 @@ interface PitanjeBanka {
   createdAt: string;
   updatedAt: string;
 }
+
+const VRSTA_LABELS: Record<string, string> = {
+  single: "Jedan tačan odgovor",
+  multiple: "Više tačnih odgovora",
+  truefalse: "Da / Ne",
+  reorder: "Poredaj redom",
+};
 
 interface PitanjeListResp {
   total: number;
@@ -73,9 +82,11 @@ function emptyForm() {
     pitanje: "",
     opcije: ["", "", "", ""],
     correctIndex: 0,
+    correctIndexes: [] as number[],
+    correctOrder: [] as number[],
     objasnjenje: "",
     slika: "",
-    vrsta: "single",
+    vrsta: "single" as "single" | "multiple" | "truefalse" | "reorder",
     kategorija: "",
     lekcijaId: "" as string | number,
     tezina: 1,
@@ -157,13 +168,25 @@ export default function AdminBankaPitanjaPage() {
 
   const startEdit = (p: PitanjeBanka) => {
     setEditId(p.id);
+    const vrsta = (["single", "multiple", "truefalse", "reorder"].includes(p.vrsta) ? p.vrsta : "single") as ReturnType<typeof emptyForm>["vrsta"];
+    const opcije = vrsta === "truefalse"
+      ? ["Da", "Ne"]
+      : (p.opcije.length >= 2 ? [...p.opcije] : [...p.opcije, "", ""].slice(0, Math.max(4, p.opcije.length)));
+    const correctOrder = vrsta === "reorder" && Array.isArray(p.correctOrder) && p.correctOrder.length === opcije.length
+      ? [...p.correctOrder]
+      : opcije.map((_, i) => i + 1);
+    const correctIndexes = vrsta === "multiple" && Array.isArray(p.correctIndexes) && p.correctIndexes.length > 0
+      ? [...p.correctIndexes]
+      : [];
     setForm({
       pitanje: p.pitanje,
-      opcije: p.opcije.length >= 2 ? [...p.opcije] : [...p.opcije, "", ""].slice(0, Math.max(4, p.opcije.length)),
+      opcije,
       correctIndex: p.correctIndex,
+      correctIndexes,
+      correctOrder,
       objasnjenje: p.objasnjenje,
       slika: p.slika || "",
-      vrsta: p.vrsta,
+      vrsta,
       kategorija: p.kategorija || "",
       lekcijaId: p.lekcijaId || "",
       tezina: p.tezina,
@@ -192,25 +215,71 @@ export default function AdminBankaPitanjaPage() {
 
   const handleSave = async () => {
     if (!token) return;
-    const opcijeClean = form.opcije.map(o => o.trim()).filter(Boolean);
     if (!form.pitanje.trim()) {
       toast({ title: "Greška", description: "Tekst pitanja je obavezan", variant: "destructive" });
       return;
     }
-    if (opcijeClean.length < 2) {
-      toast({ title: "Greška", description: "Minimum 2 opcije", variant: "destructive" });
-      return;
+
+    let opcijeOut: string[];
+    let correctIndexOut = 0;
+    let correctIndexesOut: number[] | null = null;
+    let correctOrderOut: number[] | null = null;
+
+    if (form.vrsta === "truefalse") {
+      opcijeOut = ["Da", "Ne"];
+      correctIndexOut = form.correctIndex === 1 ? 1 : 0;
+    } else if (form.vrsta === "reorder") {
+      opcijeOut = form.opcije.map(o => o.trim());
+      if (opcijeOut.length < 2 || opcijeOut.some(o => !o)) {
+        toast({ title: "Greška", description: "Minimum 2 stavke, sve moraju imati tekst", variant: "destructive" });
+        return;
+      }
+      correctOrderOut = form.correctOrder.length === opcijeOut.length
+        ? [...form.correctOrder]
+        : opcijeOut.map((_, i) => i + 1);
+      const sorted = [...correctOrderOut].sort((a, b) => a - b);
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i] !== i + 1) {
+          toast({ title: "Greška", description: `Redoslijed mora biti 1..${sorted.length} bez ponavljanja`, variant: "destructive" });
+          return;
+        }
+      }
+    } else if (form.vrsta === "multiple") {
+      // VAŽNO: ne smijemo filterati prazne opcije jer bi to pomjerilo indekse
+      // u correctIndexes — moramo validirati da nema praznih, pa onda mapirati 1:1.
+      opcijeOut = form.opcije.map(o => o.trim());
+      if (opcijeOut.length < 2 || opcijeOut.some(o => !o)) {
+        toast({ title: "Greška", description: "Minimum 2 opcije, sve moraju imati tekst", variant: "destructive" });
+        return;
+      }
+      correctIndexesOut = form.correctIndexes.filter(i => i >= 0 && i < opcijeOut.length).sort((a, b) => a - b);
+      if (correctIndexesOut.length < 2) {
+        toast({ title: "Greška", description: "Označi minimum 2 tačne opcije za tip 'Više tačnih'", variant: "destructive" });
+        return;
+      }
+      correctIndexOut = correctIndexesOut[0]!;
+    } else {
+      // single — ne filteriramo prazne (pomjerilo bi correctIndex)
+      opcijeOut = form.opcije.map(o => o.trim());
+      if (opcijeOut.length < 2 || opcijeOut.some(o => !o)) {
+        toast({ title: "Greška", description: "Minimum 2 opcije, sve moraju imati tekst", variant: "destructive" });
+        return;
+      }
+      if (form.correctIndex < 0 || form.correctIndex >= opcijeOut.length) {
+        toast({ title: "Greška", description: "Označi tačan odgovor", variant: "destructive" });
+        return;
+      }
+      correctIndexOut = form.correctIndex;
     }
-    if (form.correctIndex >= opcijeClean.length) {
-      toast({ title: "Greška", description: "Tačan odgovor je izvan raspona", variant: "destructive" });
-      return;
-    }
+
     setSaving(true);
     try {
       const body = {
         pitanje: form.pitanje.trim(),
-        opcije: opcijeClean,
-        correctIndex: form.correctIndex,
+        opcije: opcijeOut,
+        correctIndex: correctIndexOut,
+        correctIndexes: correctIndexesOut,
+        correctOrder: correctOrderOut,
         objasnjenje: form.objasnjenje.trim(),
         slika: form.slika.trim() || null,
         vrsta: form.vrsta,
@@ -476,33 +545,166 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
           />
         </div>
         <div>
-          <label className="block text-base font-semibold text-foreground mb-1">Opcije (klikni radio za tačan odgovor)</label>
-          <div className="space-y-2">
-            {form.opcije.map((o, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="correct"
-                  checked={form.correctIndex === i}
-                  onChange={() => setForm(prev => ({ ...prev, correctIndex: i }))}
-                  className="w-5 h-5 accent-emerald-600"
-                />
-                <input
-                  value={o}
-                  onChange={e => onOpcijaChange(i, e.target.value)}
-                  placeholder={`Opcija ${i + 1}`}
-                  className="flex-1 px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-                {form.opcije.length > 2 && (
-                  <button onClick={() => onRemoveOpcija(i)} className="p-2 text-muted-foreground hover:text-red-500" title="Ukloni">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button onClick={onAddOpcija} className="mt-2 text-sm text-amber-700 font-semibold hover:underline">+ Dodaj opciju</button>
+          <label className="block text-sm font-semibold text-foreground mb-1">Tip pitanja</label>
+          <select
+            value={form.vrsta}
+            onChange={e => {
+              const v = e.target.value as ReturnType<typeof emptyForm>["vrsta"];
+              setForm(prev => {
+                const base = { ...prev, vrsta: v };
+                if (v === "truefalse") {
+                  return { ...base, opcije: ["Da", "Ne"], correctIndex: 0, correctIndexes: [], correctOrder: [] };
+                }
+                if (v === "reorder") {
+                  const op = prev.opcije.length >= 2 ? prev.opcije : ["", "", "", ""];
+                  return { ...base, opcije: op, correctOrder: op.map((_, i) => i + 1), correctIndexes: [] };
+                }
+                if (v === "multiple") {
+                  return { ...base, correctIndexes: prev.correctIndex >= 0 ? [prev.correctIndex] : [], correctOrder: [] };
+                }
+                return { ...base, correctIndexes: [], correctOrder: [] };
+              });
+            }}
+            className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            <option value="single">Jedan tačan odgovor</option>
+            <option value="multiple">Više tačnih odgovora</option>
+            <option value="truefalse">Da / Ne</option>
+            <option value="reorder">Poredaj redom</option>
+          </select>
         </div>
+
+        {form.vrsta === "truefalse" ? (
+          <div>
+            <label className="block text-base font-semibold text-foreground mb-1">Tačan odgovor</label>
+            <div className="flex gap-3">
+              {["Da", "Ne"].map((label, i) => (
+                <label key={i} className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer transition ${form.correctIndex === i ? "border-emerald-500 bg-emerald-50 text-emerald-800 font-bold" : "border-border bg-white hover:bg-muted"}`}>
+                  <input type="radio" name="tf" checked={form.correctIndex === i} onChange={() => setForm(prev => ({ ...prev, correctIndex: i }))} className="w-5 h-5 accent-emerald-600" />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : form.vrsta === "reorder" ? (
+          <div>
+            <label className="block text-base font-semibold text-foreground mb-1">
+              Stavke (upiši broj redoslijeda 1..N kako trebaju biti složene)
+            </label>
+            <div className="space-y-2">
+              {form.opcije.map((o, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={form.opcije.length}
+                    value={form.correctOrder[i] ?? (i + 1)}
+                    onChange={e => {
+                      const n = parseInt(e.target.value) || 1;
+                      setForm(prev => {
+                        const next = [...prev.correctOrder];
+                        while (next.length < prev.opcije.length) next.push(next.length + 1);
+                        next[i] = Math.max(1, Math.min(prev.opcije.length, n));
+                        return { ...prev, correctOrder: next };
+                      });
+                    }}
+                    className="w-16 px-2 py-2 border border-border rounded-lg text-center text-base font-bold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <input
+                    value={o}
+                    onChange={e => onOpcijaChange(i, e.target.value)}
+                    placeholder={`Stavka ${i + 1}`}
+                    className="flex-1 px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  {form.opcije.length > 2 && (
+                    <button
+                      onClick={() => {
+                        onRemoveOpcija(i);
+                        setForm(prev => ({ ...prev, correctOrder: prev.correctOrder.filter((_, j) => j !== i).map((_, k) => k + 1) }));
+                      }}
+                      className="p-2 text-muted-foreground hover:text-red-500"
+                      title="Ukloni"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                onAddOpcija();
+                setForm(prev => ({ ...prev, correctOrder: [...prev.correctOrder, prev.correctOrder.length + 1] }));
+              }}
+              className="mt-2 text-sm text-amber-700 font-semibold hover:underline"
+            >
+              + Dodaj stavku
+            </button>
+            <p className="text-xs text-muted-foreground mt-2">Brojevi moraju činiti permutaciju 1..{form.opcije.length} (svaki broj tačno jednom).</p>
+          </div>
+        ) : form.vrsta === "multiple" ? (
+          <div>
+            <label className="block text-base font-semibold text-foreground mb-1">Opcije (označi sve tačne — minimum 2)</label>
+            <div className="space-y-2">
+              {form.opcije.map((o, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.correctIndexes.includes(i)}
+                    onChange={e => setForm(prev => ({
+                      ...prev,
+                      correctIndexes: e.target.checked
+                        ? Array.from(new Set([...prev.correctIndexes, i])).sort((a, b) => a - b)
+                        : prev.correctIndexes.filter(x => x !== i),
+                    }))}
+                    className="w-5 h-5 accent-emerald-600"
+                  />
+                  <input
+                    value={o}
+                    onChange={e => onOpcijaChange(i, e.target.value)}
+                    placeholder={`Opcija ${i + 1}`}
+                    className="flex-1 px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  {form.opcije.length > 2 && (
+                    <button onClick={() => onRemoveOpcija(i)} className="p-2 text-muted-foreground hover:text-red-500" title="Ukloni">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={onAddOpcija} className="mt-2 text-sm text-amber-700 font-semibold hover:underline">+ Dodaj opciju</button>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-base font-semibold text-foreground mb-1">Opcije (klikni radio za tačan odgovor)</label>
+            <div className="space-y-2">
+              {form.opcije.map((o, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="correct"
+                    checked={form.correctIndex === i}
+                    onChange={() => setForm(prev => ({ ...prev, correctIndex: i }))}
+                    className="w-5 h-5 accent-emerald-600"
+                  />
+                  <input
+                    value={o}
+                    onChange={e => onOpcijaChange(i, e.target.value)}
+                    placeholder={`Opcija ${i + 1}`}
+                    className="flex-1 px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  {form.opcije.length > 2 && (
+                    <button onClick={() => onRemoveOpcija(i)} className="p-2 text-muted-foreground hover:text-red-500" title="Ukloni">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={onAddOpcija} className="mt-2 text-sm text-amber-700 font-semibold hover:underline">+ Dodaj opciju</button>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">Kategorija</label>

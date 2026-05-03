@@ -1477,23 +1477,71 @@ router.get("/banka-pitanja/:id/usage", async (req, res) => {
 
 function normalizePitanjeBody(body: any) {
   const pitanje = String(body?.pitanje || "").trim();
-  const opcije = Array.isArray(body?.opcije) ? body.opcije.map((o: any) => String(o)) : [];
-  const correctIndex = Math.max(0, Math.min(opcije.length - 1, parseInt(body?.correctIndex ?? 0) || 0));
+  const allowed = ["single", "multiple", "truefalse", "reorder"];
+  const vrsta = (allowed.includes(body?.vrsta) ? body.vrsta : "single") as "single" | "multiple" | "truefalse" | "reorder";
+
+  let opcije: string[] = Array.isArray(body?.opcije) ? body.opcije.map((o: any) => String(o)) : [];
+  let correctIndex = 0;
+  let correctIndexes: number[] | null = null;
+  let correctOrder: number[] | null = null;
+
+  if (vrsta === "truefalse") {
+    opcije = ["Da", "Ne"];
+    const ci = parseInt(body?.correctIndex ?? 0) || 0;
+    correctIndex = ci === 1 ? 1 : 0;
+  } else if (vrsta === "reorder") {
+    // correctOrder = [1..N permutacija] paralelno sa opcije[]
+    if (Array.isArray(body?.correctOrder)) {
+      correctOrder = body.correctOrder.map((n: any) => Number(n) || 0);
+    }
+    correctIndex = 0;
+  } else if (vrsta === "multiple") {
+    if (Array.isArray(body?.correctIndexes) && body.correctIndexes.length > 0) {
+      correctIndexes = Array.from(new Set(body.correctIndexes.map((n: any) => parseInt(n) || 0)))
+        .filter((n) => n >= 0 && n < opcije.length)
+        .sort((a, b) => a - b) as number[];
+    }
+    correctIndex = correctIndexes && correctIndexes.length > 0 ? correctIndexes[0]! : 0;
+  } else {
+    correctIndex = Math.max(0, Math.min(Math.max(0, opcije.length - 1), parseInt(body?.correctIndex ?? 0) || 0));
+  }
+
   const objasnjenje = String(body?.objasnjenje || "").trim();
   const slika = body?.slika ? String(body.slika) : null;
-  const vrsta = body?.vrsta && ["single", "multiple", "true_false"].includes(body.vrsta) ? body.vrsta : "single";
   const kategorija = body?.kategorija ? String(body.kategorija) : null;
   const lekcijaId = body?.lekcijaId ? parseInt(body.lekcijaId) || null : null;
   const tezina = body?.tezina ? Math.max(1, Math.min(3, parseInt(body.tezina) || 1)) : 1;
-  return { pitanje, opcije, correctIndex, objasnjenje, slika, vrsta, kategorija, lekcijaId, tezina };
+  return { pitanje, opcije, correctIndex, correctIndexes, correctOrder, objasnjenje, slika, vrsta, kategorija, lekcijaId, tezina };
+}
+
+function validatePitanjeData(d: ReturnType<typeof normalizePitanjeBody>): string | null {
+  if (!d.pitanje) return "Tekst pitanja je obavezan";
+  if (d.vrsta === "truefalse") {
+    return null; // opcije su uvijek ["Da","Ne"]
+  }
+  if (d.opcije.length < 2) return "Minimum 2 opcije";
+  if (d.opcije.some((o) => !o.trim())) return "Sve opcije moraju imati tekst";
+  if (d.vrsta === "reorder") {
+    if (!d.correctOrder || d.correctOrder.length !== d.opcije.length) {
+      return "Redoslijed mora imati istu dužinu kao opcije";
+    }
+    const sorted = [...d.correctOrder].sort((a, b) => a - b);
+    for (let i = 0; i < sorted.length; i++) {
+      if (sorted[i] !== i + 1) return "Redoslijed mora biti permutacija 1..N";
+    }
+  }
+  if (d.vrsta === "multiple" && (!d.correctIndexes || d.correctIndexes.length < 2)) {
+    return "Za 'više tačnih' označi minimum 2 tačna odgovora";
+  }
+  return null;
 }
 
 // POST /api/admin/banka-pitanja — kreira novo pitanje
 router.post("/banka-pitanja", async (req, res) => {
   try {
     const data = normalizePitanjeBody(req.body);
-    if (!data.pitanje) { res.status(400).json({ error: "Tekst pitanja je obavezan" }); return; }
-    if (data.opcije.length < 2) { res.status(400).json({ error: "Minimum 2 opcije" }); return; }
+    const err = validatePitanjeData(data);
+    if (err) { res.status(400).json({ error: err }); return; }
     const userId = (req as any).user?.id;
     const [created] = await db.insert(pitanjaBankaTable).values({
       ...data,
@@ -1514,8 +1562,8 @@ router.post("/banka-pitanja", async (req, res) => {
 router.put("/banka-pitanja/:id", async (req, res) => {
   try {
     const data = normalizePitanjeBody(req.body);
-    if (!data.pitanje) { res.status(400).json({ error: "Tekst pitanja je obavezan" }); return; }
-    if (data.opcije.length < 2) { res.status(400).json({ error: "Minimum 2 opcije" }); return; }
+    const err = validatePitanjeData(data);
+    if (err) { res.status(400).json({ error: err }); return; }
     await db.update(pitanjaBankaTable).set({
       ...data,
       updatedAt: new Date(),
