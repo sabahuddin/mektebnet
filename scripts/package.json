@@ -22,6 +22,7 @@
     "generate-kviz": "tsx ./src/generate-kviz.ts",
     "export-kviz-pitanja": "tsx ./src/export-kviz-pitanja.ts",
     "categorize-migrated-kvizovi": "tsx ./src/categorize-migrated-kvizovi.ts",
+    "migrate-pitanja-u-banku": "tsx ./src/migrate-pitanja-u-banku.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
