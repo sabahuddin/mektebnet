@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Družtveni život</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Društveni život</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+    
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Koju ulogu ima biljni svijet u borbi sa štetnim gasovima?",
+    "answers": [
+      "Nema nikakvu ulogu",
+      "Najveći je pomoćnik u toj borbi",
+      "Samo ukrašava prostor"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Najveći je pomoćnik u toj borbi",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Šta Uzvišeni kaže o oživljenju u suri El-Mulk?",
+    "answers": [
+      "Da se nećemo vratiti",
+      "Da ćemo Njemu poslije oživljenja odgovarati",
+      "Da je Zemlja samo za zabavu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da ćemo Njemu poslije oživljenja odgovarati",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Na šta utječu zelene površine prema tekstu?",
+    "answers": [
+      "Na visinu zgrada",
+      "Na uravnotežavanje režima vjetrova i smanjenje buke",
+      "Samo na boju okoline"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Na uravnotežavanje režima vjetrova i smanjenje buke",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Koliko je sura u Kur'anu nazvano po životinjama?",
+    "answers": [
+      "Tri",
+      "Šest",
+      "Deset"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Šest",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Koja sura nosi naziv 'Pčele'?",
+    "answers": [
+      "En-Neml",
+      "En-Nahl",
+      "El-Ankebut"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "En-Nahl",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Šta je Poslanik, a.s., zabranio prema hadisu koji prenosi Enes ibn Malik?",
+    "answers": [
+      "Da se domaća životinja postavi kao meta i gađa",
+      "Da se životinje drže u kući",
+      "Da se životinje hrane"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da se domaća životinja postavi kao meta i gađa",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Kada je dozvoljeno nanositi bol živim bićima?",
+    "answers": [
+      "Uvijek",
+      "Izuzev u stanju nužde i potrebe",
+      "Nikada, čak ni štetočinama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Izuzev u stanju nužde i potrebe",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Šta musliman treba biti u prirodi prema lekciji?",
+    "answers": [
+      "Samo gost",
+      "Primjer ispravnog odnosa prema okolini",
+      "Onaj ko siječe šume"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Primjer ispravnog odnosa prema okolini",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Šta se dešava onome ko se smiluje živom biću prema sekciji ZAPAMTI?",
+    "answers": [
+      "Bit će sretan",
+      "Smilovat će mu se Stvoritelj",
+      "Dobit će nagradu na dunjaluku"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Smilovat će mu se Stvoritelj",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Šta je brak osobi koja je svjesna da neće moći udovoljiti bračnim dužnostima?",
+    "answers": [
+      "Sunnet",
+      "Mekruh",
+      "Haram"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Haram",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Koliko svjedoka je minimalno potrebno za sklapanje braka?",
+    "answers": [
+      "Dva muškarca ili jedan muškarac i dvije žene",
+      "Samo roditelji",
+      "Nijedan"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Dva muškarca ili jedan muškarac i dvije žene",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Koji je jedan od ciljeva bračne zajednice?",
+    "answers": [
+      "Osiguranje zakonskih nasljednika",
+      "Samo putovanja",
+      "Skupljanje poklona"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Osiguranje zakonskih nasljednika",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Koja je dužnost supruga prema ženi?",
+    "answers": [
+      "Da je ne izdržava",
+      "Da sa suprugom postupa uljudno",
+      "Da čuva njenu imovinu od nje same"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da sa suprugom postupa uljudno",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Koja je dužnost supruge u braku?",
+    "answers": [
+      "Da rasipa imetak",
+      "Da čuva ugled i dostojanstvo supruga",
+      "Da ne brine o kući"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da čuva ugled i dostojanstvo supruga",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Šta spada u STALNE bračne smetnje?",
+    "answers": [
+      "Srodstvo po krvi, mlijeku i tazbinstvu",
+      "Različita nacionalnost",
+      "Privremena bolest"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Srodstvo po krvi, mlijeku i tazbinstvu",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Šta je iddet?",
+    "answers": [
+      "Svadbeno veselje",
+      "Period čekanja u kojem žena ne može sklopiti novi brak",
+      "Vjenčani dar"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Period čekanja u kojem žena ne može sklopiti novi brak",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Može li se muškarac istovremeno oženiti sa dvije sestre?",
+    "answers": [
+      "Da, to je dozvoljeno",
+      "Ne, to je privremena smetnja",
+      "Samo uz dozvolu roditelja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Ne, to je privremena smetnja",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Kako se definira ekologija?",
+    "answers": [
+      "Nauka o svemiru",
+      "Nauka koja proučava odnose između živih bića",
+      "Nauka o istoriji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Nauka koja proučava odnose između živih bića",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Šta Allah, dž.š., kaže o bašči prekrasnoj u suri En-Neml?",
+    "answers": [
+      "Da su je ljudi sami uzgojili",
+      "Da je nemoguće da vi učinite da izraste drveće njihovo",
+      "Da nije važna"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da je nemoguće da vi učinite da izraste drveće njihovo",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Koji hadis o ljepoti musliman slijedi (Muslim)?",
+    "answers": [
+      "Zaista je Allah moćan",
+      "Zaista je Allah lijep, i voli ljepotu",
+      "Čistoća je pola vjere"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Zaista je Allah lijep, i voli ljepotu",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Šta znači da muslimani koriste blagodati prirode 's mjerom'?",
+    "answers": [
+      "Da troše što više",
+      "Na razuman način, bez rasipanja i uništavanja",
+      "Samo vikendom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Na razuman način, bez rasipanja i uništavanja",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Zbog čega je važna obrada i sadnja zemljišta?",
+    "answers": [
+      "Samo zbog novca",
+      "Zbog hrane, pročišćavanja zraka i sprečavanja erozije tla",
+      "Zbog odmora"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Zbog hrane, pročišćavanja zraka i sprečavanja erozije tla",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Koliko puta se riječ 'sadnica' spominje u Kur'anu?",
+    "answers": [
+      "10 puta",
+      "26 puta",
+      "3 puta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "26 puta",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Koja je uloga muslimana u prirodi prema tekstu?",
+    "answers": [
+      "Da je samo koristi",
+      "Da bude najbolji ekolog i čuva prirodu",
+      "Da je ne dira nikako"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da bude najbolji ekolog i čuva prirodu",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Šta treba nastojati raditi s prirodnim resursima poput drveta?",
+    "answers": [
+      "Sjeći sve što treba",
+      "Što više saditi kako bi se priroda obnavljala",
+      "Samo gledati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Što više saditi kako bi se priroda obnavljala",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Koliko puta je ime Allah spomenuto u Kur'anu?",
+    "answers": [
+      "99 puta",
+      "2.698 puta",
+      "1.000 puta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "2.698 puta",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Kako se nazivaju najljepša Allahova imena?",
+    "answers": [
+      "El-Esmaul-husna",
+      "Es-Sifat",
+      "El-Hadis"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "El-Esmaul-husna",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "U koju grupu spada ime El-Aziz?",
+    "answers": [
+      "Esmaul-džemal",
+      "Esmaul-dželal",
+      "Lijepa imena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Esmaul-dželal",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Kako se trebamo obraćati Allahu kada tražimo oprost?",
+    "answers": [
+      "Ja Rezzaku",
+      "Ja Gaffaru",
+      "Ja Rahmanu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Ja Gaffaru",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Šta znači ime El-Kuddus?",
+    "answers": [
+      "Vladar",
+      "Sveti, Čisti, Koji je bez nedostataka",
+      "Izvor mira"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Sveti, Čisti, Koji je bez nedostataka",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Koliko ima Allahovih lijepih imena?",
+    "answers": [
+      "33",
+      "99",
+      "66"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "99",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Koju suru trebamo proučiti da bismo bolje upoznali Allaha?",
+    "answers": [
+      "El-Ihlas",
+      "El-Fatiha",
+      "El-Bekare"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "El-Ihlas",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Koje ime znači 'Darovatelj oblika'?",
+    "answers": [
+      "El-Halik",
+      "El-Musavvir",
+      "El-Bari'"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "El-Musavvir",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Šta osigurava učenje zadnjih ajeta sure El-Hašr?",
+    "answers": [
+      "Bogatstvo",
+      "Džennet",
+      "Zdravlje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Džennet",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Koga smatramo svojim komšijama?",
+    "answers": [
+      "Samo rodbinu",
+      "Osobe koje žive u blizini naše kuće, ulice ili mahale",
+      "Osobe koje srećemo u prodavnici"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Osobe koje žive u blizini naše kuće, ulice ili mahale",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Šta potvrđuje lijep odnos prema komšijama?",
+    "answers": [
+      "Našu snagu",
+      "Vjeru i daje posebnu slast našem vjerovanju",
+      "Našu brzinu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Vjeru i daje posebnu slast našem vjerovanju",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Ko je najbolji od svih komšija prema hadisu?",
+    "answers": [
+      "Onaj koji ima najveću kuću",
+      "Onaj koji se najljepše odnosi prema svom komšiji",
+      "Onaj koji je najglasniji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Onaj koji se najljepše odnosi prema svom komšiji",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Koliko prava musliman ima kod drugog muslimana prema hadisu?",
+    "answers": [
+      "Tri",
+      "Šest",
+      "Devet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Šest",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Šta trebamo uraditi kada sretnemo komšiju?",
+    "answers": [
+      "Okrenuti glavu",
+      "Selamiti ga (pozdraviti)",
+      "Samo proći"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Selamiti ga (pozdraviti)",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Šta trebamo uraditi kada musliman kihne?",
+    "answers": [
+      "Ništa",
+      "Reći 'jerhamukellah'",
+      "Smijati se"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Reći 'jerhamukellah'",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Je li dozvoljeno uznemiravati komšije koji nisu muslimani?",
+    "answers": [
+      "Da",
+      "Samo ponekad",
+      "Ne, islam strogo zabranjuje uznemiravanje svih komšija"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Ne, islam strogo zabranjuje uznemiravanje svih komšija",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Šta formiramo o sebi lijepim odnosom prema vršnjacima?",
+    "answers": [
+      "Lijepu sliku",
+      "Lošu sliku",
+      "Nikakvu sliku"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Lijepu sliku",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Šta trebamo uraditi kada se komšija razboli?",
+    "answers": [
+      "Izbjegavati ga",
+      "Obići ga",
+      "Poslati drugoga"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Obići ga",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Kako ćemo biti prozivani na Sudnjem danu?",
+    "answers": [
+      "Po brojevima",
+      "Po našim imenima i imenima naših očeva",
+      "Po nadimcima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Po našim imenima i imenima naših očeva",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Kada se kolje akika (kurban) za novorođenče?",
+    "answers": [
+      "Prvi dan",
+      "Sedmi dan po rođenju",
+      "Nakon godinu dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Sedmi dan po rođenju",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Šta se radi sa kosom novorođenčeta prilikom akike?",
+    "answers": [
+      "Ništa",
+      "Šiša se i podijeli se sadaka u težini kose",
+      "Čuva se za uspomenu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Šiša se i podijeli se sadaka u težini kose",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Na koje uho se novorođenčetu uči ezan?",
+    "answers": [
+      "Na lijevo",
+      "Na desno",
+      "Na oba istovremeno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Na desno",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Šta Kur'an (El-Hudžurat, 11) kaže o ružnim nadimcima?",
+    "answers": [
+      "Dozvoljeni su u šali",
+      "Zabranjuje ih i naziva to nepravdom",
+      "Nije važno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Zabranjuje ih i naziva to nepravdom",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Šta treba uraditi s mesom akike?",
+    "answers": [
+      "Sve zadržati za sebe",
+      "U cijelosti podijeliti ili prirediti sohbet",
+      "Prodati ga"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "U cijelosti podijeliti ili prirediti sohbet",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Koja su imena preporučena da se nadijevaju?",
+    "answers": [
+      "Bilo kakva moderna imena",
+      "Lijepa muslimanska imena vezana za Poslanika i ashabe",
+      "Imena poznatih glumaca"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Lijepa muslimanska imena vezana za Poslanika i ashabe",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Da li muslimani smiju jedni drugima davati pogrdne nadimke?",
+    "answers": [
+      "Da, ako se ne ljute",
+      "Ne, to je zabranjeno",
+      "Samo prijateljima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Ne, to je zabranjeno",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Koji ajet upozorava na zabranu bluda?",
+    "answers": [
+      "El-Isra, 32",
+      "El-Bekare, 195",
+      "El-Maide, 90"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "El-Isra, 32",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Koji je narod u Kur'anu uništen zbog moralne izopačenosti?",
+    "answers": [
+      "Narod Nuha, a.s.",
+      "Narod Luta, a.s.",
+      "Narod Ad"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Narod Luta, a.s.",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Šta je Allah, dž.š., propisao da garantira čedan život i potomstvo?",
+    "answers": [
+      "Samo rad",
+      "Brak",
+      "Putovanja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Brak",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Šta je 'zinaluk'?",
+    "answers": [
+      "Vrsta hrane",
+      "Svaki vid zabranjenog spolnog odnosa",
+      "Trgovina"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Svaki vid zabranjenog spolnog odnosa",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Šta se dešava kada se muškarac i žena osame bez mahrema?",
+    "answers": [
+      "Niko nije s njima",
+      "S njima je u društvu šejtan",
+      "Anđeli su s njima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "S njima je u društvu šejtan",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Šta Poslanik, a.s., kaže o očima, rukama i nogama u kontekstu bluda?",
+    "answers": [
+      "Oni ne mogu griješiti",
+      "I oni mogu činiti blud",
+      "Samo srce griješi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "I oni mogu činiti blud",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Koje su tri dunjalučke posljedice bluda prema hadisu?",
+    "answers": [
+      "Bogatstvo, snaga i zdravlje",
+      "Uklanja ozarenost, donosi siromaštvo i smanjuje životni vijek",
+      "Zaborav, tuga i napor"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Uklanja ozarenost, donosi siromaštvo i smanjuje životni vijek",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Koje su ahiretske kazne za blud prema hadisu (Bejheki)?",
+    "answers": [
+      "Samo kajanje",
+      "Allahova srdžba, težak obračun i vječna vatra",
+      "Ništa posebno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Allahova srdžba, težak obračun i vječna vatra",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Ko ima značajnu ulogu u borbi protiv nemorala?",
+    "answers": [
+      "Samo policija",
+      "Mediji, škole, vjerske zajednice i državni organi",
+      "Samo pojedinci"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Mediji, škole, vjerske zajednice i državni organi",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "nemoral.html",
+    "lesson_title": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE",
+    "question": "Šta je dužnost roditelja prema sekciji ZAPAMTI?",
+    "answers": [
+      "Da djecu puste da rade šta žele",
+      "Da djecu lijepo odgajaju i usmjeravaju islamskom moralu",
+      "Da djeci samo osiguraju hranu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da djecu lijepo odgajaju i usmjeravaju islamskom moralu",
+    "source": "NEMORAL – BLUD, ČUVANJE I POSLJEDICE"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Šta od navedenog Allah, dž.š., spominje u suri El-Isra kao stvari za koje ćemo odgovarati?",
+    "answers": [
+      "Samo za imetak",
+      "Sluh, vid i razum",
+      "Samo za snagu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Sluh, vid i razum",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "U što ubrajamo život i zdravlje prema islamskom učenju?",
+    "answers": [
+      "U prolazne stvari bez vrijednosti",
+      "Među najveće Allahove blagodati",
+      "U privatnu stvar pojedinca"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Među najveće Allahove blagodati",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Koji je jedan od načina čuvanja zdravlja spomenut u tekstu?",
+    "answers": [
+      "Pretjerivanje u radu",
+      "Održavanje čistoće tijela, odijela i mjesta boravka",
+      "Samo spavanje bez namaza"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Održavanje čistoće tijela, odijela i mjesta boravka",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Šta je hidžama?",
+    "answers": [
+      "Poseban način ishrane",
+      "Metoda liječenja puštanjem krvi s određenih mjesta",
+      "Vrsta tjelovježbe"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Metoda liječenja puštanjem krvi s određenih mjesta",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Kojih dana u hidžretskom mjesecu je Poslanik, a.s., prakticirao hidžamu?",
+    "answers": [
+      "1., 2. i 3. dana",
+      "17., 19. i 21. dana",
+      "Samo petkom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "17., 19. i 21. dana",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Šta obuhvata odgovornost prema zdravlju u islamu?",
+    "answers": [
+      "Samo fizičko zdravlje",
+      "Samo mentalno zdravlje",
+      "I fizičko i mentalno zdravlje"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "I fizičko i mentalno zdravlje",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Kako čuvamo mentalno zdravlje?",
+    "answers": [
+      "Izbjegavanjem prijatelja",
+      "Redovnim učenjem Kur'ana i namazom",
+      "Stalnom ljutnjom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Redovnim učenjem Kur'ana i namazom",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Šta prema hadisu 'prevari' većinu ljudi?",
+    "answers": [
+      "Bogatstvo i ljepota",
+      "Zdravlje i slobodno vrijeme",
+      "Putovanja i hrana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Zdravlje i slobodno vrijeme",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Šta je grijeh učiniti prema sopstvenom životu?",
+    "answers": [
+      "Namjerno ga upropastiti ili narušiti zdravlje",
+      "Odmoriti se",
+      "Liječiti se"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Namjerno ga upropastiti ili narušiti zdravlje",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odgovornost_zdravlje.html",
+    "lesson_title": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU",
+    "question": "Kako redovno obavljanje namaza utiče na nas?",
+    "answers": [
+      "Samo na fizičko zdravlje",
+      "Samo gubimo vrijeme",
+      "I na fizičko i na mentalno zdravlje"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "I na fizičko i na mentalno zdravlje",
+    "source": "ODGOVORNOST PREMA ŽIVOTU I ZDRAVLJU"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Šta je hidžab prema definiciji iz ilmihala?",
+    "answers": [
+      "Samo marama za glavu",
+      "Način odijevanja kojim se prekriva cijelo tijelo osim lica i šaka",
+      "Posebna odjeća za namaz"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Način odijevanja kojim se prekriva cijelo tijelo osim lica i šaka",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Koji su dijelovi tijela izuzeti od pokrivanja?",
+    "answers": [
+      "Lice i šake",
+      "Samo lice",
+      "Ruke do laktova"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Lice i šake",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Šta hidžab simbolizira pored načina odijevanja?",
+    "answers": [
+      "Bogatstvo",
+      "Čednost, skromnost, privatnost i moral",
+      "Samo tradiciju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Čednost, skromnost, privatnost i moral",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Kada je ženi dozvoljeno da otkrije dijelove tijela osim lica i šaka prema hadisu?",
+    "answers": [
+      "Uvijek u kući",
+      "Nikada kada dostigne punoljetnost pred drugima",
+      "Samo na ljetovanju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Nikada kada dostigne punoljetnost pred drugima",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Kakva odjeća za hidžab NE smije biti?",
+    "answers": [
+      "Boje po izboru",
+      "Tijesna, kratka niti prozirna",
+      "Široka i duga"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Tijesna, kratka niti prozirna",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Šta je Allahov Poslanik, a.s., prokleo prema hadisu?",
+    "answers": [
+      "Ljude koji ne rade",
+      "Muškarce koji oponašaju žene i žene koje oponašaju muškarce",
+      "One koji ne nose novu odjeću"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Muškarce koji oponašaju žene i žene koje oponašaju muškarce",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Kada se obilježava svjetski Dan hidžaba?",
+    "answers": [
+      "Prvi mart",
+      "Prvi februar",
+      "Deseti muharrem"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Prvi februar",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Od čega hidžab štiti ženu?",
+    "answers": [
+      "Od kiše",
+      "Od napadanja i usmjerava je ka čednosti",
+      "Od sunca"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Od napadanja i usmjerava je ka čednosti",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "Koja je izreka Omera, r.a., spomenuta u lekciji?",
+    "answers": [
+      "Znanje je svjetlo",
+      "Onaj ko se postidi, sakrit će se...",
+      "Rad je ibadet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Onaj ko se postidi, sakrit će se...",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "odijevanje_hidzab.html",
+    "lesson_title": "KULTURA ODIJEVANJA, HIDŽAB",
+    "question": "U kojoj suri je objavljeno 'Tako će se najlakše prepoznati pa neće napastvovane biti'?",
+    "answers": [
+      "El-Bekare",
+      "El-Ahzab",
+      "En-Nisa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "El-Ahzab",
+    "source": "KULTURA ODIJEVANJA, HIDŽAB"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Koji je najbolji način održavanja rodbinskih veza?",
+    "answers": [
+      "Slanje poruka",
+      "Posjećivanje i obilaženje rodbine",
+      "Gledanje slika na internetu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Posjećivanje i obilaženje rodbine",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Ko se pored užih članova ubraja u rodbinu?",
+    "answers": [
+      "Samo komšije",
+      "Samo drugovi iz škole",
+      "Djedovi, nane, tetke, daidže, amidže i njihova djeca"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Djedovi, nane, tetke, daidže, amidže i njihova djeca",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "S čime je izjednačeno održavanje rodbinskih veza u hadisu?",
+    "answers": [
+      "S odlaskom na put",
+      "S održavanjem veze s Uzvišenim Allahom",
+      "S obavljanjem posla"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "S održavanjem veze s Uzvišenim Allahom",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Iz kojeg Allahovog imena su izvedene rodbinske veze?",
+    "answers": [
+      "El-Kuddus",
+      "El-Milostivi (Er-Rahman)",
+      "El-Aziz"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "El-Milostivi (Er-Rahman)",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Kada je najvažnije početi s njegovanjem rodbinske ljubavi?",
+    "answers": [
+      "U starosti",
+      "U vremenu djetinjstva",
+      "Tek kad odrastemo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "U vremenu djetinjstva",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Šta treba činiti da bi ljubav među rođacima ostala?",
+    "answers": [
+      "Izbjegavati se",
+      "Družiti se, igrati i boraviti u gostima jedni kod drugih",
+      "Samo se javljati za praznike"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Družiti se, igrati i boraviti u gostima jedni kod drugih",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Treba li održavati veze s onima koji nam ne dolaze u posjete?",
+    "answers": [
+      "Ne",
+      "Samo ako nam pošalju poklon",
+      "Da, rodbinske veze treba održavati i s njima"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da, rodbinske veze treba održavati i s njima",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Koje je jedna od koristi čuvanja rodbinskih veza?",
+    "answers": [
+      "Zadovoljstvo Allaha, dž.š.",
+      "Više slobodnog vremena",
+      "Manje učenja"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Zadovoljstvo Allaha, dž.š.",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "U kojoj suri se spominje dobročinstvo prema rođacima pored klanjanja Allahu?",
+    "answers": [
+      "El-Fatiha",
+      "En-Nisa",
+      "El-Ihlas"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "En-Nisa",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "rodbinske_veze.html",
+    "lesson_title": "ČUVANJE RODBINSKIH VEZA",
+    "question": "Šta donosi prekidanje rodbinskih veza?",
+    "answers": [
+      "Sreću",
+      "Teške posljedice na ovom svijetu i na Sudnjem danu",
+      "Miran život"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Teške posljedice na ovom svijetu i na Sudnjem danu",
+    "source": "ČUVANJE RODBINSKIH VEZA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Koliko dugo je majka dužna dojiti dijete prema suri Lukman?",
+    "answers": [
+      "Jednu godinu",
+      "Dvije godine",
+      "Tri godine"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Dvije godine",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Šta Allah zahtijeva od djece prema roditeljima?",
+    "answers": [
+      "Samo da im daju novac",
+      "Da ih poštuju i budu im poslušni",
+      "Da ih posjećuju jednom godišnje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Da ih poštuju i budu im poslušni",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Kada briga o roditeljima treba biti posebno izražena?",
+    "answers": [
+      "Kada su mladi",
+      "Kada dožive starost i iznemoglost",
+      "Samo za praznike"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Kada dožive starost i iznemoglost",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Šta je jedan od ljudi u pećini naveo kao svoje najbolje djelo?",
+    "answers": [
+      "Trgovinu",
+      "Dobročinstvo prema starim roditeljima",
+      "Putovanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Dobročinstvo prema starim roditeljima",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Zašto je majka spomenuta tri puta u hadisu?",
+    "answers": [
+      "Jer više priča",
+      "Jer nosi, rađa i doji svoju djecu",
+      "Jer je starija"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Jer nosi, rađa i doji svoju djecu",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Kako se trebamo obraćati roditeljima?",
+    "answers": [
+      "Glasno",
+      "Riječima poštovanja punim",
+      "Samo kada moramo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Riječima poštovanja punim",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Kako poštivanje starijih utiče na životnu sredinu?",
+    "answers": [
+      "Nema nikakvog uticaja",
+      "Čini je ugodnom i oplemenjuje ambijent",
+      "Stvara više posla za mlađe"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Čini je ugodnom i oplemenjuje ambijent",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Šta je mali predznak Sudnjeg dana spomenut u lekciji?",
+    "answers": [
+      "Kada se mlađi neuljudno usprotive starijima",
+      "Kada nestane struje",
+      "Kada ljudi prestanu putovati"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Kada se mlađi neuljudno usprotive starijima",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Koga prvog trebamo selamiti pri susretu?",
+    "answers": [
+      "Samo vršnjake",
+      "Starije osobe",
+      "Nikoga"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Starije osobe",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Gdje starijima trebamo ustupiti mjesto u džamiji?",
+    "answers": [
+      "U zadnjim safovima",
+      "U prvim safovima",
+      "Bilo gdje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "U prvim safovima",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Šta trebamo uraditi kada stariji govore?",
+    "answers": [
+      "Prekinuti ih i reći svoje mišljenje",
+      "Pažljivo ih saslušati bez prekidanja",
+      "Otići dok pričaju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Pažljivo ih saslušati bez prekidanja",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Na koju stranu trebamo propustiti starije kada idemo s njima?",
+    "answers": [
+      "Na lijevu stranu",
+      "Na desnu stranu",
+      "Nije važno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Na desnu stranu",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Šta trebamo uraditi ako se igramo a stariji prolaze?",
+    "answers": [
+      "Nastaviti igru još jače",
+      "Prekinuti igru dok stariji ne prođu",
+      "Skloniti se i sakriti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Prekinuti igru dok stariji ne prođu",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Zbog čega je poštivanje starijih odlika vjernika?",
+    "answers": [
+      "Zbog njihovih godina, iskustva i znanja",
+      "Jer su jači od nas",
+      "Jer tako piše u novinama"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Zbog njihovih godina, iskustva i znanja",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Šta podrazumijeva cjeloživotna obaveza stjecanja znanja?",
+    "answers": [
+      "Samo zabavu",
+      "Odricanje, rad, trud, strpljivost i žrtvu",
+      "Slučajno učenje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Odricanje, rad, trud, strpljivost i žrtvu",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Šta Allah kaže o neudatima i neoženjenima u suri En-Nur?",
+    "answers": [
+      "Da se ne trebaju ženiti",
+      "Udavajte neudate i ženite neoženjene",
+      "Da je brak zabranjen"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Udavajte neudate i ženite neoženjene",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Šta je obaveza mladića i djevojke prilikom upoznavanja?",
+    "answers": [
+      "Biti neiskren",
+      "Pridržavati se islamskog načina komuniciranja",
+      "Izbjegavati razgovor o važnim temama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Pridržavati se islamskog načina komuniciranja",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Koji je jedan od ciljeva upoznavanja?",
+    "answers": [
+      "Zasnivanje porodice",
+      "Svađa oko stavova",
+      "Gubljenje vremena"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Zasnivanje porodice",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Čiji blagoslov je potreban za zasnivanje bračne zajednice?",
+    "answers": [
+      "Samo prijatelja",
+      "Dozvola njihovih roditelja",
+      "Nikakva dozvola"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Dozvola njihovih roditelja",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Da li je vjeridba obavezna po šerijatskim propisima?",
+    "answers": [
+      "Da, stroga obaveza",
+      "Preporučena, ali nije obavezna",
+      "Zabranjena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Preporučena, ali nije obavezna",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Kako se naziva čin ženidbe i udaje?",
+    "answers": [
+      "Svadba",
+      "Kurban",
+      "Džemat"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Svadba",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Pred kim se obavlja šerijatsko vjenčanje?",
+    "answers": [
+      "Pred bilo kojim komšijom",
+      "Pred glavnim imamom ili ovlaštenom osobom",
+      "Pred školskim drugovima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Pred glavnim imamom ili ovlaštenom osobom",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Kako se zove mehr koji se daje odmah prilikom vjenčanja?",
+    "answers": [
+      "Mehru muadždžel",
+      "Mehru muedždžel",
+      "Mehru haram"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Mehru muadždžel",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Šta je najmrže djelo Allahu od dozvoljenih stvari?",
+    "answers": [
+      "Trgovina",
+      "Razvod braka",
+      "Putovanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "Razvod braka",
+    "source": "ŽENIDBA I UDAJA"
+  },
+  {
+    "source_file": "zenidba_udaja.html",
+    "lesson_title": "ŽENIDBA I UDAJA",
+    "question": "Kada je dopušten razvod braka?",
+    "answers": [
+      "Nikada",
+      "U opravdanim slučajevima",
+      "Samo ako roditelji tako žele"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "drustveni_zivot",
+    "correct": "U opravdanim slučajevima",
+    "source": "ŽENIDBA I UDAJA"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Družtveni život');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

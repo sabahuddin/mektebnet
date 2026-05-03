@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Ostala pitanja</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Ostala pitanja</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+        
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "biljke_zivotinje.html",
+    "lesson_title": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU",
+    "question": "Koji je teški grijeh zabranjen kada su u pitanju životinje?",
+    "answers": [
+      "Hraniti ih",
+      "Spaljivati ih na vatri",
+      "Gledati ih"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Spaljivati ih na vatri",
+    "source": "ODNOS PREMA BILJNOM I ŽIVOTINJSKOM SVIJETU"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Od čega su stvoreni džini?",
+    "answers": [
+      "Svjetlosti",
+      "Zemlje",
+      "Vatre užarene"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Vatre užarene",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Ko su džini nevjernici?",
+    "answers": [
+      "Meleki",
+      "Šejtani",
+      "Ljudi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Šejtani",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Ko je vođa šejtana?",
+    "answers": [
+      "Džibril",
+      "Ridvan",
+      "Iblis"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Iblis",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Šta znači Euzubillah?",
+    "answers": [
+      "Tražim Allahovu zaštitu od prokletog šejtana",
+      "Vjerujem u Allaha",
+      "Allah je najveći"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Tražim Allahovu zaštitu od prokletog šejtana",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Nad kim šejtan nema nikakve vlasti?",
+    "answers": [
+      "Nad onima koji vjeruju i u Allaha se uzdaju",
+      "Nad svima",
+      "Nad životinjama"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Nad onima koji vjeruju i u Allaha se uzdaju",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Koje sure učimo za zaštitu od šejtana?",
+    "answers": [
+      "El-Fatiha i El-Ihlas",
+      "El-Felek i En-Nas",
+      "El-Fil i El-Asr"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "El-Felek i En-Nas",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Šta je simbol zla prema lekciji?",
+    "answers": [
+      "Vatra",
+      "Šejtan",
+      "Noć"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Šejtan",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Gdje je objavljena sura El-'Asr?",
+    "answers": [
+      "U Medini",
+      "U Mekki",
+      "U Kudsu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "U Mekki",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Koliko ajeta sadrži ova sura?",
+    "answers": [
+      "Dva",
+      "Tri",
+      "Četiri"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Tri",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Čime se Allah, dž.š., zaklinje na početku sure?",
+    "answers": [
+      "Suncem",
+      "Vremenom",
+      "Mjesecem"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Vremenom",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "U kakvom je stanju čovjek prema drugom ajetu?",
+    "answers": [
+      "Uvijek gubi",
+      "Uvijek pobjeđuje",
+      "Ravnodušan je"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Uvijek gubi",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Ko su oni koji nisu na gubitku?",
+    "answers": [
+      "Samo bogati",
+      "Vjernici koji čine dobra djela",
+      "Svi ljudi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Vjernici koji čine dobra djela",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Šta vjernici jedni drugima preporučuju?",
+    "answers": [
+      "Zabavu",
+      "Istinu i strpljenje",
+      "Trgovinu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Istinu i strpljenje",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Šta znači 'Vel-'asr'?",
+    "answers": [
+      "Tako mi vremena",
+      "Tako mi zore",
+      "Tako mi noći"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Tako mi vremena",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Ko će uspjeti na budućem svijetu?",
+    "answers": [
+      "Svi",
+      "Samo oni koji vjeruju i čine dobra djela",
+      "Oni koji su bili slavni"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Samo oni koji vjeruju i čine dobra djela",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Koja je glavna poruka sure?",
+    "answers": [
+      "Važnost vremena i dobrih djela",
+      "Važnost putovanja",
+      "Važnost govora"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Važnost vremena i dobrih djela",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_asr.html",
+    "lesson_title": "UČENJE SURE EL-'ASR",
+    "question": "Šta znači 'Innel-insāne le-fī husr'?",
+    "answers": [
+      "Čovjek, doista, gubi",
+      "Čovjek je sretan",
+      "Čovjek je stvoren"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Čovjek, doista, gubi",
+    "source": "UČENJE SURE EL-'ASR"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Gdje je objavljena sura El-Humezeh?",
+    "answers": [
+      "U Mekki",
+      "U Medini",
+      "U Kudsu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "U Mekki",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Koliko ajeta sadrži sura El-Humezeh?",
+    "answers": [
+      "Sedam",
+      "Devet",
+      "Jedanaest"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Devet",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Kome je upućena prijetnja 'Teško svakom...'?",
+    "answers": [
+      "Putnicima",
+      "Klevetnicima i podrugljivcima",
+      "Siromašnima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Klevetnicima i podrugljivcima",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Šta misli podrugljivac kojeg spominje sura?",
+    "answers": [
+      "Da će ga blago učiniti besmrtnim",
+      "Da će biti nagrađen",
+      "Da je najbolji"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Da će ga blago učiniti besmrtnim",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Kako se naziva vatra u koju će biti bačen?",
+    "answers": [
+      "Džennet",
+      "Hutameh",
+      "Vrt"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Hutameh",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Šta klevetnik radi sa blagom prema suri?",
+    "answers": [
+      "Dijeli ga",
+      "Gomila ga i prebrojava",
+      "Krije ga"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Gomila ga i prebrojava",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Dokle će dopirati Allahova razbuktana vatra?",
+    "answers": [
+      "Do ruku",
+      "Do srca",
+      "Do očiju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Do srca",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Šta će se desiti sa vatrom iznad njih?",
+    "answers": [
+      "Bit će ugašena",
+      "Bit će zatvorena",
+      "Bit će hladna"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Bit će zatvorena",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Hoće li postići sreću oni koji se rugaju drugima?",
+    "answers": [
+      "Neće",
+      "Hoće",
+      "Ponekad"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Neće",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "el_humeze.html",
+    "lesson_title": "UČENJE SURE EL-HUMEZEH",
+    "question": "Hoće li postići sreću oni koji čuvaju bogatstvo samo za sebe?",
+    "answers": [
+      "Možda",
+      "Neće",
+      "Hoće"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Neće",
+    "source": "UČENJE SURE EL-HUMEZEH"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Šta je Poslanik, a.s., rekao o onome ko ode gataru i povjeruje mu?",
+    "answers": [
+      "Da mu se namaz ne prima 40 dana",
+      "Da je zanijekao ono što je objavljeno Muhammedu, a.s.",
+      "Da treba ponovo uzeti abdest"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Da je zanijekao ono što je objavljeno Muhammedu, a.s.",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Šta direktno poriče osoba koja piše horoskope i proriče budućnost?",
+    "answers": [
+      "Dnevne novine",
+      "Ajet da niko osim Allaha ne zna šta će se dogoditi",
+      "Zakon o medijima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Ajet da niko osim Allaha ne zna šta će se dogoditi",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Ko jedini na nebu i na Zemlji zna šta će se dogoditi (gajb)?",
+    "answers": [
+      "Astronomi",
+      "Samo Allah",
+      "Pisci horoskopa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Samo Allah",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Šta znači grčka riječ 'latreia' od koje potiče riječ idolatrija?",
+    "answers": [
+      "Slika",
+      "Obožavati",
+      "Zvijezda"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Obožavati",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Koji su savremeni primjeri idolatrije (obožavanja)?",
+    "answers": [
+      "Obožavanje hrane, glumaca, igrača, TV-emisija",
+      "Odlazak u džamiju",
+      "Učenje Kur'ana"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Obožavanje hrane, glumaca, igrača, TV-emisija",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Šta se dešava ako musliman iskreno povjeruje u horoskop?",
+    "answers": [
+      "Bit će sretniji",
+      "To je čin nevjerstva",
+      "Ništa se ne mijenja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "To je čin nevjerstva",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Šta musliman uvijek treba imati na umu u vezi s obožavanjem?",
+    "answers": [
+      "Da se obožava samo i isključivo Allah, dž.š.",
+      "Da može obožavati koga želi",
+      "Da je horoskop dozvoljena zabava"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Da se obožava samo i isključivo Allah, dž.š.",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Šta poriču oni koji vjeruju onome ko tvrdi da poznaje budućnost?",
+    "answers": [
+      "Svoj horoskop",
+      "Allahovu objavu Muhammedu, a.s.",
+      "Pravila fizike"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Allahovu objavu Muhammedu, a.s.",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "Šta se često dešava ljudima koji čitaju horoskop čak i ako 'ne vjeruju'?",
+    "answers": [
+      "Postanu bogati",
+      "Obraduju se ili uplaše zavisno o napisanom",
+      "Zaborave pročitano"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Obraduju se ili uplaše zavisno o napisanom",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "horoskop.html",
+    "lesson_title": "HOROSKOP I SAVREMENA IDOLATRIJA",
+    "question": "U čemu su ljudi danas pronašli idole?",
+    "answers": [
+      "Samo u kipovima",
+      "U svemu što ih odvraća od sjećanja na Allaha",
+      "U starim knjigama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "U svemu što ih odvraća od sjećanja na Allaha",
+    "source": "HOROSKOP I SAVREMENA IDOLATRIJA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Ko je bila prva žena na dunjaluku?",
+    "answers": [
+      "Hatidža",
+      "Hava",
+      "Asija"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Hava",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Kako se zove sura u Kur'anu koja u prevodu znači 'Žene'?",
+    "answers": [
+      "En-Nahl",
+      "En-Nisa",
+      "El-Bekare"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "En-Nisa",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Ko je bila Asija?",
+    "answers": [
+      "Supruga faraonova",
+      "Majka Isaa, a.s.",
+      "Kći Muhammeda, a.s."
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Supruga faraonova",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Koja je žena jedina imenom spomenuta u Kur'anu?",
+    "answers": [
+      "Fatima",
+      "Hatidža",
+      "Merjem"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Merjem",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Čija je majka bila Merjem, r.a.?",
+    "answers": [
+      "Musaa, a.s.",
+      "Isaa, a.s.",
+      "Adema, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Isaa, a.s.",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Ko je bila prva vjernica koja je povjerovala u Poslanikovu misiju?",
+    "answers": [
+      "Fatima",
+      "Hatidža",
+      "Asija"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Hatidža",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Kojoj je odabranoj ženi Džibril prenio selam od Allaha i sebe?",
+    "answers": [
+      "Merjemi",
+      "Hatidži",
+      "Fatimi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Hatidži",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Koja kći Poslanika, a.s., je bila primjer strpljivosti i morala?",
+    "answers": [
+      "Zejneb",
+      "Rukaja",
+      "Fatima"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Fatima",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Šta je Asija odgovorila faraonu tokom mučenja?",
+    "answers": [
+      "Da će ga poslušati",
+      "Da je njeno srce u zaštiti njenog Gospodara",
+      "Da se plaši"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Da je njeno srce u zaštiti njenog Gospodara",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  },
+  {
+    "source_file": "odabrane_zene.html",
+    "lesson_title": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA",
+    "question": "Kako je Kur'an nazvao Merjemu, r.a.?",
+    "answers": [
+      "Sestrom Harunovom",
+      "Kćerkom Musaovom",
+      "Vladarkom"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ostalo",
+    "correct": "Sestrom Harunovom",
+    "source": "ODABRANE ŽENE SPOMENUTE U KUR’ANU I HADISIMA"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Ostala pitanja');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

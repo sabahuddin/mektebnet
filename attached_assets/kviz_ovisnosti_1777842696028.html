@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Ovisnosti</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Ovisnosti</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+        
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Šta šejtan želi postići pomoću vina i kocke (El-Maide, 91)?",
+    "answers": [
+      "Mir i slogu",
+      "Unijeti neprijateljstvo i mržnju",
+      "Povećati znanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Unijeti neprijateljstvo i mržnju",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Koliko je faza kur'anskog ukidanja alkohola?",
+    "answers": [
+      "Dvije",
+      "Tri",
+      "Četiri"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Četiri",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Šta se dešava u drugoj fazi zabrane alkohola?",
+    "answers": [
+      "Zabrana obavljanja namaza u pijanom stanju",
+      "Apsolutna zabrana",
+      "Preporuka da se pije manje"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Zabrana obavljanja namaza u pijanom stanju",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Koja sura i ajeti donose apsolutnu zabranu alkohola?",
+    "answers": [
+      "El-Bekare, 219",
+      "El-Maide, 90-91",
+      "En-Nahl, 67"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "El-Maide, 90-91",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Šta musliman treba raditi ako se na stolu nalazi alkohol?",
+    "answers": [
+      "Sjediti i ne piti",
+      "Ne sjedati za taj stol",
+      "Samo kratko ostati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Ne sjedati za taj stol",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Je li dozvoljeno prodavati alkohol ako ga sami ne pijemo?",
+    "answers": [
+      "Da, to je trgovina",
+      "Ne, to uzrokuje prokletstvo shodno hadisu",
+      "Samo u hotelima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Ne, to uzrokuje prokletstvo shodno hadisu",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Može li se alkohol koristiti kao lijek prema hadisu koji bilježi Ebu Davud?",
+    "answers": [
+      "Da, ako nema drugog lijeka",
+      "Ne, jer se ne treba liječiti zabranjenim stvarima",
+      "Samo za djecu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Ne, jer se ne treba liječiti zabranjenim stvarima",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Koja je poruka sekcije ZAPAMTI?",
+    "answers": [
+      "Alkohol je dozvoljen ponekad",
+      "Izbjegavaj sve što ima veze s alkoholom",
+      "Pij samo malo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Izbjegavaj sve što ima veze s alkoholom",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Šta islam zabranjuje prema općem načelu?",
+    "answers": [
+      "Sve što je novo",
+      "Sve što ima negativan utjecaj na fizičko i psihičko zdravlje",
+      "Samo duga putovanja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Sve što ima negativan utjecaj na fizičko i psihičko zdravlje",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Šta se smatra drogom prema lekciji?",
+    "answers": [
+      "Samo lijekovi iz apoteke",
+      "Materije koje dovode do opijenosti i nemogućnosti zdravog rasuđivanja",
+      "Samo gazirana pića"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Materije koje dovode do opijenosti i nemogućnosti zdravog rasuđivanja",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Kako se definiše pojam 'hamr' prema hadisu?",
+    "answers": [
+      "Ono što muti razum",
+      "Ono što je gorko",
+      "Ono što je skupo"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Ono što muti razum",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Gdje će se osjetiti posljedice konzumiranja droge?",
+    "answers": [
+      "Samo na dunjaluku",
+      "I na dunjaluku i na ahiretu",
+      "Nigdje ako se niko ne sazna"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "I na dunjaluku i na ahiretu",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Šta Uzvišeni Allah kaže u suri El-Bekare, 195?",
+    "answers": [
+      "Učite stalno",
+      "...i sami sebe u propast ne dovodite...",
+      "Budite bogati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "...i sami sebe u propast ne dovodite...",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Čemu islamsko pravo posvećuje više pažnje u odnosu na savremeno zakonodavstvo?",
+    "answers": [
+      "Samo kažnjavanju",
+      "Prevenciji konzumiranja droge",
+      "Izgradnji bolnica"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Prevenciji konzumiranja droge",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Šta je obaveza čovjeka ako zapadne u ovisnost?",
+    "answers": [
+      "Da to sakrije",
+      "Da se liječi",
+      "Da nastavi po starom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Da se liječi",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Na osnovu čega se izvodi zabrana duhana u islamu?",
+    "answers": [
+      "Na osnovu direktnog imena u Kur'anu",
+      "Iz štete koju nanosi zdravlju",
+      "Zato što je skup"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Iz štete koju nanosi zdravlju",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Šta medicina potvrđuje u vezi s duhanom?",
+    "answers": [
+      "Da je koristan",
+      "Da izaziva bolest ovisnosti",
+      "Da ne utječe na zdravlje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Da izaziva bolest ovisnosti",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Koja je jedna od navedenih štetnih posljedica po zdravlje?",
+    "answers": [
+      "Poboljšanje vida",
+      "Skraćivanje životnog vijeka",
+      "Jačanje kostiju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Skraćivanje životnog vijeka",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Šta je 'pasivno pušenje'?",
+    "answers": [
+      "Pušenje samo jedne cigarete",
+      "Boravak u društvu pušača",
+      "Korištenje nargile"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Boravak u društvu pušača",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Kome pušač nanosi ogromnu štetu pored sebe?",
+    "answers": [
+      "Nikome",
+      "Svojoj porodici i prvenstveno djeci",
+      "Samo strancima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Svojoj porodici i prvenstveno djeci",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Šta islam kaže o trošenju novca na duhan?",
+    "answers": [
+      "To je mudra investicija",
+      "To je luksuziranje i rasipanje koje treba izbjeći",
+      "To je privatna stvar"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "To je luksuziranje i rasipanje koje treba izbjeći",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Šta se savjetuje onima koje zadesi bolest ovisnosti o duhanu?",
+    "answers": [
+      "Da nastave pušiti",
+      "Da moraju tražiti lijeka",
+      "Da se kriju od ljudi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Da moraju tražiti lijeka",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Kakav je život pušača u poređenju s nepušačima?",
+    "answers": [
+      "Duži",
+      "Kraći",
+      "Potpuno isti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Kraći",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Koji ajet se navodi kao opomena (El-Bekare, 195)?",
+    "answers": [
+      "Onaj koji govori o trgovini",
+      "Onaj koji zabranjuje da sami sebe u propast dovodimo",
+      "Onaj koji govori o postu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Onaj koji zabranjuje da sami sebe u propast dovodimo",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Šta se savjetuje da iskoristimo prije nego što dođe drugih pet stvari (hadis)?",
+    "answers": [
+      "Novu tehnologiju",
+      "Slobodno vrijeme prije zauzetosti i život prije smrti",
+      "Samo bogatstvo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Slobodno vrijeme prije zauzetosti i život prije smrti",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Kako se definira ovisnost o internetu?",
+    "answers": [
+      "Korištenje interneta samo za školu",
+      "Pretjerano korištenje koje narušava zdravlje i društveno funkcioniranje",
+      "Svako paljenje računara"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Pretjerano korištenje koje narušava zdravlje i društveno funkcioniranje",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Šta je postalo glavna preokupacija današnjih generacija prilikom posjeta objektima?",
+    "answers": [
+      "Naručivanje hrane",
+      "Šifra za Wi-Fi",
+      "Razgovor s konobarom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Šifra za Wi-Fi",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Na šta ovisnost o internetu štetno djeluje, slično alkoholu i drogi?",
+    "answers": [
+      "Na brzinu interneta",
+      "Na fizičko i psihičko zdravlje čovjeka",
+      "Samo na ocjene"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Na fizičko i psihičko zdravlje čovjeka",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Koji je jedan od znakova ovisnosti o internetu?",
+    "answers": [
+      "Gubitak kontrole vremena",
+      "Redovno učenje",
+      "Isključivanje mobitela prije spavanja"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Gubitak kontrole vremena",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Šta osjeća ovisnik o internetu ako nema dostupan pristup mreži?",
+    "answers": [
+      "Olakšanje",
+      "Tjeskobu i napetost",
+      "Radost"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Tjeskobu i napetost",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Šta je prioritet za vjernika, a ujedno i najbolja prevencija ovisnosti?",
+    "answers": [
+      "Brži internet",
+      "Allahovo zadovoljstvo, te psihičko i fizičko zdravlje",
+      "Što više pratitelja na mrežama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Allahovo zadovoljstvo, te psihičko i fizičko zdravlje",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Koja metoda pomaže u spašavanju od ove pošasti?",
+    "answers": [
+      "Gledanje TV-a",
+      "Jačanje mreže prijatelja i provođenje vremena u društvu",
+      "Kupovina novog mobitela"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Jačanje mreže prijatelja i provođenje vremena u društvu",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Šta je prekomjerna upotreba interneta?",
+    "answers": [
+      "Svako korištenje duže od 15 minuta",
+      "Ona koja nema svoje svrhe i koristi",
+      "Samo igranje igrica"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Ona koja nema svoje svrhe i koristi",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "internet_ovisnost.html",
+    "lesson_title": "OVISNOST O INTERNETU",
+    "question": "Šta internet treba biti prema sekciji ZAPAMTI?",
+    "answers": [
+      "Glavni dio života",
+      "Sredstvo za obrazovanje, komunikaciju i informacije",
+      "Nešto što upravlja nama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Sredstvo za obrazovanje, komunikaciju i informacije",
+    "source": "OVISNOST O INTERNETU"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Šta Uzvišeni Allah kaže o kocki (El-Maide, 90)?",
+    "answers": [
+      "To je dozvoljena zabava",
+      "Kocka je šejtanovo djelo i odvratna stvar",
+      "To je način brze zarade"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Kocka je šejtanovo djelo i odvratna stvar",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Šta Poslanik, a.s., kaže osobi koja pozove druga na kockanje?",
+    "answers": [
+      "Neka ide u džamiju",
+      "Neka podijeli sadaku",
+      "Neka se izvini"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Neka podijeli sadaku",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Zašto je kocka zabranjena prema islamskom učenju?",
+    "answers": [
+      "Jer odvraća od sjećanja na Allaha i od namaza",
+      "Jer troši vrijeme",
+      "Jer je naporna"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Jer odvraća od sjećanja na Allaha i od namaza",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Šta se sve ubraja u kocku?",
+    "answers": [
+      "Samo rulet",
+      "Svaka igra u novac gdje jedan dobija, a svi drugi gube",
+      "Samo dječije igre"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Svaka igra u novac gdje jedan dobija, a svi drugi gube",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Ubrajaju li se kvizovi znanja u kocku?",
+    "answers": [
+      "Da",
+      "Ne, jer se baziraju na znanju, a ne na sreći",
+      "Samo ako imaju nagrade"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Ne, jer se baziraju na znanju, a ne na sreći",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Šta kocka uzrokuje kod čovjeka prema nalazima psihologa?",
+    "answers": [
+      "Radost i mir",
+      "Uzbuđenje, pa razočarenje, te mržnju i neprijateljstvo",
+      "Bolju koncentraciju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Uzbuđenje, pa razočarenje, te mržnju i neprijateljstvo",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Koja država je, prema neslužbenim podacima, prva u Evropi po broju kladionica?",
+    "answers": [
+      "Njemačka",
+      "Bosna i Hercegovina",
+      "Francuska"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Bosna i Hercegovina",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Šta se ubraja u kocku kada su u pitanju igre kao šah ili karte?",
+    "answers": [
+      "Svako igranje",
+      "Ako se igraju u novac i uzrokuju psovku ili zapostavljanje obaveza",
+      "Nikada se ne ubrajaju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Ako se igraju u novac i uzrokuju psovku ili zapostavljanje obaveza",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Šta je 'maštoviti šejtanski projekat' prema opisu imama?",
+    "answers": [
+      "Kupovina poklona",
+      "Čekanje sreće iz bubnja uz uplaćivanje novca",
+      "Rad u fabrici"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Čekanje sreće iz bubnja uz uplaćivanje novca",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  },
+  {
+    "source_file": "kockanje.html",
+    "lesson_title": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE",
+    "question": "Gdje su strateški raspoređene kladionice prema tekstu?",
+    "answers": [
+      "Daleko od naselja",
+      "Na samo nekoliko metara od škola",
+      "Samo u centrima gradova"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "ovisnosti",
+    "correct": "Na samo nekoliko metara od škola",
+    "source": "KOCKANJE, IGRE NA SREĆU I SPORTSKE KLADIONICE"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Ovisnosti');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

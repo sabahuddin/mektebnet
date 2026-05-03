@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Muhammed, a.s., - život</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Muhammed, a.s., - život</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+        
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Kako je Poslanik, a.s., nazvao alkohol?",
+    "answers": [
+      "Hranom",
+      "Majkom svih zala",
+      "Lijekom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Majkom svih zala",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "alkohol.html",
+    "lesson_title": "ALKOHOL I ALKOHOLNA PIĆA",
+    "question": "Koliko osoba je Poslanik, a.s., prokleo u vezi s alkoholom?",
+    "answers": [
+      "Pet",
+      "Deset",
+      "Sedam"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Deset",
+    "source": "ALKOHOL I ALKOHOLNA PIĆA"
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Ko je bio putnik koji je pitao Poslanika o islamu?",
+    "answers": [
+      "Hazreti Omer",
+      "Melek Džibril",
+      "Hazreti Alija"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Melek Džibril",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "S čim Poslanik, a.s., poredi međusobnu ljubav i milost vjernika?",
+    "answers": [
+      "S jednim tijelom",
+      "Sa zgradom",
+      "S putovanjem"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "S jednim tijelom",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Šta je Poslanik, a.s., odgovorio ashabu na pitanje o islamu?",
+    "answers": [
+      "Uči svaki dan",
+      "Reci: 'Vjerujem u Allaha' a zatim ustraj u tome!",
+      "Putuj svijetom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Reci: 'Vjerujem u Allaha' a zatim ustraj u tome!",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Šta je Poslanik, a.s., rekao o onome što opija?",
+    "answers": [
+      "Da je dozvoljeno u malim količinama",
+      "Sve što opija je hamr, a svaki hamr je haram",
+      "Da je to stvar ukusa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Sve što opija je hamr, a svaki hamr je haram",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "droga.html",
+    "lesson_title": "DROGA – ŠTETNOST I POSLJEDICE",
+    "question": "Šta briše grijehe i smanjuje ahiretsku kaznu?",
+    "answers": [
+      "Samo vrijeme",
+      "Iskreno pokajanje (tevba)",
+      "Zaborav"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Iskreno pokajanje (tevba)",
+    "source": "DROGA – ŠTETNOST I POSLJEDICE"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Koje godine se Poslanik, a.s., susreo sa prvih šest ljudi iz Jesriba?",
+    "answers": [
+      "11. godine poslanstva (620. g.)",
+      "13. godine poslanstva",
+      "Prve godine objave"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "11. godine poslanstva (620. g.)",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Koliko ljudi iz Jesriba je došlo na Akabu druge godine?",
+    "answers": [
+      "6",
+      "12",
+      "73"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "12",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Koga je Muhammed, a.s., ostavio u svojoj postelji da zavara mušrike?",
+    "answers": [
+      "Ebu Bekra",
+      "Omera",
+      "Aliju ibn Ebi Taliba"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Aliju ibn Ebi Taliba",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "U kojoj pećini su se sakrili Poslanik, a.s., i Ebu Bekr?",
+    "answers": [
+      "Hira",
+      "Sevr",
+      "Uhud"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Sevr",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Koje životinje su Allahovom odredbom zaštitile ulaz u pećinu?",
+    "answers": [
+      "Lav i zmija",
+      "Pauk i golubica",
+      "Deva"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Pauk i golubica",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Ko je jurio Muhammeda, a.s., da bi dobio nagradu od 100 deva?",
+    "answers": [
+      "Ebu Džehl",
+      "Malik ibn Suraka",
+      "Ebu Leheb"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Malik ibn Suraka",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Ko je donosio hranu Poslaniku i Ebu Bekru u pećinu?",
+    "answers": [
+      "Esma bint Ebu Bekr",
+      "Fatima",
+      "Abdullah"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Esma bint Ebu Bekr",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Kako se zvao vodič kroz pustinju?",
+    "answers": [
+      "Abdullah ibn Urejkit",
+      "Zejd",
+      "Bilal"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Abdullah ibn Urejkit",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "U čijoj kući je Poslanik, a.s., boravio prvih mjeseci u Medini?",
+    "answers": [
+      "U svojoj kući",
+      "Kod Ebu Ejuba el-Ensarije",
+      "U džamiji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Kod Ebu Ejuba el-Ensarije",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "hidzra.html",
+    "lesson_title": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU",
+    "question": "Šta je prvo sagrađeno u Medini?",
+    "answers": [
+      "Velika pijaca",
+      "Džamija",
+      "Dvorac"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Džamija",
+    "source": "HIDŽRA – PRELAZAK IZ MEKKE U MEDINU"
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Kako se zove sin Ibrahima, a.s., i Hadžere?",
+    "answers": [
+      "Ishak",
+      "Ismail",
+      "Jusuf"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ismail",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Između koja dva brežuljka je Hadžera trčala tražeći vodu?",
+    "answers": [
+      "Safa i Merve",
+      "Uhud i Bedr",
+      "Arefat i Mina"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Safa i Merve",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Gdje se nalazi mjesto na koje je Ibrahim, a.s., odveo Hadžeru i Ismaila?",
+    "answers": [
+      "U Egiptu",
+      "U području današnje Mekke",
+      "U Jordanu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "U području današnje Mekke",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Kada se dogodio događaj Isra i Miradž?",
+    "answers": [
+      "27. redžeba 621. godine",
+      "1. ramazana 610. godine",
+      "12. rebiul-evvela"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "27. redžeba 621. godine",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Šta je to Isra?",
+    "answers": [
+      "Uzdignuće u nebeske sfere",
+      "Noćno putovanje iz Mekke u Kuds",
+      "Boravak u pećini Hira"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Noćno putovanje iz Mekke u Kuds",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Kome je Muhammed, a.s., bio imam u namazu u Mesdžidul-aksau?",
+    "answers": [
+      "Melekima",
+      "Ashabima",
+      "Dušama prethodnih poslanika"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Dušama prethodnih poslanika",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Šta je naređeno muslimanima tokom Miradža?",
+    "answers": [
+      "Post",
+      "Zekat",
+      "Namaz"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Namaz",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Koga je Poslanik, a.s., sreo na sedmom nebu?",
+    "answers": [
+      "Musaa, a.s.",
+      "Ibrahima, a.s.",
+      "Isaa, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ibrahima, a.s.",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Kako je nazvana godina u kojoj su umrli Hatidža i Ebu Talib?",
+    "answers": [
+      "Godina pobjede",
+      "Godina tuge (Senetul-huzn)",
+      "Godina radosti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Godina tuge (Senetul-huzn)",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Kako su se mušrici ponašali nakon što im je Poslanik, a.s., opisao detalje putovanja?",
+    "answers": [
+      "Svi su odmah povjerovali",
+      "Nisu povjerovali uprkos dokazima",
+      "Ignorisali su ga"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Nisu povjerovali uprkos dokazima",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Šta je namaz za svakog vjernika prema lekciji?",
+    "answers": [
+      "Teret",
+      "Namaz je miradž vjernika",
+      "Samo obaveza"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Namaz je miradž vjernika",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Kada je čovjek najbliži Allahu prema hadisu?",
+    "answers": [
+      "Dok uči Kur'an",
+      "Dok je na sedždi",
+      "Dok posti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Dok je na sedždi",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "isra_miradz.html",
+    "lesson_title": "KUR'AN, ISRA I MIRADŽ",
+    "question": "Dokle je Muhammed, a.s., uzdignut na Miradžu?",
+    "answers": [
+      "Do prvog neba",
+      "Do Sidretul-muntehaa i Kabi-kavsejna",
+      "Do brda Nur"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Do Sidretul-muntehaa i Kabi-kavsejna",
+    "source": "KUR'AN, ISRA I MIRADŽ"
+  },
+  {
+    "source_file": "komsije.html",
+    "lesson_title": "DUŽNOSTI PREMA KOMŠIJAMA",
+    "question": "Ko nije potpuni vjernik prema riječima Poslanika, a.s.?",
+    "answers": [
+      "Onaj ko se ne igra",
+      "Onaj od čijeg zla nije siguran njegov komšija",
+      "Onaj ko puno spava"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Onaj od čijeg zla nije siguran njegov komšija",
+    "source": "DUŽNOSTI PREMA KOMŠIJAMA"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Gdje je objavljena sura El-Isra?",
+    "answers": [
+      "U Medini",
+      "U Mekki",
+      "U Taifu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "U Mekki",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Koliko ajeta ima sura El-Isra?",
+    "answers": [
+      "111 ajeta",
+      "114 ajeta",
+      "30 ajeta"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "111 ajeta",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Kako se završava sura El-Isra?",
+    "answers": [
+      "S dovom za roditelje",
+      "Naredbom 'i hvaleći Ga veličaj' (Ve kebbirhu tekbira)",
+      "Opisom Dženneta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Naredbom 'i hvaleći Ga veličaj' (Ve kebbirhu tekbira)",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "Šta kaže Poslanik, a.s., za onoga ko vjeruje u Allaha i Sudnji dan?",
+    "answers": [
+      "Neka puno priča",
+      "Neka govori dobro ili neka šuti",
+      "Neka se raspravlja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Neka govori dobro ili neka šuti",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Koja je najveća mudžiza Muhammeda, a.s.?",
+    "answers": [
+      "Raspolovljenje mjeseca",
+      "Isra i Miradž",
+      "Kur'an"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Kur'an",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "U kom plemenu i porodici je rođen Muhammed, a.s.?",
+    "answers": [
+      "Pleme Kurejš, porodica Hašim",
+      "Pleme Benu Sa'd, porodica Azer",
+      "Pleme Kurejš, porodica Imran"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Pleme Kurejš, porodica Hašim",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Kada je rođen Muhammed, a.s.?",
+    "answers": [
+      "12. rebi'ul-evvela 571. godine",
+      "1. ramazana 610. godine",
+      "10. muharrema 571. godine"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "12. rebi'ul-evvela 571. godine",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Kako se naziva godina rođenja Muhammeda, a.s.?",
+    "answers": [
+      "Godina tuge",
+      "Godina slona",
+      "Godina pobjede"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Godina slona",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Koji je jedan od razloga zašto su djeca iz Mekke slata u pustinju?",
+    "answers": [
+      "Zbog kazne",
+      "Da bi naučili čist arapski jezik i ojačali na čistom zraku",
+      "Da bi postali trgovci"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da bi naučili čist arapski jezik i ojačali na čistom zraku",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Kako se zvala dojilja Muhammeda, a.s.?",
+    "answers": [
+      "Amina",
+      "Halima",
+      "Fatima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Halima",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Koji događaj je prestrašio Halimu kada je Muhammed, a.s., imao četiri godine?",
+    "answers": [
+      "Nestanak dječaka",
+      "Dvojica ljudi u bijelom su mu otvorili prsa i isprali srce",
+      "Velika oluja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Dvojica ljudi u bijelom su mu otvorili prsa i isprali srce",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Gdje je i kada umrla Amina, majka Muhammeda, a.s.?",
+    "answers": [
+      "U Mekki kada je imao 10 godina",
+      "U mjestu Ebva kada je imao 6 godina",
+      "U Medini kada je imao 2 godine"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "U mjestu Ebva kada je imao 6 godina",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Ko je preuzeo brigu o Muhammedu, a.s., nakon smrti djeda Abdulmuttaliba?",
+    "answers": [
+      "Amidža Ebu Talib",
+      "Dojilja Halima",
+      "Amidža Hamza"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Amidža Ebu Talib",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Kako se zvao kršćanski monah koji je u Šamu prepoznao znakove poslanstva?",
+    "answers": [
+      "Bahira",
+      "Behira",
+      "Behram"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Behira",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_djetinjstvo.html",
+    "lesson_title": "DJETINJSTVO MUHAMMEDA, A.S.",
+    "question": "Šta je Behira primijetio da prati Muhammeda, a.s., tokom putovanja?",
+    "answers": [
+      "Vojska",
+      "Oblak koji mu je pravio hlad",
+      "Ptice"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Oblak koji mu je pravio hlad",
+    "source": "DJETINJSTVO MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Čime se bavila hazreti Hatidža, r.a.?",
+    "answers": [
+      "Poljoprivredom",
+      "Trgovinom",
+      "Zanatstvom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Trgovinom",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Ko je Hatidži prenosio selame od meleka Džibrila i Allaha, dž.š.?",
+    "answers": [
+      "Njen otac",
+      "Muhammed, a.s.",
+      "Amidža Ebu Talib"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Muhammed, a.s.",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Koje su četiri najbolje žene na dunjaluku prema hadisu?",
+    "answers": [
+      "Samo žene iz Mekke",
+      "Merjem, Asija, Hatidža i Fatima",
+      "Amina, Halima, Fatima i Sara"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Merjem, Asija, Hatidža i Fatima",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Koja se godina naziva 'Senetul-huzn' (Godina tuge)?",
+    "answers": [
+      "Godina rođenja Poslanika",
+      "Godina u kojoj je umrla hazreti Hatidža",
+      "Godina u kojoj je počela objava"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Godina u kojoj je umrla hazreti Hatidža",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Koliko je ukupno djece imao Muhammed, a.s.?",
+    "answers": [
+      "Petoro",
+      "Sedmoro",
+      "Desetoro"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Sedmoro",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Kako su mušrici pogrdno nazvali Poslanika nakon smrti njegovih sinova?",
+    "answers": [
+      "Ebter",
+      "Emin",
+      "Hašim"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ebter",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Koja kćerka je jedina nadživjela Muhammeda, a.s.?",
+    "answers": [
+      "Zejneb",
+      "Rukaja",
+      "Fatima"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Fatima",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Za koga je Muhammed, a.s., udao hazreti Fatimu?",
+    "answers": [
+      "Za Omera, r.a.",
+      "Za Aliju, r.a.",
+      "Za Osmana, r.a."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Za Aliju, r.a.",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Koja djeca hazreti Fatime su nastavila plemenito potomstvo Poslanika?",
+    "answers": [
+      "Kasim i Abdullah",
+      "Hasan i Husejn",
+      "Zejneb i Rukaja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Hasan i Husejn",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muhammed_as_porodica.html",
+    "lesson_title": "PORODICA POSLANIKA MUHAMMEDA, A.S.",
+    "question": "Koju dovu je Poslanik izgovorio nakon smrti sina Ibrahima?",
+    "answers": [
+      "Oči plaču, a srce tuguje...",
+      "Gospodaru moj, vrati mi ga",
+      "Samo se Allahu klanjajte"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Oči plaču, a srce tuguje...",
+    "source": "PORODICA POSLANIKA MUHAMMEDA, A.S."
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Koje je jedno od imena Poslanikovih sinova?",
+    "answers": [
+      "Omer",
+      "Kasim",
+      "Husejn"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Kasim",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "muslimanska_imena.html",
+    "lesson_title": "LIJEPA MUSLIMANSKA IMENA",
+    "question": "Koje je jedno od imena Poslanikovih kćeri?",
+    "answers": [
+      "Aiša",
+      "Fatima",
+      "Hafsa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Fatima",
+    "source": "LIJEPA MUSLIMANSKA IMENA"
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Nakon kojeg poslanika je Nuh, a.s., ponio misiju poslanstva?",
+    "answers": [
+      "Adema, a.s.",
+      "Idrisa, a.s.",
+      "Ibrahima, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Idrisa, a.s.",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Šta je ogovaranje prema hadisu Poslanika, a.s.?",
+    "answers": [
+      "Da spomeneš brata po onome što on ne voli",
+      "Samo laž o nekome",
+      "Lijepa priča o drugome"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da spomeneš brata po onome što on ne voli",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Šta je sveto kao i grad Mekka prema Oproštajnom hadžu?",
+    "answers": [
+      "Samo imetak",
+      "Životi, imeci i čast",
+      "Samo slobodno vrijeme"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Životi, imeci i čast",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Šta je oholost prema definiciji Poslanika, a.s.?",
+    "answers": [
+      "Ljubav prema lijepoj obući",
+      "Odbijanje istine i ponižavanje ljudi",
+      "Radost zbog uspjeha"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Odbijanje istine i ponižavanje ljudi",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Koje godine po Hidžri je bio Oproštajni hadž?",
+    "answers": [
+      "8. godine",
+      "9. godine",
+      "10. godine"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "10. godine",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Koliko je ljudi, prema predajama, bilo na Oproštajnom hadžu?",
+    "answers": [
+      "Oko 50 hiljada",
+      "Između 124 i 144 hiljade",
+      "Oko pola miliona"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Između 124 i 144 hiljade",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Gdje je Muhammed, a.s., održao svoj čuveni govor?",
+    "answers": [
+      "Na Mini",
+      "Na Muzdelifi",
+      "Na Arefatu"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Na Arefatu",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Šta je Poslanik, a.s., rekao o kamati u svom govoru?",
+    "answers": [
+      "Da se smanji",
+      "Da se sve vrste kamata ukidaju",
+      "Da je dozvoljena u nuždi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da se sve vrste kamata ukidaju",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Čiju je krvnu osvetu Poslanik, a.s., prvu poništio?",
+    "answers": [
+      "Svog amidže Ebu Leheba",
+      "Ibnu Rebiʻu b. el-Harisa",
+      "Hamze b. Abdulmuttaliba"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ibnu Rebiʻu b. el-Harisa",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Po čemu se ljudi jedino razlikuju kod Allaha prema riječima Poslanika, a.s.?",
+    "answers": [
+      "Po bogatstvu",
+      "Po boji kože",
+      "Po bogobojaznosti"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Po bogobojaznosti",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Šta je Poslanik, a.s., ostavio u emanet muslimanima da ne bi zalutali?",
+    "answers": [
+      "Samo Kur'an",
+      "Allahovu Knjigu i sunnet Njegova Poslanika",
+      "Samo hadise"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Allahovu Knjigu i sunnet Njegova Poslanika",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Koji ajet je objavljen nakon Poslanikovog govora?",
+    "answers": [
+      "Ajet o postu",
+      "Ajet o usavršavanju vjere (El-Maide, 3)",
+      "Ajetul-Kursijj"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ajet o usavršavanju vjere (El-Maide, 3)",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Šta je poruka ajeta 'Danas sam vam vjeru vašu usavršio...'?",
+    "answers": [
+      "Da se vjera još treba mijenjati",
+      "Da je islam kompletiran i jedina priznata vjera",
+      "Da se čeka novi poslanik"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da je islam kompletiran i jedina priznata vjera",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "oprostajni_hadz.html",
+    "lesson_title": "OPROŠTAJNI HADŽ",
+    "question": "Kako su ljudi odgovorili na pitanje 'Allahu, jesam li dostavio?'?",
+    "answers": [
+      "Nisi",
+      "Možda",
+      "Jesi, dostavio si!"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Jesi, dostavio si!",
+    "source": "OPROŠTAJNI HADŽ"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Šta je Poslanik, a.s., rekao Bilalu da uradi namazom?",
+    "answers": [
+      "Da ih odmori i razrahati",
+      "Da ih umori",
+      "Da ih požuri"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da ih odmori i razrahati",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Šta je Poslanik, a.s., rekao Muazu ibn Džebelu?",
+    "answers": [
+      "Da će se vidjeti opet",
+      "Da će vjerovatno proći pokraj njegovog mesdžida i mezara",
+      "Da ostane u Jemenu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da će vjerovatno proći pokraj njegovog mesdžida i mezara",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Koji su bili očigledni nagovještaji kraja poslaničke misije?",
+    "answers": [
+      "Samo bolest",
+      "Oproštajni hadž, govor, ajet o usavršavanju vjere i sura En-Nasr",
+      "San"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Oproštajni hadž, govor, ajet o usavršavanju vjere i sura En-Nasr",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Koliko dugo je trajala Poslanikova, a.s., bolest?",
+    "answers": [
+      "Dva dana",
+      "Trinaest ili četrnaest dana",
+      "Mjesec dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Trinaest ili četrnaest dana",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Koga je Poslanik, a.s., odredio da predvodi namaz dok je bio bolestan?",
+    "answers": [
+      "Omera, r.a.",
+      "Aliju, r.a.",
+      "Ebu Bekra, r.a."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ebu Bekra, r.a.",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Šta je Poslanik, a.s., podijelio dan prije preseljenja?",
+    "answers": [
+      "Svoju kuću",
+      "Posljednjih sedam dirhema i poklonio svoje oružje",
+      "Svoju odjeću"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Posljednjih sedam dirhema i poklonio svoje oružje",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Zašto se Fatima, r.a., nasmijala nakon što je zaplakala?",
+    "answers": [
+      "Jer joj je otac dao poklon",
+      "Jer joj je rekao da će mu se prva pridružiti (umrijeti)",
+      "Jer je vidjela djecu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Jer joj je rekao da će mu se prva pridružiti (umrijeti)",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Koje su bile posljednje riječi Poslanika, a.s.?",
+    "answers": [
+      "Budite dobri jedni drugima",
+      "Namaz, namaz, tj. vodite računa o namazu...",
+      "Vratit ću se"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Namaz, namaz, tj. vodite računa o namazu...",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Kog datuma je preselio Muhammed, a.s.?",
+    "answers": [
+      "1. ramazana",
+      "12. rebiʻul-evvela 11. godine po Hidžri",
+      "10. muharrema"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "12. rebiʻul-evvela 11. godine po Hidžri",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Kako je reagirao Omer, r.a., na vijest o smrti?",
+    "answers": [
+      "Odmah je povjerovao",
+      "Rekao je da će posjeći svakog ko kaže da je Muhammed, a.s., umro",
+      "Šutio je"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Rekao je da će posjeći svakog ko kaže da je Muhammed, a.s., umro",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "preseljenje_ahiret.html",
+    "lesson_title": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA",
+    "question": "Gdje je ukopan Muhammed, a.s.?",
+    "answers": [
+      "Na Dženneti-bekijji",
+      "U svojoj sobi, na mjestu gdje je ispustio dušu",
+      "U Mekki"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "U svojoj sobi, na mjestu gdje je ispustio dušu",
+    "source": "PRESELJENJE NA AHIRET - SMRT BOŽIJEG POSLANIKA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Koliko puta je Poslanik, a.s., spomenuo majku kao najpreču za lijepo druženje?",
+    "answers": [
+      "Jednom",
+      "Dva puta",
+      "Tri puta"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Tri puta",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Šta ne smijemo reći roditeljima kada dožive starost prema suri El-Isra?",
+    "answers": [
+      "Hvala",
+      "Uh",
+      "Da"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Uh",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Prestaju li obaveze prema roditeljima nakon njihove smrti?",
+    "answers": [
+      "Da, potpuno",
+      "Ne, nastavljaju se kroz dovu i izvršavanje oporuke",
+      "Samo prvu godinu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ne, nastavljaju se kroz dovu i izvršavanje oporuke",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "roditelji.html",
+    "lesson_title": "POSLUŠNOST I BRIGA PREMA RODITELJIMA",
+    "question": "Šta treba činiti za roditelje nakon njihove smrti prema hadisu?",
+    "answers": [
+      "Zaboraviti ih",
+      "Učiti im dovu i posjećivati njihovu rodbinu",
+      "Samo podijeliti imovinu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Učiti im dovu i posjećivati njihovu rodbinu",
+    "source": "POSLUŠNOST I BRIGA PREMA RODITELJIMA"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Šta je Poslanik, a.s., rekao o onome ko ne poštuje starije?",
+    "answers": [
+      "Da nije od nas (ne pripada nama)",
+      "Da treba više učiti",
+      "Da mu treba oprostiti"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da nije od nas (ne pripada nama)",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stariji.html",
+    "lesson_title": "POŠTIVANJE STARIJIH",
+    "question": "Šta je Poslanik, a.s., rekao Ebu Bekru za njegovog starog oca?",
+    "answers": [
+      "Zašto ga nisi pustio da sjedi u svojoj kući pa da mi odemo njemu",
+      "Neka dođe sutra",
+      "Neka stoji u redu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Zašto ga nisi pustio da sjedi u svojoj kući pa da mi odemo njemu",
+    "source": "POŠTIVANJE STARIJIH"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Koja je prva riječ objavljena Muhammedu, a.s.?",
+    "answers": [
+      "Namaz",
+      "Ikre' (Čitaj/Uči)",
+      "Zekat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Ikre' (Čitaj/Uči)",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Traženje znanja Poslanik, a.s., opisuje kao put prema:",
+    "answers": [
+      "Bogatstvu",
+      "Džennetu",
+      "Slavi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Džennetu",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Koliko će puta Israfil puhnuti u sur prema lekciji?",
+    "answers": [
+      "Jednom",
+      "Dva puta",
+      "Tri puta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Dva puta",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Koja je bila zajednička misija svih poslanika?",
+    "answers": [
+      "Da grade hramove",
+      "Da pozivaju u vjerovanje u Jednog Boga",
+      "Da pišu knjige"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "muhammed_zivot",
+    "correct": "Da pozivaju u vjerovanje u Jednog Boga",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Muhammed, a.s., - život');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

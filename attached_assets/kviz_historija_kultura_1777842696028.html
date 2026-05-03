@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Historija i kultura</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Historija i kultura</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+    
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Koji je bio glavni cilj Kurejšija s oduzetom imovinom muslimana?",
+    "answers": [
+      "Da je podijele siromašnima",
+      "Da prodajom opreme vojsku za uništenje islama",
+      "Da izgrade hram"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Da prodajom opreme vojsku za uništenje islama",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Koliko je ratnika iz Mekke krenulo u bitku na Bedr?",
+    "answers": [
+      "Oko 300",
+      "Oko 1000",
+      "Oko 5000"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Oko 1000",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Koliko je boraca imala muslimanska vojska?",
+    "answers": [
+      "1000",
+      "314",
+      "500"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "314",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Kada se dogodila Bitka na Bedru?",
+    "answers": [
+      "17. ramazana 2. godine po Hidžri (624. g.)",
+      "1. ševvala 3. godine po Hidžri",
+      "12. rebi'ul-evvela 1. godine po Hidžri"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "17. ramazana 2. godine po Hidžri (624. g.)",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Ko je izašao na megdan ispred muslimanske vojske?",
+    "answers": [
+      "Ebu Bekr, Omer i Osman",
+      "Hamza, Alija i Ubejd ibn Haris",
+      "Bilal, Ammar i Zubejr"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Hamza, Alija i Ubejd ibn Haris",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Kako je Allah, dž.š., pomogao muslimane na Bedru?",
+    "answers": [
+      "Poslao im je novo oružje",
+      "Poslao je 3000-5000 meleka",
+      "Poslao je veliku oluju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Poslao je 3000-5000 meleka",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Koji veliki neprijatelj islama je poginuo na Bedru?",
+    "answers": [
+      "Ebu Sufjan",
+      "Ebu Džehl",
+      "Ebu Leheb"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Ebu Džehl",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Kako su se pismeni zarobljenici mogli osloboditi?",
+    "answers": [
+      "Plaćanjem zlata",
+      "Opismenjavanjem deset muslimana",
+      "Radom na polju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Opismenjavanjem deset muslimana",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Koliko je muslimana postalo šehidima na Bedru?",
+    "answers": [
+      "14",
+      "70",
+      "313"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "14",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bitka_bedr.html",
+    "lesson_title": "BITKA NA BEDRU",
+    "question": "Kako su se muslimani odnosili prema zarobljenicima?",
+    "answers": [
+      "Oštro i surovo",
+      "Humano i pošteno",
+      "Kao prema robovima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Humano i pošteno",
+    "source": "BITKA NA BEDRU"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Gdje je rođen Mula Mustafa Bašeskija?",
+    "answers": [
+      "U Tuzli",
+      "U Sarajevu",
+      "U Travniku"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "U Sarajevu",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Koji je pisac prepoznatljiv po kasidi 'Čudan zeman nastade'?",
+    "answers": [
+      "Musa Ćazim Ćatić",
+      "Edhem Mulabdić",
+      "Abdulvehab Ilhamija"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Abdulvehab Ilhamija",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Gdje je rođen Edhem Mulabdić?",
+    "answers": [
+      "U Maglaju",
+      "U Odžaku",
+      "U Mostaru"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "U Maglaju",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Ko je začetnik bošnjačkog nacionalnog preporoda početkom 20. stoljeća?",
+    "answers": [
+      "Meša Selimović",
+      "Safvet-beg Bašagić",
+      "Derviš Sušić"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Safvet-beg Bašagić",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Iz kojeg je mjesta rodom Musa Ćazim Ćatić?",
+    "answers": [
+      "Iz Žepča",
+      "Iz Odžaka",
+      "Iz Cazina"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Iz Odžaka",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Koji je književnik bio i novinar i radio u Tešnju?",
+    "answers": [
+      "Rešad Kadić",
+      "Enver Čolaković",
+      "Isnam Taljić"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Rešad Kadić",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Gdje je rođen Enver Čolaković?",
+    "answers": [
+      "U Zagrebu",
+      "U Sarajevu",
+      "U Budimpešti"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "U Budimpešti",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Iz kojeg grada je rodom Derviš Sušić?",
+    "answers": [
+      "Iz Vlasenice",
+      "Iz Zenice",
+      "Iz Budimpešte"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Iz Vlasenice",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Ko je autor istaknutog djela koji je rođen 1940. u Sarajevu?",
+    "answers": [
+      "Alija Isaković",
+      "Nedžad Ibrišimović",
+      "Mak Dizdar"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Nedžad Ibrišimović",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "bosnjacki_pjesnici.html",
+    "lesson_title": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI",
+    "question": "Šta karakterizira mnoga djela bošnjačke književnosti?",
+    "answers": [
+      "Samo ljubavne teme",
+      "Izraz otpora i neslaganja s vlašću",
+      "Samo opis prirode"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Izraz otpora i neslaganja s vlašću",
+    "source": "BOŠNJAČKI PJESNICI I KNJIŽEVNICI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Šta šejtan pokušava uraditi ljudima?",
+    "answers": [
+      "Pomoći im",
+      "Zavesti ih i spriječiti da uđu u Džennet",
+      "Naučiti ih istini"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Zavesti ih i spriječiti da uđu u Džennet",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Kada se šejtan povlači prema hadisu?",
+    "answers": [
+      "Kada čovjek spava",
+      "Kada čovjek spomene Allaha",
+      "Kada je dan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Kada čovjek spomene Allaha",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Šta hadis kaže o nagradi za zasađenu biljku (Nesai)?",
+    "answers": [
+      "Nagrada traje samo jedan dan",
+      "Nagrada će stalno teći do Sudnjeg dana",
+      "Nagrada je samo ako čovjek jede"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Nagrada će stalno teći do Sudnjeg dana",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Zašto je u početku bilo zabranjeno pisanje hadisa?",
+    "answers": [
+      "Da se ne bi pomiješali s tekstom Kur'ana",
+      "Jer niko nije znao pisati",
+      "Jer hadisi nisu bili važni"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Da se ne bi pomiješali s tekstom Kur'ana",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Šta je sened?",
+    "answers": [
+      "Tekst hadisa",
+      "Lanac poimeničnih prenosilaca",
+      "Naziv zbirke"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Lanac poimeničnih prenosilaca",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Koje dvije zbirke su najvjerodostojnije?",
+    "answers": [
+      "Buhari i Muslim",
+      "Ebu Davud i Tirmizi",
+      "Nesai i Ibn Madže"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Buhari i Muslim",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Šta znači 'El-Kutubus-sitte'?",
+    "answers": [
+      "Šest zbirki",
+      "Dvije zbirke",
+      "Sve knjige o islamu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Šest zbirki",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Koliko je hadisa Imam Buhari uvrstio nakon selekcije?",
+    "answers": [
+      "600.000",
+      "7.000",
+      "300.000"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "7.000",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Šta znači termin 'daif'?",
+    "answers": [
+      "Vjerodostojan",
+      "Dobar",
+      "Slab"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Slab",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Kada je bio najplodonosniji period sabiranja hadisa?",
+    "answers": [
+      "Za vrijeme ashaba",
+      "Kraj 1. i početak 2. stoljeća po Hidžri",
+      "U 20. stoljeću"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Kraj 1. i početak 2. stoljeća po Hidžri",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Koji bh. muhaddis se istakao u prevođenju hadiskih zbirki?",
+    "answers": [
+      "Hasan-ef. Škapur",
+      "Samo strani učenjaci",
+      "Niko ih nije prevodio"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Hasan-ef. Škapur",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Šta je ashabima Muhammed, a.s., najljepše pojašnjavao?",
+    "answers": [
+      "Propise iz Kur'ana",
+      "Historiju naroda",
+      "Samo običaje"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Propise iz Kur'ana",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "hadiske_zbirke.html",
+    "lesson_title": "NAJPOZNATIJE HADISKE ZBIRKE",
+    "question": "Šta se razvilo kao islamska naučna disciplina?",
+    "answers": [
+      "Sakupljanje, selekcija i podjela hadisa",
+      "Samo čitanje hadisa",
+      "Pisanje poezije"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Sakupljanje, selekcija i podjela hadisa",
+    "source": "NAJPOZNATIJE HADISKE ZBIRKE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Kako se zajedničkim imenom zovu četverica pravednih halifa?",
+    "answers": [
+      "Ashabi",
+      "Hulefair-rašidin",
+      "Tabi'ini"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Hulefair-rašidin",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Ko je bio prvi halifa?",
+    "answers": [
+      "Omer, r.a.",
+      "Alija, r.a.",
+      "Ebu Bekr, r.a."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Ebu Bekr, r.a.",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Šta znači nadimak 'Es-Sidik' koji je nosio Ebu Bekr?",
+    "answers": [
+      "Hrabri",
+      "Iskreni",
+      "Bogati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Iskreni",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Koji je halifa prvi sakupio Kur'an u jednu zbirku (mushaf)?",
+    "answers": [
+      "Ebu Bekr, r.a.",
+      "Osman, r.a.",
+      "Alija, r.a."
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Ebu Bekr, r.a.",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Ko je od pravednih halifa jedini umro prirodnom smrću?",
+    "answers": [
+      "Ebu Bekr, r.a.",
+      "Omer, r.a.",
+      "Osman, r.a."
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Ebu Bekr, r.a.",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Koji je halifa uveo hidžretski kalendar?",
+    "answers": [
+      "Ebu Bekr, r.a.",
+      "Omer, r.a.",
+      "Alija, r.a."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Omer, r.a.",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Koji halifa je imao nadimak 'Zunnurejn' (Vlasnik dva svjetla)?",
+    "answers": [
+      "Omer, r.a.",
+      "Osman, r.a.",
+      "Alija, r.a."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Osman, r.a.",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Koji halifa je prvi uveo mornaricu u okviru vojske?",
+    "answers": [
+      "Ebu Bekr, r.a.",
+      "Osman, r.a.",
+      "Alija, r.a."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Osman, r.a.",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Ko je bio četvrti halifa i Poslanikov, a.s., amidžić?",
+    "answers": [
+      "Osman, r.a.",
+      "Omer, r.a.",
+      "Alija, r.a."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Alija, r.a.",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "halife.html",
+    "lesson_title": "PRAVEDNE HALIFE",
+    "question": "Koja grupa je planirala i izvršila ubistvo halife Alije, r.a.?",
+    "answers": [
+      "Haridžije",
+      "Perzijanci",
+      "Bizantinci"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Haridžije",
+    "source": "PRAVEDNE HALIFE"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Kako se rad tretira u islamu?",
+    "answers": [
+      "Kao gubljenje vremena",
+      "Kao ibadet i drago djelo Allahu",
+      "Kao nešto što nije obavezno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Kao ibadet i drago djelo Allahu",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Šta musliman nastoji osigurati radom?",
+    "answers": [
+      "Samo luksuz",
+      "Sredstva sebi, porodici i za pomoć drugima",
+      "Samo slobodno vrijeme"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Sredstva sebi, porodici i za pomoć drugima",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Koji poslanik je oličenje požrtvovanosti u radu?",
+    "answers": [
+      "Nuh, a.s.",
+      "Muhammed, a.s.",
+      "Musa, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Muhammed, a.s.",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Šta je Muhammed, a.s., radio u ranoj mladosti?",
+    "answers": [
+      "Bio je vladar",
+      "Čuvao je stada imućnijih Mekelija",
+      "Bio je samo putnik"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Čuvao je stada imućnijih Mekelija",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Šta ubrajamo u radnu kulturu?",
+    "answers": [
+      "Kašnjenje na posao",
+      "Na vrijeme doći na posao i biti vrijedan",
+      "Izbjegavanje zadataka"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Na vrijeme doći na posao i biti vrijedan",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Kakva je hrana najbolja prema hadisu?",
+    "answers": [
+      "Ona koju dobijemo na poklon",
+      "Ona koju čovjek pojede od rada svojih ruku",
+      "Brza hrana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Ona koju čovjek pojede od rada svojih ruku",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Šta se smatra sadakom prema hadisu o sađenju?",
+    "answers": [
+      "Samo ako biljka procvjeta",
+      "Ako se od toga nahrani ptica, čovjek ili životinja",
+      "Ako se biljka proda"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Ako se od toga nahrani ptica, čovjek ili životinja",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Šta Allah voli kada radimo neki posao?",
+    "answers": [
+      "Da ga uradimo brzo",
+      "Da ga uradimo temeljito",
+      "Da ga ne završimo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Da ga uradimo temeljito",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Koja je poruka priče o Šekiku i Ibrahimu?",
+    "answers": [
+      "Treba čekati pomoć od drugih",
+      "Bolje je biti ruka koja radi i daje (gornja ruka)",
+      "Učenje je bitnije od rada"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Bolje je biti ruka koja radi i daje (gornja ruka)",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "rad_kultura.html",
+    "lesson_title": "RAD I RADNA KULTURA",
+    "question": "Šta postižemo radom pored materijalnih sredstava?",
+    "answers": [
+      "Samo umor",
+      "Allahovu milost i nagradu",
+      "Slavu u društvu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Allahovu milost i nagradu",
+    "source": "RAD I RADNA KULTURA"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "U kojoj suri se nalaze prvi objavljeni ajeti o znanju?",
+    "answers": [
+      "El-Bekare",
+      "El-Alek",
+      "El-Fatiha"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "El-Alek",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Znanje u mladosti je prema mudrosti kao:",
+    "answers": [
+      "Pisanje po vodi",
+      "Klesanje u kamenu",
+      "Crtanje u pijesku"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Klesanje u kamenu",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Šta je musliman dužan uraditi sa stečenim znanjem?",
+    "answers": [
+      "Samo ga čuvati za sebe",
+      "Primjenjivati u praksi i prenositi drugima",
+      "Zaboraviti ga"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Primjenjivati u praksi i prenositi drugima",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Šta kaže dova iz sure Ta-Ha?",
+    "answers": [
+      "Gospodaru moj, podari mi bogatstvo",
+      "Gospodaru moj, Ti znanje moje proširi!",
+      "Gospodaru moj, daj mi snagu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Gospodaru moj, Ti znanje moje proširi!",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Kome Allah daruje 'blago neizmjerno' prema suri El-Bekare?",
+    "answers": [
+      "Onome kome je znanje darovano",
+      "Onome ko ima puno novca",
+      "Onome ko samo odmara"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Onome kome je znanje darovano",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Koliko dugo traje obaveza učenja prema islamu?",
+    "answers": [
+      "Samo do kraja škole",
+      "Cijeli život (neprestano)",
+      "Samo u mladosti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "historija_kultura",
+    "correct": "Cijeli život (neprestano)",
+    "source": "STJECANJE ZNANJA"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Historija i kultura');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

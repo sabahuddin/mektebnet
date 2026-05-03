@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Loše osobine</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Loše osobine</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+        
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Gdje se prvo javlja mržnja?",
+    "answers": [
+      "U rukama",
+      "U srcima ljudi",
+      "U razgovoru"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "U srcima ljudi",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Čiji je rezultat dugotrajna srdžba prema nekoj osobi?",
+    "answers": [
+      "Ljubavi",
+      "Mržnje",
+      "Iskrenosti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Mržnje",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Koja je šejtanova namjera prema vjernicima?",
+    "answers": [
+      "Da ih usreći",
+      "Da u srce ubaci mržnju i naruši jedinstvo",
+      "Da im pomogne u radu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Da u srce ubaci mržnju i naruši jedinstvo",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "S čim Poslanik, a.s., poredi mržnju u hadisu?",
+    "answers": [
+      "S britvom koja brije (uništava) vjeru",
+      "Sa vjetrom",
+      "Sa kišom"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "S britvom koja brije (uništava) vjeru",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Koje su najčešće posljedice mržnje?",
+    "answers": [
+      "Uništava vjeru, unosi neslogu i narušava zdravlje",
+      "Povećava bogatstvo",
+      "Donosi popularnost"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Uništava vjeru, unosi neslogu i narušava zdravlje",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Šta je uslov za ulazak u Džennet prema hadisu (Muslim)?",
+    "answers": [
+      "Samo rad",
+      "Međusobna ljubav i vjerovanje",
+      "Samo šutnja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Međusobna ljubav i vjerovanje",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Šta treba činiti da bismo se međusobno voljeli?",
+    "answers": [
+      "Kriti se od drugih",
+      "Nazivati selam jedni drugima",
+      "Takmičiti se"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Nazivati selam jedni drugima",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Šta predstavlja ljubomora pored grijeha?",
+    "answers": [
+      "Opaku duševnu bolest",
+      "Znak snage",
+      "Normalnu osobinu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Opaku duševnu bolest",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Koji su to dva organa o kojima je govorio mudri Lukman?",
+    "answers": [
+      "Ruke i noge",
+      "Jezik i srce",
+      "Oči i uši"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Jezik i srce",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "mrznja.html",
+    "lesson_title": "MRŽNJA I LJUBOMORA",
+    "question": "Kada su jezik i srce najgori organi?",
+    "answers": [
+      "Kada su bolesni",
+      "Kada su pokvareni",
+      "Kada se ne koriste"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Kada su pokvareni",
+    "source": "MRŽNJA I LJUBOMORA"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "S čime Allah, dž.š., upoređuje ogovaranje?",
+    "answers": [
+      "S kradljivcem",
+      "S jedenjem mesa umrlog brata",
+      "S olujom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "S jedenjem mesa umrlog brata",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Šta je 'potvora'?",
+    "answers": [
+      "Kada o nekome kažeš istinu",
+      "Kada spominješ ono što kod brata muslimana nema (laž)",
+      "Dobra namjera"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Kada spominješ ono što kod brata muslimana nema (laž)",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "S kojim drugim grijehom je ogovaranje često povezano?",
+    "answers": [
+      "Sa lijenošću",
+      "Sa zavidnošću",
+      "Sa zaboravom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Sa zavidnošću",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Koji su uzroci ogovaranja?",
+    "answers": [
+      "Sreća i radost",
+      "Nepodnošenje ljudi i omalovažavanje uspjeha",
+      "Dosada"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Nepodnošenje ljudi i omalovažavanje uspjeha",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Šta treba da bude polje našeg djelovanja da bismo se sačuvali ogovaranja?",
+    "answers": [
+      "Gledanje tuđih grešaka",
+      "Istraživanje vlastitih nedostataka i mahana",
+      "Čitanje vijesti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Istraživanje vlastitih nedostataka i mahana",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Šta treba raditi onaj ko vjeruje u Allaha i u Sudnji dan?",
+    "answers": [
+      "Slušati sve što se priča",
+      "Govoriti dobro ili šutjeti",
+      "Ispravljati druge"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Govoriti dobro ili šutjeti",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Dovodi li ogovaranje do mržnje i nesuglasica?",
+    "answers": [
+      "Ne, to je samo razgovor",
+      "Da, dovodi do neprijateljstva među muslimanima",
+      "Samo ako je laž"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Da, dovodi do neprijateljstva među muslimanima",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "ogovaranje.html",
+    "lesson_title": "OGOVARANJE",
+    "question": "Prima li Allah pokajanje za grijehe?",
+    "answers": [
+      "Ne",
+      "Da, On zaista prima pokajanje i samilostan je",
+      "Samo ponekad"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Da, On zaista prima pokajanje i samilostan je",
+    "source": "OGOVARANJE"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Kada se čovjek, prema suri El-Alek, uzoholi?",
+    "answers": [
+      "Čim dobije novu odjeću",
+      "Čim se neovisnim osjeti",
+      "Kada počne učiti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Čim se neovisnim osjeti",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Ko neće ući u Džennet prema hadisu iz Muslimove zbirke?",
+    "answers": [
+      "Onaj ko nema lijepu odjeću",
+      "Onaj u čijem srcu bude i koliko trun oholosti",
+      "Onaj ko puno spava"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Onaj u čijem srcu bude i koliko trun oholosti",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Ko se prvi uzoholio?",
+    "answers": [
+      "Faraon",
+      "Iblis",
+      "Karun"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Iblis",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Šta je bio razlog Iblisove oholosti?",
+    "answers": [
+      "Mislio je da je bolji jer je stvoren od vatre",
+      "Mislio je da ima više znanja",
+      "Želio je bogatstvo"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Mislio je da je bolji jer je stvoren od vatre",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Koji je jedan od razloga zbog kojih se ljudi ohole?",
+    "answers": [
+      "Činjenje dobrih djela",
+      "Dunjalučko bogatstvo, porijeklo, ljepota",
+      "Odlazak u džamiju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Dunjalučko bogatstvo, porijeklo, ljepota",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Koji biblijski/kur'anski lik je potopljen u Crvenom moru zbog oholosti?",
+    "answers": [
+      "Karun",
+      "Faraon",
+      "Nemrud"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Faraon",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Šta vjernik zna o dunjalučkom bogatstvu i ljepoti?",
+    "answers": [
+      "Da su vječni",
+      "Da su prolazni",
+      "Da su najvažniji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Da su prolazni",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Kojeg od trojice iskušanih je Allah bio zadovoljan?",
+    "answers": [
+      "Gubavca",
+      "Ćelavca",
+      "Slijepca"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Slijepca",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "oholost.html",
+    "lesson_title": "OHOLOST",
+    "question": "Šta je zajedničko oholim ljudima iz historije (Karun, Faraon)?",
+    "answers": [
+      "Svi su bili sretni",
+      "Svi su poniženi i kažnjeni",
+      "Svi su ostali zapamćeni kao dobri"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Svi su poniženi i kažnjeni",
+    "source": "OHOLOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "Čime šejtan plaši ljude da bi bili škrti (El-Bekare, 268)?",
+    "answers": [
+      "Bolestima",
+      "Neimaštinom",
+      "Samoćom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Neimaštinom",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "Gdje se nalazi škrtac prema hadisu iz Tirmizijeve zbirke?",
+    "answers": [
+      "Daleko od ljudi i Dženneta, a blizu Džehennema",
+      "Blizu Dženneta",
+      "Samo u svojoj kući"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Daleko od ljudi i Dženneta, a blizu Džehennema",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "Šta znači škrtariti u imetku?",
+    "answers": [
+      "Dijeliti ga previše",
+      "Zadržavati imetak za sebe uskraćujući ga drugima",
+      "Trošiti na putovanja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Zadržavati imetak za sebe uskraćujući ga drugima",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "Koja je jedna od posljedica škrtosti spomenuta u lekciji?",
+    "answers": [
+      "Više prijatelja",
+      "Nestanak bereketa u imetku",
+      "Bolje zdravlje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Nestanak bereketa u imetku",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "O čemu će Allahov rob biti pitan na Sudnjem danu (Tirmizi)?",
+    "answers": [
+      "O imetku - kako ga je stekao i u šta potrošio",
+      "Samo o imenima prijatelja",
+      "Samo o mjestu stanovanja"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "O imetku - kako ga je stekao i u šta potrošio",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "S čim se poredi zavidnost u hadisu iz Ebu Davudove zbirke?",
+    "answers": [
+      "S vodom koja gasi vatru",
+      "S vatrom koja uništava drva",
+      "S vjetrom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "S vatrom koja uništava drva",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "Kome je prvom pozavidio prokleti šejtan?",
+    "answers": [
+      "Musau, a.s.",
+      "Ademu, a.s.",
+      "Nuhu, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Ademu, a.s.",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "U kojim slučajevima je dozvoljeno 'zavidjeti' (željeti isto)?",
+    "answers": [
+      "Čovjeku koji troši imetak na putu istine i mudrom čovjeku",
+      "Svakome ko ima bolji auto",
+      "Nikome i nikada"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Čovjeku koji troši imetak na putu istine i mudrom čovjeku",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "Šta zavidnost radi dobrim djelima?",
+    "answers": [
+      "Povećava ih",
+      "Uništava ih",
+      "Čuva ih"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Uništava ih",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  },
+  {
+    "source_file": "skrtost.html",
+    "lesson_title": "ŠKRTOST I ZAVIDNOST",
+    "question": "Koja je razlika između vjernika i munafika prema lekciji?",
+    "answers": [
+      "Vjernik želi, a munafik zavidi",
+      "Nema razlike",
+      "Vjernik je škrt, a munafik nije"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "lose_osobine",
+    "correct": "Vjernik želi, a munafik zavidi",
+    "source": "ŠKRTOST I ZAVIDNOST"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Loše osobine');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

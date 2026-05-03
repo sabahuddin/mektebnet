@@ -196,6 +196,7 @@ router.get("/kvizovi", async (req, res) => {
       kategorija: kvizoviTable.kategorija,
       lekcijaId: kvizoviTable.lekcijaId,
       opis: kvizoviTable.opis,
+      pitanjaPoSesiji: kvizoviTable.pitanjaPoSesiji,
       isPublished: kvizoviTable.isPublished,
       pitanjaCount: sql<number>`GREATEST(
         (SELECT COUNT(*)::int FROM "kviz_pitanja" WHERE "kviz_pitanja"."kviz_id" = "kvizovi"."id"),
@@ -314,12 +315,22 @@ router.get("/kvizovi/:slug", async (req, res) => {
 
     if (jsonbPitanja.length > 0) {
       const pitanja = jsonbPitanja.map((p) => {
+        // KRITIČNO: za dragDrop/markWords NE radi banka lookup po tekstu.
+        // Generička pitanja kao "Dopuni:" i "Pronađi greške:" imaju 40+
+        // varijanti u banci sa istim tekstom ali RAZLIČITIM meta (template/
+        // words/correct/incorrect). Lookup po tekstu bi vratio PRVU/POSLJEDNJU
+        // varijantu (Map kolapsira po ključu) i učenik bi vidio pogrešne
+        // riječi. JSONB već ima ispravan inline meta — koristi ga direktno.
+        const tipRaw = (typeof p?.type === "string" ? p.type : "").toLowerCase();
+        const isInteractive = tipRaw === "dragdrop" || tipRaw === "markwords";
+        if (isInteractive) return p;
+
         const q = typeof p?.question === "string" ? p.question : null;
         if (q) {
           const fromBankRow = bankaMap.get(norm(q));
           if (fromBankRow) return fromBank(fromBankRow);
         }
-        return p; // interaktivna pitanja (markWords/dragDrop/reorder) ostaju kako jesu
+        return p; // ostala interaktivna (reorder/truefalse) ako nemaju banka match
       });
       res.json({ ...kviz, pitanja });
       return;

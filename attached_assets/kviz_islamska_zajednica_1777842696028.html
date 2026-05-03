@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Islamska zajednica</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Islamska zajednica</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+        
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Od koje arapske riječi potiče riječ 'džamija'?",
+    "answers": [
+      "Mesdžid",
+      "Džeme'a",
+      "Kaba"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Džeme'a",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Šta znači korijen riječi 'džeme'a'?",
+    "answers": [
+      "Klanjati",
+      "Sastaviti, spojiti, skupiti",
+      "Graditi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Sastaviti, spojiti, skupiti",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Koja je prva džamija na Zemlji?",
+    "answers": [
+      "Kuba",
+      "Poslanikova džamija",
+      "Kaba u Mekki"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Kaba u Mekki",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Koja je prva džamija koju je utemeljio Poslanik, a.s.?",
+    "answers": [
+      "Džamija u Kuba'u",
+      "Džamija u Medini",
+      "Aksa"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Džamija u Kuba'u",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Kada je srušena Ferhadija džamija?",
+    "answers": [
+      "7. maja 1993. godine",
+      "1992. godine",
+      "1995. godine"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "7. maja 1993. godine",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Ko je izgradio Ferhadiju džamiju?",
+    "answers": [
+      "Gazi Husrev-beg",
+      "Ferhat-paša Sokolović",
+      "Mehmed-paša"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Ferhat-paša Sokolović",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Koliko je džamija srušeno tokom agresije na BiH?",
+    "answers": [
+      "Oko 500",
+      "Više od 1.000",
+      "Tačno 614"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Više od 1.000",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Šta se obilježava 7. maja?",
+    "answers": [
+      "Dan pobjede",
+      "Dan džamija",
+      "Dan nezavisnosti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Dan džamija",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Ko je smrtno stradao 7. maja 2001. prilikom pokušaja polaganja kamena temeljca?",
+    "answers": [
+      "Murat Badić",
+      "Ferhat-paša",
+      "Niko"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Murat Badić",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "dan_dzamija.html",
+    "lesson_title": "DAN DŽAMIJA I DŽEMATA",
+    "question": "Kada je svečano otvorena obnovljena Ferhadija?",
+    "answers": [
+      "2010.",
+      "2016.",
+      "2001."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "2016.",
+    "source": "DAN DŽAMIJA I DŽEMATA"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Koja godina označava dolazak Osmanlija i početak institucionalnog islama u BiH?",
+    "answers": [
+      "1463.",
+      "1878.",
+      "1909."
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "1463.",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Kada je osnovan Ulema-medžlis, prva vrhovna vjerska vlast muslimana pod Austrougarskom?",
+    "answers": [
+      "1930.",
+      "1882.",
+      "1993."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "1882.",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Šta je muslimanima donio Štatut iz 1909. godine?",
+    "answers": [
+      "Ukidanje vakufa",
+      "Vjersku i vakufsku autonomiju",
+      "Državnu religiju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Vjersku i vakufsku autonomiju",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Gdje je premješteno sjedište reisul-uleme 1930. godine?",
+    "answers": [
+      "U Istanbul",
+      "U Beograd",
+      "U Zagreb"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "U Beograd",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Koja obrazovna ustanova IZ je jedina nastavila rad nakon Drugog svjetskog rata?",
+    "answers": [
+      "Sve medrese",
+      "Fakultet islamskih nauka",
+      "Gazi Husrev-begova medresa"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Gazi Husrev-begova medresa",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Ko je vrhovni poglavar Islamske zajednice?",
+    "answers": [
+      "Glavni imam",
+      "Muftija",
+      "Reisu-l-ulema"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Reisu-l-ulema",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Šta je džemat?",
+    "answers": [
+      "Osnovna organizaciona jedinica IZ",
+      "Vijeće muftija",
+      "Ured reisa"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Osnovna organizaciona jedinica IZ",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Šta je menšura?",
+    "answers": [
+      "Vrsta kape",
+      "Šerijatsko-pravno ovlaštenje za reisu-l-ulemu",
+      "Naziv za džamiju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Šerijatsko-pravno ovlaštenje za reisu-l-ulemu",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Koliko je džamija srušeno tokom agresije na BiH?",
+    "answers": [
+      "100",
+      "614",
+      "50"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "614",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Ko brine o organizaciji odgojno-obrazovnog djelovanja u IZ?",
+    "answers": [
+      "Općina",
+      "Uprave pri Rijasetu Islamske zajednice",
+      "Sportska društva"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Uprave pri Rijasetu Islamske zajednice",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Šta je jedan od glavnih ciljeva ustanova IZ?",
+    "answers": [
+      "Samo učenje jezika",
+      "Poučiti učenike osnovama islamskog vjerovanja i učenja",
+      "Organizacija izleta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Poučiti učenike osnovama islamskog vjerovanja i učenja",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Koji je prvi nivo odgojno-obrazovnih ustanova IZ?",
+    "answers": [
+      "Medrese",
+      "Fakulteti",
+      "Predškolske odgojno-obrazovne ustanove"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Predškolske odgojno-obrazovne ustanove",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Gdje djeluju mektebi?",
+    "answers": [
+      "Samo u velikim gradovima",
+      "U svakom džematu",
+      "Samo u inostranstvu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "U svakom džematu",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Kojeg su tipa medrese?",
+    "answers": [
+      "Osnovne škole",
+      "Srednjoškolske ustanove",
+      "Samo kurs jezika"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Srednjoškolske ustanove",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Koja je medresa u Visokom?",
+    "answers": [
+      "Behram-begova",
+      "Osman ef. Redžović",
+      "Karađoz-begova"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Osman ef. Redžović",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Koja medresa djeluje u Mostaru?",
+    "answers": [
+      "Karađoz-begova medresa",
+      "Gazi Husrev-begova",
+      "Elči Ibrahim-pašina"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Karađoz-begova medresa",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Gdje se nalazi Behram-begova medresa?",
+    "answers": [
+      "U Bihaću",
+      "U Tuzli",
+      "U Zenici"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "U Tuzli",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Koji fakultet se nalazi u Sarajevu?",
+    "answers": [
+      "Islamski pedagoški fakultet",
+      "Fakultet islamskih nauka (FIN)",
+      "Fakultet za islamske studije"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Fakultet islamskih nauka (FIN)",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "iz_ustanove.html",
+    "lesson_title": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE",
+    "question": "Šta ustanove IZ predstavljaju roditeljima?",
+    "answers": [
+      "Samo trošak",
+      "Snažnu i neophodnu pomoć u ispunjavanju obaveze islamskog odgoja",
+      "Nisu bitne"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Snažnu i neophodnu pomoć u ispunjavanju obaveze islamskog odgoja",
+    "source": "ODGOJNO-OBRAZOVNE USTANOVE ISLAMSKE ZAJEDNICE"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Šta Poslanik, a.s., kaže da je vjera?",
+    "answers": [
+      "Zabava",
+      "Savjet",
+      "Igra"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Savjet",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Koja je prva naredba Kur'ana upućena ljudima?",
+    "answers": [
+      "Klanjaj!",
+      "Uči!",
+      "Dijeli!"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Uči!",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Šta je mekteb prema lekciji?",
+    "answers": [
+      "Mjesto za igru",
+      "Najznačajnija institucija koja uči djecu onome što vjera traži",
+      "Samo zgrada"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Najznačajnija institucija koja uči djecu onome što vjera traži",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Šta mekteb nudi djeci bez generalne probe?",
+    "answers": [
+      "Najbolju varijantu života",
+      "Samo zabavu",
+      "Poklone"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Najbolju varijantu života",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Ko ima obavezu da poduči djecu vjeri?",
+    "answers": [
+      "Samo prijatelji",
+      "Roditelji",
+      "Slučajni prolaznici"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Roditelji",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Za šta je još Poslanik, a.s., koristio džamiju?",
+    "answers": [
+      "Kao mjesto okupljanja i odgoja najmoralnijih ljudi",
+      "Samo za spavanje",
+      "Kao pijacu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Kao mjesto okupljanja i odgoja najmoralnijih ljudi",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Šta je škola prema definiciji u tekstu?",
+    "answers": [
+      "Mjesto za odmor",
+      "Ustanova u kojoj se obavlja vaspitanje i obrazovanje",
+      "Samo zgrada"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Ustanova u kojoj se obavlja vaspitanje i obrazovanje",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Koliko ima temelja odgoja i obrazovanja?",
+    "answers": [
+      "Jedan",
+      "Dva",
+      "Tri (mekteb, džamija i škola)"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Tri (mekteb, džamija i škola)",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Šta se dešava ako nedostaje jedan od tri temelja?",
+    "answers": [
+      "Ništa",
+      "Odgoj i obrazovanje nisu potpuni",
+      "Sve je isto"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Odgoj i obrazovanje nisu potpuni",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "temelji_odgoja.html",
+    "lesson_title": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA",
+    "question": "Koji je cilj obrazovanja u BiH?",
+    "answers": [
+      "Razvijanje svijesti o nacionalnoj pripadnosti i baštini",
+      "Zaboravljanje tradicije",
+      "Samo učenje matematike"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Razvijanje svijesti o nacionalnoj pripadnosti i baštini",
+    "source": "MEKTEB, DŽAMIJA I ŠKOLA – TEMELJI ODGOJA I OBRAZOVANJA"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Šta je vakuf?",
+    "answers": [
+      "Pozajmica novca",
+      "Zadužbina izdvojena u ime Allaha za korist zajednice",
+      "Vrsta poreza"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Zadužbina izdvojena u ime Allaha za korist zajednice",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Kako se zove osoba koja uvakufi dio svoje imovine?",
+    "answers": [
+      "Muderis",
+      "Muallim",
+      "Vakif"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Vakif",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Koji je dokument kojim se izražava volja vakifa?",
+    "answers": [
+      "Vakufnama",
+      "Ustav",
+      "Ferman"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Vakufnama",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Od kojeg poslanika datira uvakufljavanje?",
+    "answers": [
+      "Musaa, a.s.",
+      "Ibrahima, a.s.",
+      "Nuha, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Ibrahima, a.s.",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Ko je od ashaba prvi uvakufio dio svoje imovine?",
+    "answers": [
+      "Ebu Bekr, r.a.",
+      "Alija, r.a.",
+      "Omer, r.a."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Omer, r.a.",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Ko je udario temelje grada Sarajeva svojim vakufom?",
+    "answers": [
+      "Gazi Husrev-beg",
+      "Isa-beg Ishaković",
+      "Ferhad-beg"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Isa-beg Ishaković",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Koje godine je Gazi Husrev-beg izgradio čuvenu džamiju u Sarajevu?",
+    "answers": [
+      "1457.",
+      "1531.",
+      "1836."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "1531.",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Gdje se nalazi čuveni most Mehmed-paše Sokolovića s jedanaest lukova?",
+    "answers": [
+      "U Sarajevu",
+      "U Mostaru",
+      "U Višegradu"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "U Višegradu",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "U kojem gradu je Ferhad-beg podigao 216 javnih objekata?",
+    "answers": [
+      "U Mostaru",
+      "U Banjoj Luci",
+      "U Stocu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "U Banjoj Luci",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "vakufi_bih.html",
+    "lesson_title": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI",
+    "question": "Ko je najveći vakif Stoca?",
+    "answers": [
+      "Ali-paša Rizvanbegović",
+      "Rustem-paša",
+      "Karađoz-beg"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamska_zajednica",
+    "correct": "Ali-paša Rizvanbegović",
+    "source": "NAJPOZNATIJI VAKUFI I VAKUFSKE GRAĐEVINE U BOSNI I HERCEGOVINI"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Islamska zajednica');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

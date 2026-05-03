@@ -36,6 +36,7 @@ interface Kviz {
   naslov: string;
   nivo: number;
   pitanja: Pitanje[];
+  pitanjaPoSesiji?: number | null;
 }
 
 const QUESTION_TYPES = [
@@ -508,7 +509,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
   );
 }
 
-const QUIZ_SIZE = 20;
+const DEFAULT_QUIZ_SIZE = 20;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -582,7 +583,10 @@ export default function KvizPage() {
         setKviz(data);
         if (data.pitanja.length > 0) {
           const pool = shuffle(data.pitanja);
-          const selected = pool.slice(0, Math.min(QUIZ_SIZE, pool.length));
+          const sessionSize = (typeof data.pitanjaPoSesiji === "number" && data.pitanjaPoSesiji > 0)
+            ? data.pitanjaPoSesiji
+            : DEFAULT_QUIZ_SIZE;
+          const selected = pool.slice(0, Math.min(sessionSize, pool.length));
           setPitanja(selected);
           // init state for the first question
           const first = selected[0];
@@ -686,7 +690,9 @@ export default function KvizPage() {
           stableIndex >= 0
         ) {
           setWrongAnswers(prev => {
-            if (prev.length >= 20) return prev;
+            // Cap je do 30 jer su novi tematski kvizovi do 30 pitanja po sesiji
+            // (server cap je 50, ali držimo manje da ne pravimo spam u "Popravi saće").
+            if (prev.length >= 30) return prev;
             // Dedup unutar iste sesije — ako učenik pogrijesi dva puta isto
             // pitanje (re-attempt nakon "Ponovi"), samo jednom šaljemo.
             if (prev.some(w => w.questionIndex === stableIndex)) return prev;
@@ -851,9 +857,14 @@ export default function KvizPage() {
             </div>
             <h2 className="text-2xl font-extrabold text-foreground mb-2">Kviz završen!</h2>
             <p className="text-muted-foreground mb-6">Tačnih odgovora: {score} od {pitanja.length} pitanja</p>
-            {kviz.pitanja.length > QUIZ_SIZE && (
-              <p className="text-xs text-muted-foreground mb-2">nasumično odabrano iz {kviz.pitanja.length} pitanja</p>
-            )}
+            {(() => {
+              const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
+                ? kviz.pitanjaPoSesiji
+                : DEFAULT_QUIZ_SIZE;
+              return kviz.pitanja.length > sessionSize ? (
+                <p className="text-xs text-muted-foreground mb-2">nasumično odabrano iz {kviz.pitanja.length} pitanja</p>
+              ) : null;
+            })()}
             <div className="text-5xl font-extrabold text-primary mb-6">{pct}%</div>
             {pct >= 80 && (
               <div className="flex items-center gap-2 justify-center bg-yellow-50 text-yellow-700 rounded-2xl p-4 mb-6 border border-yellow-200">
@@ -865,7 +876,10 @@ export default function KvizPage() {
               <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">Nazad</Button>
               <Button onClick={() => {
                 const pool = shuffle(kviz.pitanja);
-                const sel = pool.slice(0, Math.min(QUIZ_SIZE, pool.length));
+                const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
+                  ? kviz.pitanjaPoSesiji
+                  : DEFAULT_QUIZ_SIZE;
+                const sel = pool.slice(0, Math.min(sessionSize, pool.length));
                 setPitanja(sel);
                 setCurrent(0); setScore(0); setFinished(false);
                 const first = sel[0];

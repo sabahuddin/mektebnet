@@ -163,7 +163,24 @@ async function runResidualSchema() {
     // Stoga ovdje idempotentno dodajemo kolonu da se produkcija auto-update-a.
     await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS meta jsonb;`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta) ready");
+    // pitanja_banka — partial UNIQUE indeksi za dedup. Prethodna verzija je
+    // imala globalni UNIQUE(pitanje), što je za interaktivne tipove (dragDrop,
+    // markWords) gubilo desetine varijanti jer ista generička pitanja kao
+    // "Dopuni:" i "Pronađi greške:" imaju 40+ varijanti sa različitim meta.
+    // Drizzle ne podržava `WHERE` na uniqueIndex pa se kreira raw SQL-om ovdje.
+    await db.execute(sql`DROP INDEX IF EXISTS pitanja_banka_pitanje_unique_idx;`);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS pitanja_banka_pitanje_std_unique_idx
+        ON pitanja_banka(pitanje)
+        WHERE vrsta NOT IN ('dragDrop','markWords');
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS pitanja_banka_pitanje_meta_unique_idx
+        ON pitanja_banka(pitanje, md5(meta::text))
+        WHERE vrsta IN ('dragDrop','markWords');
+    `);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

@@ -125,6 +125,10 @@ export const kvizoviTable = pgTable("kvizovi", {
   kategorija: varchar("kategorija", { length: 60 }),
   lekcijaId: integer("lekcija_id"),
   opis: text("opis").notNull().default(""),
+  // Koliko nasumičnih pitanja se generira po sesiji kad učenik pokrene kviz.
+  // Ako je `null`, klijent koristi default (20). Postavlja se per-kviz npr. za
+  // tematske kvizove sa velikim banaka pitanja (100+) gdje želimo 30 po sesiji.
+  pitanjaPoSesiji: integer("pitanja_po_sesiji"),
   isPublished: boolean("is_published").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -175,9 +179,17 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => ({
-  // UNIQUE po normalizovanom tekstu pitanja — sprječava duplikate kroz
-  // admin UI i osigurava idempotentnost migracije iz JSONB-a.
-  pitanjeUnique: uniqueIndex("pitanja_banka_pitanje_unique_idx").on(t.pitanje),
+  // Dedup strategija ovisi o `vrsta`:
+  // - Standardni tipovi (single/multiple/truefalse/reorder): UNIQUE po `pitanje`.
+  //   Tekst pitanja je dovoljno specifičan da identifikuje pitanje.
+  // - Interaktivni tipovi (dragDrop/markWords): UNIQUE po `(pitanje, md5(meta))`.
+  //   Razlog: ista generička pitanja kao "Dopuni:" ili "Pronađi greške:" se
+  //   koriste za 40+ različitih varijanti (template/words/correct se mijenjaju).
+  //   Bez meta hash-a sve te varijante bi se prepisivale jedna preko druge i
+  //   gubile bi se desetine pitanja. Partial indeksi se kreiraju RAW SQL-om
+  //   u migration push-u jer drizzle ne podržava `WHERE` na uniqueIndex.
+  //   Manage-an i u `scripts/src/migrate-pitanja-u-banku.ts` (ručni dedup za
+  //   interaktivne) i raw SQL u inicijalnom migration step-u (vidi DB ALTER).
   kategorijaIdx: index("pitanja_banka_kategorija_idx").on(t.kategorija),
   lekcijaIdx: index("pitanja_banka_lekcija_idx").on(t.lekcijaId),
 }));

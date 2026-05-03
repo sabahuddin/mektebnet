@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Dobre osobine</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Dobre osobine</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+    
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Šta se od nabrojanog smatra sadakom u ponašanju muslimana?",
+    "answers": [
+      "Samo davanje novca",
+      "Selam, lijepa riječ i osmijeh",
+      "Samo ćutanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Selam, lijepa riječ i osmijeh",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Kome vjernici, prema suri El-Beled, trebaju pomagati?",
+    "answers": [
+      "Samo bogatima",
+      "Siročetu bliska roda ili ubogom nevoljniku",
+      "Nikome"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Siročetu bliska roda ili ubogom nevoljniku",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Šta je cilj pokazivanja dobrote prema drugima?",
+    "answers": [
+      "Da dobijemo poklon",
+      "Da poboljšamo život ljudi oko nas",
+      "Da budemo poznati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da poboljšamo život ljudi oko nas",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Čime potvrđujemo iman u srcu?",
+    "answers": [
+      "Ustrajnim izvršavanjem naređenih dužnosti",
+      "Samo spavanjem",
+      "Odlaskom na izlet"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Ustrajnim izvršavanjem naređenih dužnosti",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Šta dolaze meleki i kažu onima koji ustraju na Pravom putu?",
+    "answers": [
+      "Radite više",
+      "Ne bojte se i ne žalostite se",
+      "Sutra je novi dan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Ne bojte se i ne žalostite se",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Šta se postiže ustrajnošću prema tekstu?",
+    "answers": [
+      "Spas od zla, približavanje Džennetu i ostvarenje želja",
+      "Samo umor",
+      "Materijalno bogatstvo"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Spas od zla, približavanje Džennetu i ostvarenje želja",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Na čemu treba zahvaljivati Uzvišenom Allahu?",
+    "answers": [
+      "Na novoj odjeći",
+      "Na ustrajnosti na Pravom putu",
+      "Na dugim raspustima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Na ustrajnosti na Pravom putu",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "dobrota.html",
+    "lesson_title": "DOBROTA I USTRAJNOST",
+    "question": "Šta potvrđuju dobrota i ustrajnost u činjenju dobrih djela?",
+    "answers": [
+      "Vjerovanje i pokornost Allahu, dž.š.",
+      "Samo našu snagu",
+      "Lijep izgled"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Vjerovanje i pokornost Allahu, dž.š.",
+    "source": "DOBROTA I USTRAJNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Šta podrazumijeva iskrenost (ihlas)?",
+    "answers": [
+      "Činjenje dobra radi pohvale ljudi",
+      "Činjenje dobra isključivo radi Allahovog zadovoljstva",
+      "Samo lijep govor"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Činjenje dobra isključivo radi Allahovog zadovoljstva",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Šta se dešava sa djelima koja nisu iskreno učinjena u ime Allaha?",
+    "answers": [
+      "Bit će primljena",
+      "Neće biti primljena",
+      "Djelimično će biti nagrađena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Neće biti primljena",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Prema čemu se vrednuju djela u poznatom hadisu?",
+    "answers": [
+      "Prema bogatstvu",
+      "Prema namjerama",
+      "Prema izgledu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Prema namjerama",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Kuda vodi iskrenost prema hadisu Muhammeda, a.s.?",
+    "answers": [
+      "U Džennet",
+      "U vatru",
+      "U dunjalučku slavu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "U Džennet",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Šta naređuje Allah, dž.š., na prvom mjestu u suri En-Nahl, 90?",
+    "answers": [
+      "Nasilje",
+      "Pravednost",
+      "Razvrat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Pravednost",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Ko će biti na uzvišenim mjestima od svjetlosti kod Allaha?",
+    "answers": [
+      "Oni koji su bili najjači",
+      "Oni koji su bili pravedni u presudama i porodici",
+      "Oni koji su samo učili"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Oni koji su bili pravedni u presudama i porodici",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Smije li mržnja prema nekome biti razlog za nepravdu?",
+    "answers": [
+      "Da, ponekad",
+      "Nikako ne smije navesti da nepravedni budemo",
+      "Samo prema neprijatelju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Nikako ne smije navesti da nepravedni budemo",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Šta znači biti pravedan prema tekstu?",
+    "answers": [
+      "Čuvati se od svega što narušava ljudskost",
+      "Slušati samo sebe",
+      "Biti brži od drugih"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Čuvati se od svega što narušava ljudskost",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Šta je temelj za zdravo muslimansko društvo?",
+    "answers": [
+      "Novac",
+      "Iskrenost",
+      "Zabava"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Iskrenost",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "iskrenost_pravednost.html",
+    "lesson_title": "ISKRENOST I PRAVEDNOST",
+    "question": "Kuda vodi laž prema hadisu?",
+    "answers": [
+      "U dobročinstvo",
+      "U bestidnost i vatru",
+      "U mudrost"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "U bestidnost i vatru",
+    "source": "ISKRENOST I PRAVEDNOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Šta podrazumijeva istinoljubivost?",
+    "answers": [
+      "Isticanje istine i ljubavi prema njoj",
+      "Samo čitanje knjiga",
+      "Šutnju u svim situacijama"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Isticanje istine i ljubavi prema njoj",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Kako musliman postupa kada je istina protiv njega?",
+    "answers": [
+      "Krije istinu",
+      "Laže da se spasi",
+      "Govori istinu makar bila i gorka"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Govori istinu makar bila i gorka",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Šta podrazumijeva pouzdanost?",
+    "answers": [
+      "Zaboravljanje obaveza",
+      "Ispunjavanje preuzete obaveze i brigu o povjerenim stvarima",
+      "Uzimanje tuđih stvari"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Ispunjavanje preuzete obaveze i brigu o povjerenim stvarima",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Koji je nadimak imao Poslanik, a.s., zbog svoje pouzdanosti?",
+    "answers": [
+      "El-Fatih",
+      "El-Faruk",
+      "El-Emin"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "El-Emin",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Kako Muhammed, a.s., naziva osobe koje krše obećanja?",
+    "answers": [
+      "Licemjerima ili dvoličnjacima",
+      "Herojima",
+      "Putnicima"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Licemjerima ili dvoličnjacima",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Zašto se Hatidža, r.a., udala za Muhammeda, a.s.?",
+    "answers": [
+      "Zbog bogatstva",
+      "Zbog njegove pouzdanosti i lijepog ponašanja",
+      "Zbog trgovine"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Zbog njegove pouzdanosti i lijepog ponašanja",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Koga je Poslanik, a.s., ostavio u Mekki da vrati povjerene stvari ljudima?",
+    "answers": [
+      "Ebu Bekra, r.a.",
+      "Omera, r.a.",
+      "Aliju, r.a."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Aliju, r.a.",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Šta Muhammed, a.s., kaže za osobu koja nema emaneta (pouzdanosti)?",
+    "answers": [
+      "Da nema vjere",
+      "Da mora više raditi",
+      "Da je dobar vjernik"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da nema vjere",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Čiji je predznak nestanak emaneta (pouzdanosti)?",
+    "answers": [
+      "Nove godine",
+      "Sudnjeg dana",
+      "Proljeća"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Sudnjeg dana",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "istinoljubivost.html",
+    "lesson_title": "ISTINOLJUBIVOST I POUZDANOST",
+    "question": "Na čemu se temelje dobri društveni odnosi?",
+    "answers": [
+      "Na novcu",
+      "Na pouzdanosti i povjerenju",
+      "Na snazi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Na pouzdanosti i povjerenju",
+    "source": "ISTINOLJUBIVOST I POUZDANOST"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "S čime Allah, dž.š., poredi lijepu riječ u ajetu?",
+    "answers": [
+      "S lijepim drvetom čiji je korijen čvrst",
+      "S bistrom vodom",
+      "S visokom planinom"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "S lijepim drvetom čiji je korijen čvrst",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "S čime se poredi ogovaranje u Kur'anu?",
+    "answers": [
+      "S jedenjem mesa mrtvog brata",
+      "S pijenjem zagađene vode",
+      "S bacanjem kamena"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "S jedenjem mesa mrtvog brata",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "S čime se poredi izgovorena riječ koja se ne može vratiti?",
+    "answers": [
+      "S prolivenim mlijekom",
+      "S odapetom strijelom",
+      "S bačenim kamenom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "S odapetom strijelom",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "Kako treba postupiti kada se neznalice obrate ružnim govorom?",
+    "answers": [
+      "Uzvratiti istom mjerom",
+      "Ignorisati ih",
+      "Uzvratiti lijepim i blagim riječima"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Uzvratiti lijepim i blagim riječima",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "Šta Kur'an zabranjuje u komunikaciji s roditeljima?",
+    "answers": [
+      "Podizanje tona na njih",
+      "Šutnju",
+      "Smijanje"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Podizanje tona na njih",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "Šta Kur'an zabranjuje u odnosu prema prosjaku?",
+    "answers": [
+      "Davanje novca",
+      "Podizanje glasa na njega",
+      "Razgovor s njim"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Podizanje glasa na njega",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "Šta se dešava s ružnom riječi prema poređenju iz Kur'ana?",
+    "answers": [
+      "Ona ostaje zauvijek",
+      "Ona je kao iščupano drvo kojem nema opstanka",
+      "Ona donosi plod"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Ona je kao iščupano drvo kojem nema opstanka",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "Šta naizgled bezazlene, ali ružne riječi mogu učiniti?",
+    "answers": [
+      "Mogu zamutiti more svojom prljavštinom",
+      "Ne mogu ništa",
+      "Mogu nasmijati ljude"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Mogu zamutiti more svojom prljavštinom",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "lijepa_rijec.html",
+    "lesson_title": "LIJEPA RIJEČ",
+    "question": "Šta stvaraju prenošenje tuđih riječi, ogovaranje i laž?",
+    "answers": [
+      "Prijateljstvo",
+      "Neprijateljstva i mržnju",
+      "Uspjeh"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Neprijateljstva i mržnju",
+    "source": "LIJEPA RIJEČ"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Zašto su muslimani izloženi stalnom neprijateljstvu?",
+    "answers": [
+      "Zbog svog bogatstva",
+      "Zbog uloge u društvu i šejtanovog nauma",
+      "Zbog putovanja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Zbog uloge u društvu i šejtanovog nauma",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Pomoću čega šejtan unosi neprijateljstvo (El-Maide, 91)?",
+    "answers": [
+      "Pomoću knjiga",
+      "Pomoću vina i kocke",
+      "Pomoću sporta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Pomoću vina i kocke",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Od čega šejtan želi odvratiti vjernike?",
+    "answers": [
+      "Od posla",
+      "Od sjećanja na Allaha i molitve",
+      "Od jela"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Od sjećanja na Allaha i molitve",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Šta definira izraz neprijateljstvo?",
+    "answers": [
+      "Pozitivan odnos",
+      "Negativan odnos između pojedinaca ili skupina",
+      "Takmičenje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Negativan odnos između pojedinaca ili skupina",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Šta nastoji onaj ko u srcu ima neprijateljstvo?",
+    "answers": [
+      "Pomoći drugome",
+      "Obezvrijediti, poniziti i osramotiti drugoga",
+      "Samo se šaliti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Obezvrijediti, poniziti i osramotiti drugoga",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Koji ajet uređuje odnos među muslimanima (Et-Tevbe, 71)?",
+    "answers": [
+      "Vjernici su braća",
+      "Vjernici i vjernice su prijatelji jedni drugima",
+      "Vjernici su strpljivi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Vjernici i vjernice su prijatelji jedni drugima",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Kakav treba biti odnos među vjernicima?",
+    "answers": [
+      "Pun rivalstva",
+      "Pun samilosti, pažnje i potpomaganja",
+      "Hladan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Pun samilosti, pažnje i potpomaganja",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Šta je Allah, dž.š., rekao o zlostavljanju (El-Bekare, 191)?",
+    "answers": [
+      "Da je zabranjeno",
+      "Da je teže od ubijanja",
+      "Da nije grijeh"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da je teže od ubijanja",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Šta je čest uzrok problema u zajednici?",
+    "answers": [
+      "Slaba komunikacija i nerazumijevanje",
+      "Previše novca",
+      "Lijepo vrijeme"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Slaba komunikacija i nerazumijevanje",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "neprijateljstvo.html",
+    "lesson_title": "NEPRIJATELJSTVO",
+    "question": "Šta muslimani brane i štite prema sekciji ZAPAMTI?",
+    "answers": [
+      "Svoju kuću",
+      "Svoje vjerovanje i bratsku ljubav",
+      "Svoj imetak"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Svoje vjerovanje i bratsku ljubav",
+    "source": "NEPRIJATELJSTVO"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Ko je najpobožniji čovjek prema hadisu Poslanika, a.s.?",
+    "answers": [
+      "Onaj koji najviše radi",
+      "Onaj koji se čuva harama",
+      "Onaj koji ima najviše znanja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Onaj koji se čuva harama",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Šta podrazumijeva ihsan?",
+    "answers": [
+      "Čitanje knjiga",
+      "Svijest da nas Allah vidi iako mi Njega ne vidimo",
+      "Samo odlazak u džamiju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Svijest da nas Allah vidi iako mi Njega ne vidimo",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "U čemu je suština bogobojaznosti?",
+    "answers": [
+      "U strahu od ljudi",
+      "U čuvanju od harama i svođenju računa sa samim sobom",
+      "U putovanjima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "U čuvanju od harama i svođenju računa sa samim sobom",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Na čijoj strani je Allah prema suri El-Bekare?",
+    "answers": [
+      "Na strani onih koji se grijeha klone",
+      "Na strani onih koji su glasni",
+      "Na strani bogatih"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Na strani onih koji se grijeha klone",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Šta će Allah darovati onima koji vjeruju u Poslanika i boje se Allaha?",
+    "answers": [
+      "Mnogo novca",
+      "Dvostruku milost i svjetlo pomoću kojeg će ići",
+      "Samo odmor"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Dvostruku milost i svjetlo pomoću kojeg će ići",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Koji poslanik je naveden kao primjer bogobojaznosti?",
+    "answers": [
+      "Musa, a.s.",
+      "Jusuf, a.s.",
+      "Ibrahim, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Jusuf, a.s.",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Šta je Jusuf, a.s., uzviknuo kada mu je ponuđen grijeh?",
+    "answers": [
+      "Daj mi vremena",
+      "Sačuvaj Bože!",
+      "Uspjet ću"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Sačuvaj Bože!",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Šta radi onaj ko se Allaha istinski boji?",
+    "answers": [
+      "Govori istinu makar bila i na njegovu štetu",
+      "Šuti o svemu",
+      "Gleda samo sebe"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Govori istinu makar bila i na njegovu štetu",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "U kojoj suri se spominje naredba 'umrite samo kao muslimani'?",
+    "answers": [
+      "El-Bekare",
+      "Alu Imran",
+      "Et-Tevbe"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Alu Imran",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "poboznost.html",
+    "lesson_title": "POBOŽNOST I BOGOBOJAZNOST",
+    "question": "Čuva li bogobojaznost od negativnih postupaka?",
+    "answers": [
+      "Da, stalno podsjeća da Allah sve vidi i zna",
+      "Ne, to nije važno",
+      "Samo ponekad"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da, stalno podsjeća da Allah sve vidi i zna",
+    "source": "POBOŽNOST I BOGOBOJAZNOST"
+  },
+  {
+    "source_file": "prijateljstvo.html",
+    "lesson_title": "PRIJATELJSTVO I DRUGARSTVO",
+    "question": "Na čemu treba biti zasnovano prijateljstvo pored iskrenosti?",
+    "answers": [
+      "Na takmičenju",
+      "Na praštanju, povjerenju i pomaganju",
+      "Na materijalnoj koristi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Na praštanju, povjerenju i pomaganju",
+    "source": "PRIJATELJSTVO I DRUGARSTVO"
+  },
+  {
+    "source_file": "prijateljstvo.html",
+    "lesson_title": "PRIJATELJSTVO I DRUGARSTVO",
+    "question": "Šta će dobar prijatelj prenijeti na svog druga?",
+    "answers": [
+      "Samo svoje loše navike",
+      "Lijepe ljudske osobine, znanje i mudrost",
+      "Ništa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Lijepe ljudske osobine, znanje i mudrost",
+    "source": "PRIJATELJSTVO I DRUGARSTVO"
+  },
+  {
+    "source_file": "prijateljstvo.html",
+    "lesson_title": "PRIJATELJSTVO I DRUGARSTVO",
+    "question": "Zašto se dobro djelo urezuje u kamen?",
+    "answers": [
+      "Da bi ga vjetrovi izbrisali",
+      "Da ga nijedan vjetar ne bi mogao izbrisati",
+      "Zato što je lakše pisati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da ga nijedan vjetar ne bi mogao izbrisati",
+    "source": "PRIJATELJSTVO I DRUGARSTVO"
+  },
+  {
+    "source_file": "prijateljstvo.html",
+    "lesson_title": "PRIJATELJSTVO I DRUGARSTVO",
+    "question": "Kada se kaže da se upoznaju prvi drugari?",
+    "answers": [
+      "Tek u srednjoj školi",
+      "U ranom djetinjstvu (vrtić, mekteb, škola)",
+      "Samo na poslu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "U ranom djetinjstvu (vrtić, mekteb, škola)",
+    "source": "PRIJATELJSTVO I DRUGARSTVO"
+  },
+  {
+    "source_file": "prijateljstvo.html",
+    "lesson_title": "PRIJATELJSTVO I DRUGARSTVO",
+    "question": "Šta znači 'Drug drugu je ogledalo'?",
+    "answers": [
+      "Da treba da se gledaju u ogledalo",
+      "Da prijatelji odražavaju osobine jedni drugih",
+      "Da se ne smiju svađati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da prijatelji odražavaju osobine jedni drugih",
+    "source": "PRIJATELJSTVO I DRUGARSTVO"
+  },
+  {
+    "source_file": "prijateljstvo.html",
+    "lesson_title": "PRIJATELJSTVO I DRUGARSTVO",
+    "question": "Kojih se prijatelja trebamo čuvati?",
+    "answers": [
+      "Onih koji nas podsjećaju na Allaha",
+      "Onih koji nas vode laži, prevari i lošim navikama",
+      "Onih koji su pametniji od nas"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Onih koji nas vode laži, prevari i lošim navikama",
+    "source": "PRIJATELJSTVO I DRUGARSTVO"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Koja su prva dva Allahova imena spomenuta u Kur'anu?",
+    "answers": [
+      "El-Gaffar i El-Emin",
+      "Er-Rahman i Er-Rahim",
+      "El-Halik i El-Malik"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Er-Rahman i Er-Rahim",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Šta nam poručuje svakodnevno učenje Bismille?",
+    "answers": [
+      "Da budemo brzi",
+      "Da je Allah Milostivi i Samilosni",
+      "Da moramo stalno putovati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da je Allah Milostivi i Samilosni",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Šta je Muhammed, a.s., odgovorio kada su tražili da prokune idolopoklonike?",
+    "answers": [
+      "Da će to uraditi sutra",
+      "Da nije poslan da proklinje, već kao milost",
+      "Da su zaslužili kaznu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Da nije poslan da proklinje, već kao milost",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Šta se desilo s plemenom Devs nakon Poslanikove, a.s., dove?",
+    "answers": [
+      "Bili su uništeni",
+      "Svi su primili islam",
+      "Otišli su u drugu zemlju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Svi su primili islam",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Prema kome je najpreče iskazati samilost?",
+    "answers": [
+      "Samo prema nepoznatima",
+      "Roditeljima, braći, sestrama, rodbini, prijateljima i komšijama",
+      "Samo prema životinjama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Roditeljima, braći, sestrama, rodbini, prijateljima i komšijama",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Šta donosi međusobna samilost zajednici muslimana?",
+    "answers": [
+      "Mir i sreću",
+      "Samo bogatstvo",
+      "Više posla"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Mir i sreću",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Kako glasi Allahovo ime El-Gaffar?",
+    "answers": [
+      "Onaj koji sve vidi",
+      "Onaj koji prašta",
+      "Svemogući"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Onaj koji prašta",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Kada je Muhammed, a.s., oprostio Kurejšijama za zlostavljanje?",
+    "answers": [
+      "Na početku islama",
+      "Na dan oslobođenja Mekke",
+      "Nikada im nije oprostio"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Na dan oslobođenja Mekke",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Šta trebamo raditi ako želimo da i nama bude oprošteno?",
+    "answers": [
+      "Samo učiti",
+      "I mi moramo drugima praštati",
+      "Ništa posebno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "I mi moramo drugima praštati",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "samilost.html",
+    "lesson_title": "SAMILOST I PRAŠTANJE",
+    "question": "Ko je na strani samilosnih prema hadisu?",
+    "answers": [
+      "Cijeli svijet",
+      "Allah im je milostiv",
+      "Samo njihovi prijatelji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Allah im je milostiv",
+    "source": "SAMILOST I PRAŠTANJE"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Šta znači riječ islam u kontekstu predanosti?",
+    "answers": [
+      "Borba",
+      "Potpuna predanost i poniznost Allahu, dž.š.",
+      "Samo učenje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Potpuna predanost i poniznost Allahu, dž.š.",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Kome treba da budu posvećeni naš život i smrt prema suri El-En'am?",
+    "answers": [
+      "Ljudima",
+      "Allahu, Gospodaru svjetova",
+      "Samo porodici"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Allahu, Gospodaru svjetova",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Šta je prvenstveni cilj islama?",
+    "answers": [
+      "Bogatstvo",
+      "Odratiti ljude od robovanja stvorenjima i usmjeriti ih Allahu",
+      "Samo putovanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Odratiti ljude od robovanja stvorenjima i usmjeriti ih Allahu",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Šta je oružje muslimana kroz životna iskušenja?",
+    "answers": [
+      "Novac",
+      "Strpljivost (sabr)",
+      "Snaga mišića"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Strpljivost (sabr)",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Ko biva najviše iskušavan prema hadisu?",
+    "answers": [
+      "Bogati ljudi",
+      "Allahovi poslanici",
+      "Oni koji ne rade ništa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Allahovi poslanici",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Šta je strpljivost u pokornosti?",
+    "answers": [
+      "Izbjegavanje posla",
+      "Ustrajnost u činjenju dobrih djela i ibadeta",
+      "Šutnja pred nepravdom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Ustrajnost u činjenju dobrih djela i ibadeta",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Šta očekuje strpljive u nedaćama prema Kur'anu?",
+    "answers": [
+      "Samo umor",
+      "Oprost, milost i to da su na Pravom putu",
+      "Zaborav ljudi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Oprost, milost i to da su na Pravom putu",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Koji vjernik ima veću nagradu prema hadisu?",
+    "answers": [
+      "Onaj koji se osami",
+      "Onaj koji se druži s ljudima i strpljivo podnosi uvrede",
+      "Onaj koji nikoga ne pozdravlja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Onaj koji se druži s ljudima i strpljivo podnosi uvrede",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Kada su naše aktivnosti u predanosti Allahu?",
+    "answers": [
+      "Kada su u skladu s Božijim zakonom i cilj je Allahovo zadovoljstvo",
+      "Kada ih radimo samo radi novca",
+      "Kada nas drugi hvale"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Kada su u skladu s Božijim zakonom i cilj je Allahovo zadovoljstvo",
+    "source": "PREDANOST I STRPLJIVOST"
+  },
+  {
+    "source_file": "strpljivost.html",
+    "lesson_title": "PREDANOST I STRPLJIVOST",
+    "question": "Šta je strpljivost u grijehu?",
+    "answers": [
+      "Činiti grijeh polako",
+      "Suzdržavanje od onoga što je Allah zabranio",
+      "Plakanje nakon grijeha"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "dobre_osobine",
+    "correct": "Suzdržavanje od onoga što je Allah zabranio",
+    "source": "PREDANOST I STRPLJIVOST"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Dobre osobine');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,2645 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Islamski šarti</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Islamski šarti</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+    
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Kada je brak po šerijatu farz (stroga dužnost)?",
+    "answers": [
+      "Osobi koja ne želi djecu",
+      "Osobi koja može izdržavati porodicu, a ne može se čuvati nemorala",
+      "Svakom djetetu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Osobi koja može izdržavati porodicu, a ne može se čuvati nemorala",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "brak.html",
+    "lesson_title": "ISLAMSKI BRAK",
+    "question": "Ko postaje 'majka po mlijeku' djetetu?",
+    "answers": [
+      "Bilo koja rođaka",
+      "Žena koja je dojila tuđe dijete u periodu od dvije godine",
+      "Vaspitačica"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Žena koja je dojila tuđe dijete u periodu od dvije godine",
+    "source": "ISLAMSKI BRAK"
+  },
+  {
+    "source_file": "duhan.html",
+    "lesson_title": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST",
+    "question": "Kada je pokuđeno (mekruh) dolaziti u džemat pušaču?",
+    "answers": [
+      "Uvijek",
+      "Ako je miris duhana intenzivan i uznemirava klanjače",
+      "Nikada"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ako je miris duhana intenzivan i uznemirava klanjače",
+    "source": "DUHAN – UPOTREBA I NJEGOVA ŠTETNOST"
+  },
+  {
+    "source_file": "dzenaza_namaz.html",
+    "lesson_title": "DŽENAZA-NAMAZ",
+    "question": "Šta je smrt prema lekciji?",
+    "answers": [
+      "Kraj svega",
+      "Prelazak sa dunjaluka na vječni svijet – ahiret",
+      "Samo dug san"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Prelazak sa dunjaluka na vječni svijet – ahiret",
+    "source": "DŽENAZA-NAMAZ"
+  },
+  {
+    "source_file": "dzenaza_namaz.html",
+    "lesson_title": "DŽENAZA-NAMAZ",
+    "question": "Šta je dženaza-namaz po stepenu obaveze?",
+    "answers": [
+      "Farzi-ajn",
+      "Fardi-kifaje",
+      "Sunnet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Fardi-kifaje",
+    "source": "DŽENAZA-NAMAZ"
+  },
+  {
+    "source_file": "dzenaza_namaz.html",
+    "lesson_title": "DŽENAZA-NAMAZ",
+    "question": "Kada se u dženazi uči dova?",
+    "answers": [
+      "Poslije prvog tekbira",
+      "Poslije drugog tekbira",
+      "Poslije trećeg tekbira"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Poslije trećeg tekbira",
+    "source": "DŽENAZA-NAMAZ"
+  },
+  {
+    "source_file": "dzenaza_namaz.html",
+    "lesson_title": "DŽENAZA-NAMAZ",
+    "question": "Kada se dižu ruke u dženaza-namazu?",
+    "answers": [
+      "Kod svakog tekbira",
+      "Samo kod prvog tekbira",
+      "Nikako"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Samo kod prvog tekbira",
+    "source": "DŽENAZA-NAMAZ"
+  },
+  {
+    "source_file": "dzenaza_namaz.html",
+    "lesson_title": "DŽENAZA-NAMAZ",
+    "question": "Kojim riječima se izražava saučešće (ta'zija)?",
+    "answers": [
+      "Inšallah",
+      "Innã lillãhi ve innã ilejhi rãdži'ũn",
+      "Elhamdulillah"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Innã lillãhi ve innã ilejhi rãdži'ũn",
+    "source": "DŽENAZA-NAMAZ"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Šta su farzovi u namazu?",
+    "answers": [
+      "Dodatni dijelovi namaza",
+      "Dijelovi namaza koji se moraju izvršiti za ispravnost",
+      "Pokreti koji se mogu izostaviti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dijelovi namaza koji se moraju izvršiti za ispravnost",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Koliko ima namaskih farzova?",
+    "answers": [
+      "Četiri",
+      "Pet",
+      "Šest"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Šest",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Šta treba učiniti klanjač koji shvati da je propustio farz?",
+    "answers": [
+      "Samo nastaviti",
+      "Obnoviti svoj namaz",
+      "Doviti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Obnoviti svoj namaz",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Kako se zove početni tekbir u namazu?",
+    "answers": [
+      "Iftitahi tekbir",
+      "Kadei-ehire",
+      "Kiraet"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Iftitahi tekbir",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Šta je kijam?",
+    "answers": [
+      "Učenje Kur'ana",
+      "Stajanje u namazu",
+      "Sjedenje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Stajanje u namazu",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Šta podrazumijeva kiraet?",
+    "answers": [
+      "Pregibanje",
+      "Ispravno učenje dijela kur'anskog teksta",
+      "Sakupljanje ruku"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ispravno učenje dijela kur'anskog teksta",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Šta je ruku?",
+    "answers": [
+      "Pregibanje u pojasu",
+      "Spuštanje čela na tlo",
+      "Početak namaza"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Pregibanje u pojasu",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Koji dijelovi tijela se spuštaju na tlo tokom sedžde?",
+    "answers": [
+      "Samo koljena",
+      "Čelo, nos, dlanovi, koljena i nožni prsti",
+      "Samo dlanovi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Čelo, nos, dlanovi, koljena i nožni prsti",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Šta je kadei-ehire?",
+    "answers": [
+      "Učenje Kur'ana",
+      "Posljednje sjedenje u namazu",
+      "Početni tekbir"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Posljednje sjedenje u namazu",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "farzovi_namaz.html",
+    "lesson_title": "FARZOVI U NAMAZU",
+    "question": "Na koji način se mogu ispuniti farzovi prema 'Zapamti'?",
+    "answers": [
+      "Samo stojeći",
+      "Onako kako dozvoljava trenutno zdravstveno stanje",
+      "Samo u džamiji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Onako kako dozvoljava trenutno zdravstveno stanje",
+    "source": "FARZOVI U NAMAZU"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Šta je gusul?",
+    "answers": [
+      "Obično pranje ruku",
+      "Kur'anom propisano vjersko kupanje",
+      "Pranje lica"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Kur'anom propisano vjersko kupanje",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Kada je gusul obavezan?",
+    "answers": [
+      "Prije spavanja",
+      "Nakon spolnog odnosa ili hajza",
+      "Svaki dan ujutro"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Nakon spolnog odnosa ili hajza",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Kako se naziva osoba koja je u stanju nečistoće prije gusula?",
+    "answers": [
+      "Muafir",
+      "Džunub",
+      "Mukellef"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Džunub",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Šta je zabranjeno neokupanim osobama?",
+    "answers": [
+      "Jesti i piti",
+      "Klanjati namaz i učiti Kur'an",
+      "Gledati televiziju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Klanjati namaz i učiti Kur'an",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Koliko gusul ima farzova?",
+    "answers": [
+      "Dva",
+      "Tri",
+      "Pet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Tri",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Šta znači termin 'gargara' u farzovima gusula?",
+    "answers": [
+      "Pranje nosa",
+      "Dobro ispiranje usta i grla",
+      "Pranje cijelog tijela"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dobro ispiranje usta i grla",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Šta znači termin 'istinšak'?",
+    "answers": [
+      "Pranje lica",
+      "Ispiranje nosa",
+      "Pranje nogu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ispiranje nosa",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Kada je sunnet uzeti gusul prema praksi Poslanika, a.s.?",
+    "answers": [
+      "Prije škole",
+      "Prije džuma i bajram-namaza",
+      "Prije ručka"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Prije džuma i bajram-namaza",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Koji je treći farz gusula?",
+    "answers": [
+      "Pranje ruku do iza laktova",
+      "Oprati cijelo tijelo da nigdje ne ostane suho",
+      "Mesianje po glavi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Oprati cijelo tijelo da nigdje ne ostane suho",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "gusul.html",
+    "lesson_title": "GUSUL - VJERSKO KUPANJE",
+    "question": "Koja je odlika sunneta gusula prilikom kupanja?",
+    "answers": [
+      "Samo polijevanje vodom",
+      "Korištenje šampona i sapuna",
+      "Šutnja tokom cijelog procesa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Korištenje šampona i sapuna",
+    "source": "GUSUL - VJERSKO KUPANJE"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Hadž je koji po redu islamski šart?",
+    "answers": [
+      "Treći",
+      "Četvrti",
+      "Peti"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Peti",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Gdje hadžije borave 9. zul-hidžeta?",
+    "answers": [
+      "Na Muzdelifi",
+      "Na Arefatu",
+      "Na Mini"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na Arefatu",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Šta su ihrami za muškarce?",
+    "answers": [
+      "Svečana odijela",
+      "Dva bijela nešivena platna",
+      "Posebne kape"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dva bijela nešivena platna",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Koji je uslov za žene prilikom odlaska na hadž?",
+    "answers": [
+      "Da putuju same",
+      "Prisustvo mahrema",
+      "Da imaju dozvolu općine"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Prisustvo mahrema",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Šta je zabranjeno hadžiji u ihramima?",
+    "answers": [
+      "Učenje dova",
+      "Svađa i prepirke",
+      "Spavanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Svađa i prepirke",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Odakle počinje tavaf?",
+    "answers": [
+      "Od Mekami-Ibrahima",
+      "Od Hadžerul-esveda",
+      "Sa Safe"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Od Hadžerul-esveda",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Šta je sa'j?",
+    "answers": [
+      "Hod između Safe i Merve",
+      "Boravak na Muzdelifi",
+      "Klanjanje u džamiji"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Hod između Safe i Merve",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Kada je umra ravna hadžu po vrijednosti?",
+    "answers": [
+      "U mjesecu ševalu",
+      "U mjesecu ramazanu",
+      "U mjesecu muharemu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "U mjesecu ramazanu",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Šta hadžije rade na Muzdelifi?",
+    "answers": [
+      "Klanjaju akšam i jaciju i skupljaju kamenčiće",
+      "Obavljaju tavaf",
+      "Samo spavaju"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Klanjaju akšam i jaciju i skupljaju kamenčiće",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hadz_propisi.html",
+    "lesson_title": "HADŽ - PROPISI I ODLIKE HADŽA",
+    "question": "Šta se čini nakon završetka svih obreda prije odlaska kući?",
+    "answers": [
+      "Kupovina poklona",
+      "Oproštajni tavaf",
+      "Šišanje kose"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Oproštajni tavaf",
+    "source": "HADŽ - PROPISI I ODLIKE HADŽA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Šta je hajz?",
+    "answers": [
+      "Krvarenje nakon poroda",
+      "Mjesečno krvarenje iz maternice",
+      "Krvarenje zbog bolesti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Mjesečno krvarenje iz maternice",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Koliko najduže može trajati hajz prema hadisu?",
+    "answers": [
+      "Sedam dana",
+      "Deset dana",
+      "Petnaest dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Deset dana",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Šta je nifas?",
+    "answers": [
+      "Mjesečni ciklus",
+      "Poslijeporođajno krvarenje",
+      "Bijelo pranje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Poslijeporođajno krvarenje",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Koliko najduže traje nifas?",
+    "answers": [
+      "30 dana",
+      "40 dana",
+      "60 dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "40 dana",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Šta je ženi zabranjeno u stanju hajza i nifasa?",
+    "answers": [
+      "Samo post",
+      "Klanjati, postiti i imati spolni odnos",
+      "Samo namaz"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Klanjati, postiti i imati spolni odnos",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Da li je žena dužna naklanjati propuštene namaze tokom hajza?",
+    "answers": [
+      "Da, odmah",
+      "Ne, nije dužna",
+      "Samo ako želi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ne, nije dužna",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Kada je najbolje napostiti propuštene dane posta?",
+    "answers": [
+      "Bilo kad u godini",
+      "Odmah nakon Ramazanskog bajrama",
+      "U zadnjih deset dana ramazana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Odmah nakon Ramazanskog bajrama",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Šta je istihaza?",
+    "answers": [
+      "Drugo ime za hajz",
+      "Krvarenje koje nije ni hajz ni nifas",
+      "Krvarenje koje traje 5 dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Krvarenje koje nije ni hajz ni nifas",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Kakav status ima žena u stanju istihaze?",
+    "answers": [
+      "Džunub",
+      "Sahibi-uzur",
+      "Mubarek"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Sahibi-uzur",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "hajz_nifas.html",
+    "lesson_title": "HAJZ, NIFAS – ISTIHAZA",
+    "question": "Koliko najkraće mora proći vremena između dva hajza?",
+    "answers": [
+      "10 dana",
+      "15 dana",
+      "20 dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "15 dana",
+    "source": "HAJZ, NIFAS – ISTIHAZA"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Šta su mekruhi?",
+    "answers": [
+      "Djela koja kvare namaz",
+      "Djela i radnje koje je muslimanu pokuđeno činiti",
+      "Obavezni dijelovi namaza"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Djela i radnje koje je muslimanu pokuđeno činiti",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Šta se smatra mekruhom u namazu?",
+    "answers": [
+      "Namjerno klanjanje bez abdesta",
+      "Nenamjerno izostavljanje namaskog sunneta",
+      "Učenje Kur'ana naglas"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Nenamjerno izostavljanje namaskog sunneta",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Šta klanjač treba izbjegavati prema popisu mekruha?",
+    "answers": [
+      "Gledanje u mjesto sedžde",
+      "Dizanje pogleda prema gore",
+      "Učenje Subhaneke"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dizanje pogleda prema gore",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Je li mekruh klanjati dok je jelo postavljeno a osoba gladna?",
+    "answers": [
+      "Da",
+      "Ne",
+      "Samo petkom"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Da",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Šta je perda ili es-sutra?",
+    "answers": [
+      "Vrsta namaza",
+      "Štap koji se stavi ispred klanjača na otvorenom",
+      "Posebna kapa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Štap koji se stavi ispred klanjača na otvorenom",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Kada neka radnja prestaje biti mekruh?",
+    "answers": [
+      "Kada klanjač to želi",
+      "Kada prijeti isticanje namaskog vremena",
+      "Kada je prostorija velika"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Kada prijeti isticanje namaskog vremena",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Jesmo li dužni ponoviti namaz ako učinimo mekruh?",
+    "answers": [
+      "Da, obavezno",
+      "Nismo dužni",
+      "Samo ako smo u džematu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Nismo dužni",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Koji rekat ne bi trebao biti duži prema pravilima o mekruhima?",
+    "answers": [
+      "Prvi",
+      "Drugi",
+      "Treći"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Drugi",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Je li dopušteno klanjati u odijelu sa slikama živih bića?",
+    "answers": [
+      "To je farz",
+      "To je mekruh",
+      "To je sunnet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "To je mekruh",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mekruhi_namaz.html",
+    "lesson_title": "MEKRUHI U NAMAZU",
+    "question": "Šta musliman treba raditi umjesto činjenja mekruha?",
+    "answers": [
+      "Samo sjediti",
+      "Voditi računa o izvršavanju sunneta",
+      "Klanjati brže"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Voditi računa o izvršavanju sunneta",
+    "source": "MEKRUHI U NAMAZU"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Kako se naziva osoba na koju se odnose šerijatski propisi?",
+    "answers": [
+      "Džematlija",
+      "Mukellef",
+      "Muallim"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Mukellef",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Na koliko propisa se dijeli Ef 'alu mukellefin?",
+    "answers": [
+      "Pet",
+      "Osam",
+      "Deset"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Osam",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Šta je farz?",
+    "answers": [
+      "Vjerska dužnost koja je lijepa",
+      "Stroga vjerska dužnost koju je Allah naredio",
+      "Ono što je Poslanik nekad radio"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Stroga vjerska dužnost koju je Allah naredio",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Kako nazivamo strogu zajedničku dužnost?",
+    "answers": [
+      "Fardi-'ajn",
+      "Fardi-kifaje",
+      "Vadžib"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Fardi-kifaje",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Šta je vadžib?",
+    "answers": [
+      "Strogo naređeno kao farz",
+      "Naređeno, ali ne strogo kao farz",
+      "Ono što je zabranjeno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Naređeno, ali ne strogo kao farz",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Koja radnja spada u haram?",
+    "answers": [
+      "Klanjanje dženaze",
+      "Konzumiranje alkohola",
+      "Šetnja parkom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Konzumiranje alkohola",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Šta je mufsid?",
+    "answers": [
+      "Djelo koje kvari vjerski obred",
+      "Djelo koje je lijepo činiti",
+      "Slobodna volja"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Djelo koje kvari vjerski obred",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Šta je mekruh?",
+    "answers": [
+      "Stroga naredba",
+      "Pokuđeno ili ružno djelo",
+      "Zajednička obaveza"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Pokuđeno ili ružno djelo",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "Koja radnja je mubah (dozvoljena na slobodnu volju)?",
+    "answers": [
+      "Krađa",
+      "Odmaranje i šetnja",
+      "Namaz"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Odmaranje i šetnja",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "mukellef.html",
+    "lesson_title": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA",
+    "question": "U koju kategoriju spada vitr-namaz?",
+    "answers": [
+      "Farz",
+      "Vadžib",
+      "Mubah"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Vadžib",
+    "source": "EF 'ALU MUKELLEFIN - POSTUPCI ODRASLIH OSOBA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Koji je drugi stub islama?",
+    "answers": [
+      "Zekat",
+      "Namaz",
+      "Post"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Namaz",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Za šta će čovjek prvo odgovarati na Sudnjem danu?",
+    "answers": [
+      "Za post",
+      "Za namaz",
+      "Za zekat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Za namaz",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Šta namaz odvraća prema Kur'anu?",
+    "answers": [
+      "Od rada",
+      "Od razvrata i svega što je ružno",
+      "Od spavanja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Od razvrata i svega što je ružno",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Šta Allah kaže kada rob u namazu zahvali Allahu?",
+    "answers": [
+      "Moj rob Me veliča",
+      "Moj rob Mi zahvaljuje",
+      "Moj rob Me pohvaljuje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Moj rob Mi zahvaljuje",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Šta Allah kaže kada rob u namazu kaže: 'Milostivom, Samilosnom'?",
+    "answers": [
+      "Moj rob Mi zahvaljuje",
+      "Moj rob Me pohvaljuje",
+      "Moj rob Me veliča"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Moj rob Me pohvaljuje",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Ko će biti u Allahovom hladu na Sudnjem danu?",
+    "answers": [
+      "Samo bogati",
+      "Mladić/djevojka koji su odrasli u pokornosti Allahu",
+      "Svi ljudi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Mladić/djevojka koji su odrasli u pokornosti Allahu",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Kako počinje, a kako završava namaz?",
+    "answers": [
+      "Počinje abdestom, završava dovom",
+      "Počinje tekbirom, završava selamom",
+      "Počinje ezanom, završava namazom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Počinje tekbirom, završava selamom",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Šta je namaz za vjernika u razgovoru s Allahom?",
+    "answers": [
+      "Razgovor s posrednikom",
+      "Razgovor bez posrednika",
+      "Samo pokret tijela"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Razgovor bez posrednika",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Šta je post prema definiciji?",
+    "answers": [
+      "Samo gladovanje",
+      "Suzdržavanje od jela, pića i uživanja od zore do zalaska Sunca",
+      "Spavanje tokom dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Suzdržavanje od jela, pića i uživanja od zore do zalaska Sunca",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Kome post NIJE dozvoljen?",
+    "answers": [
+      "Putnicima",
+      "Ženama u stanju hajza i nifasa",
+      "Starim osobama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ženama u stanju hajza i nifasa",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Šta je fidja?",
+    "answers": [
+      "Iskup za namjerno klanjanje",
+      "Iskup bolesnih i starih koji ne mogu postiti",
+      "Vrsta namaza"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Iskup bolesnih i starih koji ne mogu postiti",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Koliko dana traje kefaret (iskup) za namjerno prekinut post?",
+    "answers": [
+      "30 dana",
+      "60 dana uzastopno",
+      "10 dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "60 dana uzastopno",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Kada je zabranjeno postiti?",
+    "answers": [
+      "Petkom",
+      "Na dane Bajrama",
+      "Zimi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na dane Bajrama",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Koji su farzovi posta?",
+    "answers": [
+      "Samo nejelo",
+      "Nijet i sustezanje od zore do zalaska Sunca",
+      "Samo spavanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Nijet i sustezanje od zore do zalaska Sunca",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Šta znači 'tri srednja dana' za dobrovoljni post?",
+    "answers": [
+      "Prva tri dana mjeseca",
+      "Sredina mjeseca po hidžretskom kalendaru",
+      "Posljednja tri dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Sredina mjeseca po hidžretskom kalendaru",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Čiji se dova ne odbija prema hadisu?",
+    "answers": [
+      "Samo bogatih",
+      "Postača prilikom iftara",
+      "Samo učenih"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Postača prilikom iftara",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Šta je nijet?",
+    "answers": [
+      "Namjera u srcu da se posti radi Allaha",
+      "Samo izgovaranje riječi",
+      "Kupovina hrane za sehur"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Namjera u srcu da se posti radi Allaha",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "S čime ajet iz sure El-Hudžurat poredi odnos među vjernicima?",
+    "answers": [
+      "Vjernici su samo braća",
+      "Vjernici su stranci",
+      "Vjernici su takmičari"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Vjernici su samo braća",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "S čime Poslanik, a.s., u hadisu poredi muslimane u međusobnoj ljubavi?",
+    "answers": [
+      "S jednim tijelom",
+      "S pijeskom u pustinji",
+      "Sa zvijezdama"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "S jednim tijelom",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Šta se dešava s ostalim dijelovima tijela kada jedan dio oboli prema hadisu?",
+    "answers": [
+      "Ništa",
+      "Trpe od nespavanja i temperature",
+      "Ozdrave brže"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Trpe od nespavanja i temperature",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Koja je temeljna i najmanja organizaciona jedinica za muslimane?",
+    "answers": [
+      "Medžlis",
+      "Muftijstvo",
+      "Džemat"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Džemat",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Koliko muslimanskih domaćinstava u pravilu sačinjava džemat?",
+    "answers": [
+      "Najmanje 50",
+      "Najmanje 200",
+      "Najmanje 1000"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Najmanje 200",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Koje je osnovno pravo svakog džematlije?",
+    "answers": [
+      "Pravo na besplatnu hranu",
+      "Pravo na organiziran vjerski život i aktivnosti u džematu",
+      "Pravo da ne radi ništa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Pravo na organiziran vjerski život i aktivnosti u džematu",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Šta je dužnost džematlije po pitanju džamije?",
+    "answers": [
+      "Samo da je posmatra",
+      "Da vodi brigu o stanju džamije i pomogne održavanju",
+      "Da je zaključa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Da vodi brigu o stanju džamije i pomogne održavanju",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Koja je finansijska dužnost džematlije prema Zajednici?",
+    "answers": [
+      "Da pozajmljuje novac",
+      "Da redovno plaća članarinu",
+      "Ništa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Da redovno plaća članarinu",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Šta džematlija treba čuvati prema svojoj Islamskoj zajednici?",
+    "answers": [
+      "Samo ključeve",
+      "Dostojanstvo, ugled i jedinstvo",
+      "Samo zidove"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dostojanstvo, ugled i jedinstvo",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "prava_dzematlija.html",
+    "lesson_title": "PRAVA I DUŽNOSTI DŽEMATLIJA",
+    "question": "Nabroj neke institucije kojima je cilj održavanje zajednice muslimana?",
+    "answers": [
+      "Samo pijaca",
+      "Samo sportska društva",
+      "Džemat, džuma, bajrami, hadž, mekteb..."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Džemat, džuma, bajrami, hadž, mekteb...",
+    "source": "PRAVA I DUŽNOSTI DŽEMATLIJA"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Koji je osnovni razlog propisivanja sadekatul-fitra prema hadisu?",
+    "answers": [
+      "Kupovina bajramskih poklona",
+      "Čišćenje posta i hranjenje siromašnih",
+      "Pravljenje bajramskog ručka"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Čišćenje posta i hranjenje siromašnih",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Kada je propisan sadekatul-fitr kao ibadet?",
+    "answers": [
+      "Prve godine po Hidžri",
+      "Druge godine po Hidžri",
+      "Desete godine po Hidžri"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Druge godine po Hidžri",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Za koga se izdvaja sadekatul-fitr?",
+    "answers": [
+      "Samo za punoljetne klanjače",
+      "Samo za bogate",
+      "Za svakog muslimana i muslimanku (i djecu)"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Za svakog muslimana i muslimanku (i djecu)",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Ko izdvaja sadekatul-fitr za maloljetnu djecu?",
+    "answers": [
+      "Djeca sama od ušteđevine",
+      "Odrasla osoba zadužena za njihovu opskrbu",
+      "Niko nije dužan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Odrasla osoba zadužena za njihovu opskrbu",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Koji je krajnji rok za davanje sadekatul-fitra?",
+    "answers": [
+      "Prvi petak u ramazanu",
+      "Do pred klanjanje bajram-namaza",
+      "Do zalaska sunca prvog dana Bajrama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Do pred klanjanje bajram-namaza",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Šta se dešava ako se sadekatul-fitr dâ nakon bajram-namaza?",
+    "answers": [
+      "Vrijedi kao sadekatul-fitr",
+      "Smatra se običnom sadakom",
+      "Poništava post"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Smatra se običnom sadakom",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "U koji fond se izdvaja sadekatul-fitr u Bosni i Hercegovini?",
+    "answers": [
+      "Vakuf-nama",
+      "Bejtul-mal",
+      "Zekat-kasa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Bejtul-mal",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Gdje se prema hadisu nalazi post dok se ne podijeli fitr?",
+    "answers": [
+      "U srcu vjernika",
+      "Zaustavljen između Zemlje i nebesa",
+      "U džamiji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Zaustavljen između Zemlje i nebesa",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Je li lijepo dati sadekatul-fitr na nerođeno dijete?",
+    "answers": [
+      "Da, lijepo je",
+      "Ne, zabranjeno je",
+      "Samo ako se zna ime"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Da, lijepo je",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sadekatul_fitr.html",
+    "lesson_title": "SADEKATUL-FITR",
+    "question": "Šta je dužan uraditi onaj ko namjerno odgodi fitr?",
+    "answers": [
+      "Ništa, prošlo je vrijeme",
+      "Izdvojiti ga naknadno kao dug",
+      "Postiti još tri dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Izdvojiti ga naknadno kao dug",
+    "source": "SADEKATUL-FITR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Kako se naziva osoba koja ima stalni fizički nedostatak koji kvari abdest?",
+    "answers": [
+      "Muafir",
+      "Sahibi-uzur",
+      "Mutesahib"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Sahibi-uzur",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Šta može biti razlog za status sahibi-uzura?",
+    "answers": [
+      "Obična posjekotina",
+      "Stalno krvarenje iz nosa ili rane",
+      "Umor"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Stalno krvarenje iz nosa ili rane",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Koliko dugo uzur mora trajati da bi osoba postala sahibi-uzur?",
+    "answers": [
+      "Cijelo jedno namasko vrijeme",
+      "Samo 5 minuta",
+      "Jedan cijeli dan"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Cijelo jedno namasko vrijeme",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Kada sahibi-uzur uzima abdest?",
+    "answers": [
+      "Jednom dnevno",
+      "Za svako namasko vrijeme posebno",
+      "Samo prije spavanja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Za svako namasko vrijeme posebno",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Šta se dešava sa abdestom sahibi-uzura kada istekne namasko vrijeme?",
+    "answers": [
+      "Ostaje važiti",
+      "Prestaje važiti i mora se uzeti novi",
+      "Važi još sat vremena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Prestaje važiti i mora se uzeti novi",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Da li uzur (bolest) kvari abdest sahibi-uzuru unutar namaskog vremena?",
+    "answers": [
+      "Da, svaki put",
+      "Ne kvari mu abdest",
+      "Kvari samo ako je velika rana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ne kvari mu abdest",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Šta sahibi-uzur može raditi sa svojim abdestom unutar jednog namaskog vremena?",
+    "answers": [
+      "Samo klanjati farz",
+      "Klanjati farz, sunnete i učiti Kur'an",
+      "Samo učiti dovu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Klanjati farz, sunnete i učiti Kur'an",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Kako sahibi-uzur zadržava svoj status u narednim namaskim vremenima?",
+    "answers": [
+      "Uzur se mora pojaviti makar jednom u tom vremenu",
+      "Mora ležati u krevetu",
+      "Mora stalno krvariti"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Uzur se mora pojaviti makar jednom u tom vremenu",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Abdest sahibi-uzura kvare:",
+    "answers": [
+      "Samo uzur koji ima",
+      "Sve uobičajene stvari koje kvare abdest osim njegovog uzura",
+      "Ništa ga ne kvari"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Sve uobičajene stvari koje kvare abdest osim njegovog uzura",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sahibi_uzur.html",
+    "lesson_title": "SAHIBI-UZUR",
+    "question": "Da li bolesna osoba smije ostaviti namaz?",
+    "answers": [
+      "Da, ako joj je teško",
+      "Ne smije, treba koristiti olakšice (sahibi-uzur)",
+      "Samo ako to muallim dozvoli"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ne smije, treba koristiti olakšice (sahibi-uzur)",
+    "source": "SAHIBI-UZUR"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Šta su namaski sunneti?",
+    "answers": [
+      "Obavezni dijelovi bez kojih namaz ne vrijedi",
+      "Dijelovi koje je Poslanik činio i nas zadužio",
+      "Pokreti koji se čine samo u džamiji"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dijelovi koje je Poslanik činio i nas zadužio",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Jesmo li dužni ponoviti namaz ako izostavimo sunnet?",
+    "answers": [
+      "Da, obavezno",
+      "Ne, nismo dužni",
+      "Samo ako imamo vremena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ne, nismo dužni",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Do koje visine muškarci podižu ruke kod početnog tekbira?",
+    "answers": [
+      "Do ramena",
+      "Do visine ušiju",
+      "Iznad glave"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Do visine ušiju",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Gdje žene vežu ruke na kijamu?",
+    "answers": [
+      "Na pojasu",
+      "Na prsima",
+      "Ne vežu ih"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na prsima",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Šta se uči na prvom rekatu prije Fatihe?",
+    "answers": [
+      "Samo Bismilla",
+      "Subhaneke i Euzubilla",
+      "Et-Tehijatu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Subhaneke i Euzubilla",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Kada se izgovara 'Amin'?",
+    "answers": [
+      "Prije Fatihe",
+      "Poslije proučene Fatihe",
+      "Na kraju namaza"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Poslije proučene Fatihe",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Šta se izgovara na ruku'u?",
+    "answers": [
+      "Subhane Rabbijel-e'ala",
+      "Subhane Rabbijel-'azim",
+      "Allahuekber"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Subhane Rabbijel-'azim",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Šta žene rade sa podlakticama na sedždi?",
+    "answers": [
+      "Podignu ih s tla",
+      "Spuste ih na tlo",
+      "Drže ih na koljenima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Spuste ih na tlo",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Kada se uče Salavati i dove u četverorekatnim sunnetima?",
+    "answers": [
+      "Samo na kraju",
+      "Na prvom i posljednjem sjedenju",
+      "Ne uče se nikako"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na prvom i posljednjem sjedenju",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "sunneti_namaz.html",
+    "lesson_title": "SUNNETI U NAMAZU",
+    "question": "Na koju stranu se prvo predaje selam?",
+    "answers": [
+      "Na lijevu",
+      "Na desnu",
+      "Svejedno je"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na desnu",
+    "source": "SUNNETI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Šta su namaski vadžibi?",
+    "answers": [
+      "Dijelovi koji se moraju izvršiti da bi namaz bio potpun",
+      "Dijelovi koji se klanjaju samo petkom",
+      "Pokreti koji se mogu preskočiti"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dijelovi koji se moraju izvršiti da bi namaz bio potpun",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Šta se čini ako se vadžib zaboravi?",
+    "answers": [
+      "Ponovi se namaz odmah",
+      "Učini se sehvi-sedžda",
+      "Ništa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Učini se sehvi-sedžda",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Šta se uči poslije Fatihe na prva dva rekata farza?",
+    "answers": [
+      "Subhaneke",
+      "Sura ili tri kraća ajeta",
+      "Dova"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Sura ili tri kraća ajeta",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Gdje se uči Kunut-dova?",
+    "answers": [
+      "Na sabahu",
+      "Na akšamu",
+      "Na vitr-namazu"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na vitr-namazu",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Šta treba uraditi nakon drugog rekata u trorekatnim i četverorekatnim namazima?",
+    "answers": [
+      "Predati selam",
+      "Obaviti prvo sjedenje",
+      "Odmah ustati"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Obaviti prvo sjedenje",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Kako imam uči Fatihu i suru na podne-namazu?",
+    "answers": [
+      "Glasno",
+      "Tiho u sebi",
+      "Ne uči nikako"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Tiho u sebi",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Na koju stranu se prvo okreće glava pri predaji selama?",
+    "answers": [
+      "Na lijevu",
+      "Na desnu",
+      "Pravo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na desnu",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Koliko tekbira se izgovara kod bajram-namaza?",
+    "answers": [
+      "Tri",
+      "Šest",
+      "Devet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Šest",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Kada je klanjač dužan ponoviti namaz zbog vadžiba?",
+    "answers": [
+      "Ako zaboravi jedan",
+      "Ako namjerno izostavi vadžib",
+      "Ako pogriješi abdest"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Ako namjerno izostavi vadžib",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vadzibi_namaz.html",
+    "lesson_title": "VADŽIBI U NAMAZU",
+    "question": "Šta podrazumijeva ta'dili-erkan?",
+    "answers": [
+      "Brzo klanjanje",
+      "Skrušeno i smireno obavljanje namaza",
+      "Gledanje u nebo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Skrušeno i smireno obavljanje namaza",
+    "source": "VADŽIBI U NAMAZU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Šta znači arapska riječ od koje je nastala riječ džemat?",
+    "answers": [
+      "Razdvajanje",
+      "Skupiti, sabrati, sjediniti",
+      "Putovanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Skupiti, sabrati, sjediniti",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Koliko puta je namaz u džematu vredniji od pojedinačnog?",
+    "answers": [
+      "Sedam puta",
+      "Dvadeset i sedam puta",
+      "Deset puta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dvadeset i sedam puta",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Gdje je Poslanik, a.s., uspostavio prvi džemat po dolasku iz Mekke?",
+    "answers": [
+      "U Medini",
+      "U Taifu",
+      "U Kudsu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "U Medini",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Šta su safovi u džematu?",
+    "answers": [
+      "Samo redovi",
+      "Najbolja slika snage džemata",
+      "Mjesto za odmor"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Najbolja slika snage džemata",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Koga šejtan lakše napada prema hadisu?",
+    "answers": [
+      "Dvojicu",
+      "Pojedinca",
+      "Cijeli džemat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Pojedinca",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Čemu nas džemat uči o čovjeku?",
+    "answers": [
+      "Da je usamljenik",
+      "Da je društveno biće",
+      "Da mu niko ne treba"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Da je društveno biće",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Na šta nas podsjeća stajanje u safu?",
+    "answers": [
+      "Na visinu klanjača",
+      "Na jednakost pred Allahom, dž.š.",
+      "Na boju odjeće"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na jednakost pred Allahom, dž.š.",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Vjernici su uistinu... (dopuni ajet)?",
+    "answers": [
+      "Prijatelji",
+      "Braća",
+      "Komšije"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Braća",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Šta garantira lični i društveni uspjeh?",
+    "answers": [
+      "Bogatstvo",
+      "Samo snažna zajednica - džemat",
+      "Samoća"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Samo snažna zajednica - džemat",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vaznost_dzemata.html",
+    "lesson_title": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU",
+    "question": "Otkad postoji džemat?",
+    "answers": [
+      "Odnedavno",
+      "Otkad postoji islam",
+      "Od prošle godine"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Otkad postoji islam",
+    "source": "SMISAO I VAŽNOST DŽEMATA I NAMAZA U DŽEMATU"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Šta je namaz za muslimana prema lekciji?",
+    "answers": [
+      "Samo tjelovježba",
+      "Vrijeme razgovora s Allahom, dž.š.",
+      "Samo običaj"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Vrijeme razgovora s Allahom, dž.š.",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Šta se dešava onome ko zaniječe obaveznost namaza?",
+    "answers": [
+      "Čini mali grijeh",
+      "Prestaje biti musliman",
+      "Ništa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Prestaje biti musliman",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Koliko ukupno rekata farz-namaza klanjamo dnevno?",
+    "answers": [
+      "10 rekata",
+      "17 rekata",
+      "20 rekata"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "17 rekata",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Koji su uvjeti za obaveznost namaza?",
+    "answers": [
+      "Da je osoba punoljetna i umno zdrava",
+      "Samo da je punoljetna",
+      "Samo da je zdrava"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Da je osoba punoljetna i umno zdrava",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "U koju vrstu namaza spada vitr-namaz?",
+    "answers": [
+      "Farz",
+      "Vadžib",
+      "Sunnet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Vadžib",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Šta su sunneti-muekkede?",
+    "answers": [
+      "Sunneti koje je Poslanik povremeno izostavljao",
+      "Sunneti koje je Poslanik uvijek klanjao",
+      "Namaz za kišu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Sunneti koje je Poslanik uvijek klanjao",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Koliko sabahskih rekata sunneta spada u pritvrđene?",
+    "answers": [
+      "Dva",
+      "Četiri",
+      "Nula"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dva",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Šta je nagrada za 12 rekata sunnet-namaza u jednom danu?",
+    "answers": [
+      "Bogatstvo",
+      "Sagrađena kuća u Džennetu",
+      "Dug život"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Sagrađena kuća u Džennetu",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "Koji je od ovih namaza farz?",
+    "answers": [
+      "Bajram-namaz",
+      "Dženaza-namaz",
+      "Vitr-namaz"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Dženaza-namaz",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "vrste_namaza.html",
+    "lesson_title": "PODJELA NAMAZA PO STEPENU VAŽNOSTI",
+    "question": "U koju kategoriju spadaju kurbanski i ramazanski bajram-namaz?",
+    "answers": [
+      "Farz",
+      "Vadžib",
+      "Sunnet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Vadžib",
+    "source": "PODJELA NAMAZA PO STEPENU VAŽNOSTI"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Zekat je koji po redu islamski šart?",
+    "answers": [
+      "Treći",
+      "Četvrti",
+      "Peti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Četvrti",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Kako se naziva određeni iznos imovine koji obavezuje na zekat?",
+    "answers": [
+      "Sadaqa",
+      "Nisab",
+      "Fidja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Nisab",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Onaj ko negira obaveznost zekata smatra se:",
+    "answers": [
+      "Velikim grješnikom",
+      "Nemuslimanom",
+      "Slabim vjernikom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Nemuslimanom",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Koliko se procenat zekata izdvaja na novac i zlato?",
+    "answers": [
+      "10%",
+      "2,5%",
+      "5%"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "2,5%",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Koliki je nisab za zlato?",
+    "answers": [
+      "91,6 grama",
+      "641,5 grama",
+      "100 grama"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "91,6 grama",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Koliki je nisab za krupnu stoku (krave)?",
+    "answers": [
+      "20 grla",
+      "30 grla",
+      "40 grla"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "30 grla",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Zajednički fond u koji se u Bosni i Hercegovini prikuplja zekat zove se:",
+    "answers": [
+      "Vakuf",
+      "Bejtul-mal",
+      "Zekat-kasa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Bejtul-mal",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Kada se izdvaja zekat na poljoprivredne proizvode?",
+    "answers": [
+      "Ramazanom",
+      "Na dan žetve ili ubiranja plodova",
+      "Krajem godine"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Na dan žetve ili ubiranja plodova",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Jedna od mudrosti zekata je da on čisti dušu od:",
+    "answers": [
+      "Lijenosti",
+      "Škrtosti i pohlepe",
+      "Zaborava"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Škrtosti i pohlepe",
+    "source": "ZEKAT - BEJTUL-MAL"
+  },
+  {
+    "source_file": "zekat_bejtul_mal.html",
+    "lesson_title": "ZEKAT - BEJTUL-MAL",
+    "question": "Šta se dešava sa imetkom na koji se da zekat?",
+    "answers": [
+      "Smanjuje se",
+      "Čisti se i dobiva berićet",
+      "Ostaje isti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "islamski_sarti",
+    "correct": "Čisti se i dobiva berićet",
+    "source": "ZEKAT - BEJTUL-MAL"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Islamski šarti');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

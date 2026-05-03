@@ -17,7 +17,7 @@
  * pokazuje na produkcijsku bazu (kroz docker exec ili lokalno sa env varom).
  */
 import { db, kvizoviTable, pitanjaBankaTable, kvizPitanjaTable } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 type LegacyPitanje = {
   question: string;
@@ -185,40 +185,95 @@ export async function migratePitanjaUBanku(opts?: { silent?: boolean }): Promise
         correctIndexes = isMulti ? idxs : null;
       }
 
-      // 1. UPSERT u banku
-      const inserted = await db
-        .insert(pitanjaBankaTable)
-        .values({
-          pitanje: pitanjeText,
-          opcije,
-          correctIndex,
-          correctIndexes,
-          correctOrder,
-          meta,
-          objasnjenje: p.explanation ?? "",
-          slika: p.image ?? null,
-          vrsta,
-        })
-        .onConflictDoUpdate({
-          target: pitanjaBankaTable.pitanje,
-          set: {
+      // 1. UPSERT u banku — različita strategija po tipu:
+      //
+      // Standardni tipovi (single/multiple/truefalse/reorder):
+      //   onConflictDoUpdate po `pitanje` (partial UNIQUE
+      //   `pitanja_banka_pitanje_std_unique_idx WHERE vrsta NOT IN (...)`).
+      //
+      // Interaktivni tipovi (dragDrop/markWords):
+      //   Ručni SELECT-then-INSERT na (pitanje, vrsta, md5(meta::text)).
+      //   Razlog: drizzle-ov onConflict ne podržava partial UNIQUE indexe sa
+      //   WHERE klauzulom, a partial UNIQUE
+      //   `pitanja_banka_pitanje_meta_unique_idx WHERE vrsta IN (...)` je
+      //   neophodan jer ista generička pitanja kao "Dopuni:" / "Pronađi greške:"
+      //   imaju 40+ varijanti sa različitim meta. Bez ovog dedup-a sve varijante
+      //   bi se prepisale jedna preko druge i banka bi izgubila ~180 pitanja.
+      let pitanjeId: number;
+      if (vrsta === "dragDrop" || vrsta === "markWords") {
+        const metaJson = JSON.stringify(meta);
+        const existing = await db
+          .select({ id: pitanjaBankaTable.id })
+          .from(pitanjaBankaTable)
+          .where(
+            and(
+              eq(pitanjaBankaTable.pitanje, pitanjeText),
+              eq(pitanjaBankaTable.vrsta, vrsta),
+              // Dvostruki cast `::jsonb::text` forsira da JS-strigfikovani JSON
+              // prođe kroz Postgres jsonb canonicalization (sorted keys,
+              // normalizovan whitespace) — inače md5 hash-ovi se ne poklapaju
+              // sa stored vrijednostima i SELECT promaši duplikat.
+              sql`md5(${pitanjaBankaTable.meta}::text) = md5(${metaJson}::jsonb::text)`,
+            ),
+          )
+          .limit(1);
+        if (existing.length > 0) {
+          pitanjeId = existing[0]!.id;
+        } else {
+          const ins = await db
+            .insert(pitanjaBankaTable)
+            .values({
+              pitanje: pitanjeText,
+              opcije,
+              correctIndex,
+              correctIndexes,
+              correctOrder,
+              meta,
+              objasnjenje: p.explanation ?? "",
+              slika: p.image ?? null,
+              vrsta,
+            })
+            .returning({ id: pitanjaBankaTable.id });
+          if (ins.length === 0) {
+            warn(`  [${kviz.slug}] FAIL — INSERT interaktivnog pitanja vratio prazno`);
+            continue;
+          }
+          pitanjeId = ins[0]!.id;
+        }
+      } else {
+        const inserted = await db
+          .insert(pitanjaBankaTable)
+          .values({
+            pitanje: pitanjeText,
             opcije,
             correctIndex,
             correctIndexes,
             correctOrder,
             meta,
+            objasnjenje: p.explanation ?? "",
+            slika: p.image ?? null,
             vrsta,
-            updatedAt: new Date(),
-          },
-        })
-        .returning({ id: pitanjaBankaTable.id });
-
-      // onConflictDoUpdate uvijek vraća red (insert ili update)
-      if (inserted.length === 0) {
-        warn(`  [${kviz.slug}] FAIL — UPSERT nije vratio red?`);
-        continue;
+          })
+          .onConflictDoUpdate({
+            target: pitanjaBankaTable.pitanje,
+            targetWhere: sql`vrsta NOT IN ('dragDrop','markWords')`,
+            set: {
+              opcije,
+              correctIndex,
+              correctIndexes,
+              correctOrder,
+              meta,
+              vrsta,
+              updatedAt: new Date(),
+            },
+          })
+          .returning({ id: pitanjaBankaTable.id });
+        if (inserted.length === 0) {
+          warn(`  [${kviz.slug}] FAIL — UPSERT nije vratio red?`);
+          continue;
+        }
+        pitanjeId = inserted[0]!.id;
       }
-      const pitanjeId = inserted[0]!.id;
       bankaInserted++; // brojimo sve obrađene (insert+update zajedno)
 
       // 2. INSERT veza kviz↔pitanje

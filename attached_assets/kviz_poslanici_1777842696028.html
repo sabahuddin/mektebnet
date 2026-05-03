@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Allahovi poslanici</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Allahovi poslanici</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+        
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "esmaul_husna.html",
+    "lesson_title": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA",
+    "question": "Šta znači ime Seriul-Hisab?",
+    "answers": [
+      "Moćni",
+      "Onaj Koji je brz u sravnavanju računa",
+      "Milostivi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Onaj Koji je brz u sravnavanju računa",
+    "source": "ALLAHOVA LIJEPA IMENA - EL-ESMAUL-HUSNA"
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Šta je Ibrahim, a.s., posmatrao trudeći se da spozna Gospodara?",
+    "answers": [
+      "Samo planine",
+      "Zvijezde, Mjesec i Sunce",
+      "Rijeke"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Zvijezde, Mjesec i Sunce",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Kako se zvao otac Ibrahima, a.s.?",
+    "answers": [
+      "Azer",
+      "Nuh",
+      "Musa"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Azer",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Koji kip je Ibrahim, a.s., ostavio nakon što je porušio ostale?",
+    "answers": [
+      "Najmanji",
+      "Najljepši",
+      "Najveći"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Najveći",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Šta je Allah, dž.š., naredio vatri u koju je bačen Ibrahim, a.s.?",
+    "answers": [
+      "Da se ugasi",
+      "Da bude hladna i spasonosna",
+      "Da jače gori"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Da bude hladna i spasonosna",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "U koji blagoslovljeni grad su se preselili iz Mezopotamije?",
+    "answers": [
+      "Mekku",
+      "Kuds (Jerusalem)",
+      "Medinu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Kuds (Jerusalem)",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Šta se dešavalo rukama vladara Egipta kada bi krenuo prema Sari?",
+    "answers": [
+      "Počele bi drhtati",
+      "Ukočile bi se",
+      "Ozdravile bi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Ukočile bi se",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "ibrahim_as.html",
+    "lesson_title": "IBRAHIM, A.S.",
+    "question": "Kako se zvala sluškinja koju je vladar poklonio Sari?",
+    "answers": [
+      "Hadžera",
+      "Merjem",
+      "Asija"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Hadžera",
+    "source": "IBRAHIM, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Iz koje odabrane porodice potječe hazreti Merjema?",
+    "answers": [
+      "Porodice Nuhove",
+      "Porodice Imranove",
+      "Porodice Musine"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Porodice Imranove",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Ko je udahnuo u Merjem, majku Isaa, a.s., po Allahovoj odredbi?",
+    "answers": [
+      "Melek Mikail",
+      "Melek Džibril",
+      "Melek Israfil"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Melek Džibril",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Šta je prvo što je Isa, a.s., rekao u bešici?",
+    "answers": [
+      "Ja sam dječak",
+      "Ja sam Allahov rob",
+      "Ja ću biti bogat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Ja sam Allahov rob",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Koja je jedna od navedenih mudžiza Isaa, a.s.?",
+    "answers": [
+      "Razdvajanje mora",
+      "Pravljenje ptice od blata koja je poletjela",
+      "Pravljenje lađe"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Pravljenje ptice od blata koja je poletjela",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Šta Kur'an kaže o tvrdnji da je Isa, a.s., ubijen ili raspet?",
+    "answers": [
+      "Da su ga ubili",
+      "Da su ga raspeli",
+      "Nisu ga ni ubili ni raspeli, već im se pričinilo"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Nisu ga ni ubili ni raspeli, već im se pričinilo",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Gdje je Allah uzdigao Isaa, a.s.?",
+    "answers": [
+      "U pustinju",
+      "Sebi",
+      "U more"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Sebi",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Šta je Isa, a.s., liječio voljom Allahovom?",
+    "answers": [
+      "Samo glavobolju",
+      "Slijepe od rođenja i gubavce",
+      "Ništa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Slijepe od rođenja i gubavce",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Čemu je Allah naučio Isaa, a.s., pored pismenosti i mudrosti?",
+    "answers": [
+      "Samo Tevratu",
+      "Samo Indžilu",
+      "Tevratu i Indžilu"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Tevratu i Indžilu",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Šta je Isa, a.s., po islamskom vjerovanju?",
+    "answers": [
+      "Božiji sin",
+      "Samo Allahov poslanik",
+      "Jedan od bogova"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Samo Allahov poslanik",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "isa_as.html",
+    "lesson_title": "ISA, A.S.",
+    "question": "Kako je Merjema odgovorila Zekerijau na pitanje odakle joj hrana?",
+    "answers": [
+      "Kupila sam je",
+      "Donijeli su mi ljudi",
+      "Od Allaha, Allah opskrbljuje koga hoće"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Od Allaha, Allah opskrbljuje koga hoće",
+    "source": "ISA, A.S."
+  },
+  {
+    "source_file": "iz_historija.html",
+    "lesson_title": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI",
+    "question": "Kada je održan Obnoviteljski sabor IZ koji je vratio sjedište reisa u Sarajevo?",
+    "answers": [
+      "1992.",
+      "1993.",
+      "1995."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "1993.",
+    "source": "ISLAMSKA ZAJEDNICA U BOSNI I HERCEGOVINI"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Gdje je zapisana sudbina svih stvorenja?",
+    "answers": [
+      "U novinama",
+      "U Levhi–mahfuzu",
+      "U školskom dnevniku"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "U Levhi–mahfuzu",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Kada je počela objava Kur'ana?",
+    "answers": [
+      "610. godine u noći Kadr",
+      "622. godine na Hidžru",
+      "571. godine"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "610. godine u noći Kadr",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Gdje su objavljeni prvi ajeti Kur'ana?",
+    "answers": [
+      "U džamiji u Medini",
+      "U pećini Hira na brdu Nur",
+      "U Mesdžidul-haramu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "U pećini Hira na brdu Nur",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Koliko je ukupno trajala objava Kur'ana?",
+    "answers": [
+      "10 godina",
+      "23 godine",
+      "40 godina"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "23 godine",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Koliko sura sadrži Kur'an?",
+    "answers": [
+      "114",
+      "30",
+      "6000"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "114",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Za vrijeme kojeg halife je Kur'an sakupljen u jednu zbirku (Mushaf)?",
+    "answers": [
+      "Omera, r.a.",
+      "Alije, r.a.",
+      "Ebu Bekra, r.a."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Ebu Bekra, r.a.",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Na koliko džuzova je podijeljen Kur'an?",
+    "answers": [
+      "114",
+      "30",
+      "20"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "30",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Koji melek je dostavljao objavu Muhammedu, a.s.?",
+    "answers": [
+      "Israfil",
+      "Mikail",
+      "Džibril"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Džibril",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Šta znači naziv 'Furkan'?",
+    "answers": [
+      "Opomena",
+      "Rastavljač istine od neistine",
+      "Svjetlo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Rastavljač istine od neistine",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Koji je najpoznatiji prijevod Kur'ana na bosanski jezik iz 1977. godine?",
+    "answers": [
+      "Besima Korkuta",
+      "Enesa Karića",
+      "Mićo Ljubibratića"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Besima Korkuta",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "kuran_objava.html",
+    "lesson_title": "KUR'AN – POSLJEDNJA OBJAVA",
+    "question": "Na koja tri načina se čuva Kur'an?",
+    "answers": [
+      "U Levhi-mahfuzu, hifzom i u Mushafu",
+      "Samo u knjigama",
+      "Samo na internetu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "U Levhi-mahfuzu, hifzom i u Mushafu",
+    "source": "KUR'AN – POSLJEDNJA OBJAVA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Šta je mudžiza?",
+    "answers": [
+      "Obična pojava",
+      "Natprirodna pojava radi dokazivanja poslanstva",
+      "Ljudsko djelo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Natprirodna pojava radi dokazivanja poslanstva",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Šta se desilo sa Musaovim štapom u Egiptu?",
+    "answers": [
+      "Pretvorio se u pticu",
+      "Pretvorio se u zmiju",
+      "Postao je nevidljiv"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Pretvorio se u zmiju",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Kojem poslaniku je vatra postala hladna i spasonosna?",
+    "answers": [
+      "Ademu, a.s.",
+      "Ibrahimu, a.s.",
+      "Isau, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Ibrahimu, a.s.",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Šta znači podjela mudžiza na 'hissijje'?",
+    "answers": [
+      "Intelektualne mudžize",
+      "Mudžize koje se opažaju osjetilima",
+      "Tajne mudžize"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Mudžize koje se opažaju osjetilima",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Koja je mudžiza Salihovog, a.s., naroda?",
+    "answers": [
+      "Lađa",
+      "Vrelo Zemzem",
+      "Kamila koja je izašla iz stijene"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Kamila koja je izašla iz stijene",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Koji poslanik je progovorio iz bešike?",
+    "answers": [
+      "Muhammed, a.s.",
+      "Musa, a.s.",
+      "Isa, a.s."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Isa, a.s.",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Šta je bila mudžiza Ismaila, a.s.?",
+    "answers": [
+      "Vrelo Zemzem",
+      "Puhanje u glinenu pticu",
+      "Oživljavanje ptica"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Vrelo Zemzem",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Čime je Nuh, a.s., dokazao poslanstvo prije potopa?",
+    "answers": [
+      "Raspolovljenjem drveta",
+      "Izgradnjom lađa na kopnu",
+      "Bijelom rukom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Izgradnjom lađa na kopnu",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "mudzize.html",
+    "lesson_title": "MUDŽIZE ALLAHOVIH POSLANIKA",
+    "question": "Koje mudžize imaju trajan karakter prema lekciji?",
+    "answers": [
+      "Sve mudžize",
+      "Samo hissijje",
+      "Razumske mudžize (aklijje)"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Razumske mudžize (aklijje)",
+    "source": "MUDŽIZE ALLAHOVIH POSLANIKA"
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Gdje je rođen Musa, a.s.?",
+    "answers": [
+      "U pustinji",
+      "Pored rijeke Nil",
+      "U Jerusalemu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Pored rijeke Nil",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Zašto je faraon naredio ubijanje muške djece?",
+    "answers": [
+      "Zbog bolesti",
+      "Zbog sna i tumačenja da će ga dječak svrgnuti s vlasti",
+      "Zbog gladi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Zbog sna i tumačenja da će ga dječak svrgnuti s vlasti",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Ko je pronašao košaru sa malim Musom?",
+    "answers": [
+      "Asija, faraonova žena",
+      "Čarobnjaci",
+      "Pastiri"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Asija, faraonova žena",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Koga je Musa, a.s., uzeo za pomagača po Allahovoj dozvoli?",
+    "answers": [
+      "Luta, a.s.",
+      "Svog brata Haruna",
+      "Svog oca"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Svog brata Haruna",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "U kojoj blagoslovljenoj dolini je Musa primio prvu objavu?",
+    "answers": [
+      "Dolina Meke",
+      "Dolina Tuva",
+      "Dolina Jordan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Dolina Tuva",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Koje dokaze (mudžize) je Musa, a.s., pokazao faraonu?",
+    "answers": [
+      "Veliku lađu",
+      "Štap koji postaje zmija i bijela ruka",
+      "Letenje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Štap koji postaje zmija i bijela ruka",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Šta se desilo sa morem kada je Musa udario štapom?",
+    "answers": [
+      "Zaledilo se",
+      "Razdvojilo se",
+      "Nestalo je"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Razdvojilo se",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Šta se desilo sa faraonom i njegovom vojskom?",
+    "answers": [
+      "Pobjegli su",
+      "Utopili su se u moru",
+      "Povjerovali su odmah"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Utopili su se u moru",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Zašto je faraonovo tijelo sačuvano?",
+    "answers": [
+      "Da bi ga ljudi obožavali",
+      "Kao poučan primjer onima poslije njega",
+      "Zaboravljeno je"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Kao poučan primjer onima poslije njega",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "musa_as.html",
+    "lesson_title": "MUSA, A.S.",
+    "question": "Ko je Musau pružio utočište u Medjenu i dao mu kćerku za ženu?",
+    "answers": [
+      "Faraon",
+      "Šu'ajb, a.s.",
+      "Ibrahim, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Šu'ajb, a.s.",
+    "source": "MUSA, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Koliko godina je Nuh, a.s., živio prema Kur'anu?",
+    "answers": [
+      "Stotinu godina",
+      "Hiljadu manje pedeset godina",
+      "Pet stotina godina"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Hiljadu manje pedeset godina",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Na kojem području je djelovao Nuh, a.s.?",
+    "answers": [
+      "Području današnje Sirije, Jordana, Palestine i Iraka",
+      "Samo u Egiptu",
+      "U dalekoj Aziji"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Području današnje Sirije, Jordana, Palestine i Iraka",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Šta se raširilo u narodu neposredno prije Nuhovog dolaska?",
+    "answers": [
+      "Veliko znanje",
+      "Idolopoklonstvo i sujevjerje",
+      "Trgovina"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Idolopoklonstvo i sujevjerje",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Šta je Nuh, a.s., počeo praviti po Allahovoj zapovijedi?",
+    "answers": [
+      "Dvorac",
+      "Lađu na kopnu",
+      "Veliki bunar"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Lađu na kopnu",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Zašto je narod ismijavao Nuha, a.s., dok je gradio lađu?",
+    "answers": [
+      "Jer je lađa bila mala",
+      "Jer ju je gradio na suhom kopnu",
+      "Jer je bio sam"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Jer ju je gradio na suhom kopnu",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Ko je od Nuhove, a.s., porodice nastradao u potopu jer nije bio vjernik?",
+    "answers": [
+      "Njegova supruga",
+      "Njegov sin",
+      "Njegov brat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Njegov sin",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Šta je Allah, dž.š., odgovorio Nuhu kada je molio za spas sina?",
+    "answers": [
+      "Da će ga spasiti",
+      "On nije čeljade tvoje, jer radi ono što ne valja",
+      "Da sačeka"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "On nije čeljade tvoje, jer radi ono što ne valja",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Na kojem brdu se zaustavila Nuhova lađa nakon potopa?",
+    "answers": [
+      "Uhud",
+      "Džudi",
+      "Sinaj"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Džudi",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "nuh_as.html",
+    "lesson_title": "NUH, A.S.",
+    "question": "Ko je jedini spašen u općem potopu?",
+    "answers": [
+      "Svi ljudi",
+      "Samo Nuh, a.s., i oni koji su bili u lađi",
+      "Samo životinje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Samo Nuh, a.s., i oni koji su bili u lađi",
+    "source": "NUH, A.S."
+  },
+  {
+    "source_file": "pet_namaza.html",
+    "lesson_title": "NAMAZ - PET DNEVNIH NAMAZA",
+    "question": "Gdje je propisan namaz?",
+    "answers": [
+      "U pećini Hira",
+      "Na najvišem nebu prilikom Miradža",
+      "U Mekki"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Na najvišem nebu prilikom Miradža",
+    "source": "NAMAZ - PET DNEVNIH NAMAZA"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Koji je četvrti imanski šart?",
+    "answers": [
+      "Ve kutubihi",
+      "Ve rusulihi",
+      "Ve meläiketihî"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Ve rusulihi",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Ko je bio prvi čovjek i prvi Božiji poslanik?",
+    "answers": [
+      "Nuh, a.s.",
+      "Adem, a.s.",
+      "Muhammed, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Adem, a.s.",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Šta znači svojstvo 'Sidk'?",
+    "answers": [
+      "Povjerljivost",
+      "Pamet",
+      "Uvijek su govorili istinu"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Uvijek su govorili istinu",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Šta znači svojstvo 'Ismet'?",
+    "answers": [
+      "Pravednost",
+      "Čistoća od grijeha",
+      "Oštroumnost"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Čistoća od grijeha",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Kako nazivamo petoricu najodabranijih poslanika?",
+    "answers": [
+      "Ulul-hajr",
+      "Ulul-'azm",
+      "Ulul-bab"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Ulul-'azm",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Kojim zanatom se bavio Idris, a.s.?",
+    "answers": [
+      "Tesar",
+      "Zemljoradnik",
+      "Krojač"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Krojač",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Koliko je ukupno poslanika spomenuto imenom u Kur'anu?",
+    "answers": [
+      "99",
+      "25",
+      "124.000"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "25",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Šta izgovaramo kada spomenemo ime bilo kojeg poslanika?",
+    "answers": [
+      "Alejhis-selam",
+      "Subhanallah",
+      "Elhamdulillah"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Alejhis-selam",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Koji poslanik je bio graditelj?",
+    "answers": [
+      "Davud, a.s.",
+      "Nuh, a.s.",
+      "Sulejman, a.s."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Sulejman, a.s.",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici.html",
+    "lesson_title": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE",
+    "question": "Ko je posljednji Allahov poslanik?",
+    "answers": [
+      "Isa, a.s.",
+      "Musa, a.s.",
+      "Muhammed, a.s."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Muhammed, a.s.",
+    "source": "VE RUSULIHĪ – VJEROWANJE U ALLAHOVE POSLANIKE"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Kako se naziva Muhammed, a.s., kao posljednji poslanik?",
+    "answers": [
+      "Prvi poslanik",
+      "Hatemul-enbija (Pečat poslanika)",
+      "Jedini poslanik"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Hatemul-enbija (Pečat poslanika)",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Koliko je Božijih poslanika poimenično spomenuto u Kur'anu?",
+    "answers": [
+      "10",
+      "25",
+      "99"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "25",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Ko je bio prvi čovjek i prvi poslanik na Zemlji?",
+    "answers": [
+      "Nuh, a.s.",
+      "Adem, a.s.",
+      "Ibrahim, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Adem, a.s.",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Kako se jednim imenom nazivaju najodabraniji poslanici (Nuh, Ibrahim, Musa, Isa i Muhammed, a.s.)?",
+    "answers": [
+      "Ehlul-bejt",
+      "Ulul-ʻazm (Odlučni poslanici)",
+      "Ashabi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Ulul-ʻazm (Odlučni poslanici)",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Kome je Allah, dž.š., prema ajetu iz sure Junus poslao poslanika?",
+    "answers": [
+      "Samo Arapima",
+      "Svakom narodu",
+      "Samo bogatima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Svakom narodu",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Kome je Allah, dž.š., dao Zebur prema suri En-Nisa?",
+    "answers": [
+      "Sulejmanu, a.s.",
+      "Davudu, a.s.",
+      "Isau, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Davudu, a.s.",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Koja su trojica odabranih robova spomenuti u Kur'anu (nisu poslanici)?",
+    "answers": [
+      "Lukman, Uzeir i Zulkarnejn",
+      "Ebu Bekr, Omer i Osman",
+      "Habil i Kabil"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Lukman, Uzeir i Zulkarnejn",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Šta se dobije za jedan donesen salavat na Poslanika, a.s.?",
+    "answers": [
+      "Ništa posebno",
+      "Deset salavata od Allaha i deset dobrih djela",
+      "Jedno dobro djelo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Deset salavata od Allaha i deset dobrih djela",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "U kojim surama se nalazi većina imena Božijih poslanika?",
+    "answers": [
+      "El-Bekare i Ihlas",
+      "En-Nisa i El-Enʻam",
+      "En-Nas i El-Feleq"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "En-Nisa i El-Enʻam",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "poslanici_kuran.html",
+    "lesson_title": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU",
+    "question": "Šta je uloga poslanika prema tekstu?",
+    "answers": [
+      "Da samo pišu knjige",
+      "Pojašnjavanje Božije objave ljudima",
+      "Da vladaju svijetom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "Pojašnjavanje Božije objave ljudima",
+    "source": "BOŽIJI POSLANICI SPOMENUTI U KUR’ANU"
+  },
+  {
+    "source_file": "prijateljstvo.html",
+    "lesson_title": "PRIJATELJSTVO I DRUGARSTVO",
+    "question": "Gdje je prvi prijatelj zapisao da ga je drug ošamario?",
+    "answers": [
+      "U kamenu",
+      "U pijesku",
+      "U svesku"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "poslanici",
+    "correct": "U pijesku",
+    "source": "PRIJATELJSTVO I DRUGARSTVO"
+  }
+];
+        
+let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Allahovi poslanici');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

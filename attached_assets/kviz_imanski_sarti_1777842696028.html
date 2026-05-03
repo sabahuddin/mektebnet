@@ -1,0 +1,2668 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P10X0MRPDG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-P10X0MRPDG');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVIZ: Imanski šarti</title>
+    <link rel="stylesheet" href="../../core/styles-universal.css">
+    <link rel="stylesheet" href="../../core/kviz-standalone.css">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="quiz-header"><h1>KVIZ: Imanski šarti</h1></div>
+        
+        <div id="quiz-settings" class="quiz-settings">
+            <label for="question-count">Broj pitanja:</label>
+            <select id="question-count">
+                <option value="10">10 pitanja</option>
+                <option value="25" selected>25 pitanja</option>
+                <option value="50">50 pitanja</option>
+            </select>
+            <br><br>
+            <button class="quiz-btn" onclick="startQuiz()">Pokreni kviz</button>
+        </div>
+        
+        <div id="quiz-content">
+            <div class="progress-text" id="progress-text"></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="question-box">
+                <div class="question-text" id="question-text"></div>
+                <div id="answers"></div>
+            </div>
+            <div id="quiz-controls" style="text-align: center;">
+                <button class="quiz-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">Sljedeće pitanje →</button>
+            </div>
+        </div>
+        
+        <div id="results">
+            <h2>Rezultati kviza</h2>
+            <div class="score" id="final-score"></div>
+            <div class="message" id="result-message"></div>
+            <button class="quiz-btn" onclick="location.reload()">Ponovi kviz</button>
+        </div>
+    </div>
+    
+    <script>
+        const allQuestions = [
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Šta je prvi imanski šart?",
+    "answers": [
+      "Vjerovanje u meleke",
+      "Āmentu billāhi",
+      "Vjerovanje u Sudnji dan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Āmentu billāhi",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Kojim riječima iskazujemo vjerovanje u Allaha?",
+    "answers": [
+      "Bismillah",
+      "El-hamdu lillah",
+      "La ilahe illallah"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "La ilahe illallah",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Šta znači 'La ilahe illallah'?",
+    "answers": [
+      "Allah je najveći",
+      "Nema drugog boga osim Allaha",
+      "Hvala Allahu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nema drugog boga osim Allaha",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "U kojoj suri se nalazi Ajetul-kursija?",
+    "answers": [
+      "El-Fatiha",
+      "El-Ihlas",
+      "El-Bekare"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "El-Bekare",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Šta su 'es-sifatuz-zatijje'?",
+    "answers": [
+      "Allahova imena",
+      "Svojstva Allahovog bića",
+      "Svojstva Allahovog savršenstva"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Svojstva Allahovog bića",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Koji primjer stvaranja Allah navodi u Kur'anu?",
+    "answers": [
+      "Primjer deve",
+      "Primjer mušice",
+      "Primjer slona"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Primjer mušice",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Šta je 'ihsan' prema hadisu?",
+    "answers": [
+      "Robovati Allahu kao da Ga vidiš",
+      "Davati zekat",
+      "Postiti ramazan"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Robovati Allahu kao da Ga vidiš",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Koliko imanskih šarta ima?",
+    "answers": [
+      "5",
+      "6",
+      "10"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "6",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "amentu_billahi3.html",
+    "lesson_title": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š.",
+    "question": "Šta je prirodno stanje čovjeka?",
+    "answers": [
+      "Znanje",
+      "Vjera u Allaha",
+      "Rad"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vjera u Allaha",
+    "source": "ĀMENTU BILLĀHI – VJERUJEМ U ALLAHA, DŽ.Š."
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Šta je vječno boravište pripremljeno za vjernike?",
+    "answers": [
+      "Dunjaluk",
+      "Džehennem",
+      "Džennet"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Džennet",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Koliko deredža ima Džennet?",
+    "answers": [
+      "Deset",
+      "Sedam",
+      "Stotinu"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Stotinu",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Koji je najviši nivo Dženneta?",
+    "answers": [
+      "Adn",
+      "Firdevs",
+      "Me'va"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Firdevs",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Koliko džennetskih vrata postoji?",
+    "answers": [
+      "Sedam",
+      "Osam",
+      "Devedeset devet"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Osam",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Šta će biti najveća počast za vjernike u Džennetu?",
+    "answers": [
+      "Hrana",
+      "Odjeća",
+      "Gledanje u Allaha, dž.š."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Gledanje u Allaha, dž.š.",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Koliko je džehennemska vatra jača od ovodunjalučke?",
+    "answers": [
+      "20 puta",
+      "69 puta",
+      "100 puta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "69 puta",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Koliko vrata ima Džehennem?",
+    "answers": [
+      "Osam",
+      "Sedam",
+      "Jedna"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Sedam",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Šta će nevjernicima u Džehennemu biti hrana?",
+    "answers": [
+      "Voće",
+      "Drvo zekum",
+      "Med"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Drvo zekum",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Da li vjernici griješnici ostaju vječno u Džehennemu?",
+    "answers": [
+      "Da",
+      "Ne, izlaze nakon nekog vremena",
+      "Niko ne zna"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, izlaze nakon nekog vremena",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzennet_dzehennem.html",
+    "lesson_title": "DŽENNET I DŽEHENNEM",
+    "question": "Šta će Sirat-ćuprija biti za one koji su kažnjeni Džehennemom?",
+    "answers": [
+      "Put do Dženneta",
+      "Prepreka",
+      "Široka ulica"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Prepreka",
+    "source": "DŽENNET I DŽEHENNEM"
+  },
+  {
+    "source_file": "dzini_sejtani.html",
+    "lesson_title": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI",
+    "question": "Koju je osobu šejtan nagovorio da učini zabranjeno djelo u Džennetu?",
+    "answers": [
+      "Nuh, a.s.",
+      "Adem, a.s.",
+      "Musa, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Adem, a.s.",
+    "source": "DRUGA DUHOVNA BIĆA – DŽINI I ŠEJTANI"
+  },
+  {
+    "source_file": "ekologija.html",
+    "lesson_title": "ČUVANJE OKOLINE – EKOLOGIJA",
+    "question": "Šta treba uraditi ako nastupi Sudnji dan a imate sadnicu u ruci (Buhari)?",
+    "answers": [
+      "Baci je",
+      "Zasadi je, ako si u mogućnosti",
+      "Sakrij je"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Zasadi je, ako si u mogućnosti",
+    "source": "ČUVANJE OKOLINE – EKOLOGIJA"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Koji je šesti imanski šart?",
+    "answers": [
+      "Vjerovanje u Sudnji dan",
+      "Vjerovanje u Allahovo određenje",
+      "Vjerovanje u poslanike"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vjerovanje u Allahovo određenje",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Šta je vjernik dužan učiniti kada ga zadesi dobro?",
+    "answers": [
+      "Da se hvali",
+      "Da se zahvali Allahu",
+      "Da to sakrije"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Da se zahvali Allahu",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Šta je vjernik dužan učiniti kada ga zadesi iskušenje koje ne voli?",
+    "answers": [
+      "Očajavati",
+      "Biti strpljiv i ne žalostiti se",
+      "Ljutiti se"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Biti strpljiv i ne žalostiti se",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Kada je Allah odredio sudbinu stvorenjima?",
+    "answers": [
+      "Kad se rode",
+      "Prije nego što ih je stvorio",
+      "Kad umru"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Prije nego što ih je stvorio",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Koje riječi otvaraju prostor šejtanskom djelovanju?",
+    "answers": [
+      "Subhanallah",
+      "Da sam uradio...",
+      "Inšallah"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Da sam uradio...",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Šta može otkloniti ili izmijeniti loše određenje?",
+    "answers": [
+      "Samo čekanje",
+      "Dova, sadaka i traženje lijeka",
+      "Trčanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Dova, sadaka i traženje lijeka",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Šta donosi slast pravog imana prema hadisu?",
+    "answers": [
+      "Bogatstvo",
+      "Spoznaja da nas suđeno nije moglo mimoići",
+      "Slava"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Spoznaja da nas suđeno nije moglo mimoići",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Ko jedini zna šta će se dogoditi u budućnosti?",
+    "answers": [
+      "Ljudi",
+      "Meleki",
+      "Samo Allah, dž.š."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Samo Allah, dž.š.",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kader.html",
+    "lesson_title": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ",
+    "question": "Kakvo je svako stanje za vjernika prema hadisu?",
+    "answers": [
+      "Uvijek loše",
+      "Dobro za njega",
+      "Dosadno"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Dobro za njega",
+    "source": "VE BIL-KADERI HAJRIHĪ VE ŠERRIHĪ MINELLĀHI TE‘ĀLĀ"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Šta je prvi stub islama?",
+    "answers": [
+      "Namaz",
+      "Kelimei-šehadet",
+      "Zekat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Kelimei-šehadet",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Od koliko dijelova se sastoji Kelimei-šehadet?",
+    "answers": [
+      "Dva",
+      "Tri",
+      "Pet"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Dva",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Šta negira svjedočenje Božije jednoće?",
+    "answers": [
+      "Loša djela",
+      "Obožavanje bilo koga drugog osim Allaha",
+      "Odmor"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Obožavanje bilo koga drugog osim Allaha",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Šta je ključ ulaska u islam?",
+    "answers": [
+      "Post",
+      "Hadždž",
+      "Izjava nema drugog Boga osim Allaha"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Izjava nema drugog Boga osim Allaha",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "S čime je Allah poslao Muhammeda, a.s.?",
+    "answers": [
+      "S blagom",
+      "S Istinom - Kur'anom",
+      "Sa mačem"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "S Istinom - Kur'anom",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Kome je potčinjen cijeli kosmos?",
+    "answers": [
+      "Ljudima",
+      "Melekima",
+      "Isključivo Allahu, dž.š."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Isključivo Allahu, dž.š.",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Kakva je naša obaveza prema onome što je Poslanik naredio?",
+    "answers": [
+      "Samo čitanje",
+      "Da se pokoravamo",
+      "Da ignorišemo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Da se pokoravamo",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Čime potvrđujemo istinu Kelimei-šehadeta?",
+    "answers": [
+      "Svim ibadetima koje činimo",
+      "Samo riječima",
+      "Snom"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Svim ibadetima koje činimo",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Šta sadrži odluka čovjeka u šehadetu?",
+    "answers": [
+      "Da bude pokoran Allahu",
+      "Da bude bogat",
+      "Da puno putuje"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Da bude pokoran Allahu",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kelimei_sehadet.html",
+    "lesson_title": "KELIMEI-ŠEHADET",
+    "question": "Kako se naziva Allahova jednoća?",
+    "answers": [
+      "Mnoštvo",
+      "Tevhid",
+      "Sumnja"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Tevhid",
+    "source": "KELIMEI-ŠEHADET"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Koji je treći imanski šart?",
+    "answers": [
+      "Ve kutubihi",
+      "Ve rusulihi",
+      "Ve meläiketihî"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ve kutubihi",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Preko kojeg meleka je Allah objavljivao Svoj govor poslanicima?",
+    "answers": [
+      "Israfila",
+      "Džibrila",
+      "Mikaila"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Džibrila",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Koliko je ukupno objavljeno velikih knjiga?",
+    "answers": [
+      "4",
+      "100",
+      "10"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "4",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Kome je objavljen Tevrat?",
+    "answers": [
+      "Davudu, a.s.",
+      "Isau, a.s.",
+      "Musau, a.s."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Musau, a.s.",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Koja je verzija Zebura danas poznata na hebrejskom jeziku?",
+    "answers": [
+      "Psalmi",
+      "Evanđelje",
+      "Listovi"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Psalmi",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Kome je objavljen Indžil?",
+    "answers": [
+      "Muhammedu, a.s.",
+      "Isau, a.s.",
+      "Ibrahimu, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Isau, a.s.",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Koja je posljednja Allahova objava svim ljudima?",
+    "answers": [
+      "Kur'an",
+      "Suhufi",
+      "Indžil"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Kur'an",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Koliko je ukupno objavljeno suhufa (manjih objava)?",
+    "answers": [
+      "50",
+      "100",
+      "10"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "100",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Kojem poslaniku je objavljeno najviše suhufa (pedeset)?",
+    "answers": [
+      "Idrisu, a.s.",
+      "Šitu, a.s.",
+      "Ibrahimu, a.s."
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Šitu, a.s.",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kitabi.html",
+    "lesson_title": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE",
+    "question": "Šta postižemo pomoću objave u životu na ovom svijetu?",
+    "answers": [
+      "Pravi put i spas na ahiretu",
+      "Samo bogatstvo",
+      "Samo slavu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Pravi put i spas na ahiretu",
+    "source": "VE KUTUBIHĪ – VJEROWANJE U ALLAHOVE KNJIGE I SUHUFE"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Šta je kufr prema islamskom učenju?",
+    "answers": [
+      "Nevjerovanje u Allaha i temeljne istine vjere",
+      "Zaboravljanje molitve",
+      "Putovanje u druge zemlje"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nevjerovanje u Allaha i temeljne istine vjere",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Kako se naziva osoba koja počini širk?",
+    "answers": [
+      "Munafik",
+      "Mušrik",
+      "Kafir"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Mušrik",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Šta podrazumijeva pojam Širk?",
+    "answers": [
+      "Laganje",
+      "Pripisivanje sudruga Allahu",
+      "Nepoštivanje starijih"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Pripisivanje sudruga Allahu",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Šta je 'Rija' (mali širk)?",
+    "answers": [
+      "Krađa",
+      "Pretvaranje u djelima radi dunjalučkog interesa",
+      "Psovanje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Pretvaranje u djelima radi dunjalučkog interesa",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Šta je obavezna učiniti osoba koja počini kufr ili širk radi povratka u vjeru?",
+    "answers": [
+      "Samo postiti",
+      "Učiniti gusul, pokajati se i izgovoriti Kelimei-šehadet",
+      "Samo podijeliti zekat"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Učiniti gusul, pokajati se i izgovoriti Kelimei-šehadet",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Šta je Nifak?",
+    "answers": [
+      "Javno nevjerovanje",
+      "Skrivanje nevjerovanja u srcu a pokazivanje vjerovanja pred ljudima",
+      "Činjenje dobrih djela"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Skrivanje nevjerovanja u srcu a pokazivanje vjerovanja pred ljudima",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Gdje će se nalaziti licemjeri (munafici) prema Kur'anu?",
+    "answers": [
+      "Na ulazu u Džennet",
+      "Na samom dnu Džehennema",
+      "U posebnim sobama"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Na samom dnu Džehennema",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Koliko ajeta na početku sure El-Bekare govori o licemjerima?",
+    "answers": [
+      "3 ajeta",
+      "13 ajeta",
+      "5 ajeta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "13 ajeta",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "Koja su neka od četiri svojstva munafika spomenuta u hadisu?",
+    "answers": [
+      "Istinoljubivost",
+      "Kada govori - laže; kada obeća - ne ispuni",
+      "Marljivost"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Kada govori - laže; kada obeća - ne ispuni",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kufr_sirk_nifak.html",
+    "lesson_title": "KUFR, ŠIRK, NIFAK",
+    "question": "U kojoj suri Allah poručuje: 'vama - vaša vjera, a meni - moja'?",
+    "answers": [
+      "El-Bekare",
+      "El-Ihlas",
+      "El-Kafirun"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "El-Kafirun",
+    "source": "KUFR, ŠIRK, NIFAK"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Koji ajeti čine 'Kulid'ullahe'?",
+    "answers": [
+      "Prva dva ajeta sure El-Bekare",
+      "Posljednja dva ajeta sure El-Isra (110-111)",
+      "Ajetul-Kursijj"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Posljednja dva ajeta sure El-Isra (110-111)",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "O čemu Allah, dž.š., govori u ovim ajetima?",
+    "answers": [
+      "O ramazanskom postu",
+      "O Svojim lijepim imenima i Svojoj veličini",
+      "O hadžu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "O Svojim lijepim imenima i Svojoj veličini",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Kako trebamo učiti Kur'an u namazu prema ovim ajetima?",
+    "answers": [
+      "Što glasnije možemo",
+      "Tražiti sredinu između glasnog i tihog učenja",
+      "Uvijek u sebi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Tražiti sredinu između glasnog i tihog učenja",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Šta znači dio ajeta 'Evi-d'ur-Rahmane'?",
+    "answers": [
+      "Ili zovite: 'Milostivi'",
+      "Ili zovite: 'Gospodaru'",
+      "Ili zovite: 'Stvoritelju'"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ili zovite: 'Milostivi'",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Šta potvrđujemo za Allaha u 111. ajetu?",
+    "answers": [
+      "Da ima dvoje djece",
+      "Da Sebi nije uzeo djeteta i da u vlasti nema ortaka",
+      "Da Mu treba pomoćnik"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Da Sebi nije uzeo djeteta i da u vlasti nema ortaka",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Da li Allahu treba zaštitnik?",
+    "answers": [
+      "Da, ponekad",
+      "Ne, Njemu ne treba zaštitnik zbog nemoći",
+      "Samo u ratu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, Njemu ne treba zaštitnik zbog nemoći",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "kulidullahe.html",
+    "lesson_title": "KULID'ULLAHE",
+    "question": "Čija su imena najljepša prema ovim ajetima?",
+    "answers": [
+      "Poslanikova",
+      "Melekova",
+      "Allahova"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allahova",
+    "source": "KULID'ULLAHE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Od čega su stvoreni meleki?",
+    "answers": [
+      "Vatre",
+      "Zemlje",
+      "Nura (svjetlosti)"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nura (svjetlosti)",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Koji je drugi imanski šart?",
+    "answers": [
+      "Ve kutubihi",
+      "Ve meläiketihî",
+      "Ve rusulihi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ve meläiketihî",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Koji melek je zadužen za dostavu Allahovih objava?",
+    "answers": [
+      "Mikail",
+      "Israfil",
+      "Džibril"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Džibril",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Šta će Israfil najaviti puhanjem u sur?",
+    "answers": [
+      "Smak svijeta i Sudnji dan",
+      "Vrijeme namaza"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Smak svijeta i Sudnji dan",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Kako se zovu meleki koji pišu ljudska djela?",
+    "answers": [
+      "Munkir i Nekir",
+      "Kiramun-katibun"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Kiramun-katibun",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Ko je zadužen za uzimanje duša u času smrti?",
+    "answers": [
+      "Azrail",
+      "Malik"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Azrail",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Koja je odlika meleka?",
+    "answers": [
+      "Jedu i piju",
+      "Nikada ne griješe"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nikada ne griješe",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Ko je čuvar Dženneta?",
+    "answers": [
+      "Ridvan",
+      "Malik"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ridvan",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Koji melek je zadužen za kretanje oblaka i kišu?",
+    "answers": [
+      "Džibril",
+      "Mikail"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Mikail",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "melaike.html",
+    "lesson_title": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE",
+    "question": "Šta znači 've meläiketihî'?",
+    "answers": [
+      "Vjerujem u meleke",
+      "Vjerujem u knjige"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vjerujem u meleke",
+    "source": "VE MELĀIKETIHĪ – VJEROWANJE U ALLAHOVE MELEKE"
+  },
+  {
+    "source_file": "post_propisi.html",
+    "lesson_title": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA",
+    "question": "Kako se zovu džennetska vrata na koja ulaze samo postači?",
+    "answers": [
+      "Firdews",
+      "Rejjan",
+      "Adn"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Rejjan",
+    "source": "POST - PROPISI I ODLIKE RAMAZANSKOG POSTA"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Šta je berzah?",
+    "answers": [
+      "Džennetska bašta",
+      "Boravište ljudskih duša od smrti do proživljenja",
+      "Naziv za Sudnji dan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Boravište ljudskih duša od smrti do proživljenja",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Koja dva meleka postavljaju pitanja u kaburu?",
+    "answers": [
+      "Džibril i Mikail",
+      "Melek smrti",
+      "Munkir i Nekir"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Munkir i Nekir",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Koje je prvo pitanje koje se postavlja u kaburu?",
+    "answers": [
+      "Koje si vjere?",
+      "Ko ti je Gospodar?",
+      "Ko ti je Poslanik?"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ko ti je Gospodar?",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Šta se dešava sa tijelom nakon smrti?",
+    "answers": [
+      "Postaje svjetlost",
+      "Zakopava se u zemlju i postaje zemlja",
+      "Odlazi na nebo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Zakopava se u zemlju i postaje zemlja",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Kada će ljudi biti proživljeni iz kaburova?",
+    "answers": [
+      "Nakon prvog puhanja u sur",
+      "Nakon drugog puhanja u sur",
+      "Odmah nakon ukopa"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nakon drugog puhanja u sur",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Kako se zove mjesto okupljanja svih ljudi?",
+    "answers": [
+      "Mahšer",
+      "Kuds",
+      "Bedu"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Mahšer",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Koji dio ljudskog tijela nauka kaže da nikada ne truhne?",
+    "answers": [
+      "Srce",
+      "Lobanja",
+      "Trtična kost"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Trtična kost",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Šta znači smrt za muslimana?",
+    "answers": [
+      "Kraj postojanja",
+      "Rastanak duše od tijela",
+      "Samo san"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Rastanak duše od tijela",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Šta će odrediti kakvo će čovjeku biti boravište u berzahu?",
+    "answers": [
+      "Njegovo bogatstvo",
+      "Njegova djela i vjera",
+      "Njegova slava"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Njegova djela i vjera",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "prozivljenje.html",
+    "lesson_title": "PROŽIVLJENJE POSLIJE SMRTI",
+    "question": "Koji surah spominje da će čovjek bježati od brata i roditelja na Sudnjem danu?",
+    "answers": [
+      "Ja-Sin",
+      "Et-Tekvir",
+      "Abese"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Abese",
+    "source": "PROŽIVLJENJE POSLIJE SMRTI"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Šta je šefa'at?",
+    "answers": [
+      "Kazna",
+      "Pravo na zauzimanje na Sudnjem danu",
+      "Odlazak u školu"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Pravo na zauzimanje na Sudnjem danu",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Ko će imati pravo šefa'ata?",
+    "answers": [
+      "Poslanici, šehidi, evlije i odabrani robovi",
+      "Svi ljudi bez razlike",
+      "Samo bogati ljudi"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Poslanici, šehidi, evlije i odabrani robovi",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Šta je Mizan?",
+    "answers": [
+      "Naziv mosta",
+      "Savršena vaga na Sudnjem danu",
+      "Vrelo vode"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Savršena vaga na Sudnjem danu",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Koliko tasova ima Mizan?",
+    "answers": [
+      "Jedan",
+      "Dva",
+      "Tri"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Dva",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Koje riječi pune Mizan prema hadisu?",
+    "answers": [
+      "Subhanallah",
+      "El-Hamdulillahi",
+      "Allahu ekber"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "El-Hamdulillahi",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Kako se zove vrelo Muhammeda, a.s.?",
+    "answers": [
+      "Zemzem",
+      "Havd",
+      "Bunar"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Havd",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Odakle dotječe voda u Havd?",
+    "answers": [
+      "Iz planina",
+      "Iz rijeke Kevser",
+      "Iz mora"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Iz rijeke Kevser",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Šta je Sirat-ćuprija?",
+    "answers": [
+      "Most preko Džehennema",
+      "Vrata Dženneta",
+      "Zgrada"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Most preko Džehennema",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Kako je opisana Sirat-ćuprija?",
+    "answers": [
+      "Široka kao cesta",
+      "Oštrija od sablje i tanja od dlake",
+      "Napravljena od drveta"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Oštrija od sablje i tanja od dlake",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "sefaat_mizan_sirat.html",
+    "lesson_title": "Šefa'at, Mizan i Sirat-ćuprija",
+    "question": "Kada će vjernici ući u Džennet prema 'Zapamti'?",
+    "answers": [
+      "Čim se probude",
+      "Poslije prelaska Sirat-ćuprije i poravnanja računa",
+      "Prije Sudnjeg dana"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Poslije prelaska Sirat-ćuprije i poravnanja računa",
+    "source": "Šefa'at, Mizan i Sirat-ćuprija"
+  },
+  {
+    "source_file": "stjecanje_znanja.html",
+    "lesson_title": "STJECANJE ZNANJA",
+    "question": "Čovjek može vjerovati bez znanja, ali je takvo vjerovanje često:",
+    "answers": [
+      "Ispravno",
+      "Stranputica",
+      "Najbolje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Stranputica",
+    "source": "STJECANJE ZNANJA"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "U koju grupu svojstava spadaju Hajat, 'Ilm, Sem' i Besar?",
+    "answers": [
+      "Es-sifatuz-zatijje",
+      "Es-sifatus-subutijje",
+      "Lijepa imena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Es-sifatus-subutijje",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Šta znači svojstvo Hajat?",
+    "answers": [
+      "Allah sve zna",
+      "Allah živi vječnim životom",
+      "Allah sve čuje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah živi vječnim životom",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Šta znači svojstvo 'Ilm?",
+    "answers": [
+      "Allah sve vidi",
+      "Allah sve zna",
+      "Allah sve stvara"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah sve zna",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Šta znači svojstvo Sem'?",
+    "answers": [
+      "Allah sve čuje",
+      "Allah sve zna",
+      "Allah sve vidi"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah sve čuje",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Šta znači svojstvo Besar?",
+    "answers": [
+      "Allah sve čuje",
+      "Allah sve vidi",
+      "Allah živi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah sve vidi",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Može li zaborav utjecati na Allahovo znanje?",
+    "answers": [
+      "Da, ponekad",
+      "Ne, na Njegovo znanje ne može utjecati zaborav",
+      "Samo u pogledu daleke prošlosti"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, na Njegovo znanje ne može utjecati zaborav",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Utječu li tama noći ili fizičke prepreke na Allahov vid i sluh?",
+    "answers": [
+      "Da, donekle",
+      "Ne, na Allahov sluh i vid ne utječu nikakve prepreke",
+      "Samo na sluh"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, na Allahov sluh i vid ne utječu nikakve prepreke",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Šta obuhvata Allahovo znanje?",
+    "answers": [
+      "Samo ono što je bilo",
+      "Samo ono što se sada dešava",
+      "Sve što se desilo, što se dešava i što će se desiti"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Sve što se desilo, što se dešava i što će se desiti",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Od čega zavisi život ljudi za razliku od Allahovog života?",
+    "answers": [
+      "Život ljudi je neovisan",
+      "Život ljudi je ograničen i u Allahovoj je vlasti",
+      "Nema razlike"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Život ljudi je ograničen i u Allahovoj je vlasti",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_1.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR",
+    "question": "Šta je najviši stepen vjere prema spomenutom hadisu?",
+    "answers": [
+      "Mnogo putovati",
+      "Biti pokoran Allahu kao da Ga vidiš",
+      "Samo čitati knjige"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Biti pokoran Allahu kao da Ga vidiš",
+    "source": "ES-SIFATUS-SUBUTIJJE: HAJAT, 'ILM, SEM' I BESAR"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Koja su svojstva obrađena u ovoj lekciji?",
+    "answers": [
+      "Vudžud i Kidem",
+      "Iradet, Kudret, Kelam i Tekvin",
+      "Hajat i Besar"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Iradet, Kudret, Kelam i Tekvin",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Šta znači svojstvo Iradet?",
+    "answers": [
+      "Allah sve Svojom voljom čini",
+      "Allah sve čuje",
+      "Allah je oduvijek"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah sve Svojom voljom čini",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Šta se dogodi kada Allah nečemu kaže 'Budi'?",
+    "answers": [
+      "Treba vremena da postane",
+      "To odmah bude (postane stvarnost)",
+      "Ništa se ne desi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "To odmah bude (postane stvarnost)",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Šta znači svojstvo Kudret?",
+    "answers": [
+      "Allah govori",
+      "Allah je svemoćan",
+      "Allah je jedan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah je svemoćan",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Šta je poseban primjer Božije svemoći?",
+    "answers": [
+      "Stvaranje kiše",
+      "Stvaranje čovjeka od duše i tijela",
+      "Stvaranje planina"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Stvaranje čovjeka od duše i tijela",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Gdje je sadržan Allahov savršeni božanski govor (Kelam)?",
+    "answers": [
+      "U pričama",
+      "U Kur'anu",
+      "U snovima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "U Kur'anu",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Šta znači svojstvo Tekvin?",
+    "answers": [
+      "Allah sve stvara, održava i rastvara",
+      "Allah sve vidi",
+      "Allah je oduvijek"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah sve stvara, održava i rastvara",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Iz čega je sve što postoji nastalo?",
+    "answers": [
+      "Iz prirode",
+      "Iz ničega",
+      "Iz energije"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Iz ničega",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Jesu li ljudska svojstva uporediva s Allahovim?",
+    "answers": [
+      "Da, ista su",
+      "Ne, ljudska su ograničena i neuporediva",
+      "Da, ali samo sluh"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, ljudska su ograničena i neuporediva",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "subutijje_2.html",
+    "lesson_title": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN",
+    "question": "Kojoj grupi pripadaju ova četiri svojstva?",
+    "answers": [
+      "Es-sifatuz-zatijje",
+      "Es-sifatus-subutijje",
+      "Lijepa imena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Es-sifatus-subutijje",
+    "source": "ES-SIFATUS-SUBUTIJJE: IRADET, KUDRET, KELAM I TEKVIN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Kako glasi peti imanski šart?",
+    "answers": [
+      "Ve kutubihi",
+      "Vel-jevmil-ähiri",
+      "Ve rusulihi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vel-jevmil-ähiri",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Koji svijet je prolazan, a koji vječan?",
+    "answers": [
+      "Ahiret je prolazan, dunjaluk je vječan",
+      "Dunjaluk je prolazan, ahiret je vječan",
+      "Oba su vječna"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Dunjaluk je prolazan, ahiret je vječan",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Koji melek će puhnuti u sur?",
+    "answers": [
+      "Džibril",
+      "Mikail",
+      "Israfil"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Israfil",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Šta se dešava nakon drugog puhanja u sur?",
+    "answers": [
+      "Smak svijeta",
+      "Sva stvorenja umiru",
+      "Proživljenje i stajanje pred Allahom"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Proživljenje i stajanje pred Allahom",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Kako se zove boravište duša između smrti i proživljenja?",
+    "answers": [
+      "Berzah",
+      "Džennet",
+      "Džehennem"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Berzah",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Ko jedini zna kada će nastupiti Sudnji dan?",
+    "answers": [
+      "Meleki",
+      "Poslanici",
+      "Samo Allah, dž.š."
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Samo Allah, dž.š.",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Koji je jedan od deset velikih predznaka?",
+    "answers": [
+      "Kiša",
+      "Izlazak Sunca sa zapada",
+      "Vjetar"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Izlazak Sunca sa zapada",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Šta će se desiti s onima u kojih pretegnu dobra djela na vagi?",
+    "answers": [
+      "Bit će kažnjeni",
+      "Allah će ih nagraditi Džennetom",
+      "Vratit će se na dunjaluk"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah će ih nagraditi Džennetom",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "sudnji_dan.html",
+    "lesson_title": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN",
+    "question": "Šta znači 'Dabetul-erd'?",
+    "answers": [
+      "Naziv vatre",
+      "Životinja koja će govoriti s ljudima",
+      "Gusti dim"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Životinja koja će govoriti s ljudima",
+    "source": "VEL-JEVMIL-ĀHIRI – VJEROWANJE U SUDNJI DAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Šta znači pojam Tevhid?",
+    "answers": [
+      "Vjerovanje u meleke",
+      "Vjerovanje u Allahovu jednoću",
+      "Vjerovanje u knjige"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vjerovanje u Allahovu jednoću",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Koja sura u cijelosti govori o Božijoj jednoći?",
+    "answers": [
+      "El-Fatiha",
+      "El-Bekare",
+      "El-Ihlas"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "El-Ihlas",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Šta znači ajet 'Allah je utočište svakom'?",
+    "answers": [
+      "Samo se Njemu možemo obraćati dovom",
+      "Allah je stvorio ljude",
+      "Allah nas vidi"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Samo se Njemu možemo obraćati dovom",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Koju tvrdnju poriče ajet 'Nije rodio i rođen nije'?",
+    "answers": [
+      "Da Bog ne postoji",
+      "Tvrdnju da Bog ima dijete ili roditelje",
+      "Da je svemir vječan"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Tvrdnju da Bog ima dijete ili roditelje",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Šta bi se desilo da svemirom upravlja više bogova?",
+    "answers": [
+      "Sve bi bilo isto",
+      "Nastao bi nered i poremećaj",
+      "Svemir bi bio veći"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nastao bi nered i poremećaj",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Koja svojstva potvrđuju istinu tevhida?",
+    "answers": [
+      "Es-sifatus-subutijje",
+      "Es-sifatuz-zatijje",
+      "Lijepa imena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Es-sifatuz-zatijje",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Šta znači pojam Vahdanijet?",
+    "answers": [
+      "Postojanje",
+      "Jednoća",
+      "Vječnost"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Jednoća",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Kome se jedino musliman klanja?",
+    "answers": [
+      "Poslanicima",
+      "Samo Allahu, dž.š.",
+      "Melekima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Samo Allahu, dž.š.",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "tevhid.html",
+    "lesson_title": "TEVHID - ALLAH JE JEDAN",
+    "question": "Ko je Stvoritelj svega što postoji?",
+    "answers": [
+      "Priroda",
+      "Jedino Allah, dž.š.",
+      "Zvijezde"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Jedino Allah, dž.š.",
+    "source": "TEVHID - ALLAH JE JEDAN"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Kako se naziva nevidljivi svijet o kojem nas je Allah obavijestio?",
+    "answers": [
+      "Dunjaluk",
+      "Svijet gajba",
+      "Svijet materije"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Svijet gajba",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Može li se svijet gajba spoznati našim čulima?",
+    "answers": [
+      "Da, uz moderne aparate",
+      "Ne, on se mora prvenstveno vjerovati",
+      "Samo dodirom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, on se mora prvenstveno vjerovati",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Šta je prva osobina vjernika spomenuta u Kur'anu (El-Bekare)?",
+    "answers": [
+      "Vjerovanje u gajb",
+      "Putovanje",
+      "Bogatstvo"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vjerovanje u gajb",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Ko je jedini vlasnik ključeva svih tajni (mefatihul-gajb)?",
+    "answers": [
+      "Meleki",
+      "Uzvišeni Allah",
+      "Ljudi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Uzvišeni Allah",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Šta obuhvata vjerovanje u gajb?",
+    "answers": [
+      "Samo planete",
+      "Vjerovanje u Allaha, meleke, džine, Sudnji dan, Džennet i Džehennem",
+      "Samo ono što vidimo"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vjerovanje u Allaha, meleke, džine, Sudnji dan, Džennet i Džehennem",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Od čega je Allah stvorio džine?",
+    "answers": [
+      "Od gline",
+      "Od svjetlosti",
+      "Od plamena vatre"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Od plamena vatre",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Šta je Džennet prema islamskom učenju?",
+    "answers": [
+      "Nagrada za muslimane i muslimanke",
+      "Obična bašta",
+      "Mjesto za odmor na Zemlji"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nagrada za muslimane i muslimanke",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Da li je Muhammed, a.s., znao gajb?",
+    "answers": [
+      "Znao je sve tajne",
+      "Znao je samo onoliko koliko ga je obavijestio Allah",
+      "Nije vjerovao u gajb"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Znao je samo onoliko koliko ga je obavijestio Allah",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Šta od navedenog samo Allah zna?",
+    "answers": [
+      "Kad će pasti snijeg",
+      "Kad će Smak svijeta nastupiti i šta je u matericama",
+      "Kako se pravi auto"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Kad će Smak svijeta nastupiti i šta je u matericama",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "vjerovanje_gajb.html",
+    "lesson_title": "VJEROVANJE U GAJB",
+    "question": "Koja je temeljna obaveza muslimana prema svijetu gajba?",
+    "answers": [
+      "Da sumnjaju",
+      "Da u njega čvrsto vjeruju i odbace sumnju",
+      "Da ga ne spominju"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Da u njega čvrsto vjeruju i odbace sumnju",
+    "source": "VJEROVANJE U GAJB"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Na koje dvije glavne grupe se dijele Allahova svojstva?",
+    "answers": [
+      "Dobra i loša svojstva",
+      "Es-sifatuz-zatijje i es-sifatus-subutijje",
+      "Svojstva bića i svojstva govora"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Es-sifatuz-zatijje i es-sifatus-subutijje",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Šta su es-sifatuz-zatijje?",
+    "answers": [
+      "Svojstva Allahovog savršenstva",
+      "Svojstva Allahovog bića",
+      "Svojstva Allahovih meleka"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Svojstva Allahovog bića",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Šta znači svojstvo Vudžud?",
+    "answers": [
+      "Allah je oduvijek",
+      "Allah postoji",
+      "Allah sve čuje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah postoji",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Šta znači svojstvo Kidem?",
+    "answers": [
+      "Allah je zauvijek",
+      "Allah je oduvijek (bez početka)",
+      "Allah sve vidi"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah je oduvijek (bez početka)",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Šta znači svojstvo Beka?",
+    "answers": [
+      "Allah je jedan",
+      "Allah je zauvijek (bez kraja)",
+      "Allah sve zna"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah je zauvijek (bez kraja)",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Može li išta na ovom svijetu nastati samo od sebe?",
+    "answers": [
+      "Može",
+      "Ne, sve ima svoj uzrok nastajanja",
+      "Ponekad"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, sve ima svoj uzrok nastajanja",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Koja tri svojstva se ubrajaju u es-sifatuz-zatijje u ovoj lekciji?",
+    "answers": [
+      "Hajat, 'Ilm, Sem'",
+      "Vudžud, Kidem, Beka",
+      "Iradet, Kudret, Kelam"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vudžud, Kidem, Beka",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Može li ljudski razum u potpunosti shvatiti pojmove oduvijek i zauvijek?",
+    "answers": [
+      "Može bez problema",
+      "Ne može, dužni smo u njih čvrsto vjerovati",
+      "Samo uz pomoć tehnologije"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne može, dužni smo u njih čvrsto vjerovati",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Kome pripada vječnost, a kome prolaznost?",
+    "answers": [
+      "Vječnost stvorenjima, prolaznost Allahu",
+      "Vječnost Allahu, prolaznost stvorenjima",
+      "Svi su vječni"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Vječnost Allahu, prolaznost stvorenjima",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_1.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA",
+    "question": "Koga muslimani jedino smiju upoređivati s Uzvišenim Allahom?",
+    "answers": [
+      "Njegove poslanike",
+      "Njegove meleke",
+      "Nikoga, nije dozvoljeno upoređivati stvorenja s Allahom"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Nikoga, nije dozvoljeno upoređivati stvorenja s Allahom",
+    "source": "ES-SIFATUZ-ZATIJJE: VUDŽUD, KIDEM I BEKA"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Šta označava svojstvo Vahdanijet?",
+    "answers": [
+      "Allah je vidljiv",
+      "Allahova apsolutna jednoća u svemu",
+      "Allahova moć"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allahova apsolutna jednoća u svemu",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "U koju grupu svojstava spadaju Vahdanijet, Muhalefetun lil-havadisi i Kijamun bi nefsihi?",
+    "answers": [
+      "Es-sifatus-subutijje",
+      "Es-sifatuz-zatijje",
+      "Lijepa imena"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Es-sifatuz-zatijje",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Šta znači Muhalefetun lil-havadisi?",
+    "answers": [
+      "Allah je vječan",
+      "Allah nikome i ničemu ne sliči",
+      "Allah sve čuje"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah nikome i ničemu ne sliči",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Šta znači Kijamun bi nefsihi?",
+    "answers": [
+      "Allah sam po Sebi opstoji i neovisan je",
+      "Allah sve vidi",
+      "Allah je prvi"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Allah sam po Sebi opstoji i neovisan je",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Šta bi se desilo da nebesima i Zemljom upravljaju drugi bogovi?",
+    "answers": [
+      "Sve bi bilo lakše",
+      "Poremetili bi se",
+      "Bilo bi više kiše"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Poremetili bi se",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "O čemu nas Poslanik, a.s., savjetuje da razmišljamo kako bismo spoznali Allaha?",
+    "answers": [
+      "O Allahovom biću",
+      "O Allahovim stvorenjima",
+      "O snovima"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "O Allahovim stvorenjima",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Da li je Allah ograničen vremenom ili prostorom?",
+    "answers": [
+      "Da, u određenim trenucima",
+      "Ne, On nije ograničen ni vremenom ni prostorom",
+      "Samo prostorom"
+    ],
+    "correct_index": 1,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Ne, On nije ograničen ni vremenom ni prostorom",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Šta označava Allahova različitost u odnosu na stvorenja?",
+    "answers": [
+      "Apsolutnu posebnost",
+      "Sličnost u izgledu",
+      "Privremenu razliku"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Apsolutnu posebnost",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Ko je ovisan o bilo čijoj pomoći prema svojstvu Kijamun bi nefsihi?",
+    "answers": [
+      "Sva stvorenja ovise o Allahu",
+      "Allah ovisi o melekima",
+      "Niko nije ovisan"
+    ],
+    "correct_index": 0,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "Sva stvorenja ovise o Allahu",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  },
+  {
+    "source_file": "zatijje_2.html",
+    "lesson_title": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI",
+    "question": "Koja sura jasno poručuje da Allahu niko ravan nije?",
+    "answers": [
+      "El-Fatiha",
+      "El-Bekare",
+      "El-Ihlas"
+    ],
+    "correct_index": 2,
+    "type": "multiple_choice",
+    "category": "imanski_sarti",
+    "correct": "El-Ihlas",
+    "source": "ES-SIFATUZ-ZATIJJE: VAHDANIJET, MUHALEFETUN LIL-HAVADISI I KIJAMUN BI NEFSIHI"
+  }
+];
+        
+        let selectedQuestions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startQuiz() {
+            const count = parseInt(document.getElementById('question-count').value);
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, Math.min(count, allQuestions.length));
+            selectedQuestions.forEach(q => {
+                q.answers = [...q.answers].sort(() => Math.random() - 0.5);
+            });
+            document.getElementById('quiz-settings').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'block';
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                showResults();
+                return;
+            }
+            answered = false;
+            const q = selectedQuestions[currentQuestion];
+            document.getElementById('progress-text').textContent = `Pitanje ${currentQuestion + 1} od ${selectedQuestions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / selectedQuestions.length) * 100}%`;
+            document.getElementById('question-text').textContent = q.question;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index);
+                answersDiv.appendChild(btn);
+            });
+            document.getElementById('next-btn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            const q = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            const correctIndex = q.answers.indexOf(q.correct);
+            
+            buttons.forEach((btn, index) => {
+                btn.classList.add('disabled');
+                if (index === correctIndex) btn.classList.add('correct');
+                else if (index === selectedIndex) btn.classList.add('wrong');
+            });
+
+            const isCorrect = (q.answers[selectedIndex] === q.correct);
+            if (isCorrect) score++;
+
+            const feedbackMsg = isCorrect ? "" : `Tačan odgovor je: ${q.correct}\n\nLekcija: ${q.source}`;
+            
+            if (window.parent && window.parent.engine) {
+                window.parent.engine.showFeedbackPopup(isCorrect, feedbackMsg);
+            }
+            
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            const percentage = Math.round((score / selectedQuestions.length) * 100);
+            document.getElementById('final-score').textContent = `${score} / ${selectedQuestions.length} (${percentage}%)`;
+            let message = percentage >= 90 ? 'Izvrsno!' : (percentage >= 60 ? 'Dobro urađeno!' : 'Pokušaj ponovo!');
+            document.getElementById('result-message').textContent = message;
+            spremiRezultat(score, selectedQuestions.length, 'Imanski šarti');
+        }
+
+        function spremiRezultat(bodovi, ukupno, naziv) {
+            const korisnik = JSON.parse(localStorage.getItem('mektebUser') || 'null');
+            if (!korisnik || !korisnik.id) return;
+
+            fetch('https://mekteb.net/wp-json/mekteb/v1/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: korisnik.id,
+                    quiz: naziv,
+                    score: bodovi,
+                    total: ukupno,
+                    time: 0
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const msg = document.getElementById('result-message');
+                    if (msg) msg.textContent += ' ✓ Rezultat sačuvan!';
+                }
+            })
+            .catch(() => {});
+        }
+
+    </script>
+
+    
+
+<script src="../../core/save-results.js"></script>
+<script src="/edu/core/mekteb-topbar.js"></script>
+</body>
+</html>

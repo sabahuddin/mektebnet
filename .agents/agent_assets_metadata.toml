@@ -390,6 +390,78 @@ uri = "file://attached_assets/bee-poses/pcela-hoda.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "HJLxOHF6_TYLrxrdlBHgg"
+uri = "file://artifacts/api-server/uploads/citaonica/adem.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Hawx0mhKyx9MrEIAjiXog"
+uri = "file://artifacts/api-server/uploads/citaonica/nuh.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "st8Li_n6AVk--PXdQJtnD"
+uri = "file://artifacts/api-server/uploads/citaonica/ibrahim.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "oxKGgwYp2UBC3GFEJEfpl"
+uri = "file://artifacts/api-server/uploads/citaonica/ismail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "oHfmK3zbGXFUDcNUdQV4A"
+uri = "file://artifacts/api-server/uploads/citaonica/musa.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "FzcjfPC7bec2FJQPf6UKc"
+uri = "file://artifacts/api-server/uploads/citaonica/jusuf.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ONzCOStWHSNe3a08NT5hO"
+uri = "file://artifacts/api-server/uploads/citaonica/isa.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "iEmOgXSNzcIaQgl3qvAdB"
+uri = "file://artifacts/api-server/uploads/citaonica/davud.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "DYdBcLWtj9r5ZvQttAIVE"
+uri = "file://artifacts/api-server/uploads/citaonica/sulejman.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "JSOOQA9s1usVnxGoQPOZi"
+uri = "file://artifacts/api-server/uploads/citaonica/muhammed-1-djetinjstvo.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "DuxXCbiJh5M4tSCaXb-lc"
+uri = "file://artifacts/api-server/uploads/citaonica/muhammed-2-poslanstvo-do-hidzre.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "6F7rBMd1cwmczwZjyq5bH"
+uri = "file://artifacts/api-server/uploads/citaonica/muhammed-3-medinski-period.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
