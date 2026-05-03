@@ -182,10 +182,9 @@ router.get("/kvizovi", async (req, res) => {
       res.json([]);
       return;
     }
-    // pitanjaCount: za migrirane kvizove pravi broj iz join tabele,
-    // za legacy kvizove fallback na length JSONB-a. Frontend (kvizovi.tsx)
-    // koristi ovo polje za prikaz "X pitanja" jer JSONB može biti prazan
-    // nakon migracije ka banci.
+    // pitanjaCount: MAX(JSONB length, banka count). Razlog: read path servira
+    // sva JSONB pitanja (uključujući interaktivna markWords/dragDrop/reorder/truefalse
+    // koja banka ne sadrži), pa kartica mora da pokaže pravi broj koji učenik vidi.
     const result = await db.select({
       id: kvizoviTable.id,
       nivo: kvizoviTable.nivo,
@@ -198,7 +197,10 @@ router.get("/kvizovi", async (req, res) => {
       lekcijaId: kvizoviTable.lekcijaId,
       opis: kvizoviTable.opis,
       isPublished: kvizoviTable.isPublished,
-      pitanjaCount: sql<number>`(SELECT COUNT(*)::int FROM "kviz_pitanja" WHERE "kviz_pitanja"."kviz_id" = "kvizovi"."id")`,
+      pitanjaCount: sql<number>`GREATEST(
+        (SELECT COUNT(*)::int FROM "kviz_pitanja" WHERE "kviz_pitanja"."kviz_id" = "kvizovi"."id"),
+        CASE WHEN jsonb_typeof("kvizovi"."pitanja") = 'array' THEN jsonb_array_length("kvizovi"."pitanja") ELSE 0 END
+      )`,
     }).from(kvizoviTable).orderBy(asc(kvizoviTable.nivo), asc(kvizoviTable.id));
 
     const filtered = result.filter(k => {
