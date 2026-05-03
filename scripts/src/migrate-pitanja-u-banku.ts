@@ -28,7 +28,22 @@ type LegacyPitanje = {
   type?: string;
   // reorder
   items?: { text: string; order: number }[];
+  // dragDrop
+  template?: string[];
+  words?: string[];
+  correct?: string[];
+  // markWords
+  text?: string;
+  incorrect?: string[];
 };
+
+type Meta = {
+  template?: string[];
+  words?: string[];
+  correct?: string[];
+  text?: string;
+  incorrect?: string[];
+} | null;
 
 function normalize(s: string): string {
   return s.trim().replace(/\s+/g, " ");
@@ -74,11 +89,12 @@ async function main() {
       const tipRaw = (p.type ?? "").toLowerCase();
 
       // Pripremi vrijednosti za insert — različito po tipu
-      let vrsta: "single" | "multiple" | "truefalse" | "reorder";
+      let vrsta: "single" | "multiple" | "truefalse" | "reorder" | "dragDrop" | "markWords";
       let opcije: string[];
       let correctIndex = 0;
       let correctIndexes: number[] | null = null;
       let correctOrder: number[] | null = null;
+      let meta: Meta = null;
 
       if (tipRaw === "reorder") {
         // reorder: items=[{text, order}]. Spremi opcije u redoslijedu kako su u
@@ -102,9 +118,35 @@ async function main() {
         vrsta = "truefalse";
         opcije = ["Da", "Ne"];
         correctIndex = idx;
-      } else if (tipRaw === "markwords" || tipRaw === "dragdrop") {
-        // markWords i dragDrop ostaju samo u JSONB-u — banka ih ne podržava
-        continue;
+      } else if (tipRaw === "dragdrop") {
+        // dragDrop: template (sa "DROP"), words, correct (slijed za DROP slotove)
+        const template = Array.isArray(p.template) ? p.template.map(String) : [];
+        const words = Array.isArray(p.words) ? p.words.map(String) : [];
+        const correct = Array.isArray(p.correct) ? p.correct.map(String) : [];
+        const dropCount = template.filter((t) => t === "DROP").length;
+        if (template.length === 0 || words.length === 0 || dropCount === 0) {
+          console.warn(`  [${kviz.slug}] dragDrop #${i} ima prazan template/words/DROP, preskačem`);
+          continue;
+        }
+        if (correct.length !== dropCount) {
+          console.warn(`  [${kviz.slug}] dragDrop #${i} correct.length=${correct.length} ≠ DROP count=${dropCount}, preskačem`);
+          continue;
+        }
+        vrsta = "dragDrop";
+        opcije = []; // ne koristi se za dragDrop
+        meta = { template, words, correct };
+      } else if (tipRaw === "markwords") {
+        // markWords: text (fallback), words (klikabilne riječi), incorrect (riječi koje treba kliknuti)
+        const words = Array.isArray(p.words) ? p.words.map(String) : [];
+        const incorrect = Array.isArray(p.incorrect) ? p.incorrect.map(String) : [];
+        const text = typeof p.text === "string" ? p.text : "";
+        if (words.length === 0 || incorrect.length === 0) {
+          console.warn(`  [${kviz.slug}] markWords #${i} bez words/incorrect, preskačem`);
+          continue;
+        }
+        vrsta = "markWords";
+        opcije = [];
+        meta = { text, words, incorrect };
       } else {
         // single / multiple / radio / checkbox / nothing → klasično
         if (!Array.isArray(p.options) || p.options.length === 0) {
@@ -139,6 +181,7 @@ async function main() {
           correctIndex,
           correctIndexes,
           correctOrder,
+          meta,
           objasnjenje: p.explanation ?? "",
           slika: p.image ?? null,
           vrsta,
@@ -150,6 +193,7 @@ async function main() {
             correctIndex,
             correctIndexes,
             correctOrder,
+            meta,
             vrsta,
             updatedAt: new Date(),
           },

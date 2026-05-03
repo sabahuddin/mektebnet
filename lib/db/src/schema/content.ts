@@ -48,8 +48,30 @@ export const KVIZ_KATEGORIJE_META: Record<KvizKategorija, { naziv: string; ikona
 //                (1-based) koji govori koja stavka je 1., koja 2., itd.
 //                Primjer: opcije=["A","B","C"], correctOrder=[3,1,2] znači
 //                "A treba biti 3., B 1., C 2.".
-export const PITANJE_VRSTE = ["single", "multiple", "truefalse", "reorder"] as const;
+// - "dragDrop":  "Dopuni..." — šablon sa DROP markerima i bank riječi koje
+//                učenik povlači (klikom) u prazne slotove. Drži se u `meta`:
+//                  { template: string[] (sa "DROP" markerima),
+//                    words:    string[] (pool ponuđenih riječi),
+//                    correct:  string[] (tačan slijed za DROP slotove) }
+//                Polje `opcije` se ne koristi (ostaje []).
+// - "markWords": "Pronađi grešku" — učenik klikne pogrešne riječi u tekstu.
+//                Drži se u `meta`:
+//                  { text:      string   (pun tekst, fallback),
+//                    words:     string[] (klikabilne riječi po redu),
+//                    incorrect: string[] (riječi koje treba kliknuti) }
+//                Polje `opcije` se ne koristi (ostaje []).
+export const PITANJE_VRSTE = ["single", "multiple", "truefalse", "reorder", "dragDrop", "markWords"] as const;
 export type PitanjeVrsta = (typeof PITANJE_VRSTE)[number];
+
+// Tip-specifični meta podaci za dragDrop / markWords pitanja.
+// Stari (single/multiple/truefalse/reorder) tipovi imaju `meta = null`.
+export interface PitanjeMeta {
+  template?: string[];   // dragDrop
+  words?: string[];      // dragDrop + markWords
+  correct?: string[];    // dragDrop
+  text?: string;         // markWords
+  incorrect?: string[];  // markWords
+}
 
 // Ilmihal lessons (3 nivoa)
 export interface LekcijaKvizPitanje {
@@ -136,6 +158,10 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   // Za vrsta='reorder': niz 1-based pozicija koji preslikava `opcije[i]` u
   // tačnu poziciju. Dužina mora biti ista kao `opcije`. Za ostale tipove NULL.
   correctOrder: jsonb("correct_order").$type<number[] | null>(),
+  // Tip-specifični podaci za interaktivne tipove (dragDrop, markWords).
+  // Za standardne single/multiple/truefalse/reorder ostaje NULL.
+  // Vidi `PitanjeMeta` interface za shape.
+  meta: jsonb("meta").$type<PitanjeMeta | null>(),
   objasnjenje: text("objasnjenje").notNull().default(""),
   // URL slike (relativan, npr. /uploads/xyz.png). Renderira se iznad pitanja.
   slika: varchar("slika", { length: 500 }),

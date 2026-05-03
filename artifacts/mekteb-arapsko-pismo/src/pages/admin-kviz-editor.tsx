@@ -36,11 +36,21 @@ interface Kviz {
   isPublished: boolean;
 }
 
+interface PitanjeMeta {
+  template?: string[];
+  words?: string[];
+  correct?: string[];
+  text?: string;
+  incorrect?: string[];
+}
+
 interface KvizPitanjeRow {
   id: number;
   pitanje: string;
   opcije: string[];
   correctIndex: number;
+  vrsta: string;
+  meta: PitanjeMeta | null;
   kategorija: string | null;
   redoslijed: number;
   linkId: number;
@@ -51,8 +61,46 @@ interface PitanjeBanka {
   pitanje: string;
   opcije: string[];
   correctIndex: number;
+  vrsta: string;
+  meta: PitanjeMeta | null;
   kategorija: string | null;
   lekcijaId: number | null;
+}
+
+const VRSTA_LABELS: Record<string, string> = {
+  single: "Jedan tačan",
+  multiple: "Više tačnih",
+  truefalse: "Da/Ne",
+  reorder: "Poredaj",
+  dragDrop: "Dopuni",
+  markWords: "Pronađi grešku",
+};
+
+function PitanjeAnswerPreview({ p }: { p: { vrsta?: string; meta: PitanjeMeta | null; opcije: string[]; correctIndex: number } }) {
+  if (p.vrsta === "dragDrop" && p.meta?.template) {
+    let dropIdx = 0;
+    return (
+      <p className="text-xs text-emerald-700 mt-0.5 line-clamp-1">
+        {p.meta.template.map((t, i) => t === "DROP"
+          ? <span key={i} className="px-1.5 mx-0.5 bg-amber-100 rounded text-amber-800 font-semibold">{p.meta!.correct?.[dropIdx++] || "___"}</span>
+          : <span key={i}>{t} </span>
+        )}
+      </p>
+    );
+  }
+  if (p.vrsta === "markWords" && p.meta?.words) {
+    return (
+      <p className="text-xs text-emerald-700 mt-0.5 line-clamp-1">
+        {p.meta.words.map((w, i) => (
+          <span key={i} className={p.meta!.incorrect?.includes(w) ? "text-red-600 line-through font-semibold mr-1" : "mr-1"}>{w}</span>
+        ))}
+      </p>
+    );
+  }
+  if (p.vrsta === "reorder") {
+    return <p className="text-xs text-emerald-700 mt-0.5 line-clamp-1">✓ {p.opcije.join(" → ")}</p>;
+  }
+  return <p className="text-xs text-emerald-700 mt-0.5">✓ {p.opcije[p.correctIndex] ?? "—"}</p>;
 }
 
 interface PitanjeListResp { total: number; page: number; pageSize: number; rows: PitanjeBanka[]; }
@@ -363,10 +411,13 @@ export default function AdminKvizEditorPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         {p.kategorija && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{KATEGORIJE_LABELS[p.kategorija] || p.kategorija}</span>}
+                        {p.vrsta && p.vrsta !== "single" && (
+                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700">{VRSTA_LABELS[p.vrsta] || p.vrsta}</span>
+                        )}
                         <span className="text-xs text-muted-foreground">#{p.id}</span>
                       </div>
                       <p className="text-sm font-semibold text-foreground line-clamp-2">{p.pitanje}</p>
-                      <p className="text-xs text-emerald-700 mt-0.5">✓ {p.opcije[p.correctIndex]}</p>
+                      <PitanjeAnswerPreview p={p} />
                     </div>
                     <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => setMoveTarget(p)} className="p-2 rounded-lg hover:bg-blue-50 text-muted-foreground hover:text-blue-600" title="Premjesti u drugi kviz">
@@ -501,10 +552,13 @@ function DodajIzBankeModal({
                       onChange={() => togglePick(p.id)} className="mt-1 w-4 h-4 accent-amber-600" />
                     <div className="flex-1 min-w-0">
                       {p.kategorija && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 mr-1">{KATEGORIJE_LABELS[p.kategorija] || p.kategorija}</span>}
+                      {p.vrsta && p.vrsta !== "single" && (
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 mr-1">{VRSTA_LABELS[p.vrsta] || p.vrsta}</span>
+                      )}
                       <span className="text-xs text-muted-foreground">#{p.id}</span>
                       {exists && <span className="text-xs text-muted-foreground italic ml-2">(već u kvizu)</span>}
                       <p className="text-sm font-semibold mt-0.5">{p.pitanje}</p>
-                      <p className="text-xs text-emerald-700">✓ {p.opcije[p.correctIndex]}</p>
+                      <PitanjeAnswerPreview p={p} />
                     </div>
                   </label>
                 );

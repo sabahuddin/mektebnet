@@ -1477,13 +1477,18 @@ router.get("/banka-pitanja/:id/usage", async (req, res) => {
 
 function normalizePitanjeBody(body: any) {
   const pitanje = String(body?.pitanje || "").trim();
-  const allowed = ["single", "multiple", "truefalse", "reorder"];
-  const vrsta = (allowed.includes(body?.vrsta) ? body.vrsta : "single") as "single" | "multiple" | "truefalse" | "reorder";
+  const allowed = ["single", "multiple", "truefalse", "reorder", "dragDrop", "markWords"];
+  const vrsta = (allowed.includes(body?.vrsta) ? body.vrsta : "single") as
+    "single" | "multiple" | "truefalse" | "reorder" | "dragDrop" | "markWords";
 
   let opcije: string[] = Array.isArray(body?.opcije) ? body.opcije.map((o: any) => String(o)) : [];
   let correctIndex = 0;
   let correctIndexes: number[] | null = null;
   let correctOrder: number[] | null = null;
+  let meta: {
+    template?: string[]; words?: string[]; correct?: string[];
+    text?: string; incorrect?: string[];
+  } | null = null;
 
   if (vrsta === "truefalse") {
     opcije = ["Da", "Ne"];
@@ -1502,6 +1507,24 @@ function normalizePitanjeBody(body: any) {
         .sort((a, b) => a - b) as number[];
     }
     correctIndex = correctIndexes && correctIndexes.length > 0 ? correctIndexes[0]! : 0;
+  } else if (vrsta === "dragDrop") {
+    // dragDrop ne koristi opcije/correctIndex — sve je u meta
+    opcije = [];
+    const m = body?.meta || {};
+    meta = {
+      template: Array.isArray(m.template) ? m.template.map((t: any) => String(t)) : [],
+      words: Array.isArray(m.words) ? m.words.map((w: any) => String(w)) : [],
+      correct: Array.isArray(m.correct) ? m.correct.map((w: any) => String(w)) : [],
+    };
+  } else if (vrsta === "markWords") {
+    // markWords ne koristi opcije/correctIndex — sve je u meta
+    opcije = [];
+    const m = body?.meta || {};
+    meta = {
+      text: typeof m.text === "string" ? m.text : "",
+      words: Array.isArray(m.words) ? m.words.map((w: any) => String(w)) : [],
+      incorrect: Array.isArray(m.incorrect) ? m.incorrect.map((w: any) => String(w)) : [],
+    };
   } else {
     correctIndex = Math.max(0, Math.min(Math.max(0, opcije.length - 1), parseInt(body?.correctIndex ?? 0) || 0));
   }
@@ -1511,13 +1534,35 @@ function normalizePitanjeBody(body: any) {
   const kategorija = body?.kategorija ? String(body.kategorija) : null;
   const lekcijaId = body?.lekcijaId ? parseInt(body.lekcijaId) || null : null;
   const tezina = body?.tezina ? Math.max(1, Math.min(3, parseInt(body.tezina) || 1)) : 1;
-  return { pitanje, opcije, correctIndex, correctIndexes, correctOrder, objasnjenje, slika, vrsta, kategorija, lekcijaId, tezina };
+  return { pitanje, opcije, correctIndex, correctIndexes, correctOrder, meta, objasnjenje, slika, vrsta, kategorija, lekcijaId, tezina };
 }
 
 function validatePitanjeData(d: ReturnType<typeof normalizePitanjeBody>): string | null {
   if (!d.pitanje) return "Tekst pitanja je obavezan";
   if (d.vrsta === "truefalse") {
     return null; // opcije su uvijek ["Da","Ne"]
+  }
+  if (d.vrsta === "dragDrop") {
+    const m = d.meta || {};
+    const template = Array.isArray(m.template) ? m.template : [];
+    const words = Array.isArray(m.words) ? m.words : [];
+    const correct = Array.isArray(m.correct) ? m.correct : [];
+    const dropCount = template.filter((t) => t === "DROP").length;
+    if (template.length === 0) return "Šablon (template) je obavezan";
+    if (dropCount === 0) return "Šablon mora imati barem jednu prazninu (DROP)";
+    if (words.length < dropCount) return "Pool riječi mora imati minimum onoliko riječi koliko ima praznina";
+    if (correct.length !== dropCount) return `Tačan slijed mora imati ${dropCount} riječi (po jednu za svaku prazninu)`;
+    if (correct.some((c) => !words.includes(c))) return "Sve tačne riječi moraju biti u pool-u";
+    return null;
+  }
+  if (d.vrsta === "markWords") {
+    const m = d.meta || {};
+    const words = Array.isArray(m.words) ? m.words : [];
+    const incorrect = Array.isArray(m.incorrect) ? m.incorrect : [];
+    if (words.length < 2) return "Minimum 2 riječi u tekstu";
+    if (incorrect.length === 0) return "Označi minimum 1 pogrešnu riječ";
+    if (incorrect.some((w) => !words.includes(w))) return "Sve pogrešne riječi moraju biti u tekstu";
+    return null;
   }
   if (d.opcije.length < 2) return "Minimum 2 opcije";
   if (d.opcije.some((o) => !o.trim())) return "Sve opcije moraju imati tekst";
@@ -1604,6 +1649,8 @@ router.get("/kvizovi/:id/pitanja", async (req, res) => {
         pitanje: pitanjaBankaTable.pitanje,
         opcije: pitanjaBankaTable.opcije,
         correctIndex: pitanjaBankaTable.correctIndex,
+        vrsta: pitanjaBankaTable.vrsta,
+        meta: pitanjaBankaTable.meta,
         kategorija: pitanjaBankaTable.kategorija,
         redoslijed: kvizPitanjaTable.redoslijed,
         linkId: kvizPitanjaTable.id,

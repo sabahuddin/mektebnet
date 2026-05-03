@@ -247,6 +247,7 @@ router.get("/kvizovi/:slug", async (req, res) => {
         correctIndex: pitanjaBankaTable.correctIndex,
         correctIndexes: pitanjaBankaTable.correctIndexes,
         correctOrder: pitanjaBankaTable.correctOrder,
+        meta: pitanjaBankaTable.meta,
         vrsta: pitanjaBankaTable.vrsta,
         objasnjenje: pitanjaBankaTable.objasnjenje,
         slika: pitanjaBankaTable.slika,
@@ -279,6 +280,28 @@ router.get("/kvizovi/:slug", async (req, res) => {
         const opts = opcije.length === 2 ? opcije : ["Da", "Ne"];
         const idx = Math.min(Math.max(0, p.correctIndex ?? 0), 1);
         return { ...base, type: "truefalse", options: opts, answer: opts[idx] };
+      }
+
+      if (p.vrsta === "dragDrop") {
+        const m = (p.meta ?? {}) as { template?: string[]; words?: string[]; correct?: string[] };
+        return {
+          ...base,
+          type: "dragDrop",
+          template: Array.isArray(m.template) ? m.template : [],
+          words: Array.isArray(m.words) ? m.words : [],
+          correct: Array.isArray(m.correct) ? m.correct : [],
+        };
+      }
+
+      if (p.vrsta === "markWords") {
+        const m = (p.meta ?? {}) as { text?: string; words?: string[]; incorrect?: string[] };
+        return {
+          ...base,
+          type: "markWords",
+          text: typeof m.text === "string" ? m.text : "",
+          words: Array.isArray(m.words) ? m.words : [],
+          incorrect: Array.isArray(m.incorrect) ? m.incorrect : [],
+        };
       }
 
       // single / multiple

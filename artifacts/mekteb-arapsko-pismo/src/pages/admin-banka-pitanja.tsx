@@ -18,6 +18,14 @@ import {
 //   PUT    /admin/banka-pitanja/:id
 //   DELETE /admin/banka-pitanja/:id  (CASCADE briše iz svih kvizova)
 
+interface PitanjeMeta {
+  template?: string[];
+  words?: string[];
+  correct?: string[];
+  text?: string;
+  incorrect?: string[];
+}
+
 interface PitanjeBanka {
   id: number;
   pitanje: string;
@@ -25,6 +33,7 @@ interface PitanjeBanka {
   correctIndex: number;
   correctIndexes: number[] | null;
   correctOrder: number[] | null;
+  meta: PitanjeMeta | null;
   objasnjenje: string;
   slika: string | null;
   vrsta: string;
@@ -40,7 +49,12 @@ const VRSTA_LABELS: Record<string, string> = {
   multiple: "Više tačnih odgovora",
   truefalse: "Da / Ne",
   reorder: "Poredaj redom",
+  dragDrop: "Dopuni (drag & drop)",
+  markWords: "Pronađi grešku",
 };
+
+type Vrsta = "single" | "multiple" | "truefalse" | "reorder" | "dragDrop" | "markWords";
+const ALL_VRSTE: Vrsta[] = ["single", "multiple", "truefalse", "reorder", "dragDrop", "markWords"];
 
 interface PitanjeListResp {
   total: number;
@@ -84,9 +98,16 @@ function emptyForm() {
     correctIndex: 0,
     correctIndexes: [] as number[],
     correctOrder: [] as number[],
+    // dragDrop
+    template: [] as string[],     // npr. ["Tekst", "DROP", "još teksta", "DROP"]
+    words: [] as string[],        // pool riječi
+    correct: [] as string[],      // tačan slijed za DROP slotove
+    // markWords
+    text: "",                     // pun tekst (auto-split u words)
+    incorrect: [] as string[],    // riječi koje treba kliknuti
     objasnjenje: "",
     slika: "",
-    vrsta: "single" as "single" | "multiple" | "truefalse" | "reorder",
+    vrsta: "single" as Vrsta,
     kategorija: "",
     lekcijaId: "" as string | number,
     tezina: 1,
@@ -168,22 +189,31 @@ export default function AdminBankaPitanjaPage() {
 
   const startEdit = (p: PitanjeBanka) => {
     setEditId(p.id);
-    const vrsta = (["single", "multiple", "truefalse", "reorder"].includes(p.vrsta) ? p.vrsta : "single") as ReturnType<typeof emptyForm>["vrsta"];
+    const vrsta = (ALL_VRSTE.includes(p.vrsta as Vrsta) ? p.vrsta : "single") as Vrsta;
+    const isInteractive = vrsta === "dragDrop" || vrsta === "markWords";
     const opcije = vrsta === "truefalse"
       ? ["Da", "Ne"]
-      : (p.opcije.length >= 2 ? [...p.opcije] : [...p.opcije, "", ""].slice(0, Math.max(4, p.opcije.length)));
+      : isInteractive
+        ? []
+        : (p.opcije.length >= 2 ? [...p.opcije] : [...p.opcije, "", ""].slice(0, Math.max(4, p.opcije.length)));
     const correctOrder = vrsta === "reorder" && Array.isArray(p.correctOrder) && p.correctOrder.length === opcije.length
       ? [...p.correctOrder]
       : opcije.map((_, i) => i + 1);
     const correctIndexes = vrsta === "multiple" && Array.isArray(p.correctIndexes) && p.correctIndexes.length > 0
       ? [...p.correctIndexes]
       : [];
+    const m = (p.meta || {}) as PitanjeMeta;
     setForm({
       pitanje: p.pitanje,
       opcije,
       correctIndex: p.correctIndex,
       correctIndexes,
       correctOrder,
+      template: Array.isArray(m.template) ? [...m.template] : [],
+      words: Array.isArray(m.words) ? [...m.words] : [],
+      correct: Array.isArray(m.correct) ? [...m.correct] : [],
+      text: typeof m.text === "string" ? m.text : "",
+      incorrect: Array.isArray(m.incorrect) ? [...m.incorrect] : [],
       objasnjenje: p.objasnjenje,
       slika: p.slika || "",
       vrsta,
@@ -224,8 +254,31 @@ export default function AdminBankaPitanjaPage() {
     let correctIndexOut = 0;
     let correctIndexesOut: number[] | null = null;
     let correctOrderOut: number[] | null = null;
+    let metaOut: PitanjeMeta | null = null;
 
-    if (form.vrsta === "truefalse") {
+    if (form.vrsta === "dragDrop") {
+      const dropCount = form.template.filter(t => t === "DROP").length;
+      if (form.template.length === 0) { toast({ title: "Greška", description: "Šablon je prazan", variant: "destructive" }); return; }
+      if (dropCount === 0) { toast({ title: "Greška", description: "Šablon mora imati barem jednu prazninu", variant: "destructive" }); return; }
+      const cleanWords = form.words.map(w => w.trim()).filter(w => w);
+      const cleanCorrect = form.correct.map(w => w.trim());
+      if (cleanWords.length < dropCount) { toast({ title: "Greška", description: `Trebaš minimum ${dropCount} riječi u poolu`, variant: "destructive" }); return; }
+      if (cleanCorrect.length !== dropCount || cleanCorrect.some(c => !c)) {
+        toast({ title: "Greška", description: `Označi tačnu riječ za svaku od ${dropCount} praznina`, variant: "destructive" }); return;
+      }
+      if (cleanCorrect.some(c => !cleanWords.includes(c))) {
+        toast({ title: "Greška", description: "Sve tačne riječi moraju biti u poolu", variant: "destructive" }); return;
+      }
+      opcijeOut = [];
+      metaOut = { template: form.template, words: cleanWords, correct: cleanCorrect };
+    } else if (form.vrsta === "markWords") {
+      const cleanWords = form.words.map(w => w.trim()).filter(w => w);
+      const cleanIncorrect = form.incorrect.filter(w => cleanWords.includes(w));
+      if (cleanWords.length < 2) { toast({ title: "Greška", description: "Tekst mora imati minimum 2 riječi", variant: "destructive" }); return; }
+      if (cleanIncorrect.length === 0) { toast({ title: "Greška", description: "Označi minimum 1 pogrešnu riječ", variant: "destructive" }); return; }
+      opcijeOut = [];
+      metaOut = { text: form.text || cleanWords.join(" "), words: cleanWords, incorrect: cleanIncorrect };
+    } else if (form.vrsta === "truefalse") {
       opcijeOut = ["Da", "Ne"];
       correctIndexOut = form.correctIndex === 1 ? 1 : 0;
     } else if (form.vrsta === "reorder") {
@@ -280,6 +333,7 @@ export default function AdminBankaPitanjaPage() {
         correctIndex: correctIndexOut,
         correctIndexes: correctIndexesOut,
         correctOrder: correctOrderOut,
+        meta: metaOut,
         objasnjenje: form.objasnjenje.trim(),
         slika: form.slika.trim() || null,
         vrsta: form.vrsta,
@@ -430,11 +484,29 @@ export default function AdminBankaPitanjaPage() {
                         </div>
                         <p className="text-base font-semibold text-foreground leading-snug">{p.pitanje}</p>
                         <div className="text-sm text-muted-foreground mt-1">
-                          {p.opcije.map((o, i) => (
-                            <span key={i} className={i === p.correctIndex ? "text-emerald-700 font-semibold" : ""}>
-                              {o}{i < p.opcije.length - 1 ? " · " : ""}
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold mr-2">
+                            {VRSTA_LABELS[p.vrsta] || p.vrsta}
+                          </span>
+                          {p.vrsta === "dragDrop" && p.meta?.template ? (
+                            <span>
+                              {p.meta.template.map((t, i) => t === "DROP"
+                                ? <span key={i} className="inline-block px-2 mx-0.5 bg-amber-100 rounded text-amber-700 font-semibold">{p.meta!.correct?.[p.meta!.template!.slice(0, i).filter(x => x === "DROP").length] || "___"}</span>
+                                : <span key={i}>{t} </span>
+                              )}
                             </span>
-                          ))}
+                          ) : p.vrsta === "markWords" && p.meta?.words ? (
+                            <span>
+                              {p.meta.words.map((w, i) => (
+                                <span key={i} className={p.meta!.incorrect?.includes(w) ? "text-red-600 line-through font-semibold mr-1" : "mr-1"}>{w}</span>
+                              ))}
+                            </span>
+                          ) : (
+                            p.opcije.map((o, i) => (
+                              <span key={i} className={i === p.correctIndex ? "text-emerald-700 font-semibold" : ""}>
+                                {o}{i < p.opcije.length - 1 ? " · " : ""}
+                              </span>
+                            ))
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -549,7 +621,7 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
           <select
             value={form.vrsta}
             onChange={e => {
-              const v = e.target.value as ReturnType<typeof emptyForm>["vrsta"];
+              const v = e.target.value as Vrsta;
               setForm(prev => {
                 const base = { ...prev, vrsta: v };
                 if (v === "truefalse") {
@@ -562,6 +634,24 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
                 if (v === "multiple") {
                   return { ...base, correctIndexes: prev.correctIndex >= 0 ? [prev.correctIndex] : [], correctOrder: [] };
                 }
+                if (v === "dragDrop") {
+                  return {
+                    ...base,
+                    opcije: [],
+                    template: prev.template.length > 0 ? prev.template : ["", "DROP"],
+                    words: prev.words.length > 0 ? prev.words : ["", ""],
+                    correct: prev.correct.length > 0 ? prev.correct : [""],
+                  };
+                }
+                if (v === "markWords") {
+                  return {
+                    ...base,
+                    opcije: [],
+                    text: prev.text || "",
+                    words: prev.words.length > 0 ? prev.words : [],
+                    incorrect: prev.incorrect || [],
+                  };
+                }
                 return { ...base, correctIndexes: [], correctOrder: [] };
               });
             }}
@@ -571,6 +661,8 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
             <option value="multiple">Više tačnih odgovora</option>
             <option value="truefalse">Da / Ne</option>
             <option value="reorder">Poredaj redom</option>
+            <option value="dragDrop">Dopuni (drag & drop)</option>
+            <option value="markWords">Pronađi grešku</option>
           </select>
         </div>
 
@@ -642,6 +734,10 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
             </button>
             <p className="text-xs text-muted-foreground mt-2">Brojevi moraju činiti permutaciju 1..{form.opcije.length} (svaki broj tačno jednom).</p>
           </div>
+        ) : form.vrsta === "dragDrop" ? (
+          <DragDropEditor form={form} setForm={setForm} />
+        ) : form.vrsta === "markWords" ? (
+          <MarkWordsEditor form={form} setForm={setForm} />
         ) : form.vrsta === "multiple" ? (
           <div>
             <label className="block text-base font-semibold text-foreground mb-1">Opcije (označi sve tačne — minimum 2)</label>
@@ -771,6 +867,214 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── DragDropEditor ──────────────────────────────────────────────────────────
+// Šablon = niz dijelova: tekstualni segmenti i "DROP" markeri. Učenik povlači
+// riječ iz `words` poola u svaki DROP. `correct` čuva tačan slijed riječi za
+// DROP slotove (po redu pojavljivanja).
+function DragDropEditor({
+  form, setForm,
+}: {
+  form: ReturnType<typeof emptyForm>;
+  setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof emptyForm>>>;
+}) {
+  const dropCount = form.template.filter(t => t === "DROP").length;
+
+  // Drži correct poravnatim sa dropCount
+  const ensureCorrect = (n: number, prev: string[]) => {
+    const next = prev.slice(0, n);
+    while (next.length < n) next.push("");
+    return next;
+  };
+
+  const updatePart = (i: number, val: string) =>
+    setForm(prev => ({ ...prev, template: prev.template.map((t, j) => j === i ? val : t) }));
+
+  const removePart = (i: number) =>
+    setForm(prev => {
+      const nextTemplate = prev.template.filter((_, j) => j !== i);
+      const nextDropCount = nextTemplate.filter(t => t === "DROP").length;
+      return { ...prev, template: nextTemplate, correct: ensureCorrect(nextDropCount, prev.correct) };
+    });
+
+  const addText = () => setForm(prev => ({ ...prev, template: [...prev.template, ""] }));
+  const addDrop = () => setForm(prev => ({
+    ...prev,
+    template: [...prev.template, "DROP"],
+    correct: ensureCorrect(prev.template.filter(t => t === "DROP").length + 1, prev.correct),
+  }));
+
+  const updateWord = (i: number, val: string) =>
+    setForm(prev => {
+      const oldVal = prev.words[i];
+      const next = prev.words.map((w, j) => j === i ? val : w);
+      // Ako se mijenja riječ koja je odabrana kao tačan odgovor — ažuriraj correct
+      const nextCorrect = prev.correct.map(c => c === oldVal ? val : c);
+      return { ...prev, words: next, correct: nextCorrect };
+    });
+  const removeWord = (i: number) =>
+    setForm(prev => {
+      const removed = prev.words[i];
+      return {
+        ...prev,
+        words: prev.words.filter((_, j) => j !== i),
+        correct: prev.correct.map(c => c === removed ? "" : c),
+      };
+    });
+  const addWord = () => setForm(prev => ({ ...prev, words: [...prev.words, ""] }));
+
+  const setCorrectAt = (slot: number, val: string) =>
+    setForm(prev => ({ ...prev, correct: ensureCorrect(dropCount, prev.correct).map((c, j) => j === slot ? val : c) }));
+
+  return (
+    <div className="space-y-4 bg-amber-50/40 border border-amber-200 rounded-xl p-3">
+      <div>
+        <label className="block text-base font-semibold text-foreground mb-1">Šablon (tekst + praznine)</label>
+        <p className="text-xs text-muted-foreground mb-2">Razdijeli rečenicu u dijelove. "DROP" je prazna rupa koju učenik popunjava.</p>
+        <div className="space-y-2">
+          {form.template.map((part, i) => (
+            <div key={i} className="flex items-center gap-2">
+              {part === "DROP" ? (
+                <div className="flex-1 px-3 py-2 border-2 border-dashed border-amber-400 bg-amber-100 rounded-lg text-amber-800 font-semibold text-base">
+                  ___ praznina #{form.template.slice(0, i + 1).filter(t => t === "DROP").length}
+                </div>
+              ) : (
+                <input
+                  value={part}
+                  onChange={e => updatePart(i, e.target.value)}
+                  placeholder="Tekstualni dio (npr. 'Gusulskih šarta ima')"
+                  className="flex-1 px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              )}
+              <button onClick={() => removePart(i)} className="p-2 text-muted-foreground hover:text-red-500" title="Ukloni">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-2">
+          <button onClick={addText} className="text-sm text-amber-700 font-semibold hover:underline">+ Dodaj tekst</button>
+          <button onClick={addDrop} className="text-sm text-amber-700 font-semibold hover:underline">+ Dodaj prazninu</button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-base font-semibold text-foreground mb-1">Pool riječi (sve ponuđene, uključujući distrakcije)</label>
+        <div className="space-y-2">
+          {form.words.map((w, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={w}
+                onChange={e => updateWord(i, e.target.value)}
+                placeholder={`Riječ ${i + 1}`}
+                className="flex-1 px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              <button onClick={() => removeWord(i)} className="p-2 text-muted-foreground hover:text-red-500"><X className="w-4 h-4" /></button>
+            </div>
+          ))}
+        </div>
+        <button onClick={addWord} className="mt-2 text-sm text-amber-700 font-semibold hover:underline">+ Dodaj riječ</button>
+      </div>
+
+      {dropCount > 0 && (
+        <div>
+          <label className="block text-base font-semibold text-foreground mb-1">Tačan slijed za praznine</label>
+          <p className="text-xs text-muted-foreground mb-2">Za svaku prazninu odaberi tačnu riječ iz poola.</p>
+          <div className="space-y-2">
+            {Array.from({ length: dropCount }).map((_, slot) => (
+              <div key={slot} className="flex items-center gap-2">
+                <span className="text-sm font-bold text-amber-700 min-w-[80px]">Praznina #{slot + 1}</span>
+                <select
+                  value={form.correct[slot] || ""}
+                  onChange={e => setCorrectAt(slot, e.target.value)}
+                  className="flex-1 px-3 py-2 border border-border rounded-lg text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="">— odaberi —</option>
+                  {form.words.filter(w => w.trim()).map((w, j) => (
+                    <option key={j} value={w}>{w}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── MarkWordsEditor ─────────────────────────────────────────────────────────
+// Učenik dobija tekst s podijeljenim riječima i klikom označava one koje su
+// pogrešne. `text` se splituje po razmaku u `words`. `incorrect` su klikabilne.
+function MarkWordsEditor({
+  form, setForm,
+}: {
+  form: ReturnType<typeof emptyForm>;
+  setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof emptyForm>>>;
+}) {
+  const setText = (txt: string) => {
+    const newWords = txt.split(/\s+/).filter(w => w.length > 0);
+    setForm(prev => ({
+      ...prev,
+      text: txt,
+      words: newWords,
+      // zadrži samo one incorrect koji još postoje u novim words
+      incorrect: prev.incorrect.filter(w => newWords.includes(w)),
+    }));
+  };
+
+  const toggleIncorrect = (w: string) => {
+    setForm(prev => ({
+      ...prev,
+      incorrect: prev.incorrect.includes(w)
+        ? prev.incorrect.filter(x => x !== w)
+        : [...prev.incorrect, w],
+    }));
+  };
+
+  return (
+    <div className="space-y-4 bg-amber-50/40 border border-amber-200 rounded-xl p-3">
+      <div>
+        <label className="block text-base font-semibold text-foreground mb-1">Tekst (riječi razdvojene razmakom)</label>
+        <textarea
+          value={form.text}
+          onChange={e => setText(e.target.value)}
+          rows={3}
+          placeholder="Npr.: Allah je jedan i nema mu para u vlasti."
+          className="w-full px-3 py-2 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 resize-y"
+        />
+      </div>
+      {form.words.length > 0 && (
+        <div>
+          <label className="block text-base font-semibold text-foreground mb-1">Klikni riječi koje su POGREŠNE (one koje učenik treba pronaći)</label>
+          <div className="flex flex-wrap gap-2 p-3 bg-white rounded-lg border border-border">
+            {form.words.map((w, i) => {
+              const isIncorrect = form.incorrect.includes(w);
+              return (
+                <button
+                  key={i}
+                  onClick={() => toggleIncorrect(w)}
+                  className={`px-2.5 py-1.5 rounded-lg font-semibold text-base transition ${
+                    isIncorrect
+                      ? "bg-red-100 text-red-700 border-2 border-red-400 line-through"
+                      : "bg-slate-100 text-slate-700 border-2 border-transparent hover:bg-slate-200"
+                  }`}
+                >
+                  {w}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {form.incorrect.length === 0
+              ? "Nijedna riječ nije označena kao pogrešna."
+              : `Označeno: ${form.incorrect.length} pogrešnih riječi.`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
