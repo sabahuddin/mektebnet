@@ -366,6 +366,30 @@ uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-prazno.
 type = "image"
 title = "bee gentle empty state"
 
+[[generated]]
+id = "kgTAahVOD_shO7iXPkTUK"
+uri = "file://attached_assets/bee-poses/pcela-klanja.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "dvQjRlYa5imBoUJl13gQ0"
+uri = "file://attached_assets/bee-poses/pcela-cita-kuran.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Biq6s-rqH84nrt5e1kD9L"
+uri = "file://attached_assets/bee-poses/pcela-razmislja.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ZZPjGbhulQQhtxswCYO2_"
+uri = "file://attached_assets/bee-poses/pcela-hoda.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"

@@ -17,7 +17,10 @@ interface ModuleCard {
   text: string;
   count: string;
   comingSoon?: boolean;
+  beePose?: string;
 }
+
+const POSES_BASE = `${import.meta.env.BASE_URL}images/maskota/poses`;
 
 export default function Home() {
   const { user } = useAuth();
@@ -37,6 +40,8 @@ export default function Home() {
       border: "border-emerald-200",
       text: "text-emerald-700",
       count: `231 ${t("home.lekcija")}`,
+      beePose: "pcela-klanja.png",
+      beeAlt: "Pčela klanja na seđadi",
     },
     {
       href: "/kvizovi",
@@ -48,6 +53,8 @@ export default function Home() {
       border: "border-amber-200",
       text: "text-amber-700",
       count: `43+ ${t("home.kviza")}`,
+      beePose: "pcela-razmislja.png",
+      beeAlt: "Pčela razmišlja",
     },
     {
       href: "/citaonica",
@@ -59,6 +66,8 @@ export default function Home() {
       border: "border-violet-200",
       text: "text-violet-700",
       count: `14 ${t("home.prica")}`,
+      beePose: "pcela-cita-kuran.png",
+      beeAlt: "Pčela čita Kur'an",
     },
     {
       href: "/igrice",
@@ -70,6 +79,8 @@ export default function Home() {
       border: "border-pink-200",
       text: "text-pink-700",
       count: `7 ${t("nav.igrice").toLowerCase()}`,
+      beePose: "pcela-hoda.png",
+      beeAlt: "Pčela hoda sa torbom",
     },
     {
       href: "/arapsko-pismo",
@@ -151,19 +162,36 @@ export default function Home() {
           // (za onemogućenu Sufara karticu sa USKORO badge-om).
           const cardInner = (
             <div
-              className={`${mod.bg} ${mod.border} border-2 rounded-3xl p-6 transition-all group h-full relative ${
+              className={`${mod.bg} ${mod.border} border-2 rounded-3xl p-6 transition-all group h-full relative overflow-hidden ${
                 mod.comingSoon
                   ? "cursor-not-allowed opacity-75"
                   : "cursor-pointer hover:shadow-lg hover:-translate-y-1 duration-200"
               }`}
               data-testid={`module-card-${mod.href.replace("/", "")}`}
             >
+              {mod.beePose && (
+                <picture>
+                  <source srcSet={`${POSES_BASE}/${mod.beePose.replace(".png", ".webp")}`} type="image/webp" />
+                  <img
+                    src={`${POSES_BASE}/${mod.beePose}`}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                    width={128}
+                    height={128}
+                    className="absolute -bottom-3 -right-2 w-28 md:w-32 h-auto object-contain pointer-events-none select-none opacity-90 group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-300 drop-shadow-md"
+                    data-testid={`module-bee-${mod.href.replace("/", "")}`}
+                  />
+                </picture>
+              )}
               {mod.comingSoon && (
                 <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full shadow-sm border border-amber-500/40 z-10">
                   {t("home.uskoro")}
                 </div>
               )}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-4 relative z-10">
                 <div
                   className={`w-12 h-12 bg-gradient-to-br ${mod.color} rounded-2xl flex items-center justify-center shadow-md ${
                     mod.comingSoon ? "" : "group-hover:scale-110"
@@ -179,10 +207,10 @@ export default function Home() {
                   {mod.count}
                 </div>
               </div>
-              <h3 className={`text-xl font-extrabold ${mod.text} mb-2`}>{mod.label}</h3>
-              <p className="text-muted-foreground text-sm font-medium leading-relaxed mb-4">{mod.desc}</p>
+              <h3 className={`text-xl font-extrabold ${mod.text} mb-2 relative z-10`}>{mod.label}</h3>
+              <p className="text-muted-foreground text-sm font-medium leading-relaxed mb-4 relative z-10 pr-24 md:pr-28">{mod.desc}</p>
               {!mod.comingSoon && (
-                <div className={`flex items-center gap-1 ${mod.text} font-bold text-sm`}>
+                <div className={`flex items-center gap-1 ${mod.text} font-bold text-sm relative z-10`}>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               )}
