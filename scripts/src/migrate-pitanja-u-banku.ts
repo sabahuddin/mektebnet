@@ -49,8 +49,20 @@ function normalize(s: string): string {
   return s.trim().replace(/\s+/g, " ");
 }
 
-async function main() {
-  console.log("[migracija] počinje...");
+export interface MigracijaResult {
+  kvizoviSaPitanjima: number;
+  kvizoviPrazni: number;
+  bankaInserted: number;
+  vezaInserted: number;
+  vezaSkipped: number;
+  ukupnoBanka: number;
+  ukupnoVeza: number;
+}
+
+export async function migratePitanjaUBanku(opts?: { silent?: boolean }): Promise<MigracijaResult> {
+  const log = opts?.silent ? () => {} : (...a: any[]) => console.log(...a);
+  const warn = opts?.silent ? () => {} : (...a: any[]) => console.warn(...a);
+  log("[migracija] počinje...");
 
   const kvizovi = await db
     .select({
@@ -61,9 +73,10 @@ async function main() {
     })
     .from(kvizoviTable);
 
-  console.log(`[migracija] pronađeno ${kvizovi.length} kvizova`);
+  log(`[migracija] pronađeno ${kvizovi.length} kvizova`);
 
   let bankaInserted = 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let bankaSkipped = 0;
   let vezaInserted = 0;
   let vezaSkipped = 0;
@@ -81,7 +94,7 @@ async function main() {
     for (let i = 0; i < pitanja.length; i++) {
       const p = pitanja[i];
       if (!p?.question) {
-        console.warn(`  [${kviz.slug}] preskačem nevažeće pitanje #${i}`);
+        warn(`  [${kviz.slug}] preskačem nevažeće pitanje #${i}`);
         continue;
       }
 
@@ -100,14 +113,14 @@ async function main() {
         // reorder: items=[{text, order}]. Spremi opcije u redoslijedu kako su u
         // seedu (može biti tačan redoslijed već), a correctOrder = order vrijednosti.
         if (!Array.isArray(p.items) || p.items.length < 2) {
-          console.warn(`  [${kviz.slug}] reorder #${i} bez items, preskačem`);
+          warn(`  [${kviz.slug}] reorder #${i} bez items, preskačem`);
           continue;
         }
         vrsta = "reorder";
         opcije = p.items.map((it) => normalize(it.text ?? ""));
         correctOrder = p.items.map((it) => Number(it.order) || 0);
         if (opcije.some((o) => o === "") || correctOrder.some((o) => o <= 0)) {
-          console.warn(`  [${kviz.slug}] reorder #${i} ima prazne stavke ili invalidne order vrijednosti, preskačem`);
+          warn(`  [${kviz.slug}] reorder #${i} ima prazne stavke ili invalidne order vrijednosti, preskačem`);
           continue;
         }
       } else if (tipRaw === "truefalse") {
@@ -125,11 +138,11 @@ async function main() {
         const correct = Array.isArray(p.correct) ? p.correct.map(String) : [];
         const dropCount = template.filter((t) => t === "DROP").length;
         if (template.length === 0 || words.length === 0 || dropCount === 0) {
-          console.warn(`  [${kviz.slug}] dragDrop #${i} ima prazan template/words/DROP, preskačem`);
+          warn(`  [${kviz.slug}] dragDrop #${i} ima prazan template/words/DROP, preskačem`);
           continue;
         }
         if (correct.length !== dropCount) {
-          console.warn(`  [${kviz.slug}] dragDrop #${i} correct.length=${correct.length} ≠ DROP count=${dropCount}, preskačem`);
+          warn(`  [${kviz.slug}] dragDrop #${i} correct.length=${correct.length} ≠ DROP count=${dropCount}, preskačem`);
           continue;
         }
         vrsta = "dragDrop";
@@ -141,7 +154,7 @@ async function main() {
         const incorrect = Array.isArray(p.incorrect) ? p.incorrect.map(String) : [];
         const text = typeof p.text === "string" ? p.text : "";
         if (words.length === 0 || incorrect.length === 0) {
-          console.warn(`  [${kviz.slug}] markWords #${i} bez words/incorrect, preskačem`);
+          warn(`  [${kviz.slug}] markWords #${i} bez words/incorrect, preskačem`);
           continue;
         }
         vrsta = "markWords";
@@ -150,7 +163,7 @@ async function main() {
       } else {
         // single / multiple / radio / checkbox / nothing → klasično
         if (!Array.isArray(p.options) || p.options.length === 0) {
-          console.warn(`  [${kviz.slug}] preskačem nevažeće pitanje #${i}`);
+          warn(`  [${kviz.slug}] preskačem nevažeće pitanje #${i}`);
           continue;
         }
         const answerParts = (p.answer ?? "").includes("|||")
@@ -162,7 +175,7 @@ async function main() {
           if (idx >= 0 && !idxs.includes(idx)) idxs.push(idx);
         }
         if (idxs.length === 0) {
-          console.warn(`  [${kviz.slug}] "${pitanjeText.slice(0, 40)}…" — odgovor "${p.answer}" nije u opcijama, preskačem`);
+          warn(`  [${kviz.slug}] "${pitanjeText.slice(0, 40)}…" — odgovor "${p.answer}" nije u opcijama, preskačem`);
           continue;
         }
         const isMulti = idxs.length > 1;
@@ -202,7 +215,7 @@ async function main() {
 
       // onConflictDoUpdate uvijek vraća red (insert ili update)
       if (inserted.length === 0) {
-        console.warn(`  [${kviz.slug}] FAIL — UPSERT nije vratio red?`);
+        warn(`  [${kviz.slug}] FAIL — UPSERT nije vratio red?`);
         continue;
       }
       const pitanjeId = inserted[0]!.id;
@@ -223,7 +236,7 @@ async function main() {
       else vezaSkipped++;
     }
 
-    console.log(
+    log(
       `  [${kviz.slug}] "${kviz.naslov}" — ${pitanja.length} pitanja obrađeno`
     );
   }
@@ -236,20 +249,35 @@ async function main() {
     .select({ ukupnoVeza: sql<number>`COUNT(*)::int` })
     .from(kvizPitanjaTable);
 
-  console.log("\n[migracija] gotovo!");
-  console.log(`  Kvizovi sa pitanjima: ${kvizoviSaPitanjima}`);
-  console.log(`  Kvizovi prazni:       ${kvizoviPrazni}`);
-  console.log(`  Banka — novo umetnuto: ${bankaInserted}`);
-  console.log(`  Banka — već postojalo (dedup): ${bankaSkipped}`);
-  console.log(`  Veza — novo umetnuto: ${vezaInserted}`);
-  console.log(`  Veza — već postojalo: ${vezaSkipped}`);
-  console.log(`\n  UKUPNO U BANCI: ${ukupnoBanka} jedinstvenih pitanja`);
-  console.log(`  UKUPNO VEZA: ${ukupnoVeza} kviz↔pitanje`);
+  log("\n[migracija] gotovo!");
+  log(`  Kvizovi sa pitanjima: ${kvizoviSaPitanjima}`);
+  log(`  Kvizovi prazni:       ${kvizoviPrazni}`);
+  log(`  Banka — novo umetnuto: ${bankaInserted}`);
+  log(`  Veza — novo umetnuto: ${vezaInserted}`);
+  log(`  Veza — već postojalo: ${vezaSkipped}`);
+  log(`\n  UKUPNO U BANCI: ${ukupnoBanka} jedinstvenih pitanja`);
+  log(`  UKUPNO VEZA: ${ukupnoVeza} kviz↔pitanje`);
 
-  process.exit(0);
+  return {
+    kvizoviSaPitanjima,
+    kvizoviPrazni,
+    bankaInserted,
+    vezaInserted,
+    vezaSkipped,
+    ukupnoBanka: Number(ukupnoBanka),
+    ukupnoVeza: Number(ukupnoVeza),
+  };
 }
 
-main().catch((err) => {
-  console.error("[migracija] GREŠKA:", err);
-  process.exit(1);
-});
+// CLI entry point — pokreni samo kad je fajl direktno izvršen (tsx ./src/migrate-pitanja-u-banku.ts)
+const isCli = typeof process !== "undefined"
+  && Array.isArray(process.argv)
+  && process.argv[1]?.includes("migrate-pitanja-u-banku");
+if (isCli) {
+  migratePitanjaUBanku()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error("[migracija] GREŠKA:", err);
+      process.exit(1);
+    });
+}

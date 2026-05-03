@@ -236,6 +236,26 @@ async function runDataBootstrap() {
     logger.error({ err: gapErr }, "Fill-gaps insert failed");
   }
 
+  // BANKA PITANJA: prebaci sva kvizovska pitanja iz `kvizovi.pitanja` JSONB-a
+  // u centralnu `pitanja_banka` + napravi `kviz_pitanja` veze. Idempotentno
+  // (ON CONFLICT DO NOTHING/UPDATE), pa je sigurno pokretati na svaki start.
+  // Na produkciji prvi put — uvozi cca 2400 pitanja uključujući dragDrop i markWords.
+  try {
+    const { migratePitanjaUBanku } = await import("@workspace/scripts/migrate-pitanja-u-banku");
+    const r = await migratePitanjaUBanku({ silent: true });
+    logger.info(
+      {
+        ukupnoBanka: r.ukupnoBanka,
+        ukupnoVeza: r.ukupnoVeza,
+        novihVeza: r.vezaInserted,
+        kvizova: r.kvizoviSaPitanjima,
+      },
+      "Banka pitanja: migracija iz JSONB-a završena (idempotentno)"
+    );
+  } catch (bankaErr) {
+    logger.error({ err: bankaErr }, "Banka pitanja: migracija iz JSONB-a neuspjela (non-fatal)");
+  }
+
   // DISABLED 2026-04-21: backfillAllPripreme() je STRIPED novi dizajn pripreme
   // (gradient kartica + obojeni ciljevi) na nezaključanim lekcijama i prepisivao
   // ga sa starim dizajnom (table layout) iz pripreme-seed*.ts fajlova.
