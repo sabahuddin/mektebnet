@@ -390,8 +390,13 @@ async function startup() {
     logger.error({ err: e }, "Misije seed import failed");
   }
 
-  // Task #101 — Podsjetnik za misiju: cron koji u 17:00 (Europe/Sarajevo)
-  // šalje push aktivnim učenicima koji još nisu završili današnju daily misiju.
+  try {
+    const { migrateIlmihalContent } = await import("./lib/migrate-ilmihal-content.js");
+    await migrateIlmihalContent();
+  } catch (e) {
+    logger.error({ err: e }, "Ilmihal content migration failed");
+  }
+
   try {
     const { startMissionReminderCron } = await import("./lib/mission-reminder-cron.js");
     startMissionReminderCron();
