@@ -325,6 +325,39 @@ async function runDataBootstrap() {
     logger.error({ err: gapErr }, "Fill-gaps insert failed");
   }
 
+  // RESTORE: vrati content_html iz backup-a od 22. aprila 2026
+  // Samo ako je backup DUŽI od trenutnog sadržaja (ne prepisuje ručne ispravke)
+  try {
+    const fs = await import("fs");
+    const path = await import("path");
+    const backupPath = path.resolve(import.meta.dirname ?? ".", "routes", "restore-backup-20260422.json");
+    if (fs.existsSync(backupPath)) {
+      const backupData = JSON.parse(fs.readFileSync(backupPath, "utf-8")) as Array<{
+        slug: string; nivo: number; content_html: string;
+      }>;
+      const current = await exec<{ slug: string; content_html: string }>(
+        sql`SELECT slug, content_html FROM ilmihal_lekcije`
+      );
+      const currentMap = new Map(current.rows.map(r => [r.slug, r.content_html || ""]));
+      let restored = 0;
+      for (const bak of backupData) {
+        const cur = currentMap.get(bak.slug);
+        if (cur !== undefined && bak.content_html && bak.content_html.length > cur.length) {
+          await exec(sql`
+            UPDATE ilmihal_lekcije SET content_html = ${bak.content_html}
+            WHERE slug = ${bak.slug}
+          `);
+          restored++;
+        }
+      }
+      if (restored > 0) {
+        logger.info({ restored }, "Restore: vratio content_html iz backup-a od 22.04. za lekcije sa kraćim sadržajem");
+      }
+    }
+  } catch (restoreErr) {
+    logger.error({ err: restoreErr }, "Restore backup failed");
+  }
+
   // BANKA PITANJA: prebaci sva kvizovska pitanja iz `kvizovi.pitanja` JSONB-a
   // u centralnu `pitanja_banka` + napravi `kviz_pitanja` veze. Idempotentno
   // (ON CONFLICT DO NOTHING/UPDATE), pa je sigurno pokretati na svaki start.
