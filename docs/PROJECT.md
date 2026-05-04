@@ -164,8 +164,8 @@ lib/
 
 ### Pomoćni
 - `lessons.ts`, `health.ts`, `import-content.ts`
-- `pripreme-seed*.ts`, `pripreme-backfill.ts`, `regenerate-priprema-design.ts`, `full-data-seed.ts`, `rjecnik-seed.ts`
-- Sve auto-skripte koriste `WHERE locked = false` da zaštite ručno verifikovan sadržaj.
+- `pripreme-seed*.ts`, `pripreme-backfill.ts`, `regenerate-priprema-design.ts`, `rjecnik-seed.ts`
+- `full-data-seed.ts` je OBRISAN — sadržaj lekcija se ne čuva u kodu. Produkcija je jedini izvor istine.
 
 ---
 

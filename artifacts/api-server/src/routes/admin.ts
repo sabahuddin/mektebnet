@@ -1104,53 +1104,8 @@ router.post("/ilmihal/lock-by-slug", async (req, res) => {
   }
 });
 
-// POST /api/admin/ilmihal/restore-from-prod-seed
-// Legacy: vrati content_html / naslov / audio / kviz iz seed snapshot-a.
-// MATCH PO SLUG-u. NE dira `nivo` ni `redoslijed`. PRESKAČE sve lekcije gdje je locked = true.
-router.post("/ilmihal/restore-from-prod-seed", async (req, res) => {
-  try {
-    const { dryRun, confirm } = (req.body || {}) as { dryRun?: boolean; confirm?: string };
-    const { FULL_LEKCIJE } = await import("./full-data-seed.js");
-    const REQUIRED_CONFIRM = "RESTORE-228-LESSONS";
-    if (!dryRun && confirm !== REQUIRED_CONFIRM) {
-      return res.status(400).json({
-        error: "Potvrda je obavezna",
-        detail: `Ovaj endpoint može pregaziti sadržaj svih ${FULL_LEKCIJE.length} lekcija (osim zaključanih). Da bi nastavio, pošalji u body-ju: { "confirm": "${REQUIRED_CONFIRM}" }. Za probni run bez izmjena pošalji { "dryRun": true }.`,
-        requiredConfirm: REQUIRED_CONFIRM,
-      });
-    }
-    const existing = await db.select({
-      id: ilmihalLekcijeTable.id,
-      slug: ilmihalLekcijeTable.slug,
-      locked: ilmihalLekcijeTable.locked,
-    }).from(ilmihalLekcijeTable);
-    const bySlug = new Map(existing.map(r => [r.slug, r]));
-    let updated = 0, skippedLocked = 0, notFound: string[] = [];
-    for (const lek of FULL_LEKCIJE) {
-      const row = bySlug.get(lek.slug);
-      if (!row) { notFound.push(lek.slug); continue; }
-      if (row.locked) { skippedLocked++; continue; }
-      if (!dryRun) {
-        await db.update(ilmihalLekcijeTable).set({
-          naslov: lek.naslov,
-          contentHtml: lek.content_html,
-          audioSrc: lek.audio_src,
-          kvizPitanja: lek.kviz_pitanja,
-        }).where(eq(ilmihalLekcijeTable.id, row.id));
-      }
-      updated++;
-    }
-    res.json({
-      success: true, dryRun: !!dryRun,
-      seedTotal: FULL_LEKCIJE.length, dbTotal: existing.length,
-      updated, skippedLocked,
-      notFoundCount: notFound.length, notFound: notFound.slice(0, 20),
-      note: "nivo i redoslijed nisu dirani; samo content_html, naslov, audio_src, kviz_pitanja",
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: "Restore failed", detail: err?.message });
-  }
-});
+// UKLONJENO: restore-from-prod-seed endpoint je obrisan.
+// Produkcija je jedini izvor istine — seed fajlovi su obrisani.
 
 // POST /api/admin/ilmihal/regenerate-priprema-design
 // Parsira stari dizajn pripreme (table layout) i regeneriše u novi dizajn
