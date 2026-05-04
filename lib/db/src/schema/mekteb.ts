@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -81,6 +81,21 @@ export const pretplateTable = pgTable("pretplate", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const obavjestenjaTable = pgTable("obavjestenja", {
+  id: serial("id").primaryKey(),
+  muallimId: integer("muallim_id").notNull(),
+  grupaId: integer("grupa_id"),
+  naslov: varchar("naslov", { length: 200 }).notNull(),
+  sadrzaj: text("sadrzaj").notNull(),
+  slikaUrl: text("slika_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  muallimIdx: index("obavjestenja_muallim_idx").on(t.muallimId),
+  grupaIdx: index("obavjestenja_grupa_idx").on(t.grupaId),
+  createdIdx: index("obavjestenja_created_idx").on(t.createdAt),
+}));
+
 export const insertMektebSchema = createInsertSchema(mektebiTable).omit({ id: true, createdAt: true });
 export const insertGrupaSchema = createInsertSchema(grupeTable).omit({ id: true, createdAt: true });
 export const insertUcenikProfilSchema = createInsertSchema(ucenikProfiliTable).omit({ createdAt: true, archivedAt: true });
@@ -89,3 +104,4 @@ export type Mekteb = typeof mektebiTable.$inferSelect;
 export type Grupa = typeof grupeTable.$inferSelect;
 export type UcenikProfil = typeof ucenikProfiliTable.$inferSelect;
 export type RoditeljUcenik = typeof roditeljUcenikTable.$inferSelect;
+export type Obavjestenje = typeof obavjestenjaTable.$inferSelect;

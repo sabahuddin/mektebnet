@@ -8,8 +8,10 @@ import {
   Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
-  Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles
+  Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
+  Heart
 } from "lucide-react";
+import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -146,7 +148,7 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace" | "izvjestaji" | "h5p" | "h5p-vodic" | "profil";
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "h5p-vodic" | "profil";
   const [activeTab, setActiveTab] = useState<TabId>("pregled");
 
   // Otvara odgovarajući tab kad URL sadrži ?tab=… (npr. iz Panel dropdown
@@ -156,7 +158,7 @@ export default function MuallimPanel() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab");
-    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","zadace","izvjestaji","h5p","h5p-vodic","profil"].includes(t)) {
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","zadace","izvjestaji","roditelji","h5p","h5p-vodic","profil"].includes(t)) {
       setActiveTab(t as TabId);
     }
   }, [locationPath]);
@@ -514,6 +516,7 @@ export default function MuallimPanel() {
     { id: "statistika", label: "Statistika", icon: TrendingUp },
     { id: "zadace", label: "Zadaće", icon: ClipboardList },
     { id: "izvjestaji", label: "Izvještaji", icon: FileText },
+    { id: "roditelji", label: "Roditelji", icon: Heart },
     { id: "h5p", label: "H5P statistika", icon: Sparkles },
     { id: "h5p-vodic", label: "H5P uputstvo", icon: BookOpen },
     { id: "profil", label: "Profil", icon: Settings },
@@ -1656,8 +1659,10 @@ export default function MuallimPanel() {
               </motion.div>
             )}
 
-            {/* H5P STATISTIKA — CTA kartica vodi na full-page (izbjegavamo
-                duplikat 800-line komponente). Ranije je bila link u headeru. */}
+            {activeTab === "roditelji" && (
+              <RoditeljiTab grupe={grupe} />
+            )}
+
             {activeTab === "h5p" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-2xl p-6">

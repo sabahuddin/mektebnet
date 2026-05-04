@@ -40,6 +40,7 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - **UKLONJENI opasni endpointi (maj 2026):** `sync-from-seed` i `restore-diac` su OBRISANI jer su prepisivali produkcijski content_html sa skraćenim seed podacima. Nikada ih ne vraćati.
 - **Auto-zaključavanje lekcija:** Admin PUT /ilmihal/:id automatski zaključava lekciju nakon svakog save-a. Lock provjera je uklonjena — admin uvijek može uređivati. Lock služi SAMO kao zaštita od automatskih skripti (fill-gaps, seed).
 - **Sve lekcije na produkciji zaključane (04.05.2026):** Svih 236 lekcija zaključano. Nove lekcije se automatski zaključavaju pri prvom save-u.
+- **Roditelji tab (maj 2026):** Muallim panel ima novi "Roditelji" tab sa dva pod-prikaza: Obavještenja (CRUD story/objave za roditelje, sa slikom i grupnim filterom) i Lista roditelja (kontakt podaci roditelja po grupama). Roditelji vide obavještenja na svom dashboardu (/roditelj). DB tabela: `obavjestenja`. API: GET/POST/PUT/DELETE /muallim/obavjestenja, GET /muallim/roditelji-lista, GET /roditelj/obavjestenja.
 
 ## System Architecture
 

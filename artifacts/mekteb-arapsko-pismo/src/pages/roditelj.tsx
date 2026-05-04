@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
-import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Eye, Award, Settings } from "lucide-react";
+import { Users, CalendarCheck, Star, Link2, ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Eye, Award, Settings, Megaphone } from "lucide-react";
 import { PushToggle } from "@/components/push-toggle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +32,16 @@ interface Ocjena {
   ocjena: number;
   napomena?: string;
   datum: string;
+}
+
+interface RoditeljObavjestenje {
+  id: number;
+  naslov: string;
+  sadrzaj: string;
+  slikaUrl: string | null;
+  muallimIme: string | null;
+  grupaNaziv: string | null;
+  createdAt: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -467,6 +477,7 @@ export default function RoditeljPage() {
   const [passwordChangeId, setPasswordChangeId] = useState<number | null>(null);
   const [newPw, setNewPw] = useState("");
   const [isChangingPw, setIsChangingPw] = useState(false);
+  const [obavjestenja, setObavjestenja] = useState<RoditeljObavjestenje[]>([]);
 
   const loadDjeca = () => {
     if (!token) return;
@@ -496,6 +507,13 @@ export default function RoditeljPage() {
   };
 
   useEffect(() => { loadDjeca(); }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<RoditeljObavjestenje[]>("GET", "/roditelj/obavjestenja", undefined, token)
+      .then(setObavjestenja)
+      .catch(() => {});
+  }, [token]);
 
   if (!user || user.role !== "roditelj") {
     return (
@@ -572,6 +590,43 @@ export default function RoditeljPage() {
             <p className="text-muted-foreground text-sm">Pratite napredak, prisustvo i ocjene</p>
           </div>
         </div>
+
+        {obavjestenja.length > 0 && (
+          <div className="mb-6 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Megaphone className="w-5 h-5 text-primary" />
+              <h2 className="font-extrabold text-lg text-foreground">Obavještenja</h2>
+            </div>
+            {obavjestenja.map(o => (
+              <motion.div
+                key={o.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-br from-white to-primary/5 border border-primary/20 rounded-2xl p-5"
+              >
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h4 className="font-extrabold text-foreground text-base">{o.naslov}</h4>
+                  {o.grupaNaziv && (
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{o.grupaNaziv}</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {o.muallimIme && <span className="font-semibold">{o.muallimIme}</span>}
+                  {o.muallimIme && " — "}
+                  {new Date(o.createdAt).toLocaleDateString("bs-BA", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+                <p className="text-foreground whitespace-pre-wrap leading-relaxed">{o.sadrzaj}</p>
+                {o.slikaUrl && (
+                  <img
+                    src={o.slikaUrl.startsWith("/") ? `${getApiBase().replace("/api", "")}${o.slikaUrl}` : o.slikaUrl}
+                    alt="Ilustracija"
+                    className="mt-3 max-h-48 rounded-xl border border-border/30"
+                  />
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>

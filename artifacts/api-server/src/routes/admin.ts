@@ -52,7 +52,8 @@ router.use((req, res, next) => {
   // Sprječava buduće slučajeve gdje bi nova ruta tipa "/priloziXYZ" slučajno
   // postala dostupna i muallim-u zbog naivnog startsWith-a.
   const isPriloziRoute = req.path === "/prilozi" || req.path.startsWith("/prilozi/");
-  const allowed = isPriloziRoute
+  const isUploadRoute = req.path === "/upload";
+  const allowed = (isPriloziRoute || isUploadRoute)
     ? role === "admin" || role === "muallim"
     : role === "admin";
   if (!allowed) {

@@ -43,6 +43,13 @@
       "when": 1777759221976,
       "tag": "0005_hot_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777913432302,
+      "tag": "0006_marvelous_nighthawk",
+      "breakpoints": true
     }
   ]
 }

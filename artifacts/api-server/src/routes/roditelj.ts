@@ -15,6 +15,7 @@ import {
   studentProgressTable,
   zadaceTable,
   zadaceUceniciTable,
+  obavjestenjaTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -552,6 +553,52 @@ router.get("/zadace", async (req, res) => {
 
     res.json(result);
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/obavjestenja — all announcements visible to this parent
+router.get("/obavjestenja", async (req, res) => {
+  try {
+    const links = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, req.user!.userId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (links.length === 0) { res.json([]); return; }
+
+    const ucenikIds = links.map(l => l.ucenikId);
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(inArray(ucenikProfiliTable.userId, ucenikIds));
+    const muallimIds = [...new Set(profili.map(p => p.muallimId).filter(Boolean))] as number[];
+    const grupaIds = [...new Set(profili.map(p => p.grupaId).filter(Boolean))] as number[];
+    if (muallimIds.length === 0) { res.json([]); return; }
+
+    const allObavjestenja = await db.select().from(obavjestenjaTable)
+      .where(inArray(obavjestenjaTable.muallimId, muallimIds))
+      .orderBy(desc(obavjestenjaTable.createdAt));
+
+    const visible = allObavjestenja.filter(o =>
+      !o.grupaId || grupaIds.includes(o.grupaId)
+    );
+
+    const muallimUsers = muallimIds.length > 0
+      ? await db.select().from(usersTable).where(inArray(usersTable.id, muallimIds))
+      : [];
+    const muallimMap = Object.fromEntries(muallimUsers.map(u => [u.id, u.displayName]));
+
+    const grupeAll = grupaIds.length > 0
+      ? await db.select().from(grupeTable).where(inArray(grupeTable.id, grupaIds))
+      : [];
+    const grupaMap = Object.fromEntries(grupeAll.map(g => [g.id, g.naziv]));
+
+    res.json(visible.map(o => ({
+      ...o,
+      muallimIme: muallimMap[o.muallimId] || null,
+      grupaNaziv: o.grupaId ? grupaMap[o.grupaId] || null : null,
+    })));
+  } catch (err) {
+    console.error("roditelj obavjestenja error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

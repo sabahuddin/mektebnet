@@ -8,6 +8,7 @@ import {
   roditeljProfiliTable,
   grupeTable,
   roditeljUcenikTable,
+  obavjestenjaTable,
   priustvoTable,
   ocjeneTable,
   kvizRezultatiTable,
@@ -2133,6 +2134,189 @@ router.get("/izvjestaj/svi", async (req, res) => {
     });
   } catch (err) {
     console.error("Izvjestaj svi error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// OBAVJEŠTENJA (Story za roditelje)
+// ══════════════════════════════════════════════════════════════════════════════
+
+router.get("/obavjestenja", async (req, res) => {
+  try {
+    const rows = await db.select().from(obavjestenjaTable)
+      .where(eq(obavjestenjaTable.muallimId, req.user!.userId))
+      .orderBy(desc(obavjestenjaTable.createdAt));
+    const grupeAll = await db.select().from(grupeTable)
+      .where(eq(grupeTable.muallimId, req.user!.userId));
+    const grupaMap = Object.fromEntries(grupeAll.map(g => [g.id, g.naziv]));
+    res.json(rows.map(r => ({
+      ...r,
+      grupaNaziv: r.grupaId ? grupaMap[r.grupaId] || null : null,
+    })));
+  } catch (err) {
+    console.error("obavjestenja list error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.post("/obavjestenja", async (req, res) => {
+  try {
+    const { naslov, sadrzaj, grupaId, slikaUrl } = req.body;
+    if (!naslov?.trim() || !sadrzaj?.trim()) {
+      res.status(400).json({ error: "Naslov i sadržaj su obavezni" });
+      return;
+    }
+    if (grupaId) {
+      const [g] = await db.select().from(grupeTable)
+        .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+      if (!g) { res.status(400).json({ error: "Grupa nije pronađena" }); return; }
+    }
+    const [row] = await db.insert(obavjestenjaTable).values({
+      muallimId: req.user!.userId,
+      grupaId: grupaId || null,
+      naslov: naslov.trim(),
+      sadrzaj: sadrzaj.trim(),
+      slikaUrl: slikaUrl || null,
+    }).returning();
+
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.muallimId, req.user!.userId));
+    let targetUcenikIds: number[];
+    if (grupaId) {
+      targetUcenikIds = profili.filter(p => p.grupaId === grupaId).map(p => p.userId);
+    } else {
+      targetUcenikIds = profili.map(p => p.userId);
+    }
+    if (targetUcenikIds.length > 0) {
+      const links = await db.select().from(roditeljUcenikTable)
+        .where(and(
+          inArray(roditeljUcenikTable.ucenikId, targetUcenikIds),
+          eq(roditeljUcenikTable.status, "approved"),
+        ));
+      const roditeljIds = [...new Set(links.map(l => l.roditeljId))];
+      if (roditeljIds.length > 0) {
+        const poruke = roditeljIds.map(rid => ({
+          posiljateljId: req.user!.userId,
+          primateljId: rid,
+          naslov: "Novo obavještenje",
+          sadrzaj: `📢 ${naslov.trim()}`,
+        }));
+        await db.insert(porukeTable).values(poruke).catch(e =>
+          console.warn("[obavjestenja] poruka insert failed:", e)
+        );
+        try {
+          await sendPushNotification({
+            userIds: roditeljIds,
+            title: "Novo obavještenje",
+            message: naslov.trim(),
+            url: "/roditelj?tab=obavjestenja",
+          });
+        } catch {}
+      }
+    }
+
+    res.json(row);
+  } catch (err) {
+    console.error("obavjestenja create error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.put("/obavjestenja/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { naslov, sadrzaj, grupaId, slikaUrl } = req.body;
+    const [existing] = await db.select().from(obavjestenjaTable)
+      .where(and(eq(obavjestenjaTable.id, id), eq(obavjestenjaTable.muallimId, req.user!.userId)));
+    if (!existing) { res.status(404).json({ error: "Nije pronađeno" }); return; }
+    if (grupaId) {
+      const [g] = await db.select().from(grupeTable)
+        .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
+      if (!g) { res.status(400).json({ error: "Grupa nije pronađena" }); return; }
+    }
+    const [updated] = await db.update(obavjestenjaTable)
+      .set({
+        naslov: naslov?.trim() || existing.naslov,
+        sadrzaj: sadrzaj?.trim() || existing.sadrzaj,
+        grupaId: grupaId !== undefined ? (grupaId || null) : existing.grupaId,
+        slikaUrl: slikaUrl !== undefined ? (slikaUrl || null) : existing.slikaUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(obavjestenjaTable.id, id))
+      .returning();
+    res.json(updated);
+  } catch (err) {
+    console.error("obavjestenja update error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.delete("/obavjestenja/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(obavjestenjaTable)
+      .where(and(eq(obavjestenjaTable.id, id), eq(obavjestenjaTable.muallimId, req.user!.userId)));
+    if (!existing) { res.status(404).json({ error: "Nije pronađeno" }); return; }
+    await db.delete(obavjestenjaTable).where(eq(obavjestenjaTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("obavjestenja delete error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.get("/roditelji-lista", async (req, res) => {
+  try {
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.muallimId, req.user!.userId));
+    if (profili.length === 0) { res.json([]); return; }
+    const ucenikIds = profili.map(p => p.userId);
+    const links = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        inArray(roditeljUcenikTable.ucenikId, ucenikIds),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (links.length === 0) { res.json([]); return; }
+
+    const allUserIds = [...new Set([...links.map(l => l.roditeljId), ...ucenikIds])];
+    const users = await db.select().from(usersTable)
+      .where(inArray(usersTable.id, allUserIds));
+    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+
+    const grupeAll = await db.select().from(grupeTable)
+      .where(eq(grupeTable.muallimId, req.user!.userId));
+    const grupaMap = Object.fromEntries(grupeAll.map(g => [g.id, g.naziv]));
+    const profilMap = Object.fromEntries(profili.map(p => [p.userId, p]));
+
+    const roditeljMap = new Map<number, { roditelj: any; djeca: any[] }>();
+    for (const link of links) {
+      const roditelj = userMap[link.roditeljId];
+      if (!roditelj) continue;
+      if (!roditeljMap.has(link.roditeljId)) {
+        roditeljMap.set(link.roditeljId, {
+          roditelj: {
+            id: roditelj.id,
+            displayName: roditelj.displayName,
+            username: roditelj.username,
+            email: roditelj.email,
+          },
+          djeca: [],
+        });
+      }
+      const ucenik = userMap[link.ucenikId];
+      const profil = profilMap[link.ucenikId];
+      roditeljMap.get(link.roditeljId)!.djeca.push({
+        id: link.ucenikId,
+        displayName: ucenik?.displayName || `#${link.ucenikId}`,
+        grupaId: profil?.grupaId,
+        grupaNaziv: profil?.grupaId ? grupaMap[profil.grupaId] || null : null,
+      });
+    }
+
+    res.json(Array.from(roditeljMap.values()));
+  } catch (err) {
+    console.error("roditelji-lista error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
