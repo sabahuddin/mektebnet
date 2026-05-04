@@ -270,6 +270,21 @@ async function runDataBootstrap() {
         logger.info({ fixed }, "Fill-gaps: restored truncated lesson content from seed");
       }
     }
+
+    const playerRows = await exec<{ c: number }>(
+      sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije WHERE content_html LIKE '%audio-controls%'`
+    );
+    if (Number(playerRows.rows[0]?.c) > 0) {
+      await exec(sql`
+        UPDATE ilmihal_lekcije
+        SET content_html = regexp_replace(
+          regexp_replace(content_html, '<div class="audio-controls">.*?</div>\s*', '', 'gs'),
+          '<audio[^>]*>.*?</audio>\s*', '', 'gs'
+        )
+        WHERE content_html LIKE '%audio-controls%'
+      `);
+      logger.info({ count: Number(playerRows.rows[0]?.c) }, "Fill-gaps: removed legacy audio player from lessons");
+    }
   } catch (gapErr) {
     logger.error({ err: gapErr }, "Fill-gaps insert failed");
   }
