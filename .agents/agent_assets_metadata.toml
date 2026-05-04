@@ -462,6 +462,66 @@ uri = "file://artifacts/api-server/uploads/citaonica/muhammed-3-medinski-period.
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "cD-S3r11X3lPNe-Wznn0r"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/ve_melaiketihi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "qPzOxm-av9aUo35ZjSaJH"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/kuran_kitabi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "n2AVlnCelTowrL6NvBVK9"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/el_kafirun.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "7jJBNmDHQxohJthbf8Hlr"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/sta_kvari_namaz.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-zvO5yZa9vmNRoaV-GjPS"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/naklanjavanje.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "F2hDpzv6Nk2ADfMOZStqi"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/namaz_u_dzematu.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-L5T5fCfrYe1IQUL3oz45"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/prispijevanje.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "QFZcuZ61JM870wrtjYwuN"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/post.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "fuaYz-nP2lthLdWy5YzG5"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/hadz.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "yQQJpKwPHWTSfdc2oHWpP"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/urednost.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
