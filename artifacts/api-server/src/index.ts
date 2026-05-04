@@ -285,6 +285,42 @@ async function runDataBootstrap() {
       `);
       logger.info({ count: Number(playerRows.rows[0]?.c) }, "Fill-gaps: removed legacy audio player from lessons");
     }
+
+    const nivo21 = await exec<{ c: number }>(
+      sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije WHERE nivo = 21`
+    );
+    if (Number(nivo21.rows[0]?.c) > 0) {
+      await exec(sql`UPDATE ilmihal_lekcije SET nivo = 2 WHERE nivo = 21`);
+      logger.info({ count: Number(nivo21.rows[0]?.c) }, "Fill-gaps: merged nivo 21 -> nivo 2");
+    }
+
+    const nivo1extra = await exec<{ c: number }>(
+      sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije WHERE nivo = 1 AND slug IN (
+        SELECT slug FROM ilmihal_lekcije GROUP BY slug HAVING COUNT(*) > 1
+      )`
+    );
+    if (Number(nivo1extra.rows[0]?.c) > 0) {
+      logger.info({ count: Number(nivo1extra.rows[0]?.c) }, "Fill-gaps: found duplicate slugs across nivoi (will not auto-delete)");
+    }
+
+    const seedMap = new Map(FULL_LEKCIJE.map(l => [l.slug, l]));
+    const allRows = await exec<{ slug: string; nivo: number; redoslijed: number }>(
+      sql`SELECT slug, nivo, redoslijed FROM ilmihal_lekcije`
+    );
+    let nivoFixed = 0;
+    for (const row of allRows.rows) {
+      const seed = seedMap.get(row.slug);
+      if (seed && (seed.nivo !== row.nivo || seed.redoslijed !== row.redoslijed)) {
+        await exec(sql`
+          UPDATE ilmihal_lekcije SET nivo = ${seed.nivo}, redoslijed = ${seed.redoslijed}
+          WHERE slug = ${row.slug}
+        `);
+        nivoFixed++;
+      }
+    }
+    if (nivoFixed > 0) {
+      logger.info({ nivoFixed }, "Fill-gaps: corrected nivo/redoslijed from seed");
+    }
   } catch (gapErr) {
     logger.error({ err: gapErr }, "Fill-gaps insert failed");
   }
