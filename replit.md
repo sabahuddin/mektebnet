@@ -22,6 +22,21 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - Do not make changes to the `lib/db/src/schema/` folder.
 - Ensure that any auto-scripts (seed, restore, backfill) always include `WHERE locked = false` to protect manually verified content.
 - Prioritize security in all implementations, especially regarding user data and content integrity.
+- **OBAVEZNO: UVIJEK pushati na GitHub/Coolify sam (via code_execution sandbox) — NIKAD ne slati korisnika u Shell.** Koristiti `execSync('git add ... && git commit ... && git push ...')` iz code_execution.
+- Korisnik govori bosanski. Komunikacija na bosanskom, bez emojija, smiren ton.
+- Kad nesto fali (slika, podatak) — NIKAD ne generisati zamjenu bez pitanja. Prvo provjeriti backup, git historiju, attached_assets. Pitati korisnika ako izvor nije jasan.
+- Dev baza i produkcijska baza su ODVOJENE. Korisnici, banka pitanja, muallimi postoje samo na produkciji (Coolify Postgres). Dev baza ima samo sadržaj (lekcije, kvizove, rječnik).
+- **APSOLUTNO PRAVILO — SADRŽAJ:** Prije BILO KAKVOG diranja sadržaja lekcija, kvizova, rječnika ili bilo čega osim čistog koda — OBAVEZNO prvo povući aktuelni sadržaj sa PRODUKCIJE (mekteb.net API) i koristiti ga kao izvor istine. Produkcija je UVIJEK zadnja verzija. NIKAD ne koristiti dev bazu, seed fajlove ili backup tabele kao izvor za prepisivanje produkcijskog sadržaja. NIKAD ne pisati boot migracije koje mijenjaju content_html bez eksplicitnog odobrenja korisnika. Backup produkcijske baze napraviti PRIJE svake promjene.
+- **APSOLUTNO PRAVILO — ANALIZA PRIJE AKCIJE:** Kad se otkrije problem, PRVO zaustaviti se i analizirati uzrok. Identificirati šta je izazvalo problem. Obrisati/popraviti uzrok. TEK ONDA raditi novi kod. NIKAD ne dodavati novi kod preko postojećeg problema.
+
+## Deployment
+
+- **Hosting:** Coolify (self-hosted) na korisnikovom serveru.
+- **GitHub repo:** sabahuddin/mektebnet (remote: `github`)
+- **Push metoda:** Iz code_execution sandbox-a: `execSync('git push https://TOKEN@github.com/sabahuddin/mektebnet.git main')`
+- **Token:** GitHub PAT se mijenja — uvijek pitati korisnika za novi ako istekne (HTTP 401).
+- **Coolify deploy:** Coolify NE radi auto-deploy. Korisnik RUČNO pokreće redeploy iz Coolify panela nakon git push-a.
+- **Boot migracije (index.ts):** Pri startu servera automatski: fill-gaps (dodaj lekcije koje fale), popravka odsjecenih lekcija, brisanje legacy audio playera, migracija banke pitanja.
 
 ## System Architecture
 

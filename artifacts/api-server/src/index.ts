@@ -250,41 +250,10 @@ async function runDataBootstrap() {
       logger.info({ gapInserted, insertedByNivo }, "Fill-gaps: inserted missing lessons");
     }
 
-    const truncated = await exec<{ slug: string }>(
-      sql`SELECT slug FROM ilmihal_lekcije WHERE length(content_html) < 600`
-    );
-    if (truncated.rows.length > 0) {
-      const seedMap = new Map(FULL_LEKCIJE.map(l => [l.slug, l]));
-      let fixed = 0;
-      for (const { slug } of truncated.rows) {
-        const seed = seedMap.get(slug);
-        if (seed && seed.content_html.length > 600) {
-          await exec(sql`
-            UPDATE ilmihal_lekcije SET content_html = ${seed.content_html}
-            WHERE slug = ${slug} AND length(content_html) < 600
-          `);
-          fixed++;
-        }
-      }
-      if (fixed > 0) {
-        logger.info({ fixed }, "Fill-gaps: restored truncated lesson content from seed");
-      }
-    }
-
-    const playerRows = await exec<{ c: number }>(
-      sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije WHERE content_html LIKE '%audio-controls%'`
-    );
-    if (Number(playerRows.rows[0]?.c) > 0) {
-      await exec(sql`
-        UPDATE ilmihal_lekcije
-        SET content_html = regexp_replace(
-          regexp_replace(content_html, '<div class="audio-controls">.*?</div>\s*', '', 'gs'),
-          '<audio[^>]*>.*?</audio>\s*', '', 'gs'
-        )
-        WHERE content_html LIKE '%audio-controls%'
-      `);
-      logger.info({ count: Number(playerRows.rows[0]?.c) }, "Fill-gaps: removed legacy audio player from lessons");
-    }
+    // UKLONJENO: truncation fix i audio player removal
+    // Ove migracije su prepisivale content_html iz seed-a bez odobrenja.
+    // Sadržaj lekcija se NIKAD ne smije mijenjati boot migracijama.
+    // Produkcija je jedini izvor istine za sadržaj.
 
     const nivo21 = await exec<{ c: number }>(
       sql`SELECT COUNT(*)::int AS c FROM ilmihal_lekcije WHERE nivo = 21`
