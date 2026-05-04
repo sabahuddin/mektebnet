@@ -217,9 +217,12 @@ const TRAJECTORIES: FlightTrajectory[] = [
   },
 ];
 
+type SelamPhase = "flying-in" | "hovering" | "cloud" | "flying-out" | "done";
+
 export function SelamWelcome({ userName }: { userName?: string | null }) {
-  const [show, setShow] = useState(false);
-  const [cloudVisible, setCloudVisible] = useState(false);
+  const [phase, setPhase] = useState<SelamPhase>("done");
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
+  const [vh, setVh] = useState(typeof window !== "undefined" ? window.innerHeight : 720);
 
   const reduce =
     typeof window !== "undefined" &&
@@ -232,62 +235,107 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
     const shown = sessionStorage.getItem("mekteb-selam-shown");
     if (shown) return;
     sessionStorage.setItem("mekteb-selam-shown", "1");
-    setShow(true);
-    const cloudTimer = setTimeout(() => setCloudVisible(true), 800);
-    const hideTimer = setTimeout(() => setShow(false), 5500);
-    return () => { clearTimeout(cloudTimer); clearTimeout(hideTimer); };
+    setPhase("flying-in");
+
+    const onResize = () => { setVw(window.innerWidth); setVh(window.innerHeight); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, [reduce]);
 
-  if (!show || reduce) return null;
+  useEffect(() => {
+    if (phase === "done" || phase === "flying-in") return;
+    let timer: ReturnType<typeof setTimeout>;
+    if (phase === "hovering") {
+      timer = setTimeout(() => setPhase("cloud"), 400);
+    } else if (phase === "cloud") {
+      timer = setTimeout(() => setPhase("flying-out"), 3500);
+    } else if (phase === "flying-out") {
+      timer = setTimeout(() => setPhase("done"), 1800);
+    }
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  if (phase === "done" || reduce) return null;
 
   const name = userName || "";
   const greeting = name
     ? `Esselamu alejkum, ${name}!`
     : "Esselamu alejkum!";
 
+  const beeSize = Math.min(180, vw * 0.22);
+  const centerX = vw / 2 - beeSize / 2;
+  const centerY = vh / 2 - beeSize / 2 - 40;
+
   return (
     <div
       aria-hidden="true"
-      className="fixed inset-0 pointer-events-none z-[60] overflow-hidden flex items-center justify-center"
+      className="fixed inset-0 pointer-events-none z-[60] overflow-hidden"
       data-testid="selam-welcome"
     >
       <motion.div
-        className="relative flex flex-col items-center"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.6 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: phase === "flying-out" || phase === "done" ? 0 : 0.25 }}
+        transition={{ duration: 0.5 }}
+        className="absolute inset-0 bg-black"
+      />
+
+      <motion.div
+        style={{ position: "absolute", width: beeSize, height: beeSize }}
+        initial={{ x: -beeSize - 40, y: centerY + 80, rotate: 15, scale: 0.6 }}
+        animate={
+          phase === "flying-in"
+            ? { x: centerX, y: centerY, rotate: 0, scale: 1, opacity: 1 }
+            : phase === "hovering" || phase === "cloud"
+            ? { x: centerX, y: centerY, rotate: 0, scale: 1, opacity: 1 }
+            : { x: vw + 60, y: centerY - 60, rotate: -15, scale: 0.7, opacity: 0 }
+        }
+        transition={
+          phase === "flying-in"
+            ? { duration: 1.4, ease: [0.25, 0.46, 0.45, 0.94] }
+            : phase === "flying-out"
+            ? { duration: 1.5, ease: [0.55, 0.06, 0.68, 0.19] }
+            : { duration: 0.3 }
+        }
+        onAnimationComplete={() => {
+          if (phase === "flying-in") setPhase("hovering");
+        }}
       >
         <motion.div
-          animate={{ y: [0, -8, 0] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          animate={{ y: [0, -12, 0] }}
+          transition={{ duration: 1.0, repeat: Infinity, ease: "easeInOut" }}
+          style={{ width: "100%", height: "100%" }}
         >
           <img
             src={SRC.pozdrav}
             alt=""
             draggable={false}
-            style={{ width: 100, height: 100 }}
-            className="object-contain select-none drop-shadow-lg"
+            style={{ width: "100%", height: "100%" }}
+            className="object-contain select-none drop-shadow-2xl"
           />
         </motion.div>
-
-        <AnimatePresence>
-          {cloudVisible && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.7, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 22 }}
-              className="mt-3 bg-white rounded-2xl shadow-xl border border-border/40 px-6 py-4 max-w-xs text-center"
-            >
-              <p className="text-base font-extrabold text-primary leading-snug">{greeting}</p>
-              <p className="text-sm text-muted-foreground font-semibold mt-1">Idemo s Bismillom!</p>
-              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-l border-t border-border/40 rotate-45" />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
 
+      <AnimatePresence>
+        {(phase === "cloud") && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.6, y: -20 }}
+            transition={{ type: "spring", stiffness: 280, damping: 20 }}
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: centerY + beeSize + 10,
+              transform: "translateX(-50%)",
+            }}
+            className="bg-white rounded-3xl shadow-2xl border-2 border-primary/20 px-8 py-5 max-w-sm text-center"
+          >
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-white border-l-2 border-t-2 border-primary/20 rotate-45 rounded-tl-sm" />
+            <p className="text-xl sm:text-2xl font-extrabold text-primary leading-snug">{greeting}</p>
+            <p className="text-base sm:text-lg text-muted-foreground font-bold mt-2">Idemo s Bismillom!</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
