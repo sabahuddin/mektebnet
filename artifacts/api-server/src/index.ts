@@ -391,13 +391,6 @@ async function startup() {
   }
 
   try {
-    const { migrateIlmihalContent } = await import("./lib/migrate-ilmihal-content.js");
-    await migrateIlmihalContent();
-  } catch (e) {
-    logger.error({ err: e }, "Ilmihal content migration failed");
-  }
-
-  try {
     const { startMissionReminderCron } = await import("./lib/mission-reminder-cron.js");
     startMissionReminderCron();
   } catch (e) {

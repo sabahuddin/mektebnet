@@ -37,6 +37,7 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - **Token:** GitHub PAT se mijenja — uvijek pitati korisnika za novi ako istekne (HTTP 401).
 - **Coolify deploy:** Coolify NE radi auto-deploy. Korisnik RUČNO pokreće redeploy iz Coolify panela nakon git push-a.
 - **Boot migracije (index.ts):** Pri startu servera automatski: fill-gaps (dodaj lekcije koje fale), popravka odsjecenih lekcija, brisanje legacy audio playera, migracija banke pitanja.
+- **Ilmihal PDF migracija (maj 2026):** Ilmihal 2 PDF sadržaj ekstraktovan i ubačen u 67/70 Nivo 2 lekcija direktno preko admin API-ja. Hero slike sačuvane. Backup: `prod-backup-fresh.json`. Lekcija `ljubav-poslusnost-roditelji` ima nestandardne section ID-ove i nije ažurirana.
 
 ## System Architecture
 

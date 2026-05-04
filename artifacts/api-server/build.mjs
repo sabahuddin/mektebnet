@@ -120,7 +120,7 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 
   // Copy runtime JSON assets that endpoints read via fs.readFileSync
-  const assetsToCopy = ["src/routes/restore-diac-31.json", "src/routes/restore-backup-20260422.json", "src/routes/pdf-content/extracted-content.json"];
+  const assetsToCopy = ["src/routes/restore-diac-31.json", "src/routes/restore-backup-20260422.json"];
   for (const rel of assetsToCopy) {
     const src = path.resolve(artifactDir, rel);
     const dst = path.resolve(distDir, "routes", path.basename(rel));
