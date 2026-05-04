@@ -249,6 +249,27 @@ async function runDataBootstrap() {
     if (gapInserted > 0) {
       logger.info({ gapInserted, insertedByNivo }, "Fill-gaps: inserted missing lessons");
     }
+
+    const truncated = await exec<{ slug: string }>(
+      sql`SELECT slug FROM ilmihal_lekcije WHERE length(content_html) < 600`
+    );
+    if (truncated.rows.length > 0) {
+      const seedMap = new Map(FULL_LEKCIJE.map(l => [l.slug, l]));
+      let fixed = 0;
+      for (const { slug } of truncated.rows) {
+        const seed = seedMap.get(slug);
+        if (seed && seed.content_html.length > 600) {
+          await exec(sql`
+            UPDATE ilmihal_lekcije SET content_html = ${seed.content_html}
+            WHERE slug = ${slug} AND length(content_html) < 600
+          `);
+          fixed++;
+        }
+      }
+      if (fixed > 0) {
+        logger.info({ fixed }, "Fill-gaps: restored truncated lesson content from seed");
+      }
+    }
   } catch (gapErr) {
     logger.error({ err: gapErr }, "Fill-gaps insert failed");
   }
