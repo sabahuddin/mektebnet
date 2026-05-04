@@ -36,8 +36,10 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - **Push metoda:** Iz code_execution sandbox-a: `execSync('git push https://TOKEN@github.com/sabahuddin/mektebnet.git main')`
 - **Token:** GitHub PAT se mijenja — uvijek pitati korisnika za novi ako istekne (HTTP 401).
 - **Coolify deploy:** Coolify NE radi auto-deploy. Korisnik RUČNO pokreće redeploy iz Coolify panela nakon git push-a.
-- **Boot migracije (index.ts):** Pri startu servera automatski: fill-gaps (dodaj lekcije koje fale), popravka odsjecenih lekcija, brisanje legacy audio playera, migracija banke pitanja.
-- **Ilmihal PDF migracija (maj 2026):** Ilmihal 2 PDF sadržaj ekstraktovan i ubačen u 67/70 Nivo 2 lekcija direktno preko admin API-ja. Hero slike sačuvane. Backup: `prod-backup-fresh.json`. Lekcija `ljubav-poslusnost-roditelji` ima nestandardne section ID-ove i nije ažurirana.
+- **Boot migracije (index.ts):** Pri startu servera automatski: fill-gaps (dodaj lekcije koje fale — INSERT ON CONFLICT DO NOTHING, nikad UPDATE), migracija banke pitanja. NEMA boot migracija koje mijenjaju content_html.
+- **UKLONJENI opasni endpointi (maj 2026):** `sync-from-seed` i `restore-diac` su OBRISANI jer su prepisivali produkcijski content_html sa skraćenim seed podacima. Nikada ih ne vraćati.
+- **Auto-zaključavanje lekcija:** Admin PUT /ilmihal/:id automatski zaključava lekciju nakon svakog save-a. Lock provjera je uklonjena — admin uvijek može uređivati. Lock služi SAMO kao zaštita od automatskih skripti (fill-gaps, seed).
+- **Sve lekcije na produkciji zaključane (04.05.2026):** Svih 236 lekcija zaključano. Nove lekcije se automatski zaključavaju pri prvom save-u.
 
 ## System Architecture
 

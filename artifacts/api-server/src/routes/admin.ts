@@ -1034,9 +1034,6 @@ router.put("/ilmihal/:id", async (req, res) => {
     const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock } = req.body;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
-    if (existing.locked && contentHtml !== undefined && !forceUnlock) {
-      return res.status(423).json({ error: "Lekcija je zaključana. Otključajte je prije izmjene sadržaja.", locked: true });
-    }
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) {
       // Auto-clean before save: remove duplicate priprema accordions, upgrade old design.
@@ -1047,6 +1044,10 @@ router.put("/ilmihal/:id", async (req, res) => {
     if (redoslijed !== undefined) updates.redoslijed = redoslijed;
     if (kvizPitanja !== undefined) {
       updates.kvizPitanja = typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja);
+    }
+    if (contentHtml !== undefined) {
+      updates.locked = true;
+      updates.lockedNote = "Auto-zaključano pri uređivanju";
     }
     await db.update(ilmihalLekcijeTable).set(updates).where(eq(ilmihalLekcijeTable.id, id));
     res.json({ success: true });
@@ -1168,147 +1169,9 @@ router.post("/ilmihal/regenerate-priprema-design", async (req, res) => {
   }
 });
 
-// POST /api/admin/ilmihal/sync-from-seed
-// FULL UPSERT iz aktuelnog full-data-seed.ts (228 lekcija iz DEV baze):
-//   - INSERT lekcije koje fale (slug ne postoji u prod bazi)
-//   - UPDATE postojeće (sadržaj + nivo + redoslijed + naslov + audio + kviz) ALI samo gdje locked = false
-//   - SKIP lekcije gdje je locked = true (ručno verifikovan sadržaj — sveto)
-// Vraća detaljan izvještaj: koliko inserted, updated, skippedLocked, po nivoima.
-router.post("/ilmihal/sync-from-seed", async (req, res) => {
-  try {
-    const { dryRun, syncRjecnik } = (req.body || {}) as { dryRun?: boolean; syncRjecnik?: boolean };
-    const { FULL_LEKCIJE, FULL_RJECNIK } = await import("./full-data-seed.js");
-    const existing = await db.select({
-      id: ilmihalLekcijeTable.id,
-      slug: ilmihalLekcijeTable.slug,
-      locked: ilmihalLekcijeTable.locked,
-    }).from(ilmihalLekcijeTable);
-    const bySlug = new Map(existing.map(r => [r.slug, r]));
-    let inserted = 0, updated = 0, skippedLocked = 0;
-    const insertedSlugs: string[] = [];
-    const insertedByNivo: Record<number, number> = {};
-    for (const lek of FULL_LEKCIJE) {
-      const row = bySlug.get(lek.slug);
-      if (!row) {
-        if (!dryRun) {
-          await db.insert(ilmihalLekcijeTable).values({
-            nivo: lek.nivo,
-            slug: lek.slug,
-            naslov: lek.naslov,
-            contentHtml: lek.content_html,
-            audioSrc: lek.audio_src,
-            redoslijed: lek.redoslijed,
-            isPublished: lek.is_published,
-            kvizPitanja: lek.kviz_pitanja,
-          });
-        }
-        inserted++;
-        insertedSlugs.push(lek.slug);
-        insertedByNivo[lek.nivo] = (insertedByNivo[lek.nivo] || 0) + 1;
-        continue;
-      }
-      if (row.locked) { skippedLocked++; continue; }
-      if (!dryRun) {
-        await db.update(ilmihalLekcijeTable).set({
-          nivo: lek.nivo,
-          naslov: lek.naslov,
-          contentHtml: lek.content_html,
-          audioSrc: lek.audio_src,
-          redoslijed: lek.redoslijed,
-          isPublished: lek.is_published,
-          kvizPitanja: lek.kviz_pitanja,
-        }).where(eq(ilmihalLekcijeTable.id, row.id));
-      }
-      updated++;
-    }
-
-    let rjecnikInserted = 0;
-    if (syncRjecnik) {
-      for (const r of FULL_RJECNIK) {
-        if (!dryRun) {
-          const ins = (await db.execute(sql`
-            INSERT INTO rjecnik (rijec, definicija)
-            VALUES (${r.rijec}, ${r.definicija})
-            ON CONFLICT (rijec) DO NOTHING
-            RETURNING id
-          `)) as unknown as { rows: { id: number }[] };
-          if (ins.rows.length > 0) rjecnikInserted++;
-        }
-      }
-    }
-
-    res.json({
-      success: true, dryRun: !!dryRun,
-      seedTotal: FULL_LEKCIJE.length,
-      dbTotalBefore: existing.length,
-      inserted, updated, skippedLocked,
-      insertedByNivo,
-      insertedSlugs: insertedSlugs.slice(0, 50),
-      rjecnik: syncRjecnik ? { seedTotal: FULL_RJECNIK.length, inserted: rjecnikInserted } : null,
-      note: "Locked lekcije su preskočene. Insertovane su one koje su falile.",
-    });
-  } catch (err) {
-    console.error("sync-from-seed error", err);
-    res.status(500).json({ error: "Sync failed", detail: err instanceof Error ? err.message : String(err) });
-  }
-});
-
-// POST /api/admin/ilmihal/restore-diac
-// Jednokratni restore: učita restore-diac-31.json i UPSERTuje content_html
-// za 31 lekciju kojima su nestale kvačice. Skipuje locked.
-router.post("/ilmihal/restore-diac", async (req, res) => {
-  try {
-    const { dryRun, force } = (req.body || {}) as { dryRun?: boolean; force?: boolean };
-    const fs = await import("fs");
-    const path = await import("path");
-    const url = await import("url");
-    const here = path.dirname(url.fileURLToPath(import.meta.url));
-    // Try multiple candidate locations (dev: src/routes, prod: dist)
-    const candidates = [
-      path.resolve(here, "restore-diac-31.json"),
-      path.resolve(here, "routes/restore-diac-31.json"),
-      path.resolve(here, "../routes/restore-diac-31.json"),
-      path.resolve(here, "../../src/routes/restore-diac-31.json"),
-      path.resolve(process.cwd(), "dist/routes/restore-diac-31.json"),
-      path.resolve(process.cwd(), "src/routes/restore-diac-31.json"),
-      path.resolve(process.cwd(), "artifacts/api-server/dist/routes/restore-diac-31.json"),
-      path.resolve(process.cwd(), "artifacts/api-server/src/routes/restore-diac-31.json"),
-    ];
-    let raw: string | null = null;
-    for (const p of candidates) {
-      if (fs.existsSync(p)) { raw = fs.readFileSync(p, "utf8"); break; }
-    }
-    if (!raw) throw new Error("restore-diac-31.json not found in any candidate path");
-    const data = JSON.parse(raw) as Array<{ slug: string; content_html: string }>;
-    const existing = await db.select({
-      id: ilmihalLekcijeTable.id,
-      slug: ilmihalLekcijeTable.slug,
-      locked: ilmihalLekcijeTable.locked,
-      contentHtml: ilmihalLekcijeTable.contentHtml,
-    }).from(ilmihalLekcijeTable);
-    const bySlug = new Map(existing.map(r => [r.slug, r]));
-    let updated = 0, skippedLocked = 0, missing = 0;
-    const report: Array<{ slug: string; oldDiac: number; newDiac: number; status: string }> = [];
-    for (const lek of data) {
-      const row = bySlug.get(lek.slug);
-      const newDiac = (lek.content_html.match(/[čćšžđČĆŠŽĐ]/g) || []).length;
-      if (!row) { missing++; report.push({ slug: lek.slug, oldDiac: 0, newDiac, status: "MISSING" }); continue; }
-      const oldDiac = (row.contentHtml?.match(/[čćšžđČĆŠŽĐ]/g) || []).length;
-      if (row.locked && !force) { skippedLocked++; report.push({ slug: lek.slug, oldDiac, newDiac, status: "LOCKED" }); continue; }
-      if (!dryRun) {
-        await db.update(ilmihalLekcijeTable)
-          .set({ contentHtml: lek.content_html })
-          .where(eq(ilmihalLekcijeTable.id, row.id));
-      }
-      updated++;
-      report.push({ slug: lek.slug, oldDiac, newDiac, status: dryRun ? "WOULD-UPDATE" : "UPDATED" });
-    }
-    res.json({ success: true, dryRun: !!dryRun, total: data.length, updated, skippedLocked, missing, report });
-  } catch (err) {
-    console.error("restore-diac error", err);
-    res.status(500).json({ error: "Restore failed", detail: err instanceof Error ? err.message : String(err) });
-  }
-});
+// UKLONJENO: sync-from-seed i restore-diac endpointi su obrisani jer su
+// prepisivali produkcijski content_html sa skraćenim seed podacima.
+// Produkcija je jedini izvor istine za sadržaj lekcija.
 
 router.delete("/ilmihal/:id", async (req, res) => {
   try {
