@@ -217,6 +217,81 @@ const TRAJECTORIES: FlightTrajectory[] = [
   },
 ];
 
+export function SelamWelcome({ userName }: { userName?: string | null }) {
+  const [show, setShow] = useState(false);
+  const [cloudVisible, setCloudVisible] = useState(false);
+
+  const reduce =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  useEffect(() => {
+    if (reduce) return;
+    if (localStorage.getItem("mekteb-selam-disabled") === "true") return;
+    const shown = sessionStorage.getItem("mekteb-selam-shown");
+    if (shown) return;
+    sessionStorage.setItem("mekteb-selam-shown", "1");
+    setShow(true);
+    const cloudTimer = setTimeout(() => setCloudVisible(true), 800);
+    const hideTimer = setTimeout(() => setShow(false), 5500);
+    return () => { clearTimeout(cloudTimer); clearTimeout(hideTimer); };
+  }, [reduce]);
+
+  if (!show || reduce) return null;
+
+  const name = userName || "";
+  const greeting = name
+    ? `Esselamu alejkum, ${name}!`
+    : "Esselamu alejkum!";
+
+  return (
+    <div
+      aria-hidden="true"
+      className="fixed inset-0 pointer-events-none z-[60] overflow-hidden flex items-center justify-center"
+      data-testid="selam-welcome"
+    >
+      <motion.div
+        className="relative flex flex-col items-center"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.6 }}
+      >
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <img
+            src={SRC.pozdrav}
+            alt=""
+            draggable={false}
+            style={{ width: 100, height: 100 }}
+            className="object-contain select-none drop-shadow-lg"
+          />
+        </motion.div>
+
+        <AnimatePresence>
+          {cloudVisible && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.7, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 10 }}
+              transition={{ type: "spring", stiffness: 300, damping: 22 }}
+              className="mt-3 bg-white rounded-2xl shadow-xl border border-border/40 px-6 py-4 max-w-xs text-center"
+            >
+              <p className="text-base font-extrabold text-primary leading-snug">{greeting}</p>
+              <p className="text-sm text-muted-foreground font-semibold mt-1">Idemo s Bismillom!</p>
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-l border-t border-border/40 rotate-45" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+    </div>
+  );
+}
+
 export function FlyingMaskota() {
   const [location] = useLocation();
   const [flight, setFlight] = useState<{ id: number; traj: FlightTrajectory } | null>(null);

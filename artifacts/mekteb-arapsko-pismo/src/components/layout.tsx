@@ -3,11 +3,10 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, BookMarked, MessageSquare, Globe, Calendar, ClipboardList, Gamepad2, ChevronDown, Wrench, Target, Settings } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FlyingMaskota } from "@/components/maskota";
+import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
-import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
 import { useToast } from "@/hooks/use-toast";
 
 /** Inicijali iz displayName-a, max 2 slova (npr. "Tarik Avdić" → "TA"). */
@@ -35,151 +34,6 @@ type NavLink = {
 const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
 
 const LANG_ORDER: Lang[] = ["bs", "de", "en", "tr", "ar"];
-
-/**
- * Desktop dropdown grupa za nav linkove (npr. "Moj profil" → Moj profil / Moj napredak / Poruke).
- * Trigger je dugme; klikom se otvara mali popover sa child linkovima. Badge sa brojem
- * nepročitanih poruka pokazuje se i na trigger-u (kada je dropdown zatvoren) i pored
- * "Poruke" stavke unutar dropdown-a, da korisnik ne propusti nove poruke.
- */
-function NavDropdown({
-  link,
-  isActive,
-  unreadPoruke,
-}: {
-  link: NavLink;
-  isActive: (href: string) => boolean;
-  unreadPoruke: number;
-}) {
-  const [open, setOpen] = useState(false);
-  const [location] = useLocation();
-  const children = link.children ?? [];
-  // groupActive ignoriše akcije (onClick) — one nemaju rutu i nikad nisu "aktivne".
-  const groupActive = children.some((c) => !c.onClick && isActive(c.href));
-  const triggerBadge =
-    !open && children.some((c) => c.href === "/poruke") && unreadPoruke > 0;
-
-  // Zatvori dropdown ako se ruta promijeni iz nekog drugog razloga
-  // (npr. korisnik pritisne logo ili glavni meni dok je dropdown otvoren),
-  // da ne ostane stale-open popover.
-  useEffect(() => {
-    if (open) setOpen(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
-
-  // Escape key zatvara dropdown — A11y poboljšanje za keyboard korisnike.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        data-testid={`nav-dropdown-${link.href.replace(/\W+/g, "-")}`}
-        className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${
-          groupActive
-            ? "bg-secondary text-secondary-foreground"
-            : "text-secondary hover:bg-secondary/10"
-        }`}
-      >
-        <span className="relative inline-flex">
-          <link.icon className="w-4 h-4" />
-          {triggerBadge && (
-            <span
-              data-testid="badge-poruke-desktop"
-              aria-label={`${unreadPoruke} nepročitanih poruka`}
-              className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center shadow-sm border border-white"
-            >
-              {unreadPoruke > 9 ? "9+" : unreadPoruke}
-            </span>
-          )}
-        </span>
-        {link.label}
-        <ChevronDown
-          className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-            <motion.div
-              initial={{ opacity: 0, y: -5, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -5, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-border/50 py-1 min-w-[200px]"
-              role="menu"
-            >
-              {children.map((c, idx) => {
-                // Akcije (npr. Odjava) renderujemo kao <button>, sa opcionalnim
-                // tankim separatorom iznad da ih vizualno odvojimo od link-stavki.
-                const isAction = !!c.onClick;
-                const isDanger = c.variant === "danger";
-                const prevIsLink = idx > 0 && !children[idx - 1].onClick;
-                const baseCls = `flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-colors w-full text-left ${
-                  isDanger
-                    ? "text-red-600 hover:bg-red-50"
-                    : isActive(c.href)
-                    ? "bg-secondary/10 text-secondary"
-                    : "text-foreground/70 hover:bg-muted"
-                }`;
-                const inner = (
-                  <>
-                    <c.icon className="w-4 h-4 shrink-0" />
-                    <span className="flex-1">{c.label}</span>
-                    {c.href === "/poruke" && unreadPoruke > 0 && (
-                      <span
-                        aria-label={`${unreadPoruke} nepročitanih poruka`}
-                        className="ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center"
-                      >
-                        {unreadPoruke > 9 ? "9+" : unreadPoruke}
-                      </span>
-                    )}
-                  </>
-                );
-                return (
-                  <div key={c.onClick ? `action-${idx}` : c.href}>
-                    {isAction && prevIsLink && (
-                      <div className="my-1 border-t border-border/40" />
-                    )}
-                    {isAction ? (
-                      <button
-                        onClick={() => { setOpen(false); c.onClick!(); }}
-                        role="menuitem"
-                        data-testid={isDanger ? "nav-dropdown-odjava" : undefined}
-                        className={baseCls}
-                      >
-                        {inner}
-                      </button>
-                    ) : (
-                      <Link
-                        href={c.href}
-                        onClick={() => setOpen(false)}
-                        role="menuitem"
-                        className={baseCls}
-                      >
-                        {inner}
-                      </Link>
-                    )}
-                  </div>
-                );
-              })}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function LanguageSwitcher() {
   const { lang, setLang } = useLanguage();
@@ -230,7 +84,6 @@ export function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
   const { t } = useLanguage();
-  const unreadPoruke = useUnreadPoruke();
   const { toast } = useToast();
   const [fontLevel, setFontLevel] = useState<number>(() => {
     try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
@@ -263,76 +116,18 @@ export function Layout({ children }: LayoutProps) {
       : { href: "#sufara", label: t("nav.sufara"), icon: GraduationCap, onClick: sufaraComingSoon },
   ];
 
-  // Jedinstveni "Panel" dropdown po ulozi. Trigger je rolespecifičan
-  // (Muallim panel / Admin panel / Roditeljski panel / Moja košnica) i
-  // u sebi sadrži sve što korisnik treba: brze linkove unutar role,
-  // Poruke (sa badge-om za nepročitano), Profil, i Odjavu na dnu.
-  // Notifikacijski badge se prikazuje i na samom trigger-u kada postoji
-  // nepročitana poruka, da bude vidljiv bez otvaranja menija.
-  const buildPanelDropdown = (
-    panelHref: string,
-    panelLabel: string,
-    panelIcon: any,
-    roleQuickLinks: NavLink[],
-    profilHref: string,
-  ): NavLink => ({
-    href: panelHref,
-    label: panelLabel,
-    icon: panelIcon,
-    children: [
-      // Prva stavka: direktan ulaz u panel.
-      { href: panelHref, label: t("nav.otvoriPanel"), icon: panelIcon },
-      ...roleQuickLinks,
-      { href: "/poruke", label: t("nav.poruke"), icon: MessageSquare },
-      { href: profilHref, label: t("nav.profil"), icon: Settings },
-      { href: "#odjava", label: t("nav.odjaviSe"), icon: LogOut, onClick: logout, variant: "danger" },
-    ],
-  });
-
   const roleLinks: Record<string, NavLink[]> = {
     muallim: [
-      buildPanelDropdown(
-        "/muallim",
-        t("nav.muallimPanel"),
-        LayoutDashboard,
-        [],
-        "/muallim?tab=profil",
-      ),
+      { href: "/muallim", label: t("nav.muallimPanel"), icon: LayoutDashboard },
     ],
     admin: [
-      buildPanelDropdown(
-        "/admin",
-        t("nav.adminPanel"),
-        Shield,
-        [],
-        "/admin?tab=profil",
-      ),
+      { href: "/admin", label: t("nav.adminPanel"), icon: Shield },
     ],
     roditelj: [
-      buildPanelDropdown(
-        "/roditelj",
-        t("nav.roditeljPanel"),
-        LayoutDashboard,
-        [
-          { href: "/roditelj", label: t("nav.mojaDjeca"), icon: User },
-          { href: "/roditelj/kalendar", label: "Kalendar", icon: Calendar },
-          { href: "/roditelj/zadace", label: "Zadaće", icon: ClipboardList },
-        ],
-        "/roditelj?tab=profil",
-      ),
+      { href: "/roditelj", label: t("nav.roditeljPanel"), icon: LayoutDashboard },
     ],
     ucenik: [
-      buildPanelDropdown(
-        "/ucenik",
-        t("nav.mojaKosnica"),
-        LayoutDashboard,
-        [
-          { href: "/napredak", label: t("nav.mojNapredak"), icon: BookMarked },
-          { href: "/misije", label: "Misije", icon: Target },
-          { href: "/popravi-sace", label: "Popravi saće", icon: Wrench },
-        ],
-        "/ucenik",
-      ),
+      { href: "/ucenik", label: t("nav.mojaKosnica"), icon: LayoutDashboard },
     ],
   };
 
@@ -346,6 +141,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <FlyingMaskota />
+      <SelamWelcome userName={user?.displayName} />
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
@@ -374,31 +170,11 @@ export function Layout({ children }: LayoutProps) {
               );
             })}
             {extraLinks.map(link => (
-              link.children && link.children.length > 0 ? (
-                <NavDropdown
-                  key={link.href}
-                  link={link}
-                  isActive={isActive}
-                  unreadPoruke={unreadPoruke}
-                />
-              ) : (
-                <Link key={link.href} href={link.href}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
-                  <span className="relative inline-flex">
-                    <link.icon className="w-4 h-4" />
-                    {link.href === "/poruke" && unreadPoruke > 0 && (
-                      <span
-                        data-testid="badge-poruke-desktop"
-                        aria-label={`${unreadPoruke} nepročitanih poruka`}
-                        className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center shadow-sm border border-white"
-                      >
-                        {unreadPoruke > 9 ? "9+" : unreadPoruke}
-                      </span>
-                    )}
-                  </span>
-                  {link.label}
-                </Link>
-              )
+              <Link key={link.href} href={link.href}
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
+                <link.icon className="w-4 h-4" />
+                {link.label}
+              </Link>
             ))}
           </nav>
 
@@ -428,11 +204,17 @@ export function Layout({ children }: LayoutProps) {
               </button>
             </div>
 
-            {!user && (
-              // Inicijali korisnika (TA) i indikator uloge su uklonjeni iz
-              // headera — nisu imali interaktivnu funkciju, a Panel dropdown
-              // u glavnoj navigaciji već jasno pokazuje da je korisnik prijavljen.
-              // Prijavi-se dugme se zadržava samo za neulogovane korisnike.
+            {user ? (
+              <button
+                onClick={logout}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                title={t("nav.odjaviSe")}
+                data-testid="nav-logout-btn"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden md:inline">{t("nav.odjaviSe")}</span>
+              </button>
+            ) : (
               <Link href="/login">
                 <Button className="rounded-full font-bold shadow-sm" size="sm">{t("nav.prijava")}</Button>
               </Link>
@@ -457,67 +239,7 @@ export function Layout({ children }: LayoutProps) {
                     className="px-3 py-1 rounded-lg bg-muted text-sm font-bold disabled:opacity-30">A+</button>
                 </div>
                 {[...mainNavLinks, ...extraLinks].map((link) => (
-                  link.children && link.children.length > 0 ? (
-                    // Grupa: parent kao mali naslov, children indentirane stavke ispod.
-                    // Tako mobile meni jasno prikazuje hijerarhiju bez dodatnog tap-a.
-                    <div key={link.href} className="mt-1">
-                      <div
-                        className="flex items-center gap-2 px-4 pt-2 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-secondary/70"
-                        data-testid={`nav-mobile-group-${link.href.replace(/\W+/g, "-")}`}
-                      >
-                        <link.icon className="w-3.5 h-3.5" />
-                        {link.label}
-                      </div>
-                      {link.children.map((c, idx) => {
-                        // Akcije unutar grupe (npr. Odjava) renderujemo kao button.
-                        const isAction = !!c.onClick;
-                        const isDanger = c.variant === "danger";
-                        const cls = `flex items-center gap-3 pl-7 pr-4 py-2.5 rounded-xl font-bold text-base transition-colors w-full text-left ${
-                          isDanger
-                            ? "text-red-600 hover:bg-red-50"
-                            : isActive(c.href)
-                            ? "bg-primary/10 text-primary"
-                            : "text-foreground/70 hover:bg-muted"
-                        }`;
-                        const inner = (
-                          <>
-                            <c.icon className="w-5 h-5" />
-                            <span className="flex-1">{c.label}</span>
-                            {c.href === "/poruke" && unreadPoruke > 0 && (
-                              <span
-                                data-testid="badge-poruke-mobile"
-                                aria-label={`${unreadPoruke} nepročitanih poruka`}
-                                className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs leading-none font-extrabold flex items-center justify-center shadow-sm"
-                              >
-                                {unreadPoruke > 9 ? "9+" : unreadPoruke}
-                              </span>
-                            )}
-                          </>
-                        );
-                        return isAction ? (
-                          <button
-                            key={`mobile-action-${idx}`}
-                            onClick={() => { setMobileOpen(false); c.onClick!(); }}
-                            data-testid={isDanger ? "nav-mobile-odjava" : undefined}
-                            className={cls}
-                          >
-                            {inner}
-                          </button>
-                        ) : (
-                          <Link
-                            key={c.href}
-                            href={c.href}
-                            onClick={() => setMobileOpen(false)}
-                            className={cls}
-                          >
-                            {inner}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  ) : link.onClick ? (
-                    // Mobile: action stavka (npr. Sufara "Uskoro") — button koji
-                    // zatvara meni i triggeruje onClick (toast).
+                  link.onClick ? (
                     <button
                       key={link.href}
                       type="button"
@@ -532,21 +254,19 @@ export function Layout({ children }: LayoutProps) {
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}>
                       <link.icon className="w-5 h-5" />
                       <span className="flex-1">{link.label}</span>
-                      {link.href === "/poruke" && unreadPoruke > 0 && (
-                        <span
-                          data-testid="badge-poruke-mobile"
-                          aria-label={`${unreadPoruke} nepročitanih poruka`}
-                          className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs leading-none font-extrabold flex items-center justify-center shadow-sm"
-                        >
-                          {unreadPoruke > 9 ? "9+" : unreadPoruke}
-                        </span>
-                      )}
                     </Link>
                   )
                 ))}
-                {/* Posebni dno-Odjava button više nije potreban — odjava je
-                    stavka unutar "Moj profil" grupe za sve prijavljene uloge. */}
-                {!user && (
+                {user ? (
+                  <button
+                    onClick={() => { setMobileOpen(false); logout(); }}
+                    data-testid="nav-mobile-odjava"
+                    className="flex items-center gap-3 px-4 py-3 mt-2 rounded-xl font-bold text-base text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="flex-1">{t("nav.odjaviSe")}</span>
+                  </button>
+                ) : (
                   <Link href="/login" onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-4 py-3 mt-2 rounded-xl font-bold text-base bg-primary text-primary-foreground">
                     <User className="w-5 h-5" />

@@ -97,10 +97,6 @@ export default function Home() {
     },
   ];
 
-  const greeting = user
-    ? `${t("home.selamUser", { name: user.displayName })} 👋`
-    : `${t("home.selam")}! 👋`;
-
   return (
     <Layout>
       <motion.div
@@ -111,7 +107,7 @@ export default function Home() {
       >
         <div className="p-8 md:p-10 flex items-center justify-between gap-6">
           <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-primary mb-3 leading-tight">{greeting}</h1>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-primary mb-3 leading-tight">mekteb.net</h1>
             <p className="text-muted-foreground font-medium text-lg leading-relaxed max-w-lg">
               {t("home.dobrodosli")}
             </p>
