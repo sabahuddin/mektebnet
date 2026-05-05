@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
-    "pdfjs-dist": "3.11.174"
+    "pdfjs-dist": "3.11.174",
+    "puppeteer": "^24.42.0"
   }
 }
