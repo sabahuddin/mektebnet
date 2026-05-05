@@ -33,8 +33,9 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 
 - **Hosting:** Coolify (self-hosted) na korisnikovom serveru.
 - **GitHub repo:** sabahuddin/mektebnet (remote: `github`)
-- **Push metoda:** Iz code_execution sandbox-a: `execSync('git push https://TOKEN@github.com/sabahuddin/mektebnet.git main')`
-- **Token:** GitHub PAT se mijenja — uvijek pitati korisnika za novi ako istekne (HTTP 401).
+- **Push metoda:** Iz `bash` tool-a (NE iz code_execution sandbox-a — sandbox NEMA pristup secret env vars). Komanda:
+  `git push "https://sabahuddin:${GITHUB_TOKEN}@github.com/sabahuddin/mektebnet.git" HEAD:main`
+- **Token:** Aktivan secret je `GITHUB_TOKEN` (NE `GITHUB_PERSONAL_ACCESS_TOKEN` — taj je stari/expired). Trajanje 90 dana, korisnik osvježava ručno u Replit Secrets. Verifikacija: `curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user` → mora vratiti `"login":"sabahuddin"`.
 - **Coolify deploy:** Coolify NE radi auto-deploy. Korisnik RUČNO pokreće redeploy iz Coolify panela nakon git push-a.
 - **Boot migracije (index.ts):** Pri startu servera automatski: fill-gaps (dodaj lekcije koje fale — INSERT ON CONFLICT DO NOTHING, nikad UPDATE), migracija banke pitanja. NEMA boot migracija koje mijenjaju content_html.
 - **UKLONJENI opasni endpointi (maj 2026):** `sync-from-seed` i `restore-diac` su OBRISANI jer su prepisivali produkcijski content_html sa skraćenim seed podacima. Nikada ih ne vraćati.
