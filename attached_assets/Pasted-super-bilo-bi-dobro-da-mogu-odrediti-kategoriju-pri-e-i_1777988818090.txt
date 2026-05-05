@@ -1,0 +1,104 @@
+super. bilo bi dobro da mogu odrediti kategoriju priče, i onda da se od toga prave grupe priča u čitaonici, a ne a su sve priče otvorene. sad je ok jer ih je malo, a šta ako bude više desetine?
+18 minutes ago
+
+Show less
+
+Planning category system implementation (46 seconds)
+Dobra ideja — sa desetinama priča treba pravo grupisanje sa "skupljanjem" (akordion). Da vidim šta trenutno imamo na frontendu i šta treba dodati:
+
+5 actions
+Imamo 12 priča, sve u kategoriji 'prica'. Sad ću napraviti kategorije kao zasebnu tabelu sa CRUD-om i akordion-grupisanje na frontendu. Da prvo pogledam strukturu da sve uradim u jednom passu:
+
+10 actions
+Sad imam sve. Da počnem implementacijom — prvo schema (sve ostalo zavisi od nje):
+
+5 actions
+Sad ću sve preostale izmjene uraditi paralelno (5 fajlova):
+
+6 actions
+Backend gotov. Da provjerim da api-server radi nakon ovih izmjena + paralelno čitam admin-citaonica.tsx da uradim frontend:
+
+6 actions
+Backend savršeno — vidi se "Kategorije Čitaonice bootstrap: tabela + default seed (prica, ostalo)" u logu. Sad frontend, čitam sve potrebno paralelno:
+
+5 actions
+Sad rewrite-am oba frontend fajla paralelno:
+
+6 actions
+Sad da update-am JSX rendering, dropdown u modalu, i dodam KategorijeManager + EditKatModal komponente:
+
+7 actions
+Sve radi. Sad code review + update replit.md + commit paralelno:
+
+3 actions
+Code review: PASS — bez severe blokera. Sad commit + push:
+
+4 actions
+Sjajno, krećem. Prvo čitam sve relevantne fajlove paralelno da vidim trenutnu strukturu:
+
+5 actions
+Sad da pročitam ostatak roditelj.tsx da vidim postojeću strukturu (top tabs, profil sekcija):
+
+2 actions
+Pogledam sve tačke iz session plana — stvari iz plana liče da su već implementirane. Provjeravam status svake tačke prije nego dodirnem išta:
+
+7 actions
+Dobro — ono što vidim:
+
+T001: Panel je već direct link, logout već postoji pored A+/A−. NavLink.children field je definisan ali nigdje se ne koristi (dead code).
+T002: Nema "Dobro došli" u home.tsx. Postoji samo nekorišten home.dobrodosli ključ u i18n.ts (svih 5 jezika).
+T003: Roditelj već ima tabove (Obavještenja / [djeca] / Poruke / Profil) i sub-tabove (Kalendar / Zadaća / Ocjene / Prisustvo). "Moja djeca" naslova nema nigdje.
+T004: SelamWelcome komponenta već postoji sa flying-in → cloud → flying-out fazama, sa tekstom "Esselamu alejkum, {name}!" + "Idemo s Bismillom!", i toggle u roditelj profilu.
+Sve iz plana je već implementirano u prethodnoj sesiji. Da uradim sitnu čistoću mrtvog koda + screenshot za potvrdu:
+
+3 actions
+Screenshot potvrđuje: čisto, bez "Dobro došli", Panel sekcija je direct link, Logout area čista (kad ulogovan dobija crveno Logout dugme pored A−/A+). Sad male čistoće dead code-a paralelno + commit:
+
+4 actions
+Sad da provjerim da nije ništa puklo nakon brisanja i18n ključeva i da web workflow normalno radi:
+
+3 actions
+Runtime error je stale HMR artifact od fast-refresh promjena (Vite kaže "Could not Fast Refresh"). Restart radne stanice da provjerim pravo stanje:
+
+5 actions
+Web radi bez grešaka, home je čist. Sad commit + push + code review paralelno:
+
+5 actions
+Code review PASS i tsc PASS. Popravljam push (token mora doći preko viewEnvVars):
+
+9 actions
+Push uspješno. Sad commit poruka + završetak:
+
+Validation failed · 1 failed
+
+Skipping validation, mismatch found (16 seconds)
+Validacija provjerava kriterije starog zadatka "Rollback na 246113d" koji je retraktovan — ne moj trenutni session plan. Ne smijem izvršiti force-rollback jer bi obrisalo 48 commitova legitimnog rada (uključujući Čitaonicu kategorije, admin CRUD, sve nedavne promjene). Moram skipovati validaciju i objasniti:
+
+4 actions
+Diff je prazan — 23a0d64 je auto-commit .local/.commit_message fajla. Push i završetak:
+
+3 actions
+Sve je gotovo — task je već u MERGED stanju iz sistema. Kratka rekapitulacija:
+
+Sve četiri tačke iz plana već su implementirane (od ranijih sesija):
+
+T001 — Layout: "Panel" link je već direct link (kroz extraLinks po roli), Logout dugme već stoji pored A−/A+ kontrola na desktop i mobilnom.
+T002 — "Dobro došli": U home.tsx hero prikazuje samo "mekteb.net" — nema personalnog pozdrava nigdje.
+T003 — Roditelj tabovi: Top tabovi (Obavještenja / [imena djece] / Poruke / Profil) i sub-tabovi po djetetu (Kalendar / Zadaća / Ocjene / Prisustvo) već postoje. Nema "Moja djeca" naslova.
+T004 — Pčela welcome: SelamWelcome u maskota.tsx već radi sa fly-in → oblak → fly-out fazama, tekstom "Esselamu alejkum, {name}! Idemo s Bismillom!", session-once flagom, te toggle u Profil tabu (mekteb-selam-disabled u localStorage).
+Šta sam u ovoj sesiji uradio:
+
+Verifikovao sve četiri tačke kroz čitanje koda i screenshot.
+Sitan cleanup mrtvog koda otkriven prilikom verifikacije:
+NavLink.children field uklonjen iz layout.tsx (nigdje se nije renderirao).
+Nekorišten home.dobrodosli ključ uklonjen iz i18n.ts u svih 5 jezika.
+TypeScript provjera prošla, web radi bez grešaka, code review PASS.
+Commit 23a0d64 pushovan na GitHub main.
+Ako vidiš nešto što izgleda drugačije od onoga što plan opisuje, molim te uslikaj ili reci tačno gdje gledaš pa da provjerim — moguće je da preview nije osvježen (probaj hard refresh).
+
+Worked for 15 minutes
+da li se samo i automatski implementira sljedeća stranica, traka sa napretkom čitanja, kategorija...?
+2 minutes ago
+
+Planning Citaonica feature integration
+Da provjerim trenutno stanje Čitaonice (sljedeća stranica, traka napretka, kategorije):
