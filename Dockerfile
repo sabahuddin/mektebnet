@@ -50,6 +50,11 @@ RUN pnpm install --prod --frozen-lockfile
 COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=base /app/artifacts/mekteb-arapsko-pismo/dist ./artifacts/mekteb-arapsko-pismo/dist
 COPY --from=base /app/scripts/content-seed.json.gz ./scripts/content-seed.json.gz
+# Drizzle migrations folder — REQUIRED by drizzle-migrate.ts at runtime startup.
+# Without this, migrate() fails with "Can't find meta/_journal.json file" and
+# new schema migrations never apply to production DB (causes 500 on endpoints
+# that reference newly added columns).
+COPY --from=base /app/lib/db/drizzle ./lib/db/drizzle
 
 ENV NODE_ENV=production
 ENV PORT=3000
