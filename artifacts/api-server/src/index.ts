@@ -273,11 +273,14 @@ async function runDataBootstrap() {
     await db.execute(sql`DELETE FROM knjige WHERE slug IN ('knjiga-ilmihal', 'ilmihal');`);
     await db.execute(sql`UPDATE knjige SET redoslijed = 0 WHERE slug = 'adem' AND redoslijed <> 0;`);
     // Egzaktno matchovanje stare seed putanje da NE prepiše custom uploadane slike
-    // (admin upload kroz multer obično pravi nove jedinstvene nazive fajlova).
+    // (admin upload kroz multer pravi jedinstvene nazive fajlova). Sve 12 priča
+    // sad imaju cover slike u public/ bundle-u — ne ovisi o /api/uploads/ volume mountu.
     await db.execute(sql`
       UPDATE knjige
       SET cover_image = '/citaonica/' || slug || '.png'
       WHERE slug IN (
+              'adem', 'musa', 'nuh', 'sulejman', 'ismail',
+              'muhammed-2-poslanstvo-do-hidzre',
               'ibrahim', 'isa', 'davud', 'jusuf',
               'muhammed-1-djetinjstvo', 'muhammed-3-medinski-period'
             )
