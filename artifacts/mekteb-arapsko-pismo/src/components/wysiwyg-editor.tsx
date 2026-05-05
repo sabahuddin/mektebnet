@@ -7,6 +7,7 @@ import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
+import Youtube from "@tiptap/extension-youtube";
 import { Node, mergeAttributes } from "@tiptap/core";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { getApiBase } from "@/lib/api";
@@ -20,7 +21,7 @@ import {
   BookOpen, AlertTriangle, TableIcon,
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
   Maximize, RectangleHorizontal, Square, Loader2,
-  FolderOpen, X, Copy, Check, FileText, Minus, Music
+  FolderOpen, X, Copy, Check, FileText, Minus, Music, Youtube as YoutubeIcon
 } from "lucide-react";
 import { parsePripremaContent, renderPripremaContent, type PripremaStruct } from "@/lib/priprema-design";
 
@@ -271,6 +272,12 @@ const editorExtensions = [
   InfoBox,
   InfoCard,
   AudioBlock,
+  Youtube.configure({
+    controls: true,
+    nocookie: true,
+    modestBranding: true,
+    HTMLAttributes: { class: "yt-embed" },
+  }),
 ];
 
 function extractHeroImage(beforeHtml: string): string | null {
@@ -963,6 +970,19 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         <MenuButton onClick={() => audioInputRef.current?.click()} disabled={audioUploading} title="Umetni audio (MP3, M4A...)">
           {audioUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4 text-purple-600" />}
         </MenuButton>
+        <MenuButton
+          onClick={() => {
+            const url = window.prompt("Zalijepi YouTube link (npr. https://www.youtube.com/watch?v=... ili https://youtu.be/...)");
+            if (!url) return;
+            const ok = editor.chain().focus().setYoutubeVideo({ src: url, width: 640, height: 360 }).run();
+            if (!ok) {
+              toast({ title: "Neispravan YouTube link", description: "Provjeri da li je link sa youtube.com ili youtu.be.", variant: "destructive" });
+            }
+          }}
+          title="Umetni YouTube video"
+        >
+          <YoutubeIcon className="w-4 h-4 text-red-600" />
+        </MenuButton>
         <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
           <Undo2 className="w-4 h-4" />
@@ -1017,6 +1037,19 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             outline-offset: 4px;
           }
           .wysiwyg-editor-content .ProseMirror mark { background-color: #fef08a; padding: 0.1em 0.2em; border-radius: 0.2em; }
+          .wysiwyg-editor-content .ProseMirror div[data-youtube-video] {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 1rem auto;
+            aspect-ratio: 16 / 9;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          }
+          .wysiwyg-editor-content .ProseMirror div[data-youtube-video] iframe { width: 100%; height: 100%; border: 0; display: block; }
+          .wysiwyg-editor-content .ProseMirror div[data-youtube-video].ProseMirror-selectednode { outline: 3px solid #ef4444; outline-offset: 4px; }
           .wysiwyg-editor-content .ProseMirror hr { border: none; border-top: 2px solid #e5e7eb; margin: 1.5rem 0; }
           .wysiwyg-editor-content .ProseMirror div.arabic-card {
             background: linear-gradient(135deg, #ecfdf5, #d1fae5);
