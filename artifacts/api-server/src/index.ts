@@ -257,6 +257,41 @@ async function runDataBootstrap() {
     logger.error({ err: bankaErr }, "Banka pitanja: migracija iz JSONB-a neuspjela (non-fatal)");
   }
 
+  // ČITAONICA CLEANUP (idempotentno) — eksplicitno odobreno od strane user-a:
+  //   1. Brisanje duplikata "Ilmihal za djecu" (postojala su 2 zapisa: id=1 slug
+  //      'knjiga-ilmihal' i id=12 slug 'ilmihal'). Čitaonica je samo za priče,
+  //      ilmihal sadržaj je već dostupan kroz /ilmihal modul.
+  //   2. Adem prvi (redoslijed=0) — kao prvi poslanik u hronologiji priča.
+  //   3. Cover-image putanja prebačena u public/ bundle za 6 slika koje su
+  //      ranije imale tekst/brojeve/lažnu kaligrafiju. Nove čiste slike su
+  //      committed u artifacts/mekteb-arapsko-pismo/public/citaonica/.
+  //      Update se dešava SAMO ako cover_image pokazuje na staru /api/uploads/
+  //      putanju (ili je null) — ne prepisuje custom uploadanu sliku.
+  //
+  // SVE TRI operacije su idempotentne (rerun safe).
+  try {
+    await db.execute(sql`DELETE FROM knjige WHERE slug IN ('knjiga-ilmihal', 'ilmihal');`);
+    await db.execute(sql`UPDATE knjige SET redoslijed = 0 WHERE slug = 'adem' AND redoslijed <> 0;`);
+    // Egzaktno matchovanje stare seed putanje da NE prepiše custom uploadane slike
+    // (admin upload kroz multer obično pravi nove jedinstvene nazive fajlova).
+    await db.execute(sql`
+      UPDATE knjige
+      SET cover_image = '/citaonica/' || slug || '.png'
+      WHERE slug IN (
+              'ibrahim', 'isa', 'davud', 'jusuf',
+              'muhammed-1-djetinjstvo', 'muhammed-3-medinski-period'
+            )
+        AND (
+              cover_image IS NULL
+              OR cover_image = '/api/uploads/citaonica/' || slug || '.png'
+              OR cover_image = '/uploads/citaonica/' || slug || '.png'
+            );
+    `);
+    logger.info("Čitaonica cleanup: Ilmihal duplicates removed, Adem prvi, regenerated covers updated");
+  } catch (e) {
+    logger.error({ err: e }, "Čitaonica cleanup failed (non-fatal)");
+  }
+
   // DISABLED 2026-04-21: backfillAllPripreme() je STRIPED novi dizajn pripreme
   // (gradient kartica + obojeni ciljevi) na nezaključanim lekcijama i prepisivao
   // ga sa starim dizajnom (table layout) iz pripreme-seed*.ts fajlova.

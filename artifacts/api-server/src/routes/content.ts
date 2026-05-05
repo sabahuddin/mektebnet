@@ -364,7 +364,7 @@ router.get("/knjige", async (req, res) => {
       kategorija: knjige.kategorija,
       coverImage: knjige.coverImage,
       redoslijed: knjige.redoslijed,
-    }).from(knjige);
+    }).from(knjige).orderBy(asc(knjige.redoslijed), asc(knjige.id));
 
     const filtered = kategorija ? result.filter(k => k.kategorija === kategorija) : result;
     res.json(filtered);

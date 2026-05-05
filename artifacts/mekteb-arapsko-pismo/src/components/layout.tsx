@@ -212,7 +212,7 @@ export function Layout({ children }: LayoutProps) {
                 data-testid="nav-logout-btn"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden md:inline">{t("nav.odjaviSe")}</span>
+                <span>{t("nav.odjaviSe")}</span>
               </button>
             ) : (
               <Link href="/login">

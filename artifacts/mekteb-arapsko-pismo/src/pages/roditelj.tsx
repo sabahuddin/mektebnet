@@ -151,7 +151,7 @@ function DijeteContent({
   summaryLoading: boolean;
   gameStats: GameStatsResp | null;
 }) {
-  const [childSubTab, setChildSubTab] = useState<ChildSubTab>("prisustvo");
+  const [childSubTab, setChildSubTab] = useState<ChildSubTab>("kalendar");
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -234,10 +234,10 @@ function DijeteContent({
   const selectedEntries = selectedDate ? entriesByDate[selectedDate] || [] : [];
 
   const SUB_TABS: { id: ChildSubTab; label: string; icon: any }[] = [
-    { id: "prisustvo", label: "Prisustvo", icon: CalendarCheck },
-    { id: "ocjene", label: "Ocjene", icon: Star },
     { id: "kalendar", label: "Kalendar", icon: Calendar },
     { id: "zadaca", label: "Zadaća", icon: ClipboardList },
+    { id: "ocjene", label: "Ocjene", icon: Star },
+    { id: "prisustvo", label: "Prisustvo", icon: CalendarCheck },
   ];
 
   return (

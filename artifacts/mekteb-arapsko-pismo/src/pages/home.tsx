@@ -108,9 +108,6 @@ export default function Home() {
         <div className="p-8 md:p-10 flex items-center justify-between gap-6">
           <div className="flex-1">
             <h1 className="text-2xl md:text-3xl font-extrabold text-primary mb-3 leading-tight">mekteb.net</h1>
-            <p className="text-muted-foreground font-medium text-lg leading-relaxed max-w-lg">
-              {t("home.dobrodosli")}
-            </p>
             {user?.role === "ucenik" && (
               <div className="flex items-center gap-4 mt-5 flex-wrap">
                 <div className="flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-bold shadow-sm border border-orange-200 text-sm">

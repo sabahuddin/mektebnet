@@ -7,7 +7,7 @@ Mekteb.net is an independent, self-hosted Islamic educational platform designed 
 **Key Capabilities:**
 - **Gamified Learning:** Arabic script learning, Ilmihal lessons, and quizzes with a "Hasanat" credit system for game time.
 - **Administrative Tools:** Muallim Panel for student/group management, attendance, grades, and lesson plans. Parent Panel for tracking children's progress.
-- **Content:** Over 231 Ilmihal lessons, 43 quizzes with 1120+ questions, and a Reading Room with 14 books.
+- **Content:** Over 231 Ilmihal lessons, 43 quizzes with 1120+ questions, and a Reading Room with 12 books (Adem first by redoslijed=0).
 - **Communication:** Internal messaging system for all user roles.
 - **Reporting:** Detailed attendance and grade reports with Excel export.
 - **Glossary:** Over 314 Islamic terms with interactive tooltips.
@@ -73,7 +73,8 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - **Internationalization (i18n):** Currently locked to Bosnian, with future plans for full multi-language support.
 - **Navigation:** Flat main navigation with direct links (no dropdowns). Logout button with icon+text next to A+/- font controls for logged-in users. Panel is a direct link. A "Sufara" module is planned and shown as "coming soon."
 - **Bee Welcome Animation (SelamWelcome):** On first session visit, a bee mascot appears center-screen with a speech bubble saying "Esselamu alejkum, [name]! Idemo s Bismillom!" — auto-dismisses after ~5s, once per session (sessionStorage). Can be disabled in Roditelj Profil tab (localStorage `mekteb-selam-disabled`).
-- **Roditelj Panel (tab-based, maj 2026):** Top-level tabs: Obavještenja, [child name tabs], Poruke (navigates to /poruke), Profil. Each child tab shows summary stats + sub-tabs: Prisustvo, Ocjene, Kalendar, Zadaća. Profil tab has PushToggle, add/link child, selam toggle. Standalone /roditelj/kalendar and /roditelj/zadace routes still exist.
+- **Roditelj Panel (tab-based, maj 2026):** Top-level tabs: Obavještenja, [child name tabs], Poruke (navigates to /poruke), Profil. Each child tab shows summary stats + sub-tabs in order: Kalendar (default), Zadaća, Ocjene, Prisustvo. Profil tab has PushToggle, add/link child, selam toggle. Standalone /roditelj/kalendar and /roditelj/zadace routes still exist.
+- **Čitaonica cleanup boot script (maj 2026):** Idempotentni cleanup u `runDataBootstrap()` (api-server/src/index.ts): briše duplikate "Ilmihal za djecu" (slug `knjiga-ilmihal`/`ilmihal` — ilmihal sadržaj je u /ilmihal modulu), postavlja Adem na redoslijed=0 (prvi poslanik hronološki), prebacuje cover_image za 6 regeneriranih slika (ibrahim, isa, davud, jusuf, muhammed-1-djetinjstvo, muhammed-3-medinski-period) iz `/api/uploads/citaonica/<slug>.png` na bundleane public slike `/citaonica/<slug>.png`. Update koristi egzaktno staro path-matchovanje (`= '/api/uploads/citaonica/' || slug || '.png'`) da NE prepiše custom uploadane slike. API endpoint `/api/content/knjige` sortira po `redoslijed asc, id asc`.
 - **Admin Panel:** Tools for managing users, analytics, quiz results, and assignments. Includes H5P tutorial and statistics.
 - **Security:** Captcha for login/registration.
 - **PWA (Progressive Web App):** The application is installable across platforms, utilizing `vite-plugin-pwa` for offline capabilities and service worker caching strategies that prioritize public content. Auth-gated endpoints are explicitly not cached for security.
