@@ -217,6 +217,7 @@ router.get("/kvizovi", async (req, res) => {
     }));
     res.json(filtered);
   } catch (err) {
+    req.log.error({ err }, "GET /content/kvizovi failed");
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -345,6 +346,7 @@ router.get("/kvizovi/:slug", async (req, res) => {
 
     res.json(kviz);
   } catch (err) {
+    req.log.error({ err, slug: req.params.slug }, "GET /content/kvizovi/:slug failed");
     res.status(500).json({ error: "Greška servera" });
   }
 });
