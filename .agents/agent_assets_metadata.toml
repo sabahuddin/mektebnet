@@ -564,6 +564,30 @@ uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-letenje
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "9lyuAuEzOl35WC8qnM7R6"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/citaonica/adem.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Xjj7WLMWOC9GNRwia3-1c"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/citaonica/musa.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KZ48PF_diBzLTigwYA6TD"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/citaonica/nuh.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "LCttx35VKnM3yGXJZdZtO"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/citaonica/ismail.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
