@@ -180,7 +180,55 @@ async function runResidualSchema() {
         WHERE vrsta IN ('dragDrop','markWords');
     `);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx) ready");
+    // === MIGRATION 0006 CATCH-UP (idempotentno) ===
+    // Produkcijska baza je u partial state — Drizzle migrate() pada na 0002
+    // (push_tokens već postoji), pa migracija 0006 nikad ne stigne primijeniti
+    // nove kvizovi kolone i obavještenja tabelu. Ovdje ih osiguravamo idempotentno
+    // tako da SELECT iz /api/content/kvizovi (koji referencira sve te kolone)
+    // ne puca sa "column does not exist". Bezbjedno za pokretanje na svaki start.
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS kategorija varchar(60);`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS lekcija_id integer;`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS opis text DEFAULT '' NOT NULL;`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS pitanja_po_sesiji integer;`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS is_published boolean DEFAULT true NOT NULL;`);
+
+    // obavještenja tabela (muallim → roditelji/grupa). Iz migracije 0006.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS obavjestenja (
+        id serial PRIMARY KEY NOT NULL,
+        muallim_id integer NOT NULL,
+        grupa_id integer,
+        naslov varchar(200) NOT NULL,
+        sadrzaj text NOT NULL,
+        slika_url text,
+        created_at timestamp DEFAULT now() NOT NULL,
+        updated_at timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS obavjestenja_muallim_idx ON obavjestenja (muallim_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS obavjestenja_grupa_idx ON obavjestenja (grupa_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS obavjestenja_created_idx ON obavjestenja (created_at);`);
+
+    // kviz_pitanja join tabela (M:N kviz↔banka). Iz migracije 0006. Većina
+    // produkcija je već imala — IF NOT EXISTS čuva netaknuto.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS kviz_pitanja (
+        id serial PRIMARY KEY NOT NULL,
+        kviz_id integer NOT NULL,
+        pitanje_id integer NOT NULL,
+        redoslijed integer DEFAULT 0 NOT NULL,
+        created_at timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS kviz_pitanja_kviz_pitanje_unique_idx ON kviz_pitanja (kviz_id, pitanje_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS kviz_pitanja_kviz_redoslijed_idx ON kviz_pitanja (kviz_id, redoslijed);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS kviz_pitanja_pitanje_idx ON kviz_pitanja (pitanje_id);`);
+
+    // pitanja_banka indeksi iz migracije 0006 (tabela već postoji od ranije).
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS pitanja_banka_kategorija_idx ON pitanja_banka (kategorija);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS pitanja_banka_lekcija_idx ON pitanja_banka (lekcija_id);`);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }
