@@ -405,12 +405,28 @@ async function runDataBootstrap() {
   Neka Allah, dž.š., učini ovo učenje korisnim, a srca naša ispuni ljubavlju prema znanju i Njemu, dž.š. Bismillah!
 </p>`;
 
+    // INSERT sa redoslijed=-10 da uvodne riječi budu GARANTOVANO prve.
+    // Frontend (content.ts:38) sortira samo po `asc(redoslijed)` bez tie-break po id —
+    // ako više lekcija ima isti redoslijed, poredak je nedefinisan. Negativan
+    // broj (-10) garantuje da uvodna riječ uvijek bude prva, bez obzira što
+    // postojeća prva lekcija nivoa već ima redoslijed=0.
     await db.execute(sql`
       INSERT INTO ilmihal_lekcije (nivo, slug, naslov, content_html, redoslijed, is_published, locked, locked_at, locked_note)
       VALUES
-        (2, 'uvodna-rijec-nivo-2', 'Uvodna riječ', ${uvodnaNivo2Html}, 0, true, true, NOW(), 'Boot insert: motivirajuća uvodna riječ za Nivo 2'),
-        (3, 'uvodna-rijec-nivo-3', 'Uvodna riječ', ${uvodnaNivo3Html}, 0, true, true, NOW(), 'Boot insert: motivirajuća uvodna riječ za Nivo 3')
+        (2, 'uvodna-rijec-nivo-2', 'Uvodna riječ', ${uvodnaNivo2Html}, -10, true, true, NOW(), 'Boot insert: motivirajuća uvodna riječ za Nivo 2'),
+        (3, 'uvodna-rijec-nivo-3', 'Uvodna riječ', ${uvodnaNivo3Html}, -10, true, true, NOW(), 'Boot insert: motivirajuća uvodna riječ za Nivo 3')
       ON CONFLICT (slug) DO NOTHING;
+    `);
+
+    // Idempotentni UPDATE redoslijed=-10 za uvodne riječi Nivo 2 i 3.
+    // Pokriva slučaj kad su prethodno unijete sa redoslijed=0 (prva verzija boot scripta).
+    // WHERE redoslijed != -10 — drugi restart neće raditi UPDATE.
+    await db.execute(sql`
+      UPDATE ilmihal_lekcije
+      SET redoslijed = -10
+      WHERE nivo IN (2, 3)
+        AND slug IN ('uvodna-rijec-nivo-2', 'uvodna-rijec-nivo-3')
+        AND redoslijed != -10;
     `);
 
     // Idempotentni UPDATE za Nivo 2 i Nivo 3 uvodne riječi — ako su prethodno unijete
@@ -432,7 +448,7 @@ async function runDataBootstrap() {
         AND content_html LIKE '%lesson-container%';
     `);
 
-    logger.info("Ilmihal cleanup: 4 duplicate lessons deleted, Nivo 1 uvodna-rijec replaced (if old), Nivo 2 + Nivo 3 uvodne riječi inserted");
+    logger.info("Ilmihal cleanup: 4 duplicate lessons deleted, Nivo 1 uvodna-rijec replaced (if old), Nivo 2 + Nivo 3 uvodne riječi inserted (redoslijed=-10)");
   } catch (e) {
     logger.error({ err: e }, "Ilmihal cleanup failed (non-fatal)");
   }
