@@ -4,16 +4,18 @@ import { useLocation } from "wouter";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
 
-export type MaskotaVarijanta = "bravo" | "pozdrav" | "knjiga" | "prazno";
+export type MaskotaVarijanta = "bravo" | "pozdrav" | "knjiga" | "prazno" | "letenje";
 
-// Trenutno svaka varijanta koristi istu sliku — pčela sa ruksakom i knjigom je
-// dovoljno ekspresivna i ide uz sve kontekste (učenje, pozdrav, pohvala, prazna stanja).
-// Različite poze možemo dodati kasnije bez mijenjanja konzumera.
+// Frontalna pčela (sa knjigom) za empty states / pozdrav / pohvale i bočna
+// "leteća" pčela (profil pose, leti udesno) za animacije letenja preko ekrana.
+// Bočna se koristi u SelamWelcome i FlyingMaskota — pčele zaista lete bočno,
+// ne sa stomakom prema gledaocu.
 const SRC: Record<MaskotaVarijanta, string> = {
   bravo: `${BASE}/pcela.png`,
   pozdrav: `${BASE}/pcela.png`,
   knjiga: `${BASE}/pcela.png`,
   prazno: `${BASE}/pcela.png`,
+  letenje: `${BASE}/pcela-letenje.png`,
 };
 
 const ALT: Record<MaskotaVarijanta, string> = {
@@ -21,6 +23,7 @@ const ALT: Record<MaskotaVarijanta, string> = {
   pozdrav: "Maskota pčela pozdravlja",
   knjiga: "Maskota pčela sa knjigom",
   prazno: "Maskota pčela",
+  letenje: "Maskota pčela u letu",
 };
 
 interface MaskotaProps {
@@ -274,7 +277,7 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
     >
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: phase === "flying-out" || phase === "done" ? 0 : 0.25 }}
+        animate={{ opacity: phase === "flying-out" ? 0 : 0.25 }}
         transition={{ duration: 0.5 }}
         className="absolute inset-0 bg-black"
       />
@@ -306,7 +309,7 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
           style={{ width: "100%", height: "100%" }}
         >
           <img
-            src={SRC.pozdrav}
+            src={SRC.letenje}
             alt=""
             draggable={false}
             style={{ width: "100%", height: "100%" }}
@@ -404,7 +407,7 @@ export function FlyingMaskota() {
               style={{ width: size, height: size }}
             >
               <img
-                src={SRC.pozdrav}
+                src={SRC.letenje}
                 alt=""
                 draggable={false}
                 style={{ width: size, height: size }}
