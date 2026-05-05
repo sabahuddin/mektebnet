@@ -32,13 +32,76 @@ interface KnjigaListItem {
 function extractPages(html: string): string[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
+
+  // 1) Autoritativno: eksplicitne .page / [data-page] oznake (stare priče sa bootstrap-om).
   const pageDivs = doc.querySelectorAll(".page, [data-page]");
   if (pageDivs.length > 0) {
-    return Array.from(pageDivs).map(d => d.innerHTML);
+    return Array.from(pageDivs).map((d) => d.innerHTML);
   }
-  const content = doc.querySelector(".book-content");
-  if (content) return [content.innerHTML];
-  return [html];
+
+  // 2) Automatska paginacija za nove priče (admin nije ručno postavio .page divove).
+  //    Dijelimo po:
+  //      - eksplicitnim <hr> separatorima (ako ih admin koristi),
+  //      - h1/h2/h3 naslovima (svaki novi naslov ≈ nova stranica),
+  //      - i ograničenju riječi (cilj ~180 riječi po stranici, max ~280).
+  const root: HTMLElement = (doc.querySelector(".book-content") as HTMLElement | null) || doc.body;
+  const children = Array.from(root.children) as HTMLElement[];
+  if (children.length === 0) {
+    const fallback = root.innerHTML.trim();
+    return fallback ? [fallback] : [html];
+  }
+
+  const TARGET_WORDS = 180;
+  const MAX_WORDS = 280;
+  const MIN_WORDS_BEFORE_HEADING_BREAK = 60;
+  const HEADING_TAGS = new Set(["H1", "H2", "H3"]);
+
+  const wordCount = (txt: string) =>
+    txt.trim().split(/\s+/).filter(Boolean).length;
+
+  const pages: string[] = [];
+  let buffer: string[] = [];
+  let bufferWords = 0;
+
+  const flush = () => {
+    if (buffer.length > 0) {
+      pages.push(buffer.join(""));
+      buffer = [];
+      bufferWords = 0;
+    }
+  };
+
+  for (const el of children) {
+    const tag = el.tagName;
+    const words = wordCount(el.textContent || "");
+
+    // Eksplicitan prelom: <hr> = nova stranica, sam <hr> ne ide u sadržaj.
+    if (tag === "HR") {
+      flush();
+      continue;
+    }
+
+    // Naslov H1/H2/H3 → nova stranica AKO trenutna ima dovoljno teksta.
+    if (HEADING_TAGS.has(tag) && bufferWords >= MIN_WORDS_BEFORE_HEADING_BREAK) {
+      flush();
+    }
+
+    buffer.push(el.outerHTML);
+    bufferWords += words;
+
+    // Sigurnosni limit — nikad ne preći ~280 riječi po stranici.
+    if (bufferWords >= MAX_WORDS) {
+      flush();
+    }
+  }
+
+  flush();
+
+  if (pages.length === 0) {
+    const fallback = root.innerHTML.trim();
+    return fallback ? [fallback] : [html];
+  }
+  return pages;
 }
 
 export default function CitaonicaKnjigaPage() {
