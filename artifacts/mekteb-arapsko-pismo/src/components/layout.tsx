@@ -22,13 +22,9 @@ type NavLink = {
   href: string;
   label: string;
   icon: any;
-  /** Ako postoji, link se renderuje kao dropdown grupa; trigger linkuje na own href. */
-  children?: NavLink[];
-  /** Akcija umjesto navigacije (npr. Odjava). Kada je postavljena, stavka se renderuje
-   *  kao <button> i ne koristi se href. */
+  /** Akcija umjesto navigacije (npr. Sufara "Uskoro"). Kada je postavljena,
+   *  stavka se renderuje kao <button> i ne koristi se href. */
   onClick?: () => void;
-  /** Vizualna varijanta — "danger" boji stavku crveno (npr. Odjava). */
-  variant?: "danger";
 };
 
 const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];

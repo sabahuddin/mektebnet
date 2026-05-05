@@ -58,7 +58,6 @@ export const translations = {
     home: {
       selam: "Es-selamu 'alejkum",
       selamUser: "Es-selamu 'alejkum, {name}!",
-      dobrodosli: "Dobrodošli na mekteb.net — tvoje mjesto za učenje islama.",
       odaberiModul: "Odaberi modul",
       prijaviSe: "Prijavi se za puni pristup",
       streakAktivan: "Streak aktivan",
@@ -268,7 +267,6 @@ export const translations = {
     home: {
       selam: "Es-selamu 'alejkum",
       selamUser: "Es-selamu 'alejkum, {name}!",
-      dobrodosli: "Willkommen auf mekteb.net — Ihr Platz zum Lernen des Islam.",
       odaberiModul: "Modul auswählen",
       prijaviSe: "Anmelden für vollen Zugang",
       streakAktivan: "Streak aktiv",
@@ -477,7 +475,6 @@ export const translations = {
     home: {
       selam: "Es-selamu 'alejkum",
       selamUser: "Es-selamu 'alejkum, {name}!",
-      dobrodosli: "Welcome to mekteb.net — your place for learning Islam.",
       odaberiModul: "Choose a module",
       prijaviSe: "Sign in for full access",
       streakAktivan: "Streak active",
@@ -686,7 +683,6 @@ export const translations = {
     home: {
       selam: "Es-selamu 'alejkum",
       selamUser: "Es-selamu 'alejkum, {name}!",
-      dobrodosli: "mekteb.net'e hoş geldiniz — İslam'ı öğrenmek için yeriniz.",
       odaberiModul: "Modül seçin",
       prijaviSe: "Tam erişim için giriş yapın",
       streakAktivan: "Seri aktif",
@@ -895,7 +891,6 @@ export const translations = {
     home: {
       selam: "السلام عليكم",
       selamUser: "السلام عليكم يا {name}!",
-      dobrodosli: "مرحباً بكم في mekteb.net — مكانكم لتعلم الإسلام.",
       odaberiModul: "اختر وحدة",
       prijaviSe: "سجّل الدخول للوصول الكامل",
       streakAktivan: "السلسلة نشطة",
