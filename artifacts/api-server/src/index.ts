@@ -295,6 +295,38 @@ async function runDataBootstrap() {
     logger.error({ err: e }, "Čitaonica cleanup failed (non-fatal)");
   }
 
+  // KATEGORIJE ČITAONICE BOOTSTRAP (idempotentno):
+  //   1. CREATE TABLE IF NOT EXISTS — admin-definisane grupe priča.
+  //      `knjige.kategorija` referencira `kategorije_knjige.slug` (nema FK constrainta;
+  //      konvencija — orphan-i se grupišu pod "Bez kategorije" na frontendu).
+  //   2. INSERT default kategorija ('prica' i 'ostalo') ON CONFLICT DO NOTHING —
+  //      'prica' je glavna grupa za priče o vjerovjesnicima i defaultno otvorena,
+  //      'ostalo' je za sve ostalo (npr. hadis za djecu, ahlak teme...) i defaultno zatvorena.
+  //   3. Admin može kroz /admin/citaonica > "Kategorije" dodati nove grupe.
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS kategorije_knjige (
+        id SERIAL PRIMARY KEY,
+        slug VARCHAR(50) NOT NULL UNIQUE,
+        naziv VARCHAR(120) NOT NULL,
+        opis TEXT,
+        redoslijed INTEGER NOT NULL DEFAULT 100,
+        default_open BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      INSERT INTO kategorije_knjige (slug, naziv, opis, redoslijed, default_open)
+      VALUES
+        ('prica', 'Priče o vjerovjesnicima', 'Životne priče poslanika u hronološkom redu.', 0, TRUE),
+        ('ostalo', 'Ostale knjige', 'Hadis za djecu, ahlak teme, dove i druge islamske teme.', 999, FALSE)
+      ON CONFLICT (slug) DO NOTHING;
+    `);
+    logger.info("Kategorije Čitaonice bootstrap: tabela + default seed (prica, ostalo)");
+  } catch (e) {
+    logger.error({ err: e }, "Kategorije Čitaonice bootstrap failed (non-fatal)");
+  }
+
   // ILMIHAL CLEANUP + UVODNE RIJEČI (idempotentno) — eksplicitno odobreno od strane user-a:
   //   1. Brisanje 4 duplikata/test lekcija koje "su se pojavile odnekud":
   //      Nivo 1: 'lekcija-01' (LEKCIJA 1: IMANSKI ŠARTI), 'tesbih' (sve malim slovima)

@@ -6,6 +6,7 @@ import {
   kvizPitanjaTable,
   pitanjaBankaTable,
   knjige,
+  kategorijeKnjigeTable,
   korisnikNapredakTable,
   kvizRezultatiTable,
   prilozi,
@@ -352,6 +353,26 @@ router.get("/kvizovi/:slug", async (req, res) => {
 });
 
 // ── KNJIGE/ČITAONICA ─────────────────────────────────────────────────────────
+
+// GET /api/content/kategorije-knjiga
+// Public endpoint — vraća sve kategorije sortirane po `redoslijed`.
+// Frontend koristi ovo da grupiše priče u akordion-sekcije.
+router.get("/kategorije-knjiga", async (_req, res) => {
+  try {
+    const result = await db.select({
+      id: kategorijeKnjigeTable.id,
+      slug: kategorijeKnjigeTable.slug,
+      naziv: kategorijeKnjigeTable.naziv,
+      opis: kategorijeKnjigeTable.opis,
+      redoslijed: kategorijeKnjigeTable.redoslijed,
+      defaultOpen: kategorijeKnjigeTable.defaultOpen,
+    }).from(kategorijeKnjigeTable)
+      .orderBy(asc(kategorijeKnjigeTable.redoslijed), asc(kategorijeKnjigeTable.id));
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
 
 // GET /api/content/knjige?kategorija=prica
 // Public endpoint — vraća SAMO objavljene knjige (isPublished = true).

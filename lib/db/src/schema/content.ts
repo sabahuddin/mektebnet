@@ -226,6 +226,9 @@ export const knjige = pgTable("knjige", {
   id: serial("id").primaryKey(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   naslov: text("naslov").notNull(),
+  // Slug-style key matching kategorijeKnjigeTable.slug. NEMA FK constrainta —
+  // konvencija (lakše brisanje kategorije bez orphan-a; orphan-i se grupišu
+  // pod "Bez kategorije" na frontendu).
   kategorija: varchar("kategorija", { length: 50 }).notNull().default("prica"),
   contentHtml: text("content_html").notNull().default(""),
   coverImage: varchar("cover_image", { length: 500 }),
@@ -233,6 +236,22 @@ export const knjige = pgTable("knjige", {
   isPublished: boolean("is_published").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Kategorije za Čitaonicu — admin-definisane grupe priča.
+// `slug` se referencira iz `knjige.kategorija` (string match, no FK).
+// `defaultOpen` kontroliše početno stanje akordiona na javnoj /citaonica.
+export const kategorijeKnjigeTable = pgTable("kategorije_knjige", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 50 }).notNull().unique(),
+  naziv: varchar("naziv", { length: 120 }).notNull(),
+  opis: text("opis"),
+  redoslijed: integer("redoslijed").notNull().default(100),
+  defaultOpen: boolean("default_open").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KategorijaKnjige = typeof kategorijeKnjigeTable.$inferSelect;
+export type InsertKategorijaKnjige = typeof kategorijeKnjigeTable.$inferInsert;
 
 // User content progress (across all modules)
 export const korisnikNapredakTable = pgTable("korisnik_napredak", {

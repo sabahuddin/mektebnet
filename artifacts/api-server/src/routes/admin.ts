@@ -38,6 +38,7 @@ import {
   MEDENA_KATEGORIJE,
   type MedenaKategorija,
   knjige,
+  kategorijeKnjigeTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -1316,6 +1317,107 @@ router.delete("/knjige/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("[DELETE /admin/knjige/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── KATEGORIJE ČITAONICE ───────────────────────────────────────────────────────
+// Admin-definisane grupe priča. Slug se koristi kao referenca iz `knjige.kategorija`.
+// Brisanje kategorije NE briše priče u njoj — one postaju "Bez kategorije" na frontendu.
+
+// GET /api/admin/kategorije-knjiga — sve kategorije + broj priča u svakoj
+router.get("/kategorije-knjiga", async (_req, res) => {
+  try {
+    const kategorije = await db.select().from(kategorijeKnjigeTable)
+      .orderBy(asc(kategorijeKnjigeTable.redoslijed), asc(kategorijeKnjigeTable.id));
+    // Brojanje priča po kategoriji (uključujući neobjavljene — admin treba da vidi sve)
+    const counts = await db
+      .select({ kategorija: knjige.kategorija, broj: sql<number>`count(*)::int` })
+      .from(knjige)
+      .groupBy(knjige.kategorija);
+    const countMap = new Map(counts.map(c => [c.kategorija, c.broj]));
+    res.json(kategorije.map(k => ({ ...k, brojPrica: countMap.get(k.slug) ?? 0 })));
+  } catch (err) {
+    console.error("[GET /admin/kategorije-knjiga]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/kategorije-knjiga — kreiraj novu kategoriju
+router.post("/kategorije-knjiga", async (req, res) => {
+  try {
+    const { slug, naziv, opis, redoslijed, defaultOpen } = req.body || {};
+    if (!slug || !naziv) { res.status(400).json({ error: "slug i naziv su obavezni" }); return; }
+    const [created] = await db.insert(kategorijeKnjigeTable).values({
+      slug: String(slug).trim(),
+      naziv: String(naziv).trim(),
+      opis: opis ? String(opis).trim() : null,
+      redoslijed: typeof redoslijed === "number" ? redoslijed : 100,
+      defaultOpen: !!defaultOpen,
+    }).returning();
+    res.status(201).json(created);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Slug kategorije već postoji" });
+      return;
+    }
+    console.error("[POST /admin/kategorije-knjiga]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/kategorije-knjiga/:id — izmijeni kategoriju.
+// Ako se mijenja `slug`, automatski ažurira `knjige.kategorija` u svim pričama
+// koje su trenutno u toj kategoriji (transakcija).
+router.put("/kategorije-knjiga/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    const { slug, naziv, opis, redoslijed, defaultOpen } = req.body || {};
+    const [existing] = await db.select().from(kategorijeKnjigeTable).where(eq(kategorijeKnjigeTable.id, id));
+    if (!existing) { res.status(404).json({ error: "Kategorija nije pronađena" }); return; }
+
+    const updates: Record<string, unknown> = {};
+    if (slug !== undefined) updates["slug"] = String(slug).trim();
+    if (naziv !== undefined) updates["naziv"] = String(naziv).trim();
+    if (opis !== undefined) updates["opis"] = opis ? String(opis).trim() : null;
+    if (redoslijed !== undefined) updates["redoslijed"] = typeof redoslijed === "number" ? redoslijed : 100;
+    if (defaultOpen !== undefined) updates["defaultOpen"] = !!defaultOpen;
+    if (Object.keys(updates).length === 0) { res.status(400).json({ error: "Nema izmjena" }); return; }
+
+    const newSlug = (updates["slug"] as string | undefined) ?? existing.slug;
+    const slugChanged = newSlug !== existing.slug;
+
+    await db.transaction(async (tx) => {
+      await tx.update(kategorijeKnjigeTable).set(updates).where(eq(kategorijeKnjigeTable.id, id));
+      if (slugChanged) {
+        await tx.update(knjige)
+          .set({ kategorija: newSlug })
+          .where(eq(knjige.kategorija, existing.slug));
+      }
+    });
+    const [updated] = await db.select().from(kategorijeKnjigeTable).where(eq(kategorijeKnjigeTable.id, id));
+    res.json(updated);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Slug kategorije već postoji" });
+      return;
+    }
+    console.error("[PUT /admin/kategorije-knjiga/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/admin/kategorije-knjiga/:id — obriši kategoriju.
+// Priče u toj kategoriji ostaju (postaju "Bez kategorije" na frontendu).
+router.delete("/kategorije-knjiga/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    await db.delete(kategorijeKnjigeTable).where(eq(kategorijeKnjigeTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /admin/kategorije-knjiga/:id]", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
