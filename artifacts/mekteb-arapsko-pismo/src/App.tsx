@@ -48,6 +48,7 @@ import AdminRjecnikPage from "./pages/admin-rjecnik";
 import AdminOrphanUploadsPage from "./pages/admin-orphan-uploads";
 import AdminBankaPitanjaPage from "./pages/admin-banka-pitanja";
 import AdminKvizEditorPage from "./pages/admin-kviz-editor";
+import AdminCitaonicaPage from "./pages/admin-citaonica";
 
 // Učenik profil
 import UcenikProfilPage from "./pages/ucenik-profil";
@@ -143,6 +144,7 @@ function Router() {
       <Route path="/admin/banka-pitanja" component={AdminBankaPitanjaPage} />
       <Route path="/admin/kviz/:id" component={AdminKvizEditorPage} />
       <Route path="/admin/kviz-novi" component={AdminKvizEditorPage} />
+      <Route path="/admin/citaonica" component={AdminCitaonicaPage} />
       <Route path="/admin" component={AdminPage} />
 
       {/* Muallim panel */}

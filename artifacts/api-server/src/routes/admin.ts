@@ -37,6 +37,7 @@ import {
   igraPitanjaTable,
   MEDENA_KATEGORIJE,
   type MedenaKategorija,
+  knjige,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -1214,6 +1215,107 @@ router.delete("/kvizovi/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("[DELETE /kvizovi/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── KNJIGE / ČITAONICA ─────────────────────────────────────────────────────────
+// Admin CRUD za priče u Čitaonici. Public read ide kroz /api/content/knjige.
+// Slike (cover + slike u tekstu) se uploaduju kroz već postojeći /api/admin/upload
+// koji vraća URL oblika /uploads/<filename>.
+
+// GET /api/admin/knjige — sve knjige (uključujući neobjavljene)
+router.get("/knjige", async (_req, res) => {
+  try {
+    const result = await db.select().from(knjige)
+      .orderBy(asc(knjige.redoslijed), asc(knjige.id));
+    res.json(result);
+  } catch (err) {
+    console.error("[GET /admin/knjige]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/admin/knjige/:id — pojedinačna knjiga (za uređivanje)
+router.get("/knjige/:id", async (req, res) => {
+  try {
+    const [k] = await db.select().from(knjige).where(eq(knjige.id, parseInt(req.params.id)));
+    if (!k) { res.status(404).json({ error: "Knjiga nije pronađena" }); return; }
+    res.json(k);
+  } catch (err) {
+    console.error("[GET /admin/knjige/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/knjige — kreiraj novu knjigu/priču
+router.post("/knjige", async (req, res) => {
+  try {
+    const { slug, naslov, kategorija, contentHtml, coverImage, redoslijed, isPublished } = req.body || {};
+    if (!slug || !naslov) {
+      res.status(400).json({ error: "slug i naslov su obavezni" });
+      return;
+    }
+    const [created] = await db.insert(knjige).values({
+      slug: String(slug).trim(),
+      naslov: String(naslov).trim(),
+      kategorija: kategorija || "prica",
+      contentHtml: contentHtml || "",
+      coverImage: coverImage || null,
+      redoslijed: typeof redoslijed === "number" ? redoslijed : 0,
+      isPublished: isPublished ?? true,
+    }).returning();
+    res.status(201).json(created);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Slug već postoji — odaberi drugi" });
+      return;
+    }
+    console.error("[POST /admin/knjige]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/knjige/:id — izmijeni postojeću knjigu
+router.put("/knjige/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    const { slug, naslov, kategorija, contentHtml, coverImage, redoslijed, isPublished } = req.body || {};
+    const updates: Record<string, unknown> = {};
+    if (slug !== undefined) updates["slug"] = String(slug).trim();
+    if (naslov !== undefined) updates["naslov"] = String(naslov).trim();
+    if (kategorija !== undefined) updates["kategorija"] = kategorija || "prica";
+    if (contentHtml !== undefined) updates["contentHtml"] = contentHtml || "";
+    if (coverImage !== undefined) updates["coverImage"] = coverImage || null;
+    if (redoslijed !== undefined) updates["redoslijed"] = typeof redoslijed === "number" ? redoslijed : 0;
+    if (isPublished !== undefined) updates["isPublished"] = !!isPublished;
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: "Nema izmjena" });
+      return;
+    }
+    await db.update(knjige).set(updates).where(eq(knjige.id, id));
+    const [updated] = await db.select().from(knjige).where(eq(knjige.id, id));
+    res.json(updated);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Slug već postoji — odaberi drugi" });
+      return;
+    }
+    console.error("[PUT /admin/knjige/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/admin/knjige/:id — obriši knjigu
+router.delete("/knjige/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    await db.delete(knjige).where(eq(knjige.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /admin/knjige/:id]", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

@@ -1336,6 +1336,9 @@ export default function AdminPage() {
           <button onClick={() => setLocation("/admin/banka-pitanja")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
             <ClipboardList className="w-4 h-4" /> Banka pitanja
           </button>
+          <button onClick={() => setLocation("/admin/citaonica")} data-testid="button-admin-citaonica" className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+            <BookOpen className="w-4 h-4" /> Čitaonica — priče
+          </button>
           <button onClick={() => setLocation("/admin/kviz-novi")} className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl font-semibold hover:bg-orange-100 transition text-sm">
             <Plus className="w-4 h-4" /> Novi kviz
           </button>
