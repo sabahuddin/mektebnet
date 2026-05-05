@@ -376,7 +376,14 @@ router.get("/knjige/:slug", async (req, res) => {
   try {
     const [knjiga] = await db.select().from(knjige).where(eq(knjige.slug, req.params.slug));
     if (!knjiga) { res.status(404).json({ error: "Knjiga nije pronađena" }); return; }
-    res.json(knjiga);
+    // Povezivanje knjige sa kvizom po konvenciji slug = `kviz-{knjiga.slug}` i modul='knjige'.
+    // Ovo se izračunava u runtime-u jer schema `knjige` nema kolonu kvizSlug.
+    const expectedKvizSlug = `kviz-${knjiga.slug}`;
+    const [kviz] = await db.select({ slug: kvizoviTable.slug })
+      .from(kvizoviTable)
+      .where(and(eq(kvizoviTable.modul, "knjige"), eq(kvizoviTable.slug, expectedKvizSlug)))
+      .limit(1);
+    res.json({ ...knjiga, kvizSlug: kviz?.slug ?? null });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
