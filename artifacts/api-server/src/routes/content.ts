@@ -354,6 +354,8 @@ router.get("/kvizovi/:slug", async (req, res) => {
 // ── KNJIGE/ČITAONICA ─────────────────────────────────────────────────────────
 
 // GET /api/content/knjige?kategorija=prica
+// Public endpoint — vraća SAMO objavljene knjige (isPublished = true).
+// Admin za uređivanje koristi /api/admin/knjige koji vraća sve uključujući neobjavljene.
 router.get("/knjige", async (req, res) => {
   try {
     const { kategorija } = req.query;
@@ -364,7 +366,9 @@ router.get("/knjige", async (req, res) => {
       kategorija: knjige.kategorija,
       coverImage: knjige.coverImage,
       redoslijed: knjige.redoslijed,
-    }).from(knjige).orderBy(asc(knjige.redoslijed), asc(knjige.id));
+    }).from(knjige)
+      .where(eq(knjige.isPublished, true))
+      .orderBy(asc(knjige.redoslijed), asc(knjige.id));
 
     const filtered = kategorija ? result.filter(k => k.kategorija === kategorija) : result;
     res.json(filtered);
@@ -374,10 +378,11 @@ router.get("/knjige", async (req, res) => {
 });
 
 // GET /api/content/knjige/:slug
+// Public endpoint — neobjavljene knjige vraćaju 404 (kao da ne postoje).
 router.get("/knjige/:slug", async (req, res) => {
   try {
     const [knjiga] = await db.select().from(knjige).where(eq(knjige.slug, req.params.slug));
-    if (!knjiga) { res.status(404).json({ error: "Knjiga nije pronađena" }); return; }
+    if (!knjiga || !knjiga.isPublished) { res.status(404).json({ error: "Knjiga nije pronađena" }); return; }
     // Povezivanje knjige sa kvizom po konvenciji slug = `kviz-{knjiga.slug}` i modul='knjige'.
     // Ovo se izračunava u runtime-u jer schema `knjige` nema kolonu kvizSlug.
     const expectedKvizSlug = `kviz-${knjiga.slug}`;
