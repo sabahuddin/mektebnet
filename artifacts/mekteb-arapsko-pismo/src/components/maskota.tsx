@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import beeBuzzSrc from "../assets/bee-buzz.mp3";
+import { isAudioMuted } from "@/lib/audio-mute";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
 
@@ -285,6 +286,7 @@ const TRAJECTORIES: FlightTrajectory[] = [
  */
 function playBeeBuzz(durationSec: number): void {
   if (typeof window === "undefined") return;
+  if (isAudioMuted()) return;
   if (localStorage.getItem("mekteb-bee-sound") === "false") return;
   try {
     const audio = new Audio(beeBuzzSrc);

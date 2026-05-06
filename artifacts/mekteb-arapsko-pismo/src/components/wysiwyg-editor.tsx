@@ -276,6 +276,7 @@ const editorExtensions = [
     controls: true,
     nocookie: true,
     modestBranding: true,
+    enableIFrameApi: true,
     HTMLAttributes: { class: "yt-embed" },
   }),
 ];

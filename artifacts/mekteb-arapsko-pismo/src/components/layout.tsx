@@ -3,11 +3,12 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2 } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { installAudioMute, isAudioMuted, setAudioMuted, subscribeAudioMuted } from "@/lib/audio-mute";
 
 /** Inicijali iz displayName-a, max 2 slova (npr. "Tarik Avdić" → "TA"). */
 function getInitials(name?: string | null): string {
@@ -84,6 +85,7 @@ export function Layout({ children }: LayoutProps) {
   const [fontLevel, setFontLevel] = useState<number>(() => {
     try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
   });
+  const [audioMuted, setAudioMutedState] = useState<boolean>(() => isAudioMuted());
 
   useEffect(() => {
     const root = document.documentElement;
@@ -91,6 +93,18 @@ export function Layout({ children }: LayoutProps) {
     root.classList.add(FONT_LEVELS[fontLevel]);
     try { localStorage.setItem("mekteb-fontsize", String(fontLevel)); } catch {}
   }, [fontLevel]);
+
+  useEffect(() => {
+    installAudioMute();
+    const unsub = subscribeAudioMuted((m) => setAudioMutedState(m));
+    return unsub;
+  }, []);
+
+  const toggleAudioMute = () => {
+    const next = !audioMuted;
+    setAudioMuted(next);
+    setAudioMutedState(next);
+  };
 
   // Sufara modul je javno vidljiv u navigaciji za sve, ali je sadržaj još
   // u izradi — non-admin korisnik klikom dobije "Uskoro" toast umjesto
@@ -198,6 +212,16 @@ export function Layout({ children }: LayoutProps) {
               >
                 A<span className="text-xs leading-none align-bottom">+</span>
               </button>
+              <button
+                onClick={toggleAudioMute}
+                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all hover:bg-white ${audioMuted ? "text-red-500" : "text-muted-foreground hover:text-foreground"}`}
+                title={audioMuted ? "Uključi zvuk" : "Isključi zvuk"}
+                aria-label={audioMuted ? "Uključi zvuk" : "Isključi zvuk"}
+                aria-pressed={audioMuted}
+                data-testid="nav-audio-toggle"
+              >
+                {audioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
             </div>
 
             {user ? (
@@ -233,6 +257,15 @@ export function Layout({ children }: LayoutProps) {
                     className="px-3 py-1 rounded-lg bg-muted text-sm font-bold disabled:opacity-30">A−</button>
                   <button onClick={() => setFontLevel(l => Math.min(2, l + 1))} disabled={fontLevel === 2}
                     className="px-3 py-1 rounded-lg bg-muted text-sm font-bold disabled:opacity-30">A+</button>
+                  <button
+                    onClick={toggleAudioMute}
+                    className={`ml-2 px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1.5 ${audioMuted ? "bg-red-50 text-red-600" : "bg-muted text-foreground"}`}
+                    aria-pressed={audioMuted}
+                    data-testid="nav-mobile-audio-toggle"
+                  >
+                    {audioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                    <span>{audioMuted ? "Zvuk isklj." : "Zvuk uklj."}</span>
+                  </button>
                 </div>
                 {[...mainNavLinks, ...extraLinks].map((link) => (
                   link.onClick ? (

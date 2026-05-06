@@ -1306,15 +1306,18 @@ function getFileIcon(mimeType: string) {
 function getYoutubeEmbedUrl(url: string): string | null {
   try {
     const u = new URL(url);
+    // ?enablejsapi=1 omogućava postMessage IFrame API (mute/unMute/pauseVideo)
+    // koji koristi globalni mute toggle iz `lib/audio-mute.ts`.
+    const Q = "?enablejsapi=1";
     if (/youtu\.be$/i.test(u.hostname)) {
       const id = u.pathname.slice(1).split("/")[0];
-      return id ? `https://www.youtube.com/embed/${id}` : null;
+      return id ? `https://www.youtube.com/embed/${id}${Q}` : null;
     }
     if (/youtube\.com$/i.test(u.hostname) || /^(www\.)?youtube\.com$/i.test(u.hostname)) {
       const v = u.searchParams.get("v");
-      if (v) return `https://www.youtube.com/embed/${v}`;
+      if (v) return `https://www.youtube.com/embed/${v}${Q}`;
       const m = u.pathname.match(/\/(embed|shorts)\/([^/?]+)/);
-      if (m) return `https://www.youtube.com/embed/${m[2]}`;
+      if (m) return `https://www.youtube.com/embed/${m[2]}${Q}`;
     }
     return null;
   } catch { return null; }
