@@ -515,7 +515,6 @@ export function FlyingMaskota() {
               top: 0,
               width: size,
               height: size,
-              transform: flight.traj.scaleX === -1 ? "scaleX(-1)" : undefined,
             }}
           >
             <motion.div
@@ -527,7 +526,11 @@ export function FlyingMaskota() {
                 src={SRC.letenje}
                 alt=""
                 draggable={false}
-                style={{ width: size, height: size }}
+                style={{
+                  width: size,
+                  height: size,
+                  transform: flight.traj.scaleX === -1 ? "scaleX(-1)" : undefined,
+                }}
                 className="object-contain select-none drop-shadow-md"
               />
             </motion.div>
