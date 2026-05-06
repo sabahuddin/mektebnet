@@ -1775,13 +1775,28 @@ function PriloziSection({
                           </div>
                         )}
                         {ytEmbed && (
-                          <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
+                          <div
+                            className="aspect-video w-full rounded-lg overflow-hidden bg-black"
+                            style={{
+                              WebkitTransform: "translateZ(0)",
+                              transform: "translateZ(0)",
+                              WebkitBackfaceVisibility: "hidden",
+                              backfaceVisibility: "hidden",
+                              WebkitMaskImage: "-webkit-radial-gradient(white, black)",
+                            }}
+                          >
                             <iframe
                               src={ytEmbed}
                               className="w-full h-full"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                               title={a.originalName}
+                              style={{
+                                WebkitTransform: "translateZ(0)",
+                                transform: "translateZ(0)",
+                                WebkitBackfaceVisibility: "hidden",
+                                backfaceVisibility: "hidden",
+                              }}
                             />
                           </div>
                         )}
