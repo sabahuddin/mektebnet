@@ -104,6 +104,14 @@ function KvizCard({ k, nivo, locked, onLockedClick }: { k: Kviz; nivo: number | 
   );
 }
 
+function pluralKviz(n: number): string {
+  const abs = Math.abs(Math.floor(n));
+  if (abs % 100 >= 11 && abs % 100 <= 19) return "kvizova";
+  if (abs % 10 === 1) return "kviz";
+  if (abs % 10 >= 2 && abs % 10 <= 4) return "kviza";
+  return "kvizova";
+}
+
 type GroupMode = "nivo" | "kategorija";
 
 export default function KvizoviPage() {
@@ -196,7 +204,7 @@ export default function KvizoviPage() {
           <div>
             <h1 className="text-2xl font-extrabold text-foreground">{t("nav.kvizovi")}</h1>
             <p className="text-muted-foreground text-sm">
-              {t("kviz.provjeriZnanje")} — {kvizovi.length} {t("home.kviza")}
+              {t("kviz.provjeriZnanje")} — {kvizovi.length} {pluralKviz(kvizovi.length)}
             </p>
           </div>
         </div>
@@ -245,7 +253,7 @@ export default function KvizoviPage() {
               .map(([kat, list]) => (
                 <div key={kat}>
                   <h2 className="text-sm font-extrabold uppercase tracking-wider text-amber-700 mb-4">
-                    {kat === "_nesvrstano" ? "Nesvrstano" : (KATEGORIJE_LABELS[kat] || kat)} — {list.length} {t("home.kviza")}
+                    {kat === "_nesvrstano" ? "Nesvrstano" : (KATEGORIJE_LABELS[kat] || kat)} — {list.length} {pluralKviz(list.length)}
                   </h2>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {list.map((k, i) => (
@@ -265,7 +273,7 @@ export default function KvizoviPage() {
               return (
                 <div key={nivo}>
                   <h2 className={`text-sm font-extrabold uppercase tracking-wider ${info.color} mb-4`}>
-                    {info.label} — {nivoKvizovi.length} {t("home.kviza")}
+                    {info.label} — {nivoKvizovi.length} {pluralKviz(nivoKvizovi.length)}
                   </h2>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {nivoKvizovi.map((k, i) => (
@@ -283,7 +291,7 @@ export default function KvizoviPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <BookOpen className="w-4 h-4 text-rose-600" />
                   <h2 className="text-sm font-extrabold uppercase tracking-wider text-rose-600">
-                    {t("nav.citaonica")} — {knjigaKvizovi.length} {t("home.kviza")}
+                    {t("nav.citaonica")} — {knjigaKvizovi.length} {pluralKviz(knjigaKvizovi.length)}
                   </h2>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">

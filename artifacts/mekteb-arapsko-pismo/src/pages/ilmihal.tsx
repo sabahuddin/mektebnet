@@ -43,7 +43,7 @@ export default function IlmihalPage() {
   const [search, setSearch] = useState("");
   const [activeNivo, setActiveNivo] = useState<number | null>(urlNivo);
   const [collapsed, setCollapsed] = useState<Set<number>>(
-    urlNivo ? new Set([1, 2, 3].filter(n => n !== urlNivo)) : new Set()
+    new Set([1, 2, 3].filter(n => n !== urlNivo))
   );
 
   const { token, user } = useAuth();

@@ -53,7 +53,7 @@ export default function Home() {
       bg: "bg-amber-50",
       border: "border-amber-200",
       text: "text-amber-700",
-      count: `43+ ${t("home.kviza")}`,
+      count: `43+ kvizova`,
       beePose: "pcela-razmislja.png",
       beeAlt: "Pčela razmišlja",
     },
@@ -143,7 +143,6 @@ export default function Home() {
 
           <div className="text-center md:text-left">
             <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight">
-              Dobro došli na{" "}
               <span className="text-primary">Mekteb<span className="text-secondary">.net</span></span>
             </h1>
             <p className="text-sm md:text-base text-muted-foreground font-medium mt-2">
@@ -165,10 +164,6 @@ export default function Home() {
         </div>
       </motion.div>
 
-      <h2 className="text-xl font-extrabold text-foreground mb-6 flex items-center gap-2">
-        <BookMarked className="w-5 h-5 text-primary" />
-        {t("home.odaberiModul")}
-      </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10" data-testid="home-modules">
         {MODULES.map((mod, i) => {

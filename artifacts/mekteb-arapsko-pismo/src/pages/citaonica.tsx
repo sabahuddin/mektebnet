@@ -109,7 +109,7 @@ export default function CitaonicaPage() {
           <div>
             <h1 className="text-2xl font-extrabold text-foreground">Čitaonica</h1>
             <p className="text-muted-foreground text-sm">
-              Priče o poslanicima i islamske teme — {knjige.length} {knjige.length === 1 ? "knjiga" : "knjiga"}
+              Kazivanja o poslanicima i islamske teme — {knjige.length} {knjige.length === 1 ? "knjiga" : "knjiga"}
             </p>
           </div>
         </div>

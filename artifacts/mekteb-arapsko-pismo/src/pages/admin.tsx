@@ -1157,6 +1157,7 @@ export default function AdminPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati">("muallimi");
+  const [activeMainTab, setActiveMainTab] = useState<"korisnici" | "sistemski">("korisnici");
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -1329,38 +1330,35 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">
-            <BookOpen className="w-4 h-4" /> Rječnik pojmova
-          </button>
-          <button onClick={() => setLocation("/admin/banka-pitanja")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
-            <ClipboardList className="w-4 h-4" /> Banka pitanja
-          </button>
-          <button onClick={() => setLocation("/admin/citaonica")} data-testid="button-admin-citaonica" className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
-            <BookOpen className="w-4 h-4" /> Čitaonica — priče
-          </button>
-          <button onClick={() => setLocation("/admin/kviz-novi")} className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl font-semibold hover:bg-orange-100 transition text-sm">
-            <Plus className="w-4 h-4" /> Novi kviz
-          </button>
-          <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
-            <BookOpen className="w-4 h-4" /> Slike bez lekcije
-          </button>
-        </div>
-
-        <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6 overflow-x-auto">
+        <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6">
           {[
-            { key: "muallimi" as const, label: "Muallimi", icon: <UserCog className="w-4 h-4" /> },
             { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
-            { key: "analitika" as const, label: "Analitika", icon: <BarChart3 className="w-4 h-4" /> },
-            { key: "rezultati" as const, label: "Kviz rezultati", icon: <ClipboardList className="w-4 h-4" /> },
+            { key: "sistemski" as const, label: "Sistemski alati", icon: <ShieldCheck className="w-4 h-4" /> },
           ].map(tab => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <button key={tab.key} onClick={() => setActiveMainTab(tab.key)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeMainTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {tab.icon} {tab.label}
             </button>
           ))}
         </div>
 
+        {activeMainTab === "korisnici" && (
+          <div className="flex gap-1 bg-muted/30 p-1 rounded-xl mb-5 overflow-x-auto">
+            {[
+              { key: "muallimi" as const, label: "Muallimi", icon: <UserCog className="w-4 h-4" /> },
+              { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
+              { key: "analitika" as const, label: "Analitika", icon: <BarChart3 className="w-4 h-4" /> },
+              { key: "rezultati" as const, label: "Kviz rezultati", icon: <ClipboardList className="w-4 h-4" /> },
+            ].map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {activeMainTab === "korisnici" && (<>
         {/* ── TAB: MUALLIMI ── */}
         {activeTab === "muallimi" && (
           <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
@@ -1747,8 +1745,31 @@ export default function AdminPage() {
         </>
         )}
 
-        <SistemAlati token={token!} />
-        <IgraPitanjaEditor token={token!} />
+        </>)}
+
+        {activeMainTab === "sistemski" && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">
+                <BookOpen className="w-4 h-4" /> Rječnik pojmova
+              </button>
+              <button onClick={() => setLocation("/admin/banka-pitanja")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+                <ClipboardList className="w-4 h-4" /> Banka pitanja
+              </button>
+              <button onClick={() => setLocation("/admin/citaonica")} data-testid="button-admin-citaonica" className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+                <BookOpen className="w-4 h-4" /> Čitaonica — priče
+              </button>
+              <button onClick={() => setLocation("/admin/kviz-novi")} className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl font-semibold hover:bg-orange-100 transition text-sm">
+                <Plus className="w-4 h-4" /> Novi kviz
+              </button>
+              <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+                <BookOpen className="w-4 h-4" /> Slike bez lekcije
+              </button>
+            </div>
+            <SistemAlati token={token!} />
+            <IgraPitanjaEditor token={token!} />
+          </div>
+        )}
       </div>
 
       {showDodajAdmina && (
