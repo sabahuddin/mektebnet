@@ -125,6 +125,15 @@ export default function Home() {
               <Maskota varijanta="pozdrav" size={100} className="drop-shadow-md" />
             </motion.div>
           </motion.div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight">
+              Dobro došli na{" "}
+              <span className="text-primary">Mekteb<span className="text-secondary">.net</span></span>
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground font-medium mt-2">
+              Islamska edukativna platforma
+            </p>
+          </div>
           {user?.role === "ucenik" && (
             <div className="flex items-center gap-4 flex-wrap justify-center">
               <div className="flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-bold shadow-sm border border-orange-200 text-sm">
