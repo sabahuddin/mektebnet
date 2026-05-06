@@ -385,8 +385,8 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
             style={{
               position: "absolute",
               left: "50%",
-              top: centerY - 10,
-              transform: "translateX(-50%) translateY(-100%)",
+              top: centerY - 150,
+              transform: "translateX(-50%)",
             }}
             className="bg-white rounded-3xl shadow-2xl border-2 border-primary/20 px-8 py-5 max-w-sm text-center"
           >
