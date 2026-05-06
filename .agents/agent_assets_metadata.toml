@@ -588,6 +588,12 @@ uri = "file://artifacts/mekteb-arapsko-pismo/public/citaonica/ismail.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "pxuXVU0cgaEufk-GymAIQ"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-tablet.png"
+type = "image"
+title = "bee mascot waving tablet"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
