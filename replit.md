@@ -22,7 +22,7 @@ The platform aims to provide a modern, engaging, and efficient learning environm
 - Do not make changes to the `lib/db/src/schema/` folder.
 - Ensure that any auto-scripts (seed, restore, backfill) always include `WHERE locked = false` to protect manually verified content.
 - Prioritize security in all implementations, especially regarding user data and content integrity.
-- **OBAVEZNO: UVIJEK pushati na GitHub/Coolify sam (via code_execution sandbox) — NIKAD ne slati korisnika u Shell.** Koristiti `execSync('git add ... && git commit ... && git push ...')` iz code_execution.
+- **OBAVEZNO: UVIJEK pushati na GitHub sam — NIKAD ne slati korisnika u Shell.** Koristiti `bash` tool (NE code_execution — sandbox nema pristup secrets). Komanda: `GIT_ASKPASS=true GIT_TERMINAL_PROMPT=0 git push https://$GITHUB_TOKEN@github.com/sabahuddin/mektebnet.git HEAD:main`
 - Korisnik govori bosanski. Komunikacija na bosanskom, bez emojija, smiren ton.
 - Kad nesto fali (slika, podatak) — NIKAD ne generisati zamjenu bez pitanja. Prvo provjeriti backup, git historiju, attached_assets. Pitati korisnika ako izvor nije jasan.
 - Dev baza i produkcijska baza su ODVOJENE. Korisnici, banka pitanja, muallimi postoje samo na produkciji (Coolify Postgres). Dev baza ima samo sadržaj (lekcije, kvizove, rječnik).
