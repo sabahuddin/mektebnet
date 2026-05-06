@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Mekteb — Naučimo arapsko pismo"
+title = "Mekteb — Islamska edukativna platforma"
 version = "1.0.0"
 id = "artifacts/mekteb-arapsko-pismo"
 router = "path"
