@@ -165,14 +165,16 @@ export function MaskotaCelebration({
  * - Poštuje prefers-reduced-motion (potpuno se ne renderuje).
  */
 type FlightTrajectory = {
-  /** Funkcija koja iz širine viewporta izračuna 5 X tačaka (od ulaska do izlaska). */
+  /** Funkcija koja iz širine viewporta izračuna X tačke (od ulaska do izlaska). */
   x: (vw: number) => number[];
-  /** 5 Y tačaka u px (relativno na vrh ekrana). */
+  /** Y tačke u px (relativno na vrh ekrana). */
   y: number[];
-  /** 5 vrijednosti rotacije u stepenima. */
+  /** Vrijednosti rotacije u stepenima. */
   rotate: number[];
-  /** Vremenske čvorne tačke (0..1). */
+  /** Vremenske čvorne tačke (0..1). Duplirane susjedne tačke = pauza. */
   times: number[];
+  /** Per-frame opacity (0/1) — kontroliše ulaz i izlaz. */
+  opacity: number[];
   /** Trajanje cijelog leta u sekundama. */
   duration: number;
 };
@@ -184,6 +186,7 @@ const TRAJECTORIES: FlightTrajectory[] = [
     y: [220, 180, 250, 195, 235],
     rotate: [-8, -3, 4, -2, 6],
     times: [0, 0.2, 0.5, 0.8, 1],
+    opacity: [0, 1, 1, 1, 0],
     duration: 5.4,
   },
   {
@@ -192,6 +195,7 @@ const TRAJECTORIES: FlightTrajectory[] = [
     y: [360, 320, 390, 340, 380],
     rotate: [-5, 0, 3, -1, 4],
     times: [0, 0.25, 0.5, 0.78, 1],
+    opacity: [0, 1, 1, 1, 0],
     duration: 5.8,
   },
   {
@@ -200,6 +204,7 @@ const TRAJECTORIES: FlightTrajectory[] = [
     y: [180, 250, 320, 400, 460],
     rotate: [4, 8, 12, 9, 6],
     times: [0, 0.22, 0.48, 0.78, 1],
+    opacity: [0, 1, 1, 1, 0],
     duration: 5.0,
   },
   {
@@ -208,6 +213,7 @@ const TRAJECTORIES: FlightTrajectory[] = [
     y: [440, 360, 280, 220, 170],
     rotate: [-12, -9, -6, -3, 0],
     times: [0, 0.22, 0.5, 0.78, 1],
+    opacity: [0, 1, 1, 1, 0],
     duration: 5.2,
   },
   {
@@ -216,9 +222,94 @@ const TRAJECTORIES: FlightTrajectory[] = [
     y: [280, 220, 340, 230, 320, 260],
     rotate: [-6, 4, -5, 6, -4, 5],
     times: [0, 0.18, 0.38, 0.6, 0.82, 1],
+    opacity: [0, 1, 1, 1, 1, 0],
     duration: 5.6,
   },
+  {
+    // PAUZA jednom — uđe lijevo, doleti do sredine, zastane ~2.5s lebdeći, pa odleti udesno.
+    // Indeksi 2 i 3 imaju iste x/y → pauza dok times prelaze 0.30 → 0.62.
+    x: (vw) => [-120, vw * 0.32, vw * 0.5, vw * 0.5, vw * 0.78, vw + 120],
+    y: [260, 230, 250, 250, 220, 260],
+    rotate: [-6, -2, 0, 0, 4, 8],
+    times: [0, 0.15, 0.3, 0.62, 0.85, 1],
+    opacity: [0, 1, 1, 1, 1, 0],
+    duration: 8.5,
+  },
+  {
+    // PAUZA dva puta — uđe, prva pauza @ ~30% širine, leti do ~65%, druga pauza, pa izađe.
+    // Indeksi 2-3 = prva pauza, indeksi 4-5 = druga pauza.
+    x: (vw) => [-120, vw * 0.2, vw * 0.34, vw * 0.34, vw * 0.66, vw * 0.66, vw * 0.86, vw + 120],
+    y: [200, 240, 270, 270, 300, 300, 240, 210],
+    rotate: [-9, -4, 0, 0, 4, 4, 8, 12],
+    times: [0, 0.1, 0.22, 0.45, 0.58, 0.82, 0.92, 1],
+    opacity: [0, 1, 1, 1, 1, 1, 1, 0],
+    duration: 11,
+  },
 ];
+
+/**
+ * Sintetski "bzzz" zvuk pčele preko Web Audio API-ja — sawtooth sa vibratom.
+ * Bez audio fajla, vrlo subtilno (gain 0.035). Poštuje localStorage toggle
+ * `mekteb-bee-sound` (default uključen) i autoplay policy (tiho fail-uje
+ * dok korisnik ne interaguje sa stranicom).
+ */
+function playBeeBuzz(durationSec: number): void {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem("mekteb-bee-sound") === "false") return;
+  const AC: typeof AudioContext | undefined =
+    (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
+      .AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return;
+  let ctx: AudioContext;
+  try {
+    ctx = new AC();
+  } catch {
+    return;
+  }
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+  try {
+    const osc = ctx.createOscillator();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 1200;
+    osc.type = "sawtooth";
+    osc.frequency.value = 215;
+    lfo.type = "sine";
+    lfo.frequency.value = 17;
+    lfoGain.gain.value = 28;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    const peak = 0.035;
+    const fade = Math.min(0.45, durationSec * 0.15);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(peak, now + fade);
+    gain.gain.setValueAtTime(peak, now + Math.max(fade, durationSec - fade));
+    gain.gain.linearRampToValueAtTime(0, now + durationSec);
+    osc.start(now);
+    lfo.start(now);
+    osc.stop(now + durationSec + 0.05);
+    lfo.stop(now + durationSec + 0.05);
+    osc.onended = () => {
+      try {
+        ctx.close();
+      } catch {}
+    };
+  } catch {
+    try {
+      ctx.close();
+    } catch {}
+  }
+}
 
 type SelamPhase = "flying-in" | "hovering" | "cloud" | "flying-out" | "done";
 
@@ -366,6 +457,7 @@ export function FlyingMaskota() {
     const startTimer = setTimeout(() => {
       const traj = TRAJECTORIES[Math.floor(Math.random() * TRAJECTORIES.length)];
       setFlight((prev) => ({ id: (prev?.id ?? 0) + 1, traj }));
+      playBeeBuzz(traj.duration);
     }, 350);
     return () => clearTimeout(startTimer);
   }, [location, reduce]);
@@ -393,7 +485,7 @@ export function FlyingMaskota() {
             animate={{
               x: flight.traj.x(vw),
               y: flight.traj.y,
-              opacity: [0, 1, 1, 1, 0, 0].slice(0, flight.traj.times.length),
+              opacity: flight.traj.opacity,
               rotate: flight.traj.rotate,
             }}
             exit={{ opacity: 0 }}
