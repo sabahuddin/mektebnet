@@ -1059,6 +1059,7 @@ router.get("/lekcije-za-plan", async (req, res) => {
       id: ilmihalLekcijeTable.id,
       naslov: ilmihalLekcijeTable.naslov,
       nivo: ilmihalLekcijeTable.nivo,
+      slug: ilmihalLekcijeTable.slug,
     }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
 
     res.json(lekcije);

@@ -60,6 +60,7 @@ interface IlmihalLekcija {
   id: number;
   naslov: string;
   nivo: number;
+  slug?: string;
 }
 
 interface PendingRoditelj {
@@ -873,7 +874,16 @@ export default function MuallimPanel() {
                                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${VRSTA_COLORS[l.lekcijaTip] || "bg-gray-100 text-gray-700"}`}>
                                         {l.lekcijaTip === "obrada" ? "Obrada" : l.lekcijaTip === "ponavljanje" ? "Ponavljanje" : l.lekcijaTip === "test" ? "Test" : l.lekcijaTip === "prakticno" ? "Praktično" : l.lekcijaTip}
                                       </span>
-                                      <span className="font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                      {(() => {
+                                        const matchSlug = dostupneLekcije.find(dl => dl.naslov === l.lekcijaNaslov)?.slug;
+                                        return matchSlug ? (
+                                          <Link href={`/ilmihal/${matchSlug}`} className="font-medium text-primary hover:underline inline-flex items-center gap-1">
+                                            <BookOpen className="w-3.5 h-3.5" />{l.lekcijaNaslov}
+                                          </Link>
+                                        ) : (
+                                          <span className="font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                        );
+                                      })()}
                                     </div>
                                     <button onClick={() => deletePlanLekcija(l.id)} className="text-red-400 hover:text-red-600 p-1">
                                       <Trash2 className="w-3.5 h-3.5" />
@@ -1368,11 +1378,18 @@ export default function MuallimPanel() {
                                         <Clock className="w-3 h-3" /> Rok: {new Date(z.rokDo).toLocaleDateString("bs-BA")}
                                       </span>
                                     )}
-                                    {z.lekcijaNaslov && (
-                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <BookOpen className="w-3 h-3" /> {z.lekcijaNaslov}
-                                      </span>
-                                    )}
+                                    {z.lekcijaNaslov && (() => {
+                                      const matchSlug = dostupneLekcije.find(dl => dl.naslov === z.lekcijaNaslov)?.slug;
+                                      return matchSlug ? (
+                                        <Link href={`/ilmihal/${matchSlug}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                          <BookOpen className="w-3 h-3" /> {z.lekcijaNaslov}
+                                        </Link>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                          <BookOpen className="w-3 h-3" /> {z.lekcijaNaslov}
+                                        </span>
+                                      );
+                                    })()}
                                     <span className="text-xs text-muted-foreground">
                                       Kreirano: {new Date(z.createdAt).toLocaleDateString("bs-BA")}
                                     </span>
@@ -1567,7 +1584,16 @@ export default function MuallimPanel() {
                               <div className="space-y-2 mb-3">
                                 {planLekcija.filter(p => p.datum === selectedDate).map(l => (
                                   <div key={l.id} className="flex items-center justify-between bg-violet-50 rounded-lg px-3 py-2">
-                                    <span className="text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                    {(() => {
+                                      const matchSlug = dostupneLekcije.find(dl => dl.naslov === l.lekcijaNaslov)?.slug;
+                                      return matchSlug ? (
+                                        <Link href={`/ilmihal/${matchSlug}`} className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
+                                          <BookOpen className="w-3.5 h-3.5" />{l.lekcijaNaslov}
+                                        </Link>
+                                      ) : (
+                                        <span className="text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                      );
+                                    })()}
                                     <button onClick={() => deleteLekcija(l.id)} className="text-red-400 hover:text-red-600">
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>

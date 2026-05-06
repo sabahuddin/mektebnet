@@ -3,7 +3,7 @@ import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
@@ -786,12 +786,18 @@ export default function UcenikProfilPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-extrabold text-foreground text-base">{z.naslov}</h3>
-                                {z.lekcijaNaslov && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    <BookOpen className="w-3 h-3 inline mr-1" />
-                                    {z.lekcijaNaslov}
-                                  </p>
-                                )}
+                                {z.lekcijaNaslov && (() => {
+                                  const matchSlug = ilmihalLekcije.find(l => l.naslov === z.lekcijaNaslov)?.slug;
+                                  return matchSlug ? (
+                                    <Link href={`/ilmihal/${matchSlug}`} className="text-xs text-primary hover:underline mt-0.5 inline-flex items-center gap-1">
+                                      <BookOpen className="w-3 h-3" />{z.lekcijaNaslov}
+                                    </Link>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      <BookOpen className="w-3 h-3 inline mr-1" />{z.lekcijaNaslov}
+                                    </p>
+                                  );
+                                })()}
                               </div>
                             </div>
                             <span className={`shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold border ${rokColor}`}>
@@ -888,7 +894,14 @@ export default function UcenikProfilPage() {
                                   <div className="space-y-1.5">
                                     {lekcije.map(l => (
                                       <div key={l.id} className="bg-violet-50 rounded-lg px-3 py-2 text-sm font-medium text-foreground">
-                                        {l.lekcijaNaslov}
+                                        {(() => {
+                                          const matchSlug = ilmihalLekcije.find(il => il.naslov === l.lekcijaNaslov)?.slug;
+                                          return matchSlug ? (
+                                            <Link href={`/ilmihal/${matchSlug}`} className="text-primary hover:underline inline-flex items-center gap-1">
+                                              <BookOpen className="w-3.5 h-3.5" />{l.lekcijaNaslov}
+                                            </Link>
+                                          ) : l.lekcijaNaslov;
+                                        })()}
                                       </div>
                                     ))}
                                   </div>

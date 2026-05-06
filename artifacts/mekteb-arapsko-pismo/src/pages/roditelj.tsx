@@ -587,9 +587,6 @@ export default function RoditeljPage() {
   const [selamEnabled, setSelamEnabled] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("mekteb-selam-disabled") !== "true" : true
   );
-  const [beeSoundEnabled, setBeeSoundEnabled] = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem("mekteb-bee-sound") !== "false" : true
-  );
 
   const loadDjeca = () => {
     if (!token) return;
@@ -920,22 +917,6 @@ export default function RoditeljPage() {
                   <span className="text-sm font-bold text-foreground">Prikaži pozdrav pri ulasku na platformu</span>
                 </label>
                 <p className="text-xs text-muted-foreground mt-1 ml-7">Pčela sa selamom pri svakom otvaranju stranice</p>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border/40">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={beeSoundEnabled}
-                    onChange={e => {
-                      const val = e.target.checked;
-                      setBeeSoundEnabled(val);
-                      localStorage.setItem("mekteb-bee-sound", val ? "true" : "false");
-                    }}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/40"
-                  />
-                  <span className="text-sm font-bold text-foreground">Zvuk pčele dok leti preko ekrana</span>
-                </label>
-                <p className="text-xs text-muted-foreground mt-1 ml-7">Tihi "bzzz" prati maskotu kroz aplikaciju</p>
               </div>
             </div>
           </motion.div>

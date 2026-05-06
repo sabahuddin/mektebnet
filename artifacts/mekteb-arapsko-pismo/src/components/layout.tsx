@@ -163,26 +163,26 @@ export function Layout({ children }: LayoutProps) {
             {mainNavLinks.map((link) => {
               // Glavna navigacija sa ikonom i nazivom modula (ranije bila samo
               // ikona, ali korisnici nisu prepoznavali šta je šta).
-              const cls = `flex items-center gap-1.5 px-3 py-2 rounded-full font-bold text-sm transition-all whitespace-nowrap ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`;
+              const cls = `flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`;
               if (link.onClick) {
                 return (
                   <button key={link.href} type="button" onClick={link.onClick} className={cls} title={link.label} aria-label={link.label}>
-                    <link.icon className="w-4 h-4" />
+                    <link.icon className="w-5 h-5" />
                     <span>{link.label}</span>
                   </button>
                 );
               }
               return (
                 <Link key={link.href} href={link.href} className={cls} title={link.label} aria-label={link.label}>
-                  <link.icon className="w-4 h-4" />
+                  <link.icon className="w-5 h-5" />
                   <span>{link.label}</span>
                 </Link>
               );
             })}
             {extraLinks.map(link => (
               <Link key={link.href} href={link.href}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-bold text-base transition-all whitespace-nowrap ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
-                <link.icon className="w-4 h-4" />
+                className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
+                <link.icon className="w-5 h-5" />
                 {link.label}
               </Link>
             ))}

@@ -1,8 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import beeBuzzSrc from "../assets/bee-buzz.mp3";
-import { isAudioMuted } from "@/lib/audio-mute";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
 
@@ -278,47 +276,6 @@ const TRAJECTORIES: FlightTrajectory[] = [
   },
 ];
 
-/**
- * Pravi "bzzz" zvuk pčele iz mp3 fajla (attached_assets/bee_*.mp3).
- * Poštuje localStorage toggle `mekteb-bee-sound` (default uključen) i tih je
- * (volume 0.35) kako ne bi prepao djecu. Loop-uje audio dok let traje, pa
- * fade-uje i pauzira na kraju trajektorije.
- */
-function playBeeBuzz(durationSec: number): void {
-  if (typeof window === "undefined") return;
-  if (isAudioMuted()) return;
-  if (localStorage.getItem("mekteb-bee-sound") === "false") return;
-  try {
-    const audio = new Audio(beeBuzzSrc);
-    audio.loop = true;
-    audio.volume = 0.35;
-    const playPromise = audio.play();
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {
-        /* autoplay blokiran do prve interakcije — tihi fail */
-      });
-    }
-    const fadeMs = Math.min(500, durationSec * 1000 * 0.2);
-    const stopAt = Math.max(0, durationSec * 1000 - fadeMs);
-    window.setTimeout(() => {
-      const startVol = audio.volume;
-      const steps = 10;
-      const stepMs = fadeMs / steps;
-      let i = 0;
-      const tick = window.setInterval(() => {
-        i += 1;
-        audio.volume = Math.max(0, startVol * (1 - i / steps));
-        if (i >= steps) {
-          window.clearInterval(tick);
-          audio.pause();
-          audio.src = "";
-        }
-      }, stepMs);
-    }, stopAt);
-  } catch {
-    /* tihi fail */
-  }
-}
 
 type SelamPhase = "flying-in" | "hovering" | "cloud" | "flying-out" | "done";
 
@@ -477,7 +434,6 @@ export function FlyingMaskota() {
       lastTrajIdx.current = idx;
       const traj = TRAJECTORIES[idx];
       setFlight((prev) => ({ id: (prev?.id ?? 0) + 1, traj }));
-      playBeeBuzz(traj.duration);
     }, 350);
     return () => clearTimeout(startTimer);
   }, [location, reduce]);
