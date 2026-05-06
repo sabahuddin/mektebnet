@@ -378,19 +378,19 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
       <AnimatePresence>
         {(phase === "cloud") && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.5, y: 30 }}
+            initial={{ opacity: 0, scale: 0.5, y: -30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.6, y: -20 }}
+            exit={{ opacity: 0, scale: 0.6, y: 20 }}
             transition={{ type: "spring", stiffness: 280, damping: 20 }}
             style={{
               position: "absolute",
               left: "50%",
-              top: centerY + beeSize + 10,
-              transform: "translateX(-50%)",
+              top: centerY - 10,
+              transform: "translateX(-50%) translateY(-100%)",
             }}
             className="bg-white rounded-3xl shadow-2xl border-2 border-primary/20 px-8 py-5 max-w-sm text-center"
           >
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-white border-l-2 border-t-2 border-primary/20 rotate-45 rounded-tl-sm" />
+            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-white border-r-2 border-b-2 border-primary/20 rotate-45 rounded-br-sm" />
             <p className="text-xl sm:text-2xl font-extrabold text-primary leading-snug">{greeting}</p>
             <p className="text-base sm:text-lg text-muted-foreground font-bold mt-2">Idemo s Bismillom!</p>
           </motion.div>
