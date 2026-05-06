@@ -105,12 +105,13 @@ export default function Home() {
         className="rounded-3xl overflow-hidden mb-10"
         style={{ background: "linear-gradient(135deg, hsl(var(--primary)/0.08) 0%, hsl(var(--secondary)/0.05) 100%)" }}
       >
-        <div className="p-8 md:p-12 flex flex-col items-center text-center gap-5">
+        <div className="p-6 md:p-10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
           <motion.div
             data-testid="home-maskota-pozdrav"
-            initial={{ opacity: 0, y: -14, scale: 0.85 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 220, damping: 18, delay: 0.1 }}
+            initial={{ opacity: 0, x: -20, scale: 0.85 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 16, delay: 0.1 }}
+            className="shrink-0"
           >
             <motion.div
               animate={
@@ -118,14 +119,29 @@ export default function Home() {
                 typeof window.matchMedia === "function" &&
                 window.matchMedia("(prefers-reduced-motion: reduce)").matches
                   ? undefined
-                  : { y: [0, -10, 0] }
+                  : { rotate: [0, -10, 8, -6, 0] }
               }
-              transition={{ duration: 2.6, ease: "easeInOut", delay: 0.7, repeat: Infinity, repeatDelay: 4 }}
+              transition={{ duration: 1.4, ease: "easeInOut", delay: 0.6, repeat: Infinity, repeatDelay: 3 }}
+              style={{ transformOrigin: "50% 90%" }}
             >
-              <Maskota varijanta="pozdrav" size={100} className="drop-shadow-md" />
+              <picture>
+                <source srcSet={`${import.meta.env.BASE_URL}images/maskota/pcela-tablet.png`} type="image/png" />
+                <img
+                  src={`${import.meta.env.BASE_URL}images/maskota/pcela-tablet.png`}
+                  alt="Pčela mašući drži tablet"
+                  className="object-contain select-none pointer-events-none drop-shadow-lg"
+                  style={{ width: 160, height: 160 }}
+                  draggable={false}
+                  data-testid="maskota-pozdrav"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = `${import.meta.env.BASE_URL}images/maskota/pcela.png`;
+                  }}
+                />
+              </picture>
             </motion.div>
           </motion.div>
-          <div>
+
+          <div className="text-center md:text-left">
             <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight">
               Dobro došli na{" "}
               <span className="text-primary">Mekteb<span className="text-secondary">.net</span></span>
@@ -133,19 +149,19 @@ export default function Home() {
             <p className="text-sm md:text-base text-muted-foreground font-medium mt-2">
               Islamska edukativna platforma
             </p>
+            {user?.role === "ucenik" && (
+              <div className="flex items-center gap-3 flex-wrap mt-4 justify-center md:justify-start">
+                <div className="flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-bold shadow-sm border border-orange-200 text-sm">
+                  <Flame className="w-4 h-4 fill-orange-500" />
+                  {t("home.streakAktivan")}
+                </div>
+                <div className="flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full font-bold shadow-sm border border-yellow-200 text-sm">
+                  <Star className="w-4 h-4 fill-yellow-500" />
+                  {t("home.sakupljajHasanate")}
+                </div>
+              </div>
+            )}
           </div>
-          {user?.role === "ucenik" && (
-            <div className="flex items-center gap-4 flex-wrap justify-center">
-              <div className="flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-bold shadow-sm border border-orange-200 text-sm">
-                <Flame className="w-4 h-4 fill-orange-500" />
-                {t("home.streakAktivan")}
-              </div>
-              <div className="flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full font-bold shadow-sm border border-yellow-200 text-sm">
-                <Star className="w-4 h-4 fill-yellow-500" />
-                {t("home.sakupljajHasanate")}
-              </div>
-            </div>
-          )}
         </div>
       </motion.div>
 
