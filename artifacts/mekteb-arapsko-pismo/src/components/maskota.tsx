@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import beeBuzzSrc from "@assets/bee_1778028645901.mp3";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
 
@@ -277,91 +278,41 @@ const TRAJECTORIES: FlightTrajectory[] = [
 ];
 
 /**
- * Singleton AudioContext + auto-unlock pri prvoj korisničkoj interakciji.
- * Browseri blokiraju AudioContext dok korisnik ne klikne / dotakne / pritisne
- * tipku. Ovaj modul registruje jednokratne listenere koji "probude" kontekst
- * čim se to desi, tako da prvi sljedeći let pčele već zuji.
- */
-let sharedAudioCtx: AudioContext | null = null;
-let audioUnlockBound = false;
-
-function getAudioCtx(): AudioContext | null {
-  if (typeof window === "undefined") return null;
-  if (sharedAudioCtx) return sharedAudioCtx;
-  const AC: typeof AudioContext | undefined =
-    (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
-      .AudioContext ||
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AC) return null;
-  try {
-    sharedAudioCtx = new AC();
-  } catch {
-    return null;
-  }
-  return sharedAudioCtx;
-}
-
-function bindAudioUnlock(): void {
-  if (audioUnlockBound || typeof window === "undefined") return;
-  audioUnlockBound = true;
-  const unlock = () => {
-    const ctx = getAudioCtx();
-    if (ctx && ctx.state === "suspended") {
-      ctx.resume().catch(() => {});
-    }
-    window.removeEventListener("pointerdown", unlock);
-    window.removeEventListener("keydown", unlock);
-    window.removeEventListener("touchstart", unlock);
-  };
-  window.addEventListener("pointerdown", unlock, { once: true, passive: true });
-  window.addEventListener("keydown", unlock, { once: true });
-  window.addEventListener("touchstart", unlock, { once: true, passive: true });
-}
-
-/**
- * Sintetski "bzzz" zvuk pčele preko Web Audio API-ja — sawtooth sa vibratom
- * kroz lowpass filter. Bez audio fajla, suptilno (gain 0.04). Poštuje
- * localStorage toggle `mekteb-bee-sound` (default uključen). Koristi
- * dijeljeni AudioContext koji se otključa pri prvoj interakciji korisnika.
+ * Pravi "bzzz" zvuk pčele iz mp3 fajla (attached_assets/bee_*.mp3).
+ * Poštuje localStorage toggle `mekteb-bee-sound` (default uključen) i tih je
+ * (volume 0.35) kako ne bi prepao djecu. Loop-uje audio dok let traje, pa
+ * fade-uje i pauzira na kraju trajektorije.
  */
 function playBeeBuzz(durationSec: number): void {
   if (typeof window === "undefined") return;
   if (localStorage.getItem("mekteb-bee-sound") === "false") return;
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  if (ctx.state === "suspended") {
-    ctx.resume().catch(() => {});
-    if (ctx.state === "suspended") return;
-  }
   try {
-    const osc = ctx.createOscillator();
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 1300;
-    osc.type = "sawtooth";
-    osc.frequency.value = 220;
-    lfo.type = "sine";
-    lfo.frequency.value = 18;
-    lfoGain.gain.value = 32;
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    const now = ctx.currentTime;
-    const peak = 0.04;
-    const fade = Math.min(0.5, durationSec * 0.15);
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(peak, now + fade);
-    gain.gain.setValueAtTime(peak, now + Math.max(fade, durationSec - fade));
-    gain.gain.linearRampToValueAtTime(0, now + durationSec);
-    osc.start(now);
-    lfo.start(now);
-    osc.stop(now + durationSec + 0.05);
-    lfo.stop(now + durationSec + 0.05);
+    const audio = new Audio(beeBuzzSrc);
+    audio.loop = true;
+    audio.volume = 0.35;
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        /* autoplay blokiran do prve interakcije — tihi fail */
+      });
+    }
+    const fadeMs = Math.min(500, durationSec * 1000 * 0.2);
+    const stopAt = Math.max(0, durationSec * 1000 - fadeMs);
+    window.setTimeout(() => {
+      const startVol = audio.volume;
+      const steps = 10;
+      const stepMs = fadeMs / steps;
+      let i = 0;
+      const tick = window.setInterval(() => {
+        i += 1;
+        audio.volume = Math.max(0, startVol * (1 - i / steps));
+        if (i >= steps) {
+          window.clearInterval(tick);
+          audio.pause();
+          audio.src = "";
+        }
+      }, stepMs);
+    }, stopAt);
   } catch {
     /* tihi fail */
   }
@@ -504,7 +455,6 @@ export function FlyingMaskota() {
 
   useEffect(() => {
     if (reduce) return;
-    bindAudioUnlock();
     const onResize = () => {
       setVw(window.innerWidth);
       setVh(window.innerHeight);
