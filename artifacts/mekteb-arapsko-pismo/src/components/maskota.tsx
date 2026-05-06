@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
@@ -165,12 +165,14 @@ export function MaskotaCelebration({
  * - Poštuje prefers-reduced-motion (potpuno se ne renderuje).
  */
 type FlightTrajectory = {
-  /** Funkcija koja iz širine viewporta izračuna X tačke (od ulaska do izlaska). */
-  x: (vw: number) => number[];
-  /** Y tačke u px (relativno na vrh ekrana). */
-  y: number[];
-  /** Vrijednosti rotacije u stepenima. */
+  /** Funkcija koja iz širine i visine viewporta izračuna X tačke. */
+  x: (vw: number, vh: number) => number[];
+  /** Funkcija koja iz širine i visine viewporta izračuna Y tačke. */
+  y: (vw: number, vh: number) => number[];
+  /** Vrijednosti rotacije u stepenima (prati smjer leta). */
   rotate: number[];
+  /** Horizontalno zrcaljenje pčele: -1 za let zdesna nalijevo. */
+  scaleX?: 1 | -1;
   /** Vremenske čvorne tačke (0..1). Duplirane susjedne tačke = pauza. */
   times: number[];
   /** Per-frame opacity (0/1) — kontroliše ulaz i izlaz. */
@@ -181,94 +183,155 @@ type FlightTrajectory = {
 
 const TRAJECTORIES: FlightTrajectory[] = [
   {
-    // Klasični luk preko gornjeg dijela — talasanje gore-dolje.
+    // 1. Lijevo→desno, gornji dio ekrana, blagi luk.
     x: (vw) => [-120, vw * 0.25, vw * 0.55, vw * 0.8, vw + 120],
-    y: [220, 180, 250, 195, 235],
+    y: (_, vh) => [vh * 0.18, vh * 0.12, vh * 0.22, vh * 0.15, vh * 0.2],
     rotate: [-8, -3, 4, -2, 6],
     times: [0, 0.2, 0.5, 0.8, 1],
     opacity: [0, 1, 1, 1, 0],
     duration: 5.4,
   },
   {
-    // Donja, mirnija putanja — pčela krstari sredinom ekrana.
+    // 2. Lijevo→desno, donji dio ekrana, mirna putanja.
     x: (vw) => [-120, vw * 0.3, vw * 0.6, vw * 0.85, vw + 120],
-    y: [360, 320, 390, 340, 380],
+    y: (_, vh) => [vh * 0.78, vh * 0.7, vh * 0.85, vh * 0.74, vh * 0.82],
     rotate: [-5, 0, 3, -1, 4],
     times: [0, 0.25, 0.5, 0.78, 1],
     opacity: [0, 1, 1, 1, 0],
     duration: 5.8,
   },
   {
-    // Diagonala odozgo nadole — uđe visoko lijevo, izađe nisko desno.
-    x: (vw) => [-120, vw * 0.28, vw * 0.55, vw * 0.82, vw + 120],
-    y: [180, 250, 320, 400, 460],
-    rotate: [4, 8, 12, 9, 6],
-    times: [0, 0.22, 0.48, 0.78, 1],
-    opacity: [0, 1, 1, 1, 0],
-    duration: 5.0,
-  },
-  {
-    // Diagonala odozdo nagore — uđe nisko lijevo, izađe visoko desno.
-    x: (vw) => [-120, vw * 0.27, vw * 0.55, vw * 0.83, vw + 120],
-    y: [440, 360, 280, 220, 170],
-    rotate: [-12, -9, -6, -3, 0],
-    times: [0, 0.22, 0.5, 0.78, 1],
-    opacity: [0, 1, 1, 1, 0],
-    duration: 5.2,
-  },
-  {
-    // Zig-zag — više valova, življa putanja.
-    x: (vw) => [-120, vw * 0.22, vw * 0.42, vw * 0.62, vw * 0.82, vw + 120],
-    y: [280, 220, 340, 230, 320, 260],
-    rotate: [-6, 4, -5, 6, -4, 5],
-    times: [0, 0.18, 0.38, 0.6, 0.82, 1],
-    opacity: [0, 1, 1, 1, 1, 0],
+    // 3. Velika dijagonala — gornji-lijevi ćošak → donji-desni ćošak.
+    x: (vw) => [-120, vw * 0.28, vw * 0.6, vw + 120],
+    y: (_, vh) => [vh * 0.1, vh * 0.4, vh * 0.7, vh * 0.95],
+    rotate: [12, 18, 24, 30],
+    times: [0, 0.32, 0.66, 1],
+    opacity: [0, 1, 1, 0],
     duration: 5.6,
   },
   {
-    // PAUZA jednom — uđe lijevo, doleti do sredine, zastane ~2.5s lebdeći, pa odleti udesno.
-    // Indeksi 2 i 3 imaju iste x/y → pauza dok times prelaze 0.30 → 0.62.
+    // 4. Velika dijagonala — donji-lijevi ćošak → gornji-desni ćošak.
+    x: (vw) => [-120, vw * 0.3, vw * 0.65, vw + 120],
+    y: (_, vh) => [vh * 0.92, vh * 0.6, vh * 0.3, vh * 0.05],
+    rotate: [-12, -18, -22, -28],
+    times: [0, 0.3, 0.65, 1],
+    opacity: [0, 1, 1, 0],
+    duration: 5.6,
+  },
+  {
+    // 5. Lijevo→desno, zig-zag preko cijele visine.
+    x: (vw) => [-120, vw * 0.22, vw * 0.42, vw * 0.62, vw * 0.82, vw + 120],
+    y: (_, vh) => [vh * 0.5, vh * 0.2, vh * 0.7, vh * 0.25, vh * 0.65, vh * 0.4],
+    rotate: [-6, 14, -12, 14, -10, 6],
+    times: [0, 0.18, 0.38, 0.6, 0.82, 1],
+    opacity: [0, 1, 1, 1, 1, 0],
+    duration: 6.2,
+  },
+  {
+    // 6. Lijevo→desno, ZASTAJANJE u centru — pčela lebdi ~2.5s prije nego što odleti.
     x: (vw) => [-120, vw * 0.32, vw * 0.5, vw * 0.5, vw * 0.78, vw + 120],
-    y: [260, 230, 250, 250, 220, 260],
+    y: (_, vh) => [vh * 0.4, vh * 0.45, vh * 0.5, vh * 0.5, vh * 0.4, vh * 0.5],
     rotate: [-6, -2, 0, 0, 4, 8],
     times: [0, 0.15, 0.3, 0.62, 0.85, 1],
     opacity: [0, 1, 1, 1, 1, 0],
     duration: 8.5,
   },
   {
-    // PAUZA dva puta — uđe, prva pauza @ ~30% širine, leti do ~65%, druga pauza, pa izađe.
-    // Indeksi 2-3 = prva pauza, indeksi 4-5 = druga pauza.
-    x: (vw) => [-120, vw * 0.2, vw * 0.34, vw * 0.34, vw * 0.66, vw * 0.66, vw * 0.86, vw + 120],
-    y: [200, 240, 270, 270, 300, 300, 240, 210],
-    rotate: [-9, -4, 0, 0, 4, 4, 8, 12],
-    times: [0, 0.1, 0.22, 0.45, 0.58, 0.82, 0.92, 1],
-    opacity: [0, 1, 1, 1, 1, 1, 1, 0],
-    duration: 11,
+    // 7. DESNO→LIJEVO, gornji dio (pčela zrcaljena).
+    x: (vw) => [vw + 120, vw * 0.75, vw * 0.45, vw * 0.2, -120],
+    y: (_, vh) => [vh * 0.22, vh * 0.16, vh * 0.28, vh * 0.18, vh * 0.24],
+    rotate: [8, 3, -4, 2, -6],
+    scaleX: -1,
+    times: [0, 0.22, 0.5, 0.78, 1],
+    opacity: [0, 1, 1, 1, 0],
+    duration: 5.6,
+  },
+  {
+    // 8. DESNO→LIJEVO, srednji dio, sa ZASTAJANJEM negdje desno od centra.
+    x: (vw) => [vw + 120, vw * 0.7, vw * 0.55, vw * 0.55, vw * 0.25, -120],
+    y: (_, vh) => [vh * 0.55, vh * 0.5, vh * 0.48, vh * 0.48, vh * 0.6, vh * 0.5],
+    rotate: [6, 2, 0, 0, -4, -8],
+    scaleX: -1,
+    times: [0, 0.18, 0.32, 0.62, 0.84, 1],
+    opacity: [0, 1, 1, 1, 1, 0],
+    duration: 9,
+  },
+  {
+    // 9. ODOZGO PREMA DOLE — pčela se spušta sa vrha ekrana (rotacija 90°, leti glavom dolje).
+    x: (vw) => [vw * 0.7, vw * 0.65, vw * 0.74, vw * 0.66, vw * 0.7],
+    y: (_, vh) => [-120, vh * 0.25, vh * 0.55, vh * 0.8, vh + 120],
+    rotate: [78, 88, 92, 88, 96],
+    times: [0, 0.25, 0.5, 0.75, 1],
+    opacity: [0, 1, 1, 1, 0],
+    duration: 5.4,
+  },
+  {
+    // 10. ODOZDO PREMA GORE sa pauzom — penje se sa dna, zastane na sredini, nastavi ka vrhu.
+    x: (vw) => [vw * 0.28, vw * 0.32, vw * 0.3, vw * 0.3, vw * 0.34, vw * 0.28],
+    y: (_, vh) => [vh + 120, vh * 0.7, vh * 0.5, vh * 0.5, vh * 0.25, -120],
+    rotate: [-95, -88, -82, -82, -88, -96],
+    times: [0, 0.2, 0.38, 0.65, 0.85, 1],
+    opacity: [0, 1, 1, 1, 1, 0],
+    duration: 8.8,
   },
 ];
 
 /**
- * Sintetski "bzzz" zvuk pčele preko Web Audio API-ja — sawtooth sa vibratom.
- * Bez audio fajla, vrlo subtilno (gain 0.035). Poštuje localStorage toggle
- * `mekteb-bee-sound` (default uključen) i autoplay policy (tiho fail-uje
- * dok korisnik ne interaguje sa stranicom).
+ * Singleton AudioContext + auto-unlock pri prvoj korisničkoj interakciji.
+ * Browseri blokiraju AudioContext dok korisnik ne klikne / dotakne / pritisne
+ * tipku. Ovaj modul registruje jednokratne listenere koji "probude" kontekst
+ * čim se to desi, tako da prvi sljedeći let pčele već zuji.
  */
-function playBeeBuzz(durationSec: number): void {
-  if (typeof window === "undefined") return;
-  if (localStorage.getItem("mekteb-bee-sound") === "false") return;
+let sharedAudioCtx: AudioContext | null = null;
+let audioUnlockBound = false;
+
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (sharedAudioCtx) return sharedAudioCtx;
   const AC: typeof AudioContext | undefined =
     (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
       .AudioContext ||
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AC) return;
-  let ctx: AudioContext;
+  if (!AC) return null;
   try {
-    ctx = new AC();
+    sharedAudioCtx = new AC();
   } catch {
-    return;
+    return null;
   }
+  return sharedAudioCtx;
+}
+
+function bindAudioUnlock(): void {
+  if (audioUnlockBound || typeof window === "undefined") return;
+  audioUnlockBound = true;
+  const unlock = () => {
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("keydown", unlock);
+    window.removeEventListener("touchstart", unlock);
+  };
+  window.addEventListener("pointerdown", unlock, { once: true, passive: true });
+  window.addEventListener("keydown", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true, passive: true });
+}
+
+/**
+ * Sintetski "bzzz" zvuk pčele preko Web Audio API-ja — sawtooth sa vibratom
+ * kroz lowpass filter. Bez audio fajla, suptilno (gain 0.04). Poštuje
+ * localStorage toggle `mekteb-bee-sound` (default uključen). Koristi
+ * dijeljeni AudioContext koji se otključa pri prvoj interakciji korisnika.
+ */
+function playBeeBuzz(durationSec: number): void {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem("mekteb-bee-sound") === "false") return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
   if (ctx.state === "suspended") {
     ctx.resume().catch(() => {});
+    if (ctx.state === "suspended") return;
   }
   try {
     const osc = ctx.createOscillator();
@@ -277,20 +340,20 @@ function playBeeBuzz(durationSec: number): void {
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.value = 1200;
+    filter.frequency.value = 1300;
     osc.type = "sawtooth";
-    osc.frequency.value = 215;
+    osc.frequency.value = 220;
     lfo.type = "sine";
-    lfo.frequency.value = 17;
-    lfoGain.gain.value = 28;
+    lfo.frequency.value = 18;
+    lfoGain.gain.value = 32;
     lfo.connect(lfoGain);
     lfoGain.connect(osc.frequency);
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
     const now = ctx.currentTime;
-    const peak = 0.035;
-    const fade = Math.min(0.45, durationSec * 0.15);
+    const peak = 0.04;
+    const fade = Math.min(0.5, durationSec * 0.15);
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(peak, now + fade);
     gain.gain.setValueAtTime(peak, now + Math.max(fade, durationSec - fade));
@@ -299,15 +362,8 @@ function playBeeBuzz(durationSec: number): void {
     lfo.start(now);
     osc.stop(now + durationSec + 0.05);
     lfo.stop(now + durationSec + 0.05);
-    osc.onended = () => {
-      try {
-        ctx.close();
-      } catch {}
-    };
   } catch {
-    try {
-      ctx.close();
-    } catch {}
+    /* tihi fail */
   }
 }
 
@@ -438,6 +494,8 @@ export function FlyingMaskota() {
   const [location] = useLocation();
   const [flight, setFlight] = useState<{ id: number; traj: FlightTrajectory } | null>(null);
   const [vw, setVw] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 1280);
+  const [vh, setVh] = useState<number>(typeof window !== "undefined" ? window.innerHeight : 800);
+  const lastTrajIdx = useRef<number>(-1);
 
   const reduce =
     typeof window !== "undefined" &&
@@ -446,7 +504,11 @@ export function FlyingMaskota() {
 
   useEffect(() => {
     if (reduce) return;
-    const onResize = () => setVw(window.innerWidth);
+    bindAudioUnlock();
+    const onResize = () => {
+      setVw(window.innerWidth);
+      setVh(window.innerHeight);
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [reduce]);
@@ -455,7 +517,13 @@ export function FlyingMaskota() {
     if (reduce) return;
     setFlight(null);
     const startTimer = setTimeout(() => {
-      const traj = TRAJECTORIES[Math.floor(Math.random() * TRAJECTORIES.length)];
+      // Izaberi nasumičnu putanju koja nije ista kao prethodna — više raznolikosti.
+      let idx = Math.floor(Math.random() * TRAJECTORIES.length);
+      if (idx === lastTrajIdx.current && TRAJECTORIES.length > 1) {
+        idx = (idx + 1 + Math.floor(Math.random() * (TRAJECTORIES.length - 1))) % TRAJECTORIES.length;
+      }
+      lastTrajIdx.current = idx;
+      const traj = TRAJECTORIES[idx];
       setFlight((prev) => ({ id: (prev?.id ?? 0) + 1, traj }));
       playBeeBuzz(traj.duration);
     }, 350);
@@ -477,21 +545,28 @@ export function FlyingMaskota() {
           <motion.div
             key={flight.id}
             initial={{
-              x: flight.traj.x(vw)[0],
-              y: flight.traj.y[0],
+              x: flight.traj.x(vw, vh)[0],
+              y: flight.traj.y(vw, vh)[0],
               opacity: 0,
               rotate: flight.traj.rotate[0],
             }}
             animate={{
-              x: flight.traj.x(vw),
-              y: flight.traj.y,
+              x: flight.traj.x(vw, vh),
+              y: flight.traj.y(vw, vh),
               opacity: flight.traj.opacity,
               rotate: flight.traj.rotate,
             }}
             exit={{ opacity: 0 }}
             transition={{ duration: flight.traj.duration, ease: "easeInOut", times: flight.traj.times }}
             onAnimationComplete={() => setFlight(null)}
-            style={{ position: "absolute", left: 0, top: 0, width: size, height: size }}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: size,
+              height: size,
+              transform: flight.traj.scaleX === -1 ? "scaleX(-1)" : undefined,
+            }}
           >
             <motion.div
               animate={{ y: [0, -3, 0, -3, 0] }}
