@@ -255,9 +255,12 @@ export default function IlmihalPage() {
                           {items.map((l, i) => {
                             const isDone = completedIds.has(l.id);
                             const isNext = user != null && l.id === nextLessonId;
-                            // Guest gating: računato iz pune liste, ne iz lokalnog
-                            // indeksa (pretraga ne smije otključati lekcije).
-                            const isLocked = !user && !guestUnlockedIds.has(l.id);
+                            // Guest gating PRIVREMENO ISKLJUČEN — sve lekcije su
+                            // dostupne i gostima bez prijave (vidi i kvizovi.tsx,
+                            // citaonica.tsx). Vrati `!user && !guestUnlockedIds.has(l.id)`
+                            // kad treba ponovo zaključati.
+                            const isLocked = false;
+                            void guestUnlockedIds;
                             const innerRow = (
                               <div className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors group ${
                                 isLocked

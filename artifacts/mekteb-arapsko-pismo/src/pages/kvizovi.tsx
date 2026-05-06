@@ -182,7 +182,9 @@ export default function KvizoviPage() {
     return set;
   }, [user, kvizovi]);
 
-  const isLocked = (k: Kviz) => !user && !unlockedSlugs.has(k.slug);
+  // Guest gating PRIVREMENO ISKLJUČEN — svi kvizovi dostupni gostima.
+  // Vrati `!user && !unlockedSlugs.has(k.slug)` kad treba ponovo zaključati.
+  const isLocked = (_k: Kviz) => { void unlockedSlugs; return false; };
 
   return (
     <Layout>

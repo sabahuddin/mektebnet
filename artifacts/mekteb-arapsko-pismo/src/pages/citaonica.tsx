@@ -56,7 +56,9 @@ export default function CitaonicaPage() {
     });
   };
 
-  const isLocked = (k: Knjiga) => !user && !GUEST_UNLOCKED_KNJIGE.has(k.slug);
+  // Guest gating PRIVREMENO ISKLJUČEN — sve knjige dostupne gostima.
+  // Vrati `!user && !GUEST_UNLOCKED_KNJIGE.has(k.slug)` kad treba ponovo zaključati.
+  const isLocked = (_k: Knjiga) => false;
 
   useEffect(() => {
     Promise.all([
