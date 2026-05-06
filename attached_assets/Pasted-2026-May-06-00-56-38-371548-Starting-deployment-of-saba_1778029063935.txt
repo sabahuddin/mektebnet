@@ -1,0 +1,273 @@
+2026-May-06 00:56:38.371548
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-May-06 00:56:38.616379
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-May-06 00:56:40.060945
+----------------------------------------
+2026-May-06 00:56:40.068333
+Importing sabahuddin/mektebnet:main (commit sha 498e157f2485356bc06bca0f11f3017d5d50efbc) to /artifacts/pok8c8scggsss8o4so0g0c04.
+2026-May-06 00:56:59.466103
+Image not found (i8w884sgkkgogkwsokcwc0c4:498e157f2485356bc06bca0f11f3017d5d50efbc). Building new image.
+2026-May-06 00:57:01.430652
+----------------------------------------
+2026-May-06 00:57:01.440000
+Building docker image started.
+2026-May-06 00:57:01.448635
+To check the current progress, click on Show Debug Logs.
+2026-May-06 00:57:08.423004
+========================================
+2026-May-06 00:57:08.433903
+Deployment failed: Command execution failed (exit code 1): docker exec pok8c8scggsss8o4so0g0c04 bash -c 'bash /artifacts/build.sh'
+2026-May-06 00:57:08.433903
+Error: #0 building with "default" instance using docker driver
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#1 [internal] load build definition from Dockerfile
+2026-May-06 00:57:08.433903
+#1 transferring dockerfile: 3.05kB done
+2026-May-06 00:57:08.433903
+#1 DONE 0.0s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#2 [internal] load metadata for docker.io/library/node:24-bookworm-slim
+2026-May-06 00:57:08.433903
+#2 DONE 0.6s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#3 [internal] load .dockerignore
+2026-May-06 00:57:08.433903
+#3 transferring context: 2B done
+2026-May-06 00:57:08.433903
+#3 DONE 0.0s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#4 [base  1/18] FROM docker.io/library/node:24-bookworm-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2
+2026-May-06 00:57:08.433903
+#4 DONE 0.0s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#5 [internal] load build context
+2026-May-06 00:57:08.433903
+#5 transferring context: 119.38MB 0.4s done
+2026-May-06 00:57:08.433903
+#5 DONE 0.4s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#6 [base  6/18] COPY lib/db/package.json ./lib/db/
+2026-May-06 00:57:08.433903
+#6 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#7 [base  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/
+2026-May-06 00:57:08.433903
+#7 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#8 [base 11/18] COPY artifacts/mekteb-arapsko-pismo/package.json ./artifacts/mekteb-arapsko-pismo/
+2026-May-06 00:57:08.433903
+#8 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#9 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-06 00:57:08.433903
+#9 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#10 [base 12/18] COPY scripts/package.json ./scripts/
+2026-May-06 00:57:08.433903
+#10 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#11 [base  9/18] COPY lib/api-zod/package.json ./lib/api-zod/
+2026-May-06 00:57:08.433903
+#11 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#12 [base  7/18] COPY lib/api-spec/package.json ./lib/api-spec/
+2026-May-06 00:57:08.433903
+#12 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#13 [base 10/18] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-06 00:57:08.433903
+#13 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#14 [base  3/18] WORKDIR /app
+2026-May-06 00:57:08.433903
+#14 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#15 [base  2/18] RUN npm install -g pnpm
+2026-May-06 00:57:08.433903
+#15 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#16 [base  4/18] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-May-06 00:57:08.433903
+#16 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#17 [base  5/18] COPY tsconfig.base.json tsconfig.json ./
+2026-May-06 00:57:08.433903
+#17 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#18 [base 14/18] COPY lib/ ./lib/
+2026-May-06 00:57:08.433903
+#18 CACHED
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#19 [base 15/18] COPY artifacts/ ./artifacts/
+2026-May-06 00:57:08.433903
+#19 DONE 0.3s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#20 [base 16/18] COPY scripts/ ./scripts/
+2026-May-06 00:57:08.433903
+#20 DONE 0.0s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#21 [base 17/18] RUN pnpm --filter @workspace/api-server run build
+2026-May-06 00:57:08.433903
+#21 0.395
+2026-May-06 00:57:08.433903
+#21 0.395 > @workspace/api-server@0.0.0 build /app/artifacts/api-server
+2026-May-06 00:57:08.433903
+#21 0.395 > node ./build.mjs
+2026-May-06 00:57:08.433903
+#21 0.395
+2026-May-06 00:57:08.433903
+#21 1.162
+2026-May-06 00:57:08.433903
+#21 1.162   dist/index.mjs                       7.6mb ⚠️
+2026-May-06 00:57:08.433903
+#21 1.162   dist/pino-worker.mjs               153.4kb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/pino-file.mjs                 142.0kb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/pino-pretty.mjs               114.6kb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/thread-stream-worker.mjs        7.3kb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/index.mjs.map                  13.5mb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/pino-worker.mjs.map           256.9kb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/pino-file.mjs.map             229.0kb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/pino-pretty.mjs.map           203.9kb
+2026-May-06 00:57:08.433903
+#21 1.162   dist/thread-stream-worker.mjs.map   12.0kb
+2026-May-06 00:57:08.433903
+#21 1.162
+2026-May-06 00:57:08.433903
+#21 1.162 ⚡ Done in 690ms
+2026-May-06 00:57:08.433903
+#21 DONE 1.2s
+2026-May-06 00:57:08.433903
+2026-May-06 00:57:08.433903
+#22 [base 18/18] RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
+2026-May-06 00:57:08.433903
+#22 0.340
+2026-May-06 00:57:08.433903
+#22 0.340 > @workspace/mekteb-arapsko-pismo@0.0.0 build /app/artifacts/mekteb-arapsko-pismo
+2026-May-06 00:57:08.433903
+#22 0.340 > vite build --config vite.config.ts
+2026-May-06 00:57:08.433903
+#22 0.340
+2026-May-06 00:57:08.433903
+#22 0.777 vite v7.3.1 building client environment for production...
+2026-May-06 00:57:08.433903
+#22 0.845 transforming...
+2026-May-06 00:57:08.433903
+#22 2.473 src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-May-06 00:57:08.433903
+#22 3.440 ✓ 2330 modules transformed.
+2026-May-06 00:57:08.433903
+#22 3.443 ✗ Build failed in 2.63s
+2026-May-06 00:57:08.433903
+#22 3.443 error during build:
+2026-May-06 00:57:08.433903
+#22 3.443 [vite-plugin-pwa:build] [plugin vite-plugin-pwa:build] There was an error during the build:
+2026-May-06 00:57:08.433903
+#22 3.443   Could not load /app/attached_assets/bee_1778028645901.mp3 (imported by src/components/maskota.tsx): ENOENT: no such file or directory, open '/app/attached_assets/bee_1778028645901.mp3'
+2026-May-06 00:57:08.433903
+#22 3.443 Additionally, handling the error in the 'buildEnd' hook caused the following error:
+2026-May-06 00:57:08.433903
+#22 3.443   Could not load /app/attached_assets/bee_1778028645901.mp3 (imported by src/components/maskota.tsx): ENOENT: no such file or directory, open '/app/attached_assets/bee_1778028645901.mp3'
+2026-May-06 00:57:08.433903
+#22 3.443     at getRollupError (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js:402:41)
+2026-May-06 00:57:08.433903
+#22 3.443     at file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23467:39
+2026-May-06 00:57:08.433903
+#22 3.443     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:22925:16)
+2026-May-06 00:57:08.433903
+#22 3.443     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23450:5)
+2026-May-06 00:57:08.433903
+#22 3.443     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33541:12)
+2026-May-06 00:57:08.433903
+#22 3.443     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33900:19)
+2026-May-06 00:57:08.433903
+#22 3.443     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33897:153)
+2026-May-06 00:57:08.433903
+#22 3.443     at async CAC. (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:629:3)
+2026-May-06 00:57:08.433903
+#22 3.539 /app/artifacts/mekteb-arapsko-pismo:
+2026-May-06 00:57:08.433903
+#22 3.539  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/mekteb-arapsko-pismo@0.0.0 build: `vite build --config vite.config.ts`
+2026-May-06 00:57:08.433903
+#22 3.539 Exit status 1
+2026-May-06 00:57:08.433903
+#22 ERROR: process "/bin/sh -c pnpm --filter @workspace/mekteb-arapsko-pismo run build" did not complete successfully: exit code: 1
+2026-May-06 00:57:08.433903
+------
+2026-May-06 00:57:08.433903
+> [base 18/18] RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build:
+2026-May-06 00:57:08.433903
+3.443     at file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23467:39
+2026-May-06 00:57:08.433903
+3.443     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:22925:16)
+2026-May-06 00:57:08.433903
+3.443     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23450:5)
+2026-May-06 00:57:08.433903
+3.443     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33541:12)
+2026-May-06 00:57:08.433903
+3.443     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33900:19)
+2026-May-06 00:57:08.433903
+3.443     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33897:153)
+2026-May-06 00:57:08.433903
+3.443     at async CAC. (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:629:3)
+2026-May-06 00:57:08.433903
+3.539 /app/artifacts/mekteb-arapsko-pismo:
+2026-May-06 00:57:08.433903
+3.539  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/mekteb-arapsko-pismo@0.0.0 build: `vite build --config vite.config.ts`
+2026-May-06 00:57:08.433903
+3.539 Exit status 1
+2026-May-06 00:57:08.433903
+------
+2026-May-06 00:57:08.433903
+Dockerfile:39
+2026-May-06 00:57:08.433903
+--------------------
+2026-May-06 00:57:08.433903
+37 |     ENV BASE_PATH=/
+2026-May-06 00:57:08.433903
+38 |     ENV NODE_ENV=production
+2026-May-06 00:57:08.433903
+39 | >>> RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
+2026-May-06 00:57:08.433903
+40 |
+2026-May-06 00:57:08.433903
+41 |     # -------- Runtime image (smaller) --------
+2026-May-06 00:57:08.433903
+--------------------
+2026-May-06 00:57:08.433903
+ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm --filter @workspace/mekteb-arapsko-pismo run build" did not complete successfully: exit code: 1
+2026-May-06 00:57:08.433903
+exit status 1
+2026-May-06 00:57:08.539687
+========================================
+2026-May-06 00:57:08.550511
+Deployment failed. Removing the new version of your application.
+2026-May-06 00:57:09.033199

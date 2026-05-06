@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import beeBuzzSrc from "@assets/bee_1778028645901.mp3";
+import beeBuzzSrc from "../assets/bee-buzz.mp3";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
 
