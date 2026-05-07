@@ -9,20 +9,6 @@
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "canvas",
-      "puppeteer",
-      "sharp",
-      "@img/sharp-linux-x64",
-      "@img/sharp-libvips-linux-x64",
-      "esbuild",
-      "@esbuild/linux-x64",
-      "@esbuild/linux-arm64",
-      "@rollup/rollup-linux-x64-gnu",
-      "@rollup/rollup-linux-x64-musl"
-    ]
-  },
   "devDependencies": {
     "jsdom": "^29.0.2",
     "prettier": "^3.8.1",
