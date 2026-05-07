@@ -44,7 +44,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY lib/db/package.json ./lib/db/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Copy built assets
 COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
