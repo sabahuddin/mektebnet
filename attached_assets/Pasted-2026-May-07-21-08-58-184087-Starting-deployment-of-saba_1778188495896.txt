@@ -1,0 +1,483 @@
+2026-May-07 21:08:58.184087
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-May-07 21:08:59.035331
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-May-07 21:09:02.088520
+----------------------------------------
+2026-May-07 21:09:02.099522
+Importing sabahuddin/mektebnet:main (commit sha 1ae7d2ed12997bf8d385e9d42a962ee5aa0e0a54) to /artifacts/rcwc0488ow8wcg8gcsssoow0.
+2026-May-07 21:09:22.268776
+Image not found (i8w884sgkkgogkwsokcwc0c4:1ae7d2ed12997bf8d385e9d42a962ee5aa0e0a54). Building new image.
+2026-May-07 21:09:27.483422
+----------------------------------------
+2026-May-07 21:09:27.492915
+Building docker image started.
+2026-May-07 21:09:27.500707
+To check the current progress, click on Show Debug Logs.
+2026-May-07 21:09:41.129702
+========================================
+2026-May-07 21:09:41.135978
+Deployment failed: Command execution failed (exit code 1): docker exec rcwc0488ow8wcg8gcsssoow0 bash -c 'bash /artifacts/build.sh'
+2026-May-07 21:09:41.135978
+Error: #0 building with "default" instance using docker driver
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#1 [internal] load build definition from Dockerfile
+2026-May-07 21:09:41.135978
+#1 transferring dockerfile: 3.05kB done
+2026-May-07 21:09:41.135978
+#1 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#2 [internal] load metadata for docker.io/library/node:24-bookworm-slim
+2026-May-07 21:09:41.135978
+#2 DONE 1.2s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#3 [internal] load .dockerignore
+2026-May-07 21:09:41.135978
+#3 transferring context: 2B done
+2026-May-07 21:09:41.135978
+#3 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#4 [base  1/18] FROM docker.io/library/node:24-bookworm-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2
+2026-May-07 21:09:41.135978
+#4 resolve docker.io/library/node:24-bookworm-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2 0.0s done
+2026-May-07 21:09:41.135978
+#4 sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2 5.20kB / 5.20kB done
+2026-May-07 21:09:41.135978
+#4 sha256:eebb3322e27acec1dc74482790f744cf04a4932277c232568b4f07cad242821c 1.93kB / 1.93kB done
+2026-May-07 21:09:41.135978
+#4 sha256:ee9072928387ad4c3f526fc6c9418bc8e09924724717885c8c5acc2e86c9ec90 6.88kB / 6.88kB done
+2026-May-07 21:09:41.135978
+#4 DONE 0.1s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#5 [internal] load build context
+2026-May-07 21:09:41.135978
+#5 transferring context: 120.11MB 0.7s done
+2026-May-07 21:09:41.135978
+#5 DONE 0.8s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#6 [runner  2/11] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm
+2026-May-07 21:09:41.135978
+#6 0.132 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+2026-May-07 21:09:41.135978
+#6 0.148 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+2026-May-07 21:09:41.135978
+#6 0.148 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+2026-May-07 21:09:41.135978
+#6 0.235 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8792 kB]
+2026-May-07 21:09:41.135978
+#6 0.319 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+2026-May-07 21:09:41.135978
+#6 0.421 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [299 kB]
+2026-May-07 21:09:41.135978
+#6 1.023 Fetched 9352 kB in 1s (10.4 MB/s)
+2026-May-07 21:09:41.135978
+#6 1.023 Reading package lists...
+2026-May-07 21:09:41.135978
+#6 1.446 Reading package lists...
+2026-May-07 21:09:41.135978
+#6 ...
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#7 [base  2/18] RUN npm install -g pnpm
+2026-May-07 21:09:41.135978
+#7 1.480
+2026-May-07 21:09:41.135978
+#7 1.480 added 1 package in 1s
+2026-May-07 21:09:41.135978
+#7 1.480
+2026-May-07 21:09:41.135978
+#7 1.480 1 package is looking for funding
+2026-May-07 21:09:41.135978
+#7 1.480   run `npm fund` for details
+2026-May-07 21:09:41.135978
+#7 1.481 npm notice
+2026-May-07 21:09:41.135978
+#7 1.481 npm notice New minor version of npm available! 11.12.1 -> 11.14.0
+2026-May-07 21:09:41.135978
+#7 1.481 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.14.0
+2026-May-07 21:09:41.135978
+#7 1.481 npm notice To update run: npm install -g npm@11.14.0
+2026-May-07 21:09:41.135978
+#7 1.481 npm notice
+2026-May-07 21:09:41.135978
+#7 DONE 1.6s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#8 [base  3/18] WORKDIR /app
+2026-May-07 21:09:41.135978
+#8 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#9 [base  4/18] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-May-07 21:09:41.135978
+#9 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#10 [base  5/18] COPY tsconfig.base.json tsconfig.json ./
+2026-May-07 21:09:41.135978
+#10 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#11 [base  6/18] COPY lib/db/package.json ./lib/db/
+2026-May-07 21:09:41.135978
+#11 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#12 [base  7/18] COPY lib/api-spec/package.json ./lib/api-spec/
+2026-May-07 21:09:41.135978
+#12 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#6 [runner  2/11] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm
+2026-May-07 21:09:41.135978
+#6 1.446 Reading package lists...
+2026-May-07 21:09:41.135978
+#6 ...
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#13 [base  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/
+2026-May-07 21:09:41.135978
+#13 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#14 [base  9/18] COPY lib/api-zod/package.json ./lib/api-zod/
+2026-May-07 21:09:41.135978
+#14 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#15 [base 10/18] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-07 21:09:41.135978
+#15 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#16 [base 11/18] COPY artifacts/mekteb-arapsko-pismo/package.json ./artifacts/mekteb-arapsko-pismo/
+2026-May-07 21:09:41.135978
+#16 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#17 [base 12/18] COPY scripts/package.json ./scripts/
+2026-May-07 21:09:41.135978
+#17 DONE 0.0s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#6 [runner  2/11] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm
+2026-May-07 21:09:41.135978
+#6 1.446 Reading package lists...
+2026-May-07 21:09:41.135978
+#6 1.842 Building dependency tree...
+2026-May-07 21:09:41.135978
+#6 1.962 Reading state information...
+2026-May-07 21:09:41.135978
+#6 2.052 The following additional packages will be installed:
+2026-May-07 21:09:41.135978
+#6 2.052   libpsl5 libssl3 openssl
+2026-May-07 21:09:41.135978
+#6 2.053 Recommended packages:
+2026-May-07 21:09:41.135978
+#6 2.053   publicsuffix
+2026-May-07 21:09:41.135978
+#6 2.107 The following NEW packages will be installed:
+2026-May-07 21:09:41.135978
+#6 2.110   ca-certificates libpsl5 libssl3 openssl wget
+2026-May-07 21:09:41.135978
+#6 2.130 0 upgraded, 5 newly installed, 0 to remove and 0 not upgraded.
+2026-May-07 21:09:41.135978
+#6 2.130 Need to get 4618 kB of archives.
+2026-May-07 21:09:41.135978
+#6 2.130 After this operation, 12.6 MB of additional disk space will be used.
+2026-May-07 21:09:41.135978
+#6 2.130 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.19-1~deb12u2 [2032 kB]
+2026-May-07 21:09:41.135978
+#6 2.162 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.19-1~deb12u2 [1435 kB]
+2026-May-07 21:09:41.135978
+#6 2.173 Get:3 http://deb.debian.org/debian bookworm/main amd64 ca-certificates all 20230311+deb12u1 [155 kB]
+2026-May-07 21:09:41.135978
+#6 2.173 Get:4 http://deb.debian.org/debian bookworm/main amd64 libpsl5 amd64 0.21.2-1 [58.7 kB]
+2026-May-07 21:09:41.135978
+#6 2.173 Get:5 http://deb.debian.org/debian bookworm/main amd64 wget amd64 1.21.3-1+deb12u1 [937 kB]
+2026-May-07 21:09:41.135978
+#6 2.343 debconf: delaying package configuration, since apt-utils is not installed
+2026-May-07 21:09:41.135978
+#6 2.368 Fetched 4618 kB in 0s (73.2 MB/s)
+2026-May-07 21:09:41.135978
+#6 2.395 Selecting previously unselected package libssl3:amd64.
+2026-May-07 21:09:41.135978
+#6 2.395 (Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 6096 files and directories currently installed.)
+2026-May-07 21:09:41.135978
+#6 2.419 Preparing to unpack .../libssl3_3.0.19-1~deb12u2_amd64.deb ...
+2026-May-07 21:09:41.135978
+#6 2.424 Unpacking libssl3:amd64 (3.0.19-1~deb12u2) ...
+2026-May-07 21:09:41.135978
+#6 2.568 Selecting previously unselected package openssl.
+2026-May-07 21:09:41.135978
+#6 2.568 Preparing to unpack .../openssl_3.0.19-1~deb12u2_amd64.deb ...
+2026-May-07 21:09:41.135978
+#6 2.572 Unpacking openssl (3.0.19-1~deb12u2) ...
+2026-May-07 21:09:41.135978
+#6 2.679 Selecting previously unselected package ca-certificates.
+2026-May-07 21:09:41.135978
+#6 2.681 Preparing to unpack .../ca-certificates_20230311+deb12u1_all.deb ...
+2026-May-07 21:09:41.135978
+#6 2.687 Unpacking ca-certificates (20230311+deb12u1) ...
+2026-May-07 21:09:41.135978
+#6 2.741 Selecting previously unselected package libpsl5:amd64.
+2026-May-07 21:09:41.135978
+#6 2.745 Preparing to unpack .../libpsl5_0.21.2-1_amd64.deb ...
+2026-May-07 21:09:41.135978
+#6 2.747 Unpacking libpsl5:amd64 (0.21.2-1) ...
+2026-May-07 21:09:41.135978
+#6 2.774 Selecting previously unselected package wget.
+2026-May-07 21:09:41.135978
+#6 2.774 Preparing to unpack .../wget_1.21.3-1+deb12u1_amd64.deb ...
+2026-May-07 21:09:41.135978
+#6 2.776 Unpacking wget (1.21.3-1+deb12u1) ...
+2026-May-07 21:09:41.135978
+#6 2.869 Setting up libpsl5:amd64 (0.21.2-1) ...
+2026-May-07 21:09:41.135978
+#6 2.895 Setting up wget (1.21.3-1+deb12u1) ...
+2026-May-07 21:09:41.135978
+#6 2.907 Setting up libssl3:amd64 (3.0.19-1~deb12u2) ...
+2026-May-07 21:09:41.135978
+#6 2.912 Setting up openssl (3.0.19-1~deb12u2) ...
+2026-May-07 21:09:41.135978
+#6 2.921 Setting up ca-certificates (20230311+deb12u1) ...
+2026-May-07 21:09:41.135978
+#6 2.991 debconf: unable to initialize frontend: Dialog
+2026-May-07 21:09:41.135978
+#6 2.991 debconf: (TERM is not set, so the dialog frontend is not usable.)
+2026-May-07 21:09:41.135978
+#6 2.991 debconf: falling back to frontend: Readline
+2026-May-07 21:09:41.135978
+#6 2.992 debconf: unable to initialize frontend: Readline
+2026-May-07 21:09:41.135978
+#6 2.992 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+2026-May-07 21:09:41.135978
+#6 2.992 debconf: falling back to frontend: Teletype
+2026-May-07 21:09:41.135978
+#6 3.570 Updating certificates in /etc/ssl/certs...
+2026-May-07 21:09:41.135978
+#6 4.352 142 added, 0 removed; done.
+2026-May-07 21:09:41.135978
+#6 4.408 Processing triggers for libc-bin (2.36-9+deb12u13) ...
+2026-May-07 21:09:41.135978
+#6 4.467 Processing triggers for ca-certificates (20230311+deb12u1) ...
+2026-May-07 21:09:41.135978
+#6 4.474 Updating certificates in /etc/ssl/certs...
+2026-May-07 21:09:41.135978
+#6 5.067 0 added, 0 removed; done.
+2026-May-07 21:09:41.135978
+#6 5.067 Running hooks in /etc/ca-certificates/update.d...
+2026-May-07 21:09:41.135978
+#6 5.068 done.
+2026-May-07 21:09:41.135978
+#6 6.724
+2026-May-07 21:09:41.135978
+#6 6.724 added 1 package in 2s
+2026-May-07 21:09:41.135978
+#6 6.724
+2026-May-07 21:09:41.135978
+#6 6.728 1 package is looking for funding
+2026-May-07 21:09:41.135978
+#6 6.728   run `npm fund` for details
+2026-May-07 21:09:41.135978
+#6 6.729 npm notice
+2026-May-07 21:09:41.135978
+#6 6.729 npm notice New minor version of npm available! 11.12.1 -> 11.14.0
+2026-May-07 21:09:41.135978
+#6 6.729 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.14.0
+2026-May-07 21:09:41.135978
+#6 6.729 npm notice To update run: npm install -g npm@11.14.0
+2026-May-07 21:09:41.135978
+#6 6.729 npm notice
+2026-May-07 21:09:41.135978
+#6 DONE 7.4s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#18 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-07 21:09:41.135978
+#18 0.589 Scope: all 8 workspace projects
+2026-May-07 21:09:41.135978
+#18 0.721 Lockfile is up to date, resolution step is skipped
+2026-May-07 21:09:41.135978
+#18 0.790 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-May-07 21:09:41.135978
+#18 0.874 Packages: +1323
+2026-May-07 21:09:41.135978
+#18 0.874 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-May-07 21:09:41.135978
+#18 1.794 Progress: resolved 1323, reused 0, downloaded 179, added 154
+2026-May-07 21:09:41.135978
+#18 2.796 Progress: resolved 1323, reused 0, downloaded 451, added 448
+2026-May-07 21:09:41.135978
+#18 3.797 Progress: resolved 1323, reused 0, downloaded 837, added 836
+2026-May-07 21:09:41.135978
+#18 4.797 Progress: resolved 1323, reused 0, downloaded 1117, added 1110
+2026-May-07 21:09:41.135978
+#18 ...
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#19 [runner  3/11] WORKDIR /app
+2026-May-07 21:09:41.135978
+#19 DONE 0.2s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#20 [runner  4/11] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-May-07 21:09:41.135978
+#20 DONE 0.2s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#18 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-07 21:09:41.135978
+#18 5.798 Progress: resolved 1323, reused 0, downloaded 1178, added 1129
+2026-May-07 21:09:41.135978
+#18 ...
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#21 [runner  5/11] COPY lib/db/package.json ./lib/db/
+2026-May-07 21:09:41.135978
+#21 DONE 0.1s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#22 [runner  6/11] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-07 21:09:41.135978
+#22 DONE 0.1s
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#23 [runner  7/11] RUN pnpm install --prod --frozen-lockfile
+2026-May-07 21:09:41.135978
+#23 0.586 Scope: all 3 workspace projects
+2026-May-07 21:09:41.135978
+#23 0.723 Lockfile is up to date, resolution step is skipped
+2026-May-07 21:09:41.135978
+#23 0.757 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-May-07 21:09:41.135978
+#23 0.815 Packages: +321
+2026-May-07 21:09:41.135978
+#23 0.815 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-May-07 21:09:41.135978
+#23 1.760 Progress: resolved 321, reused 0, downloaded 210, added 137
+2026-May-07 21:09:41.135978
+#23 ...
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#18 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-07 21:09:41.135978
+#18 6.558 Progress: resolved 1323, reused 0, downloaded 1323, added 1323, done
+2026-May-07 21:09:41.135978
+#18 7.150
+2026-May-07 21:09:41.135978
+#18 7.150 dependencies:
+2026-May-07 21:09:41.135978
+#18 7.150 + adm-zip 0.5.16
+2026-May-07 21:09:41.135978
+#18 7.150 + pdfjs-dist 3.11.174
+2026-May-07 21:09:41.135978
+#18 7.150 + puppeteer 24.42.0
+2026-May-07 21:09:41.135978
+#18 7.150
+2026-May-07 21:09:41.135978
+#18 7.150 devDependencies:
+2026-May-07 21:09:41.135978
+#18 7.150 + jsdom 29.0.2
+2026-May-07 21:09:41.135978
+#18 7.150 + prettier 3.8.1
+2026-May-07 21:09:41.135978
+#18 7.150 + sharp 0.34.5
+2026-May-07 21:09:41.135978
+#18 7.150 + typescript 5.9.3
+2026-May-07 21:09:41.135978
+#18 7.150
+2026-May-07 21:09:41.135978
+#18 7.196 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-May-07 21:09:41.135978
+#18 7.226 . preinstall: Use pnpm instead
+2026-May-07 21:09:41.135978
+#18 7.226 . preinstall: Failed
+2026-May-07 21:09:41.135978
+#18 7.239 [ELIFECYCLE] Command failed with exit code 1.
+2026-May-07 21:09:41.135978
+#18 ERROR: process "/bin/sh -c pnpm install --frozen-lockfile" did not complete successfully: exit code: 1
+2026-May-07 21:09:41.135978
+2026-May-07 21:09:41.135978
+#23 [runner  7/11] RUN pnpm install --prod --frozen-lockfile
+2026-May-07 21:09:41.135978
+#23 CANCELED
+2026-May-07 21:09:41.135978
+------
+2026-May-07 21:09:41.135978
+> [base 13/18] RUN pnpm install --frozen-lockfile:
+2026-May-07 21:09:41.135978
+7.150 devDependencies:
+2026-May-07 21:09:41.135978
+7.150 + jsdom 29.0.2
+2026-May-07 21:09:41.135978
+7.150 + prettier 3.8.1
+2026-May-07 21:09:41.135978
+7.150 + sharp 0.34.5
+2026-May-07 21:09:41.135978
+7.150 + typescript 5.9.3
+2026-May-07 21:09:41.135978
+7.150
+2026-May-07 21:09:41.135978
+7.196 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-May-07 21:09:41.135978
+7.226 . preinstall: Use pnpm instead
+2026-May-07 21:09:41.135978
+7.226 . preinstall: Failed
+2026-May-07 21:09:41.135978
+7.239 [ELIFECYCLE] Command failed with exit code 1.
+2026-May-07 21:09:41.135978
+------
+2026-May-07 21:09:41.135978
+Dockerfile:27
+2026-May-07 21:09:41.135978
+--------------------
+2026-May-07 21:09:41.135978
+25 |     COPY scripts/package.json ./scripts/
+2026-May-07 21:09:41.135978
+26 |
+2026-May-07 21:09:41.135978
+27 | >>> RUN pnpm install --frozen-lockfile
+2026-May-07 21:09:41.135978
+28 |
+2026-May-07 21:09:41.135978
+29 |     # Copy source
+2026-May-07 21:09:41.135978
+--------------------
+2026-May-07 21:09:41.135978
+ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm install --frozen-lockfile" did not complete successfully: exit code: 1
+2026-May-07 21:09:41.135978
+exit status 1
+2026-May-07 21:09:41.196434
+========================================
+2026-May-07 21:09:41.202138
+Deployment failed. Removing the new version of your application.
+2026-May-07 21:09:42.795079
+Gracefully shutting down build container: rcwc0488ow8wcg8gcsssoow0

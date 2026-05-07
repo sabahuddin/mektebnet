@@ -15,6 +15,8 @@ COPY artifacts/api-server/package.json ./artifacts/api-server/
 COPY artifacts/mekteb-arapsko-pismo/package.json ./artifacts/mekteb-arapsko-pismo/
 COPY scripts/package.json ./scripts/
 
+# npm_config_user_agent mora biti postavljen da prođe preinstall guard u root package.json
+ENV npm_config_user_agent="pnpm/0.0.0 npm/0 node/v24 linux x64"
 RUN pnpm install --frozen-lockfile
 
 # Copy source
@@ -44,6 +46,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY lib/db/package.json ./lib/db/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 
+ENV npm_config_user_agent="pnpm/0.0.0 npm/0 node/v24 linux x64"
 RUN pnpm install --prod --frozen-lockfile
 
 # Copy built assets
