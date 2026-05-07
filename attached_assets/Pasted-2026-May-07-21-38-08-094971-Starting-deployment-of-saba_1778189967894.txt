@@ -1,0 +1,259 @@
+2026-May-07 21:38:08.094971
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-May-07 21:38:08.354210
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-May-07 21:38:09.773773
+----------------------------------------
+2026-May-07 21:38:09.783429
+Importing sabahuddin/mektebnet:main (commit sha 20251256502e0e4b2064c13f14e3d175bef17ac8) to /artifacts/ksccwgc00gw4c8wcss0sg44g.
+2026-May-07 21:38:29.228033
+Image not found (i8w884sgkkgogkwsokcwc0c4:20251256502e0e4b2064c13f14e3d175bef17ac8). Building new image.
+2026-May-07 21:38:31.421658
+----------------------------------------
+2026-May-07 21:38:31.432910
+Building docker image started.
+2026-May-07 21:38:31.441437
+To check the current progress, click on Show Debug Logs.
+2026-May-07 21:38:37.627800
+========================================
+2026-May-07 21:38:37.636402
+Deployment failed: Command execution failed (exit code 1): docker exec ksccwgc00gw4c8wcss0sg44g bash -c 'bash /artifacts/build.sh'
+2026-May-07 21:38:37.636402
+Error: #0 building with "default" instance using docker driver
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#1 [internal] load build definition from Dockerfile
+2026-May-07 21:38:37.636402
+#1 transferring dockerfile: 3.05kB done
+2026-May-07 21:38:37.636402
+#1 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#2 [internal] load metadata for docker.io/library/node:24-bookworm-slim
+2026-May-07 21:38:37.636402
+#2 DONE 0.5s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#3 [internal] load .dockerignore
+2026-May-07 21:38:37.636402
+#3 transferring context: 2B done
+2026-May-07 21:38:37.636402
+#3 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#4 [base  1/18] FROM docker.io/library/node:24-bookworm-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2
+2026-May-07 21:38:37.636402
+#4 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#5 [internal] load build context
+2026-May-07 21:38:37.636402
+#5 transferring context: 120.11MB 0.5s done
+2026-May-07 21:38:37.636402
+#5 DONE 0.5s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#6 [runner  2/11] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm
+2026-May-07 21:38:37.636402
+#6 CACHED
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#7 [runner  3/11] WORKDIR /app
+2026-May-07 21:38:37.636402
+#7 CACHED
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#8 [base  2/18] RUN npm install -g pnpm
+2026-May-07 21:38:37.636402
+#8 CACHED
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#9 [base  3/18] WORKDIR /app
+2026-May-07 21:38:37.636402
+#9 CACHED
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#10 [runner  4/11] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-May-07 21:38:37.636402
+#10 DONE 0.1s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#11 [base  4/18] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-May-07 21:38:37.636402
+#11 DONE 0.1s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#12 [runner  5/11] COPY lib/db/package.json ./lib/db/
+2026-May-07 21:38:37.636402
+#12 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#13 [base  5/18] COPY tsconfig.base.json tsconfig.json ./
+2026-May-07 21:38:37.636402
+#13 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#14 [runner  6/11] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-07 21:38:37.636402
+#14 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#15 [base  6/18] COPY lib/db/package.json ./lib/db/
+2026-May-07 21:38:37.636402
+#15 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#16 [base  7/18] COPY lib/api-spec/package.json ./lib/api-spec/
+2026-May-07 21:38:37.636402
+#16 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#17 [base  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/
+2026-May-07 21:38:37.636402
+#17 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#18 [base  9/18] COPY lib/api-zod/package.json ./lib/api-zod/
+2026-May-07 21:38:37.636402
+#18 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#19 [runner  7/11] RUN pnpm install --prod --frozen-lockfile
+2026-May-07 21:38:37.636402
+#19 ...
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#20 [base 10/18] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-07 21:38:37.636402
+#20 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#21 [base 11/18] COPY artifacts/mekteb-arapsko-pismo/package.json ./artifacts/mekteb-arapsko-pismo/
+2026-May-07 21:38:37.636402
+#21 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#22 [base 12/18] COPY scripts/package.json ./scripts/
+2026-May-07 21:38:37.636402
+#22 DONE 0.0s
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#23 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-07 21:38:37.636402
+#23 0.569 Scope: all 8 workspace projects
+2026-May-07 21:38:37.636402
+#23 0.700 Lockfile is up to date, resolution step is skipped
+2026-May-07 21:38:37.636402
+#23 0.759 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-May-07 21:38:37.636402
+#23 0.874 Packages: +1323
+2026-May-07 21:38:37.636402
+#23 0.874 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-May-07 21:38:37.636402
+#23 1.763 Progress: resolved 1323, reused 0, downloaded 85, added 27
+2026-May-07 21:38:37.636402
+#23 2.764 Progress: resolved 1323, reused 0, downloaded 285, added 159
+2026-May-07 21:38:37.636402
+#23 ...
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#19 [runner  7/11] RUN pnpm install --prod --frozen-lockfile
+2026-May-07 21:38:37.636402
+#19 0.526 Scope: all 3 workspace projects
+2026-May-07 21:38:37.636402
+#19 0.648 Lockfile is up to date, resolution step is skipped
+2026-May-07 21:38:37.636402
+#19 0.683 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-May-07 21:38:37.636402
+#19 0.708 Packages: +321
+2026-May-07 21:38:37.636402
+#19 0.708 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-May-07 21:38:37.636402
+#19 1.687 Progress: resolved 321, reused 0, downloaded 218, added 147
+2026-May-07 21:38:37.636402
+#19 2.517 Progress: resolved 321, reused 0, downloaded 321, added 321, done
+2026-May-07 21:38:37.636402
+#19 2.810
+2026-May-07 21:38:37.636402
+#19 2.810 dependencies:
+2026-May-07 21:38:37.636402
+#19 2.810 + adm-zip 0.5.16
+2026-May-07 21:38:37.636402
+#19 2.810 + pdfjs-dist 3.11.174
+2026-May-07 21:38:37.636402
+#19 2.810 + puppeteer 24.42.0
+2026-May-07 21:38:37.636402
+#19 2.810
+2026-May-07 21:38:37.636402
+#19 2.810 devDependencies: skipped
+2026-May-07 21:38:37.636402
+#19 2.810
+2026-May-07 21:38:37.636402
+#19 2.815 . preinstall$ rm -f package-lock.json yarn.lock
+2026-May-07 21:38:37.636402
+#19 2.838 . preinstall: Done
+2026-May-07 21:38:37.636402
+#19 2.897 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@2.11.2, puppeteer@24.42.0, sharp@0.34.5
+2026-May-07 21:38:37.636402
+#19 2.897
+2026-May-07 21:38:37.636402
+#19 2.897 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+2026-May-07 21:38:37.636402
+#19 ERROR: process "/bin/sh -c pnpm install --prod --frozen-lockfile" did not complete successfully: exit code: 1
+2026-May-07 21:38:37.636402
+2026-May-07 21:38:37.636402
+#23 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-07 21:38:37.636402
+#23 CANCELED
+2026-May-07 21:38:37.636402
+------
+2026-May-07 21:38:37.636402
+> [runner  7/11] RUN pnpm install --prod --frozen-lockfile:
+2026-May-07 21:38:37.636402
+2.810 + pdfjs-dist 3.11.174
+2026-May-07 21:38:37.636402
+2.810 + puppeteer 24.42.0
+2026-May-07 21:38:37.636402
+2.810
+2026-May-07 21:38:37.636402
+2.810 devDependencies: skipped
+2026-May-07 21:38:37.636402
+2.810
+2026-May-07 21:38:37.636402
+2.815 . preinstall$ rm -f package-lock.json yarn.lock
+2026-May-07 21:38:37.636402
+2.838 . preinstall: Done
+2026-May-07 21:38:37.636402
+2.897 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@2.11.2, puppeteer@24.42.0, sharp@0.34.5
+2026-May-07 21:38:37.636402
+2.897
+2026-May-07 21:38:37.636402
+2.897 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+2026-May-07 21:38:37.636402
+------
+2026-May-07 21:38:37.636402
+Dockerfile:65
+2026-May-07 21:38:37.636402
+--------------------
+2026-May-07 21:38:37.636402
+63 |     COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-07 21:38:37.636402
+64 |
+2026-May-07 21:38:37.636402
+65 | >>> RUN pnpm install --prod --frozen-lockfile
+2026-May-07 21:38:37.636402
+66 |
+2026-May-07 21:38:37.636402
+67 |     # Copy built assets
+2026-May-07 21:38:37.636402
+--------------------
+2026-May-07 21:38:37.636402
+ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm install --prod --frozen-lockfile" did not complete successfully: exit code: 1
+2026-May-07 21:38:37.636402
+exit status 1
+2026-May-07 21:38:37.722905
+========================================
+2026-May-07 21:38:37.732475
+Deployment failed. Removing the new version of your application.
+2026-May-07 21:38:38.161578
+Gracefully shutting down build container: ksccwgc00gw4c8wcss0sg44g
