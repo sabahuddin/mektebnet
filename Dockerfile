@@ -44,7 +44,6 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY lib/db/package.json ./lib/db/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 
-ENV npm_config_user_agent="pnpm/0.0.0 npm/0 node/v24 linux x64"
 RUN pnpm install --prod --frozen-lockfile
 
 # Copy built assets
