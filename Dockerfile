@@ -1,5 +1,5 @@
 FROM node:24-bookworm-slim AS base
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 WORKDIR /app
 
 # Copy workspace manifests for layer caching
@@ -34,7 +34,7 @@ FROM node:24-bookworm-slim AS runner
 RUN apt-get update \
  && apt-get install -y --no-install-recommends wget ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
- && npm install -g pnpm
+ && npm install -g pnpm@10
 WORKDIR /app
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
