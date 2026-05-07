@@ -181,7 +181,7 @@ export function Layout({ children }: LayoutProps) {
             })}
             {extraLinks.map(link => (
               <Link key={link.href} href={link.href}
-                className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${isActive(link.href) ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"}`}>
+                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`}>
                 <link.icon className="w-5 h-5" />
                 {link.label}
               </Link>
