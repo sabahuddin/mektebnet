@@ -103,22 +103,16 @@ export default function IlmihalPage() {
     grouped[Number(n)].sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
   }
 
-  // Guest unlocked set: računamo iz PUNE liste lekcija (nezavisno od search/filter),
-  // sortirano po redoslijedu unutar nivoa, pa uzimamo prvih GUEST_FREE_LESSONS_PER_NIVO
-  // ID-jeva po nivou. Ovo sprječava bypass kroz pretragu (architect F7 nalaz #1).
+  // Guest unlocked set: samo prvih 5 lekcija Nivoa 1.
+  // Nivo 2 i Nivo 3 su zaključani za gostima — moraju se registrovati.
   const guestUnlockedIds = useMemo(() => {
     if (user) return new Set<number>();
     const set = new Set<number>();
-    const byNivo: Record<number, Lekcija[]> = {};
-    lekcije.forEach(l => {
-      const dn = displayNivo(l);
-      if (!byNivo[dn]) byNivo[dn] = [];
-      byNivo[dn].push(l);
-    });
-    Object.values(byNivo).forEach(arr => {
-      arr.sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
-      arr.slice(0, GUEST_FREE_LESSONS_PER_NIVO).forEach(l => set.add(l.id));
-    });
+    lekcije
+      .filter(l => displayNivo(l) === 1)
+      .sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0))
+      .slice(0, GUEST_FREE_LESSONS_PER_NIVO)
+      .forEach(l => set.add(l.id));
     return set;
   }, [user, lekcije]);
 
@@ -255,12 +249,7 @@ export default function IlmihalPage() {
                           {items.map((l, i) => {
                             const isDone = completedIds.has(l.id);
                             const isNext = user != null && l.id === nextLessonId;
-                            // Guest gating PRIVREMENO ISKLJUČEN — sve lekcije su
-                            // dostupne i gostima bez prijave (vidi i kvizovi.tsx,
-                            // citaonica.tsx). Vrati `!user && !guestUnlockedIds.has(l.id)`
-                            // kad treba ponovo zaključati.
-                            const isLocked = false;
-                            void guestUnlockedIds;
+                            const isLocked = !user && !guestUnlockedIds.has(l.id);
                             const innerRow = (
                               <div className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors group ${
                                 isLocked

@@ -173,26 +173,19 @@ export default function KvizoviPage() {
     return acc;
   }, {});
 
-  // Guest gating: prvi kviz svakog nivoa (1, 2, 3) javno otvoren. Računamo iz PUNE
-  // `kvizovi` liste (ne `filtrirani`/`ilmihalKvizovi`) da kategorija filter ne mijenja
-  // koji je kviz otključan (architect F7 nalaz #2). Knjige kvizovi su zaključani za guesta.
+  // Guest gating: samo prvi kviz (najmanji ID) je otvoren gostima.
   const unlockedSlugs = useMemo(() => {
     const set = new Set<string>();
     if (!user) {
-      const ilmihalSvi = kvizovi
+      const first = kvizovi
         .filter(k => k.modul === "ilmihal" || !k.modul)
-        .sort((a, b) => a.id - b.id);
-      [1, 2, 3].forEach(n => {
-        const first = ilmihalSvi.find(k => k.nivo === n);
-        if (first) set.add(first.slug);
-      });
+        .sort((a, b) => a.id - b.id)[0];
+      if (first) set.add(first.slug);
     }
     return set;
   }, [user, kvizovi]);
 
-  // Guest gating PRIVREMENO ISKLJUČEN — svi kvizovi dostupni gostima.
-  // Vrati `!user && !unlockedSlugs.has(k.slug)` kad treba ponovo zaključati.
-  const isLocked = (_k: Kviz) => { void unlockedSlugs; return false; };
+  const isLocked = (k: Kviz) => !user && !unlockedSlugs.has(k.slug);
 
   return (
     <Layout>
