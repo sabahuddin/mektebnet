@@ -606,6 +606,12 @@ uri = "file://attached_assets/mapa-nivo1-pozadina-v2.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "G8a36OxNZul2b6qekW0iu"
+uri = "file://attached_assets/mapa-nivo1-pozadina-v3.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
@@ -911,3 +917,9 @@ id = "x8loioYcU9AQTQQuSWk74"
 uri = "file://attached_assets/mapa-nivo1-pozadina-v2.png"
 type = "image"
 title = "Mapa Nivo 1 - pozadina v2 (džamija na kraju puta)"
+
+[[outputs]]
+id = "i6Z4KEMXYguZ9kPseDC_O"
+uri = "file://attached_assets/mapa-nivo1-pozadina-v3.png"
+type = "image"
+title = "Mapa Nivo 1 - pozadina v3 (proplanci, džamija u daljini)"
