@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
+import confetti from "canvas-confetti";
 import { Maskota } from "@/components/maskota";
 import { playRewardSound } from "@/lib/sound-prefs";
 import { aferimForm } from "@/lib/aferim";
@@ -57,6 +58,25 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
   useEffect(() => {
     if (!data.isRepeat) {
       playRewardSound();
+      // Konfete pri završetku nove lekcije — preskače se ako je
+      // korisnik uključio prefers-reduced-motion (poštujemo accessibility).
+      const reduce =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reduce) {
+        const fire = (x: number, ratio: number, opts: confetti.Options = {}) =>
+          confetti({
+            spread: 70, ticks: 80, gravity: 1, decay: 0.92,
+            startVelocity: 32, scalar: 1, origin: { x, y: 0.55 },
+            particleCount: Math.floor(110 * ratio),
+            colors: ["#fbbf24", "#f59e0b", "#10b981", "#3b82f6", "#a855f7"],
+            ...opts,
+          });
+        fire(0.3, 0.3, { spread: 30, startVelocity: 50 });
+        fire(0.5, 0.4, { spread: 100 });
+        fire(0.7, 0.3, { spread: 30, startVelocity: 50 });
+      }
     }
   }, [data.isRepeat]);
 

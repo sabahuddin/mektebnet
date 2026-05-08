@@ -618,6 +618,18 @@ uri = "file://attached_assets/mapa-nivo1-pozadina-final.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "Jz-oDxCKXV5xmsA3wOTSi"
+uri = "file://attached_assets/mapa-nivo1-tile-meadow.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8cCtPcoUpTTWQjjzFSAV8"
+uri = "file://attached_assets/mapa-nivo1-vrh-dzamija.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"

@@ -6,7 +6,6 @@ import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
 import { ArrowLeft, Check, Lock, Medal, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 
 interface Lekcija {
   id: number;
@@ -51,7 +50,6 @@ function leftPercentFor(index: number): number {
 export default function Nivo1MapaPage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const [data, setData] = useState<MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -160,23 +158,34 @@ export default function Nivo1MapaPage() {
         </div>
       </div>
 
-      {/* Mapa kontejner — visok, sa pozadinskom slikom koja se ponavlja vertikalno.
-          Pozadinska slika je privremeno ponavljanje jedne 9:16 ilustracije; pravilna
-          tall verzija dolazi u sljedećoj iteraciji. */}
+      {/* Mapa kontejner. Pozadina je u dva sloja:
+          1) tile-meadow.png — seamless tileable livada sa vijugavom stazom,
+             ponavlja se vertikalno kroz cijeli put.
+          2) vrh-dzamija.png — apsolutni element zalijepljen na sam vrh
+             kontejnera, prikazuje destinaciju (košnicu-džamiju) iznad puta.
+          Polja (lekcije + medaljoni) se renderuju preko, sa serpentine layoutom. */}
       <div
         ref={containerRef}
-        className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-2xl border-2 border-emerald-200"
+        className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-2xl border-2 border-emerald-200 shadow-inner"
         style={{
           height: `${containerHeight}px`,
-          backgroundImage: "url('/images/mapa/nivo1-pozadina.png')",
+          backgroundImage: "url('/images/mapa/tile-meadow.png')",
           backgroundSize: "100% auto",
           backgroundRepeat: "repeat-y",
           backgroundPosition: "center top",
         }}
         data-testid="mapa-container"
       >
+        {/* Vrh mape — košnica-džamija (cilj puta) iznad svih polja */}
+        <img
+          src="/images/mapa/vrh-dzamija.png"
+          alt="Košnica-džamija — kraj Nivoa 1"
+          className="absolute top-0 left-0 w-full pointer-events-none select-none"
+          style={{ height: "auto" }}
+        />
+
         {/* Blagi zeleni overlay da se polja bolje vide preko pozadine */}
-        <div className="absolute inset-0 bg-emerald-50/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-emerald-50/15 pointer-events-none" />
 
         {/* SVG putanja koja povezuje polja — krivulje između susjednih kruga. */}
         <svg
@@ -257,18 +266,7 @@ export default function Nivo1MapaPage() {
           return (
             <button
               key={`m-${m.id}`}
-              onClick={() => {
-                // Medaljon stranica sa aktivnošću dolazi u sljedećoj iteraciji
-                // (admin editor + sadržaj). Zasad samo informativni toast.
-                toast({
-                  title: earned ? `Osvojen: ${m.naziv}` : `Medaljon: ${m.naziv}`,
-                  description: earned
-                    ? `Bravo! ${m.opis}`
-                    : unlocked
-                      ? "Aktivnost za osvajanje uskoro stiže."
-                      : `Završi ${m.posAfterRedoslijed} lekcija da otključaš ovo polje.`,
-                });
-              }}
+              onClick={() => setLocation(`/medaljon/${m.slug}`)}
               className="absolute group"
               style={{
                 left: `${leftPct}%`,

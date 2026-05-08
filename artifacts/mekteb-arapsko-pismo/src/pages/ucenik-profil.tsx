@@ -8,7 +8,7 @@ import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
   Flame, Trophy, Sparkles, Target, Footprints, Settings, Volume2, VolumeX,
-  FileText, Clock, AlertCircle
+  FileText, Clock, AlertCircle, Medal, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +39,29 @@ interface IlmihalLekcija {
   naslov: string;
   redoslijed: number;
 }
+
+interface MapaMedaljon {
+  id: number;
+  slug: string;
+  naziv: string;
+  opis: string;
+  posAfterRedoslijed: number;
+  boja: string;
+}
+
+interface Nivo1MapaData {
+  medaljoni: MapaMedaljon[];
+  zavrsene: number[];
+  osvojeniMedaljoni: number[];
+}
+
+const MEDALJON_GRADIENT: Record<string, string> = {
+  emerald: "from-emerald-300 to-emerald-600",
+  sky:     "from-sky-300 to-sky-600",
+  amber:   "from-amber-300 to-amber-600",
+  orange:  "from-orange-300 to-orange-600",
+  yellow:  "from-yellow-300 to-yellow-500",
+};
 
 function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: number }) {
   const count = useMotionValue(0);
@@ -140,6 +163,7 @@ export default function UcenikProfilPage() {
   const [zadace, setZadace] = useState<Zadaca[]>([]);
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
+  const [mapa, setMapa] = useState<Nivo1MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "postavke">("moj-put");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
@@ -173,7 +197,12 @@ export default function UcenikProfilPage() {
     apiRequest<IlmihalLekcija[]>("GET", "/content/ilmihal")
       .then(data => setIlmihalLekcije(Array.isArray(data) ? data : []))
       .catch(() => setIlmihalLekcije([]));
-  }, [user]);
+    if (token) {
+      apiRequest<Nivo1MapaData>("GET", "/mapa/nivo1", undefined, token)
+        .then(setMapa)
+        .catch(() => setMapa(null));
+    }
+  }, [user, token]);
 
   if (!user || user.role !== "ucenik") {
     return (
@@ -474,6 +503,75 @@ export default function UcenikProfilPage() {
                     );
                   })}
                 </motion.div>
+
+                {/* Medaljoni Nivoa 1 — pet specijalnih bedževa sa puta kroz Nivo 1.
+                    Zaključani su sivi, otključani (završene lekcije ali ne osvojeni) imaju
+                    pulse, a osvojeni sjaje. Klik vodi na medaljon detail stranicu. */}
+                {mapa && mapa.medaljoni.length > 0 && (() => {
+                  const earnedCount = mapa.osvojeniMedaljoni.length;
+                  const totalCount = mapa.medaljoni.length;
+                  const zavrseneSet = new Set(mapa.zavrsene);
+                  return (
+                    <motion.div
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.48 }}
+                      className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 border-2 border-amber-200 rounded-2xl p-5 mb-6"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-extrabold text-amber-900 flex items-center gap-2">
+                          <Medal className="w-5 h-5 text-amber-600" />
+                          Medaljoni Nivoa 1 ({earnedCount}/{totalCount})
+                        </h3>
+                        <Link
+                          href="/nivo1-mapa"
+                          className="text-xs font-bold text-amber-700 hover:underline"
+                        >
+                          Otvori mapu →
+                        </Link>
+                      </div>
+                      <div className="grid grid-cols-5 gap-2 sm:gap-3">
+                        {mapa.medaljoni.map((m) => {
+                          const earned = mapa.osvojeniMedaljoni.includes(m.id);
+                          const unlocked = zavrseneSet.size >= m.posAfterRedoslijed;
+                          const grad = MEDALJON_GRADIENT[m.boja] ?? MEDALJON_GRADIENT.amber;
+                          return (
+                            <Link
+                              key={m.id}
+                              href={`/medaljon/${m.slug}`}
+                              className="group block focus:outline-none"
+                              data-testid={`medaljon-profil-${m.slug}`}
+                            >
+                              <div
+                                className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${
+                                  earned
+                                    ? `bg-gradient-to-br ${grad} ring-4 ring-amber-200 hover:scale-105`
+                                    : unlocked
+                                      ? `bg-gradient-to-br ${grad} opacity-90 animate-pulse hover:scale-105`
+                                      : "bg-gray-200 grayscale opacity-60 border border-dashed border-gray-300"
+                                }`}
+                              >
+                                {earned ? (
+                                  <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" strokeWidth={2.5} />
+                                ) : unlocked ? (
+                                  <Medal className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" strokeWidth={2.5} />
+                                ) : (
+                                  <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" strokeWidth={2} />
+                                )}
+                              </div>
+                              <div className={`text-[10px] text-center font-bold mt-1 truncate ${earned ? "text-amber-800" : unlocked ? "text-amber-700" : "text-muted-foreground"}`}>
+                                {m.naziv}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[11px] text-amber-800/70 mt-3 italic">
+                        Završi lekcije da otključaš, klikni medaljon da osvojiš svoj bedž!
+                      </p>
+                    </motion.div>
+                  );
+                })()}
 
                 {/* Moji bedževi — preview grid */}
                 {profil.napredak?.bedzevi && profil.napredak.bedzevi.length > 0 && (() => {
