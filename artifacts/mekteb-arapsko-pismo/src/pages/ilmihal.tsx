@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useSearch } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
@@ -48,6 +48,7 @@ export default function IlmihalPage() {
 
   const { token, user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
 
   // Toast koji se prikaže kad neulogovan posjetilac klikne zaključanu stavku.
@@ -186,8 +187,13 @@ export default function IlmihalPage() {
             </button>
             {[1, 2, 3].map(n => {
               const info = NIVO_LABELS[n];
+              // Nivo 1 vodi na novu interaktivnu mapu (Duolingo-style put kroz
+              // 64 lekcije + medaljone). Nivo 2 i 3 zadržavaju listu zasad.
+              const onClick = n === 1
+                ? () => setLocation("/nivo1-mapa")
+                : () => setActiveNivo(n === activeNivo ? null : n);
               return (
-                <button key={n} onClick={() => setActiveNivo(n === activeNivo ? null : n)}
+                <button key={n} onClick={onClick}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${activeNivo === n ? `${info.bg} ${info.color} ${info.border}` : "bg-white border-border/70 text-muted-foreground hover:bg-muted"}`}>
                   {info.label.split(" – ")[0]}
                 </button>

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, jsonb, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, jsonb, timestamp, varchar, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -56,3 +56,42 @@ export const exerciseSessionsTable = pgTable("exercise_sessions", {
 export const insertExerciseSessionSchema = createInsertSchema(exerciseSessionsTable).omit({ id: true, completedAt: true });
 export type InsertExerciseSession = z.infer<typeof insertExerciseSessionSchema>;
 export type ExerciseSession = typeof exerciseSessionsTable.$inferSelect;
+
+// === MEDALJONI (Nivo 1 mapa - bedževi/checkpointi) ============================
+// Medaljon je posebno polje na mapi (između grupa lekcija). 5 fiksnih medaljona:
+//   1. Prvi koraci   — poslije 5. lekcije
+//   2. Putnik        — poslije 10. lekcije
+//   3. Polovina puta — poslije 30. lekcije
+//   4. Ustrajni      — poslije 45. lekcije
+//   5. Prva košnica  — poslije zadnje (64.) lekcije
+// `posAfterRedoslijed` = redoslijed posljednje lekcije nakon koje medaljon dolazi.
+// `contentHtml` je kasnije editovan kroz admin panel (sadržaj aktivnosti koju
+// dijete mora odraditi da bi osvojilo bedž).
+export const medaljoniTable = pgTable("medaljoni", {
+  id: serial("id").primaryKey(),
+  nivo: integer("nivo").notNull().default(1),
+  slug: varchar("slug", { length: 64 }).notNull().unique(),
+  naziv: text("naziv").notNull(),
+  opis: text("opis").notNull().default(""),
+  posAfterRedoslijed: integer("pos_after_redoslijed").notNull(),
+  contentHtml: text("content_html").notNull().default(""),
+  ikona: varchar("ikona", { length: 32 }).notNull().default("medal"),
+  boja: varchar("boja", { length: 16 }).notNull().default("amber"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type Medaljon = typeof medaljoniTable.$inferSelect;
+
+// Bilježi koje je medaljone učenik osvojio i kada (jedan medaljon po učeniku
+// jednom). Koristi se za: prikaz zlatnog medaljona na mapi, vidljivost u
+// profilu djeteta i obavještenje roditelju.
+export const studentMedaljoniTable = pgTable("student_medaljoni", {
+  id: serial("id").primaryKey(),
+  studentId: varchar("student_id", { length: 100 }).notNull(),
+  medaljonId: integer("medaljon_id").notNull(),
+  earnedAt: timestamp("earned_at").defaultNow().notNull(),
+}, (t) => ({
+  uniq: uniqueIndex("student_medaljoni_unique_idx").on(t.studentId, t.medaljonId),
+}));
+
+export type StudentMedaljon = typeof studentMedaljoniTable.$inferSelect;

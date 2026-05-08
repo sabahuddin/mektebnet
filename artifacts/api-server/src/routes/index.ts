@@ -16,6 +16,7 @@ import h5pRouter from "./h5p";
 import popraviSaceRouter from "./popravi-sace";
 import misijeRouter from "./misije";
 import pushRouter from "./push";
+import mapaRouter from "./mapa";
 
 const router: IRouter = Router();
 
@@ -36,6 +37,7 @@ router.use("/h5p", h5pRouter);
 router.use("/popravi-sace", popraviSaceRouter);
 router.use("/misije", misijeRouter);
 router.use("/push", pushRouter);
+router.use("/mapa", mapaRouter);
 
 export default router;
 
