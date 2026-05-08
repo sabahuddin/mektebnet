@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
@@ -8,7 +8,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
@@ -205,6 +205,104 @@ function SistemAlati({ token }: { token: string }) {
         </div>
       )}
     </>
+  );
+}
+
+interface PendingPrilog {
+  id: number;
+  lekcijaId: number;
+  originalName: string;
+  fileSize: number;
+  mimeType: string;
+  kind: string;
+  externalUrl: string | null;
+  uploadedByRole: string | null;
+  createdAt: string;
+}
+
+function PendingPrilozi({ token }: { token: string }) {
+  const { toast } = useToast();
+  const [pending, setPending] = useState<PendingPrilog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiRequest<PendingPrilog[]>("GET", "/admin/pending-prilozi", undefined, token);
+      setPending(data);
+    } catch {
+      setPending([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handle = async (id: number, approve: boolean) => {
+    setProcessingId(id);
+    try {
+      await apiRequest("PUT", `/admin/prilozi/${id}/approve`, { approve }, token);
+      toast({ title: approve ? "Odobreno" : "Odbijeno", description: approve ? "Materijal je sada vidljiv učenicima." : "Materijal je obrisan." });
+      setPending(prev => prev.filter(p => p.id !== id));
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  if (loading) return (
+    <div className="bg-white border border-border/50 rounded-2xl p-5">
+      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+    </div>
+  );
+
+  if (pending.length === 0) return (
+    <div className="bg-white border border-border/50 rounded-2xl p-5 flex items-center gap-3">
+      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+      <span className="text-sm text-muted-foreground">Nema materijala koji čekaju odobrenje.</span>
+    </div>
+  );
+
+  return (
+    <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden">
+      <div className="p-4 border-b border-amber-100 bg-amber-50 flex items-center gap-2">
+        <Bell className="w-5 h-5 text-amber-600" />
+        <h3 className="font-extrabold text-foreground">Materijali čekaju odobrenje</h3>
+        <span className="ml-auto text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">{pending.length}</span>
+      </div>
+      <div className="divide-y divide-border/40">
+        {pending.map(p => (
+          <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+            <span className="text-xl flex-shrink-0">
+              {p.kind === "url" ? <Link2 className="w-5 h-5 text-teal-500" /> : <FileText className="w-5 h-5 text-blue-500" />}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-foreground truncate">{p.originalName}</p>
+              <p className="text-xs text-muted-foreground">Lekcija #{p.lekcijaId} · muallim · {new Date(p.createdAt).toLocaleDateString("bs-BA")}</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => handle(p.id, true)}
+                disabled={processingId === p.id}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                {processingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Odobri
+              </button>
+              <button
+                onClick={() => handle(p.id, false)}
+                disabled={processingId === p.id}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                <X className="w-3.5 h-3.5" /> Odbij
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1749,6 +1847,7 @@ export default function AdminPage() {
 
         {activeMainTab === "sistemski" && (
           <div className="space-y-6">
+            <PendingPrilozi token={token!} />
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">
                 <BookOpen className="w-4 h-4" /> Rječnik pojmova

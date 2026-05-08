@@ -37,6 +37,7 @@ interface Prilog {
   kind?: "file" | "url" | "h5p";
   externalUrl?: string | null;
   h5pPath?: string | null;
+  approved?: boolean;
 }
 
 interface Lekcija {
@@ -1532,28 +1533,21 @@ function PriloziSection({
     }
   };
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL || "/api";
-
-  const downloadFile = async (attachment: Prilog, openInTab = false) => {
-    try {
-      const res = await fetch(`${apiBase}${attachment.url}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("Greška pri preuzimanju");
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      if (openInTab) {
-        window.open(blobUrl, "_blank");
-      } else {
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = attachment.originalName;
-        a.click();
-        URL.revokeObjectURL(blobUrl);
-      }
-    } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
-    }
+  // Koristimo native browser download (ne fetch+blob) da bi nginx proxy u
+  // Coolify-u mogao pravilno streamovati veliki fajl bez buffer truncation-a.
+  // attachment.url već sadrži /api/admin/... prefix — NE dodajemo apiBase.
+  // Token se prosljeđuje kao query param jer <a href> ne podržava headere.
+  const downloadFile = (attachment: Prilog, openInTab = false) => {
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : "";
+    const href = `${attachment.url}${tokenParam}`;
+    const a = document.createElement("a");
+    a.href = href;
+    if (!openInTab) a.setAttribute("download", attachment.originalName);
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -1694,7 +1688,14 @@ function PriloziSection({
                             {isH5p ? "🧩" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
+                              {isAdmin && a.approved === false && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 flex-shrink-0">
+                                  Čeka odobrenje
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-400 truncate">
                               {isH5p ? "Interaktivna vježba (H5P)" : isUrl ? targetUrl : formatFileSize(a.fileSize)}
                             </p>

@@ -317,6 +317,8 @@ export const prilozi = pgTable("prilozi", {
   mimeType: varchar("mime_type", { length: 100 }).notNull().default("application/octet-stream"),
   kind: varchar("kind", { length: 20 }).notNull().default("file"),
   externalUrl: text("external_url"),
+  approved: boolean("approved").notNull().default(false),
+  uploadedByRole: varchar("uploaded_by_role", { length: 20 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -140,7 +140,11 @@ router.get("/ilmihal/:slug", async (req, res) => {
 
         const isStaff = decoded.role === "admin" || decoded.role === "muallim";
         const all = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(desc(prilozi.createdAt));
-        const visible = isStaff ? all : all.filter(a => a.kind === "h5p" || a.kind === "url");
+        // Studenti vide samo odobrene (h5p + url). Staff vidi sve da bi mogli
+        // upravljati i vidjeti status "čeka odobrenje".
+        const visible = isStaff
+          ? all
+          : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "url"));
         result.prilozi = visible.map(a => {
           let url: string;
           if (a.kind === "url") url = a.externalUrl || "";
@@ -148,7 +152,9 @@ router.get("/ilmihal/:slug", async (req, res) => {
           // jedini prefix koji u Replit path routing-u sigurno pogađa api-server
           // (a u prod-u behind nginx-u takođe). Auth (cookie ili Bearer) traje.
           else if (a.kind === "h5p") url = `/api/uploads/${a.storedName}`;
-          else url = `/api/admin/prilozi/download/${a.id}`; // admin auth required
+          // Fajl — download endpoint sa token-om u query stringu (native browser download).
+          // URL već sadrži /api/ prefix pa frontend NE smije dodavati apiBase.
+          else url = `/api/admin/prilozi/download/${a.id}`;
           return {
             id: a.id,
             originalName: a.originalName,
@@ -157,6 +163,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
             kind: a.kind,
             externalUrl: a.externalUrl,
             url,
+            approved: a.approved,
             createdAt: a.createdAt,
           };
         });

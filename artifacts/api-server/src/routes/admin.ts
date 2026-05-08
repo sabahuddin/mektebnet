@@ -259,12 +259,15 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
         ".rtf": "application/rtf",
       };
       const ext = path.extname(req.file.originalname).toLowerCase();
+      const uploaderRole = req.user?.role ?? "muallim";
       const [inserted] = await db.insert(prilozi).values({
         lekcijaId,
         originalName: req.file.originalname,
         storedName: req.file.filename,
         fileSize: req.file.size,
         mimeType: mimeMap[ext] || "application/octet-stream",
+        approved: uploaderRole === "admin",
+        uploadedByRole: uploaderRole,
       }).returning();
       res.json(inserted);
     } catch (e: any) {
@@ -287,6 +290,7 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
     if (/youtube\.com|youtu\.be/i.test(url)) mimeType = "video/youtube";
     else if (/vimeo\.com/i.test(url)) mimeType = "video/vimeo";
     const displayName = (label && label.trim()) || url.replace(/^https?:\/\//i, "").slice(0, 120);
+    const uploaderRole = req.user?.role ?? "muallim";
     const [inserted] = await db.insert(prilozi).values({
       lekcijaId,
       originalName: displayName,
@@ -295,6 +299,8 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
       mimeType,
       kind: "url",
       externalUrl: url,
+      approved: uploaderRole === "admin",
+      uploadedByRole: uploaderRole,
     }).returning();
     res.json(inserted);
   } catch (e: any) {
@@ -315,15 +321,25 @@ router.get("/prilozi/:lekcijaId", async (req, res) => {
   }
 });
 
+// GET /api/admin/prilozi/download/:id
+// Prihvata token i kao Authorization header i kao ?token= query param
+// (query param potreban za native browser download via <a href>).
 router.get("/prilozi/download/:id", async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Neautorizovan pristup" });
+    const JWT_SECRET_DL = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
+    const rawToken =
+      (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : null)
+      ?? (typeof req.query.token === "string" ? req.query.token : null);
+    if (!rawToken) return res.status(401).json({ error: "Neautorizovan pristup" });
     const jwt = await import("jsonwebtoken");
-    const token = authHeader.replace("Bearer ", "");
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
+    let decoded: any;
+    try {
+      decoded = jwt.default.verify(rawToken, JWT_SECRET_DL);
+    } catch {
+      return res.status(401).json({ error: "Nevažeći token" });
+    }
     if (decoded.role !== "admin" && decoded.role !== "muallim") {
-      return res.status(403).json({ error: "Samo muallimi i admini mogu pristupiti materijalima" });
+      return res.status(403).json({ error: "Samo muallimi i admini mogu preuzimati materijale" });
     }
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID" });
@@ -331,9 +347,62 @@ router.get("/prilozi/download/:id", async (req, res) => {
     if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
     const filePath = path.join(uploadsDir, file.storedName);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Fajl nije pronađen na serveru" });
-    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.originalName)}"`);
-    res.setHeader("Content-Type", file.mimeType);
-    res.sendFile(filePath);
+    const stat = fs.statSync(filePath);
+    res.setHeader("Content-Length", stat.size);
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.originalName)}`);
+    res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
+    res.setHeader("Cache-Control", "private, no-cache");
+    fs.createReadStream(filePath).pipe(res);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/admin/pending-prilozi — lista fajlova koji čekaju odobrenje (samo admin)
+router.get("/pending-prilozi", async (req, res) => {
+  if (req.user?.role !== "admin") return res.status(403).json({ error: "Samo admin" });
+  try {
+    const pending = await db.select({
+      id: prilozi.id,
+      lekcijaId: prilozi.lekcijaId,
+      originalName: prilozi.originalName,
+      storedName: prilozi.storedName,
+      fileSize: prilozi.fileSize,
+      mimeType: prilozi.mimeType,
+      kind: prilozi.kind,
+      externalUrl: prilozi.externalUrl,
+      uploadedByRole: prilozi.uploadedByRole,
+      createdAt: prilozi.createdAt,
+    }).from(prilozi).where(eq(prilozi.approved, false)).orderBy(desc(prilozi.createdAt));
+    res.json(pending);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /api/admin/prilozi/:id/approve — odobri ili odbij prilog
+router.put("/prilozi/:id/approve", async (req, res) => {
+  if (req.user?.role !== "admin") return res.status(403).json({ error: "Samo admin" });
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID" });
+    const { approve } = (req.body || {}) as { approve?: boolean };
+    if (typeof approve !== "boolean") return res.status(400).json({ error: "Nedostaje 'approve' boolean" });
+    if (approve) {
+      const [updated] = await db.update(prilozi).set({ approved: true }).where(eq(prilozi.id, id)).returning();
+      if (!updated) return res.status(404).json({ error: "Prilog nije pronađen" });
+      res.json(updated);
+    } else {
+      // Odbij = obriši prilog
+      const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
+      if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
+      if (file.kind !== "url" && file.storedName && file.storedName !== "h5p/pending") {
+        const fp = path.join(uploadsDir, file.storedName);
+        try { if (fs.existsSync(fp)) { if (file.kind === "h5p") fs.rmSync(fp, { recursive: true, force: true }); else fs.unlinkSync(fp); } } catch {}
+      }
+      await db.delete(prilozi).where(eq(prilozi.id, id));
+      res.json({ ok: true, deleted: true });
+    }
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -457,6 +526,7 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
       if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
 
       // 1. Insert prazan h5p prilog (placeholder) da dobijemo ID za direktorij
+      const h5pUploaderRole = req.user?.role ?? "muallim";
       const [pre] = await db.insert(prilozi).values({
         lekcijaId,
         originalName: req.file.originalname,
@@ -464,6 +534,8 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
         fileSize: req.file.size,
         mimeType: "application/x-h5p",
         kind: "h5p",
+        approved: h5pUploaderRole === "admin",
+        uploadedByRole: h5pUploaderRole,
       }).returning();
       inserted = pre;
 
