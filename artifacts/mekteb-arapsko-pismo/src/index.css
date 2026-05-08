@@ -585,7 +585,12 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   to   { opacity: 1; transform: translateY(-100%); }
 }
 
-/* ── YouTube embed (auto-embed iz WysiwygEditor) ── */
+/* ── YouTube embed (auto-embed iz WysiwygEditor) ──
+   NAPOMENA: prethodna verzija je imala -webkit-mask-image radial-gradient
+   i dvostruki translateZ/backface-visibility na wrapperu i iframeu — to je
+   stvarni uzrok bljeskanja YT playera na novijim verzijama Chrome i Safarija
+   (compositor sloj se konstantno repaintuje, a -webkit-mask blokira pointer
+   eventove na djecu pa se nije ni mogao kliknuti play). Hakovi su uklonjeni. */
 div[data-youtube-video] {
   position: relative;
   width: 100%;
@@ -596,12 +601,6 @@ div[data-youtube-video] {
   overflow: hidden;
   background: #000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  /* Safari/WebKit fix: spriječava blikanje iframea na Apple uređajima */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 div[data-youtube-video] iframe,
 iframe.yt-embed {
@@ -609,10 +608,6 @@ iframe.yt-embed {
   height: 100%;
   border: 0;
   display: block;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
 }
 iframe.yt-embed {
   aspect-ratio: 16 / 9;
