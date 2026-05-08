@@ -1533,21 +1533,30 @@ function PriloziSection({
     }
   };
 
-  // Koristimo native browser download (ne fetch+blob) da bi nginx proxy u
-  // Coolify-u mogao pravilno streamovati veliki fajl bez buffer truncation-a.
-  // attachment.url već sadrži /api/admin/... prefix — NE dodajemo apiBase.
-  // Token se prosljeđuje kao query param jer <a href> ne podržava headere.
-  const downloadFile = (attachment: Prilog, openInTab = false) => {
-    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : "";
-    const href = `${attachment.url}${tokenParam}`;
-    const a = document.createElement("a");
-    a.href = href;
-    if (!openInTab) a.setAttribute("download", attachment.originalName);
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  // attachment.url vraca /api/admin/... pa NE dodajemo apiBase — to bi dalo
+  // /api/api/admin/... (dvostruki prefix) i 404 koji je izgledao kao 4KB download.
+  const downloadFile = async (attachment: Prilog, openInTab = false) => {
+    try {
+      const res = await fetch(attachment.url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`Greška pri preuzimanju (${res.status})`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      if (openInTab) {
+        window.open(blobUrl, "_blank");
+      } else {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = attachment.originalName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    }
   };
 
   return (

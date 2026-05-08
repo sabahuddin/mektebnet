@@ -321,16 +321,15 @@ router.get("/prilozi/:lekcijaId", async (req, res) => {
   }
 });
 
-// GET /api/admin/prilozi/download/:id
-// Prihvata token i kao Authorization header i kao ?token= query param
-// (query param potreban za native browser download via <a href>).
+// GET /api/admin/prilozi/download/:id — zahtijeva Authorization: Bearer <token>
 router.get("/prilozi/download/:id", async (req, res) => {
   try {
     const JWT_SECRET_DL = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
-    const rawToken =
-      (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : null)
-      ?? (typeof req.query.token === "string" ? req.query.token : null);
-    if (!rawToken) return res.status(401).json({ error: "Neautorizovan pristup" });
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Neautorizovan pristup" });
+    }
+    const rawToken = authHeader.slice(7);
     const jwt = await import("jsonwebtoken");
     let decoded: any;
     try {
