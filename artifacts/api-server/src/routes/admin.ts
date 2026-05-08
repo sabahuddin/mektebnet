@@ -260,6 +260,7 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
       };
       const ext = path.extname(req.file.originalname).toLowerCase();
       const uploaderRole = req.user?.role ?? "muallim";
+      const uploaderUserId = req.user?.userId ?? null;
       const [inserted] = await db.insert(prilozi).values({
         lekcijaId,
         originalName: req.file.originalname,
@@ -268,6 +269,7 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
         mimeType: mimeMap[ext] || "application/octet-stream",
         approved: uploaderRole === "admin",
         uploadedByRole: uploaderRole,
+        uploadedByUserId: uploaderUserId,
       }).returning();
       res.json(inserted);
     } catch (e: any) {
@@ -291,6 +293,7 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
     else if (/vimeo\.com/i.test(url)) mimeType = "video/vimeo";
     const displayName = (label && label.trim()) || url.replace(/^https?:\/\//i, "").slice(0, 120);
     const uploaderRole = req.user?.role ?? "muallim";
+    const uploaderUserId = req.user?.userId ?? null;
     const [inserted] = await db.insert(prilozi).values({
       lekcijaId,
       originalName: displayName,
@@ -301,6 +304,7 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
       externalUrl: url,
       approved: uploaderRole === "admin",
       uploadedByRole: uploaderRole,
+      uploadedByUserId: uploaderUserId,
     }).returning();
     res.json(inserted);
   } catch (e: any) {
@@ -526,6 +530,7 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
 
       // 1. Insert prazan h5p prilog (placeholder) da dobijemo ID za direktorij
       const h5pUploaderRole = req.user?.role ?? "muallim";
+      const h5pUploaderUserId = req.user?.userId ?? null;
       const [pre] = await db.insert(prilozi).values({
         lekcijaId,
         originalName: req.file.originalname,
@@ -535,6 +540,7 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
         kind: "h5p",
         approved: h5pUploaderRole === "admin",
         uploadedByRole: h5pUploaderRole,
+        uploadedByUserId: h5pUploaderUserId,
       }).returning();
       inserted = pre;
 

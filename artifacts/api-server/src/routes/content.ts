@@ -138,13 +138,19 @@ router.get("/ilmihal/:slug", async (req, res) => {
           } catch {}
         }
 
-        const isStaff = decoded.role === "admin" || decoded.role === "muallim";
+        const isAdmin = decoded.role === "admin";
+        const isMuallim = decoded.role === "muallim";
+        const myId = typeof decoded.userId === "number" ? decoded.userId : null;
         const all = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(desc(prilozi.createdAt));
-        // Studenti vide samo odobrene (h5p + url). Staff vidi sve da bi mogli
-        // upravljati i vidjeti status "čeka odobrenje".
-        const visible = isStaff
+        // Vidljivost:
+        // - admin vidi sve (i odobrene i one koje čekaju)
+        // - muallim vidi sve odobrene + svoje neodobrene (one koje je sam dodao)
+        // - studenti vide samo odobrene (h5p + url)
+        const visible = isAdmin
           ? all
-          : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "url"));
+          : isMuallim
+            ? all.filter(a => a.approved || (myId !== null && a.uploadedByUserId === myId))
+            : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "url"));
         result.prilozi = visible.map(a => {
           let url: string;
           if (a.kind === "url") url = a.externalUrl || "";

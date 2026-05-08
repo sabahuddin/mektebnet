@@ -319,6 +319,7 @@ export const prilozi = pgTable("prilozi", {
   externalUrl: text("external_url"),
   approved: boolean("approved").notNull().default(false),
   uploadedByRole: varchar("uploaded_by_role", { length: 20 }),
+  uploadedByUserId: integer("uploaded_by_user_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
