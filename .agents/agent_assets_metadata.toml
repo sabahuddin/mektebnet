@@ -594,6 +594,12 @@ uri = "file://artifacts/mekteb-arapsko-pismo/public/images/maskota/pcela-tablet.
 type = "image"
 title = "bee mascot waving tablet"
 
+[[generated]]
+id = "oI3C5MshJjXonuF-y_Oow"
+uri = "file://attached_assets/mapa-nivo1-pozadina-v1.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
@@ -887,3 +893,9 @@ id = "Bia9nTHIr0t9kWdNF_wXx"
 uri = "file://.local/brochure/mekteb-brosura.pdf"
 type = "pdf"
 title = "Mekteb.net brošura — popravljeno saće i ikone"
+
+[[outputs]]
+id = "crVjNcEYeNBNLUxRGFuNl"
+uri = "file://attached_assets/mapa-nivo1-pozadina-v1.png"
+type = "image"
+title = "Mapa Nivo 1 - prijedlog pozadine v1"
