@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, lazy, memo, Suspense } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -1303,6 +1303,25 @@ function getFileIcon(mimeType: string) {
   return "📎";
 }
 
+// Memoizovan YouTube iframe — izolovan od parent re-rendera (npr. heartbeat
+// tick svake sekunde). Bez ovoga iframe trepće jer se Framer Motion wrapper
+// (motion.div height:auto) re-mjeri pri svakom re-renderu, što povlači
+// reflow iframe-a i konstantno repaintovanje compositor sloja.
+const YouTubeEmbed = memo(function YouTubeEmbed({ src, title }: { src: string; title: string }) {
+  return (
+    <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
+      <iframe
+        src={src}
+        className="w-full h-full block border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title={title}
+        loading="lazy"
+      />
+    </div>
+  );
+});
+
 function getYoutubeEmbedUrl(url: string): string | null {
   try {
     const u = new URL(url);
@@ -1775,16 +1794,7 @@ function PriloziSection({
                           </div>
                         )}
                         {ytEmbed && (
-                          <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
-                            <iframe
-                              src={ytEmbed}
-                              className="w-full h-full block border-0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              title={a.originalName}
-                              loading="lazy"
-                            />
-                          </div>
+                          <YouTubeEmbed src={ytEmbed} title={a.originalName} />
                         )}
                       </div>
                     );
