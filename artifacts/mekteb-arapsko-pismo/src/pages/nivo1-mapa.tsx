@@ -47,7 +47,7 @@ const NIVO_CONFIGS: Record<number, NivoConfig> = {
 
 export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   const cfg = NIVO_CONFIGS[nivo] ?? NIVO_CONFIGS[1];
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [, setLocation] = useLocation();
   const [data, setData] = useState<MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,10 +102,17 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     : Math.floor(currentCellIndex / COLS);
   // Otključavanje po MEDALJONIMA (blokovi po 10 lekcija). Sve preko ove granice
   // je zaključano (sivo), ali vidljivo skrolovanjem.
-  const unlockedCellCount = Math.min(
-    TOTAL_CELLS,
-    Math.floor(completedCount / 10) * 10 + 10,
-  );
+  // Pravila pristupa:
+  //   - neprijavljen (gost): samo prvih 5 lekcija otključano
+  //   - prijavljen učenik: prvih 10 + dodatnih 10 po svakom medaljonu
+  //   - admin/muallim/roditelj: sve otključano (puni pristup)
+  const isPrivilegedRole =
+    user?.role === "admin" || user?.role === "muallim" || user?.role === "roditelj";
+  const unlockedCellCount = isPrivilegedRole
+    ? TOTAL_CELLS
+    : !user
+      ? Math.min(TOTAL_CELLS, 5)
+      : Math.min(TOTAL_CELLS, Math.floor(completedCount / 10) * 10 + 10);
 
   // Snake mapping: logički indeks → (logicalRow, col).
   function rowColFor(i: number): { logicalRow: number; col: number } {

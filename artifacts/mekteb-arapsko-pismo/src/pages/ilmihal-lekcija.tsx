@@ -45,6 +45,7 @@ interface Lekcija {
   nivo: number;
   slug: string;
   naslov: string;
+  redoslijed?: number;
   contentHtml: string;
   audioSrc?: string;
   kvizPitanja?: LekcijaKvizPitanje[] | null;
@@ -1932,6 +1933,28 @@ export default function IlmihalLekcijaPage() {
     // dobijemo lekciju ali bez priloga, što razbije H5P prikaz.
     apiRequest<Lekcija>("GET", `/content/ilmihal/${slug}`, undefined, token)
       .then(data => {
+        // Gate pristupa lekciji preko direktnog URL-a:
+        //   - neprijavljeni korisnik: samo prvih 5 lekcija (redoslijed <= 5)
+        //   - prijavljeni učenik: prvih 10 lekcija (redoslijed <= 10) — dalje
+        //     otključavanje ide kroz mapu (medaljon blokovi).
+        //   - admin/muallim/roditelj: puni pristup.
+        const isPrivileged =
+          user?.role === "admin" || user?.role === "muallim" || user?.role === "roditelj";
+        if (!isPrivileged) {
+          const limit = !user ? 5 : 10;
+          const r = data.redoslijed ?? 0;
+          if (r > limit) {
+            toast({
+              title: "Zaključano",
+              description: !user
+                ? "Prijavi se da otključaš više lekcija."
+                : "Završi prethodne lekcije da otključaš ovu.",
+              variant: "destructive",
+            });
+            setLocation(`/ilmihal?nivo=${data.nivo ?? 1}`);
+            return;
+          }
+        }
         setLekcija(data);
         setParsed(parseSections(data.contentHtml));
         // Učitaj akumulirano vrijeme iz ranijih sesija — server vraća
