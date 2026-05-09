@@ -654,6 +654,12 @@ uri = "file://artifacts/mekteb-arapsko-pismo/public/images/lekcija-bg-svjetla.pn
 type = "image"
 title = "lekcija_bg_svjetla"
 
+[[generated]]
+id = "_gVGHt0Tqq2hTVbbUbrec"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/mapa/honey-board-svjetla.png"
+type = "image"
+title = "honey_board_svjetla"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
