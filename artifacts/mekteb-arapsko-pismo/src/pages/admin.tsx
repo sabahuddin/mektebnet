@@ -8,7 +8,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
@@ -211,7 +211,11 @@ function SistemAlati({ token }: { token: string }) {
 interface PendingPrilog {
   id: number;
   lekcijaId: number;
+  lekcijaNaslov: string | null;
+  lekcijaSlug: string | null;
+  lekcijaNivo: number | null;
   originalName: string;
+  storedName: string;
   fileSize: number;
   mimeType: string;
   kind: string;
@@ -274,16 +278,62 @@ function PendingPrilozi({ token }: { token: string }) {
         <span className="ml-auto text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">{pending.length}</span>
       </div>
       <div className="divide-y divide-border/40">
-        {pending.map(p => (
+        {pending.map(p => {
+          // Pregledaj URL po tipu priloga:
+          //  - file (PDF/Word/itd.) → /api/uploads/<storedName> (statički,
+          //    requireH5pAuth propušta ne-h5p putanje)
+          //  - url → externalUrl direktno
+          //  - h5p → otvori lekciju (H5P se renderuje u kontekstu lekcije)
+          const lekcijaUrl = p.lekcijaSlug ? `/ilmihal/${p.lekcijaSlug}` : null;
+          let previewUrl: string | null = null;
+          if (p.kind === "url" && p.externalUrl) {
+            previewUrl = p.externalUrl;
+          } else if (p.kind === "h5p") {
+            previewUrl = lekcijaUrl;
+          } else if (p.storedName) {
+            previewUrl = `/api/uploads/${p.storedName}`;
+          }
+          return (
           <div key={p.id} className="flex items-center gap-3 px-4 py-3">
             <span className="text-xl flex-shrink-0">
               {p.kind === "url" ? <Link2 className="w-5 h-5 text-teal-500" /> : <FileText className="w-5 h-5 text-blue-500" />}
             </span>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-foreground truncate">{p.originalName}</p>
-              <p className="text-xs text-muted-foreground">Lekcija #{p.lekcijaId} · muallim · {new Date(p.createdAt).toLocaleDateString("bs-BA")}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {lekcijaUrl ? (
+                  <a
+                    href={lekcijaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-700 hover:underline font-semibold"
+                    data-testid={`link-lekcija-${p.id}`}
+                  >
+                    {p.lekcijaNaslov || `Lekcija #${p.lekcijaId}`}
+                    {p.lekcijaNivo ? ` · Nivo ${p.lekcijaNivo}` : ""}
+                  </a>
+                ) : (
+                  <span className="text-red-600">Lekcija obrisana (#{p.lekcijaId})</span>
+                )}
+                {" · "}
+                {p.uploadedByRole || "muallim"}
+                {" · "}
+                {new Date(p.createdAt).toLocaleDateString("bs-BA")}
+              </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
+              {previewUrl && (
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold transition-colors"
+                  data-testid={`button-pregledaj-${p.id}`}
+                  title="Otvori prilog u novom tabu"
+                >
+                  <Eye className="w-3.5 h-3.5" /> Pregledaj
+                </a>
+              )}
               <button
                 onClick={() => handle(p.id, true)}
                 disabled={processingId === p.id}
@@ -300,7 +350,8 @@ function PendingPrilozi({ token }: { token: string }) {
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

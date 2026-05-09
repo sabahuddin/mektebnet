@@ -373,9 +373,15 @@ router.get("/prilozi/download/:id", async (req, res) => {
 router.get("/pending-prilozi", async (req, res) => {
   if (req.user?.role !== "admin") return res.status(403).json({ error: "Samo admin" });
   try {
+    // LEFT JOIN ilmihal_lekcije da admin vidi naslov + slug lekcije, ne samo
+    // ID. LEFT (a ne INNER) za slučaj da je lekcija u međuvremenu obrisana —
+    // pending prilog se i dalje treba moći pregledati i odbiti.
     const pending = await db.select({
       id: prilozi.id,
       lekcijaId: prilozi.lekcijaId,
+      lekcijaNaslov: ilmihalLekcijeTable.naslov,
+      lekcijaSlug: ilmihalLekcijeTable.slug,
+      lekcijaNivo: ilmihalLekcijeTable.nivo,
       originalName: prilozi.originalName,
       storedName: prilozi.storedName,
       fileSize: prilozi.fileSize,
@@ -384,7 +390,11 @@ router.get("/pending-prilozi", async (req, res) => {
       externalUrl: prilozi.externalUrl,
       uploadedByRole: prilozi.uploadedByRole,
       createdAt: prilozi.createdAt,
-    }).from(prilozi).where(eq(prilozi.approved, false)).orderBy(desc(prilozi.createdAt));
+    })
+      .from(prilozi)
+      .leftJoin(ilmihalLekcijeTable, eq(ilmihalLekcijeTable.id, prilozi.lekcijaId))
+      .where(eq(prilozi.approved, false))
+      .orderBy(desc(prilozi.createdAt));
     res.json(pending);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
