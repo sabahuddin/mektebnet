@@ -117,7 +117,8 @@
        strane (bočne trake), sredina ostaje potpuno čista za čitanje
      - na uskim ekranima trake se sklanjaju potpuno */
   body.lekcija-honey-bg {
-    background-color: #FDE68A;
+    /* Žuta podloga je sad samo iza naslova lekcije (vidi .lekcija-titlebox),
+       ne preko cijelog body-ja. Tijelo zadržava default kremasti gradient. */
   }
   body.lekcija-honey-bg::before,
   body.lekcija-honey-bg::after {
@@ -157,6 +158,19 @@
     body.lekcija-honey-bg {
       background: white !important;
     }
+  }
+
+  /* Žuti rounded box iza naslova lekcije + Nazad dugmeta. Širina: 80% od
+     hero/akordion bloka (max-w-3xl = 48rem), centriran. Ne prelazi preko
+     ivica hero slike. */
+  .lekcija-titlebox {
+    background-color: #FDE68A;
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    width: 80%;
+    max-width: calc(48rem * 0.8);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   /* === MAPA pozadina (Nivo 1) ===
