@@ -129,7 +129,7 @@ export default function Nivo1MapaPage() {
     <div
       ref={containerRef}
       className="fixed inset-0 z-50 overflow-auto mapa-honey-bg"
-      style={{ backgroundColor: "#FEF3C7" }}
+      style={{ backgroundColor: "#FDE68A" }}
       data-testid="mapa-fullscreen"
     >
       {/* TOP BAR — counter (lijevo), 6 medaljona (sredina), X (desno) — sve sticky */}
