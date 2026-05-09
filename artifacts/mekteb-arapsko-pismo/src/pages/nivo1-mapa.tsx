@@ -174,16 +174,21 @@ export default function Nivo1MapaPage() {
         </button>
       </div>
 
-      {/* BOARD: centralna kolona — uska na mobilnom, šira na desktopu */}
-      <div className="relative mx-auto max-w-sm sm:max-w-md md:max-w-xl px-3 pt-4 pb-10">
-        <div className="relative">
+      {/* BOARD: centralna kolona — uska na mobilnom, šira na desktopu.
+          Visina se rasteže da popuni cijeli ekran kad ima mjesta (desktop),
+          ili raste sa redovima kad ih ima više nego ekran može da prikaže. */}
+      <div
+        className="relative mx-auto max-w-sm sm:max-w-md md:max-w-xl px-3 pt-2 pb-4 flex flex-col"
+        style={{ minHeight: "calc(100vh - 4rem)" }}
+      >
+        <div className="relative flex-1 flex flex-col">
           <PathSvg
             revealedRows={revealedRows}
             rowColFor={rowColFor}
             displayRowFor={displayRowFor}
           />
           <div
-            className="relative grid items-center"
+            className="relative grid items-center flex-1"
             style={{
               gridTemplateColumns: `repeat(${COLS}, 1fr)`,
               gridTemplateRows: `repeat(${revealedRows}, minmax(64px, 1fr))`,
