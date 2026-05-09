@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { Check, Lock, Medal, Sparkles, X } from "lucide-react";
+import { Check, Lock, Medal, Sparkles, X, DoorOpen, DoorClosed } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -27,15 +27,11 @@ interface MapaData {
   osvojeniMedaljoni: number[];
 }
 
-type PathItem =
-  | { kind: "lekcija"; lekcija: Lekcija; brojUListi: number }
-  | { kind: "medaljon"; medaljon: Medaljon };
-
-// Serpentine layout: ITEMS_PER_ROW po redu, parni redovi lijevo→desno,
-// neparni desno→lijevo. Sa 64 lekcije + 5 medaljona = 69 polja, 10 po
-// redu daje 7 redova — sve stane na jedan ekran (uz mali scroll na nižim
-// telefonima).
-const ITEMS_PER_ROW = 10;
+// Layout: 5 kolona × 13 redova = 65 polja.
+// Polja 1-64 su lekcije (snake/zmijoliki put), polje 65 = VRATA u Nivo 2.
+// Medaljoni su odvojeni — prikazuju se u traci na vrhu (6 komada, svakih 10 lekcija).
+const COLS = 5;
+const TOTAL_CELLS = 65; // 64 lekcije + Vrata
 
 export default function Nivo1MapaPage() {
   const { token } = useAuth();
@@ -50,49 +46,43 @@ export default function Nivo1MapaPage() {
       .finally(() => setIsLoading(false));
   }, [token]);
 
-  // Spojena lista (lekcije + medaljoni inline po posAfterRedoslijed).
-  const path: PathItem[] = useMemo(() => {
-    if (!data) return [];
-    const lekcije = [...data.lekcije].sort((a, b) => a.redoslijed - b.redoslijed);
-    const medQueue = [...data.medaljoni].sort((a, b) => a.posAfterRedoslijed - b.posAfterRedoslijed);
-    const out: PathItem[] = [];
-    let brojUListi = 0;
-    for (const l of lekcije) {
-      brojUListi++;
-      out.push({ kind: "lekcija", lekcija: l, brojUListi });
-      while (medQueue.length > 0 && l.redoslijed >= medQueue[0].posAfterRedoslijed) {
-        out.push({ kind: "medaljon", medaljon: medQueue.shift()! });
-      }
-    }
-    for (const m of medQueue) out.push({ kind: "medaljon", medaljon: m });
-    return out;
-  }, [data]);
+  const lekcijeSorted = useMemo(
+    () => [...(data?.lekcije ?? [])].sort((a, b) => a.redoslijed - b.redoslijed),
+    [data],
+  );
+  // Medaljoni iz baze, sortirani po posAfterRedoslijed (10, 20, 30, 40, 50, 60).
+  // UI uvijek prikazuje 6 slotova; ako baza vrati manje, ostatak su placeholder-i.
+  const medaljoniSorted = useMemo(
+    () => [...(data?.medaljoni ?? [])].sort((a, b) => a.posAfterRedoslijed - b.posAfterRedoslijed),
+    [data],
+  );
 
   const zavrseneSet = useMemo(() => new Set(data?.zavrsene ?? []), [data]);
   const osvojeniSet = useMemo(() => new Set(data?.osvojeniMedaljoni ?? []), [data]);
 
-  // Indeks "trenutnog" polja (prva nezavršena lekcija ili dostupan neosvojen
-  // medaljon). Pčela leti tu.
-  const currentIndex = useMemo(() => {
-    for (let i = 0; i < path.length; i++) {
-      const it = path[i];
-      if (it.kind === "lekcija" && !zavrseneSet.has(it.lekcija.id)) return i;
-      if (it.kind === "medaljon" && !osvojeniSet.has(it.medaljon.id)) {
-        if (zavrseneSet.size >= it.medaljon.posAfterRedoslijed) return i;
-      }
-    }
-    return -1;
-  }, [path, zavrseneSet, osvojeniSet]);
+  // Broj završenih lekcija — koristi se za otključavanje medaljona i Vrata.
+  const completedCount = useMemo(() => {
+    return lekcijeSorted.filter((l) => zavrseneSet.has(l.id)).length;
+  }, [lekcijeSorted, zavrseneSet]);
 
-  // Pretvori linearni indeks u (row, col) sa serpentine smjerom.
+  const allDone = lekcijeSorted.length > 0 && completedCount >= lekcijeSorted.length;
+
+  // Indeks trenutnog polja u snake-u (prva nezavršena lekcija; ako su sve gotove → Vrata).
+  const currentCellIndex = useMemo(() => {
+    for (let i = 0; i < lekcijeSorted.length; i++) {
+      if (!zavrseneSet.has(lekcijeSorted[i].id)) return i;
+    }
+    return TOTAL_CELLS - 1; // sve završeno → pčela na Vratima
+  }, [lekcijeSorted, zavrseneSet]);
+
+  // Pretvori linearni indeks u (row, col) u snake patternu.
   function rowColFor(i: number): { row: number; col: number } {
-    const row = Math.floor(i / ITEMS_PER_ROW);
-    const within = i % ITEMS_PER_ROW;
-    const col = row % 2 === 0 ? within : ITEMS_PER_ROW - 1 - within;
+    const row = Math.floor(i / COLS);
+    const within = i % COLS;
+    const col = row % 2 === 0 ? within : COLS - 1 - within;
     return { row, col };
   }
-
-  const totalRows = Math.ceil(path.length / ITEMS_PER_ROW);
+  const totalRows = Math.ceil(TOTAL_CELLS / COLS); // 13
 
   if (isLoading) {
     return (
@@ -113,7 +103,7 @@ export default function Nivo1MapaPage() {
       }}
       data-testid="mapa-fullscreen"
     >
-      {/* X za izlaz — sticky u gornjem desnom ćošku */}
+      {/* X za izlaz */}
       <button
         onClick={() => setLocation("/ilmihal")}
         className="fixed top-3 right-3 z-[60] w-11 h-11 rounded-full bg-white/95 hover:bg-white shadow-lg flex items-center justify-center text-amber-900 active:scale-95 transition"
@@ -123,134 +113,204 @@ export default function Nivo1MapaPage() {
         <X className="w-6 h-6" strokeWidth={3} />
       </button>
 
-      {/* Brojač progresa — sticky u gornjem lijevom ćošku */}
+      {/* Brojač progresa */}
       <div
         className="fixed top-3 left-3 z-[60] px-3 py-2 rounded-full bg-white/95 shadow-lg text-sm font-extrabold text-amber-900"
         data-testid="mapa-progress"
       >
-        {zavrseneSet.size}/{data?.lekcije.length ?? 0}
+        {completedCount}/{lekcijeSorted.length}
         {osvojeniSet.size > 0 && <span className="ml-2 text-amber-700">· {osvojeniSet.size}🏅</span>}
       </div>
 
-      {/* Polje sa svim lekcijama + medaljonima u serpentine gridu.
-          Grid se RASTEŽE na cijelu visinu ekrana (minus top bar), kako bi
-          polja bila ravnomjerno raspoređena po cijelom ekranu. SVG povezuje
-          krugove tankom linijom da ostavi utisak puta. */}
-      <div
-        className="relative w-full max-w-5xl mx-auto px-3 pt-20 pb-6"
-        style={{ minHeight: "100vh" }}
-      >
-        {/* SVG put između krugova (ispod krugova, iznad pozadine) */}
-        <PathSvg path={path} totalRows={totalRows} rowColFor={rowColFor} />
+      {/* CENTRALNA KOLONA — uska, ostavlja prostor desno/lijevo za honey pozadinu na PC.
+          max-w-sm = 384px; na mobilnom popunjava ekran sa malo padding-a. */}
+      <div className="relative mx-auto max-w-sm px-3 pt-16 pb-6">
+        {/* Traka medaljona na vrhu (6 slotova). */}
+        <MedaljonStrip
+          medaljoni={medaljoniSorted}
+          osvojeniSet={osvojeniSet}
+          completedCount={completedCount}
+          onClickMedaljon={(slug) => setLocation(`/medaljon/${slug}`)}
+        />
 
-        {/* Grid sa krugovima — visina jednaka kontejneru minus padding */}
-        <div
-          className="relative grid items-center"
-          style={{
-            gridTemplateColumns: `repeat(${ITEMS_PER_ROW}, 1fr)`,
-            gridTemplateRows: `repeat(${totalRows}, 1fr)`,
-            minHeight: "calc(100vh - 7rem)",
-          }}
-        >
-          {path.map((item, i) => {
-            const { row, col } = rowColFor(i);
-            const isCurrent = i === currentIndex;
+        {/* Snake board: 5 kolona × 13 redova. Visina raste sa brojem redova. */}
+        <div className="relative mt-4">
+          <PathSvg totalRows={totalRows} rowColFor={rowColFor} />
+          <div
+            className="relative grid items-center"
+            style={{
+              gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+              gridTemplateRows: `repeat(${totalRows}, minmax(54px, 1fr))`,
+            }}
+          >
+            {Array.from({ length: TOTAL_CELLS }).map((_, i) => {
+              const { row, col } = rowColFor(i);
+              const isCurrent = i === currentCellIndex;
+              const isLast = i === TOTAL_CELLS - 1;
 
-            if (item.kind === "lekcija") {
-              const l = item.lekcija;
-              const isDone = zavrseneSet.has(l.id);
+              if (isLast) {
+                // VRATA — zadnje polje
+                return (
+                  <button
+                    key="vrata"
+                    onClick={() => allDone && setLocation("/nivo2")}
+                    disabled={!allDone}
+                    className="relative flex items-center justify-center"
+                    style={{ gridRow: row + 1, gridColumn: col + 1 }}
+                    data-testid="mapa-polje-vrata"
+                    title={allDone ? "Vrata u Nivo 2" : "Završi sve lekcije da otključaš"}
+                  >
+                    <div className="relative">
+                      {isCurrent && allDone && (
+                        <span className="absolute inset-0 rounded-2xl bg-amber-300 animate-ping opacity-70" />
+                      )}
+                      <div
+                        className={`relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform active:scale-95 ${
+                          allDone
+                            ? "bg-gradient-to-br from-yellow-200 via-amber-400 to-orange-500 ring-4 ring-amber-700/50 animate-pulse"
+                            : "bg-gray-300 ring-2 ring-gray-400 opacity-80 cursor-not-allowed"
+                        }`}
+                      >
+                        {allDone ? (
+                          <DoorOpen className="w-8 h-8 text-amber-900" strokeWidth={2.5} />
+                        ) : (
+                          <DoorClosed className="w-8 h-8 text-gray-600" strokeWidth={2} />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
+
+              // Obična lekcija
+              const lekcija = lekcijeSorted[i];
+              if (!lekcija) {
+                // Manje od 64 lekcija u bazi — prazan slot
+                return (
+                  <div
+                    key={`empty-${i}`}
+                    style={{ gridRow: row + 1, gridColumn: col + 1 }}
+                    className="flex items-center justify-center"
+                  >
+                    <div className="w-11 h-11 rounded-full bg-amber-200/40 ring-2 ring-amber-700/20" />
+                  </div>
+                );
+              }
+              const isDone = zavrseneSet.has(lekcija.id);
+              const lekcijaBroj = i + 1;
               return (
                 <button
-                  key={`l-${l.id}`}
-                  onClick={() => setLocation(`/ilmihal/${l.slug}`)}
+                  key={`l-${lekcija.id}`}
+                  onClick={() => setLocation(`/ilmihal/${lekcija.slug}`)}
                   className="relative flex items-center justify-center"
                   style={{ gridRow: row + 1, gridColumn: col + 1 }}
-                  data-testid={`mapa-polje-lekcija-${l.id}`}
-                  title={l.naslov}
+                  data-testid={`mapa-polje-lekcija-${lekcija.id}`}
+                  title={lekcija.naslov}
                 >
                   <div className="relative">
                     {isCurrent && (
                       <span className="absolute inset-0 rounded-full bg-amber-300 animate-ping opacity-70" />
                     )}
                     <div
-                      className={`relative w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center font-extrabold text-sm sm:text-base shadow-md transition-transform active:scale-95 hover:scale-110 ${
+                      className={`relative w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-base shadow-md transition-transform active:scale-95 hover:scale-110 ${
                         isDone
                           ? "bg-gradient-to-br from-amber-300 to-amber-500 text-amber-900 ring-2 ring-amber-700/40"
                           : isCurrent
-                            ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-900 ring-2 ring-white"
+                            ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-900 ring-4 ring-white"
                             : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-900 ring-2 ring-amber-700/30"
                       }`}
                     >
-                      {isDone ? <Check className="w-5 h-5" strokeWidth={3} /> : item.brojUListi}
+                      {isDone ? <Check className="w-5 h-5" strokeWidth={3} /> : lekcijaBroj}
                     </div>
                   </div>
                 </button>
               );
-            }
+            })}
+          </div>
 
-            // MEDALJON — nešto veći, drugačijih boja
-            const m = item.medaljon;
-            const earned = osvojeniSet.has(m.id);
-            const unlocked = zavrseneSet.size >= m.posAfterRedoslijed;
-            return (
-              <button
-                key={`m-${m.id}`}
-                onClick={() => setLocation(`/medaljon/${m.slug}`)}
-                className="relative flex items-center justify-center"
-                style={{ gridRow: row + 1, gridColumn: col + 1 }}
-                data-testid={`mapa-polje-medaljon-${m.slug}`}
-                title={m.naziv}
-              >
-                <div className="relative">
-                  {isCurrent && (
-                    <span className="absolute inset-0 rounded-full bg-amber-300 animate-ping opacity-70" />
-                  )}
-                  <div
-                    className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 hover:scale-110 ${
-                      earned
-                        ? "bg-gradient-to-br from-yellow-200 via-amber-400 to-orange-500 ring-2 ring-white shadow-amber-500/60"
-                        : unlocked
-                          ? "bg-gradient-to-br from-amber-300 to-orange-400 ring-2 ring-amber-700/40"
-                          : "bg-gray-300 ring-2 ring-gray-400 opacity-80"
-                    }`}
-                  >
-                    {earned ? (
-                      <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white drop-shadow" strokeWidth={2.5} />
-                    ) : unlocked ? (
-                      <Medal className="w-5 h-5 sm:w-6 sm:h-6 text-white drop-shadow" strokeWidth={2.5} />
-                    ) : (
-                      <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          {/* Pčela */}
+          {currentCellIndex >= 0 && (
+            <BeeOnGrid currentIndex={currentCellIndex} totalRows={totalRows} rowColFor={rowColFor} />
+          )}
         </div>
-
-        {/* Pčela na trenutnom polju */}
-        {currentIndex >= 0 && <BeeOnGrid path={path} currentIndex={currentIndex} rowColFor={rowColFor} />}
       </div>
     </div>
   );
 }
 
-// SVG put — povezuje centre svih polja jednom linijom (serpentine).
+// ─── Traka 6 medaljona na vrhu ─────────────────────────────────────────────
+function MedaljonStrip({
+  medaljoni,
+  osvojeniSet,
+  completedCount,
+  onClickMedaljon,
+}: {
+  medaljoni: Medaljon[];
+  osvojeniSet: Set<number>;
+  completedCount: number;
+  onClickMedaljon: (slug: string) => void;
+}) {
+  // Uvijek 6 slotova; fallback nazivi ako baza nije migrirana
+  const slots = Array.from({ length: 6 }).map((_, i) => {
+    return medaljoni[i] ?? null;
+  });
+  return (
+    <div
+      className="flex items-center justify-between gap-1 px-2 py-2 rounded-2xl bg-white/70 backdrop-blur shadow-md"
+      data-testid="mapa-medaljon-strip"
+    >
+      {slots.map((m, i) => {
+        const requiredCount = (i + 1) * 10;
+        const unlocked = m ? completedCount >= m.posAfterRedoslijed : completedCount >= requiredCount;
+        const earned = m ? osvojeniSet.has(m.id) : false;
+        return (
+          <button
+            key={m?.id ?? `slot-${i}`}
+            onClick={() => m && unlocked && onClickMedaljon(m.slug)}
+            disabled={!m || !unlocked}
+            className="relative flex flex-col items-center justify-center"
+            data-testid={`mapa-medaljon-top-${i + 1}`}
+            title={m ? `${m.naziv} (${m.posAfterRedoslijed} lekcija)` : `Otključava se na ${requiredCount} lekcija`}
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center shadow transition-transform ${
+                earned
+                  ? "bg-gradient-to-br from-yellow-200 via-amber-400 to-orange-500 ring-2 ring-white shadow-amber-500/60 hover:scale-110"
+                  : unlocked
+                    ? "bg-gradient-to-br from-amber-300 to-orange-400 ring-2 ring-amber-700/40 hover:scale-110 active:scale-95"
+                    : "bg-gray-300 ring-2 ring-gray-400 opacity-80"
+              }`}
+            >
+              {earned ? (
+                <Sparkles className="w-5 h-5 text-white drop-shadow" strokeWidth={2.5} />
+              ) : unlocked ? (
+                <Medal className="w-5 h-5 text-white drop-shadow" strokeWidth={2.5} />
+              ) : (
+                <Lock className="w-4 h-4 text-gray-600" />
+              )}
+            </div>
+            <span className="text-[10px] font-bold text-amber-900 mt-0.5">
+              {(i + 1) * 10}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── SVG put između polja u snake patternu ─────────────────────────────────
 function PathSvg({
-  path,
   totalRows,
   rowColFor,
 }: {
-  path: PathItem[];
   totalRows: number;
   rowColFor: (i: number) => { row: number; col: number };
 }) {
-  if (path.length < 2) return null;
-  // Koristimo procente — grid je responzivan, pa SVG isto.
   const points: string[] = [];
-  for (let i = 0; i < path.length; i++) {
+  for (let i = 0; i < TOTAL_CELLS; i++) {
     const { row, col } = rowColFor(i);
-    const xPct = ((col + 0.5) / ITEMS_PER_ROW) * 100;
+    const xPct = ((col + 0.5) / COLS) * 100;
     const yPct = ((row + 0.5) / Math.max(totalRows, 1)) * 100;
     points.push(`${xPct},${yPct}`);
   }
@@ -259,47 +319,44 @@ function PathSvg({
       className="absolute inset-0 w-full h-full pointer-events-none"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
-      style={{ top: "5rem", height: "calc(100% - 5rem - 1.5rem)" }}
     >
       <polyline
         points={points.join(" ")}
         fill="none"
-        stroke="rgba(180, 83, 9, 0.45)"
-        strokeWidth="2.2"
+        stroke="rgba(180, 83, 9, 0.5)"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeDasharray="0.8 1.4"
+        strokeDasharray="0.9 1.6"
         vectorEffect="non-scaling-stroke"
       />
     </svg>
   );
 }
 
-// Pčela animacija — fixed na poziciji trenutnog polja u gridu.
+// ─── Pčela — leti na trenutnu lekciju ──────────────────────────────────────
 function BeeOnGrid({
-  path,
   currentIndex,
+  totalRows,
   rowColFor,
 }: {
-  path: PathItem[];
   currentIndex: number;
+  totalRows: number;
   rowColFor: (i: number) => { row: number; col: number };
 }) {
-  const totalRows = Math.ceil(path.length / ITEMS_PER_ROW);
   const { row, col } = rowColFor(currentIndex);
-  const xPct = ((col + 0.5) / ITEMS_PER_ROW) * 100;
-  const yFrac = (row + 0.5) / Math.max(totalRows, 1);
-  // Pčela ide iznad trenutnog polja u gridu. Grid je raspoređen po visini
-  // (5rem top padding + ostatak), pa pomjeramo pčelu po istoj formuli.
+  const xPct = ((col + 0.5) / COLS) * 100;
+  const yPct = ((row + 0.5) / Math.max(totalRows, 1)) * 100;
   return (
     <motion.div
       className="absolute pointer-events-none z-20"
       initial={false}
       animate={{
         left: `${xPct}%`,
-        top: `calc(5rem + (100vh - 7rem) * ${yFrac} - 28px)`,
+        top: `${yPct}%`,
       }}
       transition={{ type: "spring", stiffness: 60, damping: 14 }}
+      style={{ transform: "translate(-50%, -130%)" }}
       data-testid="mapa-pcela"
     >
       <motion.div
