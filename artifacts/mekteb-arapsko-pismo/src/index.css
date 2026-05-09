@@ -123,6 +123,14 @@
     background-attachment: fixed, scroll;
   }
 
+  /* Pri printanju lekcije bg ne treba — bijela podloga je urednija
+     i štedi tinta. */
+  @media print {
+    body.lekcija-honey-bg {
+      background: white !important;
+    }
+  }
+
   /* Specific styles for Arabic text to ensure beautiful rendering */
   .arabic-text {
     font-family: var(--font-arabic);
