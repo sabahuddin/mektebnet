@@ -117,8 +117,15 @@
        strane (bočne trake), sredina ostaje potpuno čista za čitanje
      - na uskim ekranima trake se sklanjaju potpuno */
   body.lekcija-honey-bg {
+    /* Narandzasta podloga ide samo na centralnu kolonu (.lekcija-honey-col),
+       NIKAD preko cijelog body-ja. Body zadrzava default kremasti gradient. */
+  }
+  /* Centralna kolona lekcije (max-w-3xl): narandzasta saca-boja, NIKAD ne
+     prelazi preko ivica hero slike / akordiona. */
+  .lekcija-honey-col {
     background-color: #FBBF24;
-    background-image: none;
+    border-radius: 1rem;
+    padding: 1rem;
   }
   body.lekcija-honey-bg::before,
   body.lekcija-honey-bg::after {

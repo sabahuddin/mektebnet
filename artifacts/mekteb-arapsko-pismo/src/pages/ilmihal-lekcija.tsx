@@ -2285,7 +2285,7 @@ export default function IlmihalLekcijaPage() {
       )}
     </AnimatePresence>
     <Layout>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto lekcija-honey-col">
         {/* Admin toolbar (samo admin) */}
         {user?.role === "admin" && (
           <div className="flex items-center gap-2 mb-4 justify-end flex-wrap">
