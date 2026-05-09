@@ -520,6 +520,16 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
 // poslati lažni `timeSpentSeconds` jer se on ignoriše za ilmihal gate.
 const MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION = 300;
 
+// Uvodne lekcije ("uvodna-rijec", "uvodna-rijec-nivo-2", "uvodna-rijec-nivo-3")
+// su kratke (1–2KB HTML), nemaju kviz i služe kao motivirajući uvod. Za njih
+// 5 minuta čitanja nije realno pa bi učenik nikad ne mogao otključati prvo
+// dugme "Označi kao završeno". Snižavamo prag na 30s SAMO za te slugove
+// (slug.startsWith('uvodna-rijec')). Sve ostale lekcije zadržavaju 300s.
+const INTRO_MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION = 30;
+function isIntroSlug(slug: string | null | undefined): boolean {
+  return typeof slug === "string" && slug.startsWith("uvodna-rijec");
+}
+
 // Maksimalno koliko sekundi jedan heartbeat može dodati u `time_spent_seconds`.
 // Pošto delta = min(MAX, NOW() - last_heartbeat_at), ukupno akumulirano vrijeme
 // nikad ne može premašiti realno proteklo vrijeme između prvog i posljednjeg
@@ -551,9 +561,10 @@ router.post("/napredak", requireAuth, async (req, res) => {
     // ima li lekcija mini-kviz "Provjeri znanje" — koristi se za 4. uslov
     // gate-a niže.
     let lekcijaHasQuiz = false;
+    let lekcijaSlug: string | null = null;
     if (contentType === "ilmihal") {
       const [lekcijaRow] = await db
-        .select({ id: ilmihalLekcijeTable.id, kvizPitanja: ilmihalLekcijeTable.kvizPitanja })
+        .select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, kvizPitanja: ilmihalLekcijeTable.kvizPitanja })
         .from(ilmihalLekcijeTable)
         .where(eq(ilmihalLekcijeTable.id, contentId))
         .limit(1);
@@ -561,6 +572,7 @@ router.post("/napredak", requireAuth, async (req, res) => {
         res.status(404).json({ error: "lekcija_not_found" });
         return;
       }
+      lekcijaSlug = lekcijaRow.slug ?? null;
       // "Ima kviz" znači ≥1 validno pitanje (sa tekstom i ≥2 opcije i answer-om).
       // Slabija provjera (samo length > 0) bi spriječila completion za legacy
       // lekcije sa praznim/malformed pitanjima koja UI ionako ne renderira.
@@ -612,16 +624,19 @@ router.post("/napredak", requireAuth, async (req, res) => {
     // raste samo preko heartbeat endpoint-a (gdje delta računa server iz
     // razlike NOW() - last_heartbeat_at, cap 15s). Tako klijent ne može
     // jednim curl-om proći gate.
+    const effectiveMinSeconds = isIntroSlug(lekcijaSlug)
+      ? INTRO_MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION
+      : MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION;
     if (
       zavrsen === true &&
       contentType === "ilmihal" &&
       !wasAlreadyCompleted &&
-      storedTime < MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION
+      storedTime < effectiveMinSeconds
     ) {
       res.status(422).json({
         error: "min_time_not_reached",
-        message: `Lekciju možeš označiti kao završenu nakon ${MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION} sekundi aktivnog čitanja.`,
-        minSeconds: MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION,
+        message: `Lekciju možeš označiti kao završenu nakon ${effectiveMinSeconds} sekundi aktivnog čitanja.`,
+        minSeconds: effectiveMinSeconds,
         currentSeconds: storedTime,
       });
       return;

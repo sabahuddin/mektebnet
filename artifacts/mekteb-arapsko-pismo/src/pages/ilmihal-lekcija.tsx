@@ -67,6 +67,14 @@ interface Lekcija {
 // lekciju prije nego se "Označi kao završeno" otključa. Drži paralelno s
 // `MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION` u backendu.
 const MIN_ACTIVE_SECONDS = 300;
+// Uvodne lekcije ("uvodna-rijec*") su kratke i nemaju kviz — za njih je
+// 5 minuta čitanja prepreka koja onemogućava završavanje. Snižavamo na 30s
+// SAMO za te slugove. Drži paralelno s `INTRO_MIN_ACTIVE_SECONDS_FOR_ILMIHAL_COMPLETION`
+// u backend `content.ts`.
+const INTRO_MIN_ACTIVE_SECONDS = 30;
+function isIntroSlug(slug: string | null | undefined): boolean {
+  return typeof slug === "string" && slug.startsWith("uvodna-rijec");
+}
 // Koliko često (sekundi) šalje se heartbeat na server. 10s je dobar balans:
 // dovoljno često da `delta = NOW() - last_hb` bude < 15s cap-a (ne gubimo
 // vrijeme), a ne tako često da generiše hrpu HTTP poziva. Heartbeat je sada
@@ -2251,13 +2259,14 @@ export default function IlmihalLekcijaPage() {
       return typeof p.answer === "string" && opts.includes(p.answer);
     });
   }, [lekcija?.kvizPitanja]);
-  const timeOk = timeSpent >= MIN_ACTIVE_SECONDS;
+  const effectiveMinSeconds = isIntroSlug(lekcija?.slug) ? INTRO_MIN_ACTIVE_SECONDS : MIN_ACTIVE_SECONDS;
+  const timeOk = timeSpent >= effectiveMinSeconds;
   const scrollOk = scrollPercent >= MIN_SCROLL_PERCENT;
   const sectionsOk = visibleSections.length === 0
     || visibleSections.every(s => openedSectionIds.has(s.id));
   const quizOk = !lekcijaHasQuiz || quizPassed;
   const canMarkComplete = timeOk && scrollOk && sectionsOk && quizOk;
-  const remainingSeconds = Math.max(0, MIN_ACTIVE_SECONDS - timeSpent);
+  const remainingSeconds = Math.max(0, effectiveMinSeconds - timeSpent);
   const remainingSections = visibleSections.filter(s => !openedSectionIds.has(s.id)).length;
 
   const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 3: "Nivo 3" };
