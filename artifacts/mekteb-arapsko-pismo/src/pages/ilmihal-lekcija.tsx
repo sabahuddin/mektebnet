@@ -1839,6 +1839,12 @@ export default function IlmihalLekcijaPage() {
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
 
+  // Medeni ambijent (pčele/saće/cvijeće) na body-ju samo dok je lekcija otvorena.
+  useEffect(() => {
+    document.body.classList.add("lekcija-honey-bg");
+    return () => document.body.classList.remove("lekcija-honey-bg");
+  }, []);
+
   // Anti-cheat gate state — sva ČETIRI uslova moraju biti ispunjena da se
   // dugme "Označi kao završeno" otključa za nezavršene lekcije:
   //   1) timeSpent >= MIN_ACTIVE_SECONDS (300s aktivnog čitanja)

@@ -109,6 +109,20 @@
     background-size: 32px 32px;
   }
 
+  /* Medeni ambijent (pčele, cvijeće, saće) za stranicu lekcije.
+     Slika je prigušena svijetlim amber overlayom da tekst ostane
+     ugodno čitljiv. Tile se vertikalno (repeat-y) i scroll uz sadržaj. */
+  body.lekcija-honey-bg {
+    background-color: #FEF3C7;
+    background-image:
+      linear-gradient(rgba(254, 243, 199, 0.78), rgba(254, 243, 199, 0.78)),
+      url('/images/mapa/honey-board.png');
+    background-size: auto, 100% auto;
+    background-repeat: no-repeat, repeat-y;
+    background-position: center, center top;
+    background-attachment: fixed, scroll;
+  }
+
   /* Specific styles for Arabic text to ensure beautiful rendering */
   .arabic-text {
     font-family: var(--font-arabic);
