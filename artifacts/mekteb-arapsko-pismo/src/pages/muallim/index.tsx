@@ -150,7 +150,7 @@ export default function MuallimPanel() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "h5p-vodic" | "profil";
-  const [activeTab, setActiveTab] = useState<TabId>("pregled");
+  const [activeTab, setActiveTab] = useState<TabId>("grupe");
 
   // Otvara odgovarajući tab kad URL sadrži ?tab=… (npr. iz Panel dropdown
   // linka "Profil" → /muallim?tab=profil). Pokreće se na svakoj promjeni
@@ -508,9 +508,8 @@ export default function MuallimPanel() {
   }
 
   const TABS = [
-    { id: "pregled", label: "Pregled", icon: BarChart3 },
-    { id: "ucenici", label: `Učenici (${ucenici.length})`, icon: Users },
     { id: "grupe", label: `Grupe (${grupe.length})`, icon: GraduationCap },
+    { id: "pregled", label: "Pregled", icon: BarChart3 },
     { id: "prisustvo", label: "Prisustvo", icon: CalendarCheck },
     { id: "kalendar", label: "Kalendar", icon: Calendar },
     { id: "plan", label: "Plan lekcija", icon: BookOpen },

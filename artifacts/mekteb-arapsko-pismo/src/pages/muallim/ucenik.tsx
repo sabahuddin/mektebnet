@@ -135,6 +135,14 @@ export default function UcenikPage() {
   const [savingRoditelj, setSavingRoditelj] = useState(false);
   const [kreiraniRoditelj, setKreiraniRoditelj] = useState<KreiraniRoditelj | null>(null);
   const [copiedRoditelj, setCopiedRoditelj] = useState(false);
+  const [resetRoditeljId, setResetRoditeljId] = useState<number | null>(null);
+  const [resetRoditeljPass, setResetRoditeljPass] = useState<{ id: number; password: string; displayName: string } | null>(null);
+
+  // Pojedinačna zadaća za ovog učenika
+  const [ucenikGrupaId, setUcenikGrupaId] = useState<number | null>(null);
+  const [showZadacaForm, setShowZadacaForm] = useState(false);
+  const [savingZadaca, setSavingZadaca] = useState(false);
+  const [newZadaca, setNewZadaca] = useState({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" });
 
   useEffect(() => {
     if (!token || !id) return;
@@ -160,6 +168,7 @@ export default function UcenikPage() {
       setH5pPokusaji((h5pData as any).pokusaji || []);
       setH5pPrilozi((h5pData as any).prilozi || []);
       const gId = found?.profil?.grupaId || found?.grupaId;
+      setUcenikGrupaId(gId || null);
       if (gId) {
         apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
           .then(pl => {
@@ -250,6 +259,47 @@ export default function UcenikPage() {
       toast({ title: "Greška", description: e?.message || "Nije moguće kreirati roditelja", variant: "destructive" });
     } finally {
       setSavingRoditelj(false);
+    }
+  }
+
+  async function resetRoditeljPassword(roditeljId: number) {
+    if (!token) return;
+    setResetRoditeljId(roditeljId);
+    try {
+      const res = await apiRequest<{ ok: boolean; newPassword: string; displayName: string; username: string }>(
+        "POST", `/muallim/roditelj/${roditeljId}/reset-password`, {}, token,
+      );
+      setResetRoditeljPass({ id: roditeljId, password: res.newPassword, displayName: res.displayName });
+      toast({ title: "Šifra roditelja resetovana!", description: "Nova šifra prikazana ispod." });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće resetovati šifru roditelja", variant: "destructive" });
+    } finally {
+      setResetRoditeljId(null);
+    }
+  }
+
+  async function saveZadacaForUcenik() {
+    if (!token || !id || !ucenikGrupaId || !newZadaca.naslov.trim()) {
+      toast({ title: "Naslov je obavezan", variant: "destructive" });
+      return;
+    }
+    setSavingZadaca(true);
+    try {
+      await apiRequest("POST", "/muallim/zadace", {
+        grupaId: ucenikGrupaId,
+        naslov: newZadaca.naslov.trim(),
+        opis: newZadaca.opis.trim() || null,
+        rokDo: newZadaca.rokDo || null,
+        lekcijaNaslov: newZadaca.lekcijaNaslov || null,
+        ucenikIds: [parseInt(id)],
+      }, token);
+      toast({ title: "Zadaća dodana!", description: `Pojedinačna zadaća za ${ucenik?.displayName || "učenika"}.` });
+      setShowZadacaForm(false);
+      setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće dodati zadaću", variant: "destructive" });
+    } finally {
+      setSavingZadaca(false);
     }
   }
 
@@ -350,6 +400,16 @@ export default function UcenikPage() {
                     </span>
                   )}
                 </Button>
+                {ucenikGrupaId && (
+                  <Button
+                    onClick={() => { setShowZadacaForm(s => !s); setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" }); }}
+                    variant="outline"
+                    className="rounded-xl font-bold text-sm flex items-center gap-1.5"
+                    data-testid="btn-toggle-zadaca-ucenik"
+                  >
+                    <ClipboardList className="w-4 h-4" /> Zadaća
+                  </Button>
+                )}
                 <Button
                   onClick={() => setLocation(`/muallim/izvjestaj/ucenik/${ucenik.id}`)}
                   variant="outline"
@@ -453,19 +513,45 @@ export default function UcenikPage() {
                     <p className="text-xs font-bold text-muted-foreground mb-2">Povezani roditelji ({roditelji.length}):</p>
                     <div className="space-y-1.5">
                       {roditelji.map(r => (
-                        <div key={r.id} className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2 text-sm">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                            <span className="font-bold text-foreground truncate">{r.displayName}</span>
-                            <span className="font-mono text-xs text-muted-foreground shrink-0">{r.username}</span>
+                        <div key={r.id} className="bg-muted/30 rounded-lg px-3 py-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                              <span className="font-bold text-foreground truncate">{r.displayName}</span>
+                              <span className="font-mono text-xs text-muted-foreground shrink-0">{r.username}</span>
+                            </div>
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                              r.status === "approved" ? "bg-emerald-100 text-emerald-700" :
+                              r.status === "pending" ? "bg-amber-100 text-amber-700" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                              {r.status === "approved" ? "Odobren" : r.status === "pending" ? "Na čekanju" : r.status}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => resetRoditeljPassword(r.id)}
+                              disabled={resetRoditeljId === r.id}
+                              className="rounded-lg text-[11px] font-bold flex items-center gap-1 h-7 px-2"
+                              data-testid={`btn-reset-roditelj-${r.id}`}
+                            >
+                              {resetRoditeljId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
+                              Reset šifre
+                            </Button>
                           </div>
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
-                            r.status === "approved" ? "bg-emerald-100 text-emerald-700" :
-                            r.status === "pending" ? "bg-amber-100 text-amber-700" :
-                            "bg-gray-100 text-gray-700"
-                          }`}>
-                            {r.status === "approved" ? "Odobren" : r.status === "pending" ? "Na čekanju" : r.status}
-                          </span>
+                          {resetRoditeljPass?.id === r.id && (
+                            <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
+                              <span className="text-[11px] font-bold text-emerald-700">Nova šifra:</span>
+                              <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{resetRoditeljPass.password}</code>
+                              <Button
+                                size="sm" variant="outline"
+                                onClick={async () => { try { await navigator.clipboard.writeText(resetRoditeljPass.password); toast({ title: "Kopirano!" }); } catch {} }}
+                                className="rounded-lg text-[11px] h-6 px-2"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -541,6 +627,80 @@ export default function UcenikPage() {
                     </div>
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {showZadacaForm && ucenikGrupaId && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="bg-white border border-border/50 rounded-2xl p-5 mb-6 shadow-sm"
+                data-testid="form-zadaca-ucenik"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-extrabold text-foreground flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-primary" /> Pojedinačna zadaća za {ucenik.displayName}
+                  </h3>
+                  <button onClick={() => setShowZadacaForm(false)} className="p-1 hover:bg-muted rounded-lg">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">Ova zadaća biće vidljiva samo ovom učeniku — ne cijeloj grupi.</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">Naslov *</label>
+                    <input
+                      type="text" value={newZadaca.naslov}
+                      onChange={e => setNewZadaca(z => ({ ...z, naslov: e.target.value }))}
+                      placeholder="Npr. Nauči Fatihu napamet"
+                      className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      data-testid="input-zadaca-naslov"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">Opis</label>
+                    <textarea
+                      value={newZadaca.opis} rows={3}
+                      onChange={e => setNewZadaca(z => ({ ...z, opis: e.target.value }))}
+                      placeholder="Detalji zadaće (opciono)"
+                      className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                      data-testid="input-zadaca-opis"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground block mb-1">Rok do</label>
+                      <input
+                        type="date" value={newZadaca.rokDo}
+                        onChange={e => setNewZadaca(z => ({ ...z, rokDo: e.target.value }))}
+                        className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        data-testid="input-zadaca-rok"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground block mb-1">Lekcija (opciono)</label>
+                      <select
+                        value={newZadaca.lekcijaNaslov}
+                        onChange={e => setNewZadaca(z => ({ ...z, lekcijaNaslov: e.target.value }))}
+                        className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                      >
+                        <option value="">— bez lekcije —</option>
+                        {ilmihalLekcije.map(l => (
+                          <option key={l.id} value={l.naslov}>Nivo {l.nivo}: {l.naslov}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={saveZadacaForUcenik}
+                    disabled={savingZadaca || !newZadaca.naslov.trim()}
+                    className="w-full rounded-xl font-bold flex items-center justify-center gap-1.5"
+                    data-testid="btn-save-zadaca-ucenik"
+                  >
+                    {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardList className="w-4 h-4" />}
+                    Dodaj zadaću za {ucenik.displayName}
+                  </Button>
+                </div>
               </motion.div>
             )}
 
