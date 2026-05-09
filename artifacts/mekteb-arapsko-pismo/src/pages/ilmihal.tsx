@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
+import { List } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -187,6 +188,17 @@ export default function IlmihalPage() {
               </motion.button>
             );
           })}
+        </div>
+
+        <div className="mt-10 sm:mt-12 flex justify-center">
+          <Link
+            href="/ilmihal/sve"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/85 hover:bg-white shadow-md ring-1 ring-amber-200 text-amber-900 font-bold text-sm sm:text-base transition-colors"
+            data-testid="link-ilmihal-sve"
+          >
+            <List className="w-5 h-5" />
+            Spisak svih lekcija
+          </Link>
         </div>
       </div>
     </Layout>

@@ -25,6 +25,7 @@ import Progress from "./pages/progress";
 
 // Ilmihal
 import IlmihalPage from "./pages/ilmihal";
+import IlmihalSvePage from "./pages/ilmihal-sve";
 import IlmihalLekcijaPage from "./pages/ilmihal-lekcija";
 import Nivo1MapaPage from "./pages/nivo1-mapa";
 import MedaljonDetailPage from "./pages/medaljon-detail";
@@ -105,6 +106,7 @@ function Router() {
 
       {/* Ilmihal */}
       <Route path="/ilmihal" component={IlmihalPage} />
+      <Route path="/ilmihal/sve" component={IlmihalSvePage} />
       <Route path="/nivo1-mapa" component={() => <Nivo1MapaPage nivo={1} />} />
       <Route path="/nivo2-mapa" component={() => <Nivo1MapaPage nivo={2} />} />
       <Route path="/nivo3-mapa" component={() => <Nivo1MapaPage nivo={3} />} />
