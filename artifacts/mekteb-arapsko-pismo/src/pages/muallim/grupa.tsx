@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { isOnline, formatScreentime } from "@/lib/utils";
 
 interface Grupa {
   id: number;
@@ -25,6 +26,8 @@ interface Ucenik {
   displayName: string;
   username: string;
   profil?: { grupaId?: number };
+  lastSeenAt?: string | null;
+  totalScreentimeSec?: number | null;
 }
 
 interface CreatedUcenik {
@@ -586,13 +589,32 @@ export default function GrupaPage() {
                   <motion.div key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
                     className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3 hover:bg-muted/20 transition-colors">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center text-sm font-extrabold text-primary shrink-0">
-                        {u.displayName.charAt(0)}
+                      <div className="relative shrink-0">
+                        <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center text-sm font-extrabold text-primary">
+                          {u.displayName.charAt(0)}
+                        </div>
+                        {isOnline(u.lastSeenAt) && (
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white"
+                            title="Online"
+                            data-testid={`online-dot-${u.id}`}
+                          />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-foreground truncate">{u.displayName}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-foreground truncate">{u.displayName}</p>
+                          {isOnline(u.lastSeenAt) && (
+                            <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">online</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                           <span className="font-mono">{u.username}</span>
+                          {(u.totalScreentimeSec ?? 0) > 0 && (
+                            <span className="text-[10px] font-bold text-muted-foreground/80" title="Ukupno vrijeme na platformi">
+                              ⏱ {formatScreentime(u.totalScreentimeSec)}
+                            </span>
+                          )}
                           {status?.zadnjaLekcija ? (
                             <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 rounded-full px-2 py-0.5 font-bold">
                               <BookOpen className="w-3 h-3" />

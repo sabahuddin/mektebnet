@@ -17,6 +17,7 @@ import popraviSaceRouter from "./popravi-sace";
 import misijeRouter from "./misije";
 import pushRouter from "./push";
 import mapaRouter from "./mapa";
+import aktivnostRouter from "./aktivnost";
 
 const router: IRouter = Router();
 
@@ -38,6 +39,7 @@ router.use("/popravi-sace", popraviSaceRouter);
 router.use("/misije", misijeRouter);
 router.use("/push", pushRouter);
 router.use("/mapa", mapaRouter);
+router.use("/aktivnost", aktivnostRouter);
 
 export default router;
 

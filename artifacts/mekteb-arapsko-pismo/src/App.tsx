@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/auth";
+import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { LanguageProvider } from "@/context/language";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { PushPrompt } from "@/components/push-prompt";
@@ -172,12 +173,18 @@ function Router() {
   );
 }
 
+function HeartbeatMount() {
+  useHeartbeat();
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <AuthProvider>
           <TooltipProvider>
+            <HeartbeatMount />
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
             </WouterRouter>

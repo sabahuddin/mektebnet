@@ -228,7 +228,13 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS pitanja_banka_kategorija_idx ON pitanja_banka (kategorija);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS pitanja_banka_lekcija_idx ON pitanja_banka (lekcija_id);`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx) ready");
+    // Presence/screentime — kolone na users tabeli za live indikator + total time.
+    // Heartbeat endpoint (POST /api/aktivnost/heartbeat) ažurira ova polja.
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at timestamp;`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_screentime_sec integer NOT NULL DEFAULT 0;`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS users_last_seen_idx ON users (last_seen_at);`);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

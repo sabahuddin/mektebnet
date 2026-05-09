@@ -4,16 +4,19 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, X } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { isOnline, formatScreentime } from "@/lib/utils";
 
 interface Ucenik {
   id: number;
   displayName: string;
   username: string;
   role: string;
+  lastSeenAt?: string | null;
+  totalScreentimeSec?: number | null;
 }
 
 interface Prisustvo {
@@ -371,11 +374,25 @@ export default function UcenikPage() {
         ) : (
           <>
             <div className="flex items-center gap-4 mb-4 flex-wrap">
-              <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md">
-                <User className="w-7 h-7 text-white" />
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md">
+                  <User className="w-7 h-7 text-white" />
+                </div>
+                {isOnline(ucenik.lastSeenAt) && (
+                  <span
+                    className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full ring-2 ring-white"
+                    title="Online"
+                    data-testid="online-dot-profile"
+                  />
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-extrabold text-foreground">{ucenik.displayName}</h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl font-extrabold text-foreground">{ucenik.displayName}</h1>
+                  {isOnline(ucenik.lastSeenAt) && (
+                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">online</span>
+                  )}
+                </div>
                 <p className="text-muted-foreground text-sm font-mono">{ucenik.username}</p>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -736,6 +753,18 @@ export default function UcenikPage() {
                 <Award className="w-5 h-5 text-amber-600 mb-2" />
                 <div className="text-2xl font-extrabold text-amber-600">{ukupnoBodova || "—"}</div>
                 <div className="text-sm text-muted-foreground font-medium">Bodova</div>
+              </div>
+              <div className="bg-white border border-border/50 rounded-2xl p-4" data-testid="card-screentime">
+                <Clock className="w-5 h-5 text-teal-600 mb-2" />
+                <div className="text-2xl font-extrabold text-teal-600">{formatScreentime(ucenik.totalScreentimeSec)}</div>
+                <div className="text-sm text-muted-foreground font-medium">Vrijeme na platformi</div>
+                {ucenik.lastSeenAt && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {isOnline(ucenik.lastSeenAt)
+                      ? <span className="font-bold text-emerald-600">Trenutno online</span>
+                      : <>Zadnji put: {new Date(ucenik.lastSeenAt).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
+                  </div>
+                )}
               </div>
               <div className="bg-white border border-border/50 rounded-2xl p-4 col-span-2">
                 <CalendarCheck className="w-5 h-5 text-primary mb-2" />
