@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { Check, Sparkles, X, DoorOpen, DoorClosed } from "lucide-react";
+import { Check, Sparkles, X } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -130,10 +130,11 @@ export default function Nivo1MapaPage() {
       ref={containerRef}
       className="fixed inset-0 z-50 overflow-auto"
       style={{
+        backgroundColor: "#F5C842",
         backgroundImage: "url('/images/mapa/honey-board.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundColor: "#fde68a",
+        backgroundSize: "100% auto",
+        backgroundRepeat: "repeat-y",
+        backgroundPosition: "center top",
       }}
       data-testid="mapa-fullscreen"
     >
@@ -197,8 +198,8 @@ export default function Nivo1MapaPage() {
             className="relative grid items-center flex-1"
             style={{
               gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-              gridTemplateRows: `repeat(${TOTAL_ROWS}, minmax(64px, 1fr))`,
-              minHeight: `${TOTAL_ROWS * 78}px`,
+              gridTemplateRows: `repeat(${TOTAL_ROWS}, minmax(96px, 1fr))`,
+              minHeight: `${TOTAL_ROWS * 100}px`,
             }}
           >
             {Array.from({ length: TOTAL_CELLS }).map((_, i) => {
@@ -209,40 +210,33 @@ export default function Nivo1MapaPage() {
               const isLocked = i >= unlockedCellCount;
 
               if (isLast) {
+                // Vrata zauzimaju cijelu širinu zadnjeg reda (svih 5 kolona)
                 return (
                   <button
                     key="vrata"
                     data-cell-index={i}
                     onClick={() => allDone && setLocation("/nivo2")}
                     disabled={!allDone}
-                    className="relative flex items-center justify-center"
-                    style={{ gridRow: displayRow + 1, gridColumn: col + 1 }}
+                    className="relative flex items-center justify-center disabled:cursor-not-allowed"
+                    style={{ gridRow: displayRow + 1, gridColumn: "1 / -1" }}
                     data-testid="mapa-polje-vrata"
                     title={allDone ? "Vrata u Nivo 2" : "Završi sve lekcije da otključaš"}
                   >
-                    <div className="relative">
-                      {isCurrent && allDone && (
-                        <span className="absolute inset-0 rounded-2xl bg-amber-300 animate-ping opacity-70" />
+                    <div className="relative w-32 h-32 sm:w-44 sm:h-44 transition-transform active:scale-95 hover:scale-105">
+                      {allDone && (
+                        <span className="absolute inset-0 rounded-full bg-amber-300/50 animate-ping" />
                       )}
-                      <div
-                        className={`relative w-14 h-14 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg transition-transform active:scale-95 ${
+                      <img
+                        src={
                           allDone
-                            ? "bg-gradient-to-br from-yellow-200 via-amber-400 to-orange-500 ring-4 ring-amber-700/50 animate-pulse"
-                            : "bg-gray-300 ring-2 ring-gray-400 opacity-80 cursor-not-allowed"
+                            ? "/images/mapa/vrata-otvorena.png"
+                            : "/images/mapa/vrata-zatvorena.png"
+                        }
+                        alt={allDone ? "Vrata u Nivo 2 — otvorena" : "Vrata u Nivo 2 — zaključana"}
+                        className={`relative w-full h-full object-contain drop-shadow-xl ${
+                          allDone ? "animate-pulse" : "opacity-80 grayscale-[40%]"
                         }`}
-                      >
-                        {allDone ? (
-                          <DoorOpen
-                            className="w-8 h-8 sm:w-12 sm:h-12 text-amber-900"
-                            strokeWidth={2.5}
-                          />
-                        ) : (
-                          <DoorClosed
-                            className="w-8 h-8 sm:w-12 sm:h-12 text-gray-600"
-                            strokeWidth={2}
-                          />
-                        )}
-                      </div>
+                      />
                     </div>
                   </button>
                 );
