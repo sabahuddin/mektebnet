@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { ArrowLeft, CheckCircle2, BookOpen, Lock } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -24,6 +24,15 @@ export default function IlmihalSvePage() {
   const { token, user } = useAuth();
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);
+  // Akordion: koji nivoi su otvoreni. Po defaultu SVI ZATVORENI da
+  // korisnik ne mora skrolati Nivo 1+2 da bi došao do Nivoa 3.
+  const [openNivoi, setOpenNivoi] = useState<Record<number, boolean>>({
+    1: false,
+    2: false,
+    3: false,
+  });
+  const [query, setQuery] = useState("");
+  const trimmedQuery = query.trim().toLowerCase();
 
   // Gate: ucenik (i nelogovan posjetilac) moze otvoriti samo zavrsene
   // lekcije + prvu sljedecu nezavrsenu. Muallim/admin/roditelj vide sve
@@ -38,17 +47,41 @@ export default function IlmihalSvePage() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  const groupedByNivo: Record<number, Lekcija[]> = { 1: [], 2: [], 3: [] };
-  for (const l of lekcije) {
-    if (groupedByNivo[l.nivo]) groupedByNivo[l.nivo].push(l);
-  }
-  for (const k of Object.keys(groupedByNivo)) {
-    const n = Number(k);
-    groupedByNivo[n].sort((a, b) => (a.redoslijed ?? a.id) - (b.redoslijed ?? b.id));
-  }
+  const groupedByNivo: Record<number, Lekcija[]> = useMemo(() => {
+    const g: Record<number, Lekcija[]> = { 1: [], 2: [], 3: [] };
+    for (const l of lekcije) {
+      if (g[l.nivo]) g[l.nivo].push(l);
+    }
+    for (const k of Object.keys(g)) {
+      const n = Number(k);
+      g[n].sort((a, b) => (a.redoslijed ?? a.id) - (b.redoslijed ?? b.id));
+    }
+    return g;
+  }, [lekcije]);
 
+  // Pretraga: filter po naslovu (case-insensitive). Kada je upit aktivan,
+  // automatski otvori sve nivoe koji imaju match (da rezultati budu vidljivi
+  // bez ručnog otvaranja akordiona).
+  const filteredByNivo: Record<number, Lekcija[]> = useMemo(() => {
+    if (!trimmedQuery) return groupedByNivo;
+    const out: Record<number, Lekcija[]> = { 1: [], 2: [], 3: [] };
+    for (const n of [1, 2, 3]) {
+      out[n] = groupedByNivo[n].filter((l) =>
+        l.naslov.toLowerCase().includes(trimmedQuery),
+      );
+    }
+    return out;
+  }, [groupedByNivo, trimmedQuery]);
+
+  const isSearching = trimmedQuery.length > 0;
   const total = lekcije.length;
   const done = lekcije.filter((l) => l.zavrseno).length;
+  const matchCount = isSearching
+    ? filteredByNivo[1].length + filteredByNivo[2].length + filteredByNivo[3].length
+    : 0;
+
+  const toggleNivo = (n: number) =>
+    setOpenNivoi((prev) => ({ ...prev, [n]: !prev[n] }));
 
   return (
     <Layout>
@@ -69,13 +102,49 @@ export default function IlmihalSvePage() {
           )}
         </div>
 
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-amber-900 mb-2">
             Spisak svih lekcija
           </h1>
           <p className="text-amber-800/80 text-sm sm:text-base">
             Pregledaj sve lekcije po nivoima i otvori bilo koju
           </p>
+        </div>
+
+        <div className="max-w-xl mx-auto mb-8 px-1">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-700/70 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Pretraži lekcije po naslovu…"
+              className="w-full pl-9 pr-9 py-2.5 rounded-full bg-white/90 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm sm:text-base text-amber-900 placeholder:text-amber-700/50 shadow-sm"
+              data-testid="input-pretraga-lekcija"
+              aria-label="Pretraga lekcija"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-amber-100 text-amber-700"
+                aria-label="Obriši pretragu"
+                data-testid="button-obrisi-pretragu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {isSearching && (
+            <div className="text-center text-xs text-amber-800/70 mt-2">
+              {matchCount === 0
+                ? "Nema lekcija koje odgovaraju pretrazi"
+                : `Pronađeno ${matchCount} ${matchCount === 1 ? "lekcija" : matchCount < 5 ? "lekcije" : "lekcija"}`}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -85,44 +154,73 @@ export default function IlmihalSvePage() {
             Trenutno nema dostupnih lekcija.
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4">
             {[1, 2, 3].map((nivo) => {
-              const items = groupedByNivo[nivo];
-              if (!items || items.length === 0) return null;
+              const allItems = groupedByNivo[nivo];
+              const items = filteredByNivo[nivo];
+              if (!allItems || allItems.length === 0) return null;
+              // Pri aktivnoj pretrazi sakrij nivoe bez rezultata.
+              if (isSearching && items.length === 0) return null;
               const info = NIVO_INFO[nivo];
-              const nivoDone = items.filter((l) => l.zavrseno).length;
+              const nivoDone = allItems.filter((l) => l.zavrseno).length;
+              // Pri pretrazi: forsiraj otvoren akordion da se rezultati vide.
+              const isOpen = isSearching ? true : !!openNivoi[nivo];
               return (
                 <section key={nivo} data-testid={`section-nivo-${nivo}`}>
-                  <div className="flex items-end justify-between mb-3 px-1">
-                    <div>
+                  <button
+                    type="button"
+                    onClick={() => !isSearching && toggleNivo(nivo)}
+                    aria-expanded={isOpen}
+                    aria-controls={`nivo-panel-${nivo}`}
+                    className={`w-full flex items-center justify-between gap-3 px-3 sm:px-4 py-3 rounded-2xl bg-gradient-to-br ${info.bg} ring-1 ${info.ring} shadow-sm text-left transition-colors ${
+                      isSearching ? "cursor-default" : "hover:brightness-95 active:brightness-90"
+                    }`}
+                    data-testid={`button-toggle-nivo-${nivo}`}
+                  >
+                    <div className="min-w-0">
                       <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">
                         {info.podnaslov}
                       </div>
-                      <h2 className="text-xl sm:text-2xl font-extrabold text-amber-900">
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-amber-900 truncate">
                         {info.naslov}
                       </h2>
                     </div>
-                    {token && (
-                      <div className="text-xs sm:text-sm font-bold text-amber-800/80">
-                        {nivoDone} / {items.length}
-                      </div>
-                    )}
-                  </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {token && (
+                        <div className="text-xs sm:text-sm font-bold text-amber-800/80">
+                          {nivoDone} / {allItems.length}
+                        </div>
+                      )}
+                      {!isSearching && (
+                        <ChevronDown
+                          className={`w-5 h-5 text-amber-800/80 transition-transform ${
+                            isOpen ? "rotate-180" : "rotate-0"
+                          }`}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                  </button>
 
+                  {isOpen && (
                   <div
-                    className={`rounded-2xl bg-gradient-to-br ${info.bg} ring-1 ${info.ring} shadow-sm p-2 sm:p-3`}
+                    id={`nivo-panel-${nivo}`}
+                    className={`mt-2 rounded-2xl bg-gradient-to-br ${info.bg} ring-1 ${info.ring} shadow-sm p-2 sm:p-3`}
                   >
                     <ol className="divide-y divide-amber-200/60">
                       {(() => {
-                        // Indeks prve nezavrsene lekcije u ovom nivou — to je
-                        // "sljedeca dozvoljena". Sve poslije nje su locked
-                        // (samo za ucenika/nelogovanog).
-                        const firstUndone = items.findIndex((x) => !x.zavrseno);
-                        return items.map((l, idx) => {
+                        // Indeks prve nezavrsene lekcije u CIJELOM nivou (ne u
+                        // filtriranoj listi) — to je "sljedeca dozvoljena".
+                        // Sve poslije nje su locked (samo za ucenika/nelogovanog).
+                        // Bitno: pretraga ne smije otključati zaključanu lekciju.
+                        const firstUndoneAll = allItems.findIndex((x) => !x.zavrseno);
+                        return items.map((l) => {
+                          const realIdx = allItems.findIndex((x) => x.id === l.id);
                           const isDone = !!l.zavrseno;
-                          const isNext = enforceProgress && idx === firstUndone;
+                          const isNext = enforceProgress && realIdx === firstUndoneAll;
                           const isLocked =
                             enforceProgress && !isDone && !isNext;
+                          const idx = realIdx;
 
                           const rowInner = (
                             <>
@@ -196,6 +294,7 @@ export default function IlmihalSvePage() {
                       })()}
                     </ol>
                   </div>
+                  )}
                 </section>
               );
             })}
