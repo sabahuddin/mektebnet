@@ -648,6 +648,12 @@ uri = "file://attached_assets/generated_images/generated_image.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "i0LOde05WkfMCfonkS9DF"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/lekcija-bg-svjetla.png"
+type = "image"
+title = "lekcija_bg_svjetla"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
@@ -965,3 +971,9 @@ id = "2m8QotI2eK2NXBSsriqhd"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/images/mapa/honey-board.png"
 type = "image"
 title = "honey-board.png — slika koja se koristi kao pozadina lekcije (lijeva i desna traka)"
+
+[[outputs]]
+id = "9eVYH5bn1HxiuhDosGm0s"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/lekcija-bg-svjetla.png"
+type = "image"
+title = "Nova svjetla pozadina (prijedlog) — prije nego primijenim, pogledaj"
