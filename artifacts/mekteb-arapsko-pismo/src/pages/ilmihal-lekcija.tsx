@@ -2292,11 +2292,6 @@ export default function IlmihalLekcijaPage() {
             className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
             <ArrowLeft className="w-4 h-4" /> Nazad
           </button>
-          <span className="text-border/70">|</span>
-          <button onClick={goBack}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-medium text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
-            📋 Ilmihal lista
-          </button>
           {user?.role === "admin" && (
             <>
               <span className="text-border/70 ml-auto">|</span>
@@ -2388,9 +2383,9 @@ export default function IlmihalLekcijaPage() {
                 </div>
               </div>
             ) : (
-              <h1 className="text-2xl font-extrabold text-foreground leading-tight">{lekcija.naslov}</h1>
+              <h1 className="text-2xl font-extrabold text-foreground leading-tight text-center">{lekcija.naslov}</h1>
             )}
-            {(() => {
+            {(user?.role === "admin" || user?.role === "muallim") && (() => {
               const nextUndone = lekcijeStrip.find(l => !completedIds.has(l.id) && l.id !== lekcija.id);
               if (!nextUndone) return null;
               return (
@@ -2504,8 +2499,8 @@ export default function IlmihalLekcijaPage() {
           </div>
         ) : null}
 
-        {/* Lesson navigation strip */}
-        {lekcijeStrip.length > 1 && slug && (
+        {/* Lesson navigation strip — samo muallim/admin (učenik se kreće samo iz Košnice) */}
+        {(user?.role === "admin" || user?.role === "muallim") && lekcijeStrip.length > 1 && slug && (
           <LekcijeStrip
             lekcije={lekcijeStrip}
             currentSlug={slug}
