@@ -1839,7 +1839,12 @@ export default function IlmihalLekcijaPage() {
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
 
-  // Lekcija stranica koristi default Layout pozadinu — bez dodatnih dekoracija.
+  // Bočne dekoracije (pčele/saće/cvijeće) na body-ju samo dok je lekcija otvorena.
+  // Narandžasta podloga je uklonjena — body sad zadržava default boju.
+  useEffect(() => {
+    document.body.classList.add("lekcija-honey-bg");
+    return () => document.body.classList.remove("lekcija-honey-bg");
+  }, []);
 
   // Anti-cheat gate state — sva ČETIRI uslova moraju biti ispunjena da se
   // dugme "Označi kao završeno" otključa za nezavršene lekcije:
