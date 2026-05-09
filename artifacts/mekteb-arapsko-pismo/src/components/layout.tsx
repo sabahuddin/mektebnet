@@ -3,12 +3,13 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { installAudioMute, isAudioMuted, setAudioMuted, subscribeAudioMuted } from "@/lib/audio-mute";
+import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
 
 /** Inicijali iz displayName-a, max 2 slova (npr. "Tarik Avdić" → "TA"). */
 function getInitials(name?: string | null): string {
@@ -26,6 +27,9 @@ type NavLink = {
   /** Akcija umjesto navigacije (npr. Sufara "Uskoro"). Kada je postavljena,
    *  stavka se renderuje kao <button> i ne koristi se href. */
   onClick?: () => void;
+  /** Broj nepročitanih poruka — kada > 0 prikazuje se crveni značak.
+   *  Koristi se samo na "Poruke" stavci. */
+  badge?: number;
 };
 
 const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
@@ -86,6 +90,7 @@ export function Layout({ children }: LayoutProps) {
     try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
   });
   const [audioMuted, setAudioMutedState] = useState<boolean>(() => isAudioMuted());
+  const unreadPoruke = useUnreadPoruke();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -141,7 +146,16 @@ export function Layout({ children }: LayoutProps) {
     ],
   };
 
-  const extraLinks: NavLink[] = user ? (roleLinks[user.role] || []) : [];
+  // Poruke su dostupne svim prijavljenim korisnicima (učenik ↔ muallim ↔
+  // roditelj ↔ admin). Stavku ubacujemo na početak `extraLinks` da se ona
+  // pojavi prije panel-a uloge u nav-u, sa živim brojačem nepročitanih poruka.
+  const porukeLink: NavLink = {
+    href: "/poruke",
+    label: t("nav.poruke"),
+    icon: MessageSquare,
+    badge: unreadPoruke,
+  };
+  const extraLinks: NavLink[] = user ? [porukeLink, ...(roleLinks[user.role] || [])] : [];
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
@@ -181,9 +195,18 @@ export function Layout({ children }: LayoutProps) {
             })}
             {extraLinks.map(link => (
               <Link key={link.href} href={link.href}
-                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`}>
+                className={`relative flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all ${isActive(link.href) ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-foreground/60 hover:bg-muted hover:text-foreground"}`}>
                 <link.icon className="w-5 h-5" />
                 {link.label}
+                {link.badge && link.badge > 0 ? (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm ring-2 ring-white"
+                    aria-label={`${link.badge} nepročitanih`}
+                    data-testid="nav-poruke-badge"
+                  >
+                    {link.badge > 99 ? "99+" : link.badge}
+                  </span>
+                ) : null}
               </Link>
             ))}
           </nav>
@@ -283,6 +306,15 @@ export function Layout({ children }: LayoutProps) {
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition-colors ${isActive(link.href) ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"}`}>
                       <link.icon className="w-5 h-5" />
                       <span className="flex-1">{link.label}</span>
+                      {link.badge && link.badge > 0 ? (
+                        <span
+                          className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center shadow-sm"
+                          aria-label={`${link.badge} nepročitanih`}
+                          data-testid="nav-mobile-poruke-badge"
+                        >
+                          {link.badge > 99 ? "99+" : link.badge}
+                        </span>
+                      ) : null}
                     </Link>
                   )
                 ))}
