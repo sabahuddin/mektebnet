@@ -2317,8 +2317,8 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {/* Header — naslov centriran, Nazad ispod, žuti box 80% širine */}
-        <div className="lekcija-titlebox mb-5">
+        {/* Header — naslov centriran, Nazad ispod */}
+        <div className="mb-5">
           {editingNaslov && user?.role === "admin" ? (
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
               <input
