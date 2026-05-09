@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { ArrowLeft, CheckCircle2, BookOpen } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Lock } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -21,9 +21,14 @@ const NIVO_INFO: Record<number, { naslov: string; podnaslov: string; bg: string;
 };
 
 export default function IlmihalSvePage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Gate: ucenik (i nelogovan posjetilac) moze otvoriti samo zavrsene
+  // lekcije + prvu sljedecu nezavrsenu. Muallim/admin/roditelj vide sve
+  // kao otvoreno (oni pregledaju gradivo, ne uce).
+  const enforceProgress = !user || user.role === "ucenik";
 
   useEffect(() => {
     setLoading(true);
@@ -108,35 +113,87 @@ export default function IlmihalSvePage() {
                     className={`rounded-2xl bg-gradient-to-br ${info.bg} ring-1 ${info.ring} shadow-sm p-2 sm:p-3`}
                   >
                     <ol className="divide-y divide-amber-200/60">
-                      {items.map((l, idx) => (
-                        <li key={l.id}>
-                          <Link
-                            href={`/ilmihal/${l.slug}`}
-                            className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl hover:bg-white/60 active:bg-white/80 transition-colors"
-                            data-testid={`link-lekcija-${l.slug}`}
-                          >
-                            <div className="flex-shrink-0 w-9 h-9 rounded-full bg-white shadow-sm ring-2 ring-amber-200 flex items-center justify-center text-amber-900 font-extrabold text-sm">
-                              {idx + 1}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-bold text-amber-900 text-sm sm:text-base truncate">
-                                {l.naslov}
+                      {(() => {
+                        // Indeks prve nezavrsene lekcije u ovom nivou — to je
+                        // "sljedeca dozvoljena". Sve poslije nje su locked
+                        // (samo za ucenika/nelogovanog).
+                        const firstUndone = items.findIndex((x) => !x.zavrseno);
+                        return items.map((l, idx) => {
+                          const isDone = !!l.zavrseno;
+                          const isNext = enforceProgress && idx === firstUndone;
+                          const isLocked =
+                            enforceProgress && !isDone && !isNext;
+
+                          const rowInner = (
+                            <>
+                              <div
+                                className={`flex-shrink-0 w-9 h-9 rounded-full shadow-sm ring-2 flex items-center justify-center font-extrabold text-sm ${
+                                  isLocked
+                                    ? "bg-amber-100 ring-amber-200 text-amber-700/50"
+                                    : "bg-white ring-amber-200 text-amber-900"
+                                }`}
+                              >
+                                {idx + 1}
                               </div>
-                            </div>
-                            {l.zavrseno ? (
-                              <CheckCircle2
-                                className="w-6 h-6 text-emerald-600 flex-shrink-0"
-                                aria-label="Završeno"
-                              />
-                            ) : (
-                              <BookOpen
-                                className="w-5 h-5 text-amber-700/60 flex-shrink-0"
-                                aria-hidden="true"
-                              />
-                            )}
-                          </Link>
-                        </li>
-                      ))}
+                              <div className="flex-1 min-w-0">
+                                <div
+                                  className={`font-bold text-sm sm:text-base truncate ${
+                                    isLocked
+                                      ? "text-amber-900/50"
+                                      : "text-amber-900"
+                                  }`}
+                                >
+                                  {l.naslov}
+                                </div>
+                                {isLocked && (
+                                  <div className="text-[11px] text-amber-800/60 mt-0.5">
+                                    Zaključano — završi prethodnu lekciju
+                                  </div>
+                                )}
+                              </div>
+                              {isDone ? (
+                                <CheckCircle2
+                                  className="w-6 h-6 text-emerald-600 flex-shrink-0"
+                                  aria-label="Završeno"
+                                />
+                              ) : isLocked ? (
+                                <Lock
+                                  className="w-5 h-5 text-amber-700/50 flex-shrink-0"
+                                  aria-label="Zaključano"
+                                />
+                              ) : (
+                                <BookOpen
+                                  className="w-5 h-5 text-amber-700/80 flex-shrink-0"
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </>
+                          );
+
+                          return (
+                            <li key={l.id}>
+                              {isLocked ? (
+                                <div
+                                  className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl opacity-70 cursor-not-allowed select-none"
+                                  aria-disabled="true"
+                                  data-testid={`locked-lekcija-${l.slug}`}
+                                  title="Zaključano — završi prethodnu lekciju"
+                                >
+                                  {rowInner}
+                                </div>
+                              ) : (
+                                <Link
+                                  href={`/ilmihal/${l.slug}`}
+                                  className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl hover:bg-white/60 active:bg-white/80 transition-colors"
+                                  data-testid={`link-lekcija-${l.slug}`}
+                                >
+                                  {rowInner}
+                                </Link>
+                              )}
+                            </li>
+                          );
+                        });
+                      })()}
                     </ol>
                   </div>
                 </section>
