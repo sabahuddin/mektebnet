@@ -241,7 +241,7 @@ export default function Nivo1MapaPage() {
                     style={{ gridRow: displayRow + 1, gridColumn: col + 1 }}
                     className="flex items-center justify-center"
                   >
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/30 ring-2 ring-white/40" />
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gray-300 ring-2 ring-gray-600" />
                   </div>
                 );
               }
@@ -268,7 +268,7 @@ export default function Nivo1MapaPage() {
                           : isCurrent
                             ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-900 ring-4 ring-white active:scale-95 hover:scale-110"
                             : isLocked
-                              ? "bg-white/30 text-gray-700/80 ring-2 ring-white/50 opacity-90"
+                              ? "bg-gray-300 text-gray-700 ring-2 ring-gray-600"
                               : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-900 ring-2 ring-amber-700/30 active:scale-95 hover:scale-110"
                       }`}
                     >
