@@ -65,26 +65,74 @@ export default function IlmihalPage() {
 
   return (
     <Layout>
-      {/* Minimalisti\u010dka topla pozadina: cream gradient + diskretan dot pattern.
-          Fiksna iza sadr\u017eaja, ne ometa interakciju. */}
+      {/* Minimalisticka scena u pozadini: topli nebeski gradient,
+          siluete dalje sume i obrisi brda na dnu, par pcelica.
+          Sve fiksno iza sadrzaja i bez interakcije. */}
       <div
         aria-hidden="true"
         className="fixed inset-0 -z-10 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse at top, #fff8ec 0%, #fdf3df 45%, #f7e9c8 100%)",
+            "linear-gradient(to bottom, #fff8ec 0%, #fdf3df 55%, #f7e9c8 100%)",
         }}
       />
-      <div
+      <svg
         aria-hidden="true"
-        className="fixed inset-0 -z-10 pointer-events-none opacity-50"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(180, 130, 50, 0.18) 1px, transparent 1px)",
-          backgroundSize: "22px 22px",
-        }}
-      />
-      <div className="max-w-6xl mx-auto px-2">
+        className="fixed inset-x-0 bottom-0 -z-10 pointer-events-none w-full h-[55vh] sm:h-[60vh]"
+        viewBox="0 0 1440 600"
+        preserveAspectRatio="xMidYMax slice"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M0,360 C180,300 320,330 500,310 C700,288 860,335 1040,315 C1220,295 1340,320 1440,305 L1440,600 L0,600 Z"
+          fill="#f0dca8"
+          opacity="0.55"
+        />
+        <g fill="#d9b86a" opacity="0.35">
+          {Array.from({ length: 36 }).map((_, i) => {
+            const x = i * 42 + 10;
+            const h = 18 + ((i * 7) % 14);
+            return (
+              <polygon
+                key={`tree-far-${i}`}
+                points={`${x},${360 - h} ${x - 9},370 ${x + 9},370`}
+              />
+            );
+          })}
+        </g>
+        <path
+          d="M0,420 C160,370 300,395 480,380 C680,360 880,410 1080,390 C1260,372 1360,400 1440,388 L1440,600 L0,600 Z"
+          fill="#e6c885"
+          opacity="0.7"
+        />
+        <path
+          d="M0,490 C200,440 400,470 620,460 C840,450 1060,490 1260,475 C1340,470 1400,478 1440,472 L1440,600 L0,600 Z"
+          fill="#d4a85a"
+          opacity="0.85"
+        />
+        <g transform="translate(180, 110)" opacity="0.7">
+          <ellipse cx="0" cy="0" rx="9" ry="6" fill="#f4c430" />
+          <rect x="-5" y="-6" width="3" height="12" fill="#3a2a14" rx="1" />
+          <rect x="2" y="-6" width="3" height="12" fill="#3a2a14" rx="1" />
+          <ellipse cx="-4" cy="-5" rx="6" ry="3" fill="#ffffff" opacity="0.7" transform="rotate(-25 -4 -5)" />
+          <ellipse cx="4" cy="-5" rx="6" ry="3" fill="#ffffff" opacity="0.7" transform="rotate(25 4 -5)" />
+        </g>
+        <g transform="translate(1180, 180) scale(0.75)" opacity="0.6">
+          <ellipse cx="0" cy="0" rx="9" ry="6" fill="#f4c430" />
+          <rect x="-5" y="-6" width="3" height="12" fill="#3a2a14" rx="1" />
+          <rect x="2" y="-6" width="3" height="12" fill="#3a2a14" rx="1" />
+          <ellipse cx="-4" cy="-5" rx="6" ry="3" fill="#ffffff" opacity="0.7" transform="rotate(-25 -4 -5)" />
+          <ellipse cx="4" cy="-5" rx="6" ry="3" fill="#ffffff" opacity="0.7" transform="rotate(25 4 -5)" />
+        </g>
+        <g transform="translate(820, 70) scale(0.55)" opacity="0.5">
+          <ellipse cx="0" cy="0" rx="9" ry="6" fill="#f4c430" />
+          <rect x="-5" y="-6" width="3" height="12" fill="#3a2a14" rx="1" />
+          <rect x="2" y="-6" width="3" height="12" fill="#3a2a14" rx="1" />
+          <ellipse cx="-4" cy="-5" rx="6" ry="3" fill="#ffffff" opacity="0.7" transform="rotate(-25 -4 -5)" />
+          <ellipse cx="4" cy="-5" rx="6" ry="3" fill="#ffffff" opacity="0.7" transform="rotate(25 4 -5)" />
+        </g>
+      </svg>
+      <div className="max-w-6xl mx-auto px-2 relative">
         <div className="text-center mb-8 sm:mb-12">
           <h1 className="text-3xl sm:text-5xl font-extrabold text-amber-900 mb-2">
             Lekcije
@@ -118,7 +166,7 @@ export default function IlmihalPage() {
                   {/* Broj na vratima košnice — apsolutno centriran */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-4xl sm:text-5xl font-black shadow-lg ring-4 ring-white bg-gradient-to-br from-yellow-300 to-amber-500 text-amber-900"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl sm:text-3xl font-black shadow-lg ring-4 ring-white bg-gradient-to-br from-yellow-300 to-amber-500 text-amber-900"
                       style={{ transform: "translateY(20%)" }}
                     >
                       {n.broj}
