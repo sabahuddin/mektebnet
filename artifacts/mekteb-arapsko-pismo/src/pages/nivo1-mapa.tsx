@@ -27,13 +27,15 @@ interface MapaData {
   osvojeniMedaljoni: number[];
 }
 
-// Layout: 5 kolona × 13 redova snake (bottom-up).
+// Layout: 5 kolona × 13 lekcijskih redova snake (bottom-up) + 1 zaseban red za Vrata na vrhu.
 //   - logički red 0 = lekcije 1-5 (DONJI red ekrana)
-//   - logički red 12 = lekcije 61-64 + Vrata (GORNJI red ekrana, otključava se zadnji)
+//   - logički red 12 = lekcije 61-64 (jedan slot prazan) — pretposljednji red
+//   - displayRow 0 = Vrata, sami u svom redu na samom vrhu
 // Učenik kreće odozdo i napreduje prema vrhu (kao penjanje).
 const COLS = 5;
-const TOTAL_CELLS = 65; // 64 lekcije + Vrata
-const TOTAL_ROWS = Math.ceil(TOTAL_CELLS / COLS); // 13
+const TOTAL_CELLS = 64; // 64 lekcije; Vrata su zaseban element
+const LESSON_ROWS = Math.ceil(TOTAL_CELLS / COLS); // 13
+const TOTAL_ROWS = LESSON_ROWS + 1; // 14: 13 lekcijskih + 1 vrata red na vrhu
 // Početno otkriveno: prvih 7 redova = 35 polja. Novi red se otkriva
 // dok učenik napreduje (currentRow + 2 buffer).
 const INITIAL_VISIBLE_ROWS = 7;
@@ -69,22 +71,22 @@ export default function Nivo1MapaPage() {
   );
   const allDone = completedCount >= REQUIRED_FOR_DOOR;
 
-  // Trenutni cell (linearni indeks 0..64, gdje je 0 = lekcija 1, 64 = Vrata).
+  // Trenutni cell (linearni indeks 0..63, gdje je 0 = lekcija 1).
+  // Ako su sve lekcije završene, vraća -1 (pčela je "izašla kroz vrata").
   const currentCellIndex = useMemo(() => {
     for (let i = 0; i < lekcijeSorted.length; i++) {
       if (!zavrseneSet.has(lekcijeSorted[i].id)) return i;
     }
-    if (allDone) return TOTAL_CELLS - 1;
-    return Math.min(lekcijeSorted.length, TOTAL_CELLS - 2);
-  }, [lekcijeSorted, zavrseneSet, allDone]);
+    return -1;
+  }, [lekcijeSorted, zavrseneSet]);
 
-  const currentLogicalRow = Math.floor(currentCellIndex / COLS);
-  // Otkrivenih redova: bar 7, ili currentRow+4 (3 reda iznad pčele otkrivena).
-  // Tako kad učenik završi lekciju 20 (red 4 → currentRow postaje 5 jer ide na
-  // lekciju 21), revealedRows postaje 9 → otkriveni redovi 0-8 → lekcije 1-45.
+  const currentLogicalRow = currentCellIndex < 0
+    ? LESSON_ROWS - 1
+    : Math.floor(currentCellIndex / COLS);
+  // Otkrivenih lekcijskih redova: bar 7, ili currentRow+4 (3 reda iznad pčele otkrivena).
   const revealedRows = Math.max(
     INITIAL_VISIBLE_ROWS,
-    Math.min(TOTAL_ROWS, currentLogicalRow + 4),
+    Math.min(LESSON_ROWS, currentLogicalRow + 4),
   );
   // Granica do koje su lekcije OTKLJUČANE i klikabilne. Sve preko ovoga
   // se prikazuje kao zaključano (sivi blijedi krug), ali se može vidjeti
@@ -99,7 +101,7 @@ export default function Nivo1MapaPage() {
     return { logicalRow, col };
   }
   // Bottom-up render: logički red 0 (lekcija 1) ide na DNO grida.
-  // Sad uvijek renderujemo svih TOTAL_ROWS (13) da učenik može scrolati do Vrata.
+  // Lekcije popunjavaju displayRows 1..13; displayRow 0 (vrh) je rezervisan za Vrata.
   function displayRowFor(logicalRow: number): number {
     return TOTAL_ROWS - 1 - logicalRow;
   }
@@ -202,45 +204,40 @@ export default function Nivo1MapaPage() {
               minHeight: `${TOTAL_ROWS * 100}px`,
             }}
           >
+            {/* Vrata: u svom posjebnom redu na samom vrhu (displayRow 0), span svih 5 kolona */}
+            <button
+              key="vrata"
+              data-cell-index="door"
+              onClick={() => allDone && setLocation("/nivo2")}
+              disabled={!allDone}
+              className="relative flex items-center justify-center disabled:cursor-not-allowed"
+              style={{ gridRow: 1, gridColumn: "1 / -1" }}
+              data-testid="mapa-polje-vrata"
+              title={allDone ? "Vrata u Nivo 2" : "Završi sve lekcije da otključaš"}
+            >
+              <div className="relative w-32 h-32 sm:w-44 sm:h-44 transition-transform active:scale-95 hover:scale-105">
+                {allDone && (
+                  <span className="absolute inset-0 rounded-full bg-amber-300/50 animate-ping" />
+                )}
+                <img
+                  src={
+                    allDone
+                      ? "/images/mapa/vrata-otvorena.png"
+                      : "/images/mapa/vrata-zatvorena.png"
+                  }
+                  alt={allDone ? "Vrata u Nivo 2 — otvorena" : "Vrata u Nivo 2 — zaključana"}
+                  className={`relative w-full h-full object-contain drop-shadow-xl ${
+                    allDone ? "animate-pulse" : "opacity-80 grayscale-[40%]"
+                  }`}
+                />
+              </div>
+            </button>
+
             {Array.from({ length: TOTAL_CELLS }).map((_, i) => {
               const { logicalRow, col } = rowColFor(i);
               const displayRow = displayRowFor(logicalRow);
               const isCurrent = i === currentCellIndex;
-              const isLast = i === TOTAL_CELLS - 1;
               const isLocked = i >= unlockedCellCount;
-
-              if (isLast) {
-                // Vrata zauzimaju cijelu širinu zadnjeg reda (svih 5 kolona)
-                return (
-                  <button
-                    key="vrata"
-                    data-cell-index={i}
-                    onClick={() => allDone && setLocation("/nivo2")}
-                    disabled={!allDone}
-                    className="relative flex items-center justify-center disabled:cursor-not-allowed"
-                    style={{ gridRow: displayRow + 1, gridColumn: "1 / -1" }}
-                    data-testid="mapa-polje-vrata"
-                    title={allDone ? "Vrata u Nivo 2" : "Završi sve lekcije da otključaš"}
-                  >
-                    <div className="relative w-32 h-32 sm:w-44 sm:h-44 transition-transform active:scale-95 hover:scale-105">
-                      {allDone && (
-                        <span className="absolute inset-0 rounded-full bg-amber-300/50 animate-ping" />
-                      )}
-                      <img
-                        src={
-                          allDone
-                            ? "/images/mapa/vrata-otvorena.png"
-                            : "/images/mapa/vrata-zatvorena.png"
-                        }
-                        alt={allDone ? "Vrata u Nivo 2 — otvorena" : "Vrata u Nivo 2 — zaključana"}
-                        className={`relative w-full h-full object-contain drop-shadow-xl ${
-                          allDone ? "animate-pulse" : "opacity-80 grayscale-[40%]"
-                        }`}
-                      />
-                    </div>
-                  </button>
-                );
-              }
 
               const lekcija = lekcijeSorted[i];
               if (!lekcija) {
@@ -294,7 +291,7 @@ export default function Nivo1MapaPage() {
             })}
           </div>
 
-          {currentCellIndex >= 0 && currentCellIndex < TOTAL_CELLS && (
+          {currentCellIndex >= 0 && (
             <BeeOnGrid
               currentIndex={currentCellIndex}
               rowColFor={rowColFor}
