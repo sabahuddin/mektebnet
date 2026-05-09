@@ -109,22 +109,44 @@
     background-size: 32px 32px;
   }
 
-  /* Medeni ambijent za stranicu lekcije — vraćena prava slika (košnice,
-     med, pčele, cvijeće) sa mape, ali kao FIXED ambijent koji ispunjava
-     cijeli ekran (cover) sa svjetlim overlayom — slika se ne ponavlja
-     i ne pomjera se sa skrolom, ostaje kao mirna pozadinska scena. */
+  /* Medeni ambijent za stranicu lekcije — slike samo sa STRANA (lijeva
+     i desna traka), sredina gdje je tekst ostaje čista kremasta podloga.
+     Lijeva traka pokazuje lijevi dio mape (košnica, saće, cvijeće);
+     desna traka pokazuje desni dio (tegla meda, leptiri, pčele).
+     Na uskim ekranima trake se sklanjaju potpuno. */
   body.lekcija-honey-bg {
     background-color: #FFFBEB;
   }
-  body.lekcija-honey-bg::before {
+  body.lekcija-honey-bg::before,
+  body.lekcija-honey-bg::after {
     content: "";
     position: fixed;
-    inset: 0;
+    top: 64px;
+    bottom: 0;
+    width: 16vw;
+    max-width: 260px;
+    min-width: 180px;
     z-index: -1;
     pointer-events: none;
-    background:
-      linear-gradient(rgba(255, 251, 235, 0.55), rgba(255, 251, 235, 0.55)),
-      url('/images/mapa/honey-board.png') center top / cover no-repeat;
+    background-image: url('/images/mapa/honey-board.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  body.lekcija-honey-bg::before {
+    left: 0;
+    background-position: left center;
+  }
+  body.lekcija-honey-bg::after {
+    right: 0;
+    background-position: right center;
+  }
+  /* Ispod 1100px sadržaj zauzima skoro cijeli ekran — sklanjamo trake
+     da se ne preklapaju sa karticom lekcije. */
+  @media (max-width: 1100px) {
+    body.lekcija-honey-bg::before,
+    body.lekcija-honey-bg::after {
+      display: none;
+    }
   }
 
   /* Pri printanju lekcije bg ne treba — bijela podloga je urednija
