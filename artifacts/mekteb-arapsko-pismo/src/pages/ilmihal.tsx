@@ -65,6 +65,25 @@ export default function IlmihalPage() {
 
   return (
     <Layout>
+      {/* Minimalisti\u010dka topla pozadina: cream gradient + diskretan dot pattern.
+          Fiksna iza sadr\u017eaja, ne ometa interakciju. */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 -z-10 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at top, #fff8ec 0%, #fdf3df 45%, #f7e9c8 100%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 -z-10 pointer-events-none opacity-50"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(180, 130, 50, 0.18) 1px, transparent 1px)",
+          backgroundSize: "22px 22px",
+        }}
+      />
       <div className="max-w-6xl mx-auto px-2">
         <div className="text-center mb-8 sm:mb-12">
           <h1 className="text-3xl sm:text-5xl font-extrabold text-amber-900 mb-2">
