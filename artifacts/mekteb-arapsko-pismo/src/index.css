@@ -109,18 +109,44 @@
     background-size: 32px 32px;
   }
 
-  /* Medeni ambijent (pčele, cvijeće, saće) za stranicu lekcije.
-     Slika je prigušena svijetlim amber overlayom da tekst ostane
-     ugodno čitljiv. Tile se vertikalno (repeat-y) i scroll uz sadržaj. */
+  /* Medeni ambijent za stranicu lekcije — SUPTILNO:
+     - kremasta osnova (#FFFBEB)
+     - lagani saće (honeycomb) uzorak preko cijele površine, vrlo tanke linije
+     - 4 male dekoracije u uglovima (po jedna pčela i cvijet), tek nagovještaj
+     Sve inline SVG, bez tertih fotografija, da ne odvlači pažnju od teksta. */
   body.lekcija-honey-bg {
-    background-color: #FEF3C7;
+    background-color: #FFFBEB;
     background-image:
-      linear-gradient(rgba(254, 243, 199, 0.78), rgba(254, 243, 199, 0.78)),
-      url('/images/mapa/honey-board.png');
-    background-size: auto, 100% auto;
-    background-repeat: no-repeat, repeat-y;
-    background-position: center, center top;
-    background-attachment: fixed, scroll;
+      /* gornji desni — pčelica */
+      url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='34' cy='36' rx='20' ry='13' fill='%23FBBF24'/%3E%3Cpath d='M24 36 h20 M27 28 h14 M27 44 h14' stroke='%23451A03' stroke-width='2.5' stroke-linecap='round'/%3E%3Cellipse cx='22' cy='24' rx='10' ry='6' fill='%23FFFFFF' fill-opacity='0.75' transform='rotate(-30 22 24)'/%3E%3Cellipse cx='34' cy='20' rx='10' ry='6' fill='%23FFFFFF' fill-opacity='0.75' transform='rotate(-10 34 20)'/%3E%3Ccircle cx='52' cy='34' r='2.5' fill='%23451A03'/%3E%3C/svg%3E"),
+      /* donji lijevi — cvijet */
+      url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%23FFFFFF' stroke='%23F59E0B' stroke-width='1.2'%3E%3Cellipse cx='32' cy='14' rx='6' ry='10'/%3E%3Cellipse cx='50' cy='32' rx='10' ry='6'/%3E%3Cellipse cx='32' cy='50' rx='6' ry='10'/%3E%3Cellipse cx='14' cy='32' rx='10' ry='6'/%3E%3C/g%3E%3Ccircle cx='32' cy='32' r='7' fill='%23FBBF24'/%3E%3C/svg%3E"),
+      /* gornji lijevi — mali cvijet */
+      url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%23FCD34D' stroke='%23D97706' stroke-width='1'%3E%3Ccircle cx='32' cy='14' r='7'/%3E%3Ccircle cx='50' cy='32' r='7'/%3E%3Ccircle cx='32' cy='50' r='7'/%3E%3Ccircle cx='14' cy='32' r='7'/%3E%3Ccircle cx='45' cy='19' r='6'/%3E%3Ccircle cx='45' cy='45' r='6'/%3E%3Ccircle cx='19' cy='45' r='6'/%3E%3Ccircle cx='19' cy='19' r='6'/%3E%3C/g%3E%3Ccircle cx='32' cy='32' r='8' fill='%23F59E0B'/%3E%3C/svg%3E"),
+      /* donji desni — pčelica */
+      url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='30' cy='36' rx='20' ry='13' fill='%23FBBF24'/%3E%3Cpath d='M20 36 h20 M23 28 h14 M23 44 h14' stroke='%23451A03' stroke-width='2.5' stroke-linecap='round'/%3E%3Cellipse cx='42' cy='24' rx='10' ry='6' fill='%23FFFFFF' fill-opacity='0.75' transform='rotate(30 42 24)'/%3E%3Cellipse cx='30' cy='20' rx='10' ry='6' fill='%23FFFFFF' fill-opacity='0.75' transform='rotate(10 30 20)'/%3E%3Ccircle cx='12' cy='34' r='2.5' fill='%23451A03'/%3E%3C/svg%3E"),
+      /* saće — lagani uzorak preko cijele pozadine */
+      url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath fill='%23D97706' fill-opacity='0.07' d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/svg%3E");
+    background-position:
+      right 28px top 96px,
+      left 28px bottom 32px,
+      left 28px top 96px,
+      right 28px bottom 32px,
+      0 0;
+    background-size: 56px, 72px, 64px, 56px, 28px 49px;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-attachment: fixed;
+  }
+
+  /* Na mobitelima i uskim ekranima sklanjamo dekoracije iz uglova
+     da ne smetaju sadržaju — ostaje samo lagani saće uzorak. */
+  @media (max-width: 768px) {
+    body.lekcija-honey-bg {
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath fill='%23D97706' fill-opacity='0.07' d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/svg%3E");
+      background-size: 28px 49px;
+      background-position: 0 0;
+      background-repeat: repeat;
+    }
   }
 
   /* Pri printanju lekcije bg ne treba — bijela podloga je urednija
