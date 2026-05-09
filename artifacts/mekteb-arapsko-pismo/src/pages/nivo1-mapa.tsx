@@ -27,29 +27,37 @@ interface MapaData {
   osvojeniMedaljoni: number[];
 }
 
-// Layout: 5 kolona × 13 lekcijskih redova snake (bottom-up) + 1 zaseban red za Vrata na vrhu.
-//   - logički red 0 = lekcije 1-5 (DONJI red ekrana)
-//   - logički red 12 = lekcije 61-64 (jedan slot prazan) — pretposljednji red
-//   - displayRow 0 = Vrata, sami u svom redu na samom vrhu
-// Učenik kreće odozdo i napreduje prema vrhu (kao penjanje).
+// Layout: 5 kolona × N lekcijskih redova snake (bottom-up). Vrata zauzimaju
+// prazno mjesto na vrhu (ako postoji) i otvaraju sljedeći nivo.
 const COLS = 5;
-const TOTAL_CELLS = 64; // 64 lekcije; Vrata su zaseban element
-const LESSON_ROWS = Math.ceil(TOTAL_CELLS / COLS); // 13
-const TOTAL_ROWS = LESSON_ROWS; // 13: vrata zauzimaju prazno mjesto u zadnjem redu
-const REQUIRED_FOR_DOOR = 64;
 
-export default function Nivo1MapaPage() {
+interface NivoConfig {
+  totalCells: number;        // broj polja za lekcije (npr. 64 za Nivo 1)
+  medaljonCount: number;     // broj medaljona u top baru
+  doorTo: string | null;     // ruta na koju vode vrata (null = nema vrata)
+  doorLabel: string;         // tekst za alt/title
+  fallbackTotal: number;     // za guest/empty case
+}
+
+const NIVO_CONFIGS: Record<number, NivoConfig> = {
+  1: { totalCells: 64, medaljonCount: 6, doorTo: "/nivo2-mapa", doorLabel: "Vrata u Zlatnu košnicu", fallbackTotal: 64 },
+  2: { totalCells: 69, medaljonCount: 6, doorTo: "/nivo3-mapa", doorLabel: "Vrata u Košnicu mudrosti", fallbackTotal: 69 },
+  3: { totalCells: 0,  medaljonCount: 10, doorTo: null,         doorLabel: "",                         fallbackTotal: 50 }, // totalCells=0 ⇒ koristi data.length
+};
+
+export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
+  const cfg = NIVO_CONFIGS[nivo] ?? NIVO_CONFIGS[1];
   const { token } = useAuth();
   const [, setLocation] = useLocation();
   const [data, setData] = useState<MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    apiRequest<MapaData>("GET", `/mapa/nivo1`, undefined, token || undefined)
+    apiRequest<MapaData>("GET", `/mapa/nivo/${nivo}`, undefined, token || undefined)
       .then(setData)
       .catch(() => setData({ lekcije: [], medaljoni: [], zavrsene: [], osvojeniMedaljoni: [] }))
       .finally(() => setIsLoading(false));
-  }, [token]);
+  }, [token, nivo]);
 
   const lekcijeSorted = useMemo(
     () => [...(data?.lekcije ?? [])].sort((a, b) => a.redoslijed - b.redoslijed),
@@ -62,13 +70,25 @@ export default function Nivo1MapaPage() {
   const zavrseneSet = useMemo(() => new Set(data?.zavrsene ?? []), [data]);
   const osvojeniSet = useMemo(() => new Set(data?.osvojeniMedaljoni ?? []), [data]);
 
+  // Dinamički total: za nivoe 1/2 koristimo fiksni totalCells; za nivo 3
+  // (totalCells=0) koristimo broj lekcija iz baze (ili fallback dok se učitava).
+  const TOTAL_CELLS = cfg.totalCells > 0
+    ? cfg.totalCells
+    : Math.max(lekcijeSorted.length, cfg.fallbackTotal);
+  const LESSON_ROWS = Math.ceil(TOTAL_CELLS / COLS);
+  // Vrata zauzimaju prazno mjesto u zadnjem redu lekcija; ako je zadnji red pun
+  // (totalCells je višekratnik 5), vrata dobiju zaseban red iznad.
+  const needsExtraDoorRow = !!cfg.doorTo && TOTAL_CELLS % COLS === 0;
+  const TOTAL_ROWS = LESSON_ROWS + (needsExtraDoorRow ? 1 : 0);
+  const REQUIRED_FOR_DOOR = TOTAL_CELLS;
+
   const completedCount = useMemo(
     () => lekcijeSorted.filter((l) => zavrseneSet.has(l.id)).length,
     [lekcijeSorted, zavrseneSet],
   );
   const allDone = completedCount >= REQUIRED_FOR_DOOR;
 
-  // Trenutni cell (linearni indeks 0..63, gdje je 0 = lekcija 1).
+  // Trenutni cell (linearni indeks 0..N-1, gdje je 0 = lekcija 1).
   // Ako su sve lekcije završene, vraća -1 (pčela je "izašla kroz vrata").
   const currentCellIndex = useMemo(() => {
     for (let i = 0; i < lekcijeSorted.length; i++) {
@@ -80,12 +100,8 @@ export default function Nivo1MapaPage() {
   const currentLogicalRow = currentCellIndex < 0
     ? LESSON_ROWS - 1
     : Math.floor(currentCellIndex / COLS);
-  // Otključavanje po MEDALJONIMA (blokovi po 10 lekcija):
-  //   - Start: 1-10 otključano (žuto), čeka se 1. medaljon (na 10 lekcija).
-  //   - Kad se osvoji 1. medaljon (completed=10): otključa se 11-20.
-  //   - Kad se osvoji 2. medaljon (completed=20): otključa se 21-30.
-  //   - ... i tako dalje, do 61-64 nakon 6. medaljona.
-  // Sve preko ove granice je zaključano (sivo), ali vidljivo skrolovanjem.
+  // Otključavanje po MEDALJONIMA (blokovi po 10 lekcija). Sve preko ove granice
+  // je zaključano (sivo), ali vidljivo skrolovanjem.
   const unlockedCellCount = Math.min(
     TOTAL_CELLS,
     Math.floor(completedCount / 10) * 10 + 10,
@@ -99,10 +115,20 @@ export default function Nivo1MapaPage() {
     return { logicalRow, col };
   }
   // Bottom-up render: logički red 0 (lekcija 1) ide na DNO grida.
-  // Lekcije popunjavaju displayRows 1..13; displayRow 0 (vrh) je rezervisan za Vrata.
   function displayRowFor(logicalRow: number): number {
     return TOTAL_ROWS - 1 - logicalRow;
   }
+
+  // Pozicija vrata: u istom redu kao zadnja lekcija (na suprotnom kraju snake-a),
+  // osim ako je zadnji red pun — tada idu sami u red iznad.
+  const lastIdx = TOTAL_CELLS - 1;
+  const lastLogicalRow = Math.floor(lastIdx / COLS);
+  const doorDisplayRow = needsExtraDoorRow ? 0 : displayRowFor(lastLogicalRow);
+  const doorCol = needsExtraDoorRow
+    ? COLS - 1
+    : lastLogicalRow % 2 === 0
+      ? COLS - 1
+      : 0;
 
   // Auto-scroll do trenutne lekcije (kad se data učita)
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,11 +164,11 @@ export default function Nivo1MapaPage() {
           className="flex-shrink-0 px-2.5 py-1.5 rounded-full bg-white shadow text-xs sm:text-base font-extrabold text-amber-900 whitespace-nowrap"
           data-testid="mapa-progress"
         >
-          {completedCount}/{lekcijeSorted.length || 64}
+          {completedCount}/{lekcijeSorted.length || cfg.fallbackTotal}
         </div>
 
         <div className="flex-1 flex items-center justify-center gap-0.5 sm:gap-2">
-          {Array.from({ length: 6 }).map((_, i) => {
+          {Array.from({ length: cfg.medaljonCount }).map((_, i) => {
             const m = medaljoniSorted[i] ?? null;
             const required = (i + 1) * 10;
             const unlocked = m
@@ -187,6 +213,8 @@ export default function Nivo1MapaPage() {
           <PathSvg
             rowColFor={rowColFor}
             displayRowFor={displayRowFor}
+            totalCells={TOTAL_CELLS}
+            totalRows={TOTAL_ROWS}
           />
           <div
             className="relative grid items-center flex-1"
@@ -196,35 +224,36 @@ export default function Nivo1MapaPage() {
               minHeight: `${TOTAL_ROWS * 100}px`,
             }}
           >
-            {/* Vrata: zauzimaju prazno 5. mjesto u zadnjem redu, odmah desno od lekcije 64.
-                Iste veličine kao i krugovi lekcija. */}
-            <button
-              key="vrata"
-              data-cell-index="door"
-              onClick={() => allDone && setLocation("/nivo2")}
-              disabled={!allDone}
-              className="relative flex items-center justify-center disabled:cursor-not-allowed"
-              style={{ gridRow: 1, gridColumn: COLS }}
-              data-testid="mapa-polje-vrata"
-              title={allDone ? "Vrata u Nivo 2" : "Završi sve lekcije da otključaš"}
-            >
-              <div className="relative w-12 h-12 sm:w-16 sm:h-16 transition-transform active:scale-95 hover:scale-105">
-                {allDone && (
-                  <span className="absolute inset-0 rounded-full bg-amber-300/50 animate-ping" />
-                )}
-                <img
-                  src={
-                    allDone
-                      ? "/images/mapa/vrata-otvorena.png"
-                      : "/images/mapa/vrata-zatvorena.png"
-                  }
-                  alt={allDone ? "Vrata u Nivo 2 — otvorena" : "Vrata u Nivo 2 — zaključana"}
-                  className={`relative w-full h-full object-contain drop-shadow-md ${
-                    allDone ? "animate-pulse" : "opacity-80 grayscale-[40%]"
-                  }`}
-                />
-              </div>
-            </button>
+            {/* Vrata: prazno mjesto na vrhu (samo ako nivo ima sljedeći). */}
+            {cfg.doorTo && (
+              <button
+                key="vrata"
+                data-cell-index="door"
+                onClick={() => allDone && cfg.doorTo && setLocation(cfg.doorTo)}
+                disabled={!allDone}
+                className="relative flex items-center justify-center disabled:cursor-not-allowed"
+                style={{ gridRow: doorDisplayRow + 1, gridColumn: doorCol + 1 }}
+                data-testid="mapa-polje-vrata"
+                title={allDone ? cfg.doorLabel : "Završi sve lekcije da otključaš"}
+              >
+                <div className="relative w-12 h-12 sm:w-16 sm:h-16 transition-transform active:scale-95 hover:scale-105">
+                  {allDone && (
+                    <span className="absolute inset-0 rounded-full bg-amber-300/50 animate-ping" />
+                  )}
+                  <img
+                    src={
+                      allDone
+                        ? "/images/mapa/vrata-otvorena.png"
+                        : "/images/mapa/vrata-zatvorena.png"
+                    }
+                    alt={allDone ? `${cfg.doorLabel} — otvorena` : `${cfg.doorLabel} — zaključana`}
+                    className={`relative w-full h-full object-contain drop-shadow-md ${
+                      allDone ? "animate-pulse" : "opacity-80 grayscale-[40%]"
+                    }`}
+                  />
+                </div>
+              </button>
+            )}
 
             {Array.from({ length: TOTAL_CELLS }).map((_, i) => {
               const { logicalRow, col } = rowColFor(i);
@@ -289,6 +318,7 @@ export default function Nivo1MapaPage() {
               currentIndex={currentCellIndex}
               rowColFor={rowColFor}
               displayRowFor={displayRowFor}
+              totalRows={TOTAL_ROWS}
             />
           )}
         </div>
@@ -392,16 +422,20 @@ function MedaljonHex({
 function PathSvg({
   rowColFor,
   displayRowFor,
+  totalCells,
+  totalRows,
 }: {
   rowColFor: (i: number) => { logicalRow: number; col: number };
   displayRowFor: (lr: number) => number;
+  totalCells: number;
+  totalRows: number;
 }) {
   const points: string[] = [];
-  for (let i = 0; i < TOTAL_CELLS; i++) {
+  for (let i = 0; i < totalCells; i++) {
     const { logicalRow, col } = rowColFor(i);
     const displayRow = displayRowFor(logicalRow);
     const xPct = ((col + 0.5) / COLS) * 100;
-    const yPct = ((displayRow + 0.5) / TOTAL_ROWS) * 100;
+    const yPct = ((displayRow + 0.5) / totalRows) * 100;
     points.push(`${xPct},${yPct}`);
   }
   return (
@@ -429,15 +463,17 @@ function BeeOnGrid({
   currentIndex,
   rowColFor,
   displayRowFor,
+  totalRows,
 }: {
   currentIndex: number;
   rowColFor: (i: number) => { logicalRow: number; col: number };
   displayRowFor: (lr: number) => number;
+  totalRows: number;
 }) {
   const { logicalRow, col } = rowColFor(currentIndex);
   const displayRow = displayRowFor(logicalRow);
   const xPct = ((col + 0.5) / COLS) * 100;
-  const yPct = ((displayRow + 0.5) / TOTAL_ROWS) * 100;
+  const yPct = ((displayRow + 0.5) / totalRows) * 100;
   return (
     <motion.div
       className="absolute pointer-events-none z-20"

@@ -11,15 +11,20 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 
-// GET /api/mapa/nivo1
-// Vraća sve potrebno za render mape Nivo 1: lista lekcija, lista medaljona,
-// koje je trenutni student završio, i koje je medaljone osvojio.
+// GET /api/mapa/nivo/:n  (n ∈ {1, 2, 3})
+// Vraća sve potrebno za render mape jednog nivoa: lista lekcija, lista
+// medaljona, koje je trenutni student završio, i koje je medaljone osvojio.
+//
+// Back-compat: stari `/api/mapa/nivo1` i dalje radi kao alias za /nivo/1.
 //
 // Sigurnost: progress podaci (zavrsene, osvojeniMedaljoni) vraćaju se SAMO ako
 // je korisnik prijavljen i ID-ovi se uzimaju ISKLJUČIVO iz JWT-a, ne iz query
 // parametra. Bez auth-a vraća samo katalog (lekcije + medaljoni) bez progressa.
-// Ranije je endpoint primao `studentId` iz querya bez provjere — IDOR rupa.
-router.get("/nivo1", async (req, res) => {
+async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, res: import("express").Response) {
+  const nivo = Number(nivoRaw);
+  if (!Number.isInteger(nivo) || nivo < 1 || nivo > 3) {
+    return res.status(400).json({ error: "Nivo mora biti 1, 2 ili 3" });
+  }
   try {
     const [lekcije, medaljoni] = await Promise.all([
       db
@@ -30,12 +35,12 @@ router.get("/nivo1", async (req, res) => {
           redoslijed: ilmihalLekcijeTable.redoslijed,
         })
         .from(ilmihalLekcijeTable)
-        .where(eq(ilmihalLekcijeTable.nivo, 1))
+        .where(eq(ilmihalLekcijeTable.nivo, nivo))
         .orderBy(asc(ilmihalLekcijeTable.redoslijed)),
       db
         .select()
         .from(medaljoniTable)
-        .where(eq(medaljoniTable.nivo, 1))
+        .where(eq(medaljoniTable.nivo, nivo))
         .orderBy(asc(medaljoniTable.posAfterRedoslijed)),
     ]);
 
@@ -70,10 +75,13 @@ router.get("/nivo1", async (req, res) => {
 
     res.json({ lekcije, medaljoni, zavrsene, osvojeniMedaljoni });
   } catch (err) {
-    console.error("[mapa/nivo1] error", err);
+    console.error("[mapa/nivo] error", err);
     res.status(500).json({ error: "Greška pri učitavanju mape" });
   }
-});
+}
+
+router.get("/nivo/:n", (req, res) => handleMapaNivo(req.params.n, req, res));
+router.get("/nivo1", (req, res) => handleMapaNivo(1, req, res));
 
 // POST /api/mapa/medaljon/:slug/claim
 // Označava medaljon kao osvojen za prijavljenog učenika. Idempotentno —

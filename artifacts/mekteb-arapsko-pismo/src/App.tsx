@@ -26,7 +26,6 @@ import Progress from "./pages/progress";
 import IlmihalPage from "./pages/ilmihal";
 import IlmihalLekcijaPage from "./pages/ilmihal-lekcija";
 import Nivo1MapaPage from "./pages/nivo1-mapa";
-import Nivo2UskoroPage from "./pages/nivo2-uskoro";
 import MedaljonDetailPage from "./pages/medaljon-detail";
 
 // Kvizovi
@@ -105,9 +104,11 @@ function Router() {
 
       {/* Ilmihal */}
       <Route path="/ilmihal" component={IlmihalPage} />
-      <Route path="/nivo1-mapa" component={Nivo1MapaPage} />
-      <Route path="/nivo1-mapa/:segment" component={Nivo1MapaPage} />
-      <Route path="/nivo2" component={Nivo2UskoroPage} />
+      <Route path="/nivo1-mapa" component={() => <Nivo1MapaPage nivo={1} />} />
+      <Route path="/nivo2-mapa" component={() => <Nivo1MapaPage nivo={2} />} />
+      <Route path="/nivo3-mapa" component={() => <Nivo1MapaPage nivo={3} />} />
+      {/* Back-compat: stari /nivo2 link sada vodi direktno u Zlatnu košnicu. */}
+      <Route path="/nivo2" component={() => <Nivo1MapaPage nivo={2} />} />
       <Route path="/medaljon/:slug" component={MedaljonDetailPage} />
       <Route path="/ilmihal/:slug" component={IlmihalLekcijaPage} />
 
