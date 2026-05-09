@@ -105,6 +105,7 @@ function Router() {
       {/* Ilmihal */}
       <Route path="/ilmihal" component={IlmihalPage} />
       <Route path="/nivo1-mapa" component={Nivo1MapaPage} />
+      <Route path="/nivo1-mapa/:segment" component={Nivo1MapaPage} />
       <Route path="/medaljon/:slug" component={MedaljonDetailPage} />
       <Route path="/ilmihal/:slug" component={IlmihalLekcijaPage} />
 

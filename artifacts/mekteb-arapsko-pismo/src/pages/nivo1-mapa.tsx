@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, Link } from "wouter";
+import { useLocation, useRoute, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { ArrowLeft, Check, Lock, Medal, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Lock, Medal, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Lekcija {
@@ -33,38 +33,48 @@ type PathItem =
   | { kind: "lekcija"; lekcija: Lekcija; brojUListi: number }
   | { kind: "medaljon"; medaljon: Medaljon };
 
-// Visina svakog polja (vertikalni razmak između susjednih polja na mapi).
-// 130px daje ugodan ritam — ni stiješnjeno ni predugo skrolovanje.
+interface Segment {
+  index: number;
+  items: PathItem[];
+  medaljon: Medaljon;
+  background: string;
+}
+
 const FIELD_GAP_PX = 130;
-// Krugovi se postavljaju centralno (kolona). Pozadinska slika ima vlastitu
-// vijugavu stazu koja se ponavlja kao tile — pošto je njena frekvencija
-// nezavisna od broja lekcija po tile-u, pokušaji da se krugovi matematički
-// poklope sa stazom djeluju neuredno. Stoga je staza puko dekorativni
-// ambijent, a krugovi formiraju jasnu, čitljivu vertikalnu putanju.
 const SERP_CENTER = 50;
+
+// Mapiranje segmenata na pozadinske slike. Slike su placeholder dok ne
+// generišemo 5 različitih scena — koristimo postojeću tile-meadow za sve.
+// Ključ je slug medaljona kojim segment završava.
+const SEGMENT_BACKGROUNDS: Record<string, string> = {
+  "prvi-koraci": "/images/mapa/tile-meadow.png",
+  "putnik": "/images/mapa/tile-meadow.png",
+  "polovina-puta": "/images/mapa/tile-meadow.png",
+  "ustrajni": "/images/mapa/tile-meadow.png",
+  "prva-kosnica": "/images/mapa/tile-meadow.png",
+};
 
 function leftPercentFor(_index: number): number {
   return SERP_CENTER;
 }
 
 export default function Nivo1MapaPage() {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const [, setLocation] = useLocation();
+  const [, params] = useRoute<{ segment?: string }>("/nivo1-mapa/:segment?");
   const [data, setData] = useState<MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Backend uzima studentId iz JWT-a (ne iz querya) radi sigurnosti.
     apiRequest<MapaData>("GET", `/mapa/nivo1`, undefined, token || undefined)
       .then(setData)
       .catch(() => setData({ lekcije: [], medaljoni: [], zavrsene: [], osvojeniMedaljoni: [] }))
       .finally(() => setIsLoading(false));
   }, [token]);
 
-  // Sklopi putanju: lekcije po redoslijedu, sa medaljonima ubačenim na svojim
-  // pozicijama. Preostali medaljoni (npr. "Prva košnica" sa pos=64) idu na kraj.
-  const path: PathItem[] = useMemo(() => {
+  // Cijela putanja (svi segmenti zajedno) — koristi se za "trenutni" izračun.
+  const fullPath: PathItem[] = useMemo(() => {
     if (!data) return [];
     const lekcije = [...data.lekcije].sort((a, b) => a.redoslijed - b.redoslijed);
     const medQueue = [...data.medaljoni].sort((a, b) => a.posAfterRedoslijed - b.posAfterRedoslijed);
@@ -81,37 +91,90 @@ export default function Nivo1MapaPage() {
     return out;
   }, [data]);
 
+  // Podijeli putanju u segmente — svaki segment završava medaljonom.
+  // Lekcije nakon zadnjeg medaljona (ako postoje) idu u "rep" zadnjeg segmenta.
+  const segments: Segment[] = useMemo(() => {
+    if (fullPath.length === 0) return [];
+    const segs: Segment[] = [];
+    let buf: PathItem[] = [];
+    for (const it of fullPath) {
+      buf.push(it);
+      if (it.kind === "medaljon") {
+        segs.push({
+          index: segs.length,
+          items: buf,
+          medaljon: it.medaljon,
+          background: SEGMENT_BACKGROUNDS[it.medaljon.slug] ?? "/images/mapa/tile-meadow.png",
+        });
+        buf = [];
+      }
+    }
+    // Ako su ostale lekcije bez medaljona na kraju, prikači ih posljednjem segmentu.
+    if (buf.length > 0 && segs.length > 0) {
+      segs[segs.length - 1].items.push(...buf);
+    }
+    return segs;
+  }, [fullPath]);
+
   const zavrseneSet = useMemo(() => new Set(data?.zavrsene ?? []), [data]);
   const osvojeniSet = useMemo(() => new Set(data?.osvojeniMedaljoni ?? []), [data]);
 
-  // Indeks "trenutnog" polja: prva nezavršena lekcija (ili prvi neosvojeni
-  // medaljon koji student već ispunjava uslove). Pčela će letjeti do njega.
-  const currentIndex = useMemo(() => {
-    for (let i = 0; i < path.length; i++) {
-      const it = path[i];
+  // Indeks segmenta u kojem je trenutni napredak (prva nezavršena lekcija
+  // ili prvi neosvojeni dostupni medaljon). Default: 0.
+  const currentSegmentIndex = useMemo(() => {
+    for (let s = 0; s < segments.length; s++) {
+      const seg = segments[s];
+      // Segment je "trenutni" ako medaljon na kraju nije osvojen.
+      if (!osvojeniSet.has(seg.medaljon.id)) return s;
+    }
+    return Math.max(0, segments.length - 1);
+  }, [segments, osvojeniSet]);
+
+  // Aktivni segment iz URL-a, fallback na trenutni.
+  const activeSegmentIndex = useMemo(() => {
+    if (!params?.segment) return currentSegmentIndex;
+    const n = parseInt(params.segment, 10) - 1;
+    if (Number.isNaN(n) || n < 0 || n >= segments.length) return currentSegmentIndex;
+    return n;
+  }, [params, segments.length, currentSegmentIndex]);
+
+  const activeSegment = segments[activeSegmentIndex];
+
+  // Otključan segment = svi prethodni medaljoni osvojeni (ili je to prvi).
+  function isSegmentUnlocked(segIdx: number): boolean {
+    if (segIdx === 0) return true;
+    for (let s = 0; s < segIdx; s++) {
+      if (!osvojeniSet.has(segments[s].medaljon.id)) return false;
+    }
+    return true;
+  }
+
+  // "Trenutni" indeks UNUTAR aktivnog segmenta (za pčelu i pulse).
+  const currentItemIndexInSegment = useMemo(() => {
+    if (!activeSegment) return -1;
+    for (let i = 0; i < activeSegment.items.length; i++) {
+      const it = activeSegment.items[i];
       if (it.kind === "lekcija" && !zavrseneSet.has(it.lekcija.id)) return i;
       if (it.kind === "medaljon" && !osvojeniSet.has(it.medaljon.id)) {
-        // Medaljon je "current" samo ako su lekcije do njega završene.
         const sveZavrsene = zavrseneSet.size >= it.medaljon.posAfterRedoslijed;
         if (sveZavrsene) return i;
       }
     }
-    return -1; // sve završeno
-  }, [path, zavrseneSet, osvojeniSet]);
+    return -1;
+  }, [activeSegment, zavrseneSet, osvojeniSet]);
 
-  // Kontejner je obrnut: indeks 0 (prva lekcija) je na DNU, posljednji na VRHU.
-  // Total visina kontejnera = (path.length + 2) * FIELD_GAP_PX.
-  const containerHeight = (path.length + 2) * FIELD_GAP_PX;
+  const containerHeight = activeSegment
+    ? (activeSegment.items.length + 2) * FIELD_GAP_PX
+    : 400;
 
-  // Auto-scroll na trenutno polje pri prvom učitavanju (centriraj u viewportu).
+  // Auto-scroll na trenutno polje kad se aktivni segment učita.
   useEffect(() => {
-    if (currentIndex < 0 || !containerRef.current) return;
-    const fromBottomPx = (currentIndex + 1) * FIELD_GAP_PX;
+    if (currentItemIndexInSegment < 0 || !containerRef.current) return;
+    const fromBottomPx = (currentItemIndexInSegment + 1) * FIELD_GAP_PX;
     const targetTop = containerHeight - fromBottomPx - window.innerHeight / 2;
     window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
-  }, [currentIndex, containerHeight]);
+  }, [currentItemIndexInSegment, containerHeight, activeSegmentIndex]);
 
-  // Boja medaljona (emerald/sky/amber/orange/yellow) → tailwind klase.
   const medaljonBoje: Record<string, { bg: string; ring: string; glow: string }> = {
     emerald: { bg: "from-emerald-300 to-emerald-500", ring: "ring-emerald-200", glow: "shadow-emerald-400/50" },
     sky:     { bg: "from-sky-300 to-sky-500",         ring: "ring-sky-200",     glow: "shadow-sky-400/50" },
@@ -135,11 +198,27 @@ export default function Nivo1MapaPage() {
     );
   }
 
+  if (!activeSegment) {
+    return (
+      <Layout>
+        <div className="max-w-2xl mx-auto p-6 text-center">
+          <p className="text-emerald-700">Mapa nije dostupna.</p>
+          <Link href="/ilmihal">
+            <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg">Nazad</button>
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  const prevUnlocked = activeSegmentIndex > 0;
+  const nextUnlocked = activeSegmentIndex < segments.length - 1 && isSegmentUnlocked(activeSegmentIndex + 1);
+
   return (
     <Layout>
-      {/* Top bar - povratak + naslov + brojač napretka */}
+      {/* Top bar - povratak + naslov segmenta + brojač + navigacija */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-emerald-100 px-4 py-3 -mx-4 mb-2">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
+        <div className="max-w-2xl mx-auto flex items-center gap-2">
           <Link href="/ilmihal">
             <button
               className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-700 shrink-0"
@@ -148,54 +227,62 @@ export default function Nivo1MapaPage() {
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-extrabold text-emerald-900 truncate">Mapa — Nivo 1</h1>
+
+          <button
+            disabled={!prevUnlocked}
+            onClick={() => setLocation(`/nivo1-mapa/${activeSegmentIndex}`)}
+            className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+            data-testid="button-segment-prev"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <div className="flex-1 min-w-0 text-center">
+            <h1 className="text-base font-extrabold text-emerald-900 truncate">
+              Etapa {activeSegmentIndex + 1} / {segments.length} — {activeSegment.medaljon.naziv}
+            </h1>
             <p className="text-xs text-emerald-700/70">
               {zavrseneSet.size} / {data?.lekcije.length ?? 0} lekcija
               {osvojeniSet.size > 0 && <span> · {osvojeniSet.size} medaljona</span>}
             </p>
           </div>
+
+          <button
+            disabled={!nextUnlocked}
+            onClick={() => setLocation(`/nivo1-mapa/${activeSegmentIndex + 2}`)}
+            className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+            data-testid="button-segment-next"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
-      {/* Mapa kontejner. Pozadina je u dva sloja:
-          1) tile-meadow.png — seamless tileable livada sa vijugavom stazom,
-             ponavlja se vertikalno kroz cijeli put.
-          2) vrh-dzamija.png — apsolutni element zalijepljen na sam vrh
-             kontejnera, prikazuje destinaciju (košnicu-džamiju) iznad puta.
-          Polja (lekcije + medaljoni) se renderuju preko, sa serpentine layoutom. */}
+      {/* Mapa kontejner — pozadinska slika trenutnog segmenta + ravna staza
+          (krugovi centralno). Svaki segment je samostalna scena. */}
       <div
         ref={containerRef}
         className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-2xl border-2 border-emerald-200 shadow-inner"
         style={{
           height: `${containerHeight}px`,
-          backgroundImage: "url('/images/mapa/tile-meadow.png')",
+          backgroundImage: `url('${activeSegment.background}')`,
           backgroundSize: "100% auto",
           backgroundRepeat: "repeat-y",
           backgroundPosition: "center top",
         }}
         data-testid="mapa-container"
       >
-        {/* Vrh mape — košnica-džamija (cilj puta) iznad svih polja */}
-        <img
-          src="/images/mapa/vrh-dzamija.png"
-          alt="Košnica-džamija — kraj Nivoa 1"
-          className="absolute top-0 left-0 w-full pointer-events-none select-none"
-          style={{ height: "auto" }}
-        />
-
-        {/* Blagi zeleni overlay da se polja bolje vide preko pozadine */}
         <div className="absolute inset-0 bg-emerald-50/15 pointer-events-none" />
 
-        {/* Polja (lekcije + medaljoni) */}
-        {path.map((item, i) => {
+        {/* Polja (lekcije + medaljon na vrhu) */}
+        {activeSegment.items.map((item, i) => {
           const leftPct = leftPercentFor(i);
           const bottomPx = (i + 1) * FIELD_GAP_PX;
 
           if (item.kind === "lekcija") {
             const l = item.lekcija;
             const isDone = zavrseneSet.has(l.id);
-            const isCurrent = i === currentIndex;
+            const isCurrent = i === currentItemIndexInSegment;
             return (
               <button
                 key={`l-${l.id}`}
@@ -231,11 +318,12 @@ export default function Nivo1MapaPage() {
             );
           }
 
-          // MEDALJON
+          // MEDALJON — kraj segmenta. Klik na otključan vodi na medaljon detail
+          // gdje se osvaja, a onda se vraća na sljedeći segment.
           const m = item.medaljon;
           const earned = osvojeniSet.has(m.id);
           const unlocked = zavrseneSet.size >= m.posAfterRedoslijed;
-          const isCurrent = i === currentIndex;
+          const isCurrent = i === currentItemIndexInSegment;
           const boje = medaljonBoje[m.boja] ?? medaljonBoje.amber;
           return (
             <button
@@ -280,23 +368,34 @@ export default function Nivo1MapaPage() {
           );
         })}
 
-        {/* Pčela animacija — leti do trenutnog polja sa blagim bobblanjem */}
-        {currentIndex >= 0 && (
+        {currentItemIndexInSegment >= 0 && (
           <BeeOnMap
-            leftPct={leftPercentFor(currentIndex)}
-            bottomPx={(currentIndex + 1) * FIELD_GAP_PX}
+            leftPct={leftPercentFor(currentItemIndexInSegment)}
+            bottomPx={(currentItemIndexInSegment + 1) * FIELD_GAP_PX}
           />
         )}
       </div>
 
-      <div className="max-w-2xl mx-auto py-6 text-center text-xs text-emerald-700/70">
-        Skrolaj prema dolje za pregled cijelog puta. Pčela ti pokazuje gdje si stao.
+      {/* Footer sa CTA na sljedeći segment ako je otključan */}
+      <div className="max-w-2xl mx-auto py-6 text-center">
+        {nextUnlocked ? (
+          <button
+            onClick={() => setLocation(`/nivo1-mapa/${activeSegmentIndex + 2}`)}
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow"
+            data-testid="button-sljedeci-segment"
+          >
+            Sljedeća etapa →
+          </button>
+        ) : (
+          <p className="text-xs text-emerald-700/70">
+            Završi lekcije i osvoji medaljon da otključaš sljedeću etapu.
+          </p>
+        )}
       </div>
     </Layout>
   );
 }
 
-// Pčela — SVG sa krilima u floating animaciji.
 function BeeOnMap({ leftPct, bottomPx }: { leftPct: number; bottomPx: number }) {
   return (
     <motion.div
@@ -315,14 +414,11 @@ function BeeOnMap({ leftPct, bottomPx }: { leftPct: number; bottomPx: number }) 
         transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
       >
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-          {/* Krila */}
           <ellipse cx="14" cy="18" rx="9" ry="6" fill="rgba(255,255,255,0.85)" stroke="rgba(0,0,0,0.2)" />
           <ellipse cx="34" cy="18" rx="9" ry="6" fill="rgba(255,255,255,0.85)" stroke="rgba(0,0,0,0.2)" />
-          {/* Tijelo */}
           <ellipse cx="24" cy="26" rx="11" ry="9" fill="#fbbf24" stroke="#78350f" strokeWidth="1.5" />
           <rect x="14" y="22" width="20" height="3" fill="#78350f" />
           <rect x="14" y="28" width="20" height="3" fill="#78350f" />
-          {/* Glava + oči */}
           <circle cx="35" cy="24" r="4" fill="#78350f" />
           <circle cx="36" cy="23" r="1" fill="#fff" />
         </svg>
