@@ -130,8 +130,8 @@ export default function Nivo1MapaPage() {
       ref={containerRef}
       className="fixed inset-0 z-50 overflow-auto"
       style={{
-        backgroundColor: "#F5C842",
-        backgroundImage: "url('/images/mapa/honey-board.png')",
+        backgroundColor: "#FEF3C7",
+        backgroundImage: "url('/images/mapa/honey-board-svjetla.png')",
         backgroundSize: "100% auto",
         backgroundRepeat: "repeat-y",
         backgroundPosition: "center top",
