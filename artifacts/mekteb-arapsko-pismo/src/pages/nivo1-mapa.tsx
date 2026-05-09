@@ -35,7 +35,7 @@ interface MapaData {
 const COLS = 5;
 const TOTAL_CELLS = 64; // 64 lekcije; Vrata su zaseban element
 const LESSON_ROWS = Math.ceil(TOTAL_CELLS / COLS); // 13
-const TOTAL_ROWS = LESSON_ROWS + 1; // 14: 13 lekcijskih + 1 vrata red na vrhu
+const TOTAL_ROWS = LESSON_ROWS; // 13: vrata zauzimaju prazno mjesto u zadnjem redu
 // Početno otkriveno: prvih 7 redova = 35 polja. Novi red se otkriva
 // dok učenik napreduje (currentRow + 2 buffer).
 const INITIAL_VISIBLE_ROWS = 7;
@@ -204,18 +204,19 @@ export default function Nivo1MapaPage() {
               minHeight: `${TOTAL_ROWS * 100}px`,
             }}
           >
-            {/* Vrata: u svom posjebnom redu na samom vrhu (displayRow 0), span svih 5 kolona */}
+            {/* Vrata: zauzimaju prazno 5. mjesto u zadnjem redu, odmah desno od lekcije 64.
+                Iste veličine kao i krugovi lekcija. */}
             <button
               key="vrata"
               data-cell-index="door"
               onClick={() => allDone && setLocation("/nivo2")}
               disabled={!allDone}
               className="relative flex items-center justify-center disabled:cursor-not-allowed"
-              style={{ gridRow: 1, gridColumn: "1 / -1" }}
+              style={{ gridRow: 1, gridColumn: COLS }}
               data-testid="mapa-polje-vrata"
               title={allDone ? "Vrata u Nivo 2" : "Završi sve lekcije da otključaš"}
             >
-              <div className="relative w-32 h-32 sm:w-44 sm:h-44 transition-transform active:scale-95 hover:scale-105">
+              <div className="relative w-12 h-12 sm:w-16 sm:h-16 transition-transform active:scale-95 hover:scale-105">
                 {allDone && (
                   <span className="absolute inset-0 rounded-full bg-amber-300/50 animate-ping" />
                 )}
@@ -226,7 +227,7 @@ export default function Nivo1MapaPage() {
                       : "/images/mapa/vrata-zatvorena.png"
                   }
                   alt={allDone ? "Vrata u Nivo 2 — otvorena" : "Vrata u Nivo 2 — zaključana"}
-                  className={`relative w-full h-full object-contain drop-shadow-xl ${
+                  className={`relative w-full h-full object-contain drop-shadow-md ${
                     allDone ? "animate-pulse" : "opacity-80 grayscale-[40%]"
                   }`}
                 />
