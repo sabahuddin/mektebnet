@@ -2344,28 +2344,30 @@ router.delete("/ucenik/:id/hard", async (req, res) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, ucenikId));
     if (!user || user.role !== "ucenik") { res.status(404).json({ error: "Učenik ne postoji" }); return; }
 
-    // Brisanje povezanih zapisa (best-effort — pojedinačne greške ne ruše operaciju).
-    await db.delete(korisnikNapredakTable).where(eq(korisnikNapredakTable.userId, ucenikId)).catch(() => {});
-    await db.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, ucenikId)).catch(() => {});
-    await db.delete(priustvoTable).where(eq(priustvoTable.ucenikId, ucenikId)).catch(() => {});
-    await db.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.ucenikId, ucenikId)).catch(() => {});
-    await db.delete(roditeljUcenikTable).where(eq(roditeljUcenikTable.ucenikId, ucenikId)).catch(() => {});
-    await db.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, ucenikId)).catch(() => {});
-    await db.delete(h5pPokusajiTable).where(eq(h5pPokusajiTable.userId, ucenikId)).catch(() => {});
-    await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId)).catch(() => {});
-    await db.delete(usersTable).where(eq(usersTable.id, ucenikId)).catch(() => {});
+    // Atomski: brisanje svih povezanih zapisa + dekrement licence u jednoj transakciji.
+    await db.transaction(async (tx) => {
+      await tx.delete(korisnikNapredakTable).where(eq(korisnikNapredakTable.userId, ucenikId));
+      await tx.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, ucenikId));
+      await tx.delete(priustvoTable).where(eq(priustvoTable.ucenikId, ucenikId));
+      await tx.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.ucenikId, ucenikId));
+      await tx.delete(roditeljUcenikTable).where(eq(roditeljUcenikTable.ucenikId, ucenikId));
+      await tx.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, ucenikId));
+      await tx.delete(h5pPokusajiTable).where(eq(h5pPokusajiTable.userId, ucenikId));
+      await tx.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+      await tx.delete(usersTable).where(eq(usersTable.id, ucenikId));
 
-    // Ako učenik nije bio arhiviran, oslobodi licencni slot muallima koji ga je imao.
-    if (!profil.isArchived && profil.muallimId !== null) {
-      const muallimId = profil.muallimId;
-      const [muallimProfil] = await db.select().from(muallimProfiliTable)
-        .where(eq(muallimProfiliTable.userId, muallimId));
-      if (muallimProfil && muallimProfil.licencesUsed > 0) {
-        await db.update(muallimProfiliTable)
-          .set({ licencesUsed: muallimProfil.licencesUsed - 1 })
+      // Ako učenik nije bio arhiviran, oslobodi licencni slot muallima koji ga je imao.
+      if (!profil.isArchived && profil.muallimId !== null) {
+        const muallimId = profil.muallimId;
+        const [muallimProfil] = await tx.select().from(muallimProfiliTable)
           .where(eq(muallimProfiliTable.userId, muallimId));
+        if (muallimProfil && muallimProfil.licencesUsed > 0) {
+          await tx.update(muallimProfiliTable)
+            .set({ licencesUsed: muallimProfil.licencesUsed - 1 })
+            .where(eq(muallimProfiliTable.userId, muallimId));
+        }
       }
-    }
+    });
 
     res.json({ ok: true });
   } catch (err) {
