@@ -36,17 +36,15 @@ type PathItem =
 // Visina svakog polja (vertikalni razmak između susjednih polja na mapi).
 // 130px daje ugodan ritam — ni stiješnjeno ni predugo skrolovanje.
 const FIELD_GAP_PX = 130;
-// Horizontalna amplituda serpentine putanje kao % od širine kontejnera.
-// Manja amplituda — krugovi ostaju blizu sredine kontejnera gdje staza
-// na pozadinskoj slici zaista prolazi (slika ima blage zavoje, ne široke).
-const SERP_AMPLITUDE = 14;
-// Centar oscilacije.
+// Krugovi se postavljaju centralno (kolona). Pozadinska slika ima vlastitu
+// vijugavu stazu koja se ponavlja kao tile — pošto je njena frekvencija
+// nezavisna od broja lekcija po tile-u, pokušaji da se krugovi matematički
+// poklope sa stazom djeluju neuredno. Stoga je staza puko dekorativni
+// ambijent, a krugovi formiraju jasnu, čitljivu vertikalnu putanju.
 const SERP_CENTER = 50;
 
-// Po indeksu u putanji daje horizontalnu poziciju u procentima — sinusoida
-// za prirodan S-zavoj sličan vijugavoj stazi na pozadini.
-function leftPercentFor(index: number): number {
-  return SERP_CENTER + SERP_AMPLITUDE * Math.sin(index * 0.55);
+function leftPercentFor(_index: number): number {
+  return SERP_CENTER;
 }
 
 export default function Nivo1MapaPage() {
