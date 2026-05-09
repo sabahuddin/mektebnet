@@ -234,7 +234,24 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_screentime_sec integer NOT NULL DEFAULT 0;`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS users_last_seen_idx ON users (last_seen_at);`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence) ready");
+    // Prilozi catch-up (idempotent). Tabela prilozi je nastala prije Drizzle
+    // baseline-a (0000_*.sql) na nekim okruženjima, pa migration tracker ne
+    // dodaje kolone iz baseline-a. Bez ovoga POST /api/admin/prilozi/:id
+    // pada sa 500 ("column does not exist") jer schema/INSERT očekuju
+    // kind/external_url/approved/uploaded_by_*. Idempotent ALTER pokriva
+    // svaki slučaj. Defaults odgovaraju Drizzle schemi.
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS kind varchar(20) NOT NULL DEFAULT 'file';`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS external_url text;`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS approved boolean NOT NULL DEFAULT false;`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_role varchar(20);`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_user_id integer;`);
+    // Stored_name/file_size/mime_type imaju defaults u baseline-u; dodaj
+    // defaults i ovdje za svaki slučaj (NOT NULL bez defaulta = INSERT pada).
+    await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name SET DEFAULT '';`);
+    await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN file_size SET DEFAULT 0;`);
+    await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN mime_type SET DEFAULT 'application/octet-stream';`);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

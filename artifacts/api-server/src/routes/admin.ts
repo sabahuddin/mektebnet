@@ -273,7 +273,15 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
       }).returning();
       res.json(inserted);
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      console.error("[POST /prilozi/:lekcijaId] insert failed:", {
+        lekcijaId: req.params.lekcijaId,
+        file: req.file && { name: req.file.originalname, size: req.file.size, stored: req.file.filename },
+        errCode: e?.code,
+        errMessage: e?.message,
+        errDetail: e?.detail,
+        stack: e?.stack,
+      });
+      res.status(500).json({ error: "Greška servera pri snimanju priloga. Pokušaj ponovo." });
     }
   });
 });
