@@ -65,15 +65,21 @@ export default function Nivo1MapaPage() {
     return lekcijeSorted.filter((l) => zavrseneSet.has(l.id)).length;
   }, [lekcijeSorted, zavrseneSet]);
 
-  const allDone = lekcijeSorted.length > 0 && completedCount >= lekcijeSorted.length;
+  // Vrata se otključavaju SAMO kad je završeno svih 64 lekcije Nivoa 1.
+  // Ne koristimo `lekcijeSorted.length` jer bi to omogućilo otvaranje vrata
+  // ako baza ima manje od 64 lekcija (greška seeda, lekcija u izradi, itd.).
+  const REQUIRED_FOR_DOOR = 64;
+  const allDone = completedCount >= REQUIRED_FOR_DOOR;
 
-  // Indeks trenutnog polja u snake-u (prva nezavršena lekcija; ako su sve gotove → Vrata).
+  // Indeks trenutnog polja u snake-u (prva nezavršena lekcija; ako je svih
+  // 64 završeno → pčela na Vratima).
   const currentCellIndex = useMemo(() => {
     for (let i = 0; i < lekcijeSorted.length; i++) {
       if (!zavrseneSet.has(lekcijeSorted[i].id)) return i;
     }
-    return TOTAL_CELLS - 1; // sve završeno → pčela na Vratima
-  }, [lekcijeSorted, zavrseneSet]);
+    if (completedCount >= REQUIRED_FOR_DOOR) return TOTAL_CELLS - 1;
+    return Math.min(lekcijeSorted.length, TOTAL_CELLS - 2);
+  }, [lekcijeSorted, zavrseneSet, completedCount]);
 
   // Pretvori linearni indeks u (row, col) u snake patternu.
   function rowColFor(i: number): { row: number; col: number } {
