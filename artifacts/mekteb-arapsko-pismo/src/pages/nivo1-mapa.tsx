@@ -37,7 +37,9 @@ type PathItem =
 // 130px daje ugodan ritam — ni stiješnjeno ni predugo skrolovanje.
 const FIELD_GAP_PX = 130;
 // Horizontalna amplituda serpentine putanje kao % od širine kontejnera.
-const SERP_AMPLITUDE = 32;
+// Manja amplituda — krugovi ostaju blizu sredine kontejnera gdje staza
+// na pozadinskoj slici zaista prolazi (slika ima blage zavoje, ne široke).
+const SERP_AMPLITUDE = 14;
 // Centar oscilacije.
 const SERP_CENTER = 50;
 
@@ -187,32 +189,6 @@ export default function Nivo1MapaPage() {
         {/* Blagi zeleni overlay da se polja bolje vide preko pozadine */}
         <div className="absolute inset-0 bg-emerald-50/15 pointer-events-none" />
 
-        {/* SVG putanja koja povezuje polja — krivulje između susjednih kruga. */}
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          preserveAspectRatio="none"
-          viewBox={`0 0 100 ${containerHeight}`}
-        >
-          {path.map((_, i) => {
-            if (i === 0) return null;
-            const x1 = leftPercentFor(i - 1);
-            const x2 = leftPercentFor(i);
-            const y1 = containerHeight - (i) * FIELD_GAP_PX;
-            const y2 = containerHeight - (i + 1) * FIELD_GAP_PX;
-            const cx = (x1 + x2) / 2;
-            return (
-              <path
-                key={i}
-                d={`M ${x1} ${y1} Q ${cx} ${(y1 + y2) / 2} ${x2} ${y2}`}
-                stroke="rgba(255,255,255,0.55)"
-                strokeWidth="1.2"
-                strokeDasharray="2 2"
-                fill="none"
-              />
-            );
-          })}
-        </svg>
-
         {/* Polja (lekcije + medaljoni) */}
         {path.map((item, i) => {
           const leftPct = leftPercentFor(i);
@@ -280,7 +256,7 @@ export default function Nivo1MapaPage() {
                   <span className="absolute inset-0 rounded-full bg-amber-300 animate-ping opacity-70" />
                 )}
                 <div
-                  className={`relative w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-transform group-hover:scale-110 ${
+                  className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-transform group-hover:scale-110 ${
                     earned
                       ? `bg-gradient-to-br ${boje.bg} ring-4 ring-white ${boje.glow} shadow-2xl`
                       : unlocked
@@ -289,11 +265,11 @@ export default function Nivo1MapaPage() {
                   }`}
                 >
                   {earned ? (
-                    <Sparkles className="w-9 h-9 text-white drop-shadow" strokeWidth={2.5} />
+                    <Sparkles className="w-7 h-7 text-white drop-shadow" strokeWidth={2.5} />
                   ) : unlocked ? (
-                    <Medal className="w-9 h-9 text-white drop-shadow" strokeWidth={2.5} />
+                    <Medal className="w-7 h-7 text-white drop-shadow" strokeWidth={2.5} />
                   ) : (
-                    <Lock className="w-8 h-8 text-gray-500" />
+                    <Lock className="w-6 h-6 text-gray-500" />
                   )}
                 </div>
               </div>
