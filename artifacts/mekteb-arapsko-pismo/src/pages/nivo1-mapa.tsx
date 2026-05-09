@@ -79,11 +79,17 @@ export default function Nivo1MapaPage() {
   }, [lekcijeSorted, zavrseneSet, allDone]);
 
   const currentLogicalRow = Math.floor(currentCellIndex / COLS);
-  // Otkrivenih redova: bar 7, ili currentRow+3 (2 reda iznad za "namamiti" na nastavak).
+  // Otkrivenih redova: bar 7, ili currentRow+4 (3 reda iznad pčele otkrivena).
+  // Tako kad učenik završi lekciju 20 (red 4 → currentRow postaje 5 jer ide na
+  // lekciju 21), revealedRows postaje 9 → otkriveni redovi 0-8 → lekcije 1-45.
   const revealedRows = Math.max(
     INITIAL_VISIBLE_ROWS,
-    Math.min(TOTAL_ROWS, currentLogicalRow + 3),
+    Math.min(TOTAL_ROWS, currentLogicalRow + 4),
   );
+  // Granica do koje su lekcije OTKLJUČANE i klikabilne. Sve preko ovoga
+  // se prikazuje kao zaključano (sivi blijedi krug), ali se može vidjeti
+  // skrolovanjem prema gore.
+  const unlockedCellCount = revealedRows * COLS;
 
   // Snake mapping: logički indeks → (logicalRow, col).
   function rowColFor(i: number): { logicalRow: number; col: number } {
@@ -93,8 +99,9 @@ export default function Nivo1MapaPage() {
     return { logicalRow, col };
   }
   // Bottom-up render: logički red 0 (lekcija 1) ide na DNO grida.
+  // Sad uvijek renderujemo svih TOTAL_ROWS (13) da učenik može scrolati do Vrata.
   function displayRowFor(logicalRow: number): number {
-    return revealedRows - 1 - logicalRow;
+    return TOTAL_ROWS - 1 - logicalRow;
   }
 
   // Auto-scroll do trenutne lekcije (kad se data učita)
@@ -183,7 +190,6 @@ export default function Nivo1MapaPage() {
       >
         <div className="relative flex-1 flex flex-col">
           <PathSvg
-            revealedRows={revealedRows}
             rowColFor={rowColFor}
             displayRowFor={displayRowFor}
           />
@@ -191,16 +197,16 @@ export default function Nivo1MapaPage() {
             className="relative grid items-center flex-1"
             style={{
               gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-              gridTemplateRows: `repeat(${revealedRows}, minmax(64px, 1fr))`,
-              minHeight: `${revealedRows * 78}px`,
+              gridTemplateRows: `repeat(${TOTAL_ROWS}, minmax(64px, 1fr))`,
+              minHeight: `${TOTAL_ROWS * 78}px`,
             }}
           >
             {Array.from({ length: TOTAL_CELLS }).map((_, i) => {
               const { logicalRow, col } = rowColFor(i);
-              if (logicalRow >= revealedRows) return null;
               const displayRow = displayRowFor(logicalRow);
               const isCurrent = i === currentCellIndex;
               const isLast = i === TOTAL_CELLS - 1;
+              const isLocked = i >= unlockedCellCount;
 
               if (isLast) {
                 return (
@@ -260,23 +266,26 @@ export default function Nivo1MapaPage() {
                 <button
                   key={`l-${lekcija.id}`}
                   data-cell-index={i}
-                  onClick={() => setLocation(`/ilmihal/${lekcija.slug}`)}
-                  className="relative flex items-center justify-center"
+                  onClick={() => !isLocked && setLocation(`/ilmihal/${lekcija.slug}`)}
+                  disabled={isLocked && !isDone}
+                  className="relative flex items-center justify-center disabled:cursor-not-allowed"
                   style={{ gridRow: displayRow + 1, gridColumn: col + 1 }}
                   data-testid={`mapa-polje-lekcija-${lekcija.id}`}
-                  title={lekcija.naslov}
+                  title={isLocked ? `Zaključano — završi prethodne lekcije` : lekcija.naslov}
                 >
                   <div className="relative">
                     {isCurrent && (
                       <span className="absolute inset-0 rounded-full bg-amber-300 animate-ping opacity-70" />
                     )}
                     <div
-                      className={`relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-extrabold text-base sm:text-xl shadow-md transition-transform active:scale-95 hover:scale-110 ${
+                      className={`relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-extrabold text-base sm:text-xl shadow-md transition-transform ${
                         isDone
-                          ? "bg-gradient-to-br from-amber-300 to-amber-500 text-amber-900 ring-2 ring-amber-700/40"
+                          ? "bg-gradient-to-br from-amber-300 to-amber-500 text-amber-900 ring-2 ring-amber-700/40 active:scale-95 hover:scale-110"
                           : isCurrent
-                            ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-900 ring-4 ring-white"
-                            : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-900 ring-2 ring-amber-700/30"
+                            ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-900 ring-4 ring-white active:scale-95 hover:scale-110"
+                            : isLocked
+                              ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-600 ring-2 ring-gray-500/40 opacity-70"
+                              : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-900 ring-2 ring-amber-700/30 active:scale-95 hover:scale-110"
                       }`}
                     >
                       {isDone ? (
@@ -294,7 +303,6 @@ export default function Nivo1MapaPage() {
           {currentCellIndex >= 0 && currentCellIndex < TOTAL_CELLS && (
             <BeeOnGrid
               currentIndex={currentCellIndex}
-              revealedRows={revealedRows}
               rowColFor={rowColFor}
               displayRowFor={displayRowFor}
             />
@@ -398,21 +406,18 @@ function MedaljonHex({
 
 // ─── Snake path (bottom-up) ──────────────────────────────────────────────
 function PathSvg({
-  revealedRows,
   rowColFor,
   displayRowFor,
 }: {
-  revealedRows: number;
   rowColFor: (i: number) => { logicalRow: number; col: number };
   displayRowFor: (lr: number) => number;
 }) {
   const points: string[] = [];
   for (let i = 0; i < TOTAL_CELLS; i++) {
     const { logicalRow, col } = rowColFor(i);
-    if (logicalRow >= revealedRows) break;
     const displayRow = displayRowFor(logicalRow);
     const xPct = ((col + 0.5) / COLS) * 100;
-    const yPct = ((displayRow + 0.5) / Math.max(revealedRows, 1)) * 100;
+    const yPct = ((displayRow + 0.5) / TOTAL_ROWS) * 100;
     points.push(`${xPct},${yPct}`);
   }
   return (
@@ -438,20 +443,17 @@ function PathSvg({
 // ─── Pčela ───────────────────────────────────────────────────────────────
 function BeeOnGrid({
   currentIndex,
-  revealedRows,
   rowColFor,
   displayRowFor,
 }: {
   currentIndex: number;
-  revealedRows: number;
   rowColFor: (i: number) => { logicalRow: number; col: number };
   displayRowFor: (lr: number) => number;
 }) {
   const { logicalRow, col } = rowColFor(currentIndex);
-  if (logicalRow >= revealedRows) return null;
   const displayRow = displayRowFor(logicalRow);
   const xPct = ((col + 0.5) / COLS) * 100;
-  const yPct = ((displayRow + 0.5) / Math.max(revealedRows, 1)) * 100;
+  const yPct = ((displayRow + 0.5) / TOTAL_ROWS) * 100;
   return (
     <motion.div
       className="absolute pointer-events-none z-20"
