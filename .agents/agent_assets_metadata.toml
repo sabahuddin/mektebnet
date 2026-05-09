@@ -630,6 +630,18 @@ uri = "file://attached_assets/mapa-nivo1-vrh-dzamija.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "uA6P7m7BmPKoTwtLAjsm8"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/mapa/tile-meadow.png"
+type = "image"
+title = "straight meadow path tile"
+
+[[generated]]
+id = "CQdn5oR-9WUizidoYk08g"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/mapa/vrh-dzamija.png"
+type = "image"
+title = "Pixar mosque beehive top"
+
 [[outputs]]
 id = "70fM7x_DVtCcdVseXrONt"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/audio/slogovi/d983a102c1a8.mp3"
