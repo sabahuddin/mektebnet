@@ -128,14 +128,8 @@ export default function Nivo1MapaPage() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 overflow-auto"
-      style={{
-        backgroundColor: "#FEF3C7",
-        backgroundImage: "url('/images/mapa/honey-board-svjetla.png')",
-        backgroundSize: "100% auto",
-        backgroundRepeat: "repeat-y",
-        backgroundPosition: "center top",
-      }}
+      className="fixed inset-0 z-50 overflow-auto mapa-honey-bg"
+      style={{ backgroundColor: "#FEF3C7" }}
       data-testid="mapa-fullscreen"
     >
       {/* TOP BAR — counter (lijevo), 6 medaljona (sredina), X (desno) — sve sticky */}

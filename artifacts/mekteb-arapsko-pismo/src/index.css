@@ -159,6 +159,45 @@
     }
   }
 
+  /* === MAPA pozadina (Nivo 1) ===
+     Isti princip kao lekcija: kremasta podloga + dekorativne bočne
+     trake (košnice, saće, pčele, cvijeće) izvan širine table sa
+     brojevima, tako da brojevi nikad ne prelaze preko dekoracija. */
+  .mapa-honey-bg {
+    position: fixed;
+  }
+  .mapa-honey-bg::before,
+  .mapa-honey-bg::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 18vw;
+    max-width: 280px;
+    min-width: 200px;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/images/lekcija-bg-svjetla.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  .mapa-honey-bg::before {
+    left: 0;
+    background-position: left center;
+  }
+  .mapa-honey-bg::after {
+    right: 0;
+    background-position: right center;
+  }
+  /* Tabla sa brojevima je max-w-xl (576px). Ispod ~1024px nema dovoljno
+     mjesta sa strane — sklanjamo trake da brojevi imaju vazduh. */
+  @media (max-width: 1024px) {
+    .mapa-honey-bg::before,
+    .mapa-honey-bg::after {
+      display: none;
+    }
+  }
+
   /* Specific styles for Arabic text to ensure beautiful rendering */
   .arabic-text {
     font-family: var(--font-arabic);
