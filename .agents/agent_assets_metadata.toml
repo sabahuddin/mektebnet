@@ -959,3 +959,9 @@ id = "i6Z4KEMXYguZ9kPseDC_O"
 uri = "file://attached_assets/mapa-nivo1-pozadina-v3.png"
 type = "image"
 title = "Mapa Nivo 1 - pozadina v3 (proplanci, džamija u daljini)"
+
+[[outputs]]
+id = "2m8QotI2eK2NXBSsriqhd"
+uri = "file://artifacts/mekteb-arapsko-pismo/public/images/mapa/honey-board.png"
+type = "image"
+title = "honey-board.png — slika koja se koristi kao pozadina lekcije (lijeva i desna traka)"
