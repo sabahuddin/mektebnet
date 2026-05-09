@@ -1839,11 +1839,7 @@ export default function IlmihalLekcijaPage() {
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
 
-  // Medeni ambijent (pčele/saće/cvijeće) na body-ju samo dok je lekcija otvorena.
-  useEffect(() => {
-    document.body.classList.add("lekcija-honey-bg");
-    return () => document.body.classList.remove("lekcija-honey-bg");
-  }, []);
+  // Lekcija stranica koristi default Layout pozadinu — bez dodatnih dekoracija.
 
   // Anti-cheat gate state — sva ČETIRI uslova moraju biti ispunjena da se
   // dugme "Označi kao završeno" otključa za nezavršene lekcije:
@@ -2285,7 +2281,7 @@ export default function IlmihalLekcijaPage() {
       )}
     </AnimatePresence>
     <Layout>
-      <div className="max-w-3xl mx-auto lekcija-honey-col">
+      <div className="max-w-3xl mx-auto">
         {/* Admin toolbar (samo admin) */}
         {user?.role === "admin" && (
           <div className="flex items-center gap-2 mb-4 justify-end flex-wrap">
