@@ -2286,121 +2286,94 @@ export default function IlmihalLekcijaPage() {
     </AnimatePresence>
     <Layout>
       <div className="max-w-3xl mx-auto">
-        {/* Back navigation */}
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={goBack}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
-            <ArrowLeft className="w-4 h-4" /> Nazad
-          </button>
-          {user?.role === "admin" && (
-            <>
-              <span className="text-border/70 ml-auto">|</span>
-              <button onClick={async () => {
-                if (!lekcija || !token) return;
-                const isLocked = lekcija.locked;
-                const url = `/admin/ilmihal/${lekcija.id}/${isLocked ? "unlock" : "lock"}`;
-                if (isLocked && !confirm("Otključati lekciju? Nakon otključavanja je možeš uređivati ili je auto-skripte mogu prepisati.")) return;
-                try {
-                  await apiRequest("POST", url, {}, token);
-                  setLekcija(prev => prev ? { ...prev, locked: !isLocked } : prev);
-                  toast({ title: isLocked ? "Otključano" : "🔒 Zaključano", description: isLocked ? "Lekcija je otključana." : "Sadržaj je zaštićen od izmjena." });
-                } catch {
-                  toast({ title: "Greška", description: "Ne mogu promijeniti status zaključavanja.", variant: "destructive" });
-                }
-              }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${lekcija?.locked ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                title={lekcija?.locked ? (lekcija.lockedNote || "Lekcija je zaključana") : "Zaključaj lekciju (zaštita od auto-skripti)"}>
-                {lekcija?.locked ? <><Lock className="w-3.5 h-3.5" /> Zaključano</> : <><Unlock className="w-3.5 h-3.5" /> Zaključaj</>}
-              </button>
-              <button onClick={() => { setNaslovDraft(lekcija?.naslov || ""); setEditingNaslov(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
-                <PenLine className="w-3.5 h-3.5" /> Uredi naziv
-              </button>
-              <button onClick={() => setShowEditor(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
-                <FilePen className="w-3.5 h-3.5" /> Uredi sadržaj
-              </button>
-            </>
-          )}
-        </div>
+        {/* Admin toolbar (samo admin) */}
+        {user?.role === "admin" && (
+          <div className="flex items-center gap-2 mb-4 justify-end flex-wrap">
+            <button onClick={async () => {
+              if (!lekcija || !token) return;
+              const isLocked = lekcija.locked;
+              const url = `/admin/ilmihal/${lekcija.id}/${isLocked ? "unlock" : "lock"}`;
+              if (isLocked && !confirm("Otključati lekciju? Nakon otključavanja je možeš uređivati ili je auto-skripte mogu prepisati.")) return;
+              try {
+                await apiRequest("POST", url, {}, token);
+                setLekcija(prev => prev ? { ...prev, locked: !isLocked } : prev);
+                toast({ title: isLocked ? "Otključano" : "🔒 Zaključano", description: isLocked ? "Lekcija je otključana." : "Sadržaj je zaštićen od izmjena." });
+              } catch {
+                toast({ title: "Greška", description: "Ne mogu promijeniti status zaključavanja.", variant: "destructive" });
+              }
+            }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${lekcija?.locked ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              title={lekcija?.locked ? (lekcija.lockedNote || "Lekcija je zaključana") : "Zaključaj lekciju (zaštita od auto-skripti)"}>
+              {lekcija?.locked ? <><Lock className="w-3.5 h-3.5" /> Zaključano</> : <><Unlock className="w-3.5 h-3.5" /> Zaključaj</>}
+            </button>
+            <button onClick={() => { setNaslovDraft(lekcija?.naslov || ""); setEditingNaslov(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
+              <PenLine className="w-3.5 h-3.5" /> Uredi naziv
+            </button>
+            <button onClick={() => setShowEditor(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+              <FilePen className="w-3.5 h-3.5" /> Uredi sadržaj
+            </button>
+          </div>
+        )}
 
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-5">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                {NIVO_LABELS[lekcija.nivo] || `Nivo ${lekcija.nivo}`}
-              </span>
-              {completedIds.has(lekcija.id) && (
-                <span
-                  className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200"
-                  data-testid="badge-lekcija-zavrsena"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={3} />
-                  Završeno
-                </span>
-              )}
-              {!completedIds.has(lekcija.id) && (() => {
-                const firstUndone = lekcijeStrip.find(l => !completedIds.has(l.id));
-                return firstUndone?.id === lekcija.id ? (
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border-2 border-amber-300"
-                    data-testid="badge-lekcija-sljedeca"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Sljedeća lekcija
-                  </span>
-                ) : null;
-              })()}
-            </div>
-            {editingNaslov && user?.role === "admin" ? (
-              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                <input
-                  autoFocus
-                  type="text"
-                  value={naslovDraft}
-                  onChange={(e) => setNaslovDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); handleSaveNaslov(); }
-                    if (e.key === "Escape") { e.preventDefault(); setEditingNaslov(false); }
-                  }}
+        {/* Header — naslov centriran, Nazad ispod */}
+        <div className="mb-5">
+          {editingNaslov && user?.role === "admin" ? (
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              <input
+                autoFocus
+                type="text"
+                value={naslovDraft}
+                onChange={(e) => setNaslovDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleSaveNaslov(); }
+                  if (e.key === "Escape") { e.preventDefault(); setEditingNaslov(false); }
+                }}
+                disabled={savingNaslov}
+                className="flex-1 text-2xl font-extrabold text-foreground leading-tight bg-white border-2 border-sky-300 focus:border-sky-500 focus:outline-none rounded-xl px-3 py-1.5 min-w-0"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveNaslov}
                   disabled={savingNaslov}
-                  className="flex-1 text-2xl font-extrabold text-foreground leading-tight bg-white border-2 border-sky-300 focus:border-sky-500 focus:outline-none rounded-xl px-3 py-1.5 min-w-0"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSaveNaslov}
-                    disabled={savingNaslov}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50">
-                    {savingNaslov ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Spasi
-                  </button>
-                  <button
-                    onClick={() => setEditingNaslov(false)}
-                    disabled={savingNaslov}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50">
-                    <X className="w-3.5 h-3.5" /> Otkaži
-                  </button>
-                </div>
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50">
+                  {savingNaslov ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Spasi
+                </button>
+                <button
+                  onClick={() => setEditingNaslov(false)}
+                  disabled={savingNaslov}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50">
+                  <X className="w-3.5 h-3.5" /> Otkaži
+                </button>
               </div>
-            ) : (
-              <h1 className="text-2xl font-extrabold text-foreground leading-tight text-center">{lekcija.naslov}</h1>
-            )}
-            {(user?.role === "admin" || user?.role === "muallim") && (() => {
-              const nextUndone = lekcijeStrip.find(l => !completedIds.has(l.id) && l.id !== lekcija.id);
-              if (!nextUndone) return null;
-              return (
+            </div>
+          ) : (
+            <h1 className="text-2xl font-extrabold text-foreground leading-tight text-center">{lekcija.naslov}</h1>
+          )}
+          <div className="flex justify-center mt-2">
+            <button onClick={goBack}
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
+              <ArrowLeft className="w-4 h-4" /> Nazad
+            </button>
+          </div>
+          {(user?.role === "admin" || user?.role === "muallim") && (() => {
+            const nextUndone = lekcijeStrip.find(l => !completedIds.has(l.id) && l.id !== lekcija.id);
+            if (!nextUndone) return null;
+            return (
+              <div className="flex justify-center mt-1">
                 <button
                   onClick={() => setLocation(`/ilmihal/${nextUndone.slug}`)}
-                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-800 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-800 hover:underline"
                   data-testid="link-sljedeca-lekcija"
                 >
                   <ChevronRight className="w-4 h-4" />
                   <span className="text-muted-foreground font-semibold">Sljedeća:</span>
                   <span className="truncate max-w-[16rem] sm:max-w-xs">{nextUndone.naslov}</span>
                 </button>
-              );
-            })()}
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Print button */}
