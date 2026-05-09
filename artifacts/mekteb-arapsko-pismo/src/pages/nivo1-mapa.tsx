@@ -36,9 +36,6 @@ const COLS = 5;
 const TOTAL_CELLS = 64; // 64 lekcije; Vrata su zaseban element
 const LESSON_ROWS = Math.ceil(TOTAL_CELLS / COLS); // 13
 const TOTAL_ROWS = LESSON_ROWS; // 13: vrata zauzimaju prazno mjesto u zadnjem redu
-// Početno otkriveno: prvih 7 redova = 35 polja. Novi red se otkriva
-// dok učenik napreduje (currentRow + 2 buffer).
-const INITIAL_VISIBLE_ROWS = 7;
 const REQUIRED_FOR_DOOR = 64;
 
 export default function Nivo1MapaPage() {
@@ -83,15 +80,16 @@ export default function Nivo1MapaPage() {
   const currentLogicalRow = currentCellIndex < 0
     ? LESSON_ROWS - 1
     : Math.floor(currentCellIndex / COLS);
-  // Otkrivenih lekcijskih redova: bar 7, ili currentRow+4 (3 reda iznad pčele otkrivena).
-  const revealedRows = Math.max(
-    INITIAL_VISIBLE_ROWS,
-    Math.min(LESSON_ROWS, currentLogicalRow + 4),
+  // Otključavanje po MEDALJONIMA (blokovi po 10 lekcija):
+  //   - Start: 1-10 otključano (žuto), čeka se 1. medaljon (na 10 lekcija).
+  //   - Kad se osvoji 1. medaljon (completed=10): otključa se 11-20.
+  //   - Kad se osvoji 2. medaljon (completed=20): otključa se 21-30.
+  //   - ... i tako dalje, do 61-64 nakon 6. medaljona.
+  // Sve preko ove granice je zaključano (sivo), ali vidljivo skrolovanjem.
+  const unlockedCellCount = Math.min(
+    TOTAL_CELLS,
+    Math.floor(completedCount / 10) * 10 + 10,
   );
-  // Granica do koje su lekcije OTKLJUČANE i klikabilne. Sve preko ovoga
-  // se prikazuje kao zaključano (sivi blijedi krug), ali se može vidjeti
-  // skrolovanjem prema gore.
-  const unlockedCellCount = revealedRows * COLS;
 
   // Snake mapping: logički indeks → (logicalRow, col).
   function rowColFor(i: number): { logicalRow: number; col: number } {
