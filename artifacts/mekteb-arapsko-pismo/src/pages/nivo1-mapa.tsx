@@ -241,7 +241,7 @@ export default function Nivo1MapaPage() {
                     style={{ gridRow: displayRow + 1, gridColumn: col + 1 }}
                     className="flex items-center justify-center"
                   >
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-amber-200/40 ring-2 ring-amber-700/20" />
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/30 ring-2 ring-white/40" />
                   </div>
                 );
               }
@@ -268,7 +268,7 @@ export default function Nivo1MapaPage() {
                           : isCurrent
                             ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-900 ring-4 ring-white active:scale-95 hover:scale-110"
                             : isLocked
-                              ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-600 ring-2 ring-gray-500/40 opacity-70"
+                              ? "bg-white/30 text-gray-700/80 ring-2 ring-white/50 opacity-90"
                               : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-900 ring-2 ring-amber-700/30 active:scale-95 hover:scale-110"
                       }`}
                     >
@@ -413,8 +413,8 @@ function PathSvg({
       <polyline
         points={points.join(" ")}
         fill="none"
-        stroke="rgba(180, 83, 9, 0.5)"
-        strokeWidth="2.5"
+        stroke="rgba(255, 255, 255, 0.55)"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeDasharray="0.9 1.6"
