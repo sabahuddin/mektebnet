@@ -411,11 +411,27 @@ export default function GrupaPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
-        <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Nazad na panel
-        </button>
+      {/* Sticky traka na vrhu — uvijek vidljiva pri skrolu, jasno pokazuje
+          u kojoj smo grupi i kako izaći nazad na panel. Header layout-a je
+          h-16 (top-16), pa naša traka sjeda odmah ispod njega. */}
+      <div className="sticky top-16 z-30 -mx-4 px-4 py-2.5 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 border-b border-emerald-200/70 shadow-sm mb-6">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
+          <button
+            onClick={() => setLocation("/muallim?tab=grupe")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold text-sm transition-colors shrink-0"
+            data-testid="btn-nazad-na-panel"
+          >
+            <ArrowLeft className="w-4 h-4" /> Nazad
+          </button>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <GraduationCap className="w-4 h-4 text-emerald-700 shrink-0" />
+            <span className="font-extrabold text-foreground truncate">{grupa.naziv}</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">· {studentiGrupe.length} učenika</span>
+          </div>
+        </div>
+      </div>
 
+      <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-14 h-14 bg-gradient-to-br from-secondary to-emerald-600 rounded-2xl flex items-center justify-center shadow-md">
             <GraduationCap className="w-7 h-7 text-white" />

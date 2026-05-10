@@ -575,14 +575,11 @@ export default function MuallimPanel() {
   return (
     <Layout>
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-secondary to-emerald-600 rounded-2xl flex items-center justify-center shadow-md">
-            <GraduationCap className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-secondary to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+            <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-extrabold text-foreground">Muallim panel</h1>
-            <p className="text-muted-foreground text-sm">Dobrodošao/la, {user.displayName}</p>
-          </div>
+          <h1 className="text-xl font-extrabold text-foreground">Muallim panel</h1>
         </div>
 
         {/* H5P statistika, H5P uputstvo i Profil su sada tabovi (ne više
