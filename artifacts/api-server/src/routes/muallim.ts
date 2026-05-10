@@ -1511,6 +1511,190 @@ router.get("/grupa/:id/statistika", async (req, res) => {
   }
 });
 
+// GET /api/muallim/dashboard-stats — agregat za panel pregled (cijeli mekteb)
+router.get("/dashboard-stats", async (req, res) => {
+  try {
+    const muallimId = req.user!.userId;
+    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
+    const skolskaGodina = profil?.tekucaSkolskaGodina || null;
+
+    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+    const grupeIds = grupe.map(g => g.id);
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.muallimId, muallimId));
+    const ucenikIds = profili.map(p => p.userId);
+    const aktivnihUcenika = profili.filter(p => !p.isArchived).length;
+
+    let prosjekPrisustva: number | null = null;
+    let prosjekOcjena: number | null = null;
+    let ukupnoLekcijaZavrseno = 0;
+    let ukupnoKvizovaUradeno = 0;
+    let ukupnoBodova = 0;
+    let danasnjePrisustvoPct: number | null = null;
+
+    if (ucenikIds.length > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      const [prisustvo, ocjene, kvizovi, lekcije, danasnje] = await Promise.all([
+        db.select().from(priustvoTable).where(eq(priustvoTable.muallimId, muallimId)),
+        db.select().from(ocjeneTable).where(eq(ocjeneTable.muallimId, muallimId)),
+        db.select().from(kvizRezultatiTable).where(inArray(kvizRezultatiTable.userId, ucenikIds)),
+        db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
+          .where(and(inArray(korisnikNapredakTable.userId, ucenikIds), eq(korisnikNapredakTable.zavrsen, true))),
+        db.select().from(priustvoTable)
+          .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, today))),
+      ]);
+
+      const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
+      prosjekPrisustva = prisustvo.length > 0 ? Math.round((prisutnih / prisustvo.length) * 100) : null;
+      prosjekOcjena = ocjene.length > 0
+        ? Math.round((ocjene.reduce((a, o) => a + o.ocjena, 0) / ocjene.length) * 10) / 10
+        : null;
+      ukupnoLekcijaZavrseno = lekcije.length;
+      ukupnoKvizovaUradeno = kvizovi.length;
+      ukupnoBodova = kvizovi.reduce((a, k) => a + (k.bodovi || 0), 0);
+
+      const danasPrisutnih = danasnje.filter(p => p.status === "prisutan").length;
+      danasnjePrisustvoPct = danasnje.length > 0 ? Math.round((danasPrisutnih / danasnje.length) * 100) : null;
+    }
+
+    const denom = aktivnihUcenika || profili.length || 1;
+    res.json({
+      ukupnoUcenika: profili.length,
+      aktivnihUcenika,
+      ukupnoGrupa: grupe.length,
+      skolskaGodina,
+      prosjekPrisustva,
+      prosjekOcjena,
+      ukupnoLekcijaZavrseno,
+      prosjekLekcijaPoUceniku: Math.round((ukupnoLekcijaZavrseno / denom) * 10) / 10,
+      ukupnoKvizovaUradeno,
+      prosjekKvizovaPoUceniku: Math.round((ukupnoKvizovaUradeno / denom) * 10) / 10,
+      ukupnoBodova,
+      danasnjePrisustvoPct,
+      danasnjeEvidentirano: ucenikIds.length > 0 ? (await db.select().from(priustvoTable)
+        .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, new Date().toISOString().split("T")[0])))).length : 0,
+    });
+  } catch (err) {
+    console.error("Dashboard stats error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/statistika-mekteb — agregat statistike kroz sve grupe muallima
+router.get("/statistika-mekteb", async (req, res) => {
+  try {
+    const muallimId = req.user!.userId;
+    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+
+    if (grupe.length === 0) {
+      res.json({
+        perGrupa: [],
+        global: {
+          ukupnoGrupa: 0, ukupnoUcenika: 0, ukupnoCasova: 0,
+          prosjekPrisustva: null, prosjekOcjena: null,
+          ukupnoKvizova: 0, ukupnoBodova: 0,
+          prosjekLekcijaPoUceniku: 0, prosjekKvizovaPoUceniku: 0,
+        },
+      });
+      return;
+    }
+
+    const perGrupa = await Promise.all(grupe.map(async (g) => {
+      const stats = await getGrupaFullStats(g.id);
+      return {
+        id: g.id,
+        naziv: g.naziv,
+        skolskaGodina: g.skolskaGodina,
+        ukupnoUcenika: stats.ucenici.length,
+        ukupnoCasova: stats.ukupnoCasova,
+        prisustvoPct: stats.grupaPrisustvoPct,
+        prosjekOcjena: stats.grupaProsjekOcjena,
+        ukupnoKvizova: stats.ukupnoKvizova,
+        ukupnoBodova: stats.ukupnoBodovaGrupa,
+        prosjekBodova: stats.prosjekBodovaGrupa,
+        aktivnihProslejSedmice: stats.aktivnihProslejSedmice,
+      };
+    }));
+
+    const totalUcenika = perGrupa.reduce((a, g) => a + g.ukupnoUcenika, 0);
+    const totalCasova = perGrupa.reduce((a, g) => a + g.ukupnoCasova, 0);
+    const totalKvizova = perGrupa.reduce((a, g) => a + g.ukupnoKvizova, 0);
+    const totalBodova = perGrupa.reduce((a, g) => a + g.ukupnoBodova, 0);
+
+    const validPris = perGrupa.filter(g => g.prisustvoPct !== null);
+    const prosjekPrisustva = validPris.length > 0
+      ? Math.round(validPris.reduce((a, g) => a + (g.prisustvoPct || 0) * g.ukupnoUcenika, 0) / Math.max(validPris.reduce((a, g) => a + g.ukupnoUcenika, 0), 1))
+      : null;
+    const validOc = perGrupa.filter(g => g.prosjekOcjena !== null);
+    const prosjekOcjena = validOc.length > 0
+      ? Math.round((validOc.reduce((a, g) => a + (g.prosjekOcjena || 0) * g.ukupnoUcenika, 0) / Math.max(validOc.reduce((a, g) => a + g.ukupnoUcenika, 0), 1)) * 10) / 10
+      : null;
+
+    // Lekcije završeno preko korisnik-napredak za sve učenike svih grupa.
+    const profili = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.muallimId, muallimId));
+    const ucenikIds = profili.map(p => p.userId);
+    const lekcije = ucenikIds.length > 0
+      ? await db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
+          .where(and(inArray(korisnikNapredakTable.userId, ucenikIds), eq(korisnikNapredakTable.zavrsen, true)))
+      : [];
+    const denom = totalUcenika || 1;
+
+    res.json({
+      perGrupa,
+      global: {
+        ukupnoGrupa: grupe.length,
+        ukupnoUcenika: totalUcenika,
+        ukupnoCasova: totalCasova,
+        prosjekPrisustva,
+        prosjekOcjena,
+        ukupnoKvizova: totalKvizova,
+        ukupnoBodova: totalBodova,
+        ukupnoLekcijaZavrseno: lekcije.length,
+        prosjekLekcijaPoUceniku: Math.round((lekcije.length / denom) * 10) / 10,
+        prosjekKvizovaPoUceniku: Math.round((totalKvizova / denom) * 10) / 10,
+      },
+    });
+  } catch (err) {
+    console.error("Statistika mekteb error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/kalendar/sve — objedinjeni kalendar svih grupa muallima
+// Vraća sve kalendar entry-je + plan-lekcija unose svih svojih grupa, sa
+// grupaNaziv labelom za prikaz badgeova.
+router.get("/kalendar/sve", async (req, res) => {
+  try {
+    const muallimId = req.user!.userId;
+    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+    const grupeIds = grupe.map(g => g.id);
+    const grupaMap = new Map(grupe.map(g => [g.id, g.naziv]));
+
+    if (grupeIds.length === 0) {
+      res.json({ kalendar: [], planLekcija: [] });
+      return;
+    }
+
+    const [kalendar, planLekcija] = await Promise.all([
+      db.select().from(mektebKalendarTable)
+        .where(inArray(mektebKalendarTable.grupaId, grupeIds))
+        .orderBy(asc(mektebKalendarTable.datum)),
+      db.select().from(planLekcijaTable)
+        .where(inArray(planLekcijaTable.grupaId, grupeIds))
+        .orderBy(asc(planLekcijaTable.datum), asc(planLekcijaTable.redoslijed)),
+    ]);
+
+    res.json({
+      kalendar: kalendar.map(k => ({ ...k, grupaNaziv: grupaMap.get(k.grupaId) || null })),
+      planLekcija: planLekcija.map(p => ({ ...p, grupaNaziv: grupaMap.get(p.grupaId) || null })),
+    });
+  } catch (err) {
+    console.error("Kalendar sve error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // GET /api/muallim/h5p-stats?grupaId=X
 // Agregira H5P pokušaje učenika date grupe po (prilog × učenik). Za svaki H5P
 // prilog koji je makar jedan učenik iz grupe pokušao vraća: koliko učenika ga
