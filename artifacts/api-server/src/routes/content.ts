@@ -866,7 +866,10 @@ router.post("/kviz-rezultat", requireAuth, async (req, res) => {
     }
 
     const procenat = ukupnoPitanja > 0 ? Math.round((tacniOdgovori / ukupnoPitanja) * 100) : 0;
-    const bodovi = procenat >= 50 ? Math.round(procenat / 10) : 0;
+    // Kapi meda (DB total_hasanat): 2 po tačnom odgovoru kad je rezultat ≥ 50%.
+    // Npr. 20 tačnih = 40 kapi meda. Ranije: procenat/10 (max 10). Povećano
+    // po zahtjevu — znanje vrijedi više nego igrica.
+    const bodovi = procenat >= 50 ? tacniOdgovori * 2 : 0;
 
     const [rezultat] = await db.insert(kvizRezultatiTable).values({
       userId,

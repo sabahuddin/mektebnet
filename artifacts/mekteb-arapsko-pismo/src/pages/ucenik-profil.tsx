@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { aferimForm } from "@/lib/aferim";
 import {
   getSoundEffectsEnabled,
   setSoundEffectsEnabled,
@@ -360,20 +359,18 @@ export default function UcenikProfilPage() {
                     transition={{ delay: 0.15 }}
                     className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 text-amber-900 shadow-lg shadow-amber-400/20"
                   >
-                    <div className="absolute -right-4 -top-4 opacity-25">
-                      <Star className="w-32 h-32 fill-current" />
-                    </div>
+                    <div className="absolute -right-4 -top-4 opacity-25 text-9xl leading-none select-none" aria-hidden>🍯</div>
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
-                        <Star className="w-5 h-5 fill-current" />
-                        <span className="text-sm font-extrabold uppercase tracking-wider">Aferimi</span>
+                        <span className="text-lg" aria-hidden>🍯</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider">Kapi meda</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={totalHasanat} />
                       </div>
                       <div className="text-sm font-bold mt-1 opacity-80">ukupno sakupljeno</div>
                       <div className="text-xs mt-2 opacity-75">
-                        Za svaku završenu lekciju zaradiš nove Aferime ⭐
+                        Za svaku završenu lekciju i kviz zaradiš nove kapi meda 🍯
                       </div>
                     </div>
                   </motion.div>
@@ -385,18 +382,20 @@ export default function UcenikProfilPage() {
                     className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-orange-300 via-orange-400 to-amber-500 text-orange-950 shadow-lg shadow-orange-400/20"
                     data-testid="card-med"
                   >
-                    <div className="absolute -right-4 -top-4 opacity-25 text-9xl leading-none select-none" aria-hidden>🍯</div>
+                    <div className="absolute -right-4 -top-4 opacity-25">
+                      <Star className="w-32 h-32 fill-current" />
+                    </div>
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg" aria-hidden>🍯</span>
-                        <span className="text-sm font-extrabold uppercase tracking-wider">Med</span>
+                        <Star className="w-5 h-5 fill-current" />
+                        <span className="text-sm font-extrabold uppercase tracking-wider">Aferimi</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={totalMed} />
                       </div>
-                      <div className="text-sm font-bold mt-1 opacity-80">slatka nagrada</div>
+                      <div className="text-sm font-bold mt-1 opacity-80">igrom zarađeni</div>
                       <div className="text-xs mt-2 opacity-75">
-                        Med se zarađuje samo igranjem igrica.
+                        Aferimi se zarađuju samo igranjem igrica.
                       </div>
                     </div>
                   </motion.div>
@@ -634,7 +633,7 @@ export default function UcenikProfilPage() {
                     <div className="flex-1 min-w-0">
                       <div className="font-extrabold text-foreground">Nastavi učenje</div>
                       <div className="text-xs text-muted-foreground mb-2">
-                        Završi sljedeću lekciju i zaradi +20 Aferima.
+                        Završi sljedeću lekciju i zaradi +30 kapi meda 🍯.
                       </div>
                       <Button size="sm" className="rounded-xl" onClick={() => setLocation("/ilmihal")}>
                         <BookOpen className="w-4 h-4 mr-1" /> Otvori ilmihal
@@ -678,7 +677,7 @@ export default function UcenikProfilPage() {
                       <div className="bg-white border border-amber-200 rounded-2xl p-4 text-center">
                         <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
                         <div className="text-3xl font-extrabold text-amber-600">{profil.napredak.totalHasanat}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{aferimForm(profil.napredak.totalHasanat)}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? "kap meda" : "kapi meda"}</div>
                       </div>
                       <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-center">
                         <BookOpen className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
@@ -1108,7 +1107,7 @@ export default function UcenikProfilPage() {
                             <p className="font-bold text-foreground truncate">{r.kvizNaslov}</p>
                             <p className="text-sm text-muted-foreground">
                               {r.tacniOdgovori}/{r.ukupnoPitanja} tačnih
-                              {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} {aferimForm(r.bodovi)}</span>}
+                              {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} kapi meda 🍯</span>}
                             </p>
                           </div>
                           <div className="text-sm text-muted-foreground shrink-0">

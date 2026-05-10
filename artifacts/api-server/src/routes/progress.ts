@@ -58,7 +58,10 @@ router.post("/progress/lesson", async (req, res) => {
       .where(eq(studentProgressTable.studentId, studentId))
       .limit(1);
 
-    const hasanatEarned = score >= maxScore * 0.9 ? 20 : 10;
+    // Med (DB kolona total_hasanat — UI je relabelovao u "Kapi meda") za
+    // završenu lekciju: 30 po lekciji. Ranije 10/20 — povećano po zahtjevu
+    // korisnika ("med za znanje, više nagrade za učenje nego za igricu").
+    const hasanatEarned = 30;
     const today = new Date().toISOString().split("T")[0];
 
     if (!progress) {

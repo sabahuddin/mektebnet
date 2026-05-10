@@ -5,7 +5,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogIn, User, Lock, AlertCircle, BookOpen, ShieldCheck } from "lucide-react";
+import { LogIn, User, Lock, AlertCircle, BookOpen, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 function generateCaptcha(): { a: number; b: number; answer: number } {
   const a = Math.floor(Math.random() * 9) + 1;
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [captcha, setCaptcha] = useState(generateCaptcha);
   const [captchaAnswer, setCaptchaAnswer] = useState("");
@@ -110,14 +111,25 @@ export default function LoginPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-10 h-12 rounded-xl border-border/70"
+                  placeholder={showPassword ? "Mekteb1234" : "••••••••"}
+                  className="pl-10 pr-12 h-12 rounded-xl border-border/70"
                   autoComplete="current-password"
                   required
+                  data-testid="input-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(s => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                  aria-label={showPassword ? "Sakrij lozinku" : "Pokaži lozinku"}
+                  data-testid="btn-toggle-password"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 

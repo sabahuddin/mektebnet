@@ -620,30 +620,28 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
       return;
     }
 
-    // Med = score (1:1 mapping). Aferim/Med razdvajanje znači da igrice
-    // više ne hrane Aferim ekonomiju (koja kupuje vrijeme za igru) — Med je
-    // čista gamifikacijska valuta. Idempotentno upis je gore u UPDATE
-    // game_sessions (samo jedan UPDATE uspijeva po sessionId), pa ovaj awarding
-    // se izvrši TAČNO jednom po sesiji. Mali score (>0) preskaču INSERT da
-    // ne pravimo prazne redove za 0-poena partije.
-    if (score > 0) {
+    // Aferimi (DB kolona total_med — UI je relabelovao u "Aferimi") za
+    // odigranu igricu: score / 10 (zaokruženo na manju vrijednost). Ranije
+    // 1:1, ali to je bilo previše brzo — znanje (lekcije/kvizovi) sada daje
+    // 30 / 2-po-pitanju kapi meda, a igrice ~10× sporije aferima. DB kolona
+    // i dalje se zove total_med radi DB stabilnosti, ali UI je "Aferimi".
+    const aferimEarned = score > 0 ? Math.floor(score / 10) : 0;
+    if (aferimEarned > 0) {
       const studentIdStr = String(userId);
       try {
         await db.execute(sql`
           INSERT INTO student_progress (student_id, total_hasanat, total_med, completed_lessons, badges, streak_days, last_activity_date, created_at, updated_at)
-          VALUES (${studentIdStr}, 0, ${score}, '[]'::jsonb, '[]'::jsonb, 0, NULL, NOW(), NOW())
+          VALUES (${studentIdStr}, 0, ${aferimEarned}, '[]'::jsonb, '[]'::jsonb, 0, NULL, NOW(), NOW())
           ON CONFLICT (student_id) DO UPDATE
-            SET total_med = student_progress.total_med + ${score},
+            SET total_med = student_progress.total_med + ${aferimEarned},
                 updated_at = NOW()
         `);
       } catch (medErr) {
-        // Greška u med-awarding-u ne smije srušiti /end response — sesija je
-        // već zatvorena u DB. Logiramo i nastavljamo.
-        req.log.error({ err: medErr, sessionId, score }, "med award failed");
+        req.log.error({ err: medErr, sessionId, score, aferimEarned }, "aferim award failed");
       }
     }
 
-    res.json({ ok: true, sessionId, gameId: session.game_id, score, finalScore: score, durationSec, medEarned: score > 0 ? score : 0 });
+    res.json({ ok: true, sessionId, gameId: session.game_id, score, finalScore: score, durationSec, medEarned: aferimEarned });
   } catch (err) {
     req.log.error({ err }, "games/end failed");
     res.status(500).json({ error: "internal_error" });

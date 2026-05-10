@@ -242,7 +242,7 @@ export default function ZastaveSvijeta() {
             {creditsLoading ? "Učitavam…" : "Pokreni igru"}
           </Button>
           {!creditsLoading && (credits?.secondsRemaining ?? 0) <= 0 && (
-            <p className="text-sm text-red-600 mt-3 font-medium">Nemaš vremena za igre. Završi neku lekciju za nove Aferime.</p>
+            <p className="text-sm text-red-600 mt-3 font-medium">Nemaš vremena za igre. Završi neku lekciju za nove kapi meda 🍯.</p>
           )}
         </Card>
       )}
@@ -254,7 +254,7 @@ export default function ZastaveSvijeta() {
       {state === "no-credit" && (
         <Card className="p-6 bg-amber-50 border-amber-200">
           <p className="font-bold text-foreground mb-2">Nemaš više vremena za igre.</p>
-          <p className="text-sm text-muted-foreground mb-3">Završi lekciju ili kviz da zaradiš nove Aferime.</p>
+          <p className="text-sm text-muted-foreground mb-3">Završi lekciju ili kviz da zaradiš nove kapi meda 🍯.</p>
           <div className="flex gap-2 flex-wrap">
             <Link href="/ilmihal"><Button size="sm" className="rounded-xl">Ilmihal</Button></Link>
             <Link href="/kvizovi"><Button size="sm" variant="outline" className="rounded-xl">Kvizovi</Button></Link>

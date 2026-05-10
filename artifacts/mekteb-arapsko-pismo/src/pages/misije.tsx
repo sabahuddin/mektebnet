@@ -51,8 +51,8 @@ export default function MisijePage() {
         toast({ title: "Već preuzeto", description: resp.message ?? "Nagrada je već preuzeta." });
       } else {
         const parts: string[] = [];
-        if (resp.nagradaAferim > 0) parts.push(`+${resp.nagradaAferim} Aferima ⭐`);
-        if (resp.nagradaMed > 0) parts.push(`+${resp.nagradaMed} Med 🍯`);
+        if (resp.nagradaAferim > 0) parts.push(`+${resp.nagradaAferim} kapi meda 🍯`);
+        if (resp.nagradaMed > 0) parts.push(`+${resp.nagradaMed} Aferima ⭐`);
         toast({ title: "Misija završena!", description: parts.join("  ·  ") || resp.message });
       }
       load();
@@ -180,12 +180,12 @@ function MisijaCard({ m, onClaim, loading }: { m: Misija; onClaim: () => void; l
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 text-xs font-bold">
           {m.nagradaAferim > 0 && (
-            <span className="flex items-center gap-1 text-amber-700">
-              <Star className="w-3.5 h-3.5 fill-current" /> +{m.nagradaAferim}
-            </span>
+            <span className="flex items-center gap-1 text-orange-700">🍯 +{m.nagradaAferim}</span>
           )}
           {m.nagradaMed > 0 && (
-            <span className="flex items-center gap-1 text-orange-700">🍯 +{m.nagradaMed}</span>
+            <span className="flex items-center gap-1 text-amber-700">
+              <Star className="w-3.5 h-3.5 fill-current" /> +{m.nagradaMed}
+            </span>
           )}
         </div>
         {ready && (

@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { aferimForm } from "@/lib/aferim";
 
 interface KvizRezultat {
   id: number;
@@ -109,7 +108,7 @@ export default function Progress() {
               <Star className="w-8 h-8 fill-current" />
             </div>
             <div>
-              <p className="text-sm font-bold uppercase tracking-wider text-yellow-800/70">Ukupno Aferima</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-yellow-800/70">Ukupno kapi meda 🍯</p>
               <p className="text-4xl font-black text-yellow-600">{napredak?.totalHasanat || 0}</p>
             </div>
           </Card>
@@ -162,7 +161,7 @@ export default function Progress() {
                     <p className="font-bold text-foreground truncate">{r.kvizNaslov}</p>
                     <p className="text-sm text-muted-foreground">
                       {r.tacniOdgovori}/{r.ukupnoPitanja} tačnih
-                      {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} {aferimForm(r.bodovi)}</span>}
+                      {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} kapi meda 🍯</span>}
                     </p>
                   </div>
                   <div className="text-sm text-muted-foreground shrink-0">

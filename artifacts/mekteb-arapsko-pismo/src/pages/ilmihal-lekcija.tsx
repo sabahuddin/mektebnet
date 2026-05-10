@@ -16,7 +16,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Maskota } from "@/components/maskota";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
-import { aferimForm } from "@/lib/aferim";
 import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
 const H5PPlayerLazy = lazy(() => import("@/components/h5p-player").then(m => ({ default: m.H5PPlayer })));
@@ -1501,7 +1500,7 @@ function PriloziSection({
         });
       } else {
         const reason = res.attemptNo >= 3
-          ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose Aferime.`
+          ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose kapi meda.`
           : `Pokušaj ${res.attemptNo}: ${res.procenat}%`;
         toast({ title: "Vježba završena", description: reason });
       }
@@ -1772,9 +1771,9 @@ function PriloziSection({
                         {isH5p && h5pUrl && (
                           <div className="mt-2 rounded-lg overflow-hidden bg-white border border-purple-100">
                             {/* Attempt-aware header — pokazuje učeniku unaprijed koji
-                                je ovo pokušaj, koliki je % nagrade i do koliko Aferima
+                                je ovo pokušaj, koliki je % nagrade i do koliko kapi meda
                                 konkretno može dobiti (sve uzima u obzir prethodne
-                                pokušaje). Format: "Pokušaj X — Y% nagrade · do N Aferima". */}
+                                pokušaje). Format: "Pokušaj X — Y% nagrade · do N kapi meda". */}
                             <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center gap-2">
                               <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
                               <p className="text-sm font-semibold text-purple-700">
@@ -1784,12 +1783,12 @@ function PriloziSection({
                                       {" — "}
                                       <span className="text-purple-900">{Math.round(nextMult * 100)}% nagrade</span>
                                       {" · možeš osvojiti do "}
-                                      <span className="text-purple-900">{maxNext} {aferimForm(maxNext)}</span>
+                                      <span className="text-purple-900">{maxNext} {maxNext === 1 ? "kap meda" : "kapi meda"} 🍯</span>
                                     </>
                                   : <>
                                       Pokušaj <span className="text-purple-900">{att?.nextAttemptNo ?? 1}</span>
                                       {" — "}
-                                      <span className="text-purple-900">više pokušaja ne donosi Aferime</span>
+                                      <span className="text-purple-900">više pokušaja ne donosi kapi meda</span>
                                       {" (već "}{Math.max(0, (att?.nextAttemptNo ?? 1) - 1)} pokušaja{")"}
                                     </>
                                 }
@@ -1808,7 +1807,7 @@ function PriloziSection({
                               />
                             </Suspense>
                             <p className="px-3 py-2 text-xs text-purple-500 bg-purple-50/60">
-                              Maks. 50 Aferima. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
+                              Maks. 50 kapi meda. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
                             </p>
                           </div>
                         )}
@@ -2666,7 +2665,7 @@ export default function IlmihalLekcijaPage() {
 
             {/* Status za već-završene lekcije: učenik se može vratiti i čitati
                 slobodno, vrijeme se i dalje akumulira (server radi MAX), ali
-                Aferime ne dobija opet. */}
+                Kapi meda ne dobija opet. */}
             {completed && (
               <div
                 className="flex flex-wrap gap-2 justify-end items-center text-xs text-muted-foreground"
@@ -2677,7 +2676,7 @@ export default function IlmihalLekcijaPage() {
                   Provedeno: {formatDuration(timeSpent)}
                 </span>
                 <span className="italic">
-                  Već završeno ✓ — ponovi koliko želiš, Aferime ne dobijaš opet.
+                  Već završeno ✓ — ponovi koliko želiš, kapi meda ne dobijaš opet.
                 </span>
               </div>
             )}

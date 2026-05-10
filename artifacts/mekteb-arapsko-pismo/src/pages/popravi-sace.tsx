@@ -87,7 +87,7 @@ export default function PopraviSacePage() {
           return next;
         });
         toast({
-          title: `+${resp.nagradaAferim ?? 5} Aferima ⭐`,
+          title: `+${resp.nagradaAferim ?? 5} kapi meda 🍯`,
           description: "Saće je popravljeno!",
         });
         // Sačekaj malo da feedback bude vidljiv, pa pređi na sljedeću grešku.
@@ -154,7 +154,7 @@ export default function PopraviSacePage() {
             <div>
               <h1 className="text-2xl font-extrabold text-foreground">Popravi saće</h1>
               <p className="text-sm text-muted-foreground">
-                Riješi pitanja na kojima si ranije pogriješio/la i zaradi po <strong>5 Aferima</strong>.
+                Riješi pitanja na kojima si ranije pogriješio/la i zaradi po <strong>5 kapi meda 🍯</strong>.
               </p>
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function PopraviSacePage() {
                   exit={{ opacity: 0 }}
                   className="flex items-center gap-2 bg-emerald-50 text-emerald-800 rounded-2xl p-3 border border-emerald-200"
                 >
-                  <Sparkles className="w-5 h-5" /> <strong>Bravo! +5 Aferima.</strong> Saće je popravljeno.
+                  <Sparkles className="w-5 h-5" /> <strong>Bravo! +5 kapi meda 🍯.</strong> Saće je popravljeno.
                 </motion.div>
               )}
               {feedback === "wrong" && (

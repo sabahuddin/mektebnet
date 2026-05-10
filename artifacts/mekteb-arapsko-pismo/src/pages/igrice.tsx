@@ -50,7 +50,7 @@ export default function IgricePage() {
         </div>
         <div>
           <h1 className="text-3xl font-black text-foreground">Igrice</h1>
-          <p className="text-muted-foreground font-medium">Zarađuj Aferime kroz lekcije i kvizove — zatim se zabavi!</p>
+          <p className="text-muted-foreground font-medium">Zarađuj kapi meda 🍯 kroz lekcije i kvizove — zatim se zabavi i sakupljaj Aferime ⭐!</p>
         </div>
       </div>
 
@@ -71,41 +71,41 @@ export default function IgricePage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-amber-200">
-            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+          <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-orange-200">
+            <span className="text-2xl leading-none" aria-hidden>🍯</span>
             <div>
-              <p className="text-xs font-bold text-amber-800/70 uppercase flex items-center gap-1">
-                Aferimi
+              <p className="text-xs font-bold text-orange-800/70 uppercase flex items-center gap-1">
+                Kapi meda
                 <TooltipProvider delayDuration={150}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        aria-label="Kako Aferimi otključavaju vrijeme"
-                        className="text-amber-600 hover:text-amber-700 cursor-help"
+                        aria-label="Kako kapi meda otključavaju vrijeme"
+                        className="text-orange-600 hover:text-orange-700 cursor-help"
                         data-testid="tooltip-hasanat-rule"
                       >
                         <Info className="w-3.5 h-3.5" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
-                      Svakih <strong>{credits?.hasanatPerBlock || 100} Aferima</strong> otključava{" "}
+                      Svakih <strong>{credits?.hasanatPerBlock || 100} kapi meda</strong> otključava{" "}
                       <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre.
-                      Aferimi se NE troše — ostaju ti zauvijek, samo otključavaju vrijeme.
+                      Kapi meda se NE troše — ostaju ti zauvijek, samo otključavaju vrijeme.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </p>
-              <p className="text-xl font-black text-yellow-600">{totalHas}</p>
-              <p className="text-[10px] text-amber-700/70">{blocks} × {formatSeconds(credits?.secondsPerBlock || 600)}</p>
+              <p className="text-xl font-black text-orange-600">{totalHas}</p>
+              <p className="text-[10px] text-orange-700/70">{blocks} × {formatSeconds(credits?.secondsPerBlock || 600)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-orange-200">
-            <span className="text-2xl leading-none" aria-hidden>🍯</span>
+          <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-amber-200">
+            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
             <div>
-              <p className="text-xs font-bold text-orange-800/70 uppercase">Med</p>
-              <p className="text-xl font-black text-orange-600" data-testid="text-total-med">{totalMed}</p>
-              <p className="text-[10px] text-orange-700/70">zarađen igrajući</p>
+              <p className="text-xs font-bold text-amber-800/70 uppercase">Aferimi</p>
+              <p className="text-xl font-black text-yellow-600" data-testid="text-total-med">{totalMed}</p>
+              <p className="text-[10px] text-amber-700/70">zarađeni igranjem ⭐</p>
             </div>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function IgricePage() {
             <div>
               <p className="font-bold text-foreground mb-1">Nema više vremena za igre</p>
               <p className="text-sm text-muted-foreground">
-                Svakih <strong>{credits?.hasanatPerBlock || 100} Aferima</strong> otključava{" "}
+                Svakih <strong>{credits?.hasanatPerBlock || 100} kapi meda 🍯</strong> otključava{" "}
                 <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre. Završi
                 lekciju ili pokušaj kviz da zaradiš još.
               </p>
