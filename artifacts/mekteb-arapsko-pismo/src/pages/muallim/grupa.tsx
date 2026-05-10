@@ -7,7 +7,8 @@ import { useAuth } from "@/context/auth";
 import {
   ArrowLeft, Users, UserPlus, Printer, ChevronRight, ArrowRightLeft,
   Loader2, GraduationCap, X, Plus, Trash2, Star, ClipboardList, KeyRound,
-  AlertTriangle, BookOpen, Copy, Check
+  AlertTriangle, BookOpen, Copy, Check,
+  CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -432,6 +433,32 @@ export default function GrupaPage() {
             <div className="text-xs text-muted-foreground font-medium">učenika</div>
           </div>
         </div>
+
+        {/* Modul kartice za ovu grupu — vode na odgovarajuće stranice/tabove
+            sa pre-selektovanom grupom (preko ?grupaId=… za panel-tabove). */}
+        {grupa && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
+            {[
+              { label: "Prisustvo", icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}`, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" },
+              { label: "Plan lekcija", icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}`, color: "bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100" },
+              { label: "Kalendar", icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}`, color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" },
+              { label: "Statistika", icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}`, color: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" },
+              { label: "Zadaća", icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" },
+              { label: "Izvještaji", icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}`, color: "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100" },
+              { label: "Roditelji", icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}`, color: "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100" },
+              { label: "H5P statistika", icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}`, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" },
+            ].map(card => (
+              <Link
+                key={card.label}
+                href={card.href}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${card.color}`}
+              >
+                <card.icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{card.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 mb-6">
           <Button onClick={() => { setShowBulkAdd(true); setCreatedStudents([]); setBulkNames(""); }}

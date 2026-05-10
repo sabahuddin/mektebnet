@@ -150,7 +150,7 @@ export default function MuallimPanel() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "h5p-vodic" | "profil";
-  const [activeTab, setActiveTab] = useState<TabId>("grupe");
+  const [activeTab, setActiveTab] = useState<TabId>("pregled");
 
   // Otvara odgovarajući tab kad URL sadrži ?tab=… (npr. iz Panel dropdown
   // linka "Profil" → /muallim?tab=profil). Pokreće se na svakoj promjeni
@@ -161,6 +161,18 @@ export default function MuallimPanel() {
     const t = params.get("tab");
     if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","zadace","izvjestaji","roditelji","h5p","h5p-vodic","profil"].includes(t)) {
       setActiveTab(t as TabId);
+    }
+    // Pre-selektuj grupu kad link iz Grupa stranice prosijedi ?grupaId=…
+    // (npr. iz kartica "Plan lekcija", "Statistika", "Kalendar", "Zadaća").
+    const gid = params.get("grupaId");
+    if (gid) {
+      const n = parseInt(gid);
+      if (!Number.isNaN(n) && n > 0) {
+        setSelectedGrupaId(n);
+        setStatGrupaId(n);
+        setPlanGrupaId(n);
+        setZadGrupaId(n);
+      }
     }
   }, [locationPath]);
 
@@ -545,17 +557,17 @@ export default function MuallimPanel() {
     );
   }
 
+  // Glavni tabovi panela = pogled na cijeli mekteb. Tabovi vezani za jednu grupu
+  // (Prisustvo, Plan lekcija, Zadaća, H5P statistika) preselili su se u Grupa
+  // stranicu (kartice unutar grupe). Te blokove i dalje renderujemo niže — link
+  // iz Grupe ih otvara preko ?tab=…&grupaId=… s pre-selektovanom grupom.
   const TABS = [
-    { id: "grupe", label: `Grupe (${grupe.length})`, icon: GraduationCap },
     { id: "pregled", label: "Pregled", icon: BarChart3 },
-    { id: "prisustvo", label: "Prisustvo", icon: CalendarCheck },
-    { id: "kalendar", label: "Kalendar", icon: Calendar },
-    { id: "plan", label: "Plan lekcija", icon: BookOpen },
+    { id: "grupe", label: `Grupe (${grupe.length})`, icon: GraduationCap },
     { id: "statistika", label: "Statistika", icon: TrendingUp },
-    { id: "zadace", label: "Zadaće", icon: ClipboardList },
     { id: "izvjestaji", label: "Izvještaji", icon: FileText },
+    { id: "kalendar", label: "Kalendar", icon: Calendar },
     { id: "roditelji", label: "Roditelji", icon: Heart },
-    { id: "h5p", label: "H5P statistika", icon: Sparkles },
     { id: "h5p-vodic", label: "H5P uputstvo", icon: BookOpen },
     { id: "profil", label: "Profil", icon: Settings },
   ] as const;
@@ -1777,7 +1789,7 @@ export default function MuallimPanel() {
             )}
 
             {activeTab === "roditelji" && (
-              <RoditeljiTab grupe={grupe} />
+              <RoditeljiTab grupe={grupe} filterGrupaId={selectedGrupaId} />
             )}
 
             {activeTab === "h5p" && (

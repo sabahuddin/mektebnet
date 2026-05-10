@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Megaphone, Plus, Trash2, Edit3, Image, X, Loader2, Users,
-  Send, ChevronDown, Mail, User, Save
+  Send, ChevronDown, Mail, User, Save, Heart
 } from "lucide-react";
 
 interface Obavjestenje {
@@ -40,7 +40,13 @@ interface RoditeljEntry {
   }[];
 }
 
-export default function RoditeljiTab({ grupe }: { grupe: Grupa[] }) {
+export default function RoditeljiTab({
+  grupe,
+  filterGrupaId = null,
+}: {
+  grupe: Grupa[];
+  filterGrupaId?: number | null;
+}) {
   const { token } = useAuth();
   const { toast } = useToast();
 
@@ -53,7 +59,25 @@ export default function RoditeljiTab({ grupe }: { grupe: Grupa[] }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [naslov, setNaslov] = useState("");
   const [sadrzaj, setSadrzaj] = useState("");
-  const [grupaId, setGrupaId] = useState<number | "">(  "");
+  const [grupaId, setGrupaId] = useState<number | "">(filterGrupaId ?? "");
+
+  // Kad iz Grupa stranice dođe filterGrupaId, predefinisi novu objavu na tu
+  // grupu i prebaci na roditelji listu (jer korisnik je tu radi te grupe).
+  useEffect(() => {
+    if (filterGrupaId) {
+      setGrupaId(filterGrupaId);
+    }
+  }, [filterGrupaId]);
+
+  const filteredRoditelji = filterGrupaId
+    ? roditelji.filter(r => r.djeca.some(d => d.grupaId === filterGrupaId))
+    : roditelji;
+  const filteredObavjestenja = filterGrupaId
+    ? obavjestenja.filter(o => o.grupaId === filterGrupaId || o.grupaId === null)
+    : obavjestenja;
+  const filterGrupaNaziv = filterGrupaId
+    ? grupe.find(g => g.id === filterGrupaId)?.naziv
+    : null;
   const [slikaUrl, setSlikaUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,7 +100,7 @@ export default function RoditeljiTab({ grupe }: { grupe: Grupa[] }) {
     setEditingId(null);
     setNaslov("");
     setSadrzaj("");
-    setGrupaId("");
+    setGrupaId(filterGrupaId ?? "");
     setSlikaUrl("");
   }
 
@@ -160,18 +184,27 @@ export default function RoditeljiTab({ grupe }: { grupe: Grupa[] }) {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      {filterGrupaNaziv && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-sm text-rose-800 font-medium flex items-center gap-2">
+          <Heart className="w-4 h-4 shrink-0" />
+          <span>
+            Prikazani su samo roditelji i obavještenja za grupu <strong>{filterGrupaNaziv}</strong>.
+            Nove objave će biti automatski usmjerene na ovu grupu.
+          </span>
+        </div>
+      )}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setView("obavjestenja")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${view === "obavjestenja" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}
         >
-          <Megaphone className="w-4 h-4" /> Obavještenja ({obavjestenja.length})
+          <Megaphone className="w-4 h-4" /> Obavještenja ({filteredObavjestenja.length})
         </button>
         <button
           onClick={() => setView("roditelji")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${view === "roditelji" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}
         >
-          <Users className="w-4 h-4" /> Roditelji ({roditelji.length})
+          <Users className="w-4 h-4" /> Roditelji ({filteredRoditelji.length})
         </button>
       </div>
 
@@ -289,7 +322,7 @@ export default function RoditeljiTab({ grupe }: { grupe: Grupa[] }) {
             )}
           </AnimatePresence>
 
-          {obavjestenja.length === 0 && !showForm ? (
+          {filteredObavjestenja.length === 0 && !showForm ? (
             <div className="text-center py-12 text-muted-foreground">
               <Megaphone className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Nema obavještenja</p>
@@ -297,7 +330,7 @@ export default function RoditeljiTab({ grupe }: { grupe: Grupa[] }) {
             </div>
           ) : (
             <div className="space-y-3">
-              {obavjestenja.map(o => (
+              {filteredObavjestenja.map(o => (
                 <motion.div
                   key={o.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -340,14 +373,14 @@ export default function RoditeljiTab({ grupe }: { grupe: Grupa[] }) {
 
       {view === "roditelji" && (
         <div className="space-y-3">
-          {roditelji.length === 0 ? (
+          {filteredRoditelji.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">Nema registrovanih roditelja</p>
+              <p className="font-medium">Nema registrovanih roditelja{filterGrupaNaziv ? ` u grupi "${filterGrupaNaziv}"` : ""}</p>
               <p className="text-sm mt-1">Roditelji se prikazuju nakon što povežu svoj nalog sa djetetom</p>
             </div>
           ) : (
-            roditelji.map(r => (
+            filteredRoditelji.map(r => (
               <div key={r.roditelj.id} className="bg-white border border-border/50 rounded-2xl p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-violet-400 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
