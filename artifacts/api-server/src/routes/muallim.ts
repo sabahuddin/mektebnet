@@ -480,6 +480,87 @@ router.get("/ucenici/:id/roditelji", async (req, res) => {
   }
 });
 
+// POST /api/muallim/ucenici/:id/poveži-roditelja — poveže POSTOJEĆEG roditelja
+// (po korisničkom imenu) sa POSTOJEĆIM učenikom muallima. Korisno kad roditelj
+// već ima jedno dijete u mektebu, a muallim mu hoće dodati još jedno bez čekanja
+// da roditelj sam podnese zahtjev.
+// Body: { roditeljUsername: string }
+router.post("/ucenici/:id/poveži-roditelja", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const muallimId = req.user!.userId;
+    const rawUsername = String((req.body?.roditeljUsername ?? "")).trim();
+    if (!rawUsername) {
+      res.status(400).json({ error: "Korisničko ime roditelja je obavezno" });
+      return;
+    }
+    const username = rawUsername.replace(/^@/, "").toLowerCase();
+
+    // Provjera vlasništva — učenik mora pripadati ovom muallimu.
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+    if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
+
+    // Pronađi roditelja po korisničkom imenu.
+    const [roditelj] = await db.select().from(usersTable)
+      .where(and(eq(usersTable.username, username), eq(usersTable.role, "roditelj")));
+    if (!roditelj) {
+      res.status(404).json({ error: "Roditelj sa tim korisničkim imenom nije pronađen" });
+      return;
+    }
+
+    // Provjeri da li veza već postoji.
+    const [postojeca] = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, roditelj.id),
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+      ));
+
+    if (postojeca) {
+      if (postojeca.status === "approved") {
+        res.status(409).json({ error: "Roditelj je već povezan sa ovim učenikom" });
+        return;
+      }
+      // Pending ili rejected → reuse zapis i postavi approved.
+      await db.update(roditeljUcenikTable)
+        .set({ status: "approved", approvedAt: new Date(), approvedBy: muallimId })
+        .where(eq(roditeljUcenikTable.id, postojeca.id));
+    } else {
+      await db.insert(roditeljUcenikTable).values({
+        roditeljId: roditelj.id,
+        ucenikId,
+        status: "approved",
+        approvedAt: new Date(),
+        approvedBy: muallimId,
+      });
+    }
+
+    // In-app obavijest roditelju.
+    const [ucenikUser] = await db.select({ displayName: usersTable.displayName })
+      .from(usersTable).where(eq(usersTable.id, ucenikId));
+    try {
+      await db.insert(porukeTable).values({
+        posiljateljId: muallimId,
+        primateljId: roditelj.id,
+        naslov: "Povezani ste sa novim djetetom",
+        sadrzaj: `Muallim vas je povezao sa učenikom ${ucenikUser?.displayName ?? `#${ucenikId}`}. Sada možete pratiti njegov napredak u svom roditeljskom panelu.`,
+      });
+    } catch (err) {
+      console.error("[POST /muallim/ucenici/:id/poveži-roditelja] in-app poruka failed", err);
+    }
+
+    res.status(201).json({
+      id: roditelj.id,
+      displayName: roditelj.displayName,
+      username: roditelj.username,
+      status: "approved",
+    });
+  } catch (err: any) {
+    console.error("[POST /muallim/ucenici/:id/poveži-roditelja]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // POST /api/muallim/ucenici/:id/roditelj — kreira roditelja za POSTOJEĆEG
 // učenika i odmah ga povezuje (status='approved'). Roditelj NE ulazi u kvotu.
 // Body: { displayName: string }

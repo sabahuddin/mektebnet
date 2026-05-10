@@ -140,6 +140,9 @@ export default function UcenikPage() {
   const [copiedRoditelj, setCopiedRoditelj] = useState(false);
   const [resetRoditeljId, setResetRoditeljId] = useState<number | null>(null);
   const [resetRoditeljPass, setResetRoditeljPass] = useState<{ id: number; password: string; displayName: string } | null>(null);
+  // Povezivanje POSTOJEĆEG roditelja (drugo dijete istih roditelja itd.)
+  const [postojeciUsername, setPostojeciUsername] = useState("");
+  const [linkujemPostojeceg, setLinkujemPostojeceg] = useState(false);
 
   // Pojedinačna zadaća za ovog učenika
   const [ucenikGrupaId, setUcenikGrupaId] = useState<number | null>(null);
@@ -262,6 +265,38 @@ export default function UcenikPage() {
       toast({ title: "Greška", description: e?.message || "Nije moguće kreirati roditelja", variant: "destructive" });
     } finally {
       setSavingRoditelj(false);
+    }
+  }
+
+  async function linkPostojecegRoditelja() {
+    if (!token || !id || !postojeciUsername.trim()) {
+      toast({ title: "Unesite korisničko ime postojećeg roditelja", variant: "destructive" });
+      return;
+    }
+    setLinkujemPostojeceg(true);
+    try {
+      const linked = await apiRequest<{ id: number; displayName: string; username: string; status: string }>(
+        "POST",
+        `/muallim/ucenici/${parseInt(id)}/poveži-roditelja`,
+        { roditeljUsername: postojeciUsername.trim() },
+        token,
+      );
+      setRoditelji(prev => {
+        if (prev.some(r => r.id === linked.id)) return prev;
+        return [...prev, {
+          id: linked.id,
+          displayName: linked.displayName,
+          username: linked.username,
+          status: "approved",
+          approvedAt: new Date().toISOString(),
+        }];
+      });
+      setPostojeciUsername("");
+      toast({ title: "Roditelj povezan!", description: `${linked.displayName} sada može pratiti ovog učenika.` });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće povezati roditelja", variant: "destructive" });
+    } finally {
+      setLinkujemPostojeceg(false);
     }
   }
 
@@ -577,10 +612,42 @@ export default function UcenikPage() {
                   <p className="text-sm text-muted-foreground mb-4">Učenik još nema povezanog roditelja.</p>
                 )}
 
+                {/* Poveži postojećeg roditelja (npr. roditelj već ima drugo dijete u mektebu) */}
+                {!kreiraniRoditelj && (
+                  <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                    <p className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5" /> Poveži postojećeg roditelja:
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      <input
+                        type="text"
+                        value={postojeciUsername}
+                        onChange={e => setPostojeciUsername(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" && postojeciUsername.trim() && !linkujemPostojeceg) linkPostojecegRoditelja(); }}
+                        placeholder="Korisničko ime roditelja"
+                        className="flex-1 min-w-[200px] border border-blue-200 rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                        data-testid="input-roditelj-postojeci-username"
+                      />
+                      <Button
+                        onClick={linkPostojecegRoditelja}
+                        disabled={linkujemPostojeceg || !postojeciUsername.trim()}
+                        className="rounded-xl font-bold flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                        data-testid="btn-poveži-postojećeg-roditelja"
+                      >
+                        {linkujemPostojeceg ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                        Poveži
+                      </Button>
+                    </div>
+                    <p className="text-xs text-blue-700 mt-2">
+                      Ako roditelj već ima račun u mektebu (npr. drugo dijete) — unesi njegovo korisničko ime i odmah povezuje sa ovim učenikom. Ne kreira novi nalog.
+                    </p>
+                  </div>
+                )}
+
                 {/* Forma za novog */}
                 {!kreiraniRoditelj ? (
                   <div>
-                    <p className="text-xs font-bold text-muted-foreground mb-2">Dodaj novi nalog za roditelja:</p>
+                    <p className="text-xs font-bold text-muted-foreground mb-2">Ili dodaj novi nalog za roditelja:</p>
                     <div className="flex gap-2 flex-wrap">
                       <input
                         type="text"

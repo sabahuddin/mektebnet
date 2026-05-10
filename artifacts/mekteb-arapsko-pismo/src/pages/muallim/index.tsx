@@ -540,12 +540,24 @@ export default function MuallimPanel() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
-              <tab.icon className="w-4 h-4" /> {tab.label}
-            </button>
-          ))}
+          {TABS.map(tab => {
+            const badgeCount = tab.id === "pregled" ? pendingRoditelji.length : 0;
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                <tab.icon className="w-4 h-4" /> {tab.label}
+                {badgeCount > 0 && (
+                  <span
+                    className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[11px] font-extrabold shadow-sm"
+                    data-testid={`badge-${tab.id}`}
+                    title={`${badgeCount} zahtjev/a roditelja čeka odobrenje`}
+                  >
+                    {badgeCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {isLoading ? (
