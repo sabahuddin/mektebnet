@@ -7,6 +7,7 @@ import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { LanguageProvider } from "@/context/language";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { PushPrompt } from "@/components/push-prompt";
+import { InstallPrompt } from "@/components/install-prompt";
 
 // Auth pages
 import LoginPage from "./pages/login";
@@ -192,6 +193,7 @@ function App() {
             </WouterRouter>
             <OfflineIndicator />
             <PushPrompt />
+            <InstallPrompt />
             <Toaster />
           </TooltipProvider>
         </AuthProvider>
