@@ -38,14 +38,54 @@ router.use(requireAuth, requireRole("muallim", "admin"));
 type NewUserRow = typeof usersTable.$inferSelect;
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-function generateUsername(name: string) {
-  const firstName = name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "") || "korisnik";
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return { username: `${firstName}.${rand}`, rand };
+function firstNameSlug(name: string) {
+  return name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "") || "korisnik";
 }
 
-function generateMektebPassword() {
-  return `Mekteb${Math.floor(1000 + Math.random() * 9000)}`;
+function randomSuffix() {
+  return Math.floor(1000 + Math.random() * 9000);
+}
+
+function generateUsername(name: string, suffix?: number) {
+  const rand = suffix ?? randomSuffix();
+  return { username: `${firstNameSlug(name)}.${rand}`, rand };
+}
+
+function generateMektebPassword(suffix?: number) {
+  return `Mekteb${suffix ?? randomSuffix()}`;
+}
+
+// Učenik i roditelj iz istog para dijele isti 4-cifreni sufiks i lozinku
+// (npr. amir.4567 / Mekteb4567 i ismet.4567 / Mekteb4567) — radi lakše
+// komunikacije muallim ↔ porodica. Muallim i dalje može resetovati šifru
+// roditelja zasebno.
+function generatePairCredentials() {
+  const suffix = randomSuffix();
+  return { suffix, password: `Mekteb${suffix}` };
+}
+
+function isUniqueViolation(e: any) {
+  return e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
+}
+
+// Strict varijanta — pokušava točno jednom sa zadatim sufiksom. Baca na
+// koliziji. Koristi se u retry petljama gdje suffix mora biti tačan (par).
+async function tryInsertUser(
+  tx: Tx,
+  baseName: string,
+  passwordHash: string,
+  displayNameVal: string,
+  role: "ucenik" | "roditelj",
+  suffix: number,
+): Promise<NewUserRow> {
+  const { username } = generateUsername(baseName, suffix);
+  const [row] = await tx.insert(usersTable).values({
+    username,
+    passwordHash,
+    displayName: displayNameVal,
+    role,
+  }).returning();
+  return row;
 }
 
 async function insertWithUniqueUsername(
@@ -54,20 +94,16 @@ async function insertWithUniqueUsername(
   passwordHash: string,
   displayNameVal: string,
   role: "ucenik" | "roditelj",
+  preferredSuffix?: number,
 ): Promise<NewUserRow> {
+  // Prvi pokušaj koristi preferirani sufiks (za učenik+roditelj par); ako
+  // pukne na koliziji, padamo na nasumične sufikse u sljedećim attempt-ima.
   for (let attempt = 0; attempt < 5; attempt++) {
-    const { username } = generateUsername(baseName);
+    const suffix = attempt === 0 && preferredSuffix !== undefined ? preferredSuffix : randomSuffix();
     try {
-      const [row] = await tx.insert(usersTable).values({
-        username,
-        passwordHash,
-        displayName: displayNameVal,
-        role,
-      }).returning();
-      return row;
+      return await tryInsertUser(tx, baseName, passwordHash, displayNameVal, role, suffix);
     } catch (e: any) {
-      const isUniqueViolation = e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
-      if (attempt === 4 || !isUniqueViolation) throw e;
+      if (attempt === 4 || !isUniqueViolation(e)) throw e;
     }
   }
   throw new Error("USERNAME_COLLISION");
@@ -263,60 +299,77 @@ router.post("/ucenici", async (req, res) => {
 
     const muallimId = req.user!.userId;
 
-    const ucenikPass = password || generateMektebPassword();
-    const ucenikPasswordHash = await bcrypt.hash(ucenikPass, 10);
+    // Učenik i roditelj iz istog para dijele isti 4-cifreni sufiks i lozinku
+    // (npr. amir.4567 / Mekteb4567 i ismet.4567 / Mekteb4567). Da bi sufiks
+    // ostao usklađen i kod kolizije, cijelu pair transakciju retry-amo s
+    // novim sufiksom. Bcrypt se izvršava jednom po pokušaju (ista lozinka).
+    // Napomena: kad se kreira par, custom `password` se ignoriše da par
+    // ostane konzistentan; muallim može kasnije promijeniti šifre preko
+    // postojećih reset endpoint-a.
+    const useCustomPassword = !!password && !roditeljZahtjev;
 
-    let roditeljPass: string | null = null;
-    let roditeljPasswordHash: string | null = null;
-    if (roditeljZahtjev) {
-      roditeljPass = generateMektebPassword();
-      roditeljPasswordHash = await bcrypt.hash(roditeljPass, 10);
+    let chosenSuffix = 0;
+    let chosenPassword = "";
+    let chosenUcenikPassword = "";
+    let createdPair: { newUcenik: NewUserRow; newRoditelj: NewUserRow | null } | null = null;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const pair = generatePairCredentials();
+      const ucenikPass = useCustomPassword ? password! : pair.password;
+      const ucenikHash = await bcrypt.hash(ucenikPass, 10);
+      const roditeljHash = roditeljZahtjev ? (useCustomPassword ? null : await bcrypt.hash(pair.password, 10)) : null;
+
+      try {
+        createdPair = await db.transaction(async (tx) => {
+          const newUcenik = await tryInsertUser(tx, displayName, ucenikHash, displayName.trim(), "ucenik", pair.suffix);
+          await tx.insert(ucenikProfiliTable).values({
+            userId: newUcenik.id, muallimId, grupaId: grupaId || null,
+          });
+
+          let newRoditelj: NewUserRow | null = null;
+          if (roditeljZahtjev && roditeljHash) {
+            newRoditelj = await tryInsertUser(tx, roditeljZahtjev, roditeljHash, roditeljZahtjev, "roditelj", pair.suffix);
+            await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
+            await tx.insert(roditeljUcenikTable).values({
+              roditeljId: newRoditelj.id,
+              ucenikId: newUcenik.id,
+              status: "approved",
+              approvedAt: new Date(),
+              approvedBy: muallimId,
+            });
+          }
+
+          if (profil) {
+            await tx.update(muallimProfiliTable)
+              .set({ licencesUsed: profil.licencesUsed + 1 })
+              .where(eq(muallimProfiliTable.userId, muallimId));
+          }
+          return { newUcenik, newRoditelj };
+        });
+        chosenSuffix = pair.suffix;
+        chosenPassword = pair.password;
+        chosenUcenikPassword = ucenikPass;
+        break;
+      } catch (e: any) {
+        if (attempt === 4 || !isUniqueViolation(e)) throw e;
+      }
     }
 
-    const result = await db.transaction(async (tx) => {
-      const newUcenik = await insertWithUniqueUsername(tx, displayName, ucenikPasswordHash, displayName.trim(), "ucenik");
-
-      await tx.insert(ucenikProfiliTable).values({
-        userId: newUcenik.id,
-        muallimId,
-        grupaId: grupaId || null,
-      });
-
-      let newRoditelj: NewUserRow | null = null;
-      if (roditeljZahtjev && roditeljPasswordHash) {
-        newRoditelj = await insertWithUniqueUsername(tx, roditeljZahtjev, roditeljPasswordHash, roditeljZahtjev, "roditelj");
-
-        await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
-
-        await tx.insert(roditeljUcenikTable).values({
-          roditeljId: newRoditelj.id,
-          ucenikId: newUcenik.id,
-          status: "approved",
-          approvedAt: new Date(),
-          approvedBy: muallimId,
-        });
-      }
-
-      // Increment licences used (samo učenik, roditelj je freebie)
-      if (profil) {
-        await tx.update(muallimProfiliTable)
-          .set({ licencesUsed: profil.licencesUsed + 1 })
-          .where(eq(muallimProfiliTable.userId, muallimId));
-      }
-
-      return { newUcenik, newRoditelj };
-    });
+    if (!createdPair) {
+      res.status(409).json({ error: "Nije moguće generisati jedinstveno korisničko ime — pokušajte ponovo" });
+      return;
+    }
 
     res.status(201).json({
-      ...result.newUcenik,
+      ...createdPair.newUcenik,
       passwordHash: undefined,
-      generatedPassword: ucenikPass,
-      roditelj: result.newRoditelj
+      generatedPassword: chosenUcenikPassword,
+      roditelj: createdPair.newRoditelj
         ? {
-            id: result.newRoditelj.id,
-            displayName: result.newRoditelj.displayName,
-            username: result.newRoditelj.username,
-            generatedPassword: roditeljPass,
+            id: createdPair.newRoditelj.id,
+            displayName: createdPair.newRoditelj.displayName,
+            username: createdPair.newRoditelj.username,
+            generatedPassword: chosenPassword,
           }
         : null,
     });
@@ -373,63 +426,71 @@ router.post("/ucenici/bulk", async (req, res) => {
 
     const grupaId = body.grupaId;
 
-    // Pre-hash sve lozinke izvan transakcije (bcrypt je sporo) — onda jedna
-    // transakcija po učeniku-paru da koliziju username-a hendlamo lokalno.
-    const prepared = await Promise.all(normalized.map(async (e) => {
-      const ucenikPass = generateMektebPassword();
-      const ucenikHash = await bcrypt.hash(ucenikPass, 10);
-      let roditeljPass: string | null = null;
-      let roditeljHash: string | null = null;
-      if (e.roditelj) {
-        roditeljPass = generateMektebPassword();
-        roditeljHash = await bcrypt.hash(roditeljPass, 10);
-      }
-      return { ...e, ucenikPass, ucenikHash, roditeljPass, roditeljHash };
-    }));
-
     const results: Array<{
       id: number; displayName: string; username: string; generatedPassword: string;
       roditelj: { id: number; displayName: string; username: string; generatedPassword: string } | null;
     }> = [];
 
     let kreiranoUcenika = 0;
-    for (const p of prepared) {
-      const created = await db.transaction(async (tx) => {
-        const newUcenik = await insertWithUniqueUsername(tx, p.ucenik, p.ucenikHash, p.ucenik, "ucenik");
-        await tx.insert(ucenikProfiliTable).values({
-          userId: newUcenik.id, muallimId, grupaId: grupaId || null,
-        });
+    for (const e of normalized) {
+      // Po jedan učenik (sa opcionim roditeljem) — retry petlja garantuje
+      // da par dijeli sufiks i lozinku i kad postoji kolizija username-a.
+      let createdEntry: typeof results[number] | null = null;
+      let lastErr: any = null;
 
-        let newRoditelj: NewUserRow | null = null;
-        if (p.roditelj && p.roditeljHash) {
-          newRoditelj = await insertWithUniqueUsername(tx, p.roditelj, p.roditeljHash, p.roditelj, "roditelj");
-          await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
-          await tx.insert(roditeljUcenikTable).values({
-            roditeljId: newRoditelj.id,
-            ucenikId: newUcenik.id,
-            status: "approved",
-            approvedAt: new Date(),
-            approvedBy: muallimId,
-          });
-        }
-        return { newUcenik, newRoditelj };
-      });
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const pair = generatePairCredentials();
+        const sharedHash = await bcrypt.hash(pair.password, 10);
 
-      kreiranoUcenika++;
-      results.push({
-        id: created.newUcenik.id,
-        displayName: created.newUcenik.displayName,
-        username: created.newUcenik.username,
-        generatedPassword: p.ucenikPass,
-        roditelj: created.newRoditelj && p.roditeljPass
-          ? {
-              id: created.newRoditelj.id,
-              displayName: created.newRoditelj.displayName,
-              username: created.newRoditelj.username,
-              generatedPassword: p.roditeljPass,
+        try {
+          const created = await db.transaction(async (tx) => {
+            const newUcenik = await tryInsertUser(tx, e.ucenik, sharedHash, e.ucenik, "ucenik", pair.suffix);
+            await tx.insert(ucenikProfiliTable).values({
+              userId: newUcenik.id, muallimId, grupaId: grupaId || null,
+            });
+
+            let newRoditelj: NewUserRow | null = null;
+            if (e.roditelj) {
+              newRoditelj = await tryInsertUser(tx, e.roditelj, sharedHash, e.roditelj, "roditelj", pair.suffix);
+              await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
+              await tx.insert(roditeljUcenikTable).values({
+                roditeljId: newRoditelj.id,
+                ucenikId: newUcenik.id,
+                status: "approved",
+                approvedAt: new Date(),
+                approvedBy: muallimId,
+              });
             }
-          : null,
-      });
+            return { newUcenik, newRoditelj };
+          });
+
+          createdEntry = {
+            id: created.newUcenik.id,
+            displayName: created.newUcenik.displayName,
+            username: created.newUcenik.username,
+            generatedPassword: pair.password,
+            roditelj: created.newRoditelj
+              ? {
+                  id: created.newRoditelj.id,
+                  displayName: created.newRoditelj.displayName,
+                  username: created.newRoditelj.username,
+                  generatedPassword: pair.password,
+                }
+              : null,
+          };
+          break;
+        } catch (err: any) {
+          lastErr = err;
+          if (!isUniqueViolation(err)) throw err;
+        }
+      }
+
+      if (!createdEntry) {
+        throw lastErr ?? new Error("USERNAME_COLLISION");
+      }
+
+      results.push(createdEntry);
+      kreiranoUcenika++;
     }
 
     if (profil && kreiranoUcenika > 0) {
@@ -580,27 +641,54 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
       .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
 
-    const roditeljPass = generateMektebPassword();
-    const roditeljHash = await bcrypt.hash(roditeljPass, 10);
+    // Pokušaj iskoristiti isti 4-cifreni sufiks kao učenik (npr. amir.4567 →
+    // ismet.4567 / Mekteb4567). Ako sufiks bude zauzet ili učenikov username
+    // nije u tom formatu, padamo na nasumičan sufiks — ali lozinku uvijek
+    // vežemo za STVARNI sufiks koji je završio u bazi (Mekteb<suffix>).
+    const [ucenikRow] = await db.select({ username: usersTable.username })
+      .from(usersTable).where(eq(usersTable.id, ucenikId));
+    const suffixMatch = ucenikRow?.username?.match(/\.(\d{4})$/);
+    const preferredSuffix = suffixMatch ? parseInt(suffixMatch[1], 10) : null;
 
-    const result = await db.transaction(async (tx) => {
-      const newRoditelj = await insertWithUniqueUsername(tx, displayName, roditeljHash, displayName, "roditelj");
-      await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
-      await tx.insert(roditeljUcenikTable).values({
-        roditeljId: newRoditelj.id,
-        ucenikId,
-        status: "approved",
-        approvedAt: new Date(),
-        approvedBy: muallimId,
-      });
-      return newRoditelj;
-    });
+    let createdRoditelj: NewUserRow | null = null;
+    let finalPassword = "";
+    let lastErr: any = null;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const suffix = attempt === 0 && preferredSuffix !== null ? preferredSuffix : randomSuffix();
+      const password = `Mekteb${suffix}`;
+      const hash = await bcrypt.hash(password, 10);
+
+      try {
+        createdRoditelj = await db.transaction(async (tx) => {
+          const newRoditelj = await tryInsertUser(tx, displayName, hash, displayName, "roditelj", suffix);
+          await tx.insert(roditeljProfiliTable).values({ userId: newRoditelj.id });
+          await tx.insert(roditeljUcenikTable).values({
+            roditeljId: newRoditelj.id,
+            ucenikId,
+            status: "approved",
+            approvedAt: new Date(),
+            approvedBy: muallimId,
+          });
+          return newRoditelj;
+        });
+        finalPassword = password;
+        break;
+      } catch (err: any) {
+        lastErr = err;
+        if (!isUniqueViolation(err)) throw err;
+      }
+    }
+
+    if (!createdRoditelj) {
+      throw lastErr ?? new Error("USERNAME_COLLISION");
+    }
 
     res.status(201).json({
-      id: result.id,
-      displayName: result.displayName,
-      username: result.username,
-      generatedPassword: roditeljPass,
+      id: createdRoditelj.id,
+      displayName: createdRoditelj.displayName,
+      username: createdRoditelj.username,
+      generatedPassword: finalPassword,
     });
   } catch (err: any) {
     console.error("[POST /muallim/ucenici/:id/roditelj]", err);
