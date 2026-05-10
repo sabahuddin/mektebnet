@@ -1060,6 +1060,77 @@ router.post("/kalendar/batch", async (req, res) => {
   }
 });
 
+// POST /api/muallim/kalendar/kopiraj — kopira sve unose iz jednog kalendara
+// (datumi nastave, ferije, važni datumi) u drugi kalendar iste muallime.
+// Body: { sourceGrupaId: number, targetGrupaId: number, override?: boolean }
+// Po defaultu skip-uje datume koji već postoje u target-u; ako je override=true
+// upsertuje preko postojećih.
+router.post("/kalendar/kopiraj", async (req, res) => {
+  try {
+    const { sourceGrupaId, targetGrupaId, override } = req.body || {};
+    const srcId = parseInt(String(sourceGrupaId));
+    const tgtId = parseInt(String(targetGrupaId));
+    if (!srcId || !tgtId) {
+      res.status(400).json({ error: "sourceGrupaId i targetGrupaId su obavezni" });
+      return;
+    }
+    if (srcId === tgtId) {
+      res.status(400).json({ error: "Izvorna i odredišna grupa moraju biti različite" });
+      return;
+    }
+
+    const muallimId = req.user!.userId;
+    const role = req.user!.role;
+    const sourceGrupa = await verifyGrupaAccess(srcId, muallimId, role);
+    const targetGrupa = await verifyGrupaAccess(tgtId, muallimId, role);
+    if (!sourceGrupa || !targetGrupa) {
+      res.status(403).json({ error: "Nije vaša grupa" });
+      return;
+    }
+
+    const sourceEntries = await db.select().from(mektebKalendarTable)
+      .where(eq(mektebKalendarTable.grupaId, srcId));
+    if (sourceEntries.length === 0) {
+      res.json({ kopirano: 0, preskoceno: 0, ukupno: 0 });
+      return;
+    }
+
+    const existingTarget = await db.select().from(mektebKalendarTable)
+      .where(eq(mektebKalendarTable.grupaId, tgtId));
+    const existingByDate = new Map(existingTarget.map(e => [e.datum, e]));
+
+    let kopirano = 0;
+    let preskoceno = 0;
+    for (const entry of sourceEntries) {
+      const existing = existingByDate.get(entry.datum);
+      if (existing) {
+        if (override) {
+          await db.update(mektebKalendarTable)
+            .set({ tip: entry.tip, opis: entry.opis })
+            .where(eq(mektebKalendarTable.id, existing.id));
+          kopirano++;
+        } else {
+          preskoceno++;
+        }
+      } else {
+        await db.insert(mektebKalendarTable).values({
+          grupaId: tgtId,
+          muallimId,
+          datum: entry.datum,
+          tip: entry.tip,
+          opis: entry.opis,
+        });
+        kopirano++;
+      }
+    }
+
+    res.json({ kopirano, preskoceno, ukupno: sourceEntries.length });
+  } catch (err) {
+    console.error("Kalendar kopiraj error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // DELETE /api/muallim/kalendar/:id
 router.delete("/kalendar/:id", async (req, res) => {
   try {

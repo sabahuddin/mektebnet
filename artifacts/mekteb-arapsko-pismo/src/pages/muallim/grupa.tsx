@@ -402,7 +402,7 @@ export default function GrupaPage() {
       <Layout>
         <div className="text-center py-20">
           <p className="text-muted-foreground font-medium">Grupa nije pronađena</p>
-          <Button className="mt-4" onClick={() => setLocation("/muallim")}>Nazad</Button>
+          <Button className="mt-4" onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }}>Nazad</Button>
         </div>
       </Layout>
     );
@@ -411,7 +411,7 @@ export default function GrupaPage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
-        <button onClick={() => setLocation("/muallim")} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
+        <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> Nazad na panel
         </button>
 

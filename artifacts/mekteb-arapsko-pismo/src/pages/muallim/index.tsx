@@ -189,6 +189,11 @@ export default function MuallimPanel() {
   const [batchMode, setBatchMode] = useState(false);
   const [batchDatumi, setBatchDatumi] = useState<string[]>([]);
   const [batchSaving, setBatchSaving] = useState(false);
+  // Kopiranje kalendara iz druge grupe
+  const [showCopyKalendar, setShowCopyKalendar] = useState(false);
+  const [copyFromGrupaId, setCopyFromGrupaId] = useState<number | null>(null);
+  const [copyOverride, setCopyOverride] = useState(false);
+  const [copyingKalendar, setCopyingKalendar] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -294,6 +299,39 @@ export default function MuallimPanel() {
       setKalendar(updated);
       toast({ title: "Sačuvano!" });
     } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  async function copyKalendarFromGrupa() {
+    if (!token || !selectedGrupaId || !copyFromGrupaId) {
+      toast({ title: "Odaberi izvornu grupu", variant: "destructive" });
+      return;
+    }
+    if (copyFromGrupaId === selectedGrupaId) {
+      toast({ title: "Izvor i odredište ne mogu biti ista grupa", variant: "destructive" });
+      return;
+    }
+    setCopyingKalendar(true);
+    try {
+      const result = await apiRequest<{ kopirano: number; preskoceno: number; ukupno: number }>(
+        "POST",
+        "/muallim/kalendar/kopiraj",
+        { sourceGrupaId: copyFromGrupaId, targetGrupaId: selectedGrupaId, override: copyOverride },
+        token,
+      );
+      const updated = await apiRequest<KalendarEntry[]>("GET", `/muallim/kalendar?grupaId=${selectedGrupaId}`, undefined, token);
+      setKalendar(updated);
+      toast({
+        title: "Kalendar kopiran!",
+        description: `Dodano ${result.kopirano} datuma${result.preskoceno > 0 ? `, preskočeno ${result.preskoceno} (već postoje)` : ""}.`,
+      });
+      setShowCopyKalendar(false);
+      setCopyFromGrupaId(null);
+      setCopyOverride(false);
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće kopirati kalendar", variant: "destructive" });
+    } finally {
+      setCopyingKalendar(false);
+    }
   }
 
   async function deleteKalendarEntry(id: number) {
@@ -1465,10 +1503,52 @@ export default function MuallimPanel() {
                             className={`text-sm font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${batchMode ? "bg-violet-100 border-violet-400 text-violet-700" : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
                             {batchMode ? "✓ Grupno označavanje" : "Grupno označavanje"}
                           </button>
-                          <button onClick={() => { setSelectedGrupaId(null); setBatchMode(false); setBatchDatumi([]); }} className="ml-auto text-sm text-muted-foreground hover:text-foreground font-medium">
+                          <button
+                            onClick={() => { setShowCopyKalendar(v => !v); setCopyFromGrupaId(null); setCopyOverride(false); }}
+                            className={`text-sm font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${showCopyKalendar ? "bg-emerald-100 border-emerald-400 text-emerald-700" : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
+                            Kopiraj iz druge grupe
+                          </button>
+                          <button onClick={() => { setSelectedGrupaId(null); setBatchMode(false); setBatchDatumi([]); setShowCopyKalendar(false); }} className="ml-auto text-sm text-muted-foreground hover:text-foreground font-medium">
                             ← Promijeni grupu
                           </button>
                         </div>
+
+                        {showCopyKalendar && (
+                          <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                            <div className="text-sm font-bold text-emerald-800 mb-2">
+                              Kopiraj datume nastave i praznike iz druge tvoje grupe u trenutnu grupu
+                            </div>
+                            {grupe.filter(g => g.id !== selectedGrupaId).length === 0 ? (
+                              <div className="text-sm text-emerald-700">Nemaš drugu grupu za kopiranje.</div>
+                            ) : (
+                              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                <select
+                                  value={copyFromGrupaId ?? ""}
+                                  onChange={(e) => setCopyFromGrupaId(e.target.value ? Number(e.target.value) : null)}
+                                  className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-foreground flex-1">
+                                  <option value="">— odaberi izvornu grupu —</option>
+                                  {grupe.filter(g => g.id !== selectedGrupaId).map(g => (
+                                    <option key={g.id} value={g.id}>{g.naziv}</option>
+                                  ))}
+                                </select>
+                                <label className="flex items-center gap-2 text-sm text-emerald-800 font-medium select-none">
+                                  <input type="checkbox" checked={copyOverride} onChange={(e) => setCopyOverride(e.target.checked)} className="w-4 h-4 accent-emerald-600" />
+                                  Prepiši postojeće
+                                </label>
+                                <Button
+                                  onClick={copyKalendarFromGrupa}
+                                  disabled={!copyFromGrupaId || copyingKalendar}
+                                  className="rounded-xl font-bold text-sm px-4 py-2 h-auto flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                  {copyingKalendar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                  Kopiraj
+                                </Button>
+                              </div>
+                            )}
+                            <div className="text-xs text-emerald-700 mt-2">
+                              Kopiraju se svi datumi (mekteb, ferije, važni datumi). Po defaultu se preskaču datumi koji već postoje u trenutnoj grupi.
+                            </div>
+                          </div>
+                        )}
 
                         {batchMode && (
                           <div className="flex items-center gap-3 mb-4 bg-violet-50 border border-violet-200 rounded-xl p-3">

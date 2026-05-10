@@ -58,7 +58,7 @@ export default defineConfig({
         start_url: basePath,
         scope: basePath,
         display: "standalone",
-        orientation: "portrait",
+        orientation: "any",
         background_color: "#fffaf3",
         theme_color: "#248F8F",
         categories: ["education", "books", "kids"],
