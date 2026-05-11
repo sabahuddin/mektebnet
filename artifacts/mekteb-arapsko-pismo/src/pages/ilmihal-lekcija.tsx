@@ -1122,7 +1122,11 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
 // ──────────────────────────────────────────────────
 // Single accordion section
 // ──────────────────────────────────────────────────
-function SectionAccordion({ section, slug, nivo, onOpened }: {
+// Memoizovano: roditelj (ilmihal-lekcija) re-renderuje svake sekunde zbog
+// `timeSpent` ticka. Bez memo-a se motion.div (height:auto) re-mjeri svake
+// sekunde, što izaziva reflow YouTube iframe-a unutar dangerouslySetInnerHTML
+// — vizuelno "treperenje" i nemogućnost pokretanja video-a.
+const SectionAccordion = memo(function SectionAccordion({ section, slug, nivo, onOpened }: {
   section: AccordionSection;
   slug: string;
   nivo: number;
@@ -1189,7 +1193,7 @@ function SectionAccordion({ section, slug, nivo, onOpened }: {
       </AnimatePresence>
     </div>
   );
-}
+});
 
 // ──────────────────────────────────────────────────
 // Hero image uploader (admin only)
