@@ -519,6 +519,17 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+// Shuffle opcije unutar pitanja kako tačan odgovor ne bi uvijek bio na istoj
+// poziciji. Ne miješa truefalse (Da/Ne ostaje fiksno) niti tipove koji ne
+// koriste klasične opcije (reorder, dragDrop, markWords — ovi imaju vlastiti
+// shuffle za svoje strukture).
+function shuffleQuestionOptions(p: Pitanje): Pitanje {
+  const skip = new Set(["truefalse", "reorder", "dragDrop", "markWords"]);
+  if (p.type && skip.has(p.type)) return p;
+  if (!Array.isArray(p.options) || p.options.length < 2) return p;
+  return { ...p, options: shuffle(p.options) };
+}
+
 export default function KvizPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
@@ -585,7 +596,7 @@ export default function KvizPage() {
           const sessionSize = (typeof data.pitanjaPoSesiji === "number" && data.pitanjaPoSesiji > 0)
             ? data.pitanjaPoSesiji
             : DEFAULT_QUIZ_SIZE;
-          const selected = pool.slice(0, Math.min(sessionSize, pool.length));
+          const selected = pool.slice(0, Math.min(sessionSize, pool.length)).map(shuffleQuestionOptions);
           setPitanja(selected);
           // init state for the first question
           const first = selected[0];
@@ -878,7 +889,7 @@ export default function KvizPage() {
                 const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
                   ? kviz.pitanjaPoSesiji
                   : DEFAULT_QUIZ_SIZE;
-                const sel = pool.slice(0, Math.min(sessionSize, pool.length));
+                const sel = pool.slice(0, Math.min(sessionSize, pool.length)).map(shuffleQuestionOptions);
                 setPitanja(sel);
                 setCurrent(0); setScore(0); setFinished(false);
                 const first = sel[0];

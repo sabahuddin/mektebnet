@@ -559,7 +559,10 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
             const kviz = saPitanjima[Math.floor(Math.random() * saPitanjima.length)];
             const sva: QuizQuestion[] = typeof kviz.pitanja === "string"
               ? JSON.parse(kviz.pitanja) : kviz.pitanja;
-            const shuffled = [...sva].sort(() => Math.random() - 0.5).slice(0, 5);
+            const shuffled = [...sva]
+              .sort(() => Math.random() - 0.5)
+              .slice(0, 5)
+              .map(p => ({ ...p, options: [...p.options].sort(() => Math.random() - 0.5) }));
             setPitanja(shuffled);
           }
         }
@@ -577,7 +580,14 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
       <Trophy className="w-10 h-10 mx-auto mb-3 text-amber-500" />
       <p className="text-lg font-extrabold text-foreground">{score}/{pitanja.length} tačnih!</p>
       <p className="text-sm text-muted-foreground mt-1">Ovo je provjera za sebe — ne broji u bodove</p>
-      <Button size="sm" variant="outline" onClick={() => { setCurrent(0); setScore(0); setDone(false); setSelected(null); }}
+      <Button size="sm" variant="outline" onClick={() => {
+        setCurrent(0); setScore(0); setDone(false); setSelected(null);
+        // Re-shuffle pitanja i opcije da redoslijed nije isti kao u prošlom pokušaju.
+        setPitanja(prev => [...prev]
+          .sort(() => Math.random() - 0.5)
+          .map(p => ({ ...p, options: [...p.options].sort(() => Math.random() - 0.5) }))
+        );
+      }}
         className="mt-4 rounded-xl">Ponovi</Button>
     </div>
   );
@@ -709,20 +719,32 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
   const [done, setDone] = useState(false);
   const [open, setOpen] = useState(!!defaultOpen);
   const [editOpen, setEditOpen] = useState(false);
+  // Brojač koji se inkrementira na "Ponovi" — koristi se kao dependency u
+  // useMemo da re-shuffle-ujemo pitanja i opcije pri svakom novom pokušaju.
+  const [shuffleSeed, setShuffleSeed] = useState(0);
   // Lokalni guard da onPassed pozovemo TAČNO jednom (i bez obzira što
   // useEffect može opaliti više puta na re-renderima).
   const passedFiredRef = useRef(false);
 
-  const reset = () => { setCurrent(0); setSelected(null); setScore(0); setDone(false); };
+  const reset = () => {
+    setCurrent(0); setSelected(null); setScore(0); setDone(false);
+    setShuffleSeed(s => s + 1);
+  };
 
-  // Hardening: izbaci malformed legacy zapise (nema teksta ili nedovoljno opcija)
-  const safePitanja: LekcijaKvizPitanje[] = (pitanja || [])
+  // Hardening: izbaci malformed legacy zapise (nema teksta ili nedovoljno opcija).
+  // useMemo je nužan da se opcije ne re-shuffle-uju na svaki render (inače bi
+  // se redoslijed mijenjao usred odgovaranja). Re-shuffle dolazi samo kad se
+  // promijeni `pitanja` prop ili kad učenik klikne "Ponovi" (shuffleSeed++).
+  const safePitanja: LekcijaKvizPitanje[] = React.useMemo(() => (pitanja || [])
     .map(p => ({
       question: typeof p?.question === "string" ? p.question : "",
       options: Array.isArray(p?.options) ? p.options.filter(o => typeof o === "string" && o.trim().length > 0) : [],
       answer: typeof p?.answer === "string" ? p.answer : "",
     }))
-    .filter(p => p.question.trim().length > 0 && p.options.length >= 2);
+    .filter(p => p.question.trim().length > 0 && p.options.length >= 2)
+    .map(p => ({ ...p, options: [...p.options].sort(() => Math.random() - 0.5) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pitanja, shuffleSeed]);
 
   const safeIdx = Math.min(current, Math.max(0, safePitanja.length - 1));
   const q = safePitanja[safeIdx];
