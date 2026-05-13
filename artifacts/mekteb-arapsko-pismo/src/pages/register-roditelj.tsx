@@ -10,22 +10,9 @@ import {
   GraduationCap, Users, Building2, MapPin, ExternalLink, ShieldCheck, Globe
 } from "lucide-react";
 
-// TODO: Korisnik (sabahuddin) treba poslati nove BMAC linkove za nove pakete:
-//   - Učenik (pojedinačna):  20 BAM / 12 € (BiH) i 20 € (svijet)
-//   - Roditelj (porodična):  50 BAM / 25 € (BiH) i 50 € (svijet)
-//   - Mekteb do 100 učenika: 200 BAM / 100 € (BiH) i 200 € (svijet)
-//   - Mekteb XL (>100):      300 BAM / 150 € (BiH) i 250 € (svijet)
-// Do tada koristimo postojeće linkove iz prethodne strukture cijena.
-const BMAC_LINKS = {
-  ucenik: {
-    bih: "https://buymeacoffee.com/mekteb/e/517837",
-    world: "https://buymeacoffee.com/mekteb/e/517833",
-  },
-  roditelj: {
-    bih: "https://buymeacoffee.com/mekteb/e/523964",
-    world: "https://buymeacoffee.com/mekteb/e/523965",
-  },
-};
+// Jedinstveni Buy Me a Coffee membership link — korisnik na BMAC stranici
+// bira nivo pretplate (pojedinačna, porodična, mektebska, mektebska XL).
+const BMAC_MEMBERSHIP_LINK = "https://buymeacoffee.com/mekteb/membership";
 
 // Cijena za pojedinačnu (učeničku) pretplatu — fiksno mjesečno.
 const UCENIK_PRICE_BIH = "20 BAM (12 €)";
@@ -157,7 +144,7 @@ export default function RegisterRoditeljPage() {
     setError("");
     if (!validateCaptcha()) return;
     setIsLoading(true);
-    const link = isBiH ? BMAC_LINKS.ucenik.bih : BMAC_LINKS.ucenik.world;
+    const link = BMAC_MEMBERSHIP_LINK;
     try {
       await apiRequest("POST", "/auth/register-ucenik", { ...ucenikForm, paymentLink: link });
       window.open(link, "_blank");
@@ -175,7 +162,7 @@ export default function RegisterRoditeljPage() {
     setError("");
     if (!validateCaptcha()) return;
     setIsLoading(true);
-    const link = isBiH ? BMAC_LINKS.roditelj.bih : BMAC_LINKS.roditelj.world;
+    const link = BMAC_MEMBERSHIP_LINK;
     try {
       await apiRequest("POST", "/auth/register-roditelj-v2", { ...roditeljForm, paymentLink: link });
       window.open(link, "_blank");
