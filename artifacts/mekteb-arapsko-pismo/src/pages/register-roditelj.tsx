@@ -14,7 +14,7 @@ import {
 // bira nivo pretplate (pojedinačna, porodična, mektebska, mektebska XL).
 const BMAC_MEMBERSHIP_LINK = "https://buymeacoffee.com/mekteb/membership";
 
-// Cijena za pojedinačnu (učeničku) pretplatu — fiksno mjesečno.
+// Cijena za pojedinačnu (učeničku) pretplatu — fiksno godišnje.
 const UCENIK_PRICE_BIH = "20 BAM (12 €)";
 const UCENIK_PRICE_EUR = "20 €";
 
@@ -260,10 +260,10 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="ucenik" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Samostalna registracija</strong> — pristup svim sadržajima (Ilmihal, Sufara, Kvizovi, Čitaonica).
+                      <strong>Pojedinačna pretplata</strong> — pristup svim sadržajima za jednu osobu.
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
-                      Pretplata: {isBiH === null ? "..." : ucenikPrice} / mjesečno
+                      Pretplata: {isBiH === null ? "..." : ucenikPrice} / godišnje
                     </p>
                   </div>
 
@@ -305,10 +305,10 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="roditelj" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Registracija roditelja</strong> — u svom profilu možete dodati do 4 djece i pratiti njihov rad na platformi.
+                      <strong>Porodična pretplata</strong> — pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon završene registracije.
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
-                      Porodična pretplata: {isBiH === null ? "..." : roditeljPrice} / mjesečno
+                      Pretplata: {isBiH === null ? "..." : roditeljPrice} / godišnje
                     </p>
                   </div>
 
@@ -350,7 +350,7 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="mekteb" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Registracija mekteba</strong> — registrant je muallim. Naziv mekteba koristimo za generisanje šifri kada budete unosili učenike.
+                      <strong>Registracija mekteba</strong> — učenike dodajete nakon uspješne registracije.
                     </p>
                   </div>
 
@@ -422,7 +422,7 @@ export default function RegisterRoditeljPage() {
                             </div>
                             <span className="text-xs font-bold text-primary shrink-0 ml-2 text-right">
                               {isBiH === null ? "..." : (isBiH ? p.cijenaBih : p.cijenaEur)}
-                              <div className="text-[10px] font-normal text-muted-foreground">/ mjesečno</div>
+                              <div className="text-[10px] font-normal text-muted-foreground">/ godišnje</div>
                             </span>
                           </button>
                         ))}
