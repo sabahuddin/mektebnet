@@ -337,17 +337,13 @@ router.post("/register-ucenik", async (req, res) => {
 // POST /api/auth/register-roditelj-v2 — parent registration with children count
 router.post("/register-roditelj-v2", async (req, res) => {
   try {
-    const { displayName, email, brojDjece, paymentLink } = req.body;
-    if (!displayName?.trim() || !email?.trim() || !brojDjece) {
-      res.status(400).json({ error: "Ime, email i broj djece su obavezni" });
+    const { displayName, email, paymentLink } = req.body;
+    if (!displayName?.trim() || !email?.trim()) {
+      res.status(400).json({ error: "Ime i email su obavezni" });
       return;
     }
-
-    const count = parseInt(brojDjece);
-    if (count < 1 || count > 4) {
-      res.status(400).json({ error: "Broj djece mora biti 1-4" });
-      return;
-    }
+    // Porodična pretplata pokriva do 4 djece — roditelj ih dodaje sam u svom profilu.
+    const count = 4;
 
     const firstName = displayName.trim().split(/\s+/)[0];
     const password = crypto.randomBytes(4).toString("hex");
@@ -391,7 +387,7 @@ router.post("/register-roditelj-v2", async (req, res) => {
 // POST /api/auth/register-mekteb — mekteb registration request
 router.post("/register-mekteb", async (req, res) => {
   try {
-    const { email, korisnickoIme, drzava, grad, nazivMekteba, paket, koliko_muallima, koliko_ucenika } = req.body;
+    const { email, korisnickoIme, drzava, grad, nazivMekteba, paket, koliko_muallima } = req.body;
     if (!email?.trim() || !korisnickoIme?.trim() || !grad?.trim() || !nazivMekteba?.trim() || !paket) {
       res.status(400).json({ error: "Sva polja su obavezna" });
       return;
@@ -401,7 +397,11 @@ router.post("/register-mekteb", async (req, res) => {
       return;
     }
 
-    const paketNaziv = paket === 4 ? "Posebni zahtjevi" : `Paket ${paket}`;
+    const paketNaziv =
+      paket === "do100" ? "Mektebska pretplata (do 100 učenika)" :
+      paket === "vise100" ? "Mektebska pretplata XL (više od 100 učenika)" :
+      String(paket);
+
     const data: Record<string, any> = {
       "Email": email,
       "Korisničko ime": korisnickoIme,
@@ -409,12 +409,8 @@ router.post("/register-mekteb", async (req, res) => {
       "Grad": grad,
       "Naziv mekteba": nazivMekteba,
       "Paket": paketNaziv,
+      "Koliko muallimskih računa": koliko_muallima || 1,
     };
-
-    if (paket === 4) {
-      data["Koliko muallima"] = koliko_muallima || 1;
-      data["Koliko učenika"] = koliko_ucenika || "50";
-    }
 
     console.log("=== MEKTEB REGISTRATION REQUEST ===");
     Object.entries(data).forEach(([k, v]) => console.log(`${k}: ${v}`));
