@@ -108,7 +108,7 @@ export default function Progress() {
               <Star className="w-8 h-8 fill-current" />
             </div>
             <div>
-              <p className="text-sm font-bold uppercase tracking-wider text-yellow-800/70">Ukupno kapi meda 🍯</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-yellow-800/70">Ukupno kapljica meda 🍯</p>
               <p className="text-4xl font-black text-yellow-600">{napredak?.totalHasanat || 0}</p>
             </div>
           </Card>

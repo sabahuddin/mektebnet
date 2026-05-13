@@ -363,14 +363,14 @@ export default function UcenikProfilPage() {
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg" aria-hidden>🍯</span>
-                        <span className="text-sm font-extrabold uppercase tracking-wider">Kapi meda</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider">Kapljice meda</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={totalHasanat} />
                       </div>
                       <div className="text-sm font-bold mt-1 opacity-80">ukupno sakupljeno</div>
                       <div className="text-xs mt-2 opacity-75">
-                        Za svaku završenu lekciju i kviz zaradiš nove kapi meda 🍯
+                        Za svaku završenu lekciju i kviz zaradiš nove kapljice meda 🍯
                       </div>
                     </div>
                   </motion.div>
@@ -677,7 +677,7 @@ export default function UcenikProfilPage() {
                       <div className="bg-white border border-amber-200 rounded-2xl p-4 text-center">
                         <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
                         <div className="text-3xl font-extrabold text-amber-600">{profil.napredak.totalHasanat}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? "kap meda" : "kapi meda"}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? "kapljica meda" : "kapljice meda"}</div>
                       </div>
                       <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-center">
                         <BookOpen className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
