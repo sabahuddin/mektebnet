@@ -277,7 +277,7 @@ export default function UcenikPage() {
     try {
       const linked = await apiRequest<{ id: number; displayName: string; username: string; status: string }>(
         "POST",
-        `/muallim/ucenici/${parseInt(id)}/poveži-roditelja`,
+        `/muallim/ucenici/${parseInt(id)}/povezi-roditelja`,
         { roditeljUsername: postojeciUsername.trim() },
         token,
       );

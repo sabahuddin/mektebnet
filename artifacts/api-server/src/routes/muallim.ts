@@ -541,12 +541,12 @@ router.get("/ucenici/:id/roditelji", async (req, res) => {
   }
 });
 
-// POST /api/muallim/ucenici/:id/poveži-roditelja — poveže POSTOJEĆEG roditelja
+// POST /api/muallim/ucenici/:id/povezi-roditelja — poveže POSTOJEĆEG roditelja
 // (po korisničkom imenu) sa POSTOJEĆIM učenikom muallima. Korisno kad roditelj
 // već ima jedno dijete u mektebu, a muallim mu hoće dodati još jedno bez čekanja
 // da roditelj sam podnese zahtjev.
 // Body: { roditeljUsername: string }
-router.post("/ucenici/:id/poveži-roditelja", async (req, res) => {
+router.post("/ucenici/:id/povezi-roditelja", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.id);
     const muallimId = req.user!.userId;
