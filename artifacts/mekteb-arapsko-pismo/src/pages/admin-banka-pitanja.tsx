@@ -6,7 +6,8 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, Search, Pencil, Trash2, Loader2, X, Save,
-  Database, AlertTriangle, ChevronLeft, ChevronRight, Filter, BookOpenCheck
+  Database, AlertTriangle, ChevronLeft, ChevronRight, Filter, BookOpenCheck,
+  Settings, Tag,
 } from "lucide-react";
 
 // Banka pitanja — centralni admin UI za sva kviz pitanja.
@@ -77,19 +78,14 @@ interface UsageInfo {
 
 const PAGE_SIZE = 50;
 
-const KATEGORIJE_LABELS: Record<string, string> = {
-  vjerovanje: "Vjerovanje",
-  namaz: "Namaz",
-  ahlak: "Ahlak",
-  historija: "Historija",
-  bosna: "Bosna",
-  sure: "Sure",
-  dove: "Dove",
-  halal_haram: "Halal/Haram",
-  kuran: "Kur'an",
-  sufara: "Sufara",
-  opce: "Opće",
-};
+interface KvizKategorijaApi {
+  id: number;
+  slug: string;
+  naziv: string;
+  ikona: string | null;
+  redoslijed: number;
+  brojPitanja?: number;
+}
 
 function emptyForm() {
   return {
@@ -135,6 +131,28 @@ export default function AdminBankaPitanjaPage() {
   const [saving, setSaving] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ pitanje: PitanjeBanka; usage: UsageInfo | null } | null>(null);
+
+  // Dinamičke kategorije iz baze (admin može dodavati/brisati).
+  const [kategorije, setKategorije] = useState<KvizKategorijaApi[]>([]);
+  const [showKatManager, setShowKatManager] = useState(false);
+
+  const loadKategorije = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<KvizKategorijaApi[]>("GET", "/admin/kviz-kategorije", undefined, token);
+      setKategorije(data);
+    } catch {
+      // tihi fallback — koristi se prazna lista
+    }
+  };
+
+  useEffect(() => { void loadKategorije(); }, [token]);
+
+  const kategorijeLabels = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    kategorije.forEach(k => { m[k.slug] = k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv; });
+    return m;
+  }, [kategorije]);
 
   useEffect(() => {
     if (!user || user.role !== "admin") { setLocation("/"); return; }
@@ -189,6 +207,11 @@ export default function AdminBankaPitanjaPage() {
 
   const startEdit = (p: PitanjeBanka) => {
     setEditId(p.id);
+    // Skrol na red koji se uređuje (mobilno ne vidi formu inače).
+    setTimeout(() => {
+      const el = document.querySelector(`[data-testid="inline-editor-${p.id}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 80);
     const vrsta = (ALL_VRSTE.includes(p.vrsta as Vrsta) ? p.vrsta : "single") as Vrsta;
     const isInteractive = vrsta === "dragDrop" || vrsta === "markWords";
     const opcije = vrsta === "truefalse"
@@ -423,11 +446,19 @@ export default function AdminBankaPitanjaPage() {
               className="pl-10 pr-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-[180px]"
             >
               <option value="">Sve kategorije</option>
-              {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => (
+              {Object.entries(kategorijeLabels).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
             </select>
           </div>
+          <button
+            onClick={() => setShowKatManager(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-amber-300 text-amber-700 rounded-xl font-semibold hover:bg-amber-50 transition shrink-0"
+            title="Dodaj/obriši kategorije pitanja"
+            data-testid="btn-upravljaj-kategorijama"
+          >
+            <Settings className="w-4 h-4" /> Kategorije
+          </button>
           <button
             onClick={startNew}
             className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition shrink-0"
@@ -436,13 +467,15 @@ export default function AdminBankaPitanjaPage() {
           </button>
         </div>
 
-        {showForm && (
+        {/* Forma za NOVO pitanje stoji na vrhu (nema reda u koji bi se ubacila).
+            Forma za EDIT se renderira INLINE unutar reda (vidi map ispod). */}
+        {showForm && editId === null && (
           <PitanjeForm
             form={form}
             setForm={setForm}
             lekcije={lekcije}
-            kategorijeLabels={KATEGORIJE_LABELS}
-            editId={editId}
+            kategorijeLabels={kategorijeLabels}
+            editId={null}
             saving={saving}
             onSave={handleSave}
             onCancel={cancelForm}
@@ -465,6 +498,7 @@ export default function AdminBankaPitanjaPage() {
             <div className="space-y-2">
               {rows.map(p => {
                 const lek = p.lekcijaId ? lekcijeMap.get(p.lekcijaId) : null;
+                const isEditingThis = showForm && editId === p.id;
                 return (
                   <div key={p.id} className="bg-white border border-border/50 rounded-xl px-4 py-3 hover:border-amber-200 transition group">
                     <div className="flex items-start gap-3">
@@ -472,7 +506,7 @@ export default function AdminBankaPitanjaPage() {
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           {p.kategorija && (
                             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                              {KATEGORIJE_LABELS[p.kategorija] || p.kategorija}
+                              {kategorijeLabels[p.kategorija] || p.kategorija}
                             </span>
                           )}
                           {lek && (
@@ -509,13 +543,13 @@ export default function AdminBankaPitanjaPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <div className={`flex items-center gap-1 shrink-0 ${isEditingThis ? "" : "sm:opacity-0 sm:group-hover:opacity-100"} transition-opacity`}>
                         <button
-                          onClick={() => startEdit(p)}
-                          className="p-2 rounded-lg hover:bg-amber-50 text-muted-foreground hover:text-amber-600 transition"
-                          title="Uredi"
+                          onClick={() => isEditingThis ? cancelForm() : startEdit(p)}
+                          className={`p-2 rounded-lg transition ${isEditingThis ? "bg-amber-100 text-amber-700" : "hover:bg-amber-50 text-muted-foreground hover:text-amber-600"}`}
+                          title={isEditingThis ? "Zatvori urednik" : "Uredi"}
                         >
-                          <Pencil className="w-4 h-4" />
+                          {isEditingThis ? <X className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
                         </button>
                         <button
                           onClick={() => askDelete(p)}
@@ -526,6 +560,25 @@ export default function AdminBankaPitanjaPage() {
                         </button>
                       </div>
                     </div>
+                    {/* Inline editor — otvara se TU GDJE SI KLIKNUO, ne na vrhu strane,
+                        tako da nema nepotrebnog scrolanja gore-dolje. */}
+                    {isEditingThis && (
+                      <div className="mt-3 border-t border-amber-200 pt-3" data-testid={`inline-editor-${p.id}`}>
+                        <PitanjeForm
+                          form={form}
+                          setForm={setForm}
+                          lekcije={lekcije}
+                          kategorijeLabels={kategorijeLabels}
+                          editId={editId}
+                          saving={saving}
+                          onSave={handleSave}
+                          onCancel={cancelForm}
+                          onOpcijaChange={handleOpcijaChange}
+                          onAddOpcija={addOpcija}
+                          onRemoveOpcija={removeOpcija}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -551,6 +604,15 @@ export default function AdminBankaPitanjaPage() {
               </div>
             )}
           </>
+        )}
+
+        {showKatManager && (
+          <KategorijeManagerModal
+            kategorije={kategorije}
+            token={token!}
+            onClose={() => setShowKatManager(false)}
+            onChanged={() => { void loadKategorije(); void loadList(); }}
+          />
         )}
 
         {confirmDelete && (
@@ -582,6 +644,162 @@ export default function AdminBankaPitanjaPage() {
         )}
       </div>
     </Layout>
+  );
+}
+
+// ── KategorijeManagerModal ────────────────────────────────────────────────────
+// Admin panel za dodavanje/brisanje kategorija pitanja. Brisanje NE briše
+// pitanja — ona ostaju u bazi sa starim slug-om. Promjena slug-a postojeće
+// kategorije automatski premjesti pitanja (server-side transakcija).
+function KategorijeManagerModal({
+  kategorije, token, onClose, onChanged,
+}: {
+  kategorije: KvizKategorijaApi[];
+  token: string;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { toast } = useToast();
+  const [novaSlug, setNovaSlug] = useState("");
+  const [noviNaziv, setNoviNaziv] = useState("");
+  const [novaIkona, setNovaIkona] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [confirming, setConfirming] = useState<KvizKategorijaApi | null>(null);
+
+  const dodaj = async () => {
+    if (!noviNaziv.trim()) { toast({ title: "Greška", description: "Naziv je obavezan", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      await apiRequest("POST", "/admin/kviz-kategorije", {
+        slug: novaSlug.trim() || noviNaziv.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_"),
+        naziv: noviNaziv.trim(),
+        ikona: novaIkona.trim() || null,
+      }, token);
+      toast({ title: "Dodano", description: `Kategorija "${noviNaziv.trim()}"` });
+      setNovaSlug(""); setNoviNaziv(""); setNovaIkona("");
+      onChanged();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće dodati", variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  const obrisi = async (k: KvizKategorijaApi) => {
+    setSaving(true);
+    try {
+      await apiRequest("DELETE", `/admin/kviz-kategorije/${k.id}`, undefined, token);
+      toast({ title: "Obrisano", description: `Kategorija "${k.naziv}" uklonjena` });
+      setConfirming(null);
+      onChanged();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće obrisati", variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <Tag className="w-5 h-5 text-amber-600" />
+            </div>
+            <h3 className="font-extrabold text-lg text-foreground">Kategorije pitanja</h3>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-4 mb-4">
+          <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2"><Plus className="w-4 h-4" /> Dodaj novu kategoriju</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+            <input
+              value={noviNaziv}
+              onChange={e => setNoviNaziv(e.target.value)}
+              placeholder="Naziv (npr. Sirat)"
+              className="px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+              data-testid="input-nova-kategorija-naziv"
+            />
+            <input
+              value={novaSlug}
+              onChange={e => setNovaSlug(e.target.value)}
+              placeholder="slug (auto)"
+              className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              data-testid="input-nova-kategorija-slug"
+            />
+            <input
+              value={novaIkona}
+              onChange={e => setNovaIkona(e.target.value)}
+              placeholder="ikona (emoji)"
+              maxLength={4}
+              className="px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+              data-testid="input-nova-kategorija-ikona"
+            />
+          </div>
+          <button
+            onClick={dodaj}
+            disabled={saving || !noviNaziv.trim()}
+            className="px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 disabled:opacity-50"
+            data-testid="btn-dodaj-kategoriju"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Dodaj"}
+          </button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Slug se generiše automatski iz naziva ako ga ne upišeš (samo a-z, 0-9, _).
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {kategorije.length === 0 ? (
+            <p className="text-center text-muted-foreground py-6">Nema kategorija. Dodaj prvu iznad.</p>
+          ) : kategorije.map(k => (
+            <div key={k.id} className="flex items-center gap-3 px-3 py-2 border border-border rounded-lg">
+              <span className="text-xl shrink-0 w-6 text-center">{k.ikona || "•"}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-foreground truncate">{k.naziv}</div>
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-mono">{k.slug}</span> · {k.brojPitanja || 0} pitanja
+                </div>
+              </div>
+              <button
+                onClick={() => setConfirming(k)}
+                className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition"
+                title="Obriši kategoriju"
+                data-testid={`btn-obrisi-kategoriju-${k.slug}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {confirming && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setConfirming(null)}>
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="font-extrabold text-lg text-foreground">Obrisati kategoriju?</h3>
+              </div>
+              <p className="text-base text-muted-foreground mb-2">
+                <strong>{confirming.naziv}</strong> ({confirming.brojPitanja || 0} pitanja)
+              </p>
+              {(confirming.brojPitanja || 0) > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm text-amber-800">
+                  Pitanja u ovoj kategoriji ostaju u banci, samo neće više imati kategoriju
+                  i prikazivat će se sa starim slug-om dok im ne dodijeliš novu.
+                </div>
+              )}
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setConfirming(null)} className="px-4 py-2 rounded-xl border border-border font-semibold hover:bg-muted">Odustani</button>
+                <button onClick={() => obrisi(confirming)} disabled={saving} className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Obriši"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

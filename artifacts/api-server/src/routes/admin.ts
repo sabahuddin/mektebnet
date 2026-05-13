@@ -39,6 +39,7 @@ import {
   type MedenaKategorija,
   knjige,
   kategorijeKnjigeTable,
+  kvizKategorijeTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
@@ -1568,8 +1569,124 @@ router.get("/banka-pitanja", async (req, res) => {
 });
 
 // GET /api/admin/banka-pitanja/kategorije — meta za UI dropdowns
+// Vraća admin-definisane kategorije iz baze + (fallback) hardcoded set
+// ako tabela još nije seedovana.
 router.get("/banka-pitanja/kategorije", async (_req, res) => {
+  try {
+    const rows = await db.select().from(kvizKategorijeTable)
+      .orderBy(asc(kvizKategorijeTable.redoslijed), asc(kvizKategorijeTable.id));
+    if (rows.length > 0) {
+      res.json({ kategorije: rows.map(r => r.slug), kategorijeRows: rows });
+      return;
+    }
+  } catch (err) {
+    console.error("[GET /admin/banka-pitanja/kategorije] DB read failed, falling back", err);
+  }
   res.json({ kategorije: KVIZ_KATEGORIJE });
+});
+
+// ── KVIZ KATEGORIJE (admin CRUD) ───────────────────────────────────────────────
+// Admin-definisane kategorije za pitanja u banci. Brisanje kategorije NE briše
+// pitanja — ona ostaju sa starim slugom u koloni `kategorija` i u UI-ju se
+// prikazuju pod "Bez kategorije" (ili pod sirovim slugom). Admin može masovno
+// promijeniti kategoriju pitanjima kroz banku ako želi.
+
+// GET /api/admin/kviz-kategorije — sve kategorije + broj pitanja u svakoj
+router.get("/kviz-kategorije", async (_req, res) => {
+  try {
+    const kategorije = await db.select().from(kvizKategorijeTable)
+      .orderBy(asc(kvizKategorijeTable.redoslijed), asc(kvizKategorijeTable.id));
+    const counts = await db
+      .select({ kategorija: pitanjaBankaTable.kategorija, broj: sql<number>`count(*)::int` })
+      .from(pitanjaBankaTable)
+      .groupBy(pitanjaBankaTable.kategorija);
+    const countMap = new Map(counts.map(c => [c.kategorija, c.broj]));
+    res.json(kategorije.map(k => ({ ...k, brojPitanja: countMap.get(k.slug) ?? 0 })));
+  } catch (err) {
+    console.error("[GET /admin/kviz-kategorije]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/kviz-kategorije — dodaj novu kategoriju
+router.post("/kviz-kategorije", async (req, res) => {
+  try {
+    const { slug, naziv, ikona, redoslijed } = req.body || {};
+    if (!slug || !naziv) { res.status(400).json({ error: "slug i naziv su obavezni" }); return; }
+    const slugClean = String(slug).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+    if (!slugClean) { res.status(400).json({ error: "Slug mora sadržavati a-z, 0-9 ili _" }); return; }
+    const [created] = await db.insert(kvizKategorijeTable).values({
+      slug: slugClean,
+      naziv: String(naziv).trim(),
+      ikona: ikona ? String(ikona).trim().slice(0, 16) : null,
+      redoslijed: typeof redoslijed === "number" ? redoslijed : 100,
+    }).returning();
+    res.status(201).json(created);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Slug kategorije već postoji" });
+      return;
+    }
+    console.error("[POST /admin/kviz-kategorije]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/kviz-kategorije/:id — izmijeni kategoriju.
+// Ako se mijenja `slug`, automatski ažurira `pitanja_banka.kategorija` u svim
+// pitanjima koja su u toj kategoriji (transakcija).
+router.put("/kviz-kategorije/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    const { slug, naziv, ikona, redoslijed } = req.body || {};
+    const [existing] = await db.select().from(kvizKategorijeTable).where(eq(kvizKategorijeTable.id, id));
+    if (!existing) { res.status(404).json({ error: "Kategorija nije pronađena" }); return; }
+    const updates: Record<string, unknown> = {};
+    if (slug !== undefined) {
+      const s = String(slug).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+      if (!s) { res.status(400).json({ error: "Slug mora sadržavati a-z, 0-9 ili _" }); return; }
+      updates["slug"] = s;
+    }
+    if (naziv !== undefined) updates["naziv"] = String(naziv).trim();
+    if (ikona !== undefined) updates["ikona"] = ikona ? String(ikona).trim().slice(0, 16) : null;
+    if (redoslijed !== undefined) updates["redoslijed"] = typeof redoslijed === "number" ? redoslijed : existing.redoslijed;
+    if (Object.keys(updates).length === 0) { res.status(400).json({ error: "Nema izmjena" }); return; }
+    const newSlug = (updates["slug"] as string | undefined) ?? existing.slug;
+    const slugChanged = newSlug !== existing.slug;
+    await db.transaction(async (tx) => {
+      await tx.update(kvizKategorijeTable).set(updates).where(eq(kvizKategorijeTable.id, id));
+      if (slugChanged) {
+        await tx.update(pitanjaBankaTable)
+          .set({ kategorija: newSlug })
+          .where(eq(pitanjaBankaTable.kategorija, existing.slug));
+      }
+    });
+    const [updated] = await db.select().from(kvizKategorijeTable).where(eq(kvizKategorijeTable.id, id));
+    res.json(updated);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Slug kategorije već postoji" });
+      return;
+    }
+    console.error("[PUT /admin/kviz-kategorije/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/admin/kviz-kategorije/:id — obriši kategoriju.
+// Pitanja u toj kategoriji ostaju netaknuta (slug ostaje u koloni — UI ih
+// grupiše pod "Bez kategorije"). Admin ih može pojedinačno premjestiti.
+router.delete("/kviz-kategorije/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    await db.delete(kvizKategorijeTable).where(eq(kvizKategorijeTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /admin/kviz-kategorije/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
 });
 
 // GET /api/admin/banka-pitanja/:id

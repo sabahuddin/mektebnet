@@ -256,6 +256,30 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN file_size SET DEFAULT 0;`);
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN mime_type SET DEFAULT 'application/octet-stream';`);
 
+    // Kviz kategorije (admin-definisane). Tabela + idempotent seed iz
+    // KVIZ_KATEGORIJE_META ako je tabela prazna (prvi start nakon migracije).
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS kviz_kategorije (
+        id serial PRIMARY KEY,
+        slug varchar(60) NOT NULL UNIQUE,
+        naziv varchar(120) NOT NULL,
+        ikona varchar(16),
+        redoslijed integer NOT NULL DEFAULT 100,
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    const { KVIZ_KATEGORIJE_META: KK_META } = await import("@workspace/db/schema");
+    const seedRows = Object.entries(KK_META).map(([slug, meta], idx) => ({
+      slug, naziv: meta.naziv, ikona: meta.ikona, redoslijed: (idx + 1) * 10,
+    }));
+    for (const r of seedRows) {
+      await db.execute(sql`
+        INSERT INTO kviz_kategorije (slug, naziv, ikona, redoslijed)
+        VALUES (${r.slug}, ${r.naziv}, ${r.ikona}, ${r.redoslijed})
+        ON CONFLICT (slug) DO NOTHING;
+      `);
+    }
+
     logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");

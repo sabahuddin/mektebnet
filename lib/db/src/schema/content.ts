@@ -253,6 +253,25 @@ export const kategorijeKnjigeTable = pgTable("kategorije_knjige", {
 export type KategorijaKnjige = typeof kategorijeKnjigeTable.$inferSelect;
 export type InsertKategorijaKnjige = typeof kategorijeKnjigeTable.$inferInsert;
 
+// Kategorije za pitanja u banci. Admin-definisane (mogu se dodavati/brisati
+// kroz admin panel). `slug` se referencira iz `pitanja_banka.kategorija`
+// (string match, no FK — brisanje kategorije ostavlja postojeća pitanja sa
+// stalnim slugom u koloni; admin ih može masovno premjestiti ili će se
+// prikazivati pod "Bez kategorije" u UI-ju).
+// Inicijalni seed iz `KVIZ_KATEGORIJE_META` se ubacuje pri prvom startu
+// (vidi runResidualSchema u api-server/src/index.ts).
+export const kvizKategorijeTable = pgTable("kviz_kategorije", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 60 }).notNull().unique(),
+  naziv: varchar("naziv", { length: 120 }).notNull(),
+  ikona: varchar("ikona", { length: 16 }),
+  redoslijed: integer("redoslijed").notNull().default(100),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KvizKategorijaRow = typeof kvizKategorijeTable.$inferSelect;
+export type InsertKvizKategorijaRow = typeof kvizKategorijeTable.$inferInsert;
+
 // User content progress (across all modules)
 export const korisnikNapredakTable = pgTable("korisnik_napredak", {
   id: serial("id").primaryKey(),
