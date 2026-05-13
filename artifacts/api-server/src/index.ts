@@ -234,6 +234,11 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_screentime_sec integer NOT NULL DEFAULT 0;`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS users_last_seen_idx ON users (last_seen_at);`);
 
+    // Probni period za self-registration. Login dozvoljen ako je
+    // `is_active=true` (admin odobrio pretplatu) ILI `trial_until > now`
+    // (probnih 7 dana još nije isteklo).
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_until timestamp;`);
+
     // Prilozi catch-up (idempotent). Tabela prilozi je nastala prije Drizzle
     // baseline-a (0000_*.sql) na nekim okruženjima, pa migration tracker ne
     // dodaje kolone iz baseline-a. Bez ovoga POST /api/admin/prilozi/:id

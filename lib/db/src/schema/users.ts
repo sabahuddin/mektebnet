@@ -12,6 +12,11 @@ export const usersTable = pgTable("users", {
   displayName: text("display_name").notNull(),
   role: userRoleEnum("role").notNull().default("ucenik"),
   isActive: boolean("is_active").notNull().default(true),
+  // Probni period — popunjeno kod self-registration (NOW + 7 dana). Login je
+  // dozvoljen ako je `isActive=true` (admin odobrio) ILI `trialUntil > now`.
+  // Kad admin odobri pretplatu, postavi se `isActive=true` i ovo polje se
+  // čisti (NULL).
+  trialUntil: timestamp("trial_until"),
   createdAt: timestamp("created_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
   // Presence/screentime — ažurirano preko POST /api/aktivnost/heartbeat svakih ~60s.

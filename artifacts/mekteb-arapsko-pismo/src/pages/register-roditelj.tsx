@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   UserPlus, User, Mail, AlertCircle, CheckCircle2,
-  GraduationCap, Users, Building2, MapPin, ExternalLink, ShieldCheck, Globe
+  GraduationCap, Users, Building2, MapPin, ExternalLink, ShieldCheck, Globe,
+  Calendar, KeyRound, Copy
 } from "lucide-react";
 
 // Jedinstveni Buy Me a Coffee membership link — korisnik na BMAC stranici
@@ -98,20 +99,29 @@ export default function RegisterRoditeljPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const [ucenikForm, setUcenikForm] = useState({ displayName: "", email: "" });
+  const [ucenikForm, setUcenikForm] = useState({ displayName: "", email: "", godine: "" });
   const [roditeljForm, setRoditeljForm] = useState({ displayName: "", email: "" });
   const [mektebForm, setMektebForm] = useState<{
     email: string;
     korisnickoIme: string;
+    displayName: string;
     drzava: string;
     grad: string;
     nazivMekteba: string;
     paket: MektebPaketId;
     koliko_muallima: number;
   }>({
-    email: "", korisnickoIme: "", drzava: "", grad: "", nazivMekteba: "",
+    email: "", korisnickoIme: "", displayName: "", drzava: "", grad: "", nazivMekteba: "",
     paket: "do100", koliko_muallima: 1
   });
+
+  // Kredencijali vraćeni iz API-ja nakon uspješne registracije.
+  const [credentials, setCredentials] = useState<{
+    username: string;
+    password: string;
+    displayName: string;
+    trialUntil: string;
+  } | null>(null);
 
   const [captcha, setCaptcha] = useState(generateCaptcha);
   const [captchaAnswer, setCaptchaAnswer] = useState("");
@@ -143,11 +153,16 @@ export default function RegisterRoditeljPage() {
     e.preventDefault();
     setError("");
     if (!validateCaptcha()) return;
+    if (!ucenikForm.godine || parseInt(ucenikForm.godine) < 1) {
+      setError("Unesite koliko godina imate.");
+      return;
+    }
     setIsLoading(true);
-    const link = BMAC_MEMBERSHIP_LINK;
     try {
-      await apiRequest("POST", "/auth/register-ucenik", { ...ucenikForm, paymentLink: link });
-      window.open(link, "_blank");
+      const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
+        "POST", "/auth/register-ucenik", { ...ucenikForm, godine: parseInt(ucenikForm.godine) }
+      );
+      setCredentials({ username: r.username, password: r.password, displayName: r.displayName, trialUntil: r.trialUntil });
       setSuccess(true);
     } catch (err: any) {
       setError(err?.message || t("common.greskaRegistracija"));
@@ -162,10 +177,11 @@ export default function RegisterRoditeljPage() {
     setError("");
     if (!validateCaptcha()) return;
     setIsLoading(true);
-    const link = BMAC_MEMBERSHIP_LINK;
     try {
-      await apiRequest("POST", "/auth/register-roditelj-v2", { ...roditeljForm, paymentLink: link });
-      window.open(link, "_blank");
+      const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
+        "POST", "/auth/register-roditelj-v2", roditeljForm
+      );
+      setCredentials({ username: r.username, password: r.password, displayName: r.displayName, trialUntil: r.trialUntil });
       setSuccess(true);
     } catch (err: any) {
       setError(err?.message || t("common.greskaRegistracija"));
@@ -181,7 +197,10 @@ export default function RegisterRoditeljPage() {
     if (!validateCaptcha()) return;
     setIsLoading(true);
     try {
-      await apiRequest("POST", "/auth/register-mekteb", mektebForm);
+      const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
+        "POST", "/auth/register-mekteb", mektebForm
+      );
+      setCredentials({ username: r.username, password: r.password, displayName: r.displayName, trialUntil: r.trialUntil });
       setSuccess(true);
     } catch (err: any) {
       setError(err?.message || t("common.greskaSlanje"));
@@ -191,23 +210,64 @@ export default function RegisterRoditeljPage() {
     }
   };
 
-  if (success) {
+  if (success && credentials) {
+    const trialDate = new Date(credentials.trialUntil);
+    const trialDateStr = trialDate.toLocaleDateString("bs-BA", { day: "numeric", month: "long", year: "numeric" });
+    const copyText = `Korisničko ime: ${credentials.username}\nLozinka: ${credentials.password}`;
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"
         style={{ backgroundImage: "radial-gradient(circle at 50% 0%, hsl(var(--primary)/0.08) 0%, transparent 70%)" }}>
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md text-center">
-          <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-10">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md">
+          <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-8">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+              </div>
+              <h2 className="text-2xl font-extrabold text-foreground mb-2">Račun je otvoren!</h2>
+              <p className="text-muted-foreground text-sm mb-6">
+                Dobrodošli, <strong className="text-foreground">{credentials.displayName}</strong>. Sačuvajte podatke za prijavu.
+              </p>
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground mb-3">{t("common.hvalaRegistracija")}</h2>
-            <p className="text-muted-foreground mb-6">
-              {activeTab === "mekteb"
-                ? t("common.zahtjevZaprimljen")
-                : t("common.podaciPoslani")}
-            </p>
-            <Button onClick={() => setLocation("/login")} className="rounded-xl">
-              {t("common.nazadNaPrijavu")}
+
+            <div className="bg-muted/40 border border-border/60 rounded-2xl p-5 mb-5">
+              <div className="flex items-center gap-2 mb-3">
+                <KeyRound className="w-4 h-4 text-primary" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vaši podaci za prijavu</span>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Korisničko ime:</span>
+                  <code className="font-bold text-foreground bg-white px-2 py-1 rounded border border-border/40 select-all">{credentials.username}</code>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Lozinka:</span>
+                  <code className="font-bold text-foreground bg-white px-2 py-1 rounded border border-border/40 select-all">{credentials.password}</code>
+                </div>
+              </div>
+              <Button type="button" variant="outline" size="sm"
+                onClick={() => navigator.clipboard?.writeText(copyText)}
+                className="w-full mt-4 rounded-xl flex items-center justify-center gap-2">
+                <Copy className="w-3.5 h-3.5" /> Kopiraj podatke
+              </Button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
+              <Calendar className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <div className="font-bold text-amber-900">7 dana besplatnog probnog perioda</div>
+                <div className="text-amber-800 mt-0.5">
+                  Probni period traje do <strong>{trialDateStr}</strong>. Da biste nastavili koristiti platformu i poslije, obavite uplatu pretplate.
+                </div>
+              </div>
+            </div>
+
+            <a href={BMAC_MEMBERSHIP_LINK} target="_blank" rel="noopener noreferrer"
+              className="block w-full text-center bg-primary/5 border border-primary/20 hover:bg-primary/10 transition rounded-xl px-4 py-3 mb-3 text-sm font-bold text-primary flex items-center justify-center gap-2">
+              <ExternalLink className="w-4 h-4" /> Plati pretplatu
+            </a>
+
+            <Button onClick={() => setLocation("/login")} size="lg" className="w-full rounded-xl">
+              Prijavite se sada
             </Button>
           </div>
         </motion.div>
@@ -260,7 +320,7 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="ucenik" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Pojedinačna pretplata</strong> — pristup svim sadržajima za jednu osobu.
+                      <strong>Pojedinačna pretplata</strong> — pristup svim sadržajima za jednu osobu. <strong>7 dana besplatnog probnog perioda</strong>, pa pretplata.
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
                       Pretplata: {isBiH === null ? "..." : ucenikPrice} / godišnje
@@ -286,16 +346,28 @@ export default function RegisterRoditeljPage() {
                           placeholder="vas@email.com" className="pl-10 h-12 rounded-xl border-border/70" />
                       </div>
                     </div>
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Koliko godina imate?</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="number" min={1} max={120} required value={ucenikForm.godine}
+                          onChange={e => setUcenikForm(p => ({ ...p, godine: e.target.value.replace(/[^0-9]/g, "") }))}
+                          placeholder="npr. 12" className="pl-10 h-12 rounded-xl border-border/70" />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Bit ćete raspoređeni u odgovarajuću Online Mekteb grupu prema dobi.
+                      </p>
+                    </div>
 
                     <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
-                      <ExternalLink className="w-4 h-4" />
-                      {isLoading ? "Obrada..." : `Plati i registriraj se`}
+                      <UserPlus className="w-4 h-4" />
+                      {isLoading ? "Obrada..." : "Otvori račun (7 dana besplatno)"}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Nakon uplate, admin odobrava račun i šalje podatke za prijavu na vaš email.
+                      Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.
                     </p>
                   </form>
                 </motion.div>
@@ -305,7 +377,7 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="roditelj" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Porodična pretplata</strong> — pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon završene registracije.
+                      <strong>Porodična pretplata</strong> — pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon prijave. <strong>7 dana besplatnog probnog perioda</strong>.
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
                       Pretplata: {isBiH === null ? "..." : roditeljPrice} / godišnje
@@ -336,11 +408,11 @@ export default function RegisterRoditeljPage() {
 
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2">
-                      <ExternalLink className="w-4 h-4" />
-                      {isLoading ? "Obrada..." : "Plati i registriraj se"}
+                      <UserPlus className="w-4 h-4" />
+                      {isLoading ? "Obrada..." : "Otvori račun (7 dana besplatno)"}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Nakon uplate, admin odobrava račun i šalje podatke za prijavu na vaš email.
+                      Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.
                     </p>
                   </form>
                 </motion.div>
@@ -350,7 +422,7 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="mekteb" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Registracija mekteba</strong> — učenike dodajete nakon uspješne registracije.
+                      <strong>Registracija mekteba</strong> — odmah dobijate muallimski račun. <strong>7 dana besplatnog probnog perioda</strong>, učenike dodajete nakon prijave.
                     </p>
                   </div>
 
@@ -365,11 +437,20 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
                     <div>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">Ime i prezime muallima</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="text" required value={mektebForm.displayName}
+                          onChange={e => setMektebForm(p => ({ ...p, displayName: e.target.value }))}
+                          placeholder="npr. Hasan Hodžić" className="pl-10 h-11 rounded-xl border-border/70" />
+                      </div>
+                    </div>
+                    <div>
                       <label className="text-sm font-bold text-foreground mb-1.5 block">Korisničko ime muallima</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="text" required value={mektebForm.korisnickoIme}
-                          onChange={e => setMektebForm(p => ({ ...p, korisnickoIme: e.target.value }))}
+                          onChange={e => setMektebForm(p => ({ ...p, korisnickoIme: e.target.value.toLowerCase().replace(/\s+/g, ".") }))}
                           placeholder="hasan.muallim" className="pl-10 h-11 rounded-xl border-border/70" />
                       </div>
                     </div>
@@ -443,11 +524,12 @@ export default function RegisterRoditeljPage() {
                     <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}
-                      className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20">
-                      {isLoading ? "Slanje..." : "Pošalji zahtjev"}
+                      className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
+                      <UserPlus className="w-4 h-4" />
+                      {isLoading ? "Obrada..." : "Otvori muallimski račun (7 dana besplatno)"}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Komunikacija se odvija putem e-maila. Link za uplatu bit će poslan na vašu adresu.
+                      Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.
                     </p>
                   </form>
                 </motion.div>

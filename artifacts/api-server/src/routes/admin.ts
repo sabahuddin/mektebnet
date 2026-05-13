@@ -41,7 +41,7 @@ import {
   kategorijeKnjigeTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -977,7 +977,12 @@ router.put("/korisnici/:id", async (req, res) => {
     const updates: Record<string, any> = {};
     if (displayName !== undefined) updates.displayName = displayName;
     if (email !== undefined) updates.email = email;
-    if (isActive !== undefined) updates.isActive = isActive;
+    if (isActive !== undefined) {
+      updates.isActive = isActive;
+      // Kad admin aktivira nalog (pretplata odobrena), čistimo trial — od sada
+      // pristup ovisi isključivo o `isActive` flagu.
+      if (isActive === true) updates.trialUntil = null;
+    }
     if (role !== undefined) updates.role = role;
 
     const [updated] = await db.update(usersTable)
@@ -991,8 +996,13 @@ router.put("/korisnici/:id", async (req, res) => {
       if (ucenikProfili.length > 0) {
         const ucenikIds = ucenikProfili.map(p => p.userId);
         await db.update(usersTable).set({ isActive }).where(inArray(usersTable.id, ucenikIds));
+        for (const id of ucenikIds) invalidateUserStatusCache(id);
       }
     }
+
+    // Cache u requireAuth ima TTL 30s — invalidacija ovdje garantuje
+    // trenutnu primjenu deaktivacije/aktivacije bez čekanja.
+    invalidateUserStatusCache(userId);
 
     res.json({ ...updated, passwordHash: undefined });
   } catch (err) {
