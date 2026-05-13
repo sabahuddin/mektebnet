@@ -4,7 +4,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { Layout } from "@/components/layout";
 import { Maskota } from "@/components/maskota";
-import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, Star, Flame, ChevronRight, BookMarked } from "lucide-react";
+import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, Star, Flame, ChevronRight, BookMarked, Scroll } from "lucide-react";
 
 interface ModuleCard {
   href: string;
@@ -17,6 +17,7 @@ interface ModuleCard {
   text: string;
   count: string;
   comingSoon?: boolean;
+  external?: boolean;
   beePose?: string;
   beeAlt?: string;
 }
@@ -82,6 +83,20 @@ export default function Home() {
       count: `7 ${t("nav.igrice").toLowerCase()}`,
       beePose: "pcela-hoda.png",
       beeAlt: "Pčela hoda sa torbom",
+    },
+    {
+      href: "https://sira.mekteb.net",
+      icon: Scroll,
+      label: t("nav.sira"),
+      desc: t("home.siraDesc"),
+      color: "from-sky-500 to-blue-600",
+      bg: "bg-sky-50",
+      border: "border-sky-200",
+      text: "text-sky-700",
+      count: `10 ${t("home.kviza")}`,
+      external: true,
+      beePose: "pcela-cita-kuran.png",
+      beeAlt: "Pčela uči o životu Poslanika",
     },
     {
       href: "/arapsko-pismo",
@@ -176,7 +191,7 @@ export default function Home() {
                   ? "cursor-not-allowed opacity-75"
                   : "cursor-pointer hover:shadow-lg hover:-translate-y-1 duration-200"
               }`}
-              data-testid={`module-card-${mod.href.replace("/", "")}`}
+              data-testid={`module-card-${mod.href.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`}
             >
               {mod.beePose && (
                 <picture>
@@ -191,7 +206,7 @@ export default function Home() {
                     width={128}
                     height={128}
                     className="absolute -bottom-3 -right-2 w-28 md:w-32 h-auto object-contain pointer-events-none select-none opacity-90 group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-300 drop-shadow-md"
-                    data-testid={`module-bee-${mod.href.replace("/", "")}`}
+                    data-testid={`module-bee-${mod.href.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`}
                   />
                 </picture>
               )}
@@ -233,7 +248,11 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
             >
-              {mod.comingSoon ? cardInner : <Link href={mod.href}>{cardInner}</Link>}
+              {mod.comingSoon ? cardInner : mod.external ? (
+                <a href={mod.href} target="_blank" rel="noopener noreferrer">{cardInner}</a>
+              ) : (
+                <Link href={mod.href}>{cardInner}</Link>
+              )}
             </motion.div>
           );
         })}
