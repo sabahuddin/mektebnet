@@ -76,10 +76,17 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     ? cfg.totalCells
     : Math.max(lekcijeSorted.length, cfg.fallbackTotal);
   const LESSON_ROWS = Math.ceil(TOTAL_CELLS / COLS);
+  // INLINE MEDALJON-REDOVI: nakon svakih 10 lekcija (10, 20, 30...) ubacujemo
+  // poseban red u kojem stoji samo medaljon (srednja kolona). Klik vodi na
+  // "praznu lekciju" sa slug-om `medaljon-nivo{N}-{NN}` koju admin kreira i
+  // popuni akordionima/vježbama.
+  // 10 lekcija = 2 lekcijska reda → medaljon-red ide IZMEĐU svaka 2 lekcijska
+  // reda (između lr=1 i lr=2, između lr=3 i lr=4, ...).
+  const MED_COUNT = Math.floor(TOTAL_CELLS / 10);
   // Vrata zauzimaju prazno mjesto u zadnjem redu lekcija; ako je zadnji red pun
   // (totalCells je višekratnik 5), vrata dobiju zaseban red iznad.
   const needsExtraDoorRow = !!cfg.doorTo && TOTAL_CELLS % COLS === 0;
-  const TOTAL_ROWS = LESSON_ROWS + (needsExtraDoorRow ? 1 : 0);
+  const TOTAL_ROWS = LESSON_ROWS + MED_COUNT + (needsExtraDoorRow ? 1 : 0);
   const REQUIRED_FOR_DOOR = TOTAL_CELLS;
 
   const completedCount = useMemo(
@@ -121,9 +128,21 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     const col = logicalRow % 2 === 0 ? within : COLS - 1 - within;
     return { logicalRow, col };
   }
-  // Bottom-up render: logički red 0 (lekcija 1) ide na DNO grida.
+  // Bottom-up render uz INLINE medaljone: stack pozicija (od dna, 0-idx) je
+  //   - za lekcijski red lr: lr + floor(lr/2)  (svaki par lekcijskih redova
+  //     dobije medaljon ispod sljedećeg para)
+  //   - za medaljon r:       2 + 3*r           (medaljon 0 je 3. red od dna)
+  function stackPosForLessonRow(lr: number): number {
+    return lr + Math.floor(lr / 2);
+  }
+  function stackPosForMedaljon(r: number): number {
+    return 2 + 3 * r;
+  }
   function displayRowFor(logicalRow: number): number {
-    return TOTAL_ROWS - 1 - logicalRow;
+    return TOTAL_ROWS - 1 - stackPosForLessonRow(logicalRow);
+  }
+  function displayRowForMedaljon(r: number): number {
+    return TOTAL_ROWS - 1 - stackPosForMedaljon(r);
   }
 
   // Pozicija vrata: u istom redu kao zadnja lekcija (na suprotnom kraju snake-a),
@@ -220,8 +239,10 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
           <PathSvg
             rowColFor={rowColFor}
             displayRowFor={displayRowFor}
+            displayRowForMedaljon={displayRowForMedaljon}
             totalCells={TOTAL_CELLS}
             totalRows={TOTAL_ROWS}
+            medCount={MED_COUNT}
           />
           <div
             className="relative grid items-center flex-1"
@@ -261,6 +282,42 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                 </div>
               </button>
             )}
+
+            {/* INLINE MEDALJONI — sami u svom redu, srednja kolona (col=3 u
+                1-indexed CSS gridu). Klik vodi na "praznu lekciju" sa
+                standardiziranim slug-om koji admin kreira u bazi. */}
+            {Array.from({ length: MED_COUNT }).map((_, r) => {
+              const required = (r + 1) * 10;
+              const unlocked = isPrivilegedRole || completedCount >= required;
+              const slug = `medaljon-nivo${nivo}-${required}`;
+              const state: "locked" | "unlocked" | "earned" = unlocked
+                ? "unlocked"
+                : "locked";
+              return (
+                <div
+                  key={`med-row-${r}`}
+                  data-cell-index={`med-${r}`}
+                  style={{
+                    gridRow: displayRowForMedaljon(r) + 1,
+                    gridColumn: 3,
+                  }}
+                  className="flex items-center justify-center"
+                  data-testid={`mapa-inline-medaljon-${required}`}
+                >
+                  <MedaljonHex
+                    broj={required}
+                    state={state}
+                    onClick={() => unlocked && setLocation(`/ilmihal/${slug}`)}
+                    title={
+                      unlocked
+                        ? `Medaljon ${required} — otvori praznu lekciju`
+                        : `Otključava se na ${required} lekcija`
+                    }
+                    testId={`mapa-inline-medaljon-btn-${required}`}
+                  />
+                </div>
+              );
+            })}
 
             {Array.from({ length: TOTAL_CELLS }).map((_, i) => {
               const { logicalRow, col } = rowColFor(i);
@@ -429,13 +486,17 @@ function MedaljonHex({
 function PathSvg({
   rowColFor,
   displayRowFor,
+  displayRowForMedaljon,
   totalCells,
   totalRows,
+  medCount,
 }: {
   rowColFor: (i: number) => { logicalRow: number; col: number };
   displayRowFor: (lr: number) => number;
+  displayRowForMedaljon: (r: number) => number;
   totalCells: number;
   totalRows: number;
+  medCount: number;
 }) {
   const points: string[] = [];
   for (let i = 0; i < totalCells; i++) {
@@ -444,6 +505,14 @@ function PathSvg({
     const xPct = ((col + 0.5) / COLS) * 100;
     const yPct = ((displayRow + 0.5) / totalRows) * 100;
     points.push(`${xPct},${yPct}`);
+    // Nakon svake 10. lekcije ubaci medaljon-tačku (srednja kolona) prije
+    // sljedeće lekcije — tako linija prolazi kroz medaljon.
+    const medIdx = (i + 1) / 10 - 1;
+    if (Number.isInteger(medIdx) && medIdx < medCount && i + 1 < totalCells) {
+      const medX = ((2 + 0.5) / COLS) * 100;
+      const medY = ((displayRowForMedaljon(medIdx) + 0.5) / totalRows) * 100;
+      points.push(`${medX},${medY}`);
+    }
   }
   return (
     <svg
