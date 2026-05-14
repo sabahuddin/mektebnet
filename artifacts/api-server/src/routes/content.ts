@@ -26,28 +26,29 @@ const router = Router();
 router.get("/ilmihal", async (req, res) => {
   try {
     const nivo = req.query.nivo ? parseInt(req.query.nivo as string) : undefined;
+    // Predmet se ne čuva u zasebnoj koloni — izvlači se direktno iz priprema HTML-a
+    // (sekcija "Predmet" u meta bloku). POSIX regex grupa hvata vrijednost između
+    // <div>Predmet</div> i sljedećeg <div>...</div>. Ako priprema ne postoji ili
+    // nema predmet, vrati NULL i frontend ga svrsta u "Bez predmeta".
+    const predmetExpr = sql<string | null>`substring(${ilmihalLekcijeTable.contentHtml} from 'Predmet</div>[[:space:]]*<div[^>]*>([^<]+)</div>')`;
+    const baseSelect = {
+      id: ilmihalLekcijeTable.id,
+      nivo: ilmihalLekcijeTable.nivo,
+      slug: ilmihalLekcijeTable.slug,
+      naslov: ilmihalLekcijeTable.naslov,
+      redoslijed: ilmihalLekcijeTable.redoslijed,
+      audioSrc: ilmihalLekcijeTable.audioSrc,
+      isPublished: ilmihalLekcijeTable.isPublished,
+      predmet: predmetExpr,
+    };
     let lekcije;
     if (nivo) {
-      lekcije = await db.select({
-        id: ilmihalLekcijeTable.id,
-        nivo: ilmihalLekcijeTable.nivo,
-        slug: ilmihalLekcijeTable.slug,
-        naslov: ilmihalLekcijeTable.naslov,
-        redoslijed: ilmihalLekcijeTable.redoslijed,
-        audioSrc: ilmihalLekcijeTable.audioSrc,
-        isPublished: ilmihalLekcijeTable.isPublished,
-      }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.nivo, nivo)).orderBy(asc(ilmihalLekcijeTable.redoslijed));
+      lekcije = await db.select(baseSelect).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.nivo, nivo)).orderBy(asc(ilmihalLekcijeTable.redoslijed));
     } else {
-      lekcije = await db.select({
-        id: ilmihalLekcijeTable.id,
-        nivo: ilmihalLekcijeTable.nivo,
-        slug: ilmihalLekcijeTable.slug,
-        naslov: ilmihalLekcijeTable.naslov,
-        redoslijed: ilmihalLekcijeTable.redoslijed,
-        audioSrc: ilmihalLekcijeTable.audioSrc,
-        isPublished: ilmihalLekcijeTable.isPublished,
-      }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.redoslijed));
+      lekcije = await db.select(baseSelect).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.redoslijed));
     }
+    // Trim whitespace iz izvučene vrijednosti
+    lekcije = lekcije.map(l => ({ ...l, predmet: l.predmet ? String(l.predmet).trim() || null : null }));
 
     // Optional: ako je auth, dodaj zavrseno boolean za svaku lekciju
     // Izvor istine: student_progress.completedLessons (jsonb array). Fallback: korisnik_napredak.

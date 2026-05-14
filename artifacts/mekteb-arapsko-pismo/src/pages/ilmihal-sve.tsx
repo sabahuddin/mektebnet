@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X, Filter } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -12,7 +12,10 @@ interface Lekcija {
   naslov: string;
   redoslijed?: number;
   zavrseno?: boolean;
+  predmet?: string | null;
 }
+
+const BEZ_PREDMETA = "__bez__";
 
 const NIVO_INFO: Record<number, { naslov: string; podnaslov: string; bg: string; ring: string }> = {
   1: { naslov: "Mala Košnica",     podnaslov: "Nivo 1", bg: "from-yellow-50 to-yellow-100", ring: "ring-yellow-200" },
@@ -33,6 +36,10 @@ export default function IlmihalSvePage() {
   });
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim().toLowerCase();
+  // Filter po predmetu (Ahlak, Akaid, Ibadat, ...). "" = svi predmeti.
+  // Vrijednosti dolaze iz priprema HTML-a; nove se pojave automatski čim
+  // muallim upiše novi predmet u pripremu lekcije.
+  const [predmet, setPredmet] = useState<string>("");
 
   // Gate: ucenik (i nelogovan posjetilac) moze otvoriti samo zavrsene
   // lekcije + prvu sljedecu nezavrsenu. Muallim/admin/roditelj vide sve
@@ -59,21 +66,48 @@ export default function IlmihalSvePage() {
     return g;
   }, [lekcije]);
 
-  // Pretraga: filter po naslovu (case-insensitive). Kada je upit aktivan,
-  // automatski otvori sve nivoe koji imaju match (da rezultati budu vidljivi
-  // bez ručnog otvaranja akordiona).
+  // Lista jedinstvenih predmeta (sortirana po broju lekcija, najveći prvo).
+  // Lekcije bez predmeta dobijaju zasebnu opciju "Bez predmeta" na dnu.
+  const predmetiOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    let bez = 0;
+    for (const l of lekcije) {
+      const p = (l.predmet || "").trim();
+      if (!p) { bez++; continue; }
+      counts.set(p, (counts.get(p) || 0) + 1);
+    }
+    const sorted = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "bs"))
+      .map(([value, count]) => ({ value, label: value, count }));
+    if (bez > 0) sorted.push({ value: BEZ_PREDMETA, label: "Bez predmeta", count: bez });
+    return sorted;
+  }, [lekcije]);
+
+  // Pretraga + filter po predmetu. Kada je bilo koji filter aktivan, otvori
+  // sve nivoe koji imaju match (da rezultati budu vidljivi bez ručnog otvaranja).
   const filteredByNivo: Record<number, Lekcija[]> = useMemo(() => {
-    if (!trimmedQuery) return groupedByNivo;
+    const hasQuery = trimmedQuery.length > 0;
+    const hasPredmet = predmet.length > 0;
+    if (!hasQuery && !hasPredmet) return groupedByNivo;
     const out: Record<number, Lekcija[]> = { 1: [], 2: [], 3: [] };
     for (const n of [1, 2, 3]) {
-      out[n] = groupedByNivo[n].filter((l) =>
-        l.naslov.toLowerCase().includes(trimmedQuery),
-      );
+      out[n] = groupedByNivo[n].filter((l) => {
+        if (hasQuery && !l.naslov.toLowerCase().includes(trimmedQuery)) return false;
+        if (hasPredmet) {
+          const p = (l.predmet || "").trim();
+          if (predmet === BEZ_PREDMETA) {
+            if (p) return false;
+          } else if (p !== predmet) {
+            return false;
+          }
+        }
+        return true;
+      });
     }
     return out;
-  }, [groupedByNivo, trimmedQuery]);
+  }, [groupedByNivo, trimmedQuery, predmet]);
 
-  const isSearching = trimmedQuery.length > 0;
+  const isSearching = trimmedQuery.length > 0 || predmet.length > 0;
   const total = lekcije.length;
   const done = lekcije.filter((l) => l.zavrseno).length;
   const matchCount = isSearching
@@ -111,32 +145,58 @@ export default function IlmihalSvePage() {
           </p>
         </div>
 
-        <div className="max-w-xl mx-auto mb-8 px-1">
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-700/70 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Pretraži lekcije po naslovu…"
-              className="w-full pl-9 pr-9 py-2.5 rounded-full bg-white/90 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm sm:text-base text-amber-900 placeholder:text-amber-700/50 shadow-sm"
-              data-testid="input-pretraga-lekcija"
-              aria-label="Pretraga lekcija"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-amber-100 text-amber-700"
-                aria-label="Obriši pretragu"
-                data-testid="button-obrisi-pretragu"
+        <div className="max-w-2xl mx-auto mb-8 px-1">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-700/70 pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Pretraži lekcije po naslovu…"
+                className="w-full pl-9 pr-9 py-2.5 rounded-full bg-white/90 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm sm:text-base text-amber-900 placeholder:text-amber-700/50 shadow-sm"
+                data-testid="input-pretraga-lekcija"
+                aria-label="Pretraga lekcija"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-amber-100 text-amber-700"
+                  aria-label="Obriši pretragu"
+                  data-testid="button-obrisi-pretragu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="relative sm:w-56 flex-shrink-0">
+              <Filter
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-700/70 pointer-events-none"
+                aria-hidden="true"
+              />
+              <select
+                value={predmet}
+                onChange={(e) => setPredmet(e.target.value)}
+                className="w-full pl-9 pr-8 py-2.5 rounded-full bg-white/90 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm sm:text-base text-amber-900 shadow-sm appearance-none cursor-pointer"
+                data-testid="select-predmet"
+                aria-label="Filter po predmetu"
               >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+                <option value="">Svi predmeti</option>
+                {predmetiOptions.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label} ({p.count})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-700/70 pointer-events-none"
+                aria-hidden="true"
+              />
+            </div>
           </div>
           {isSearching && (
             <div className="text-center text-xs text-amber-800/70 mt-2">
