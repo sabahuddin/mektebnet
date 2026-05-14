@@ -33,7 +33,7 @@ interface Prilog {
   mimeType: string;
   url: string;
   createdAt: string;
-  kind?: "file" | "url" | "h5p";
+  kind?: "file" | "url" | "h5p" | "embed";
   externalUrl?: string | null;
   h5pPath?: string | null;
   approved?: boolean;
@@ -1416,6 +1416,10 @@ function PriloziSection({
   const [urlValue, setUrlValue] = useState("");
   const [urlLabel, setUrlLabel] = useState("");
   const [savingUrl, setSavingUrl] = useState(false);
+  const [showEmbedForm, setShowEmbedForm] = useState(false);
+  const [embedValue, setEmbedValue] = useState("");
+  const [embedLabel, setEmbedLabel] = useState("");
+  const [savingEmbed, setSavingEmbed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const h5pInputRef = useRef<HTMLInputElement>(null);
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
@@ -1556,6 +1560,23 @@ function PriloziSection({
     }
   };
 
+  const handleAddEmbed = async () => {
+    if (!embedValue.trim() || !token) return;
+    setSavingEmbed(true);
+    try {
+      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/embed`, {
+        embedCode: embedValue.trim(), label: embedLabel.trim() || undefined
+      }, token);
+      setAttachments(prev => [{ ...result, url: (result as any).externalUrl || "" }, ...prev]);
+      toast({ title: "Embed vježba dodana", description: result.originalName });
+      setEmbedValue(""); setEmbedLabel(""); setShowEmbedForm(false);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingEmbed(false);
+    }
+  };
+
   const handleDelete = async (id: number, name: string) => {
     if (!confirm(`Obrisati "${name}"?`)) return;
     try {
@@ -1667,8 +1688,15 @@ function PriloziSection({
                         <><Sparkles className="w-4 h-4 mr-2" /> Dodaj H5P vježbu</>
                       )}
                     </Button>
+                    <Button
+                      onClick={() => setShowEmbedForm(v => !v)}
+                      variant="outline"
+                      className="rounded-xl border-amber-300 text-amber-700 hover:bg-amber-100 font-bold"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? "Odustani" : "Dodaj embed vježbu"}
+                    </Button>
                   </div>
-                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB), YouTube/web link, ili .h5p arhiva (max 50MB)</p>
+                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB), YouTube/web link, .h5p arhiva (max 50MB), ili embed (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)</p>
                   <Link
                     href="/muallim/h5p-uputstvo"
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-800 mt-1.5 underline-offset-2 hover:underline"
@@ -1702,6 +1730,37 @@ function PriloziSection({
                       </Button>
                     </div>
                   )}
+                  {showEmbedForm && (
+                    <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 flex flex-col gap-2">
+                      <p className="text-xs text-amber-700 font-semibold">
+                        Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.
+                      </p>
+                      <textarea
+                        placeholder='&lt;iframe src="https://learningapps.org/watch?app=..."&gt;&lt;/iframe&gt; ili samo URL'
+                        value={embedValue}
+                        onChange={e => setEmbedValue(e.target.value)}
+                        rows={4}
+                        className="px-3 py-2 rounded-lg border border-amber-200 text-sm focus:outline-none focus:border-amber-500 font-mono"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Naziv vježbe (opciono)"
+                        value={embedLabel}
+                        onChange={e => setEmbedLabel(e.target.value)}
+                        className="px-3 py-2 rounded-lg border border-amber-200 text-sm focus:outline-none focus:border-amber-500"
+                      />
+                      <p className="text-xs text-amber-600 italic">
+                        ⚠️ Učeniku će iznad vježbe biti prikazana napomena da se za nju ne broje kapi meda.
+                      </p>
+                      <Button
+                        onClick={handleAddEmbed}
+                        disabled={savingEmbed || !embedValue.trim()}
+                        className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold self-start"
+                      >
+                        {savingEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</> : "Spasi embed vježbu"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1712,6 +1771,7 @@ function PriloziSection({
                   {attachments.map(a => {
                     const isUrl = a.kind === "url";
                     const isH5p = a.kind === "h5p";
+                    const isEmbed = a.kind === "embed";
                     const targetUrl = a.externalUrl || a.url;
                     const ytEmbed = isUrl ? getYoutubeEmbedUrl(targetUrl) : null;
                     // a.url backend već vraća kao apsolutnu putanju from origin (npr.
@@ -1728,7 +1788,7 @@ function PriloziSection({
                       <div key={a.id} className="flex flex-col gap-2 bg-white rounded-xl border border-blue-100 p-3 hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl flex-shrink-0">
-                            {isH5p ? "🧩" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
+                            {isH5p ? "🧩" : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -1740,7 +1800,7 @@ function PriloziSection({
                               )}
                             </div>
                             <p className="text-sm text-gray-400 truncate">
-                              {isH5p ? "Interaktivna vježba (H5P)" : isUrl ? targetUrl : formatFileSize(a.fileSize)}
+                              {isH5p ? "Interaktivna vježba (H5P)" : isEmbed ? "Embed vježba (bez kapi meda)" : isUrl ? targetUrl : formatFileSize(a.fileSize)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1758,7 +1818,7 @@ function PriloziSection({
                               >
                                 <Sparkles className="w-4 h-4" /> Ponovi
                               </button>
-                            ) : isUrl ? (
+                            ) : isUrl || isEmbed ? (
                               <a
                                 href={targetUrl}
                                 target="_blank"
@@ -1839,6 +1899,26 @@ function PriloziSection({
                         )}
                         {ytEmbed && (
                           <YouTubeEmbed src={ytEmbed} title={a.originalName} />
+                        )}
+                        {isEmbed && targetUrl && (
+                          <div className="mt-2 rounded-lg overflow-hidden bg-white border border-amber-200">
+                            <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                              <p className="text-sm font-semibold text-amber-800">
+                                ⚠️ Za ovu vježbu se ne broje kapi meda 🍯
+                              </p>
+                            </div>
+                            <iframe
+                              src={targetUrl}
+                              title={a.originalName}
+                              className="w-full"
+                              style={{ height: "500px", border: "none" }}
+                              loading="lazy"
+                              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
+                              referrerPolicy="no-referrer"
+                              allow="fullscreen"
+                            />
+                          </div>
                         )}
                       </div>
                     );

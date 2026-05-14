@@ -145,15 +145,15 @@ router.get("/ilmihal/:slug", async (req, res) => {
         // Vidljivost:
         // - admin vidi sve (i odobrene i one koje čekaju)
         // - muallim vidi sve odobrene + svoje neodobrene (one koje je sam dodao)
-        // - studenti vide samo odobrene (h5p + url)
+        // - studenti vide samo odobrene (h5p + url + embed)
         const visible = isAdmin
           ? all
           : isMuallim
             ? all.filter(a => a.approved || (myId !== null && a.uploadedByUserId === myId))
-            : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "url"));
+            : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "url" || a.kind === "embed"));
         result.prilozi = visible.map(a => {
           let url: string;
-          if (a.kind === "url") url = a.externalUrl || "";
+          if (a.kind === "url" || a.kind === "embed") url = a.externalUrl || "";
           // H5P static fajlovi: koristimo `/api/uploads/...` jer je `/api`
           // jedini prefix koji u Replit path routing-u sigurno pogađa api-server
           // (a u prod-u behind nginx-u takođe). Auth (cookie ili Bearer) traje.

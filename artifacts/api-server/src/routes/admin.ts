@@ -321,6 +321,110 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
   }
 });
 
+// POST /api/admin/prilozi/:lekcijaId/embed — dodaj embed vježbu (LearningApps,
+// Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter). Prihvata ili
+// puni iframe HTML (iz "embed code" dugmeta na tim sajtovima) ili direktan
+// URL. Whitelist domena je obavezan zbog sigurnosti — proizvoljan iframe se
+// odbija. Embed vježbe NE donose kapi meda (frontend prikazuje napomenu).
+const EMBED_WHITELIST = [
+  "learningapps.org",
+  "wordwall.net",
+  "view.genial.ly",
+  "genial.ly",
+  "quizizz.com",
+  "kahoot.it",
+  "kahoot.com",
+  "padlet.com",
+  "mentimeter.com",
+  "embed.mentimeter.com",
+  "h5p.org",
+];
+
+function extractEmbedSrc(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  // Ako je čisti URL, vrati ga
+  if (/^https?:\/\//i.test(trimmed) && !/<iframe/i.test(trimmed)) {
+    return trimmed.length <= 2000 ? trimmed : null;
+  }
+  // Ako je iframe HTML, izvuci src
+  const m = trimmed.match(/<iframe[^>]+src\s*=\s*["']([^"']+)["']/i);
+  if (m && m[1]) {
+    const src = m[1];
+    if (/^https?:\/\//i.test(src) && src.length <= 2000) return src;
+  }
+  return null;
+}
+
+function isWhitelistedHost(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const host = u.hostname.toLowerCase();
+    return EMBED_WHITELIST.some(d => host === d || host.endsWith("." + d));
+  } catch {
+    return false;
+  }
+}
+
+router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
+  try {
+    const lekcijaId = parseInt(req.params.lekcijaId);
+    if (isNaN(lekcijaId)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
+    const { embedCode, label } = (req.body || {}) as { embedCode?: string; label?: string };
+    if (!embedCode || typeof embedCode !== "string") {
+      return res.status(400).json({ error: "Pošalji iframe kod ili URL vježbe" });
+    }
+    if (embedCode.length > 5000) {
+      return res.status(400).json({ error: "Embed kod je predugačak (max 5000 znakova)" });
+    }
+    const src = extractEmbedSrc(embedCode);
+    if (!src) {
+      return res.status(400).json({ error: "Ne mogu da pronađem URL u embed kodu. Provjeri da je iframe ispravan." });
+    }
+    if (!isWhitelistedHost(src)) {
+      return res.status(400).json({
+        error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni."
+      });
+    }
+    const [exists] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
+    if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
+
+    let provider = "Embed";
+    try {
+      const host = new URL(src).hostname.toLowerCase();
+      if (host.includes("learningapps")) provider = "LearningApps";
+      else if (host.includes("wordwall")) provider = "Wordwall";
+      else if (host.includes("genial")) provider = "Genially";
+      else if (host.includes("quizizz")) provider = "Quizizz";
+      else if (host.includes("kahoot")) provider = "Kahoot";
+      else if (host.includes("padlet")) provider = "Padlet";
+      else if (host.includes("mentimeter")) provider = "Mentimeter";
+      else if (host.includes("h5p.org")) provider = "H5P";
+    } catch {}
+
+    const displayName = (label && label.trim()) || `${provider} vježba`;
+    const uploaderRole = req.user?.role ?? "muallim";
+    const uploaderUserId = req.user?.userId ?? null;
+    const [inserted] = await db.insert(prilozi).values({
+      lekcijaId,
+      originalName: displayName.slice(0, 200),
+      storedName: "",
+      fileSize: 0,
+      mimeType: "text/embed",
+      kind: "embed",
+      externalUrl: src,
+      approved: uploaderRole === "admin",
+      uploadedByRole: uploaderRole,
+      uploadedByUserId: uploaderUserId,
+    }).returning();
+    res.json(inserted);
+  } catch (e: any) {
+    console.error("[POST /prilozi/:lekcijaId/embed] failed:", e?.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get("/prilozi/:lekcijaId", async (req, res) => {
   try {
     const lekcijaId = parseInt(req.params.lekcijaId);
