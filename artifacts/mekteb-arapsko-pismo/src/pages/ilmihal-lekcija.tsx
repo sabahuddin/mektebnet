@@ -2676,11 +2676,58 @@ export default function IlmihalLekcijaPage() {
   }
 
   if (!lekcija || !parsed) {
+    // Specijalni slučaj: medaljon-prazna lekcija. Slug forma:
+    // `medaljon-nivo{N}-{NN}` (npr. medaljon-nivo1-10). Admin dobije dugme
+    // koje jednim klikom kreira praznu lekciju sa tim slugom.
+    const medMatch = slug?.match(/^medaljon-nivo(\d+)-(\d+)$/);
+    const isAdminUser = user?.role === "admin";
     return (
       <Layout>
-        <div className="text-center py-20">
+        <div className="text-center py-20 max-w-md mx-auto px-4">
           <p className="text-muted-foreground font-medium">Lekcija nije pronađena</p>
-          <Button className="mt-4" onClick={() => setLocation("/ilmihal")}>Nazad</Button>
+          {medMatch && isAdminUser && token && (
+            <div className="mt-6 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300">
+              <p className="text-sm text-amber-900 font-bold mb-1">
+                Zlatni medaljon — Nivo {medMatch[1]} · {medMatch[2]} lekcija
+              </p>
+              <p className="text-xs text-amber-800 mb-4">
+                Ova prazna lekcija još ne postoji. Klikni dugme da je kreiraš,
+                pa je popuni akordionima i vježbama.
+              </p>
+              <Button
+                onClick={async () => {
+                  try {
+                    const naslov = `Zlatni medaljon — Nivo ${medMatch[1]} (${medMatch[2]} lekcija)`;
+                    await apiRequest(
+                      "POST",
+                      "/admin/ilmihal",
+                      {
+                        naslov,
+                        slug,
+                        nivo: parseInt(medMatch[1]),
+                        redoslijed: 9000 + parseInt(medMatch[2]),
+                        contentHtml: `<h1>${naslov}</h1><p>Čestitamo na osvojenom medaljonu! Ovdje admin dodaje sadržaj.</p>`,
+                      },
+                      token,
+                    );
+                    toast({ title: "Lekcija kreirana", description: "Učitavam…" });
+                    setTimeout(() => window.location.reload(), 600);
+                  } catch (err: any) {
+                    toast({
+                      title: "Greška",
+                      description: err?.message || "Nije moguće kreirati lekciju",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                data-testid="button-create-medaljon-lekcija"
+                className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold"
+              >
+                Kreiraj praznu lekciju
+              </Button>
+            </div>
+          )}
+          <Button className="mt-4" variant="outline" onClick={() => setLocation("/ilmihal")}>Nazad</Button>
         </div>
       </Layout>
     );
