@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X, Filter } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X, Filter, Award } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -328,27 +328,52 @@ export default function IlmihalSvePage() {
                             </>
                           );
 
+                          // Nakon svake 10. lekcije (po REALNOM redu u nivou,
+                          // ne u filtriranom prikazu) ubacujemo "medaljon" red
+                          // — prazan placeholder za sekciju ponavljanja koju
+                          // admin kasnije popunjava akordionima i vježbama.
+                          // Prikazuje se samo kad nije aktivna pretraga (da
+                          // search rezultati ostanu kompaktni).
+                          const showMedallionAfter =
+                            !q.trim() && (idx + 1) % 10 === 0;
+
                           return (
-                            <li key={l.id}>
-                              {isLocked ? (
-                                <div
-                                  className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl opacity-70 cursor-not-allowed select-none"
-                                  aria-disabled="true"
-                                  data-testid={`locked-lekcija-${l.slug}`}
-                                  title="Zaključano — završi prethodnu lekciju"
+                            <Fragment key={l.id}>
+                              <li>
+                                {isLocked ? (
+                                  <div
+                                    className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl opacity-70 cursor-not-allowed select-none"
+                                    aria-disabled="true"
+                                    data-testid={`locked-lekcija-${l.slug}`}
+                                    title="Zaključano — završi prethodnu lekciju"
+                                  >
+                                    {rowInner}
+                                  </div>
+                                ) : (
+                                  <Link
+                                    href={`/ilmihal/${l.slug}`}
+                                    className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl hover:bg-white/60 active:bg-white/80 transition-colors"
+                                    data-testid={`link-lekcija-${l.slug}`}
+                                  >
+                                    {rowInner}
+                                  </Link>
+                                )}
+                              </li>
+                              {showMedallionAfter && (
+                                <li
+                                  data-testid={`medaljon-${nivo}-${idx + 1}`}
+                                  className="flex items-center gap-3 px-3 py-4 select-none"
                                 >
-                                  {rowInner}
-                                </div>
-                              ) : (
-                                <Link
-                                  href={`/ilmihal/${l.slug}`}
-                                  className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl hover:bg-white/60 active:bg-white/80 transition-colors"
-                                  data-testid={`link-lekcija-${l.slug}`}
-                                >
-                                  {rowInner}
-                                </Link>
+                                  <div
+                                    className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 ring-2 ring-amber-500 shadow-md"
+                                    aria-label="Medaljon — sekcija ponavljanja"
+                                  >
+                                    <Award className="w-5 h-5 text-amber-900" />
+                                  </div>
+                                  <div className="flex-1 h-px bg-gradient-to-r from-amber-400/60 via-amber-300/40 to-transparent" />
+                                </li>
                               )}
-                            </li>
+                            </Fragment>
                           );
                         });
                       })()}
