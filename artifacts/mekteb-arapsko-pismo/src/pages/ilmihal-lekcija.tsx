@@ -12,6 +12,7 @@ import {
   ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Maskota } from "@/components/maskota";
@@ -1420,6 +1421,7 @@ function PriloziSection({
   const [embedValue, setEmbedValue] = useState("");
   const [embedLabel, setEmbedLabel] = useState("");
   const [savingEmbed, setSavingEmbed] = useState(false);
+  const [openEmbed, setOpenEmbed] = useState<Prilog | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const h5pInputRef = useRef<HTMLInputElement>(null);
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
@@ -1768,12 +1770,53 @@ function PriloziSection({
                 <p className="text-blue-400 text-base italic">Nema uploadovanih materijala za ovu lekciju.</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {attachments.map(a => {
+                  {/* Embed vježbe idu na dno spiska — prikazuju se kao široki
+                      button koji otvara popup, da bi vježba imala maksimum prostora
+                      umjesto da se gubi u 4 ugnježdena okvira. */}
+                  {[...attachments].sort((x, y) => {
+                    const ex = x.kind === "embed" ? 1 : 0;
+                    const ey = y.kind === "embed" ? 1 : 0;
+                    return ex - ey;
+                  }).map(a => {
                     const isUrl = a.kind === "url";
                     const isH5p = a.kind === "h5p";
                     const isEmbed = a.kind === "embed";
                     const targetUrl = a.externalUrl || a.url;
                     const ytEmbed = isUrl ? getYoutubeEmbedUrl(targetUrl) : null;
+
+                    // Embed: široki button preko cijele kartice umjesto inline iframe-a
+                    if (isEmbed) {
+                      return (
+                        <div key={a.id} className="flex items-stretch gap-2">
+                          <button
+                            onClick={() => setOpenEmbed(a)}
+                            className="flex-1 flex items-center gap-3 px-4 py-4 rounded-xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 hover:border-amber-400 transition-all shadow-sm hover:shadow-md text-left"
+                            data-testid={`embed-open-${a.id}`}
+                          >
+                            <span className="text-3xl flex-shrink-0">🎯</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-base text-amber-900 truncate">{a.originalName}</p>
+                              <p className="text-xs text-amber-700">Klikni da otvoriš vježbu • bez kapi meda 🍯</p>
+                            </div>
+                            {isAdmin && a.approved === false && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-800 border border-amber-400 flex-shrink-0">
+                                Čeka odobrenje
+                              </span>
+                            )}
+                            <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDelete(a.id, a.originalName)}
+                              className="p-2 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors border-2 border-transparent hover:border-red-200"
+                              title="Obriši"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
                     // a.url backend već vraća kao apsolutnu putanju from origin (npr.
                     // "/uploads/h5p/12"). NE prefixaj sa apiBase ("/api") — statički
                     // sadržaj se servira iz "/uploads", ne "/api/uploads".
@@ -1818,7 +1861,7 @@ function PriloziSection({
                               >
                                 <Sparkles className="w-4 h-4" /> Ponovi
                               </button>
-                            ) : isUrl || isEmbed ? (
+                            ) : isUrl ? (
                               <a
                                 href={targetUrl}
                                 target="_blank"
@@ -1900,31 +1943,44 @@ function PriloziSection({
                         {ytEmbed && (
                           <YouTubeEmbed src={ytEmbed} title={a.originalName} />
                         )}
-                        {isEmbed && targetUrl && (
-                          <div className="mt-2 rounded-lg overflow-hidden bg-white border border-amber-200">
-                            <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
-                              <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                              <p className="text-sm font-semibold text-amber-800">
-                                ⚠️ Za ovu vježbu se ne broje kapi meda 🍯
-                              </p>
-                            </div>
-                            <iframe
-                              src={targetUrl}
-                              title={a.originalName}
-                              className="w-full"
-                              style={{ height: "500px", border: "none" }}
-                              loading="lazy"
-                              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
-                              referrerPolicy="no-referrer"
-                              allow="fullscreen"
-                            />
-                          </div>
-                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
+
+              {/* Modal za embed vježbe — full-screen na mobile, large na desktop.
+                  X dugme gore desno, žuta napomena unutra iznad iframe-a. */}
+              <Dialog open={!!openEmbed} onOpenChange={(o) => { if (!o) setOpenEmbed(null); }}>
+                <DialogContent
+                  className="p-0 gap-0 max-w-[100vw] sm:max-w-[95vw] md:max-w-5xl w-full h-[100dvh] sm:h-[92vh] sm:rounded-2xl rounded-none overflow-hidden flex flex-col"
+                  data-testid="embed-modal"
+                >
+                  <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200 flex-shrink-0">
+                    <span className="text-2xl flex-shrink-0">🎯</span>
+                    <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-amber-900 truncate">
+                      {openEmbed?.originalName}
+                    </DialogTitle>
+                    <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                      ⚠️ Bez kapi meda 🍯
+                    </span>
+                  </div>
+                  <div className="sm:hidden px-4 py-2 bg-amber-100/60 text-xs font-semibold text-amber-800 text-center flex-shrink-0">
+                    ⚠️ Za ovu vježbu se ne broje kapi meda 🍯
+                  </div>
+                  {openEmbed && (openEmbed.externalUrl || openEmbed.url) && (
+                    <iframe
+                      src={openEmbed.externalUrl || openEmbed.url}
+                      title={openEmbed.originalName}
+                      className="flex-1 w-full bg-white"
+                      style={{ border: "none" }}
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
+                      referrerPolicy="no-referrer"
+                      allow="fullscreen"
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
             </div>
           </motion.div>
         )}
