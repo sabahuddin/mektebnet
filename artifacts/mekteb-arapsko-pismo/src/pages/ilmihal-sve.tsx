@@ -335,7 +335,7 @@ export default function IlmihalSvePage() {
                           // Prikazuje se samo kad nije aktivna pretraga (da
                           // search rezultati ostanu kompaktni).
                           const showMedallionAfter =
-                            !q.trim() && (idx + 1) % 10 === 0;
+                            !trimmedQuery && (idx + 1) % 10 === 0;
 
                           return (
                             <Fragment key={l.id}>
