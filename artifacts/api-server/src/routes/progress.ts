@@ -1,8 +1,9 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { studentProgressTable, exerciseSessionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { studentProgressTable, exerciseSessionsTable, embedCompletionsTable, prilozi } from "@workspace/db";
+import { and, eq, sql } from "drizzle-orm";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router: IRouter = Router();
 
@@ -243,5 +244,102 @@ router.post("/exercises/session", async (req, res) => {
     res.status(500).json({ error: "internal_error", message: "Failed to save exercise session" });
   }
 });
+
+// POST /content/embed/zavrseno — učenik kaže "Završio sam embed vježbu".
+//
+// SIGURNOST: requireAuth + requireRole("ucenik"). studentId se čita ISKLJUČIVO
+// iz JWT-a (req.user.userId), NE iz body-ja — inače bi bilo koji prijavljeni
+// korisnik mogao claim-ovati hasanate za tuđi račun (IDOR).
+//
+// Server NE može verifikovati tačnost (eksterni iframe), pa samo provjerava:
+//   1) prilog postoji, kind='embed', approved=true
+//   2) (student_id, prilozi_id) još nije u embed_completions (anti-double-claim)
+//   3) hasanat_reward > 0
+//
+// Insert u embed_completions + upsert u student_progress idu u JEDNU
+// transakciju — ako upsert padne, insert se rollback-a, pa učenik može
+// pokušati ponovo (umjesto da ostane "već claim-ovan" bez nagrade).
+router.post(
+  "/content/embed/zavrseno",
+  requireAuth,
+  requireRole("ucenik"),
+  async (req: Request, res: Response) => {
+    try {
+      const studentId = String(req.user!.userId);
+      const { priloziId } = (req.body || {}) as { priloziId?: number };
+      const pid = Number(priloziId);
+      if (!Number.isFinite(pid) || pid <= 0) {
+        return res.status(400).json({ error: "bad_request", message: "priloziId required" });
+      }
+
+      const [prilog] = await db.select().from(prilozi).where(eq(prilozi.id, pid));
+      if (!prilog) return res.status(404).json({ error: "not_found", message: "Prilog nije pronađen" });
+      if (prilog.kind !== "embed") {
+        return res.status(400).json({ error: "bad_request", message: "Samo embed vježbe" });
+      }
+      if (!prilog.approved) {
+        return res.status(403).json({ error: "not_approved", message: "Vježba nije odobrena" });
+      }
+      const reward = Number(prilog.hasanatReward) || 0;
+      if (reward <= 0) {
+        return res.json({ hasanatGained: 0, alreadyClaimed: false, reason: "no_reward" });
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+
+      // TRANSACT: insert audit + upsert hasanata atomski. Ako bilo koji
+      // korak padne, oba se rollback-aju (tx throw → drizzle rollback).
+      const result = await db.transaction(async (tx) => {
+        // Anti-double-claim — atomski INSERT sa ON CONFLICT DO NOTHING.
+        // RETURNING je prazan ako conflict (već claim-ovano), ima red ako insert prošao.
+        const insertRes = await tx.execute<{ id: number }>(sql`
+          INSERT INTO embed_completions (student_id, prilozi_id, hasanat_gained)
+          VALUES (${studentId}, ${pid}, ${reward})
+          ON CONFLICT (student_id, prilozi_id) DO NOTHING
+          RETURNING id
+        `);
+        const insertRows = (insertRes as unknown as { rows?: unknown[] }).rows
+          ?? (Array.isArray(insertRes) ? (insertRes as unknown as unknown[]) : []);
+        if (!insertRows || insertRows.length === 0) {
+          return { alreadyClaimed: true as const };
+        }
+
+        // Atomski upsert hasanata u student_progress (lost-update safe).
+        const upsert = await tx.execute<{ total_hasanat: number; previous_hasanat: number }>(sql`
+          INSERT INTO student_progress (student_id, total_hasanat, completed_lessons, badges, streak_days, last_activity_date)
+          VALUES (${studentId}, ${reward}, '[]'::jsonb, '[]'::jsonb, 1, ${today})
+          ON CONFLICT (student_id) DO UPDATE SET
+            total_hasanat = student_progress.total_hasanat + ${reward},
+            last_activity_date = ${today},
+            updated_at = NOW()
+          RETURNING
+            total_hasanat,
+            (total_hasanat - ${reward})::int AS previous_hasanat
+        `);
+        const upsertRows = (upsert as unknown as { rows?: Array<{ total_hasanat: number; previous_hasanat: number }> }).rows
+          ?? (Array.isArray(upsert) ? (upsert as unknown as Array<{ total_hasanat: number; previous_hasanat: number }>) : []);
+        const row = upsertRows[0];
+        return {
+          alreadyClaimed: false as const,
+          totalHasanat: Number(row?.total_hasanat ?? reward),
+          previousHasanat: Number(row?.previous_hasanat ?? 0),
+        };
+      });
+
+      if (result.alreadyClaimed) {
+        return res.json({ hasanatGained: 0, alreadyClaimed: true });
+      }
+      res.json({
+        hasanatGained: reward,
+        totalHasanat: result.totalHasanat,
+        previousHasanat: result.previousHasanat,
+        alreadyClaimed: false,
+      });
+    } catch (err) {
+      req.log.error({ err }, "Failed to claim embed completion");
+      res.status(500).json({ error: "internal_error", message: "Failed to claim" });
+    }
+  },
+);
 
 export default router;

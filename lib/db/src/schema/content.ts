@@ -343,7 +343,18 @@ export const prilozi = pgTable("prilozi", {
   approved: boolean("approved").notNull().default(false),
   uploadedByRole: varchar("uploaded_by_role", { length: 20 }),
   uploadedByUserId: integer("uploaded_by_user_id"),
+  hasanatReward: integer("hasanat_reward").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Audit + anti-double-claim za embed vježbe. Unique (student_id, prilozi_id)
+// se osigurava migracijom u index.ts (CREATE UNIQUE INDEX IF NOT EXISTS).
+export const embedCompletionsTable = pgTable("embed_completions", {
+  id: serial("id").primaryKey(),
+  studentId: varchar("student_id", { length: 120 }).notNull(),
+  priloziId: integer("prilozi_id").notNull(),
+  hasanatGained: integer("hasanat_gained").notNull().default(0),
+  completedAt: timestamp("completed_at").defaultNow(),
 });
 
 export const rjecnikTable = pgTable("rjecnik", {

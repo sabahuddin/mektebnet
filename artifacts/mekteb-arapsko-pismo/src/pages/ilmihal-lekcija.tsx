@@ -38,6 +38,8 @@ interface Prilog {
   externalUrl?: string | null;
   h5pPath?: string | null;
   approved?: boolean;
+  /** Kapi meda koje učenik dobija klikom "Završio sam" — samo embed (0/3/5/10). */
+  hasanatReward?: number;
 }
 
 interface Lekcija {
@@ -1398,8 +1400,9 @@ function PriloziSection({
   // Lokalni alias za čitljivost — ranije su uvjeti pisali `isAdmin`, ali sada
   // "upravljanje materijalima" obuhvata i muallim-a (vidi backend admin.ts).
   // NAPOMENA: `isAdmin` ovdje znači "može upravljati" (admin ili muallim);
-  // za radnje koje su STROGO admin-only (brisanje), koristi `canDelete`.
+  // za radnje koje su STROGO admin-only (brisanje, edit), koristi `canDelete`.
   const isAdmin = canManage;
+  const { user } = useAuth();
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   // `lekcija.prilozi` može stići naknadno (npr. token postane dostupan tek
@@ -1427,8 +1430,18 @@ function PriloziSection({
   const [showEmbedForm, setShowEmbedForm] = useState(false);
   const [embedValue, setEmbedValue] = useState("");
   const [embedLabel, setEmbedLabel] = useState("");
+  const [embedReward, setEmbedReward] = useState<0 | 3 | 5 | 10>(5);
   const [savingEmbed, setSavingEmbed] = useState(false);
   const [openEmbed, setOpenEmbed] = useState<Prilog | null>(null);
+  // Edit embed (samo admin) — modal sa label + hasanatReward.
+  const [editEmbed, setEditEmbed] = useState<Prilog | null>(null);
+  const [editEmbedLabel, setEditEmbedLabel] = useState("");
+  const [editEmbedReward, setEditEmbedReward] = useState<0 | 3 | 5 | 10>(0);
+  const [savingEditEmbed, setSavingEditEmbed] = useState(false);
+  // "Završio sam" claim — koje je učenik već claim-ovao u ovoj sesiji
+  // (poslije refresh-a server svejedno odbije sa alreadyClaimed:true).
+  const [claimedEmbeds, setClaimedEmbeds] = useState<Set<number>>(new Set());
+  const [claimingEmbed, setClaimingEmbed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const h5pInputRef = useRef<HTMLInputElement>(null);
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
@@ -1574,15 +1587,82 @@ function PriloziSection({
     setSavingEmbed(true);
     try {
       const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/embed`, {
-        embedCode: embedValue.trim(), label: embedLabel.trim() || undefined
+        embedCode: embedValue.trim(),
+        label: embedLabel.trim() || undefined,
+        hasanatReward: embedReward,
       }, token);
       setAttachments(prev => [{ ...result, url: (result as any).externalUrl || "" }, ...prev]);
       toast({ title: "Embed vježba dodana", description: result.originalName });
-      setEmbedValue(""); setEmbedLabel(""); setShowEmbedForm(false);
+      setEmbedValue(""); setEmbedLabel(""); setEmbedReward(5); setShowEmbedForm(false);
     } catch (err: any) {
       toast({ title: "Greška", description: err.message, variant: "destructive" });
     } finally {
       setSavingEmbed(false);
+    }
+  };
+
+  const openEditEmbed = (a: Prilog) => {
+    setEditEmbed(a);
+    setEditEmbedLabel(a.originalName);
+    const r = (a.hasanatReward ?? 0) as number;
+    setEditEmbedReward((r === 3 || r === 5 || r === 10 ? r : 0) as 0 | 3 | 5 | 10);
+  };
+
+  const handleSaveEditEmbed = async () => {
+    if (!editEmbed || !token) return;
+    if (!editEmbedLabel.trim()) {
+      toast({ title: "Greška", description: "Naziv ne može biti prazan", variant: "destructive" });
+      return;
+    }
+    setSavingEditEmbed(true);
+    try {
+      const result = await apiRequest<Prilog>("PUT", `/admin/prilozi/${editEmbed.id}`, {
+        label: editEmbedLabel.trim(),
+        hasanatReward: editEmbedReward,
+      }, token);
+      setAttachments(prev => prev.map(a => a.id === editEmbed.id ? { ...a, ...result, url: (result as any).externalUrl || a.url } : a));
+      toast({ title: "Sačuvano", description: result.originalName });
+      setEditEmbed(null);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingEditEmbed(false);
+    }
+  };
+
+  const handleClaimEmbed = async (a: Prilog) => {
+    if (!token || claimingEmbed) return;
+    if (claimedEmbeds.has(a.id)) return;
+    setClaimingEmbed(true);
+    try {
+      // studentId backend čita iz JWT-a (req.user.userId), ne iz body-ja —
+      // prevent IDOR. Šaljemo samo priloziId.
+      const res = await apiRequest<{
+        hasanatGained: number;
+        totalHasanat?: number;
+        previousHasanat?: number;
+        alreadyClaimed?: boolean;
+      }>("POST", `/content/embed/zavrseno`, { priloziId: a.id }, token);
+      setClaimedEmbeds(prev => new Set(prev).add(a.id));
+      if (res.alreadyClaimed) {
+        toast({ title: "Već si dobio kapi", description: "Za ovu vježbu si ranije primio kapi meda." });
+      } else if (res.hasanatGained > 0) {
+        onH5pCelebration?.({
+          isRepeat: false,
+          hasanatGained: res.hasanatGained,
+          totalHasanat: res.totalHasanat ?? 0,
+          previousHasanat: res.previousHasanat ?? 0,
+          streakDays: 0,
+          streakIncreased: false,
+        });
+      } else {
+        toast({ title: "Vježba završena", description: "Za ovu vježbu nisu predviđene kapi meda." });
+      }
+      setOpenEmbed(null);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setClaimingEmbed(false);
     }
   };
 
@@ -1758,8 +1838,22 @@ function PriloziSection({
                         onChange={e => setEmbedLabel(e.target.value)}
                         className="px-3 py-2 rounded-lg border border-amber-200 text-sm focus:outline-none focus:border-amber-500"
                       />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className="text-xs font-bold text-amber-800">Kapi meda za završetak:</label>
+                        <select
+                          value={embedReward}
+                          onChange={e => setEmbedReward(Number(e.target.value) as 0 | 3 | 5 | 10)}
+                          className="px-2 py-1.5 rounded-lg border border-amber-300 text-sm font-semibold bg-white focus:outline-none focus:border-amber-500"
+                          data-testid="embed-reward-select"
+                        >
+                          <option value={0}>Bez nagrade (0 🍯)</option>
+                          <option value={3}>Lahka vježba — 3 🍯</option>
+                          <option value={5}>Srednja vježba — 5 🍯</option>
+                          <option value={10}>Teža vježba — 10 🍯</option>
+                        </select>
+                      </div>
                       <p className="text-xs text-amber-600 italic">
-                        ⚠️ Učeniku će iznad vježbe biti prikazana napomena da se za nju ne broje kapi meda.
+                        Učenik dobija kapi tek kada klikne <strong>"Završio sam vježbu"</strong> u popupu — i to samo prvi put.
                       </p>
                       <Button
                         onClick={handleAddEmbed}
@@ -1793,6 +1887,10 @@ function PriloziSection({
 
                     // Embed: široki button preko cijele kartice umjesto inline iframe-a
                     if (isEmbed) {
+                      const reward = a.hasanatReward ?? 0;
+                      const subtitle = reward > 0
+                        ? `Klikni da otvoriš vježbu • do ${reward} kapi meda 🍯`
+                        : "Klikni da otvoriš vježbu • bez kapi meda 🍯";
                       return (
                         <div key={a.id} className="flex items-stretch gap-2">
                           <button
@@ -1803,7 +1901,7 @@ function PriloziSection({
                             <span className="text-3xl flex-shrink-0">🎯</span>
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-base text-amber-900 truncate">{a.originalName}</p>
-                              <p className="text-xs text-amber-700">Klikni da otvoriš vježbu • bez kapi meda 🍯</p>
+                              <p className="text-xs text-amber-700">{subtitle}</p>
                             </div>
                             {isAdmin && a.approved === false && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-800 border border-amber-400 flex-shrink-0">
@@ -1812,6 +1910,16 @@ function PriloziSection({
                             )}
                             <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0" />
                           </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => openEditEmbed(a)}
+                              className="p-2 rounded-xl text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors border-2 border-transparent hover:border-amber-300"
+                              title="Uredi naziv i nagradu"
+                              data-testid={`embed-edit-${a.id}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
                           {canDelete && (
                             <button
                               onClick={() => handleDelete(a.id, a.originalName)}
@@ -1957,35 +2065,122 @@ function PriloziSection({
               )}
 
               {/* Modal za embed vježbe — full-screen na mobile, large na desktop.
-                  X dugme gore desno, žuta napomena unutra iznad iframe-a. */}
+                  X dugme gore desno, žuta napomena unutra iznad iframe-a.
+                  Footer "Završio sam" se prikazuje samo učeniku (ne admin/muallim)
+                  i samo ako vježba ima hasanatReward > 0. */}
               <Dialog open={!!openEmbed} onOpenChange={(o) => { if (!o) setOpenEmbed(null); }}>
                 <DialogContent
                   className="p-0 gap-0 max-w-[100vw] sm:max-w-[95vw] md:max-w-5xl w-full h-[100dvh] sm:h-[92vh] sm:rounded-2xl rounded-none overflow-hidden flex flex-col"
                   data-testid="embed-modal"
                 >
-                  <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200 flex-shrink-0">
-                    <span className="text-2xl flex-shrink-0">🎯</span>
-                    <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-amber-900 truncate">
-                      {openEmbed?.originalName}
-                    </DialogTitle>
-                    <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
-                      ⚠️ Bez kapi meda 🍯
-                    </span>
-                  </div>
-                  <div className="sm:hidden px-4 py-2 bg-amber-100/60 text-xs font-semibold text-amber-800 text-center flex-shrink-0">
-                    ⚠️ Za ovu vježbu se ne broje kapi meda 🍯
-                  </div>
-                  {openEmbed && (openEmbed.externalUrl || openEmbed.url) && (
-                    <iframe
-                      src={openEmbed.externalUrl || openEmbed.url}
-                      title={openEmbed.originalName}
-                      className="flex-1 w-full bg-white"
-                      style={{ border: "none" }}
-                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
-                      referrerPolicy="no-referrer"
-                      allow="fullscreen"
+                  {(() => {
+                    const reward = openEmbed?.hasanatReward ?? 0;
+                    const isStudent = user?.role === "ucenik";
+                    const alreadyClaimed = openEmbed ? claimedEmbeds.has(openEmbed.id) : false;
+                    const showClaim = !!openEmbed && reward > 0 && isStudent;
+                    const headerBadge = reward > 0
+                      ? `Do ${reward} kapi meda 🍯`
+                      : "Bez kapi meda 🍯";
+                    return (
+                      <>
+                        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200 flex-shrink-0">
+                          <span className="text-2xl flex-shrink-0">🎯</span>
+                          <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-amber-900 truncate">
+                            {openEmbed?.originalName}
+                          </DialogTitle>
+                          <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                            {headerBadge}
+                          </span>
+                        </div>
+                        <div className="sm:hidden px-4 py-2 bg-amber-100/60 text-xs font-semibold text-amber-800 text-center flex-shrink-0">
+                          {headerBadge}
+                        </div>
+                        {openEmbed && (openEmbed.externalUrl || openEmbed.url) && (
+                          <iframe
+                            src={openEmbed.externalUrl || openEmbed.url}
+                            title={openEmbed.originalName}
+                            className="flex-1 w-full bg-white"
+                            style={{ border: "none" }}
+                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
+                            referrerPolicy="no-referrer"
+                            allow="fullscreen"
+                          />
+                        )}
+                        {showClaim && openEmbed && (
+                          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border-t border-amber-200 flex-shrink-0">
+                            <p className="text-xs sm:text-sm text-amber-800 font-semibold">
+                              {alreadyClaimed
+                                ? "Već si dobio kapi za ovu vježbu."
+                                : "Kad završiš vježbu, klikni dugme da dobiješ kapi meda."}
+                            </p>
+                            <Button
+                              onClick={() => handleClaimEmbed(openEmbed)}
+                              disabled={claimingEmbed || alreadyClaimed}
+                              className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold whitespace-nowrap"
+                              data-testid="embed-claim"
+                            >
+                              {claimingEmbed
+                                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</>
+                                : alreadyClaimed
+                                  ? "✓ Završeno"
+                                  : `Završio sam vježbu • +${reward} 🍯`}
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit modal za embed (samo admin) — uređuje naziv + nagradu.
+                  Promjena URL-a se NE radi ovdje; ako URL nije ispravan, admin
+                  obriše prilog i doda novi (rijedak slučaj). */}
+              <Dialog open={!!editEmbed} onOpenChange={(o) => { if (!o) setEditEmbed(null); }}>
+                <DialogContent className="max-w-md" data-testid="embed-edit-modal">
+                  <DialogTitle className="text-lg font-bold text-amber-900">Uredi embed vježbu</DialogTitle>
+                  <div className="flex flex-col gap-3 mt-2">
+                    <label className="text-xs font-bold text-amber-800">Naziv vježbe</label>
+                    <input
+                      type="text"
+                      value={editEmbedLabel}
+                      onChange={e => setEditEmbedLabel(e.target.value)}
+                      className="px-3 py-2 rounded-lg border border-amber-300 text-sm focus:outline-none focus:border-amber-500"
+                      data-testid="embed-edit-label"
                     />
-                  )}
+                    <label className="text-xs font-bold text-amber-800">Kapi meda za završetak</label>
+                    <select
+                      value={editEmbedReward}
+                      onChange={e => setEditEmbedReward(Number(e.target.value) as 0 | 3 | 5 | 10)}
+                      className="px-3 py-2 rounded-lg border border-amber-300 text-sm font-semibold bg-white focus:outline-none focus:border-amber-500"
+                      data-testid="embed-edit-reward"
+                    >
+                      <option value={0}>Bez nagrade (0 🍯)</option>
+                      <option value={3}>Lahka vježba — 3 🍯</option>
+                      <option value={5}>Srednja vježba — 5 🍯</option>
+                      <option value={10}>Teža vježba — 10 🍯</option>
+                    </select>
+                    <p className="text-xs text-amber-600 italic">
+                      Učenici koji su već dobili kapi za ovu vježbu ih neće dobiti ponovo, čak i ako povećaš nagradu.
+                    </p>
+                    <div className="flex justify-end gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setEditEmbed(null)}
+                        className="rounded-lg font-bold"
+                      >
+                        Odustani
+                      </Button>
+                      <Button
+                        onClick={handleSaveEditEmbed}
+                        disabled={savingEditEmbed || !editEmbedLabel.trim()}
+                        className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                        data-testid="embed-edit-save"
+                      >
+                        {savingEditEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</> : "Spasi"}
+                      </Button>
+                    </div>
+                  </div>
                 </DialogContent>
               </Dialog>
             </div>

@@ -265,11 +265,31 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS approved boolean NOT NULL DEFAULT false;`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_role varchar(20);`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_user_id integer;`);
+    // hasanat_reward — kapi meda koje učenik dobija kad klikne "Završio sam"
+    // na embed vježbi (LearningApps, Wordwall, Quizizz...). Admin postavlja
+    // pri dodavanju/uređivanju. Dozvoljene vrijednosti: 0, 3, 5, 10.
+    // Default 0 = bez nagrade (nazad-kompatibilno za stare embedove).
+    // Reward se daje SAMO jednom po (student, prilog) — vidi embed_completions.
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS hasanat_reward integer NOT NULL DEFAULT 0;`);
     // Stored_name/file_size/mime_type imaju defaults u baseline-u; dodaj
     // defaults i ovdje za svaki slučaj (NOT NULL bez defaulta = INSERT pada).
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN stored_name SET DEFAULT '';`);
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN file_size SET DEFAULT 0;`);
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN mime_type SET DEFAULT 'application/octet-stream';`);
+
+    // embed_completions — audit + anti-double-claim za embed vježbe.
+    // Učenik može klikom "Završio sam" zatražiti hasanate SAMO jednom po
+    // (student_id, prilozi_id). Unique index garantuje atomski guard.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS embed_completions (
+        id serial PRIMARY KEY,
+        student_id varchar(120) NOT NULL,
+        prilozi_id integer NOT NULL,
+        hasanat_gained integer NOT NULL DEFAULT 0,
+        completed_at timestamp DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS embed_completions_student_prilozi_uidx ON embed_completions (student_id, prilozi_id);`);
 
     // Kviz kategorije (admin-definisane). Tabela + idempotent seed iz
     // KVIZ_KATEGORIJE_META ako je tabela prazna (prvi start nakon migracije).

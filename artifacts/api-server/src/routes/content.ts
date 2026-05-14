@@ -167,6 +167,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
             externalUrl: a.externalUrl,
             url,
             approved: a.approved,
+            hasanatReward: a.hasanatReward,
             createdAt: a.createdAt,
           };
         });

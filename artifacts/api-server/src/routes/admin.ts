@@ -367,11 +367,21 @@ function isWhitelistedHost(url: string): boolean {
   }
 }
 
+// Dozvoljene vrijednosti kapi meda za embed vježbu (admin postavlja).
+// 0 = bez nagrade (samo informativna/dekorativna vježba).
+// Limit do 10 jer cijela lekcija nosi 30 — embed ne smije nadjačati učenje.
+const ALLOWED_EMBED_REWARDS = [0, 3, 5, 10] as const;
+function normalizeEmbedReward(input: unknown): number {
+  const n = Number(input);
+  if (!Number.isFinite(n)) return 0;
+  return ALLOWED_EMBED_REWARDS.includes(n as 0 | 3 | 5 | 10) ? n : 0;
+}
+
 router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
   try {
     const lekcijaId = parseInt(req.params.lekcijaId);
     if (isNaN(lekcijaId)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
-    const { embedCode, label } = (req.body || {}) as { embedCode?: string; label?: string };
+    const { embedCode, label, hasanatReward } = (req.body || {}) as { embedCode?: string; label?: string; hasanatReward?: number };
     if (!embedCode || typeof embedCode !== "string") {
       return res.status(400).json({ error: "Pošalji iframe kod ili URL vježbe" });
     }
@@ -417,10 +427,70 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
       approved: uploaderRole === "admin",
       uploadedByRole: uploaderRole,
       uploadedByUserId: uploaderUserId,
+      hasanatReward: normalizeEmbedReward(hasanatReward),
     }).returning();
     res.json(inserted);
   } catch (e: any) {
     console.error("[POST /prilozi/:lekcijaId/embed] failed:", e?.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /api/admin/prilozi/:id — uredi embed prilog (samo admin).
+// Trenutno podržava: label (originalName) + hasanatReward + opciono novi
+// embedCode (URL ili iframe — prolazi kroz isti extractEmbedSrc + whitelist).
+// Ostali tipovi priloga (file/url/h5p) se NE mogu uređivati ovim endpointom —
+// fajl bi zahtijevao re-upload, URL bi mogao biti dodan kasnije.
+router.put("/prilozi/:id", async (req, res) => {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ error: "Samo admin može uređivati materijale" });
+  }
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID" });
+    const [existing] = await db.select().from(prilozi).where(eq(prilozi.id, id));
+    if (!existing) return res.status(404).json({ error: "Prilog nije pronađen" });
+    if (existing.kind !== "embed") {
+      return res.status(400).json({ error: "Trenutno se može uređivati samo embed vježba" });
+    }
+
+    const { label, hasanatReward, embedCode } = (req.body || {}) as {
+      label?: string;
+      hasanatReward?: number;
+      embedCode?: string;
+    };
+    const updates: Partial<typeof prilozi.$inferInsert> = {};
+
+    if (typeof label === "string") {
+      const trimmed = label.trim();
+      if (!trimmed) return res.status(400).json({ error: "Naziv ne može biti prazan" });
+      updates.originalName = trimmed.slice(0, 200);
+    }
+    if (hasanatReward !== undefined) {
+      updates.hasanatReward = normalizeEmbedReward(hasanatReward);
+    }
+    if (typeof embedCode === "string" && embedCode.trim()) {
+      if (embedCode.length > 5000) {
+        return res.status(400).json({ error: "Embed kod je predugačak (max 5000 znakova)" });
+      }
+      const src = extractEmbedSrc(embedCode);
+      if (!src) return res.status(400).json({ error: "Ne mogu da pronađem URL u embed kodu" });
+      if (!isWhitelistedHost(src)) {
+        return res.status(400).json({
+          error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org."
+        });
+      }
+      updates.externalUrl = src;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "Nema promjena" });
+    }
+
+    const [updated] = await db.update(prilozi).set(updates).where(eq(prilozi.id, id)).returning();
+    res.json(updated);
+  } catch (e: any) {
+    console.error("[PUT /prilozi/:id] failed:", e?.message);
     res.status(500).json({ error: e.message });
   }
 });
