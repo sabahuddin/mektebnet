@@ -1913,11 +1913,12 @@ function PriloziSection({
                           {canDelete && (
                             <button
                               onClick={() => openEditEmbed(a)}
-                              className="p-2 rounded-xl text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-colors border-2 border-transparent hover:border-amber-300"
+                              className="px-3 py-2 rounded-xl text-amber-800 bg-amber-100 hover:bg-amber-200 transition-colors border-2 border-amber-300 hover:border-amber-500 flex items-center gap-1.5 font-bold text-xs"
                               title="Uredi naziv i nagradu"
                               data-testid={`embed-edit-${a.id}`}
                             >
                               <Pencil className="w-4 h-4" />
+                              <span className="hidden sm:inline">Uredi</span>
                             </button>
                           )}
                           {canDelete && (
