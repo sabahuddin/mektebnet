@@ -89,6 +89,10 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   audioSrc: varchar("audio_src", { length: 500 }),
   redoslijed: integer("redoslijed").notNull().default(0),
   isPublished: boolean("is_published").notNull().default(true),
+  // Predmet (Akaid, Ahlak, Ibadat, ...) — koristi se za filter na "Sve lekcije".
+  // Inicijalno backfill-ovano iz priprema HTML-a (regex extract iz meta bloka),
+  // dalje admin može direktno mijenjati. NULL za lekcije bez priprema/predmeta.
+  predmet: varchar("predmet", { length: 60 }),
   kvizPitanja: jsonb("kviz_pitanja").$type<LekcijaKvizPitanje[]>(),
   locked: boolean("locked").notNull().default(false),
   lockedAt: timestamp("locked_at"),

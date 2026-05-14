@@ -1244,7 +1244,7 @@ router.post("/ilmihal", async (req, res) => {
 router.put("/ilmihal/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock } = req.body;
+    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet } = req.body;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
     const updates: Record<string, any> = {};
@@ -1255,6 +1255,11 @@ router.put("/ilmihal/:id", async (req, res) => {
     }
     if (naslov !== undefined) updates.naslov = naslov;
     if (redoslijed !== undefined) updates.redoslijed = redoslijed;
+    if (predmet !== undefined) {
+      // Predmet: prazan string → NULL (lekcija "bez predmeta"). Trim, max 60 char.
+      const p = typeof predmet === "string" ? predmet.trim() : "";
+      updates.predmet = p ? p.slice(0, 60) : null;
+    }
     if (kvizPitanja !== undefined) {
       updates.kvizPitanja = typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja);
     }

@@ -163,6 +163,21 @@ async function runResidualSchema() {
     // Stoga ovdje idempotentno dodajemo kolonu da se produkcija auto-update-a.
     await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS meta jsonb;`);
 
+    // ilmihal_lekcije.predmet — kolona za pedagošku oblast (Akaid, Ahlak,
+    // Ibadat, ...). Koristi se za dropdown filter na "Sve lekcije". Vrijednosti
+    // su prvi put backfill-ovane iz priprema HTML-a (Predmet</div><div>VALUE</div>),
+    // a dalje ih admin direktno mijenja kroz UI. Idempotentno na svaki start.
+    await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS predmet varchar(60);`);
+    // Jednokratni backfill: popuni predmet iz content_html-a samo za redove
+    // gdje je predmet NULL (preskače već postavljene). POSIX regex hvata
+    // vrijednost između <div>Predmet</div> i sljedećeg <div>...</div>.
+    await db.execute(sql`
+      UPDATE ilmihal_lekcije
+      SET predmet = trim(substring(content_html from 'Predmet</div>[[:space:]]*<div[^>]*>([^<]+)</div>'))
+      WHERE predmet IS NULL
+        AND content_html ~ 'Predmet</div>'
+    `);
+
     // pitanja_banka — partial UNIQUE indeksi za dedup. Prethodna verzija je
     // imala globalni UNIQUE(pitanje), što je za interaktivne tipove (dragDrop,
     // markWords) gubilo desetine varijanti jer ista generička pitanja kao

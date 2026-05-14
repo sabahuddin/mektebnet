@@ -48,6 +48,7 @@ interface Lekcija {
   redoslijed?: number;
   contentHtml: string;
   audioSrc?: string;
+  predmet?: string | null;
   kvizPitanja?: LekcijaKvizPitanje[] | null;
   prilozi?: Prilog[];
   locked?: boolean;
@@ -2007,6 +2008,7 @@ export default function IlmihalLekcijaPage() {
   const [editingNaslov, setEditingNaslov] = useState(false);
   const [naslovDraft, setNaslovDraft] = useState("");
   const [savingNaslov, setSavingNaslov] = useState(false);
+  const [savingPredmet, setSavingPredmet] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
 
   // Bočne dekoracije (pčele/saće/cvijeće) na body-ju samo dok je lekcija otvorena.
@@ -2063,6 +2065,31 @@ export default function IlmihalLekcijaPage() {
   }, [lekcija?.id, token]);
 
   const displayNivo = (nivo: number) => nivo;
+
+  // Admin-only: izmjena predmeta lekcije (kategorija za "Sve lekcije" filter).
+  // Muallim NEMA pristup ovome — backend ruta /admin/* je admin-only middleware,
+  // a UI dugme se renderuje samo za user.role === "admin".
+  const handleEditPredmet = async () => {
+    if (!lekcija || !token) return;
+    const trenutni = lekcija.predmet || "";
+    const noviRaw = window.prompt(
+      "Predmet lekcije (npr. Akaid, Ahlak, Ibadat, Historija islama, Kur'an, Fikh).\nOstavi prazno za 'Bez predmeta'.",
+      trenutni,
+    );
+    if (noviRaw === null) return; // Otkazano
+    const novi = noviRaw.trim();
+    if (novi === trenutni) return;
+    setSavingPredmet(true);
+    try {
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { predmet: novi }, token);
+      setLekcija(prev => prev ? { ...prev, predmet: novi || null } : prev);
+      toast({ title: "Predmet ažuriran", description: novi ? `Predmet: ${novi}` : "Predmet uklonjen." });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Ne mogu spasiti predmet.", variant: "destructive" });
+    } finally {
+      setSavingPredmet(false);
+    }
+  };
 
   const handleSaveNaslov = async () => {
     if (!lekcija || !token) return;
@@ -2503,6 +2530,12 @@ export default function IlmihalLekcijaPage() {
             <button onClick={() => { setNaslovDraft(lekcija?.naslov || ""); setEditingNaslov(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
               <PenLine className="w-3.5 h-3.5" /> Uredi naziv
+            </button>
+            <button onClick={handleEditPredmet} disabled={savingPredmet}
+              title="Promijeni predmet (kategoriju) lekcije za 'Sve lekcije' filter"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors disabled:opacity-50">
+              {savingPredmet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PenLine className="w-3.5 h-3.5" />}
+              Predmet: {lekcija.predmet || "—"}
             </button>
             <button onClick={() => setShowEditor(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
