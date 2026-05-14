@@ -729,6 +729,14 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
 
 router.delete("/prilozi/:id", async (req, res) => {
   try {
+    // Brisanje materijala (fajl, URL link, embed vježba, H5P) je admin-only.
+    // Muallim smije dodavati i odobravati priloge, ali NE smije ih brisati —
+    // tako se sprječava nehotično ili namjerno gubljenje sadržaja koji je već
+    // postavljen na lekciji.
+    const role = (req as unknown as { user?: { role?: string } }).user?.role;
+    if (role !== "admin") {
+      return res.status(403).json({ error: "Samo admin može brisati materijale" });
+    }
     const id = parseInt(req.params.id);
     const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
     if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });

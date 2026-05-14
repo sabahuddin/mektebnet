@@ -1383,16 +1383,22 @@ function PriloziSection({
   lekcija,
   token,
   canManage,
+  canDelete,
   onH5pCelebration,
 }: {
   lekcija: Lekcija;
   token: string | null;
-  /** Da li korisnik smije dodavati/brisati materijale (muallim ili admin). */
+  /** Da li korisnik smije dodavati materijale (muallim ili admin). */
   canManage: boolean;
+  /** Da li korisnik smije BRISATI materijale (samo admin). Muallim NE smije
+   *  brisati embedovane vježbe, linkove, fajlove itd. — backend takođe odbija. */
+  canDelete: boolean;
   onH5pCelebration?: (data: CelebrationData) => void;
 }) {
   // Lokalni alias za čitljivost — ranije su uvjeti pisali `isAdmin`, ali sada
   // "upravljanje materijalima" obuhvata i muallim-a (vidi backend admin.ts).
+  // NAPOMENA: `isAdmin` ovdje znači "može upravljati" (admin ili muallim);
+  // za radnje koje su STROGO admin-only (brisanje), koristi `canDelete`.
   const isAdmin = canManage;
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
@@ -1806,7 +1812,7 @@ function PriloziSection({
                             )}
                             <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0" />
                           </button>
-                          {isAdmin && (
+                          {canDelete && (
                             <button
                               onClick={() => handleDelete(a.id, a.originalName)}
                               className="p-2 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors border-2 border-transparent hover:border-red-200"
@@ -1887,7 +1893,7 @@ function PriloziSection({
                                 </button>
                               </>
                             )}
-                            {isAdmin && (
+                            {canDelete && (
                               <button
                                 onClick={() => handleDelete(a.id, a.originalName)}
                                 className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -2800,6 +2806,7 @@ export default function IlmihalLekcijaPage() {
             lekcija={lekcija}
             token={token}
             canManage={user.role === "admin" || user.role === "muallim"}
+            canDelete={user.role === "admin"}
             onH5pCelebration={setCelebration}
           />
         )}
