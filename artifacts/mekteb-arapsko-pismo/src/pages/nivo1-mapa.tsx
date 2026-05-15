@@ -188,8 +188,8 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
         backgroundImage: `url(${mapaPozadinaUrl})`,
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
-        backgroundPosition: "center center",
-        backgroundAttachment: "fixed",
+        backgroundPosition: "top center",
+        backgroundAttachment: "scroll",
       }}
       data-testid="mapa-fullscreen"
     >
@@ -534,14 +534,25 @@ function PathSvg({
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
+      {/* Dvostruki stroke za bolju vidljivost: tamno-zlatni okvir + svijetla žuta sredina. */}
       <polyline
         points={points.join(" ")}
         fill="none"
-        stroke="rgba(255, 255, 255, 0.55)"
-        strokeWidth="2"
+        stroke="#92400e"
+        strokeWidth="5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeDasharray="0.9 1.6"
+        strokeOpacity="0.85"
+        vectorEffect="non-scaling-stroke"
+      />
+      <polyline
+        points={points.join(" ")}
+        fill="none"
+        stroke="#fde047"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray="3 3"
         vectorEffect="non-scaling-stroke"
       />
     </svg>
