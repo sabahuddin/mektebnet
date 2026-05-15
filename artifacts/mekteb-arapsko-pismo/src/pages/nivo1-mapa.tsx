@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
 import { Check, Sparkles, X } from "lucide-react";
-import mapaPozadinaUrl from "@assets/85372ef6-da9a-44a0-b14a-25ff1482aac6_1778874277136.png";
+
+const mapaPozadinaUrl = `${import.meta.env.BASE_URL}images/mapa/pozadina-pcele.png`;
 
 interface Lekcija {
   id: number;

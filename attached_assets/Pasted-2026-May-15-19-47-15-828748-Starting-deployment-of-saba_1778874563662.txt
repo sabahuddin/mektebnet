@@ -1,0 +1,820 @@
+2026-May-15 19:47:15.828748
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-May-15 19:47:16.689741
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-May-15 19:47:19.673206
+----------------------------------------
+2026-May-15 19:47:19.687298
+Importing sabahuddin/mektebnet:main (commit sha 22fc3dc577b7ce07c0a8e14ac4869775c9410f29) to /artifacts/qkgcgok0k0gs4wckwgow0k04.
+2026-May-15 19:47:33.492724
+Image not found (i8w884sgkkgogkwsokcwc0c4:22fc3dc577b7ce07c0a8e14ac4869775c9410f29). Building new image.
+2026-May-15 19:47:38.765863
+----------------------------------------
+2026-May-15 19:47:38.777631
+Building docker image started.
+2026-May-15 19:47:38.786668
+To check the current progress, click on Show Debug Logs.
+2026-May-15 19:48:05.104399
+========================================
+2026-May-15 19:48:05.121162
+Deployment failed: Command execution failed (exit code 1): docker exec qkgcgok0k0gs4wckwgow0k04 bash -c 'bash /artifacts/build.sh'
+2026-May-15 19:48:05.121162
+Error: #0 building with "default" instance using docker driver
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#1 [internal] load build definition from Dockerfile
+2026-May-15 19:48:05.121162
+#1 transferring dockerfile: 3.13kB done
+2026-May-15 19:48:05.121162
+#1 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#2 [internal] load metadata for docker.io/library/node:24-bookworm-slim
+2026-May-15 19:48:05.121162
+#2 DONE 1.2s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#3 [internal] load .dockerignore
+2026-May-15 19:48:05.121162
+#3 transferring context: 2B done
+2026-May-15 19:48:05.121162
+#3 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#4 [base  1/18] FROM docker.io/library/node:24-bookworm-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e
+2026-May-15 19:48:05.121162
+#4 resolve docker.io/library/node:24-bookworm-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e 0.0s done
+2026-May-15 19:48:05.121162
+#4 sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e 5.20kB / 5.20kB done
+2026-May-15 19:48:05.121162
+#4 sha256:6bdcd38621f965652197b6fffa34b719a7dd6831a00e91e338671887e51e1e1b 1.93kB / 1.93kB done
+2026-May-15 19:48:05.121162
+#4 sha256:fd75ed6070b7d9d737d045c7c0db0920d33e82e0d7ebddd2faf9b2f2192cd11c 6.88kB / 6.88kB done
+2026-May-15 19:48:05.121162
+#4 DONE 0.1s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#5 [internal] load build context
+2026-May-15 19:48:05.121162
+#5 transferring context: 134.75MB 0.7s done
+2026-May-15 19:48:05.121162
+#5 DONE 0.7s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#6 [runner  2/11] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm@10
+2026-May-15 19:48:05.121162
+#6 0.136 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+2026-May-15 19:48:05.121162
+#6 0.154 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+2026-May-15 19:48:05.121162
+#6 0.170 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+2026-May-15 19:48:05.121162
+#6 0.242 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8792 kB]
+2026-May-15 19:48:05.121162
+#6 0.345 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+2026-May-15 19:48:05.121162
+#6 0.379 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [306 kB]
+2026-May-15 19:48:05.121162
+#6 1.055 Fetched 9359 kB in 1s (10.0 MB/s)
+2026-May-15 19:48:05.121162
+#6 1.055 Reading package lists...
+2026-May-15 19:48:05.121162
+#6 1.444 Reading package lists...
+2026-May-15 19:48:05.121162
+#6 1.799 Building dependency tree...
+2026-May-15 19:48:05.121162
+#6 1.878 Reading state information...
+2026-May-15 19:48:05.121162
+#6 1.958 The following additional packages will be installed:
+2026-May-15 19:48:05.121162
+#6 1.959   libpsl5 libssl3 openssl
+2026-May-15 19:48:05.121162
+#6 1.960 Recommended packages:
+2026-May-15 19:48:05.121162
+#6 1.960   publicsuffix
+2026-May-15 19:48:05.121162
+#6 2.044 The following NEW packages will be installed:
+2026-May-15 19:48:05.121162
+#6 ...
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#7 [base  2/18] RUN npm install -g pnpm@10
+2026-May-15 19:48:05.121162
+#7 1.768
+2026-May-15 19:48:05.121162
+#7 1.768 added 1 package in 2s
+2026-May-15 19:48:05.121162
+#7 1.769
+2026-May-15 19:48:05.121162
+#7 1.769 1 package is looking for funding
+2026-May-15 19:48:05.121162
+#7 1.769   run `npm fund` for details
+2026-May-15 19:48:05.121162
+#7 1.771 npm notice
+2026-May-15 19:48:05.121162
+#7 1.771 npm notice New minor version of npm available! 11.12.1 -> 11.14.1
+2026-May-15 19:48:05.121162
+#7 1.771 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.14.1
+2026-May-15 19:48:05.121162
+#7 1.771 npm notice To update run: npm install -g npm@11.14.1
+2026-May-15 19:48:05.121162
+#7 1.771 npm notice
+2026-May-15 19:48:05.121162
+#7 DONE 2.1s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#8 [base  3/18] WORKDIR /app
+2026-May-15 19:48:05.121162
+#8 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#9 [base  4/18] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-May-15 19:48:05.121162
+#9 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#10 [base  5/18] COPY tsconfig.base.json tsconfig.json ./
+2026-May-15 19:48:05.121162
+#10 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#11 [base  6/18] COPY lib/db/package.json ./lib/db/
+2026-May-15 19:48:05.121162
+#11 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#6 [runner  2/11] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm@10
+2026-May-15 19:48:05.121162
+#6 2.044   ca-certificates libpsl5 libssl3 openssl wget
+2026-May-15 19:48:05.121162
+#6 2.065 0 upgraded, 5 newly installed, 0 to remove and 0 not upgraded.
+2026-May-15 19:48:05.121162
+#6 2.065 Need to get 4618 kB of archives.
+2026-May-15 19:48:05.121162
+#6 2.065 After this operation, 12.6 MB of additional disk space will be used.
+2026-May-15 19:48:05.121162
+#6 2.065 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.19-1~deb12u2 [2032 kB]
+2026-May-15 19:48:05.121162
+#6 2.104 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.19-1~deb12u2 [1435 kB]
+2026-May-15 19:48:05.121162
+#6 2.116 Get:3 http://deb.debian.org/debian bookworm/main amd64 ca-certificates all 20230311+deb12u1 [155 kB]
+2026-May-15 19:48:05.121162
+#6 2.118 Get:4 http://deb.debian.org/debian bookworm/main amd64 libpsl5 amd64 0.21.2-1 [58.7 kB]
+2026-May-15 19:48:05.121162
+#6 2.121 Get:5 http://deb.debian.org/debian bookworm/main amd64 wget amd64 1.21.3-1+deb12u1 [937 kB]
+2026-May-15 19:48:05.121162
+#6 ...
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#12 [base  7/18] COPY lib/api-spec/package.json ./lib/api-spec/
+2026-May-15 19:48:05.121162
+#12 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#13 [base  8/18] COPY lib/api-client-react/package.json ./lib/api-client-react/
+2026-May-15 19:48:05.121162
+#13 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#14 [base  9/18] COPY lib/api-zod/package.json ./lib/api-zod/
+2026-May-15 19:48:05.121162
+#14 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#15 [base 10/18] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-15 19:48:05.121162
+#15 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#16 [base 11/18] COPY artifacts/mekteb-arapsko-pismo/package.json ./artifacts/mekteb-arapsko-pismo/
+2026-May-15 19:48:05.121162
+#16 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#17 [base 12/18] COPY scripts/package.json ./scripts/
+2026-May-15 19:48:05.121162
+#17 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#6 [runner  2/11] RUN apt-get update  && apt-get install -y --no-install-recommends wget ca-certificates  && rm -rf /var/lib/apt/lists/*  && npm install -g pnpm@10
+2026-May-15 19:48:05.121162
+#6 2.284 debconf: delaying package configuration, since apt-utils is not installed
+2026-May-15 19:48:05.121162
+#6 2.307 Fetched 4618 kB in 0s (56.6 MB/s)
+2026-May-15 19:48:05.121162
+#6 2.333 Selecting previously unselected package libssl3:amd64.
+2026-May-15 19:48:05.121162
+#6 2.333 (Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 6096 files and directories currently installed.)
+2026-May-15 19:48:05.121162
+#6 2.358 Preparing to unpack .../libssl3_3.0.19-1~deb12u2_amd64.deb ...
+2026-May-15 19:48:05.121162
+#6 2.362 Unpacking libssl3:amd64 (3.0.19-1~deb12u2) ...
+2026-May-15 19:48:05.121162
+#6 2.488 Selecting previously unselected package openssl.
+2026-May-15 19:48:05.121162
+#6 2.492 Preparing to unpack .../openssl_3.0.19-1~deb12u2_amd64.deb ...
+2026-May-15 19:48:05.121162
+#6 2.494 Unpacking openssl (3.0.19-1~deb12u2) ...
+2026-May-15 19:48:05.121162
+#6 2.594 Selecting previously unselected package ca-certificates.
+2026-May-15 19:48:05.121162
+#6 2.595 Preparing to unpack .../ca-certificates_20230311+deb12u1_all.deb ...
+2026-May-15 19:48:05.121162
+#6 2.598 Unpacking ca-certificates (20230311+deb12u1) ...
+2026-May-15 19:48:05.121162
+#6 2.659 Selecting previously unselected package libpsl5:amd64.
+2026-May-15 19:48:05.121162
+#6 2.659 Preparing to unpack .../libpsl5_0.21.2-1_amd64.deb ...
+2026-May-15 19:48:05.121162
+#6 2.660 Unpacking libpsl5:amd64 (0.21.2-1) ...
+2026-May-15 19:48:05.121162
+#6 2.690 Selecting previously unselected package wget.
+2026-May-15 19:48:05.121162
+#6 2.690 Preparing to unpack .../wget_1.21.3-1+deb12u1_amd64.deb ...
+2026-May-15 19:48:05.121162
+#6 2.692 Unpacking wget (1.21.3-1+deb12u1) ...
+2026-May-15 19:48:05.121162
+#6 2.759 Setting up libpsl5:amd64 (0.21.2-1) ...
+2026-May-15 19:48:05.121162
+#6 2.765 Setting up wget (1.21.3-1+deb12u1) ...
+2026-May-15 19:48:05.121162
+#6 2.773 Setting up libssl3:amd64 (3.0.19-1~deb12u2) ...
+2026-May-15 19:48:05.121162
+#6 2.785 Setting up openssl (3.0.19-1~deb12u2) ...
+2026-May-15 19:48:05.121162
+#6 2.794 Setting up ca-certificates (20230311+deb12u1) ...
+2026-May-15 19:48:05.121162
+#6 2.870 debconf: unable to initialize frontend: Dialog
+2026-May-15 19:48:05.121162
+#6 2.870 debconf: (TERM is not set, so the dialog frontend is not usable.)
+2026-May-15 19:48:05.121162
+#6 2.870 debconf: falling back to frontend: Readline
+2026-May-15 19:48:05.121162
+#6 2.870 debconf: unable to initialize frontend: Readline
+2026-May-15 19:48:05.121162
+#6 2.870 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+2026-May-15 19:48:05.121162
+#6 2.870 debconf: falling back to frontend: Teletype
+2026-May-15 19:48:05.121162
+#6 3.473 Updating certificates in /etc/ssl/certs...
+2026-May-15 19:48:05.121162
+#6 4.201 142 added, 0 removed; done.
+2026-May-15 19:48:05.121162
+#6 4.231 Processing triggers for libc-bin (2.36-9+deb12u13) ...
+2026-May-15 19:48:05.121162
+#6 4.270 Processing triggers for ca-certificates (20230311+deb12u1) ...
+2026-May-15 19:48:05.121162
+#6 4.279 Updating certificates in /etc/ssl/certs...
+2026-May-15 19:48:05.121162
+#6 4.833 0 added, 0 removed; done.
+2026-May-15 19:48:05.121162
+#6 4.833 Running hooks in /etc/ca-certificates/update.d...
+2026-May-15 19:48:05.121162
+#6 4.835 done.
+2026-May-15 19:48:05.121162
+#6 6.895
+2026-May-15 19:48:05.121162
+#6 6.895 added 1 package in 2s
+2026-May-15 19:48:05.121162
+#6 6.895
+2026-May-15 19:48:05.121162
+#6 6.895 1 package is looking for funding
+2026-May-15 19:48:05.121162
+#6 6.895   run `npm fund` for details
+2026-May-15 19:48:05.121162
+#6 6.896 npm notice
+2026-May-15 19:48:05.121162
+#6 6.896 npm notice New minor version of npm available! 11.12.1 -> 11.14.1
+2026-May-15 19:48:05.121162
+#6 6.896 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.14.1
+2026-May-15 19:48:05.121162
+#6 6.896 npm notice To update run: npm install -g npm@11.14.1
+2026-May-15 19:48:05.121162
+#6 6.896 npm notice
+2026-May-15 19:48:05.121162
+#6 DONE 7.5s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#18 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-15 19:48:05.121162
+#18 0.456 Scope: all 8 workspace projects
+2026-May-15 19:48:05.121162
+#18 0.530 Lockfile is up to date, resolution step is skipped
+2026-May-15 19:48:05.121162
+#18 0.602 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-May-15 19:48:05.121162
+#18 0.680 Packages: +1323
+2026-May-15 19:48:05.121162
+#18 0.680 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-May-15 19:48:05.121162
+#18 0.898
+2026-May-15 19:48:05.121162
+#18 0.898    ╭─────────────────────────────────────────╮
+2026-May-15 19:48:05.121162
+#18 0.898    │                                         │
+2026-May-15 19:48:05.121162
+#18 0.898    │   Update available! 10.33.4 → 11.1.2.   │
+2026-May-15 19:48:05.121162
+#18 0.898    │   Changelog: https://pnpm.io/v/11.1.2   │
+2026-May-15 19:48:05.121162
+#18 0.898    │    To update, run: pnpm add -g pnpm     │
+2026-May-15 19:48:05.121162
+#18 0.898    │                                         │
+2026-May-15 19:48:05.121162
+#18 0.898    ╰─────────────────────────────────────────╯
+2026-May-15 19:48:05.121162
+#18 0.898
+2026-May-15 19:48:05.121162
+#18 1.603 Progress: resolved 1323, reused 0, downloaded 157, added 115
+2026-May-15 19:48:05.121162
+#18 2.603 Progress: resolved 1323, reused 0, downloaded 400, added 400
+2026-May-15 19:48:05.121162
+#18 3.604 Progress: resolved 1323, reused 0, downloaded 735, added 731
+2026-May-15 19:48:05.121162
+#18 4.603 Progress: resolved 1323, reused 0, downloaded 1079, added 1078
+2026-May-15 19:48:05.121162
+#18 ...
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#19 [runner  3/11] WORKDIR /app
+2026-May-15 19:48:05.121162
+#19 DONE 0.2s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#18 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-15 19:48:05.121162
+#18 5.603 Progress: resolved 1323, reused 0, downloaded 1131, added 1112
+2026-May-15 19:48:05.121162
+#18 ...
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#20 [runner  4/11] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+2026-May-15 19:48:05.121162
+#20 DONE 0.3s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#21 [runner  5/11] COPY lib/db/package.json ./lib/db/
+2026-May-15 19:48:05.121162
+#21 DONE 0.1s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#22 [runner  6/11] COPY artifacts/api-server/package.json ./artifacts/api-server/
+2026-May-15 19:48:05.121162
+#22 DONE 0.1s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#18 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-15 19:48:05.121162
+#18 6.604 Progress: resolved 1323, reused 0, downloaded 1248, added 1173
+2026-May-15 19:48:05.121162
+#18 7.198 Progress: resolved 1323, reused 0, downloaded 1323, added 1323, done
+2026-May-15 19:48:05.121162
+#18 7.742 .../canvas@2.11.2/node_modules/canvas install$ node-pre-gyp install --fallback-to-build --update-binary
+2026-May-15 19:48:05.121162
+#18 7.745 .../node_modules/puppeteer postinstall$ node install.mjs
+2026-May-15 19:48:05.121162
+#18 7.745 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-May-15 19:48:05.121162
+#18 7.745 .../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+2026-May-15 19:48:05.121162
+#18 7.819 .../sharp@0.32.6/node_modules/sharp install$ (node install/libvips && node install/dll-copy && prebuild-install) || (node install/can-compile && node-gyp rebuild && node install/dll-copy)
+2026-May-15 19:48:05.121162
+#18 7.911 .../sharp@0.34.5/node_modules/sharp install: Done
+2026-May-15 19:48:05.121162
+#18 7.951 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp info it worked if it ends with ok
+2026-May-15 19:48:05.121162
+#18 7.951 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp info using node-pre-gyp@1.0.11
+2026-May-15 19:48:05.121162
+#18 7.951 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp info using node@24.15.0 | linux | x64
+2026-May-15 19:48:05.121162
+#18 7.959 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-May-15 19:48:05.121162
+#18 7.973 .../node_modules/h5p-standalone preinstall$ npx only-allow yarn
+2026-May-15 19:48:05.121162
+#18 8.005 .../node_modules/puppeteer postinstall: **INFO** Skipping Firefox download as instructed.
+2026-May-15 19:48:05.121162
+#18 8.007 .../sharp@0.32.6/node_modules/sharp install: sharp: Downloading https://github.com/lovell/sharp-libvips/releases/download/v8.14.5/libvips-8.14.5-linux-x64.tar.br
+2026-May-15 19:48:05.121162
+#18 8.141 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp http GET https://github.com/Automattic/node-canvas/releases/download/v2.11.2/canvas-v2.11.2-node-v137-linux-glibc-x64.tar.gz
+2026-May-15 19:48:05.121162
+#18 8.193 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! install response status 404 Not Found on https://github.com/Automattic/node-canvas/releases/download/v2.11.2/canvas-v2.11.2-node-v137-linux-glibc-x64.tar.gz
+2026-May-15 19:48:05.121162
+#18 8.193 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp WARN Pre-built binaries not installable for canvas@2.11.2 and node@24.15.0 (node-v137 ABI, glibc) (falling back to source compile with node-gyp)
+2026-May-15 19:48:05.121162
+#18 8.193 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp WARN Hit error response status 404 Not Found on https://github.com/Automattic/node-canvas/releases/download/v2.11.2/canvas-v2.11.2-node-v137-linux-glibc-x64.tar.gz
+2026-May-15 19:48:05.121162
+#18 8.290 .../canvas@2.11.2/node_modules/canvas install: gyp info it worked if it ends with ok
+2026-May-15 19:48:05.121162
+#18 8.297 .../canvas@2.11.2/node_modules/canvas install: gyp info using node-gyp@11.5.0
+2026-May-15 19:48:05.121162
+#18 8.297 .../canvas@2.11.2/node_modules/canvas install: gyp info using node@24.15.0 | linux | x64
+2026-May-15 19:48:05.121162
+#18 8.303 .../canvas@2.11.2/node_modules/canvas install: gyp info ok
+2026-May-15 19:48:05.121162
+#18 8.379 .../canvas@2.11.2/node_modules/canvas install: gyp info it worked if it ends with ok
+2026-May-15 19:48:05.121162
+#18 8.381 .../canvas@2.11.2/node_modules/canvas install: gyp info using node-gyp@11.5.0
+2026-May-15 19:48:05.121162
+#18 8.384 .../canvas@2.11.2/node_modules/canvas install: gyp info using node@24.15.0 | linux | x64
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python Python is not set from command line or npm configuration
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python Python is not set from environment variable PYTHON
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python checking if "python3" can be used
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python - executable path is ""
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python - "" could not be run
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python checking if "python" can be used
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python - executable path is ""
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python - "" could not be run
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python **********************************************************
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python You need to install the latest version of Python.
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python Node-gyp should be able to find and use Python. If not,
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python you can try one of the following options:
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python - Use the switch --python="/path/to/pythonexecutable"
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python (accepted by both node-gyp and npm)
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python - Set the environment variable PYTHON
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python - Set the npm configuration variable python:
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python npm config set python "/path/to/pythonexecutable"
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python For more information consult the documentation at:
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python https://github.com/nodejs/node-gyp#installation
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python **********************************************************
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! find Python
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! configure error
+2026-May-15 19:48:05.121162
+#18 8.491 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! stack Error: Could not find any Python installation to use
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! stack at PythonFinder.fail (/usr/local/lib/node_modules/pnpm/dist/node_modules/node-gyp/lib/find-python.js:306:11)
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! stack at PythonFinder.findPython (/usr/local/lib/node_modules/pnpm/dist/node_modules/node-gyp/lib/find-python.js:164:17)
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! stack at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! stack at async configure (/usr/local/lib/node_modules/pnpm/dist/node_modules/node-gyp/lib/configure.js:27:18)
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! stack at async run (/usr/local/lib/node_modules/pnpm/dist/node_modules/node-gyp/bin/node-gyp.js:81:18)
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! System Linux 6.8.0-101-generic
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! command "/usr/local/bin/node" "/usr/local/lib/node_modules/pnpm/dist/node_modules/node-gyp/bin/node-gyp.js" "configure" "--fallback-to-build" "--update-binary" "--module=/app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas/build/Release/canvas.node" "--module_name=canvas" "--module_path=/app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas/build/Release" "--napi_version=10" "--node_abi_napi=napi" "--napi_build_version=0" "--node_napi_label=node-v137"
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! cwd /app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! node -v v24.15.0
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! node-gyp -v v11.5.0
+2026-May-15 19:48:05.121162
+#18 8.496 .../canvas@2.11.2/node_modules/canvas install: gyp ERR! not ok
+2026-May-15 19:48:05.121162
+#18 8.515 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! build error
+2026-May-15 19:48:05.121162
+#18 8.515 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! stack Error: Failed to execute '/usr/local/bin/node /usr/local/lib/node_modules/pnpm/dist/node_modules/node-gyp/bin/node-gyp.js configure --fallback-to-build --update-binary --module=/app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas/build/Release/canvas.node --module_name=canvas --module_path=/app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas/build/Release --napi_version=10 --node_abi_napi=napi --napi_build_version=0 --node_napi_label=node-v137' (1)
+2026-May-15 19:48:05.121162
+#18 8.516 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! stack     at ChildProcess. (/app/node_modules/.pnpm/@mapbox+node-pre-gyp@1.0.11/node_modules/@mapbox/node-pre-gyp/lib/util/compile.js:89:23)
+2026-May-15 19:48:05.121162
+#18 8.516 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! stack     at ChildProcess.emit (node:events:509:28)
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! stack     at maybeClose (node:internal/child_process:1124:16)
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! stack     at ChildProcess._handle.onexit (node:internal/child_process:306:5)
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! System Linux 6.8.0-101-generic
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! command "/usr/local/bin/node" "/app/node_modules/.pnpm/@mapbox+node-pre-gyp@1.0.11/node_modules/@mapbox/node-pre-gyp/bin/node-pre-gyp" "install" "--fallback-to-build" "--update-binary"
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! cwd /app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! node -v v24.15.0
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! node-pre-gyp -v v1.0.11
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: node-pre-gyp ERR! not ok
+2026-May-15 19:48:05.121162
+#18 8.517 .../canvas@2.11.2/node_modules/canvas install: Failed to execute '/usr/local/bin/node /usr/local/lib/node_modules/pnpm/dist/node_modules/node-gyp/bin/node-gyp.js configure --fallback-to-build --update-binary --module=/app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas/build/Release/canvas.node --module_name=canvas --module_path=/app/node_modules/.pnpm/canvas@2.11.2/node_modules/canvas/build/Release --napi_version=10 --node_abi_napi=napi --napi_build_version=0 --node_napi_label=node-v137' (1)
+2026-May-15 19:48:05.121162
+#18 8.536 .../canvas@2.11.2/node_modules/canvas install: Failed
+2026-May-15 19:48:05.121162
+#18 8.815 .../sharp@0.32.6/node_modules/sharp install: sharp: Integrity check passed for linux-x64
+2026-May-15 19:48:05.121162
+#18 8.956 .../sharp@0.32.6/node_modules/sharp install: (node:59) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+2026-May-15 19:48:05.121162
+#18 8.956 .../sharp@0.32.6/node_modules/sharp install: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-May-15 19:48:05.121162
+#18 8.988 .../node_modules/h5p-standalone preinstall: npm warn Unknown env config "catalog". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-May-15 19:48:05.121162
+#18 8.989 .../node_modules/h5p-standalone preinstall: npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-May-15 19:48:05.121162
+#18 8.989 .../node_modules/h5p-standalone preinstall: npm warn Unknown env config "minimum-release-age". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-May-15 19:48:05.121162
+#18 8.989 .../node_modules/h5p-standalone preinstall: npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-May-15 19:48:05.121162
+#18 8.989 .../node_modules/h5p-standalone preinstall: npm warn Unknown env config "overrides". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-May-15 19:48:05.121162
+#18 8.989 .../node_modules/h5p-standalone preinstall: npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-May-15 19:48:05.121162
+#18 9.079 .../sharp@0.32.6/node_modules/sharp install: Done
+2026-May-15 19:48:05.121162
+#18 ...
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#23 [runner  7/11] RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+2026-May-15 19:48:05.121162
+#23 0.566 Scope: all 3 workspace projects
+2026-May-15 19:48:05.121162
+#23 0.706 Lockfile is up to date, resolution step is skipped
+2026-May-15 19:48:05.121162
+#23 0.796 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-May-15 19:48:05.121162
+#23 0.849 Packages: +321
+2026-May-15 19:48:05.121162
+#23 0.849 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-May-15 19:48:05.121162
+#23 1.191
+2026-May-15 19:48:05.121162
+#23 1.191    ╭─────────────────────────────────────────╮
+2026-May-15 19:48:05.121162
+#23 1.191    │                                         │
+2026-May-15 19:48:05.121162
+#23 1.191    │   Update available! 10.33.4 → 11.1.2.   │
+2026-May-15 19:48:05.121162
+#23 1.191    │   Changelog: https://pnpm.io/v/11.1.2   │
+2026-May-15 19:48:05.121162
+#23 1.191    │    To update, run: pnpm add -g pnpm     │
+2026-May-15 19:48:05.121162
+#23 1.191    │                                         │
+2026-May-15 19:48:05.121162
+#23 1.191    ╰─────────────────────────────────────────╯
+2026-May-15 19:48:05.121162
+#23 1.191
+2026-May-15 19:48:05.121162
+#23 1.797 Progress: resolved 321, reused 0, downloaded 164, added 108
+2026-May-15 19:48:05.121162
+#23 2.764 Progress: resolved 321, reused 0, downloaded 321, added 321, done
+2026-May-15 19:48:05.121162
+#23 2.990
+2026-May-15 19:48:05.121162
+#23 2.990 dependencies:
+2026-May-15 19:48:05.121162
+#23 2.990 + adm-zip 0.5.16
+2026-May-15 19:48:05.121162
+#23 2.990 + pdfjs-dist 3.11.174
+2026-May-15 19:48:05.121162
+#23 2.990 + puppeteer 24.42.0
+2026-May-15 19:48:05.121162
+#23 2.990
+2026-May-15 19:48:05.121162
+#23 2.990 devDependencies: skipped
+2026-May-15 19:48:05.121162
+#23 2.990
+2026-May-15 19:48:05.121162
+#23 3.007 Done in 2.8s using pnpm v10.33.4
+2026-May-15 19:48:05.121162
+#23 DONE 3.3s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#18 [base 13/18] RUN pnpm install --frozen-lockfile
+2026-May-15 19:48:05.121162
+#18 9.217 .../node_modules/h5p-standalone preinstall: npm warn exec The following package was not found and will be installed: only-allow@1.2.2
+2026-May-15 19:48:05.121162
+#18 9.572 .../node_modules/h5p-standalone preinstall: Done
+2026-May-15 19:48:05.121162
+#18 14.14 .../node_modules/puppeteer postinstall: chrome-headless-shell (147.0.7727.57) downloaded to /root/.cache/puppeteer/chrome-headless-shell/linux-147.0.7727.57
+2026-May-15 19:48:05.121162
+#18 15.49 .../node_modules/puppeteer postinstall: chrome (147.0.7727.57) downloaded to /root/.cache/puppeteer/chrome/linux-147.0.7727.57
+2026-May-15 19:48:05.121162
+#18 15.50 .../node_modules/puppeteer postinstall: Done
+2026-May-15 19:48:05.121162
+#18 15.79
+2026-May-15 19:48:05.121162
+#18 15.79 dependencies:
+2026-May-15 19:48:05.121162
+#18 15.79 + adm-zip 0.5.16
+2026-May-15 19:48:05.121162
+#18 15.79 + pdfjs-dist 3.11.174
+2026-May-15 19:48:05.121162
+#18 15.79 + puppeteer 24.42.0
+2026-May-15 19:48:05.121162
+#18 15.79
+2026-May-15 19:48:05.121162
+#18 15.79 devDependencies:
+2026-May-15 19:48:05.121162
+#18 15.79 + jsdom 29.0.2
+2026-May-15 19:48:05.121162
+#18 15.79 + prettier 3.8.1
+2026-May-15 19:48:05.121162
+#18 15.79 + sharp 0.34.5
+2026-May-15 19:48:05.121162
+#18 15.79 + typescript 5.9.3
+2026-May-15 19:48:05.121162
+#18 15.79
+2026-May-15 19:48:05.121162
+#18 15.81 . preinstall$ rm -f package-lock.json yarn.lock
+2026-May-15 19:48:05.121162
+#18 15.85 . preinstall: Done
+2026-May-15 19:48:05.121162
+#18 16.07 Done in 15.9s using pnpm v10.33.4
+2026-May-15 19:48:05.121162
+#18 DONE 16.4s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#24 [base 14/18] COPY lib/ ./lib/
+2026-May-15 19:48:05.121162
+#24 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#25 [base 15/18] COPY artifacts/ ./artifacts/
+2026-May-15 19:48:05.121162
+#25 DONE 0.7s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#26 [base 16/18] COPY scripts/ ./scripts/
+2026-May-15 19:48:05.121162
+#26 DONE 0.0s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#27 [base 17/18] RUN pnpm --filter @workspace/api-server run build
+2026-May-15 19:48:05.121162
+#27 0.350
+2026-May-15 19:48:05.121162
+#27 0.350 > @workspace/api-server@0.0.0 build /app/artifacts/api-server
+2026-May-15 19:48:05.121162
+#27 0.350 > node ./build.mjs
+2026-May-15 19:48:05.121162
+#27 0.350
+2026-May-15 19:48:05.121162
+#27 1.009
+2026-May-15 19:48:05.121162
+#27 1.009   dist/index.mjs                       7.6mb ⚠️
+2026-May-15 19:48:05.121162
+#27 1.009   dist/pino-worker.mjs               153.4kb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/pino-file.mjs                 142.0kb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/pino-pretty.mjs               114.6kb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/thread-stream-worker.mjs        7.3kb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/index.mjs.map                  13.7mb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/pino-worker.mjs.map           256.9kb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/pino-file.mjs.map             229.0kb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/pino-pretty.mjs.map           203.9kb
+2026-May-15 19:48:05.121162
+#27 1.009   dist/thread-stream-worker.mjs.map   12.0kb
+2026-May-15 19:48:05.121162
+#27 1.009
+2026-May-15 19:48:05.121162
+#27 1.009 ⚡ Done in 601ms
+2026-May-15 19:48:05.121162
+#27 DONE 1.1s
+2026-May-15 19:48:05.121162
+2026-May-15 19:48:05.121162
+#28 [base 18/18] RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
+2026-May-15 19:48:05.121162
+#28 0.344
+2026-May-15 19:48:05.121162
+#28 0.344 > @workspace/mekteb-arapsko-pismo@0.0.0 build /app/artifacts/mekteb-arapsko-pismo
+2026-May-15 19:48:05.121162
+#28 0.344 > vite build --config vite.config.ts
+2026-May-15 19:48:05.121162
+#28 0.344
+2026-May-15 19:48:05.121162
+#28 0.760 vite v7.3.1 building client environment for production...
+2026-May-15 19:48:05.121162
+#28 0.836 transforming...
+2026-May-15 19:48:05.121162
+#28 2.377 ✓ 1069 modules transformed.
+2026-May-15 19:48:05.121162
+#28 2.380 ✗ Build failed in 1.58s
+2026-May-15 19:48:05.121162
+#28 2.380 error during build:
+2026-May-15 19:48:05.121162
+#28 2.380 [vite-plugin-pwa:build] [plugin vite-plugin-pwa:build] There was an error during the build:
+2026-May-15 19:48:05.121162
+#28 2.380   Could not load /app/attached_assets/85372ef6-da9a-44a0-b14a-25ff1482aac6_1778874277136.png (imported by src/pages/nivo1-mapa.tsx): ENOENT: no such file or directory, open '/app/attached_assets/85372ef6-da9a-44a0-b14a-25ff1482aac6_1778874277136.png'
+2026-May-15 19:48:05.121162
+#28 2.380 Additionally, handling the error in the 'buildEnd' hook caused the following error:
+2026-May-15 19:48:05.121162
+#28 2.380   Could not load /app/attached_assets/85372ef6-da9a-44a0-b14a-25ff1482aac6_1778874277136.png (imported by src/pages/nivo1-mapa.tsx): ENOENT: no such file or directory, open '/app/attached_assets/85372ef6-da9a-44a0-b14a-25ff1482aac6_1778874277136.png'
+2026-May-15 19:48:05.121162
+#28 2.380     at getRollupError (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js:402:41)
+2026-May-15 19:48:05.121162
+#28 2.380     at file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23467:39
+2026-May-15 19:48:05.121162
+#28 2.380     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:22925:16)
+2026-May-15 19:48:05.121162
+#28 2.380     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23450:5)
+2026-May-15 19:48:05.121162
+#28 2.380     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33541:12)
+2026-May-15 19:48:05.121162
+#28 2.380     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33900:19)
+2026-May-15 19:48:05.121162
+#28 2.380     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33897:153)
+2026-May-15 19:48:05.121162
+#28 2.380     at async CAC. (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:629:3)
+2026-May-15 19:48:05.121162
+#28 2.466 /app/artifacts/mekteb-arapsko-pismo:
+2026-May-15 19:48:05.121162
+#28 2.466  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/mekteb-arapsko-pismo@0.0.0 build: `vite build --config vite.config.ts`
+2026-May-15 19:48:05.121162
+#28 2.466 Exit status 1
+2026-May-15 19:48:05.121162
+#28 ERROR: process "/bin/sh -c pnpm --filter @workspace/mekteb-arapsko-pismo run build" did not complete successfully: exit code: 1
+2026-May-15 19:48:05.121162
+------
+2026-May-15 19:48:05.121162
+> [base 18/18] RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build:
+2026-May-15 19:48:05.121162
+2.380     at file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23467:39
+2026-May-15 19:48:05.121162
+2.380     at async catchUnfinishedHookActions (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:22925:16)
+2026-May-15 19:48:05.121162
+2.380     at async rollupInternal (file:///app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/node-entry.js:23450:5)
+2026-May-15 19:48:05.121162
+2.380     at async buildEnvironment (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33541:12)
+2026-May-15 19:48:05.121162
+2.380     at async Object.build (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33900:19)
+2026-May-15 19:48:05.121162
+2.380     at async Object.buildApp (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33897:153)
+2026-May-15 19:48:05.121162
+2.380     at async CAC. (file:///app/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_terser@5.46.2_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:629:3)
+2026-May-15 19:48:05.121162
+2.466 /app/artifacts/mekteb-arapsko-pismo:
+2026-May-15 19:48:05.121162
+2.466  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/mekteb-arapsko-pismo@0.0.0 build: `vite build --config vite.config.ts`
+2026-May-15 19:48:05.121162
+2.466 Exit status 1
+2026-May-15 19:48:05.121162
+------
+2026-May-15 19:48:05.121162
+Dockerfile:39
+2026-May-15 19:48:05.121162
+--------------------
+2026-May-15 19:48:05.121162
+37 |     ENV BASE_PATH=/
+2026-May-15 19:48:05.121162
+38 |     ENV NODE_ENV=production
+2026-May-15 19:48:05.121162
+39 | >>> RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
+2026-May-15 19:48:05.121162
+40 |
+2026-May-15 19:48:05.121162
+41 |     # -------- Runtime image (smaller) --------
+2026-May-15 19:48:05.121162
+--------------------
+2026-May-15 19:48:05.121162
+ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm --filter @workspace/mekteb-arapsko-pismo run build" did not complete successfully: exit code: 1
+2026-May-15 19:48:05.121162
+exit status 1
+2026-May-15 19:48:05.269128
+========================================
+2026-May-15 19:48:05.280311
+Deployment failed. Removing the new version of your application.
+2026-May-15 19:48:06.992859
+Gracefully shutting down build container: qkgcgok0k0gs4wckwgow0k04
