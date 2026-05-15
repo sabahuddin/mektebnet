@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
 import { Check, Sparkles, X } from "lucide-react";
+import mapaPozadinaUrl from "@assets/85372ef6-da9a-44a0-b14a-25ff1482aac6_1778874277136.png";
 
 interface Lekcija {
   id: number;
@@ -181,7 +182,14 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     <div
       ref={containerRef}
       className="fixed inset-0 z-50 overflow-auto mapa-honey-bg"
-      style={{ backgroundColor: "#FDE68A" }}
+      style={{
+        backgroundColor: "#FEF3C7",
+        backgroundImage: `url(${mapaPozadinaUrl})`,
+        backgroundRepeat: "repeat-y",
+        backgroundSize: "100% auto",
+        backgroundPosition: "top center",
+        backgroundAttachment: "local",
+      }}
       data-testid="mapa-fullscreen"
     >
       {/* TOP BAR — counter (lijevo), 6 medaljona (sredina), X (desno) — sve sticky */}
