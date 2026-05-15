@@ -186,10 +186,10 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
       style={{
         backgroundColor: "#FEF3C7",
         backgroundImage: `url(${mapaPozadinaUrl})`,
-        backgroundRepeat: "repeat-y",
-        backgroundSize: "100% auto",
-        backgroundPosition: "top center",
-        backgroundAttachment: "local",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundAttachment: "fixed",
       }}
       data-testid="mapa-fullscreen"
     >
