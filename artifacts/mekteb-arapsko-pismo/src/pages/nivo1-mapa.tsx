@@ -355,18 +355,23 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                       <span className="absolute inset-0 rounded-full bg-amber-300 animate-ping opacity-70" />
                     )}
                     <div
-                      className={`relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-extrabold text-base sm:text-xl shadow-md transition-transform ${
+                      className={`relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-black text-lg sm:text-2xl shadow-lg transition-transform ${
                         isDone
-                          ? "bg-gradient-to-br from-amber-300 to-amber-500 text-amber-900 ring-2 ring-amber-700/40 active:scale-95 hover:scale-110"
+                          ? "bg-gradient-to-br from-amber-300 to-amber-500 text-amber-950 ring-2 ring-amber-800 active:scale-95 hover:scale-110"
                           : isCurrent
-                            ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-900 ring-4 ring-white active:scale-95 hover:scale-110"
+                            ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-950 ring-4 ring-white active:scale-95 hover:scale-110"
                             : isLocked
-                              ? "bg-gray-300 text-gray-700 ring-2 ring-gray-600"
-                              : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-900 ring-2 ring-amber-700/30 active:scale-95 hover:scale-110"
+                              ? "bg-gray-300 text-gray-800 ring-2 ring-gray-700"
+                              : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-950 ring-2 ring-amber-800 active:scale-95 hover:scale-110"
                       }`}
+                      style={{
+                        textShadow: isLocked
+                          ? "none"
+                          : "0 1px 0 rgba(255,255,255,0.6), 0 -1px 0 rgba(120,53,15,0.25)",
+                      }}
                     >
                       {isDone ? (
-                        <Check className="w-5 h-5 sm:w-7 sm:h-7" strokeWidth={3} />
+                        <Check className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={3.5} />
                       ) : (
                         i + 1
                       )}
