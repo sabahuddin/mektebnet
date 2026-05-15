@@ -187,7 +187,9 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
         backgroundColor: "#FEF3C7",
         backgroundImage: `url(${mapaPozadinaUrl})`,
         backgroundRepeat: "no-repeat",
-        backgroundSize: "100% auto",
+        // Ne upscale-uj iznad originalne širine slike (941px) — sprječava blur
+        // na desktopu. Na mobilnom popunjava 100% širine.
+        backgroundSize: "min(100%, 941px) auto",
         backgroundPosition: "top center",
         backgroundAttachment: "local",
       }}
