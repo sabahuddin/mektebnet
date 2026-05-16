@@ -370,10 +370,18 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
             {Array.from({ length: MED_COUNT }).map((_, r) => {
               const required = (r + 1) * 10;
               const unlocked = isPrivilegedRole || completedCount >= required;
-              const slug = `medaljon-nivo${nivo}-${required}`;
-              const state: "locked" | "unlocked" | "earned" = unlocked
-                ? "unlocked"
-                : "locked";
+              // Task #126: koristi STVARNI medaljon iz baze (preko mape data)
+              // i navigiraj na novi etapa detail `/medaljon/:slug` (tabovi
+              // Ponavljanje + Završni ispit), umjesto legacy "prazne lekcije"
+              // sa hardkodiranim slugom `medaljon-nivoN-NN`.
+              const realMed = medaljoniSorted[r] ?? null;
+              const earned = realMed ? osvojeniSet.has(realMed.id) : false;
+              const state: "locked" | "unlocked" | "earned" = earned
+                ? "earned"
+                : unlocked
+                  ? "unlocked"
+                  : "locked";
+              const targetSlug = realMed?.slug ?? `medaljon-nivo${nivo}-${required}`;
               return (
                 <div
                   key={`med-row-${r}`}
@@ -388,10 +396,12 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                   <MedaljonHex
                     broj={required}
                     state={state}
-                    onClick={() => unlocked && setLocation(`/ilmihal/${slug}`)}
+                    onClick={() => unlocked && setLocation(`/medaljon/${targetSlug}`)}
                     title={
                       unlocked
-                        ? `Medaljon ${required} — otvori praznu lekciju`
+                        ? realMed
+                          ? `${realMed.naziv} — Ponavljanje i završni ispit`
+                          : `Medaljon ${required}`
                         : `Otključava se na ${required} lekcija`
                     }
                     testId={`mapa-inline-medaljon-btn-${required}`}

@@ -12,8 +12,13 @@ import {
   prilozi,
   rjecnikTable,
   studentProgressTable,
+  medaljoniTable,
+  studentMedaljoniTable,
+  etapaPolaganjaTable,
+  krunisanjaTable,
+  studentKrunisanjaTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte, lt, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
@@ -90,6 +95,115 @@ router.get("/ilmihal/:slug", async (req, res) => {
   try {
     const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, req.params.slug));
     if (!lekcija) { res.status(404).json({ error: "Lekcija nije pronađena" }); return; }
+
+    // Task #126: server-side progression gating za učenike. Direktan URL
+    // pristup zaključanoj lekciji vraća 403 sa eksplicitnim razlogom; tako
+    // se ne može zaobići mapa-gating preko deep linka. Privilegovane role
+    // (admin/muallim/roditelj) i neprijavljeni gosti (za prvih nekoliko
+    // javnih lekcija) idu starim tokom — gating se primjenjuje samo na
+    // role "ucenik".
+    let lockedReason: string | null = null;
+    const authHeaderEarly = req.headers.authorization;
+    if (authHeaderEarly?.startsWith("Bearer ")) {
+      try {
+        const jwt = await import("jsonwebtoken");
+        const decoded = jwt.default.verify(
+          authHeaderEarly.slice(7),
+          process.env.JWT_SECRET || "mekteb-secret-change-in-production",
+        ) as { userId: number; role?: string };
+        if (decoded.role === "ucenik") {
+          const studentId = String(decoded.userId);
+          // 1) Prethodno krunisanje za nivoe > 1.
+          if (lekcija.nivo > 1) {
+            const [prevKrun] = await db
+              .select()
+              .from(krunisanjaTable)
+              .where(eq(krunisanjaTable.nivo, lekcija.nivo - 1))
+              .limit(1);
+            const prevIds = Array.isArray(prevKrun?.kvizPitanjaIds)
+              ? (prevKrun!.kvizPitanjaIds as number[])
+              : [];
+            if (prevKrun && prevKrun.isGating && prevIds.length > 0) {
+              const [pass] = await db
+                .select({ id: studentKrunisanjaTable.id })
+                .from(studentKrunisanjaTable)
+                .where(and(
+                  eq(studentKrunisanjaTable.studentId, studentId),
+                  eq(studentKrunisanjaTable.krunisanjeId, prevKrun.id),
+                ))
+                .limit(1);
+              if (!pass) {
+                lockedReason = `Položi krunisanje nivoa ${lekcija.nivo - 1} da otključaš ovu lekciju.`;
+              }
+            }
+          }
+          // 2) Prethodna etapa istog nivoa (medaljon sa posAfterRedoslijed < lekcija.redoslijed).
+          if (!lockedReason) {
+            const priorMedaljoni = await db
+              .select()
+              .from(medaljoniTable)
+              .where(and(
+                eq(medaljoniTable.nivo, lekcija.nivo),
+                lt(medaljoniTable.posAfterRedoslijed, lekcija.redoslijed),
+              ))
+              .orderBy(desc(medaljoniTable.posAfterRedoslijed))
+              .limit(1);
+            const priorMed = priorMedaljoni[0];
+            if (priorMed) {
+              const [osvojen] = await db
+                .select({ medaljonId: studentMedaljoniTable.medaljonId })
+                .from(studentMedaljoniTable)
+                .where(and(
+                  eq(studentMedaljoniTable.studentId, studentId),
+                  eq(studentMedaljoniTable.medaljonId, priorMed.id),
+                ))
+                .limit(1);
+              const medImaKviz = Array.isArray(priorMed.kvizPitanjaIds)
+                && (priorMed.kvizPitanjaIds as unknown[]).length > 0;
+              let priorPassed = !!osvojen;
+              if (!priorPassed && !medImaKviz) {
+                // Fallback: bez konfigurisanog ispita — prethodne lekcije
+                // do `posAfterRedoslijed` moraju biti gotove.
+                const [progRow] = await db
+                  .select({ completed: studentProgressTable.completedLessons })
+                  .from(studentProgressTable)
+                  .where(eq(studentProgressTable.studentId, studentId))
+                  .limit(1);
+                const doneSet = new Set((progRow?.completed as number[] | undefined) ?? []);
+                const trebaju = await db
+                  .select({ id: ilmihalLekcijeTable.id })
+                  .from(ilmihalLekcijeTable)
+                  .where(and(
+                    eq(ilmihalLekcijeTable.nivo, lekcija.nivo),
+                    lte(ilmihalLekcijeTable.redoslijed, priorMed.posAfterRedoslijed),
+                  ));
+                priorPassed = trebaju.every((l) => doneSet.has(l.id));
+              }
+              if (!priorPassed) {
+                lockedReason = medImaKviz
+                  ? `Položi etapu "${priorMed.naziv}" da otključaš ovu lekciju.`
+                  : `Završi sve lekcije etape "${priorMed.naziv}" da otključaš ovu lekciju.`;
+              }
+            }
+          }
+          if (lockedReason) {
+            return res.status(403).json({
+              error: lockedReason,
+              locked: true,
+              lekcija: {
+                id: lekcija.id,
+                slug: lekcija.slug,
+                naslov: lekcija.naslov,
+                nivo: lekcija.nivo,
+                redoslijed: lekcija.redoslijed,
+              },
+            });
+          }
+        }
+      } catch {
+        /* nevažeći token — nastavi kao gost */
+      }
+    }
 
     // Auto-upgrade legacy priprema (table-based) to new gradient design on read.
     // No DB write — purely transforms HTML before serving.
