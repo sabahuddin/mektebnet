@@ -220,6 +220,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
 
   // Auto-scroll do trenutne lekcije (kad se data učita)
   const containerRef = useRef<HTMLDivElement>(null);
+  const bgRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!data || !containerRef.current) return;
     const t = setTimeout(() => {
@@ -230,6 +231,46 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     }, 150);
     return () => clearTimeout(t);
   }, [data, currentCellIndex]);
+
+  // Parallax: pozadina prelazi od vrha do dna svoje pune visine paralelno
+  // sa scrollom sadržaja. Kad sadržaj dođe na dno, vidi se i dno pozadine.
+  useEffect(() => {
+    const el = containerRef.current;
+    const bg = bgRef.current;
+    if (!el || !bg) return;
+    let rafId = 0;
+    const update = () => {
+      rafId = 0;
+      const contentMax = el.scrollHeight - el.clientHeight;
+      const bgRange = bg.offsetHeight - el.clientHeight;
+      if (contentMax <= 0 || bgRange <= 0) {
+        bg.style.transform = "translate3d(0,0,0)";
+        return;
+      }
+      const ratio = Math.max(0, Math.min(1, el.scrollTop / contentMax));
+      bg.style.transform = `translate3d(0, ${-(ratio * bgRange).toFixed(2)}px, 0)`;
+    };
+    const onScroll = () => {
+      if (rafId === 0) rafId = requestAnimationFrame(update);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", update);
+    // ResizeObserver hvata kasne layout promjene (font/image load, sticky bar
+    // promjena visine na različitim breakpointima, sadržaj se širi/skuplja).
+    const ro = new ResizeObserver(() => onScroll());
+    ro.observe(el);
+    ro.observe(bg);
+    update();
+    // Dodatni delayed update da uhvati kasne asset dimenzije prije prvog scrolla.
+    const lateT = setTimeout(update, 300);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", update);
+      ro.disconnect();
+      clearTimeout(lateT);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [data]);
 
   if (isLoading) {
     return (
@@ -242,21 +283,27 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 overflow-auto mapa-honey-bg"
-      style={{
-        backgroundColor: "#FEF3C7",
-        backgroundImage: `url(${mapaPozadinaUrl})`,
-        backgroundRepeat: "no-repeat",
-        // Pozadina pokriva cijeli viewport i pinned je — lekcije skroluju
-        // preko nje (parallax efekt: zmija lekcija brža od pozadine).
-        // Time se izbjegava prazni žuti prostor ispod kad sadržaj postane viši
-        // od originalne slike.
-        backgroundSize: "cover",
-        backgroundPosition: "center center",
-        backgroundAttachment: "fixed",
-      }}
+      className="fixed inset-0 z-50 overflow-auto"
+      style={{ backgroundColor: "#FEF3C7" }}
       data-testid="mapa-fullscreen"
     >
+      {/* PARALLAX POZADINA — fixed sloj koji se translatuje sa scrollom.
+          Visina = max(100vh, natural aspect ratio slike 941x1672). Dok korisnik
+          skroluje od vrha do dna sadržaja, pozadina paralelno prelazi od vrha
+          do dna svoje pune visine (vidi useEffect ispod). */}
+      <div
+        ref={bgRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-0 will-change-transform"
+        style={{
+          height: "max(100vh, calc(100vw * 1672 / 941))",
+          backgroundImage: `url(${mapaPozadinaUrl})`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+        }}
+      />
+
       {/* TOP BAR — counter (lijevo), 6 medaljona (sredina), X (desno) — sve sticky */}
       <div className="sticky top-0 z-[60] flex items-center gap-2 px-2 sm:px-4 py-2 bg-gradient-to-b from-amber-100/95 via-amber-50/85 to-transparent backdrop-blur-sm">
         <div
