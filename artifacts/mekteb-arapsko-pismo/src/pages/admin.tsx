@@ -53,6 +53,7 @@ interface Korisnik {
   lastLoginAt: string | null;
   lastSeenAt?: string | null;
   totalScreentimeSec?: number;
+  trialUntil?: string | null;
 }
 
 type SortField = "displayName" | "createdAt" | "totalScreentimeSec";
@@ -2043,9 +2044,24 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${k.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                          {k.isActive ? "Aktivan" : "Neaktivan"}
-                        </span>
+                        {(() => {
+                          if (k.isActive) {
+                            return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Aktivan</span>;
+                          }
+                          const trialMs = k.trialUntil ? new Date(k.trialUntil).getTime() - Date.now() : 0;
+                          if (trialMs > 0) {
+                            const dana = Math.ceil(trialMs / (24 * 60 * 60 * 1000));
+                            return (
+                              <span
+                                className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300"
+                                title={`Probni period ističe: ${new Date(k.trialUntil!).toLocaleString("bs-BA")}`}
+                              >
+                                Probni — još {dana} {dana === 1 ? "dan" : "dana"}
+                              </span>
+                            );
+                          }
+                          return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Neaktivan</span>;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         {new Date(k.createdAt).toLocaleDateString("bs-BA")}
