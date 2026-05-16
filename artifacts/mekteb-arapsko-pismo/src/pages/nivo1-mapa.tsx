@@ -247,11 +247,13 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
         backgroundColor: "#FEF3C7",
         backgroundImage: `url(${mapaPozadinaUrl})`,
         backgroundRepeat: "no-repeat",
-        // Ne upscale-uj iznad originalne širine slike (941px) — sprječava blur
-        // na desktopu. Na mobilnom popunjava 100% širine.
-        backgroundSize: "min(100%, 941px) auto",
-        backgroundPosition: "top center",
-        backgroundAttachment: "local",
+        // Pozadina pokriva cijeli viewport i pinned je — lekcije skroluju
+        // preko nje (parallax efekt: zmija lekcija brža od pozadine).
+        // Time se izbjegava prazni žuti prostor ispod kad sadržaj postane viši
+        // od originalne slike.
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundAttachment: "fixed",
       }}
       data-testid="mapa-fullscreen"
     >
