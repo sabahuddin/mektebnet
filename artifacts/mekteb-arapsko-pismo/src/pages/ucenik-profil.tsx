@@ -92,6 +92,93 @@ interface BedzInfo {
   earnedAt: string | null;
 }
 
+function ChangePasswordCard() {
+  const { token } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMsg(null);
+    if (newPassword.length < 6) { setMsg({ kind: "err", text: "Nova šifra mora imati najmanje 6 karaktera." }); return; }
+    if (newPassword !== confirmPassword) { setMsg({ kind: "err", text: "Potvrda nove šifre se ne podudara." }); return; }
+    setSaving(true);
+    try {
+      await apiRequest("POST", "/auth/change-password", { currentPassword, newPassword }, token!);
+      setMsg({ kind: "ok", text: "Šifra je uspješno promijenjena." });
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+      setTimeout(() => { setOpen(false); setMsg(null); }, 1500);
+    } catch (err: any) {
+      setMsg({ kind: "err", text: err?.message || "Greška pri promjeni šifre." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-start gap-4 p-4 rounded-2xl border border-border/60 bg-muted/20">
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-slate-100 text-slate-700">
+        <Lock className="w-5 h-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="font-extrabold text-foreground">Lozinka</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Promijeni svoju šifru za prijavu.</p>
+          </div>
+          {!open && (
+            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} data-testid="open-change-password">
+              Promijeni šifru
+            </Button>
+          )}
+        </div>
+        {open && (
+          <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
+            <div>
+              <label className="text-xs font-bold text-muted-foreground">Trenutna šifra</label>
+              <input type="password" autoComplete="current-password" required value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-border/60 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="input-current-password" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted-foreground">Nova šifra (min. 6 karaktera)</label>
+              <input type="password" autoComplete="new-password" required minLength={6} value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-border/60 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="input-new-password" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted-foreground">Potvrdi novu šifru</label>
+              <input type="password" autoComplete="new-password" required minLength={6} value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-border/60 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="input-confirm-password" />
+            </div>
+            {msg && (
+              <p className={`text-xs font-bold px-3 py-2 rounded-lg ${msg.kind === "ok" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                {msg.text}
+              </p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setMsg(null); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }} disabled={saving}>
+                Odustani
+              </Button>
+              <Button type="submit" size="sm" disabled={saving} data-testid="submit-change-password">
+                {saving ? "Spašavam..." : "Spasi novu šifru"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function formatEarnedDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -1083,6 +1170,10 @@ export default function UcenikProfilPage() {
 
                   <div className="mt-3">
                     <PushToggle />
+                  </div>
+
+                  <div className="mt-3">
+                    <ChangePasswordCard />
                   </div>
                 </div>
               </motion.div>

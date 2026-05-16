@@ -270,6 +270,38 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+// POST /api/auth/change-password — prijavljeni korisnik mijenja sopstvenu šifru.
+// Body: { currentPassword, newPassword }. Zahtijeva trenutnu šifru radi sigurnosti.
+router.post("/change-password", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) { res.status(401).json({ error: "Niste prijavljeni" }); return; }
+    const { currentPassword, newPassword } = req.body ?? {};
+    if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+      res.status(400).json({ error: "Trenutna i nova šifra su obavezne" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: "Nova šifra mora imati najmanje 6 karaktera" });
+      return;
+    }
+    if (newPassword === currentPassword) {
+      res.status(400).json({ error: "Nova šifra mora biti različita od trenutne" });
+      return;
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (!user) { res.status(404).json({ error: "Korisnik nije pronađen" }); return; }
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) { res.status(401).json({ error: "Trenutna šifra nije ispravna" }); return; }
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, userId));
+    res.json({ ok: true, message: "Šifra je uspješno promijenjena." });
+  } catch (err) {
+    console.error("[change-password]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // POST /api/auth/logout — briše H5P session cookie. Nije strogo "logout" u JWT
 // smislu (token je stateless i traje do isteka), ali sprječava da browser
 // nakon klijentskog logout-a još uvijek može fetchati H5P static fajlove.
