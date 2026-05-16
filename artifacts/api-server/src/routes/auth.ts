@@ -9,10 +9,11 @@ import {
   roditeljProfiliTable,
   roditeljUcenikTable,
   grupeTable,
+  passwordResetTokensTable,
 } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, gt } from "drizzle-orm";
 import { signToken, requireAuth } from "../middlewares/auth.js";
-import { sendRegistrationNotification } from "../lib/email.js";
+import { sendRegistrationNotification, sendPasswordResetEmail } from "../lib/email.js";
 
 const router = Router();
 
@@ -165,6 +166,95 @@ router.post("/register-roditelj", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/auth/forgot-password — pokreće reset šifre.
+// Uvijek vraća 200 (ne otkriva da li email postoji u bazi — sigurnost).
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email?.trim()) {
+      res.status(400).json({ error: "Email je obavezan" });
+      return;
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, normalizedEmail));
+
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
+
+      await db.insert(passwordResetTokensTable).values({
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      });
+
+      const origin =
+        process.env["FRONTEND_URL"] ||
+        (req.headers.origin as string) ||
+        "https://mekteb.net";
+      const resetUrl = `${origin.replace(/\/$/, "")}/reset-sifra?token=${rawToken}`;
+
+      if (user.email) {
+        await sendPasswordResetEmail(user.email, user.displayName, resetUrl);
+      }
+    }
+
+    res.json({ ok: true, message: "Ako račun s tim emailom postoji, link za reset je poslan." });
+  } catch (err) {
+    console.error("[forgot-password]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/auth/reset-password — postavlja novu šifru putem tokena.
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      res.status(400).json({ error: "Token i nova šifra su obavezni" });
+      return;
+    }
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
+      res.status(400).json({ error: "Šifra mora imati najmanje 6 karaktera" });
+      return;
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const [record] = await db
+      .select()
+      .from(passwordResetTokensTable)
+      .where(
+        and(
+          eq(passwordResetTokensTable.tokenHash, tokenHash),
+          isNull(passwordResetTokensTable.usedAt),
+          gt(passwordResetTokensTable.expiresAt, new Date()),
+        ),
+      );
+
+    if (!record) {
+      res.status(400).json({ error: "Link za reset šifre nije valjan ili je istekao. Zatražite novi." });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, record.userId));
+    await db
+      .update(passwordResetTokensTable)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokensTable.id, record.id));
+
+    res.json({ ok: true, message: "Šifra je uspješno promijenjena. Možete se prijaviti." });
+  } catch (err) {
+    console.error("[reset-password]", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

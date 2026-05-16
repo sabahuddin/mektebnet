@@ -164,6 +164,16 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          <div className="mt-4 text-right">
+            <button
+              type="button"
+              onClick={() => setLocation("/zaboravljena-sifra")}
+              className="text-sm text-primary hover:underline font-medium"
+            >
+              Zaboravili ste šifru?
+            </button>
+          </div>
+
           <div className="mt-6 pt-6 border-t border-border/50">
             <p className="text-sm text-center text-muted-foreground">
               {t("login.nemateRacun")}{" "}

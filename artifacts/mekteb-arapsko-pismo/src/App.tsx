@@ -12,6 +12,8 @@ import { InstallPrompt } from "@/components/install-prompt";
 // Auth pages
 import LoginPage from "./pages/login";
 import RegisterRoditeljPage from "./pages/register-roditelj";
+import ZaboravljenaSifraPage from "./pages/zaboravljena-sifra";
+import ResetSifraPage from "./pages/reset-sifra";
 
 // Main pages
 import Home from "./pages/home";
@@ -97,6 +99,8 @@ function Router() {
       {/* Auth */}
       <Route path="/login" component={LoginPage} />
       <Route path="/registracija" component={RegisterRoditeljPage} />
+      <Route path="/zaboravljena-sifra" component={ZaboravljenaSifraPage} />
+      <Route path="/reset-sifra" component={ResetSifraPage} />
 
       {/* Arapsko pismo */}
       <Route path="/arapsko-pismo" component={ArapskoPismoPage} />

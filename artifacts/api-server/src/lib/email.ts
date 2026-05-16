@@ -38,6 +38,33 @@ export async function sendEmail(to: string, subject: string, html: string) {
   return false;
 }
 
+export async function sendPasswordResetEmail(to: string, displayName: string, resetUrl: string) {
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#0d9488;padding:20px;border-radius:12px 12px 0 0">
+        <h2 style="color:white;margin:0">Reset šifre — Mekteb.net</h2>
+      </div>
+      <div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;background:white">
+        <p style="font-size:16px;color:#111827;margin:0 0 16px">Esselamu alejkum, ${displayName},</p>
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 16px">
+          Primili smo zahtjev za promjenu šifre na vašem Mekteb.net računu. Kliknite na dugme ispod kako biste postavili novu šifru:
+        </p>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${resetUrl}" style="display:inline-block;background:#0d9488;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:bold;font-size:16px">Postavi novu šifru</a>
+        </div>
+        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 8px">
+          Link važi <strong>1 sat</strong>. Ako dugme ne radi, kopirajte link u browser:
+        </p>
+        <p style="font-size:12px;color:#0d9488;word-break:break-all;margin:0 0 16px">${resetUrl}</p>
+        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:16px 0 0;border-top:1px solid #e5e7eb;padding-top:16px">
+          Ako niste vi tražili reset šifre, slobodno ignorišite ovu poruku — vaša šifra ostaje nepromijenjena.
+        </p>
+      </div>
+    </div>
+  `;
+  return sendEmail(to, "Reset šifre — Mekteb.net", html);
+}
+
 export async function sendRegistrationNotification(type: string, data: Record<string, any>) {
   const lines = Object.entries(data)
     .map(([k, v]) => `<tr><td style="padding:6px 12px;font-weight:bold;border:1px solid #e5e7eb">${k}</td><td style="padding:6px 12px;border:1px solid #e5e7eb">${v}</td></tr>`)
