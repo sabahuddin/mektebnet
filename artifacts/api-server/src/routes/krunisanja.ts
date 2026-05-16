@@ -9,6 +9,7 @@ import {
   medaljoniTable,
   studentMedaljoniTable,
   studentProgressTable,
+  etapaPolaganjaTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -235,7 +236,12 @@ router.get("/lekcija/:slug", async (req, res) => {
       })
       .from(krunisanjeLekcijeTable)
       .innerJoin(krunisanjaTable, eq(krunisanjeLekcijeTable.krunisanjeId, krunisanjaTable.id))
-      .where(eq(krunisanjeLekcijeTable.slug, slug))
+      .where(
+        and(
+          eq(krunisanjeLekcijeTable.slug, slug),
+          eq(krunisanjeLekcijeTable.isPublished, true),
+        ),
+      )
       .limit(1);
     if (!row) return res.status(404).json({ error: "Lekcija ne postoji" });
     res.json(row);
@@ -271,9 +277,12 @@ async function proveriGatingKrunisanja(
     return `Završi sve lekcije nivoa ${krunisanje.nivo} (nedostaje ${nedostajeLekcija}/${sveLekcije.length}).`;
   }
 
-  // 2) Svi medaljoni ovog nivoa osvojeni
+  // 2) Svi medaljoni (etape) ovog nivoa osvojeni. Za medaljone s
+  // konfigurisanim kvizom dodatno zahtijevamo dokaz o položenom ispitu
+  // (`etapa_polaganja.polozeno=true`) — ne samo `student_medaljoni` zapis —
+  // čime se zatvara potencijalni bypass kroz legacy claim endpoint.
   const sviMedaljoni = await db
-    .select({ id: medaljoniTable.id })
+    .select({ id: medaljoniTable.id, kvizPitanjaIds: medaljoniTable.kvizPitanjaIds })
     .from(medaljoniTable)
     .where(eq(medaljoniTable.nivo, krunisanje.nivo));
   if (sviMedaljoni.length > 0) {
@@ -290,6 +299,27 @@ async function proveriGatingKrunisanja(
     const nedostajeMed = sviMedaljoni.filter((m) => !osvojeni.has(m.id)).length;
     if (nedostajeMed > 0) {
       return `Osvoji sve medaljone nivoa ${krunisanje.nivo} (nedostaje ${nedostajeMed}/${sviMedaljoni.length}).`;
+    }
+    // Etape sa kvizom — provjeri da postoji prolaz u etapa_polaganja.
+    const kvizMedaljoni = sviMedaljoni.filter(
+      (m) => Array.isArray(m.kvizPitanjaIds) && (m.kvizPitanjaIds as unknown[]).length > 0,
+    );
+    if (kvizMedaljoni.length > 0) {
+      const polozenoRows = await db
+        .select({ medaljonId: etapaPolaganjaTable.medaljonId })
+        .from(etapaPolaganjaTable)
+        .where(
+          and(
+            eq(etapaPolaganjaTable.studentId, userId),
+            eq(etapaPolaganjaTable.polozeno, true),
+            inArray(etapaPolaganjaTable.medaljonId, kvizMedaljoni.map((m) => m.id)),
+          ),
+        );
+      const polozenoSet = new Set(polozenoRows.map((r) => r.medaljonId));
+      const bezIspita = kvizMedaljoni.filter((m) => !polozenoSet.has(m.id)).length;
+      if (bezIspita > 0) {
+        return `Položi završne ispite svih etapa nivoa ${krunisanje.nivo} (nedostaje ${bezIspita}/${kvizMedaljoni.length}).`;
+      }
     }
   }
 

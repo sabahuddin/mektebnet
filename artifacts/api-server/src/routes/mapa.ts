@@ -5,6 +5,8 @@ import {
   medaljoniTable,
   studentMedaljoniTable,
   studentProgressTable,
+  krunisanjaTable,
+  etapaPolaganjaTable,
 } from "@workspace/db/schema";
 import { eq, and, lte, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -28,7 +30,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     return res.status(400).json({ error: "Nivo mora biti 1, 2 ili 3" });
   }
   try {
-    const [lekcije, medaljoni] = await Promise.all([
+    const [lekcije, medaljoni, krunisanjeRow] = await Promise.all([
       db
         .select({
           id: ilmihalLekcijeTable.id,
@@ -44,7 +46,35 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
         .from(medaljoniTable)
         .where(eq(medaljoniTable.nivo, nivo))
         .orderBy(asc(medaljoniTable.posAfterRedoslijed)),
+      db
+        .select({
+          id: krunisanjaTable.id,
+          nivo: krunisanjaTable.nivo,
+          naslov: krunisanjaTable.naslov,
+          isGating: krunisanjaTable.isGating,
+          kvizPitanjaIds: krunisanjaTable.kvizPitanjaIds,
+        })
+        .from(krunisanjaTable)
+        .where(eq(krunisanjaTable.nivo, nivo))
+        .limit(1)
+        .then((rows) => rows[0] ?? null),
     ]);
+    // Augment medaljoni s `imaKviz` flag-om da FE može odlučiti da li za
+    // gating treba polaganje ispita ili samo završene lekcije + claim.
+    const medaljoniAug = medaljoni.map((m) => ({
+      ...m,
+      imaKviz: Array.isArray(m.kvizPitanjaIds) && m.kvizPitanjaIds.length > 0,
+    }));
+    const krunisanjeMeta = krunisanjeRow
+      ? {
+          id: krunisanjeRow.id,
+          nivo: krunisanjeRow.nivo,
+          naslov: krunisanjeRow.naslov,
+          isGating: krunisanjeRow.isGating,
+          imaKviz: Array.isArray(krunisanjeRow.kvizPitanjaIds)
+            && krunisanjeRow.kvizPitanjaIds.length > 0,
+        }
+      : null;
 
     let zavrsene: number[] = [];
     let osvojeniMedaljoni: number[] = [];
@@ -86,7 +116,8 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
 
     res.json({
       lekcije,
-      medaljoni,
+      medaljoni: medaljoniAug,
+      krunisanje: krunisanjeMeta,
       zavrsene,
       osvojeniMedaljoni,
       polozeneEtape,
@@ -151,6 +182,33 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
         nedostajeBroj: nedostaje.length,
         ukupno: potrebne.length,
       });
+    }
+
+    // Task #126 server-side gating: ako je etapa konfigurisana sa kvizom,
+    // direktan claim NIJE dozvoljen — student mora prvo položiti završni
+    // ispit (`/etape/:medaljonId/predaj`) koji onda automatski upisuje
+    // medaljon. Bez ove provjere učenik bi mogao zaobići ispit i otključati
+    // sljedeći blok lekcija + krunisanje.
+    const imaKviz = Array.isArray(medaljon.kvizPitanjaIds)
+      && (medaljon.kvizPitanjaIds as unknown[]).length > 0;
+    if (imaKviz) {
+      const [pass] = await db
+        .select({ id: etapaPolaganjaTable.id })
+        .from(etapaPolaganjaTable)
+        .where(
+          and(
+            eq(etapaPolaganjaTable.studentId, userId),
+            eq(etapaPolaganjaTable.medaljonId, medaljon.id),
+            eq(etapaPolaganjaTable.polozeno, true),
+          ),
+        )
+        .limit(1);
+      if (!pass) {
+        return res.status(403).json({
+          error: "Položi završni ispit etape da osvojiš medaljon",
+          trebaKviz: true,
+        });
+      }
     }
 
     const inserted = await db

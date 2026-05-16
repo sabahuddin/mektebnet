@@ -20,7 +20,22 @@ const router = Router();
 router.get("/medaljon/:slug", async (req, res) => {
   try {
     const slug = req.params.slug;
-    const userId = String(req.user?.userId ?? "");
+    // Opcionalno parsiranje JWT-a (ova ruta nema requireAuth middleware,
+    // a `req.user` se postavlja samo tamo gdje requireAuth radi). Bez ovoga
+    // bi `polozeno`/`brojPokusaja` uvijek bili null/0 za normalne bearer
+    // pozive, pa učenik ne bi vidio status polaganja na detail stranici.
+    let userId = "";
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const jwt = await import("jsonwebtoken");
+        const JWT_SECRET = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
+        const payload = jwt.default.verify(authHeader.slice(7), JWT_SECRET) as { userId: number };
+        userId = String(payload.userId);
+      } catch {
+        /* neulogovan ili nevažeći token */
+      }
+    }
 
     const [medaljon] = await db
       .select()

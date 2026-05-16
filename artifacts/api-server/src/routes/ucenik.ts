@@ -13,6 +13,10 @@ import {
   ilmihalLekcijeTable,
   zadaceTable,
   zadaceUceniciTable,
+  etapaPolaganjaTable,
+  medaljoniTable,
+  studentKrunisanjaTable,
+  krunisanjaTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -114,6 +118,67 @@ router.get("/profil", async (req, res) => {
       progress: badgeProgress[meta.id] ?? null,
     }));
 
+    // Task #126: položene etape (medaljoni s ispitom) + krunisanja sa datumom.
+    // Za etape uzimamo NAJRANIJI uspješan pokušaj po medaljonu (DISTINCT ON
+    // ekvivalent na strani Node-a — broj zapisa je mali).
+    let polozeneEtape: { medaljonId: number; nivo: number; naziv: string; slug: string; polozenoAt: string; procenat: number }[] = [];
+    let polozenaKrunisanjaList: { krunisanjeId: number; nivo: number; naslov: string | null; polozenoAt: string; procenat: number }[] = [];
+    try {
+      const etapeRows = await db
+        .select({
+          medaljonId: etapaPolaganjaTable.medaljonId,
+          procenat: etapaPolaganjaTable.procenat,
+          createdAt: etapaPolaganjaTable.createdAt,
+          nivo: medaljoniTable.nivo,
+          naziv: medaljoniTable.naziv,
+          slug: medaljoniTable.slug,
+        })
+        .from(etapaPolaganjaTable)
+        .innerJoin(medaljoniTable, eq(etapaPolaganjaTable.medaljonId, medaljoniTable.id))
+        .where(
+          and(
+            eq(etapaPolaganjaTable.studentId, studentIdStr),
+            eq(etapaPolaganjaTable.polozeno, true),
+          ),
+        )
+        .orderBy(asc(etapaPolaganjaTable.createdAt));
+      const seen = new Set<number>();
+      for (const r of etapeRows) {
+        if (seen.has(r.medaljonId)) continue;
+        seen.add(r.medaljonId);
+        polozeneEtape.push({
+          medaljonId: r.medaljonId,
+          nivo: r.nivo,
+          naziv: r.naziv,
+          slug: r.slug,
+          polozenoAt: r.createdAt.toISOString(),
+          procenat: r.procenat,
+        });
+      }
+
+      const krunRows = await db
+        .select({
+          krunisanjeId: studentKrunisanjaTable.krunisanjeId,
+          procenat: studentKrunisanjaTable.procenat,
+          polozenoAt: studentKrunisanjaTable.polozenoAt,
+          nivo: krunisanjaTable.nivo,
+          naslov: krunisanjaTable.naslov,
+        })
+        .from(studentKrunisanjaTable)
+        .innerJoin(krunisanjaTable, eq(studentKrunisanjaTable.krunisanjeId, krunisanjaTable.id))
+        .where(eq(studentKrunisanjaTable.studentId, studentIdStr))
+        .orderBy(asc(krunisanjaTable.nivo));
+      polozenaKrunisanjaList = krunRows.map((r) => ({
+        krunisanjeId: r.krunisanjeId,
+        nivo: r.nivo,
+        naslov: r.naslov,
+        polozenoAt: r.polozenoAt.toISOString(),
+        procenat: r.procenat,
+      }));
+    } catch (err) {
+      console.warn("[ucenik/profil] polozeneEtape/krunisanja failed", err);
+    }
+
     const napredak = {
       streakDays: refreshed?.streakDays ?? progress?.streakDays ?? 0,
       totalHasanat: refreshed?.totalHasanat ?? progress?.totalHasanat ?? 0,
@@ -121,6 +186,8 @@ router.get("/profil", async (req, res) => {
       lastActivityDate: refreshed?.lastActivityDate ?? progress?.lastActivityDate ?? null,
       poNivou: completedByNivo,
       bedzevi,
+      polozeneEtape,
+      polozenaKrunisanja: polozenaKrunisanjaList,
     };
 
     res.json({ user, profil, grupa, muallim, ocjene, prisustvo, kvizovi, napredak });

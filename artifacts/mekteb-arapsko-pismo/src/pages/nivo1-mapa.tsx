@@ -21,12 +21,22 @@ interface Medaljon {
   posAfterRedoslijed: number;
   ikona: string;
   boja: string;
+  imaKviz?: boolean;
+}
+interface KrunisanjeMeta {
+  id: number;
+  nivo: number;
+  naslov: string | null;
+  isGating: boolean;
+  imaKviz: boolean;
 }
 interface MapaData {
   lekcije: Lekcija[];
   medaljoni: Medaljon[];
+  krunisanje?: KrunisanjeMeta | null;
   zavrsene: number[];
   osvojeniMedaljoni: number[];
+  polozenaKrunisanja?: number[];
 }
 
 // Layout: 5 kolona × N lekcijskih redova snake (bottom-up). Vrata zauzimaju
@@ -57,7 +67,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   useEffect(() => {
     apiRequest<MapaData>("GET", `/mapa/nivo/${nivo}`, undefined, token || undefined)
       .then(setData)
-      .catch(() => setData({ lekcije: [], medaljoni: [], zavrsene: [], osvojeniMedaljoni: [] }))
+      .catch(() => setData({ lekcije: [], medaljoni: [], krunisanje: null, zavrsene: [], osvojeniMedaljoni: [], polozenaKrunisanja: [] }))
       .finally(() => setIsLoading(false));
   }, [token, nivo]);
 
@@ -95,7 +105,30 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     () => lekcijeSorted.filter((l) => zavrseneSet.has(l.id)).length,
     [lekcijeSorted, zavrseneSet],
   );
-  const allDone = completedCount >= REQUIRED_FOR_DOOR;
+  const lessonsAllDone = completedCount >= REQUIRED_FOR_DOOR;
+  // Krunisanje gating: vrata na sljedeći nivo zahtijevaju da su sve etape
+  // (medaljoni) ovog nivoa "položene" (claim ili ispit). Ako krunisanje
+  // postoji s konfigurisanim kvizom, vrata vode na /krunisanje/:nivo
+  // (završni izazov); inače na sljedeću mapu po starom toku.
+  const sveEtapePolozene = medaljoniSorted.length > 0
+    && medaljoniSorted.every((m) => isEtapaPassed(m));
+  const krunisanjeMeta = data?.krunisanje ?? null;
+  const krunisanjePolozeno = !!krunisanjeMeta
+    && (data?.polozenaKrunisanja ?? []).includes(krunisanjeMeta.id);
+  const allDone = lessonsAllDone && (medaljoniSorted.length === 0 || sveEtapePolozene);
+  const doorTarget = krunisanjeMeta && krunisanjeMeta.imaKviz
+    ? `/krunisanje/${nivo}`
+    : cfg.doorTo;
+  // Vrata su otključana kad su sve lekcije + sve etape gotove. Ako krunisanje
+  // ima ispit, klik vodi na krunisanje stranicu (koja interno traži ispit).
+  // Ako je krunisanje već položeno, dodatno se može direktno otići na
+  // sljedeći nivo (zadržavamo isti target — krunisanje stranica ima link).
+  const doorEnabled = allDone;
+  const doorLabel = krunisanjeMeta && krunisanjeMeta.imaKviz
+    ? (krunisanjePolozeno
+        ? `Krunisanje položeno — ${krunisanjeMeta.naslov ?? `Nivo ${nivo}`}`
+        : `Završni izazov — ${krunisanjeMeta.naslov ?? `Krunisanje nivoa ${nivo}`}`)
+    : cfg.doorLabel;
 
   // Trenutni cell (linearni indeks 0..N-1, gdje je 0 = lekcija 1).
   // Ako su sve lekcije završene, vraća -1 (pčela je "izašla kroz vrata").
@@ -117,11 +150,33 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   //   - admin/muallim/roditelj: sve otključano (puni pristup)
   const isPrivilegedRole =
     user?.role === "admin" || user?.role === "muallim" || user?.role === "roditelj";
-  const unlockedCellCount = isPrivilegedRole
-    ? TOTAL_CELLS
-    : !user
-      ? Math.min(TOTAL_CELLS, 5)
-      : Math.min(TOTAL_CELLS, Math.floor(completedCount / 10) * 10 + 10);
+
+  // Etapa-based gating: svaki blok od 10 lekcija (lek 11-20, 21-30, ...) je
+  // otključan SAMO ako je prethodna etapa (medaljon) "položena". Etapa se
+  // smatra položenom ako je:
+  //   (a) student osvojio medaljon (kviz položen za etape s ispitom, ili
+  //       legacy claim za one bez ispita), ili
+  //   (b) etapa nema konfigurisan kviz I sve lekcije te etape su završene
+  //       (kompatibilnost — daje "soft" napredak dok admin ne unese pitanja).
+  function isEtapaPassed(m: Medaljon): boolean {
+    if (osvojeniSet.has(m.id)) return true;
+    if (!m.imaKviz && completedCount >= m.posAfterRedoslijed) return true;
+    return false;
+  }
+  const unlockedCellCount = (() => {
+    if (isPrivilegedRole) return TOTAL_CELLS;
+    if (!user) return Math.min(TOTAL_CELLS, 5);
+    // Prvih 10 lekcija uvijek otvoreno za prijavljene učenike.
+    let unlocked = Math.min(TOTAL_CELLS, 10);
+    for (const m of medaljoniSorted) {
+      if (isEtapaPassed(m)) {
+        unlocked = Math.min(TOTAL_CELLS, m.posAfterRedoslijed + 10);
+      } else {
+        break;
+      }
+    }
+    return unlocked;
+  })();
 
   // Snake mapping: logički indeks → (logicalRow, col).
   function rowColFor(i: number): { logicalRow: number; col: number } {
@@ -264,32 +319,47 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
             }}
           >
             {/* Vrata: prazno mjesto na vrhu (samo ako nivo ima sljedeći). */}
-            {cfg.doorTo && (
+            {doorTarget && (
               <button
                 key="vrata"
                 data-cell-index="door"
-                onClick={() => allDone && cfg.doorTo && setLocation(cfg.doorTo)}
-                disabled={!allDone}
+                onClick={() => doorEnabled && doorTarget && setLocation(doorTarget)}
+                disabled={!doorEnabled}
                 className="relative flex items-center justify-center disabled:cursor-not-allowed"
                 style={{ gridRow: doorDisplayRow + 1, gridColumn: doorCol + 1 }}
                 data-testid="mapa-polje-vrata"
-                title={allDone ? cfg.doorLabel : "Završi sve lekcije da otključaš"}
+                title={
+                  doorEnabled
+                    ? doorLabel
+                    : !lessonsAllDone
+                      ? "Završi sve lekcije da otključaš"
+                      : "Položi sve etape da otključaš"
+                }
               >
                 <div className="relative w-12 h-12 sm:w-16 sm:h-16 transition-transform active:scale-95 hover:scale-105">
-                  {allDone && (
+                  {doorEnabled && (
                     <span className="absolute inset-0 rounded-full bg-amber-300/50 animate-ping" />
                   )}
                   <img
                     src={
-                      allDone
+                      doorEnabled
                         ? "/images/mapa/vrata-otvorena.png"
                         : "/images/mapa/vrata-zatvorena.png"
                     }
-                    alt={allDone ? `${cfg.doorLabel} — otvorena` : `${cfg.doorLabel} — zaključana`}
+                    alt={doorEnabled ? `${doorLabel} — otvorena` : `${doorLabel} — zaključana`}
                     className={`relative w-full h-full object-contain drop-shadow-md ${
-                      allDone ? "animate-pulse" : "opacity-80 grayscale-[40%]"
+                      doorEnabled ? "animate-pulse" : "opacity-80 grayscale-[40%]"
                     }`}
                   />
+                  {krunisanjePolozeno && (
+                    <span
+                      className="absolute -top-1 -right-1 text-base sm:text-lg"
+                      aria-label="Krunisanje položeno"
+                      title="Krunisanje položeno"
+                    >
+                      👑
+                    </span>
+                  )}
                 </div>
               </button>
             )}

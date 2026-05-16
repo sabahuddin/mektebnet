@@ -203,6 +203,8 @@ interface ProfilData {
     lastActivityDate: string | null;
     poNivou: Record<number, { ukupno: number; gotov: number }>;
     bedzevi?: BedzInfo[];
+    polozeneEtape?: { medaljonId: number; nivo: number; naziv: string; slug: string; polozenoAt: string; procenat: number }[];
+    polozenaKrunisanja?: { krunisanjeId: number; nivo: number; naslov: string | null; polozenoAt: string; procenat: number }[];
   };
 }
 
@@ -658,6 +660,73 @@ export default function UcenikProfilPage() {
                     </motion.div>
                   );
                 })()}
+
+                {/* Etape i krunisanja — položene s datumima (Task #126) */}
+                {((profil.napredak?.polozeneEtape?.length ?? 0) > 0
+                  || (profil.napredak?.polozenaKrunisanja?.length ?? 0) > 0) && (
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.49 }}
+                    className="bg-gradient-to-br from-violet-50 via-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl p-5 mb-6"
+                    data-testid="card-etape-krunisanja"
+                  >
+                    <h3 className="font-extrabold text-amber-900 flex items-center gap-2 mb-3">
+                      <Trophy className="w-5 h-5 text-amber-700" />
+                      Položene etape i krunisanja
+                    </h3>
+                    {(profil.napredak?.polozenaKrunisanja?.length ?? 0) > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-amber-800/80 mb-2">Krunisanja</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {profil.napredak!.polozenaKrunisanja!.map((k) => (
+                            <Link
+                              key={k.krunisanjeId}
+                              href={`/krunisanje/${k.nivo}`}
+                              className="flex items-center gap-3 p-3 rounded-xl bg-white border border-amber-200 hover:border-amber-400 transition"
+                              data-testid={`krunisanje-polozeno-${k.nivo}`}
+                            >
+                              <span className="text-2xl" aria-hidden>👑</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-amber-900 text-sm truncate">
+                                  {k.naslov || `Krunisanje nivoa ${k.nivo}`}
+                                </div>
+                                <div className="text-[11px] text-amber-700/80">
+                                  Nivo {k.nivo} · {k.procenat}% · {formatEarnedDate(k.polozenoAt) ?? ""}
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(profil.napredak?.polozeneEtape?.length ?? 0) > 0 && (
+                      <div>
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-amber-800/80 mb-2">
+                          Etape s položenim ispitom
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {profil.napredak!.polozeneEtape!.map((e) => (
+                            <Link
+                              key={e.medaljonId}
+                              href={`/medaljon/${e.slug}`}
+                              className="flex items-center gap-3 p-3 rounded-xl bg-white border border-violet-200 hover:border-violet-400 transition"
+                              data-testid={`etapa-polozena-${e.medaljonId}`}
+                            >
+                              <Medal className="w-5 h-5 text-violet-600 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-foreground text-sm truncate">{e.naziv}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  Nivo {e.nivo} · {e.procenat}% · {formatEarnedDate(e.polozenoAt) ?? ""}
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
 
                 {/* Moji bedževi — preview grid */}
                 {profil.napredak?.bedzevi && profil.napredak.bedzevi.length > 0 && (() => {
