@@ -289,28 +289,31 @@ async function proveriGatingKrunisanja(
     })
     .from(medaljoniTable)
     .where(eq(medaljoniTable.nivo, krunisanje.nivo));
-  if (sviMedaljoni.length > 0) {
+  // Poštuj is_gating: non-gating medaljoni se NE zahtijevaju za pristup
+  // krunisanju — uskladjeno s FE mapa.tsx ponašanjem (non-gating etapa ne
+  // blokira napredak). Inače bi UI rekao "otključano" a API odbio start.
+  const gatingMedaljoni = sviMedaljoni.filter((m) => m.isGating);
+  if (gatingMedaljoni.length > 0) {
     const osvojeniRows = await db
       .select({ medaljonId: studentMedaljoniTable.medaljonId })
       .from(studentMedaljoniTable)
       .where(
         and(
           eq(studentMedaljoniTable.studentId, userId),
-          inArray(studentMedaljoniTable.medaljonId, sviMedaljoni.map((m) => m.id)),
+          inArray(studentMedaljoniTable.medaljonId, gatingMedaljoni.map((m) => m.id)),
         ),
       );
     const osvojeni = new Set(osvojeniRows.map((r) => r.medaljonId));
-    const nedostajeMed = sviMedaljoni.filter((m) => !osvojeni.has(m.id)).length;
+    const nedostajeMed = gatingMedaljoni.filter((m) => !osvojeni.has(m.id)).length;
     if (nedostajeMed > 0) {
-      return `Osvoji sve medaljone nivoa ${krunisanje.nivo} (nedostaje ${nedostajeMed}/${sviMedaljoni.length}).`;
+      return `Osvoji sve obavezne medaljone nivoa ${krunisanje.nivo} (nedostaje ${nedostajeMed}/${gatingMedaljoni.length}).`;
     }
     // Etape sa kvizom — provjeri prolaz u etapa_polaganja SAMO za
     // gating etape. Non-gating etape (admin toggle) ne zahtijevaju
     // dokaz o ispitu za krunisanje.
-    const kvizMedaljoni = sviMedaljoni.filter(
+    const kvizMedaljoni = gatingMedaljoni.filter(
       (m) =>
-        m.isGating
-        && Array.isArray(m.kvizPitanjaIds)
+        Array.isArray(m.kvizPitanjaIds)
         && (m.kvizPitanjaIds as unknown[]).length > 0,
     );
     if (kvizMedaljoni.length > 0) {
