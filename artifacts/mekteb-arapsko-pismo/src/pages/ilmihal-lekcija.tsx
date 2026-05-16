@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Maskota } from "@/components/maskota";
+import { PcelaRating } from "@/components/PcelaRating";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
 import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
@@ -1892,7 +1893,8 @@ function PriloziSection({
                         ? `Klikni da otvoriš vježbu • do ${reward} kapi meda 🍯`
                         : "Klikni da otvoriš vježbu • bez kapi meda 🍯";
                       return (
-                        <div key={a.id} className="flex items-stretch gap-2">
+                        <div key={a.id} className="flex flex-col gap-1">
+                          <div className="flex items-stretch gap-2">
                           <button
                             onClick={() => setOpenEmbed(a)}
                             className="flex-1 flex items-center gap-3 px-4 py-4 rounded-xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 hover:border-amber-400 transition-all shadow-sm hover:shadow-md text-left"
@@ -1930,6 +1932,8 @@ function PriloziSection({
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
+                          </div>
+                          <PcelaRating tip="prilog" id={a.id} size={16} align="right" className="pr-2" />
                         </div>
                       );
                     }
@@ -2059,6 +2063,7 @@ function PriloziSection({
                         {ytEmbed && (
                           <YouTubeEmbed src={ytEmbed} title={a.originalName} />
                         )}
+                        <PcelaRating tip="prilog" id={a.id} size={16} align="right" className="pt-1" />
                       </div>
                     );
                   })}
@@ -2947,6 +2952,13 @@ export default function IlmihalLekcijaPage() {
             />
           </div>
         ) : null}
+
+        {/* Ocjena lekcije (5 pčelica) — vidi se svima, glasaju prijavljeni */}
+        {lekcija?.id && (
+          <div className="flex justify-end -mt-3 mb-4 pr-1">
+            <PcelaRating tip="lekcija" id={lekcija.id} size={20} align="right" label="Ocijeni lekciju" />
+          </div>
+        )}
 
         {/* Lesson navigation strip — samo muallim/admin (učenik se kreće samo iz Košnice) */}
         {(user?.role === "admin" || user?.role === "muallim") && lekcijeStrip.length > 1 && slug && (

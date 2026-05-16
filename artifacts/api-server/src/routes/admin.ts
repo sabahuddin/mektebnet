@@ -3017,6 +3017,93 @@ router.post("/igra-pitanja/import", (req, res) => {
   });
 });
 
+// GET /admin/statistika-sadrzaja — pregled završetaka i ocjena po lekciji i prilogu.
+// Vraća { lekcije: [...], prilozi: [...] } — admin tab "Statistika sadržaja".
+router.get("/statistika-sadrzaja", async (_req, res) => {
+  try {
+    const lekcijeRes: any = await db.execute(sql`
+      SELECT
+        l.id,
+        l.naslov,
+        l.nivo,
+        l.slug,
+        COALESCE(c.zavrseno, 0)::int AS zavrseno,
+        COALESCE(o.avg_ocjena, 0)::float AS avg_ocjena,
+        COALESCE(o.broj_ocjena, 0)::int AS broj_ocjena
+      FROM ilmihal_lekcije l
+      LEFT JOIN (
+        SELECT content_id AS lekcija_id, COUNT(*)::int AS zavrseno
+        FROM korisnik_napredak
+        WHERE zavrsen = TRUE AND content_type = 'lekcija'
+        GROUP BY content_id
+      ) c ON c.lekcija_id = l.id
+      LEFT JOIN (
+        SELECT sadrzaj_id, AVG(ocjena)::float AS avg_ocjena, COUNT(*)::int AS broj_ocjena
+        FROM ocjene_sadrzaja
+        WHERE tip_sadrzaja = 'lekcija'
+        GROUP BY sadrzaj_id
+      ) o ON o.sadrzaj_id = l.id
+      ORDER BY l.nivo NULLS LAST, l.redoslijed NULLS LAST, l.id;
+    `);
+    const priloziRes: any = await db.execute(sql`
+      SELECT
+        p.id,
+        p.original_name AS naziv,
+        p.kind,
+        p.lekcija_id,
+        l.naslov AS lekcija_naslov,
+        l.nivo AS lekcija_nivo,
+        COALESCE(ec.zavrseno, 0)::int AS zavrseno,
+        COALESCE(o.avg_ocjena, 0)::float AS avg_ocjena,
+        COALESCE(o.broj_ocjena, 0)::int AS broj_ocjena
+      FROM prilozi p
+      LEFT JOIN ilmihal_lekcije l ON l.id = p.lekcija_id
+      LEFT JOIN (
+        SELECT prilozi_id, COUNT(*)::int AS zavrseno
+        FROM embed_completions GROUP BY prilozi_id
+      ) ec ON ec.prilozi_id = p.id
+      LEFT JOIN (
+        SELECT sadrzaj_id, AVG(ocjena)::float AS avg_ocjena, COUNT(*)::int AS broj_ocjena
+        FROM ocjene_sadrzaja
+        WHERE tip_sadrzaja = 'prilog'
+        GROUP BY sadrzaj_id
+      ) o ON o.sadrzaj_id = p.id
+      ORDER BY l.nivo NULLS LAST, p.lekcija_id, p.id;
+    `);
+    const kvizoviRes: any = await db.execute(sql`
+      SELECT
+        k.id,
+        k.naslov,
+        k.kategorija,
+        COALESCE(kr.broj_pokusaja, 0)::int AS broj_pokusaja,
+        COALESCE(kr.prosjek_postotak, 0)::float AS prosjek_postotak,
+        COALESCE(o.avg_ocjena, 0)::float AS avg_ocjena,
+        COALESCE(o.broj_ocjena, 0)::int AS broj_ocjena
+      FROM kvizovi k
+      LEFT JOIN (
+        SELECT kviz_id, COUNT(*)::int AS broj_pokusaja,
+               AVG(CASE WHEN ukupno_pitanja > 0 THEN (tacni_odgovori::float / ukupno_pitanja * 100) ELSE 0 END) AS prosjek_postotak
+        FROM kviz_rezultati GROUP BY kviz_id
+      ) kr ON kr.kviz_id = k.id
+      LEFT JOIN (
+        SELECT sadrzaj_id, AVG(ocjena)::float AS avg_ocjena, COUNT(*)::int AS broj_ocjena
+        FROM ocjene_sadrzaja
+        WHERE tip_sadrzaja = 'kviz'
+        GROUP BY sadrzaj_id
+      ) o ON o.sadrzaj_id = k.id
+      ORDER BY k.kategorija, k.id;
+    `);
+    res.json({
+      lekcije: lekcijeRes.rows ?? [],
+      prilozi: priloziRes.rows ?? [],
+      kvizovi: kvizoviRes.rows ?? [],
+    });
+  } catch (err: any) {
+    console.error("[admin/statistika-sadrzaja] greška:", err);
+    res.status(500).json({ error: "Greška servera", detail: err?.message });
+  }
+});
+
 // POST /admin/system/seed-medena-pitanja — pokreni seed (160 pitanja)
 router.post("/system/seed-medena-pitanja", async (_req, res) => {
   try {

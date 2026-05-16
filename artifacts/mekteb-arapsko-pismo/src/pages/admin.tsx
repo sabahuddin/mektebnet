@@ -1322,7 +1322,23 @@ export default function AdminPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati">("muallimi");
+  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "statistika">("muallimi");
+  const [statSadrzaja, setStatSadrzaja] = useState<{ lekcije: any[]; prilozi: any[]; kvizovi: any[] }>({ lekcije: [], prilozi: [], kvizovi: [] });
+  const [statLoading, setStatLoading] = useState(false);
+  const [statSubTab, setStatSubTab] = useState<"lekcije" | "prilozi" | "kvizovi">("lekcije");
+  const [statSort, setStatSort] = useState<{ field: string; dir: "asc" | "desc" }>({ field: "zavrseno", dir: "desc" });
+
+  const loadStatistikaSadrzaja = async () => {
+    setStatLoading(true);
+    try {
+      const data = await apiRequest<{ lekcije: any[]; prilozi: any[]; kvizovi: any[] }>("GET", "/admin/statistika-sadrzaja", undefined, token);
+      setStatSadrzaja(data);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setStatLoading(false);
+    }
+  };
   const [activeMainTab, setActiveMainTab] = useState<"korisnici" | "sistemski">("korisnici");
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
@@ -1428,6 +1444,7 @@ export default function AdminPage() {
   useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); }, [token]);
   useEffect(() => { if (activeTab === "analitika") loadAnalytics(); }, [activeTab]);
   useEffect(() => { if (activeTab === "rezultati") loadKvizStatistike(); }, [activeTab]);
+  useEffect(() => { if (activeTab === "statistika") loadStatistikaSadrzaja(); }, [activeTab]);
 
   if (!user || user.role !== "admin") {
     return (
@@ -1540,6 +1557,7 @@ export default function AdminPage() {
               { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
               { key: "analitika" as const, label: "Analitika", icon: <BarChart3 className="w-4 h-4" /> },
               { key: "rezultati" as const, label: "Kviz rezultati", icon: <ClipboardList className="w-4 h-4" /> },
+              { key: "statistika" as const, label: "Statistika sadržaja", icon: <BarChart3 className="w-4 h-4" /> },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -1810,6 +1828,135 @@ export default function AdminPage() {
           </div>
         )}
 
+
+        {/* ── TAB: STATISTIKA SADRŽAJA ── */}
+        {activeTab === "statistika" && (
+          <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+              <h2 className="font-extrabold text-foreground flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" /> Statistika sadržaja
+              </h2>
+              <div className="flex gap-1 bg-muted/40 p-1 rounded-xl">
+                {([
+                  { k: "lekcije" as const, l: `Lekcije (${statSadrzaja.lekcije.length})` },
+                  { k: "prilozi" as const, l: `Materijali (${statSadrzaja.prilozi.length})` },
+                  { k: "kvizovi" as const, l: `Kvizovi (${statSadrzaja.kvizovi.length})` },
+                ]).map(t => (
+                  <button key={t.k} onClick={() => setStatSubTab(t.k)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statSubTab === t.k ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {statLoading ? (
+              <div className="p-4 flex flex-col gap-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                {(() => {
+                  const rows = statSadrzaja[statSubTab] ?? [];
+                  const sorted = rows.slice().sort((a: any, b: any) => {
+                    const dir = statSort.dir === "asc" ? 1 : -1;
+                    const av = a[statSort.field], bv = b[statSort.field];
+                    if (typeof av === "string") return String(av).localeCompare(String(bv), "bs") * dir;
+                    return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
+                  });
+                  const toggle = (f: string) => setStatSort(s => s.field === f ? { field: f, dir: s.dir === "asc" ? "desc" : "asc" } : { field: f, dir: f === "naslov" || f === "naziv" ? "asc" : "desc" });
+                  const arrow = (f: string) => statSort.field === f ? (statSort.dir === "asc" ? " ↑" : " ↓") : " ⇅";
+                  const SortBtn = ({ f, label }: { f: string; label: string }) => (
+                    <button type="button" onClick={() => toggle(f)} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+                      {label}{arrow(f)}
+                    </button>
+                  );
+                  if (statSubTab === "lekcije") {
+                    return (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border/40 bg-muted/30">
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naslov" label="Lekcija" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="nivo" label="Nivo" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="zavrseno" label="Završili" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label="Prosj. ocjena" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label="Br. ocjena" /></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sorted.map((r: any) => (
+                            <tr key={r.id} className="border-b border-border/20 hover:bg-muted/20">
+                              <td className="px-4 py-3 font-bold text-foreground">{r.naslov}</td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">N{r.nivo ?? "-"}</td>
+                              <td className="px-4 py-3 text-sm tabular-nums">{r.zavrseno}</td>
+                              <td className="px-4 py-3 text-sm tabular-nums">{r.broj_ocjena > 0 ? `${Number(r.avg_ocjena).toFixed(2)} 🐝` : "—"}</td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.broj_ocjena}</td>
+                            </tr>
+                          ))}
+                          {sorted.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema podataka</td></tr>}
+                        </tbody>
+                      </table>
+                    );
+                  }
+                  if (statSubTab === "prilozi") {
+                    return (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border/40 bg-muted/30">
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naziv" label="Materijal" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="lekcija_naslov" label="Lekcija" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="kind" label="Tip" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="zavrseno" label="Završili" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label="Prosj. ocjena" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label="Br. ocjena" /></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sorted.map((r: any) => (
+                            <tr key={r.id} className="border-b border-border/20 hover:bg-muted/20">
+                              <td className="px-4 py-3 font-bold text-foreground">{r.naziv}</td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{r.lekcija_naslov ?? "—"}</td>
+                              <td className="px-4 py-3 text-xs"><span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold">{r.kind}</span></td>
+                              <td className="px-4 py-3 text-sm tabular-nums">{r.zavrseno}</td>
+                              <td className="px-4 py-3 text-sm tabular-nums">{r.broj_ocjena > 0 ? `${Number(r.avg_ocjena).toFixed(2)} 🐝` : "—"}</td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.broj_ocjena}</td>
+                            </tr>
+                          ))}
+                          {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema podataka</td></tr>}
+                        </tbody>
+                      </table>
+                    );
+                  }
+                  // kvizovi
+                  return (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border/40 bg-muted/30">
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naslov" label="Kviz" /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="kategorija" label="Kategorija" /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_pokusaja" label="Pokušaja" /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="prosjek_postotak" label="Prosjek %" /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label="Prosj. ocjena" /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label="Br. ocjena" /></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sorted.map((r: any) => (
+                          <tr key={r.id} className="border-b border-border/20 hover:bg-muted/20">
+                            <td className="px-4 py-3 font-bold text-foreground">{r.naslov}</td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">{r.kategorija ?? "—"}</td>
+                            <td className="px-4 py-3 text-sm tabular-nums">{r.broj_pokusaja}</td>
+                            <td className="px-4 py-3 text-sm tabular-nums">{r.broj_pokusaja > 0 ? `${Number(r.prosjek_postotak).toFixed(0)}%` : "—"}</td>
+                            <td className="px-4 py-3 text-sm tabular-nums">{r.broj_ocjena > 0 ? `${Number(r.avg_ocjena).toFixed(2)} 🐝` : "—"}</td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.broj_ocjena}</td>
+                          </tr>
+                        ))}
+                        {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema podataka</td></tr>}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── TAB: KORISNICI ── */}
         {activeTab === "korisnici" && (

@@ -291,6 +291,28 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS embed_completions_student_prilozi_uidx ON embed_completions (student_id, prilozi_id);`);
 
+    // Ocjene sadržaja (5 pčelica) — jedna aktivna ocjena po (user, tip, id).
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS ocjene_sadrzaja (
+        id serial PRIMARY KEY,
+        user_id integer NOT NULL,
+        tip_sadrzaja varchar(32) NOT NULL,
+        sadrzaj_id integer NOT NULL,
+        ocjena integer NOT NULL,
+        created_at timestamp NOT NULL DEFAULT NOW(),
+        updated_at timestamp NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS ocjene_sadrzaja_user_tip_id_uidx ON ocjene_sadrzaja (user_id, tip_sadrzaja, sadrzaj_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS ocjene_sadrzaja_by_content_idx ON ocjene_sadrzaja (tip_sadrzaja, sadrzaj_id);`);
+    await db.execute(sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ocjene_sadrzaja_ocjena_check') THEN
+          ALTER TABLE ocjene_sadrzaja ADD CONSTRAINT ocjene_sadrzaja_ocjena_check CHECK (ocjena BETWEEN 1 AND 5);
+        END IF;
+      END $$;
+    `);
+
     // Kviz kategorije (admin-definisane). Tabela + idempotent seed iz
     // KVIZ_KATEGORIJE_META ako je tabela prazna (prvi start nakon migracije).
     await db.execute(sql`

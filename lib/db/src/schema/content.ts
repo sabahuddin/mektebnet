@@ -357,6 +357,19 @@ export const embedCompletionsTable = pgTable("embed_completions", {
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
+// Ocjene sadržaja (5 pčelica) — jedna ocjena po korisniku po (tip, id).
+// Bez FK zbog mixed tipova sadržaja (lekcija/prilog/kviz) — guard radimo
+// unique indexom (vidi index.ts migration) i app logikom.
+export const ocjeneSadrzajaTable = pgTable("ocjene_sadrzaja", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  tipSadrzaja: varchar("tip_sadrzaja", { length: 32 }).notNull(),
+  sadrzajId: integer("sadrzaj_id").notNull(),
+  ocjena: integer("ocjena").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const rjecnikTable = pgTable("rjecnik", {
   id: serial("id").primaryKey(),
   rijec: varchar("rijec", { length: 200 }).notNull().unique(),

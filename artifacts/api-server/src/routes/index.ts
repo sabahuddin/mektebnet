@@ -18,6 +18,7 @@ import misijeRouter from "./misije";
 import pushRouter from "./push";
 import mapaRouter from "./mapa";
 import aktivnostRouter from "./aktivnost";
+import ocjeneRouter from "./ocjene";
 
 const router: IRouter = Router();
 
@@ -40,6 +41,7 @@ router.use("/misije", misijeRouter);
 router.use("/push", pushRouter);
 router.use("/mapa", mapaRouter);
 router.use("/aktivnost", aktivnostRouter);
+router.use("/ocjene", ocjeneRouter);
 
 export default router;
 
