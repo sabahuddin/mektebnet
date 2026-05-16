@@ -51,6 +51,23 @@ interface Korisnik {
   isActive: boolean;
   createdAt: string;
   lastLoginAt: string | null;
+  lastSeenAt?: string | null;
+  totalScreentimeSec?: number;
+}
+
+type SortField = "displayName" | "createdAt" | "totalScreentimeSec";
+type SortDir = "asc" | "desc";
+
+function formatScreentime(sec: number | undefined | null): string {
+  const s = sec ?? 0;
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h < 24) return `${h}h ${rem}min`;
+  const d = Math.floor(h / 24);
+  return `${d}d ${h % 24}h`;
 }
 
 interface MuallimPregled {
@@ -1324,6 +1341,17 @@ export default function AdminPage() {
   const [filterRole, setFilterRole] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir(field === "displayName" ? "asc" : "desc");
+    }
+  };
 
   const [muallimPregled, setMuallimPregled] = useState<MuallimPregled[]>([]);
   const [muallimLoading, setMuallimLoading] = useState(false);
@@ -1451,7 +1479,21 @@ export default function AdminPage() {
       !searchQuery ||
       k.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       k.username.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    )
+    .slice()
+    .sort((a, b) => {
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortField === "displayName") {
+        return a.displayName.localeCompare(b.displayName, "bs") * dir;
+      }
+      if (sortField === "totalScreentimeSec") {
+        return ((a.totalScreentimeSec ?? 0) - (b.totalScreentimeSec ?? 0)) * dir;
+      }
+      // createdAt
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return (ta - tb) * dir;
+    });
 
   return (
     <Layout>
@@ -1819,8 +1861,27 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/40 bg-muted/30">
-                    {["Ime", "Korisničko ime", "Uloga", "Status", "Registrovan", "Akcije"].map(h => (
-                      <th key={h} className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground">{h}</th>
+                    {([
+                      { label: "Ime", sort: "displayName" as SortField },
+                      { label: "Korisničko ime", sort: null },
+                      { label: "Uloga", sort: null },
+                      { label: "Status", sort: null },
+                      { label: "Registrovan", sort: "createdAt" as SortField },
+                      { label: "Vrijeme na platformi", sort: "totalScreentimeSec" as SortField },
+                      { label: "Akcije", sort: null },
+                    ]).map(h => (
+                      <th key={h.label} className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground">
+                        {h.sort ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleSort(h.sort as SortField)}
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                          >
+                            {h.label}
+                            {sortField === h.sort ? (sortDir === "asc" ? " ↑" : " ↓") : " ⇅"}
+                          </button>
+                        ) : h.label}
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -1841,6 +1902,9 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         {new Date(k.createdAt).toLocaleDateString("bs-BA")}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground" title={k.lastSeenAt ? `Posljednje viđen: ${new Date(k.lastSeenAt).toLocaleString("bs-BA")}` : "Nikad nije bio aktivan"}>
+                        {formatScreentime(k.totalScreentimeSec)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
@@ -1884,7 +1948,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {filtrirani.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
                   )}
                 </tbody>
               </table>

@@ -134,11 +134,22 @@ router.post("/register-roditelj", async (req, res) => {
       return;
     }
 
+    if (email?.trim()) {
+      const normalizedEmail = email.trim().toLowerCase();
+      const emailExists = await db.select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, normalizedEmail));
+      if (emailExists.length > 0) {
+        res.status(409).json({ error: "Ovaj email je već u upotrebi. Prijavite se ili koristite drugi email." });
+        return;
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     const [newUser] = await db.insert(usersTable).values({
       username: username.trim().toLowerCase(),
-      email: email?.trim() || null,
+      email: email?.trim().toLowerCase() || null,
       passwordHash,
       displayName: displayName.trim(),
       role: "roditelj",
@@ -492,6 +503,16 @@ router.post("/register-roditelj-v2", async (req, res) => {
       res.status(400).json({ error: "Ime i email su obavezni" });
       return;
     }
+    // Provjera duplikata emaila prije insert-a — ljepša poruka nego "Greška servera"
+    // koju bi vratio fallback na unique constraint violation.
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingEmail = await db.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, normalizedEmail));
+    if (existingEmail.length > 0) {
+      res.status(409).json({ error: "Ovaj email je već u upotrebi. Prijavite se ili koristite drugi email." });
+      return;
+    }
     // Porodična pretplata pokriva do 4 djece — roditelj ih dodaje sam u svom profilu.
     const count = 4;
 
@@ -510,7 +531,7 @@ router.post("/register-roditelj-v2", async (req, res) => {
             username,
             passwordHash,
             displayName: displayName.trim(),
-            email: email.trim(),
+            email: normalizedEmail,
             role: "roditelj",
             isActive: false,
             trialUntil,

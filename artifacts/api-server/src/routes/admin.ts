@@ -1074,6 +1074,8 @@ router.get("/korisnici", async (req, res) => {
       isActive: usersTable.isActive,
       createdAt: usersTable.createdAt,
       lastLoginAt: usersTable.lastLoginAt,
+      lastSeenAt: usersTable.lastSeenAt,
+      totalScreentimeSec: usersTable.totalScreentimeSec,
     }).from(usersTable);
     res.json(korisnici);
   } catch (err) {
