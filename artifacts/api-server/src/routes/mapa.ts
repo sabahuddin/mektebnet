@@ -64,6 +64,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     const medaljoniAug = medaljoni.map((m) => ({
       ...m,
       imaKviz: Array.isArray(m.kvizPitanjaIds) && m.kvizPitanjaIds.length > 0,
+      isGating: m.isGating ?? true,
     }));
     const krunisanjeMeta = krunisanjeRow
       ? {
@@ -229,7 +230,10 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
     // sljedeći blok lekcija + krunisanje.
     const imaKviz = Array.isArray(medaljon.kvizPitanjaIds)
       && (medaljon.kvizPitanjaIds as unknown[]).length > 0;
-    if (imaKviz) {
+    // Poštuj `is_gating` toggle: non-gating etape dozvoljavaju direktan
+    // claim i bez polaganja ispita (admin može imati pripremne etape
+    // koje ne blokiraju progres).
+    if (imaKviz && medaljon.isGating) {
       const [pass] = await db
         .select({ id: etapaPolaganjaTable.id })
         .from(etapaPolaganjaTable)

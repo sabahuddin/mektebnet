@@ -149,7 +149,9 @@ router.get("/ilmihal/:slug", async (req, res) => {
               .orderBy(desc(medaljoniTable.posAfterRedoslijed))
               .limit(1);
             const priorMed = priorMedaljoni[0];
-            if (priorMed) {
+            // Task #126: poštuj `is_gating` toggle — ako je etapa
+            // konfigurisana kao non-gating, NE blokiraj sljedeće lekcije.
+            if (priorMed && priorMed.isGating) {
               const [osvojen] = await db
                 .select({ medaljonId: studentMedaljoniTable.medaljonId })
                 .from(studentMedaljoniTable)

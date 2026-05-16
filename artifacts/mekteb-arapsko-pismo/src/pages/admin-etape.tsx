@@ -47,7 +47,116 @@ interface BankaPitanje {
   id: number;
   pitanje: string;
   vrsta: string;
-  kategorija: string | null;
+  kategorija?: string | null;
+  lekcijaId?: number | null;
+}
+
+interface BankaLekcija { id: number; naslov: string; redoslijed: number; }
+interface BankaResponse { lekcije: BankaLekcija[]; pitanja: BankaPitanje[]; }
+
+function PitanjaPicker({
+  url, token, selectedIds, onChange,
+}: {
+  url: string;
+  token: string;
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const [data, setData] = useState<BankaResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filterLekcija, setFilterLekcija] = useState<number | "all">("all");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true);
+    apiRequest<BankaResponse>("GET", url, undefined, token)
+      .then((d) => { if (!cancel) setData(d); })
+      .catch(() => { if (!cancel) setData({ lekcije: [], pitanja: [] }); })
+      .finally(() => { if (!cancel) setLoading(false); });
+    return () => { cancel = true; };
+  }, [url, token]);
+
+  if (loading) return <div className="text-sm text-muted-foreground py-2">Učitavam pitanja iz banke…</div>;
+  if (!data) return null;
+
+  const selSet = new Set(selectedIds);
+  const lekcijaMap = new Map(data.lekcije.map((l) => [l.id, l]));
+  const visible = data.pitanja.filter((p) => {
+    if (filterLekcija !== "all" && p.lekcijaId !== filterLekcija) return false;
+    if (search && !p.pitanje.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+  const toggle = (id: number) => {
+    if (selSet.has(id)) onChange(selectedIds.filter((x) => x !== id));
+    else onChange([...selectedIds, id]);
+  };
+  const allVisIds = visible.map((p) => p.id);
+  const allVisSelected = allVisIds.length > 0 && allVisIds.every((id) => selSet.has(id));
+
+  return (
+    <div className="border rounded-lg p-2 bg-gray-50 max-h-80 overflow-auto" data-testid="pitanja-picker">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <select
+          className="text-xs px-2 py-1 border rounded"
+          value={String(filterLekcija)}
+          onChange={(e) => setFilterLekcija(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+        >
+          <option value="all">Sve lekcije ({data.lekcije.length})</option>
+          {data.lekcije.map((l) => (
+            <option key={l.id} value={l.id}>#{l.redoslijed} {l.naslov}</option>
+          ))}
+        </select>
+        <input
+          className="text-xs px-2 py-1 border rounded flex-1 min-w-[120px]"
+          placeholder="Pretraga…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button
+          type="button"
+          className="text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100"
+          onClick={() => {
+            if (allVisSelected) onChange(selectedIds.filter((id) => !allVisIds.includes(id)));
+            else onChange(Array.from(new Set([...selectedIds, ...allVisIds])));
+          }}
+        >
+          {allVisSelected ? "Odznači sve" : "Označi sve"}
+        </button>
+        <span className="text-xs text-muted-foreground">
+          {selectedIds.length} odabrano • {visible.length}/{data.pitanja.length} prikazano
+        </span>
+      </div>
+      {visible.length === 0 ? (
+        <div className="text-xs text-muted-foreground py-2">
+          Nema pitanja u banci za ovaj raspon. Dodaj pitanja u Banci pitanja sa lekcijaId iz ovog opsega.
+        </div>
+      ) : (
+        <ul className="space-y-1">
+          {visible.map((p) => {
+            const lek = p.lekcijaId ? lekcijaMap.get(p.lekcijaId) : null;
+            return (
+              <li key={p.id}>
+                <label className="flex items-start gap-2 text-xs bg-white border rounded px-2 py-1 cursor-pointer hover:bg-emerald-50">
+                  <input
+                    type="checkbox"
+                    checked={selSet.has(p.id)}
+                    onChange={() => toggle(p.id)}
+                    className="mt-0.5"
+                  />
+                  <span className="flex-1">
+                    <span className="font-mono text-gray-400 mr-1">#{p.id}</span>
+                    {p.pitanje}
+                    {lek && <span className="ml-1 text-gray-400">— {lek.naslov}</span>}
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function parseIdsCSV(s: string): number[] {
@@ -347,28 +456,9 @@ export default function AdminEtapePage() {
 
 function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: () => void; onSave: (e: Etapa) => void; token: string }) {
   const [form, setForm] = useState<Etapa>(etapa);
+  const [selectedIds, setSelectedIds] = useState<number[]>(etapa.kvizPitanjaIds ?? []);
+  const [showRaw, setShowRaw] = useState(false);
   const [idsText, setIdsText] = useState((etapa.kvizPitanjaIds ?? []).join(", "));
-  const [validating, setValidating] = useState(false);
-  const [validInfo, setValidInfo] = useState<string | null>(null);
-
-  async function validateIds() {
-    const ids = parseIdsCSV(idsText);
-    if (ids.length === 0) { setValidInfo("Lista je prazna."); return; }
-    setValidating(true); setValidInfo(null);
-    try {
-      const found: BankaPitanje[] = [];
-      // Sample first ~5 to verify existence
-      for (const id of ids.slice(0, 5)) {
-        try {
-          const p = await apiRequest<BankaPitanje>("GET", `/admin/banka-pitanja/${id}`, undefined, token);
-          found.push(p);
-        } catch { /* missing */ }
-      }
-      setValidInfo(`${found.length}/${Math.min(ids.length, 5)} provjereno. Ukupno ID-jeva: ${ids.length}.`);
-    } finally {
-      setValidating(false);
-    }
-  }
 
   return (
     <ModalShell title={`Etapa: ${etapa.naziv}`} onClose={onClose}>
@@ -379,20 +469,30 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
         <Field label="Opis">
           <input className="w-full px-3 py-2 border rounded-lg" value={form.opis} onChange={(e) => setForm({ ...form, opis: e.target.value })} />
         </Field>
-        <Field label={`Pitanja iz banke (ID-jevi, odvojeni zarezom). Tip pitanja koji se boduju: jednočlani (single/true-false). Aktuelno: ${parseIdsCSV(idsText).length} ID-jeva.`}>
-          <textarea
-            className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-24"
-            value={idsText}
-            onChange={(e) => setIdsText(e.target.value)}
-            placeholder="npr. 12, 45, 78, 102"
-            data-testid="textarea-pitanja-ids"
+        <Field label={`Pitanja iz banke — odaberi iz lekcija ove etape (${selectedIds.length} odabrano)`}>
+          <PitanjaPicker
+            url={`/admin/etape/${etapa.id}/banka`}
+            token={token}
+            selectedIds={selectedIds}
+            onChange={(ids) => { setSelectedIds(ids); setIdsText(ids.join(", ")); }}
           />
           <div className="flex items-center gap-2 mt-1">
-            <button onClick={validateIds} disabled={validating} type="button" className="text-xs px-2 py-1 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 hover:bg-emerald-100">
-              {validating ? "Provjera..." : "Provjeri postojanje"}
+            <button type="button" className="text-xs text-blue-600 hover:underline" onClick={() => setShowRaw((v) => !v)}>
+              {showRaw ? "Sakrij" : "Prikaži"} ručni unos ID-jeva (napredno)
             </button>
-            {validInfo && <span className="text-xs text-muted-foreground">{validInfo}</span>}
           </div>
+          {showRaw && (
+            <textarea
+              className="w-full mt-1 px-3 py-2 border rounded-lg font-mono text-sm h-20"
+              value={idsText}
+              onChange={(e) => {
+                setIdsText(e.target.value);
+                setSelectedIds(parseIdsCSV(e.target.value));
+              }}
+              placeholder="npr. 12, 45, 78, 102"
+              data-testid="textarea-pitanja-ids"
+            />
+          )}
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Prag prolaza (%)">
@@ -414,7 +514,7 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
       </div>
       <div className="flex gap-2 justify-end mt-4">
         <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">Otkaži</button>
-        <button onClick={() => onSave({ ...form, kvizPitanjaIds: parseIdsCSV(idsText) })}
+        <button onClick={() => onSave({ ...form, kvizPitanjaIds: selectedIds })}
           className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-sm flex items-center gap-1"
           data-testid="button-save-etapa">
           <Save className="w-4 h-4" /> Sačuvaj
@@ -424,8 +524,10 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
   );
 }
 
-function KrunisanjeModal({ krunisanje, onClose, onSave, token: _token }: { krunisanje: Krunisanje; onClose: () => void; onSave: (k: Krunisanje) => void; token: string }) {
+function KrunisanjeModal({ krunisanje, onClose, onSave, token }: { krunisanje: Krunisanje; onClose: () => void; onSave: (k: Krunisanje) => void; token: string }) {
   const [form, setForm] = useState<Krunisanje>(krunisanje);
+  const [selectedIds, setSelectedIds] = useState<number[]>(krunisanje.kvizPitanjaIds ?? []);
+  const [showRaw, setShowRaw] = useState(false);
   const [idsText, setIdsText] = useState((krunisanje.kvizPitanjaIds ?? []).join(", "));
   return (
     <ModalShell title={`Krunisanje — Nivo ${krunisanje.nivo}`} onClose={onClose}>
@@ -438,9 +540,24 @@ function KrunisanjeModal({ krunisanje, onClose, onSave, token: _token }: { kruni
           <textarea className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-28"
             value={form.opisHtml ?? ""} onChange={(e) => setForm({ ...form, opisHtml: e.target.value })} />
         </Field>
-        <Field label={`Pitanja iz banke (ID-jevi). Aktuelno: ${parseIdsCSV(idsText).length}.`}>
-          <textarea className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-24"
-            value={idsText} onChange={(e) => setIdsText(e.target.value)} placeholder="npr. 12, 45, 78" />
+        <Field label={`Pitanja iz banke — odaberi iz svih lekcija nivoa ${krunisanje.nivo} (${selectedIds.length} odabrano)`}>
+          <PitanjaPicker
+            url={`/admin/krunisanja/${krunisanje.id}/banka`}
+            token={token}
+            selectedIds={selectedIds}
+            onChange={(ids) => { setSelectedIds(ids); setIdsText(ids.join(", ")); }}
+          />
+          <div className="flex items-center gap-2 mt-1">
+            <button type="button" className="text-xs text-blue-600 hover:underline" onClick={() => setShowRaw((v) => !v)}>
+              {showRaw ? "Sakrij" : "Prikaži"} ručni unos ID-jeva (napredno)
+            </button>
+          </div>
+          {showRaw && (
+            <textarea className="w-full mt-1 px-3 py-2 border rounded-lg font-mono text-sm h-20"
+              value={idsText}
+              onChange={(e) => { setIdsText(e.target.value); setSelectedIds(parseIdsCSV(e.target.value)); }}
+              placeholder="npr. 12, 45, 78" />
+          )}
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Prag prolaza (%)">
@@ -468,7 +585,7 @@ function KrunisanjeModal({ krunisanje, onClose, onSave, token: _token }: { kruni
       </div>
       <div className="flex gap-2 justify-end mt-4">
         <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">Otkaži</button>
-        <button onClick={() => onSave({ ...form, kvizPitanjaIds: parseIdsCSV(idsText) })}
+        <button onClick={() => onSave({ ...form, kvizPitanjaIds: selectedIds })}
           className="px-4 py-2 rounded-lg bg-amber-600 text-white font-bold text-sm flex items-center gap-1"
           data-testid="button-save-krunisanje">
           <Save className="w-4 h-4" /> Sačuvaj

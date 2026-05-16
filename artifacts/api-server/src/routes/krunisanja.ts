@@ -282,7 +282,11 @@ async function proveriGatingKrunisanja(
   // (`etapa_polaganja.polozeno=true`) — ne samo `student_medaljoni` zapis —
   // čime se zatvara potencijalni bypass kroz legacy claim endpoint.
   const sviMedaljoni = await db
-    .select({ id: medaljoniTable.id, kvizPitanjaIds: medaljoniTable.kvizPitanjaIds })
+    .select({
+      id: medaljoniTable.id,
+      kvizPitanjaIds: medaljoniTable.kvizPitanjaIds,
+      isGating: medaljoniTable.isGating,
+    })
     .from(medaljoniTable)
     .where(eq(medaljoniTable.nivo, krunisanje.nivo));
   if (sviMedaljoni.length > 0) {
@@ -300,9 +304,14 @@ async function proveriGatingKrunisanja(
     if (nedostajeMed > 0) {
       return `Osvoji sve medaljone nivoa ${krunisanje.nivo} (nedostaje ${nedostajeMed}/${sviMedaljoni.length}).`;
     }
-    // Etape sa kvizom — provjeri da postoji prolaz u etapa_polaganja.
+    // Etape sa kvizom — provjeri prolaz u etapa_polaganja SAMO za
+    // gating etape. Non-gating etape (admin toggle) ne zahtijevaju
+    // dokaz o ispitu za krunisanje.
     const kvizMedaljoni = sviMedaljoni.filter(
-      (m) => Array.isArray(m.kvizPitanjaIds) && (m.kvizPitanjaIds as unknown[]).length > 0,
+      (m) =>
+        m.isGating
+        && Array.isArray(m.kvizPitanjaIds)
+        && (m.kvizPitanjaIds as unknown[]).length > 0,
     );
     if (kvizMedaljoni.length > 0) {
       const polozenoRows = await db

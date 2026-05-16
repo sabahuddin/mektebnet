@@ -46,7 +46,7 @@ import {
   etapaPolaganjaTable,
   studentKrunisanjaTable,
 } from "@workspace/db/schema";
-import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
+import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 
 const router = Router();
@@ -3148,6 +3148,81 @@ router.get("/etape/nivo/:n", async (req, res) => {
     res.json({ etape });
   } catch (err) {
     console.error("[admin/etape/nivo] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// GET /api/admin/etape/:medaljonId/banka — pitanja iz banke filtrirana po
+// lekcijama koje pripadaju ovoj etapi (redoslijed u (prevPos, posAfterRedoslijed]
+// istog nivoa). Koristi se u admin UI-ju za odabir pitanja umjesto ručnog
+// unosa ID-jeva.
+router.get("/etape/:medaljonId/banka", async (req, res) => {
+  try {
+    const id = Number(req.params.medaljonId);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const [med] = await db.select().from(medaljoniTable).where(eq(medaljoniTable.id, id)).limit(1);
+    if (!med) return res.status(404).json({ error: "Etapa ne postoji" });
+    const [prev] = await db
+      .select({ pos: medaljoniTable.posAfterRedoslijed })
+      .from(medaljoniTable)
+      .where(and(eq(medaljoniTable.nivo, med.nivo), lt(medaljoniTable.posAfterRedoslijed, med.posAfterRedoslijed)))
+      .orderBy(desc(medaljoniTable.posAfterRedoslijed))
+      .limit(1);
+    const startPos = prev?.pos ?? -999999;
+    const lekcije = await db
+      .select({ id: ilmihalLekcijeTable.id, naslov: ilmihalLekcijeTable.naslov, redoslijed: ilmihalLekcijeTable.redoslijed })
+      .from(ilmihalLekcijeTable)
+      .where(and(
+        eq(ilmihalLekcijeTable.nivo, med.nivo),
+        gt(ilmihalLekcijeTable.redoslijed, startPos),
+        lte(ilmihalLekcijeTable.redoslijed, med.posAfterRedoslijed),
+      ))
+      .orderBy(asc(ilmihalLekcijeTable.redoslijed));
+    const lekcijaIds = lekcije.map((l) => l.id);
+    const pitanja = lekcijaIds.length === 0 ? [] : await db
+      .select({
+        id: pitanjaBankaTable.id,
+        pitanje: pitanjaBankaTable.pitanje,
+        vrsta: pitanjaBankaTable.vrsta,
+        lekcijaId: pitanjaBankaTable.lekcijaId,
+      })
+      .from(pitanjaBankaTable)
+      .where(inArray(pitanjaBankaTable.lekcijaId, lekcijaIds))
+      .orderBy(asc(pitanjaBankaTable.lekcijaId), asc(pitanjaBankaTable.id));
+    res.json({ lekcije, pitanja });
+  } catch (err) {
+    console.error("[admin/etape/banka] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// GET /api/admin/krunisanja/:id/banka — pitanja iz banke za sve lekcije nivoa
+// (krunisanje pokriva cijeli nivo).
+router.get("/krunisanja/:id/banka", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const [krun] = await db.select().from(krunisanjaTable).where(eq(krunisanjaTable.id, id)).limit(1);
+    if (!krun) return res.status(404).json({ error: "Krunisanje ne postoji" });
+    const lekcije = await db
+      .select({ id: ilmihalLekcijeTable.id, naslov: ilmihalLekcijeTable.naslov, redoslijed: ilmihalLekcijeTable.redoslijed })
+      .from(ilmihalLekcijeTable)
+      .where(eq(ilmihalLekcijeTable.nivo, krun.nivo))
+      .orderBy(asc(ilmihalLekcijeTable.redoslijed));
+    const lekcijaIds = lekcije.map((l) => l.id);
+    const pitanja = lekcijaIds.length === 0 ? [] : await db
+      .select({
+        id: pitanjaBankaTable.id,
+        pitanje: pitanjaBankaTable.pitanje,
+        vrsta: pitanjaBankaTable.vrsta,
+        lekcijaId: pitanjaBankaTable.lekcijaId,
+      })
+      .from(pitanjaBankaTable)
+      .where(inArray(pitanjaBankaTable.lekcijaId, lekcijaIds))
+      .orderBy(asc(pitanjaBankaTable.lekcijaId), asc(pitanjaBankaTable.id));
+    res.json({ lekcije, pitanja });
+  } catch (err) {
+    console.error("[admin/krunisanja/banka] error", err);
     res.status(500).json({ error: "Greška" });
   }
 });

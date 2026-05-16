@@ -22,6 +22,7 @@ interface Medaljon {
   ikona: string;
   boja: string;
   imaKviz?: boolean;
+  isGating?: boolean;
 }
 interface KrunisanjeMeta {
   id: number;
@@ -159,6 +160,10 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   //   (b) etapa nema konfigurisan kviz I sve lekcije te etape su završene
   //       (kompatibilnost — daje "soft" napredak dok admin ne unese pitanja).
   function isEtapaPassed(m: Medaljon): boolean {
+    // Task #126: ako etapa NIJE gating (admin toggle), tretiramo je kao
+    // "uvijek prošla" za potrebe otključavanja sljedećih lekcija — student
+    // je i dalje može osvojiti (kviz/legacy claim), ali ne blokira napredak.
+    if (m.isGating === false) return true;
     if (osvojeniSet.has(m.id)) return true;
     if (!m.imaKviz && completedCount >= m.posAfterRedoslijed) return true;
     return false;
