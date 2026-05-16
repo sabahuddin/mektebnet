@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { List } from "lucide-react";
+import { List, Lock, Crown } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -18,6 +18,11 @@ interface NivoCard {
   href: string;
 }
 
+interface KrunisanjeStatus {
+  krunisanje: { id: number; nivo: number; isGating: boolean; imaKviz: boolean };
+  polozeno: null | { polozenoAt: string };
+}
+
 export default function IlmihalPage() {
   const [, setLocation] = useLocation();
   const { token, user } = useAuth();
@@ -26,6 +31,9 @@ export default function IlmihalPage() {
     2: { done: 0, total: 0 },
     3: { done: 0, total: 0 },
   });
+  // Krunisanja po nivou — koristi se za gating Nivo 2/3.
+  // null = neulogovan ili još učitava; true = položeno, false = nije.
+  const [krunisanjaStatus, setKrunisanjaStatus] = useState<Record<number, { polozeno: boolean; isGating: boolean; imaKviz: boolean }>>({});
 
   useEffect(() => {
     apiRequest<Lekcija[]>("GET", "/content/ilmihal", undefined, token || undefined)
@@ -56,6 +64,17 @@ export default function IlmihalPage() {
         setCompletedByNivo(totals);
       })
       .catch(() => {});
+
+    // Učitaj krunisanja za sva 3 nivoa paralelno (radi gating-a).
+    Promise.all([1, 2, 3].map((n) =>
+      apiRequest<KrunisanjeStatus>("GET", `/krunisanja/nivo/${n}`, undefined, token || undefined)
+        .then((d) => ({ n, polozeno: !!d.polozeno, isGating: d.krunisanje.isGating, imaKviz: d.krunisanje.imaKviz }))
+        .catch(() => null),
+    )).then((rows) => {
+      const map: Record<number, { polozeno: boolean; isGating: boolean; imaKviz: boolean }> = {};
+      rows.forEach((r) => { if (r) map[r.n] = { polozeno: r.polozeno, isGating: r.isGating, imaKviz: r.imaKviz }; });
+      setKrunisanjaStatus(map);
+    });
   }, [token, user]);
 
   const nivoi: NivoCard[] = [
@@ -146,16 +165,34 @@ export default function IlmihalPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
           {nivoi.map((n, idx) => {
             const stats = completedByNivo[n.broj] ?? { done: 0, total: 0 };
+            // Gating: Nivo 2 zaključan dok Nivo 1 krunisanje nije položeno (ako je gating aktivan i postoji ispit);
+            //         Nivo 3 dok Nivo 2 krunisanje nije položeno.
+            // Ne primjenjujemo na muallime/admine — oni uvijek imaju pristup.
+            const isElevated = !!user && user.role !== "ucenik";
+            let zakljucano = false;
+            let zakljucanRazlog = "";
+            if (!isElevated && n.broj > 1) {
+              const prevKrun = krunisanjaStatus[n.broj - 1];
+              if (prevKrun && prevKrun.isGating && prevKrun.imaKviz && !prevKrun.polozeno) {
+                zakljucano = true;
+                zakljucanRazlog = `Položi krunisanje nivoa ${n.broj - 1} da otključaš.`;
+              }
+            }
             return (
               <motion.button
                 key={n.broj}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.12, duration: 0.4 }}
-                onClick={() => setLocation(n.href)}
-                className="group relative flex flex-col items-center focus:outline-none"
+                onClick={() => {
+                  if (zakljucano) return;
+                  setLocation(n.href);
+                }}
+                disabled={zakljucano}
+                className={`group relative flex flex-col items-center focus:outline-none ${zakljucano ? "opacity-60 cursor-not-allowed" : ""}`}
                 data-testid={`button-nivo-${n.broj}`}
-                aria-label={`${n.naslov} — Nivo ${n.broj}`}
+                aria-label={`${n.naslov} — Nivo ${n.broj}${zakljucano ? " (zaključano)" : ""}`}
+                title={zakljucano ? zakljucanRazlog : undefined}
               >
                 <div className="relative w-full aspect-square max-w-xs mx-auto">
                   <img
@@ -176,13 +213,22 @@ export default function IlmihalPage() {
                 </div>
 
                 <div className="mt-3 text-center">
-                  <div className="text-xl sm:text-2xl font-extrabold text-amber-900">
+                  <div className="text-xl sm:text-2xl font-extrabold text-amber-900 flex items-center justify-center gap-2">
                     {n.naslov}
+                    {zakljucano && <Lock className="w-5 h-5 text-amber-700" />}
                   </div>
                   {user && stats.total > 0 && (
                     <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 shadow-sm text-xs font-bold text-amber-900">
                       {stats.done} / {stats.total} lekcija
                     </div>
+                  )}
+                  {krunisanjaStatus[n.broj]?.polozeno && (
+                    <div className="mt-1 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-bold shadow">
+                      <Crown className="w-3 h-3" /> Krunisanje
+                    </div>
+                  )}
+                  {zakljucano && (
+                    <div className="mt-1 text-xs text-amber-700/80 italic px-2">{zakljucanRazlog}</div>
                   )}
                 </div>
               </motion.button>

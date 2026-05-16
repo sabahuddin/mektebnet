@@ -77,10 +77,90 @@ export const medaljoniTable = pgTable("medaljoni", {
   contentHtml: text("content_html").notNull().default(""),
   ikona: varchar("ikona", { length: 32 }).notNull().default("medal"),
   boja: varchar("boja", { length: 16 }).notNull().default("amber"),
+  // === Task #126: Etape kviz konfiguracija =====================================
+  // Lista ID-jeva iz pitanja_banka koje admin bira kao završni ispit etape.
+  // Server scoring (anti-cheat): klijent dobija pitanja BEZ tačnog odgovora,
+  // odgovori se predaju serveru koji ih boduje protiv banke.
+  kvizPitanjaIds: jsonb("kviz_pitanja_ids").$type<number[]>().notNull().default([]),
+  // Minimalni procenat tačnih odgovora za prolaz (0-100). Default 70%.
+  pragProlazaPercent: integer("prag_prolaza_percent").notNull().default(70),
+  // Ako je true (default), nepoloženi ispit zaključava lekcije sa
+  // redoslijed > posAfterRedoslijed. Ako je false, etapa je samo dekorativna
+  // (medaljon se i dalje claim-uje kao nagrada, ali ne blokira napredak).
+  isGating: boolean("is_gating").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export type Medaljon = typeof medaljoniTable.$inferSelect;
+
+// === ETAPA POLAGANJA — pokušaji studenta na završnom ispitu etape ============
+// Svaki pokušaj se loguje (audit + UI prikaz historije). `polozeno=true` znači
+// da je dosegnut prag prolaza; tek to otključava sljedeće lekcije.
+export const etapaPolaganjaTable = pgTable("etapa_polaganja", {
+  id: serial("id").primaryKey(),
+  studentId: varchar("student_id", { length: 100 }).notNull(),
+  medaljonId: integer("medaljon_id").notNull(),
+  brojTacnih: integer("broj_tacnih").notNull().default(0),
+  brojPitanja: integer("broj_pitanja").notNull().default(0),
+  procenat: integer("procenat").notNull().default(0),
+  polozeno: boolean("polozeno").notNull().default(false),
+  pokusajBr: integer("pokusaj_br").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  studentMedaljonIdx: uniqueIndex("etapa_polaganja_student_med_pokusaj_idx").on(t.studentId, t.medaljonId, t.pokusajBr),
+}));
+
+export type EtapaPolaganje = typeof etapaPolaganjaTable.$inferSelect;
+
+// === KRUNISANJA — završetak nivoa ============================================
+// Jedan red po nivou (UNIQUE nivo). Drži meta krunisanja i konfiguraciju
+// završnog kviza nivoa (isti pattern kao etapa).
+export const krunisanjaTable = pgTable("krunisanja", {
+  id: serial("id").primaryKey(),
+  nivo: integer("nivo").notNull().unique(),
+  naslov: text("naslov").notNull().default(""),
+  opisHtml: text("opis_html").notNull().default(""),
+  ikona: varchar("ikona", { length: 32 }).notNull().default("crown"),
+  boja: varchar("boja", { length: 16 }).notNull().default("amber"),
+  kvizPitanjaIds: jsonb("kviz_pitanja_ids").$type<number[]>().notNull().default([]),
+  pragProlazaPercent: integer("prag_prolaza_percent").notNull().default(70),
+  // Ako je true, nivo N+1 je zaključan dok krunisanje N nije položeno.
+  isGating: boolean("is_gating").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type Krunisanje = typeof krunisanjaTable.$inferSelect;
+
+// === KRUNSKE LEKCIJE — proizvoljne dodatne lekcije unutar krunisanja ========
+// Admin pravi 0..N dodatnih lekcija (npr. "Ponavljanje svih sura") koje
+// učenik prolazi prije završnog ispita krunisanja.
+export const krunisanjeLekcijeTable = pgTable("krunisanje_lekcije", {
+  id: serial("id").primaryKey(),
+  krunisanjeId: integer("krunisanje_id").notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  naslov: text("naslov").notNull(),
+  contentHtml: text("content_html").notNull().default(""),
+  redoslijed: integer("redoslijed").notNull().default(0),
+  isPublished: boolean("is_published").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KrunisanjeLekcija = typeof krunisanjeLekcijeTable.$inferSelect;
+
+// === STUDENT KRUNISANJA — passage tracking ===================================
+export const studentKrunisanjaTable = pgTable("student_krunisanja", {
+  id: serial("id").primaryKey(),
+  studentId: varchar("student_id", { length: 100 }).notNull(),
+  krunisanjeId: integer("krunisanje_id").notNull(),
+  brojTacnih: integer("broj_tacnih").notNull().default(0),
+  brojPitanja: integer("broj_pitanja").notNull().default(0),
+  procenat: integer("procenat").notNull().default(0),
+  polozenoAt: timestamp("polozeno_at").defaultNow().notNull(),
+}, (t) => ({
+  uniq: uniqueIndex("student_krunisanja_unique_idx").on(t.studentId, t.krunisanjeId),
+}));
+
+export type StudentKrunisanje = typeof studentKrunisanjaTable.$inferSelect;
 
 // Bilježi koje je medaljone učenik osvojio i kada (jedan medaljon po učeniku
 // jednom). Koristi se za: prikaz zlatnog medaljona na mapi, vidljivost u

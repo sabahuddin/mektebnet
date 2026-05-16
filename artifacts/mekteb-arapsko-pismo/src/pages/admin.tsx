@@ -2142,6 +2142,9 @@ export default function AdminPage() {
               <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
                 <BookOpen className="w-4 h-4" /> Slike bez lekcije
               </button>
+              <button onClick={() => setLocation("/admin/etape")} data-testid="button-admin-etape" className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-semibold hover:bg-emerald-100 transition text-sm">
+                <Award className="w-4 h-4" /> Etape i krunisanja
+              </button>
             </div>
             <SistemAlati token={token!} />
             <IgraPitanjaEditor token={token!} />

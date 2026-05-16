@@ -8,6 +8,8 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, lte, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { polozeneEtapeNivoa } from "./etape.js";
+import { polozenaKrunisanja } from "./krunisanja.js";
 
 const router = Router();
 
@@ -46,6 +48,8 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
 
     let zavrsene: number[] = [];
     let osvojeniMedaljoni: number[] = [];
+    let polozeneEtape: number[] = [];
+    let polozenaKrunisanjaIds: number[] = [];
 
     // Provjeri JWT iz Authorization headera (opcionalno — ne baca 401 ako nema).
     const authHeader = req.headers.authorization;
@@ -68,12 +72,26 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
           .from(studentMedaljoniTable)
           .where(eq(studentMedaljoniTable.studentId, userIdStr));
         osvojeniMedaljoni = earnedRows.map((r) => r.medaljonId);
+
+        const [etapeSet, krunSet] = await Promise.all([
+          polozeneEtapeNivoa(userIdStr, nivo),
+          polozenaKrunisanja(userIdStr),
+        ]);
+        polozeneEtape = Array.from(etapeSet);
+        polozenaKrunisanjaIds = Array.from(krunSet);
       } catch {
         // Nevažeći token — tretiraj kao neulogovan, vrati samo katalog.
       }
     }
 
-    res.json({ lekcije, medaljoni, zavrsene, osvojeniMedaljoni });
+    res.json({
+      lekcije,
+      medaljoni,
+      zavrsene,
+      osvojeniMedaljoni,
+      polozeneEtape,
+      polozenaKrunisanja: polozenaKrunisanjaIds,
+    });
   } catch (err) {
     console.error("[mapa/nivo] error", err);
     res.status(500).json({ error: "Greška pri učitavanju mape" });
@@ -114,15 +132,15 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
       .limit(1);
     const zavrsene = new Set((progressRow?.completedLessons as number[] | undefined) ?? []);
 
-    // Sve Nivo 1 lekcije sa redoslijed <= posAfterRedoslijed moraju biti u
-    // zavrsene. Tako "Putnik" (pos=10) traži tačno tih 10 lekcija, ne bilo
-    // kojih 10.
+    // Sve lekcije ovog nivoa sa redoslijed <= posAfterRedoslijed moraju biti
+    // u `zavrsene`. Koristimo `medaljon.nivo` (ne hard-coded 1) tako da gating
+    // ispravno radi za Nivo 2 i 3.
     const potrebne = await db
       .select({ id: ilmihalLekcijeTable.id })
       .from(ilmihalLekcijeTable)
       .where(
         and(
-          eq(ilmihalLekcijeTable.nivo, 1),
+          eq(ilmihalLekcijeTable.nivo, medaljon.nivo),
           lte(ilmihalLekcijeTable.redoslijed, medaljon.posAfterRedoslijed),
         ),
       );

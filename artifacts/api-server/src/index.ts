@@ -337,7 +337,79 @@ async function runResidualSchema() {
       `);
     }
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up) ready");
+    // === Task #126 — Etape i krunisanje nivoa ==================================
+    // Proširenja medaljona (završni ispit etape) + nove tabele za polaganja,
+    // krunisanja, krunske lekcije i student passage. Vidi schema/lessons.ts.
+    await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS kviz_pitanja_ids jsonb NOT NULL DEFAULT '[]'::jsonb;`);
+    await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS prag_prolaza_percent integer NOT NULL DEFAULT 70;`);
+    await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS is_gating boolean NOT NULL DEFAULT true;`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS etapa_polaganja (
+        id serial PRIMARY KEY,
+        student_id varchar(100) NOT NULL,
+        medaljon_id integer NOT NULL,
+        broj_tacnih integer NOT NULL DEFAULT 0,
+        broj_pitanja integer NOT NULL DEFAULT 0,
+        procenat integer NOT NULL DEFAULT 0,
+        polozeno boolean NOT NULL DEFAULT false,
+        pokusaj_br integer NOT NULL DEFAULT 1,
+        created_at timestamp NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS etapa_polaganja_student_med_pokusaj_idx ON etapa_polaganja (student_id, medaljon_id, pokusaj_br);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS etapa_polaganja_student_polozeno_idx ON etapa_polaganja (student_id, medaljon_id, polozeno);`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS krunisanja (
+        id serial PRIMARY KEY,
+        nivo integer NOT NULL UNIQUE,
+        naslov text NOT NULL DEFAULT '',
+        opis_html text NOT NULL DEFAULT '',
+        ikona varchar(32) NOT NULL DEFAULT 'crown',
+        boja varchar(16) NOT NULL DEFAULT 'amber',
+        kviz_pitanja_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
+        prag_prolaza_percent integer NOT NULL DEFAULT 70,
+        is_gating boolean NOT NULL DEFAULT true,
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS krunisanje_lekcije (
+        id serial PRIMARY KEY,
+        krunisanje_id integer NOT NULL,
+        slug varchar(100) NOT NULL UNIQUE,
+        naslov text NOT NULL,
+        content_html text NOT NULL DEFAULT '',
+        redoslijed integer NOT NULL DEFAULT 0,
+        is_published boolean NOT NULL DEFAULT true,
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS krunisanje_lekcije_krunisanje_idx ON krunisanje_lekcije (krunisanje_id, redoslijed);`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS student_krunisanja (
+        id serial PRIMARY KEY,
+        student_id varchar(100) NOT NULL,
+        krunisanje_id integer NOT NULL,
+        broj_tacnih integer NOT NULL DEFAULT 0,
+        broj_pitanja integer NOT NULL DEFAULT 0,
+        procenat integer NOT NULL DEFAULT 0,
+        polozeno_at timestamp NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS student_krunisanja_unique_idx ON student_krunisanja (student_id, krunisanje_id);`);
+    // Seed: po jedan red krunisanja za nivoe 1, 2, 3 ako ne postoje. Admin
+    // ih kasnije popunjava (naslov, opis, pitanja). Bez seeda admin UI mora
+    // raditi UPSERT što komplikuje frontend.
+    await db.execute(sql`
+      INSERT INTO krunisanja (nivo, naslov, opis_html)
+      VALUES
+        (1, 'Krunisanje Male košnice', ''),
+        (2, 'Krunisanje Zlatne košnice', ''),
+        (3, 'Krunisanje Košnice mudrosti', '')
+      ON CONFLICT (nivo) DO NOTHING;
+    `);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

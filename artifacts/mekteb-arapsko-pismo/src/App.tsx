@@ -56,6 +56,9 @@ import AdminOrphanUploadsPage from "./pages/admin-orphan-uploads";
 import AdminBankaPitanjaPage from "./pages/admin-banka-pitanja";
 import AdminKvizEditorPage from "./pages/admin-kviz-editor";
 import AdminCitaonicaPage from "./pages/admin-citaonica";
+import AdminEtapePage from "./pages/admin-etape";
+import KrunisanjeNivoPage from "./pages/krunisanje";
+import KrunisanjeLekcijaPage from "./pages/krunisanje-lekcija";
 
 // Učenik profil
 import UcenikProfilPage from "./pages/ucenik-profil";
@@ -118,6 +121,8 @@ function Router() {
       {/* Back-compat: stari /nivo2 link sada vodi direktno u Zlatnu košnicu. */}
       <Route path="/nivo2" component={() => <Nivo1MapaPage nivo={2} />} />
       <Route path="/medaljon/:slug" component={MedaljonDetailPage} />
+      <Route path="/krunisanje/lekcija/:slug" component={KrunisanjeLekcijaPage} />
+      <Route path="/krunisanje/:nivo" component={KrunisanjeNivoPage} />
       <Route path="/ilmihal/:slug" component={IlmihalLekcijaPage} />
 
       {/* Kvizovi */}
@@ -161,6 +166,7 @@ function Router() {
       <Route path="/admin/kviz/:id" component={AdminKvizEditorPage} />
       <Route path="/admin/kviz-novi" component={AdminKvizEditorPage} />
       <Route path="/admin/citaonica" component={AdminCitaonicaPage} />
+      <Route path="/admin/etape" component={AdminEtapePage} />
       <Route path="/admin" component={AdminPage} />
 
       {/* Muallim panel */}

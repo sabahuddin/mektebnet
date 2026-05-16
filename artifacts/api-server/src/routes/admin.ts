@@ -40,6 +40,11 @@ import {
   knjige,
   kategorijeKnjigeTable,
   kvizKategorijeTable,
+  medaljoniTable,
+  krunisanjaTable,
+  krunisanjeLekcijeTable,
+  etapaPolaganjaTable,
+  studentKrunisanjaTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
@@ -3122,5 +3127,192 @@ router.post("/system/seed-medena-pitanja", async (_req, res) => {
     res.status(500).json({ error: "Greška pri seed-u pitanja", detail: e?.message ?? String(err) });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task #126 — Etape (medaljon kviz konfiguracija) + Krunisanja (CRUD)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/etape/nivo/:n — lista svih medaljona/etapa za jedan nivo
+// sa pridruženim brojem pitanja i brojem polaganja (audit).
+router.get("/etape/nivo/:n", async (req, res) => {
+  try {
+    const nivo = Number(req.params.n);
+    if (!Number.isInteger(nivo) || nivo < 1 || nivo > 3) {
+      return res.status(400).json({ error: "Nivo mora biti 1, 2 ili 3" });
+    }
+    const etape = await db
+      .select()
+      .from(medaljoniTable)
+      .where(eq(medaljoniTable.nivo, nivo))
+      .orderBy(asc(medaljoniTable.posAfterRedoslijed));
+    res.json({ etape });
+  } catch (err) {
+    console.error("[admin/etape/nivo] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// PUT /api/admin/etape/:medaljonId — ažuriraj konfiguraciju kviza za etapu
+// Body: { kvizPitanjaIds?: number[], pragProlazaPercent?: number, isGating?: boolean,
+//         naziv?: string, opis?: string, contentHtml?: string }
+router.put("/etape/:medaljonId", async (req, res) => {
+  try {
+    const id = Number(req.params.medaljonId);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const patch: Partial<typeof medaljoniTable.$inferInsert> = {};
+    if (Array.isArray(req.body?.kvizPitanjaIds)) {
+      patch.kvizPitanjaIds = req.body.kvizPitanjaIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n));
+    }
+    if (typeof req.body?.pragProlazaPercent === "number") {
+      patch.pragProlazaPercent = Math.max(0, Math.min(100, Math.round(req.body.pragProlazaPercent)));
+    }
+    if (typeof req.body?.isGating === "boolean") patch.isGating = req.body.isGating;
+    if (typeof req.body?.naziv === "string") patch.naziv = req.body.naziv;
+    if (typeof req.body?.opis === "string") patch.opis = req.body.opis;
+    if (typeof req.body?.contentHtml === "string") patch.contentHtml = req.body.contentHtml;
+    if (Object.keys(patch).length === 0) return res.status(400).json({ error: "Nema polja za update" });
+    const [updated] = await db
+      .update(medaljoniTable)
+      .set(patch)
+      .where(eq(medaljoniTable.id, id))
+      .returning();
+    res.json({ ok: true, etapa: updated });
+  } catch (err) {
+    console.error("[admin/etape/put] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// GET /api/admin/krunisanja/nivo/:n — vrati krunisanje + krunske lekcije za nivo
+router.get("/krunisanja/nivo/:n", async (req, res) => {
+  try {
+    const nivo = Number(req.params.n);
+    if (!Number.isInteger(nivo) || nivo < 1 || nivo > 3) {
+      return res.status(400).json({ error: "Nivo mora biti 1, 2 ili 3" });
+    }
+    const [krunisanje] = await db
+      .select()
+      .from(krunisanjaTable)
+      .where(eq(krunisanjaTable.nivo, nivo))
+      .limit(1);
+    if (!krunisanje) return res.status(404).json({ error: "Krunisanje ne postoji (seed-uje se na restartu)" });
+    const lekcije = await db
+      .select()
+      .from(krunisanjeLekcijeTable)
+      .where(eq(krunisanjeLekcijeTable.krunisanjeId, krunisanje.id))
+      .orderBy(asc(krunisanjeLekcijeTable.redoslijed));
+    res.json({ krunisanje, lekcije });
+  } catch (err) {
+    console.error("[admin/krunisanja/nivo] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// PUT /api/admin/krunisanja/:id — update konfiguracije krunisanja
+router.put("/krunisanja/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const patch: Partial<typeof krunisanjaTable.$inferInsert> = {};
+    if (typeof req.body?.naslov === "string") patch.naslov = req.body.naslov;
+    if (typeof req.body?.opisHtml === "string") patch.opisHtml = req.body.opisHtml;
+    if (typeof req.body?.ikona === "string") patch.ikona = req.body.ikona;
+    if (typeof req.body?.boja === "string") patch.boja = req.body.boja;
+    if (Array.isArray(req.body?.kvizPitanjaIds)) {
+      patch.kvizPitanjaIds = req.body.kvizPitanjaIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n));
+    }
+    if (typeof req.body?.pragProlazaPercent === "number") {
+      patch.pragProlazaPercent = Math.max(0, Math.min(100, Math.round(req.body.pragProlazaPercent)));
+    }
+    if (typeof req.body?.isGating === "boolean") patch.isGating = req.body.isGating;
+    if (Object.keys(patch).length === 0) return res.status(400).json({ error: "Nema polja za update" });
+    const [updated] = await db
+      .update(krunisanjaTable)
+      .set(patch)
+      .where(eq(krunisanjaTable.id, id))
+      .returning();
+    res.json({ ok: true, krunisanje: updated });
+  } catch (err) {
+    console.error("[admin/krunisanja/put] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// POST /api/admin/krunisanja/:id/lekcije — kreiraj krunsku lekciju
+router.post("/krunisanja/:id/lekcije", async (req, res) => {
+  try {
+    const krunisanjeId = Number(req.params.id);
+    const naslov: string = String(req.body?.naslov || "").trim();
+    if (!naslov) return res.status(400).json({ error: "Naslov je obavezan" });
+    const slug: string =
+      String(req.body?.slug || "").trim() ||
+      `krunisanje-${krunisanjeId}-${naslov
+        .toLowerCase()
+        .replace(/[čć]/g, "c")
+        .replace(/[š]/g, "s")
+        .replace(/[ž]/g, "z")
+        .replace(/[đ]/g, "d")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60)}-${Date.now().toString().slice(-6)}`;
+    const redoslijed = Number(req.body?.redoslijed ?? 100);
+    const [lekcija] = await db
+      .insert(krunisanjeLekcijeTable)
+      .values({
+        krunisanjeId,
+        slug,
+        naslov,
+        contentHtml: String(req.body?.contentHtml ?? ""),
+        redoslijed,
+        isPublished: req.body?.isPublished !== false,
+      })
+      .returning();
+    res.json({ ok: true, lekcija });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[admin/krunisanja/lekcije/post] error", err);
+    res.status(500).json({ error: msg.includes("unique") ? "Slug već postoji" : "Greška pri kreiranju" });
+  }
+});
+
+// PUT /api/admin/krunisanja/lekcije/:lekcijaId
+router.put("/krunisanja/lekcije/:lekcijaId", async (req, res) => {
+  try {
+    const id = Number(req.params.lekcijaId);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const patch: Partial<typeof krunisanjeLekcijeTable.$inferInsert> = {};
+    if (typeof req.body?.naslov === "string") patch.naslov = req.body.naslov;
+    if (typeof req.body?.contentHtml === "string") patch.contentHtml = req.body.contentHtml;
+    if (typeof req.body?.redoslijed === "number") patch.redoslijed = req.body.redoslijed;
+    if (typeof req.body?.isPublished === "boolean") patch.isPublished = req.body.isPublished;
+    if (Object.keys(patch).length === 0) return res.status(400).json({ error: "Nema polja za update" });
+    const [updated] = await db
+      .update(krunisanjeLekcijeTable)
+      .set(patch)
+      .where(eq(krunisanjeLekcijeTable.id, id))
+      .returning();
+    res.json({ ok: true, lekcija: updated });
+  } catch (err) {
+    console.error("[admin/krunisanja/lekcije/put] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// DELETE /api/admin/krunisanja/lekcije/:lekcijaId
+router.delete("/krunisanja/lekcije/:lekcijaId", async (req, res) => {
+  try {
+    const id = Number(req.params.lekcijaId);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    await db.delete(krunisanjeLekcijeTable).where(eq(krunisanjeLekcijeTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[admin/krunisanja/lekcije/delete] error", err);
+    res.status(500).json({ error: "Greška" });
+  }
+});
+
+// Suppressors za nove tabele importovane ali korištene samo u join statistici (kasnije)
+void etapaPolaganjaTable;
+void studentKrunisanjaTable;
 
 export default router;
