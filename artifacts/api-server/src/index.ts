@@ -429,6 +429,10 @@ async function runResidualSchema() {
         (3, 'm3-7-kralj',      'Kralj Košnice mudrosti','70 lekcija Nivoa 3 — kralj Košnice mudrosti!',  70, 'medal', 'violet')
       ON CONFLICT (slug) DO NOTHING;
     `);
+    // Tematska boja po nivou: Nivo 1 = bronzana, Nivo 2 = srebrena, Nivo 3 = zlatna.
+    await db.execute(sql`UPDATE medaljoni SET boja='bronze' WHERE nivo=1 AND boja <> 'bronze';`);
+    await db.execute(sql`UPDATE medaljoni SET boja='silver' WHERE nivo=2 AND boja <> 'silver';`);
+    await db.execute(sql`UPDATE medaljoni SET boja='gold' WHERE nivo=3 AND boja <> 'gold';`);
 
     logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje) ready");
   } catch (e) {

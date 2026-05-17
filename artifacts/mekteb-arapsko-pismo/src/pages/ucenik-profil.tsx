@@ -61,6 +61,10 @@ const MEDALJON_GRADIENT: Record<string, string> = {
   amber:   "from-amber-300 to-amber-600",
   orange:  "from-orange-300 to-orange-600",
   yellow:  "from-yellow-300 to-yellow-500",
+  violet:  "from-violet-300 to-violet-600",
+  bronze:  "from-amber-600 to-amber-900",
+  silver:  "from-slate-300 to-slate-500",
+  gold:    "from-yellow-400 to-amber-600",
 };
 
 function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: number }) {
@@ -253,6 +257,8 @@ export default function UcenikProfilPage() {
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [mapa, setMapa] = useState<Nivo1MapaData | null>(null);
+  const [mapaN2, setMapaN2] = useState<Nivo1MapaData | null>(null);
+  const [mapaN3, setMapaN3] = useState<Nivo1MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "postavke">("moj-put");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
@@ -290,6 +296,12 @@ export default function UcenikProfilPage() {
       apiRequest<Nivo1MapaData>("GET", "/mapa/nivo1", undefined, token)
         .then(setMapa)
         .catch(() => setMapa(null));
+      apiRequest<Nivo1MapaData>("GET", "/mapa/nivo/2", undefined, token)
+        .then(setMapaN2)
+        .catch(() => setMapaN2(null));
+      apiRequest<Nivo1MapaData>("GET", "/mapa/nivo/3", undefined, token)
+        .then(setMapaN3)
+        .catch(() => setMapaN3(null));
     }
   }, [user, token]);
 
@@ -453,14 +465,14 @@ export default function UcenikProfilPage() {
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg" aria-hidden>🍯</span>
-                        <span className="text-sm font-extrabold uppercase tracking-wider">Kapljice meda</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider">Kapi meda</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={totalHasanat} />
                       </div>
                       <div className="text-sm font-bold mt-1 opacity-80">ukupno sakupljeno</div>
                       <div className="text-xs mt-2 opacity-75">
-                        Za svaku završenu lekciju i kviz zaradiš nove kapljice meda 🍯
+                        Za svaku završenu lekciju i kviz zaradiš nove kapi meda 🍯
                       </div>
                     </div>
                   </motion.div>
@@ -593,37 +605,42 @@ export default function UcenikProfilPage() {
                   })}
                 </motion.div>
 
-                {/* Medaljoni Nivoa 1 — pet specijalnih bedževa sa puta kroz Nivo 1.
-                    Zaključani su sivi, otključani (završene lekcije ali ne osvojeni) imaju
-                    pulse, a osvojeni sjaje. Klik vodi na medaljon detail stranicu. */}
-                {mapa && mapa.medaljoni.length > 0 && (() => {
-                  const earnedCount = mapa.osvojeniMedaljoni.length;
-                  const totalCount = mapa.medaljoni.length;
-                  const zavrseneSet = new Set(mapa.zavrsene);
+                {/* Medaljoni — sekcija po nivou (1=bronzani, 2=srebreni, 3=zlatni).
+                    Zaključani su sivi, otključani imaju pulse, a osvojeni sjaje. */}
+                {([
+                  { nivo: 1, m: mapa,   theme: "from-amber-100 via-amber-50 to-orange-50 border-amber-300",  h: "text-amber-900", icon: "text-amber-700", link: "/nivo1-mapa", earnedText: "text-amber-900", unlockedText: "text-amber-800", hint: "text-amber-800/70" },
+                  { nivo: 2, m: mapaN2, theme: "from-slate-100 via-slate-50 to-zinc-50 border-slate-300",    h: "text-slate-800", icon: "text-slate-500", link: "/nivo2-mapa", earnedText: "text-slate-800", unlockedText: "text-slate-700", hint: "text-slate-700/70" },
+                  { nivo: 3, m: mapaN3, theme: "from-yellow-100 via-amber-50 to-yellow-50 border-yellow-400", h: "text-amber-900", icon: "text-yellow-600", link: "/nivo3-mapa", earnedText: "text-amber-900", unlockedText: "text-amber-800", hint: "text-amber-800/70" },
+                ] as const).map((cfg, idx) => {
+                  if (!cfg.m || cfg.m.medaljoni.length === 0) return null;
+                  const earnedCount = cfg.m.osvojeniMedaljoni.length;
+                  const totalCount = cfg.m.medaljoni.length;
+                  const zavrseneSet = new Set(cfg.m.zavrsene);
                   return (
                     <motion.div
+                      key={cfg.nivo}
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.48 }}
-                      className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 border-2 border-amber-200 rounded-2xl p-5 mb-6"
+                      transition={{ delay: 0.48 + idx * 0.04 }}
+                      className={`bg-gradient-to-br ${cfg.theme} border-2 rounded-2xl p-5 mb-6`}
+                      data-testid={`card-medaljoni-nivo-${cfg.nivo}`}
                     >
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-extrabold text-amber-900 flex items-center gap-2">
-                          <Medal className="w-5 h-5 text-amber-600" />
-                          Medaljoni Nivoa 1 ({earnedCount}/{totalCount})
+                        <h3 className={`font-extrabold flex items-center gap-2 ${cfg.h}`}>
+                          <Medal className={`w-5 h-5 ${cfg.icon}`} />
+                          Medaljoni Nivoa {cfg.nivo} ({earnedCount}/{totalCount})
                         </h3>
                         <Link
-                          href="/nivo1-mapa"
-                          className="text-xs font-bold text-amber-700 hover:underline"
+                          href={cfg.link}
+                          className={`text-xs font-bold hover:underline ${cfg.h}`}
                         >
                           Otvori mapu →
                         </Link>
                       </div>
-                      <div className="grid grid-cols-5 gap-2 sm:gap-3">
-                        {mapa.medaljoni.map((m) => {
-                          const earned = mapa.osvojeniMedaljoni.includes(m.id);
+                      <div className={`grid gap-2 sm:gap-3 ${cfg.m.medaljoni.length <= 5 ? "grid-cols-5" : "grid-cols-7"}`}>
+                        {cfg.m.medaljoni.map((m) => {
+                          const earned = cfg.m!.osvojeniMedaljoni.includes(m.id);
                           const unlocked = zavrseneSet.size >= m.posAfterRedoslijed;
-                          const grad = MEDALJON_GRADIENT[m.boja] ?? MEDALJON_GRADIENT.amber;
                           return (
                             <Link
                               key={m.id}
@@ -647,19 +664,19 @@ export default function UcenikProfilPage() {
                                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                                 />
                               </div>
-                              <div className={`text-[10px] text-center font-bold mt-1 truncate ${earned ? "text-amber-800" : unlocked ? "text-amber-700" : "text-muted-foreground"}`}>
+                              <div className={`text-[10px] text-center font-bold mt-1 truncate ${earned ? cfg.earnedText : unlocked ? cfg.unlockedText : "text-muted-foreground"}`}>
                                 {m.naziv}
                               </div>
                             </Link>
                           );
                         })}
                       </div>
-                      <p className="text-[11px] text-amber-800/70 mt-3 italic">
+                      <p className={`text-[11px] mt-3 italic ${cfg.hint}`}>
                         Završi lekcije da otključaš, klikni medaljon da osvojiš svoj bedž!
                       </p>
                     </motion.div>
                   );
-                })()}
+                })}
 
                 {/* Etape i krunisanja — položene s datumima (Task #126) */}
                 {((profil.napredak?.polozeneEtape?.length ?? 0) > 0
@@ -838,7 +855,7 @@ export default function UcenikProfilPage() {
                       <div className="bg-white border border-amber-200 rounded-2xl p-4 text-center">
                         <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
                         <div className="text-3xl font-extrabold text-amber-600">{profil.napredak.totalHasanat}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? "kapljica meda" : "kapljice meda"}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? "kap meda" : "kapi meda"}</div>
                       </div>
                       <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-center">
                         <BookOpen className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
