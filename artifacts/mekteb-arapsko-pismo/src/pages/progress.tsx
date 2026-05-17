@@ -213,8 +213,13 @@ export default function Progress() {
               key={badge.id}
             >
               <Card className={`p-6 flex flex-col items-center text-center h-full transition-all ${isEarned ? 'bg-white border-primary/30 shadow-md shadow-primary/5' : 'bg-muted/50 border-dashed opacity-60 grayscale'}`}>
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${isEarned ? `bg-gradient-to-br ${badge.bojaGradient} shadow-md` : 'bg-gray-200'}`}>
-                  <span className={`text-4xl ${isEarned ? 'drop-shadow-sm' : ''}`}>{badge.ikona}</span>
+                <div className="w-20 h-20 flex items-center justify-center mb-4">
+                  <img
+                    src={`${import.meta.env.BASE_URL}bedzevi/${badge.id}.png`}
+                    alt={badge.naziv}
+                    className={`w-full h-full object-contain ${isEarned ? 'drop-shadow-md' : ''}`}
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
                 </div>
                 <h3 className={`font-bold leading-tight mb-2 ${isEarned ? 'text-foreground' : 'text-muted-foreground'}`}>{badge.naziv}</h3>
                 <p className="text-xs text-muted-foreground mt-auto">{badge.opis}</p>

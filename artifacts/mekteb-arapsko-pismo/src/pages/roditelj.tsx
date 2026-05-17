@@ -310,8 +310,13 @@ function DijeteContent({
                         onClick={() => setSelectedBadge(b)}
                         className="group relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
                       >
-                        <div className={`aspect-square rounded-lg flex items-center justify-center shadow-sm transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-110 cursor-pointer` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300 cursor-pointer"}`}>
-                          <span className={`text-base ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
+                        <div className={`aspect-square rounded-lg flex items-center justify-center transition-all ${b.earned ? "hover:scale-110 cursor-pointer" : "grayscale opacity-50 cursor-pointer"}`}>
+                          <img
+                            src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png`}
+                            alt={b.naziv}
+                            className="w-full h-full object-contain"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
                         </div>
                       </button>
                     </TooltipTrigger>
@@ -332,8 +337,13 @@ function DijeteContent({
                 <>
                   <DialogHeader>
                     <div className="flex flex-col items-center gap-3">
-                      <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ${selectedBadge.earned ? `bg-gradient-to-br ${selectedBadge.bojaGradient}` : "bg-gray-200 grayscale opacity-60"}`}>
-                        <span className={`text-4xl ${selectedBadge.earned ? "filter drop-shadow-sm" : ""}`}>{selectedBadge.ikona}</span>
+                      <div className={`w-24 h-24 flex items-center justify-center ${selectedBadge.earned ? "" : "grayscale opacity-60"}`}>
+                        <img
+                          src={`${import.meta.env.BASE_URL}bedzevi/${selectedBadge.id}.png`}
+                          alt={selectedBadge.naziv}
+                          className="w-full h-full object-contain"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
                       </div>
                       <DialogTitle className="text-center text-lg font-extrabold">{selectedBadge.naziv}</DialogTitle>
                     </div>

@@ -761,8 +761,13 @@ export default function UcenikProfilPage() {
                             className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
                             data-testid={`badge-moj-put-${b.id}`}
                           >
-                            <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-pointer` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300 cursor-pointer"}`}>
-                              <span className={`text-2xl ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
+                            <div className={`aspect-square rounded-2xl flex items-center justify-center transition-all ${b.earned ? "hover:scale-105 cursor-pointer" : "grayscale opacity-50 cursor-pointer"}`}>
+                              <img
+                                src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png`}
+                                alt={b.naziv}
+                                className="w-full h-full object-contain"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
                             </div>
                             <div className={`text-[10px] text-center font-bold mt-1 truncate ${b.earned ? "text-foreground/70" : "text-muted-foreground"}`}>{b.naziv}</div>
                           </button>
@@ -880,8 +885,13 @@ export default function UcenikProfilPage() {
                                 className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
                                 data-testid={`badge-pregled-${b.id}`}
                               >
-                                <div className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${b.earned ? `bg-gradient-to-br ${b.bojaGradient} hover:scale-105 cursor-pointer` : "bg-gray-200 grayscale opacity-50 border border-dashed border-gray-300 cursor-pointer"}`}>
-                                  <span className={`text-2xl ${b.earned ? "filter drop-shadow-sm" : ""}`}>{b.ikona}</span>
+                                <div className={`aspect-square rounded-2xl flex items-center justify-center transition-all ${b.earned ? "hover:scale-105 cursor-pointer" : "grayscale opacity-50 cursor-pointer"}`}>
+                                  <img
+                                    src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png`}
+                                    alt={b.naziv}
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                  />
                                 </div>
                                 <div className={`text-[10px] text-center font-bold mt-1 truncate ${b.earned ? "text-foreground/70" : "text-muted-foreground"}`}>{b.naziv}</div>
                               </button>
@@ -1289,8 +1299,13 @@ export default function UcenikProfilPage() {
               <>
                 <DialogHeader>
                   <div className="flex flex-col items-center gap-3">
-                    <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ${selectedBadge.earned ? `bg-gradient-to-br ${selectedBadge.bojaGradient}` : "bg-gray-200 grayscale opacity-60 border border-dashed border-gray-300"}`}>
-                      <span className={`text-4xl ${selectedBadge.earned ? "filter drop-shadow-sm" : ""}`}>{selectedBadge.ikona}</span>
+                    <div className={`w-24 h-24 flex items-center justify-center ${selectedBadge.earned ? "" : "grayscale opacity-60"}`}>
+                      <img
+                        src={`${import.meta.env.BASE_URL}bedzevi/${selectedBadge.id}.png`}
+                        alt={selectedBadge.naziv}
+                        className="w-full h-full object-contain"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                      />
                     </div>
                     <DialogTitle className="text-center text-lg font-extrabold" data-testid="badge-detail-title">
                       {selectedBadge.naziv}
