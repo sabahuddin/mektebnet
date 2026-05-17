@@ -429,6 +429,37 @@ async function runResidualSchema() {
         (3, 'm3-7-kralj',      'Kralj Košnice mudrosti','70 lekcija Nivoa 3 — kralj Košnice mudrosti!',  70, 'medal', 'violet')
       ON CONFLICT (slug) DO NOTHING;
     `);
+    // Nivo 1 — 6 novih m1-* medaljona (pos 10..60) sa PNG ikonama.
+    // Prod baza ima stare slugove (prvi-koraci, putnik, polovina-puta, ustrajni,
+    // prva-kosnica) koji nemaju PNG ikone — čistimo ih i ubacujemo nove.
+    await db.execute(sql`
+      INSERT INTO medaljoni (nivo, slug, naziv, opis, pos_after_redoslijed, ikona, boja)
+      VALUES
+        (1, 'm1-pocetnik',   'Pčelica početnik',    '10 lekcija Nivoa 1 — prvi let pčelice.',         10, 'medal', 'bronze'),
+        (1, 'm2-radilica',   'Marljiva pčela',      '20 lekcija Nivoa 1 — marljivo sakupljaš znanje.', 20, 'medal', 'bronze'),
+        (1, 'm3-istrazivac', 'Istraživač cvijeća',  '30 lekcija Nivoa 1 — istražuješ cvjetna polja.',  30, 'medal', 'bronze'),
+        (1, 'm4-cuvar',      'Čuvar košnice',       '40 lekcija Nivoa 1 — čuvaš košnicu znanja.',      40, 'medal', 'bronze'),
+        (1, 'm5-mudrac',     'Mudra pčela',         '50 lekcija Nivoa 1 — mudrost te vodi naprijed.',  50, 'medal', 'bronze'),
+        (1, 'm6-majstor',    'Majstor meda',        '60 lekcija Nivoa 1 — majstor zlatnog meda.',      60, 'medal', 'bronze')
+      ON CONFLICT (slug) DO NOTHING;
+    `);
+    // Očisti stare Nivo 1 medaljone (bez PNG ikona). Najprije ukloni FK reference.
+    await db.execute(sql`
+      DELETE FROM student_medaljoni WHERE medaljon_id IN (
+        SELECT id FROM medaljoni WHERE nivo=1 AND slug NOT IN
+          ('m1-pocetnik','m2-radilica','m3-istrazivac','m4-cuvar','m5-mudrac','m6-majstor')
+      );
+    `);
+    await db.execute(sql`
+      DELETE FROM etapa_polaganja WHERE medaljon_id IN (
+        SELECT id FROM medaljoni WHERE nivo=1 AND slug NOT IN
+          ('m1-pocetnik','m2-radilica','m3-istrazivac','m4-cuvar','m5-mudrac','m6-majstor')
+      );
+    `);
+    await db.execute(sql`
+      DELETE FROM medaljoni WHERE nivo=1 AND slug NOT IN
+        ('m1-pocetnik','m2-radilica','m3-istrazivac','m4-cuvar','m5-mudrac','m6-majstor');
+    `);
     // Tematska boja po nivou: Nivo 1 = bronzana, Nivo 2 = srebrena, Nivo 3 = zlatna.
     await db.execute(sql`UPDATE medaljoni SET boja='bronze' WHERE nivo=1 AND boja <> 'bronze';`);
     await db.execute(sql`UPDATE medaljoni SET boja='silver' WHERE nivo=2 AND boja <> 'silver';`);
