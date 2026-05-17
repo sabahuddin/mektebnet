@@ -248,7 +248,7 @@ export default function MedaljonDetailPage() {
             }`}
           >
             <img
-              src={`${import.meta.env.BASE_URL}medaljoni/nivo${medaljon.nivo}-${medaljon.posAfterRedoslijed}-lekcija.png?v=3`}
+              src={`${import.meta.env.BASE_URL}medaljoni/nivo${medaljon.nivo}-${medaljon.posAfterRedoslijed}-lekcija.png?v=4`}
               alt={medaljon.naziv}
               className="w-24 h-24 object-contain drop-shadow-lg"
               onError={(e) => {
