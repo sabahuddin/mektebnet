@@ -408,6 +408,27 @@ async function runResidualSchema() {
         (3, 'Krunisanje Košnice mudrosti', '')
       ON CONFLICT (nivo) DO NOTHING;
     `);
+    // Medaljoni za nivo 2 i 3 — 7 etapa po nivou (pos 10..70), bojama uparenim
+    // s temom košnice. PNG ikone su već u public/medaljoni/nivo{2,3}-{10..70}-lekcija.png.
+    await db.execute(sql`
+      INSERT INTO medaljoni (nivo, slug, naziv, opis, pos_after_redoslijed, ikona, boja)
+      VALUES
+        (2, 'm2-1-sakupljac',  'Sakupljač nektara',     '10 lekcija Nivoa 2 — sakupljaš nektar znanja.', 10, 'medal', 'amber'),
+        (2, 'm2-2-graditelj',  'Graditelj saća',        '20 lekcija Nivoa 2 — gradiš saće mudrosti.',    20, 'medal', 'orange'),
+        (2, 'm2-3-putnik',     'Cvjetni putnik',        '30 lekcija Nivoa 2 — putuješ kroz cvjetna polja znanja.', 30, 'medal', 'yellow'),
+        (2, 'm2-4-strazar',    'Stražar košnice',       '40 lekcija Nivoa 2 — stražariš nad zlatnom košnicom.', 40, 'medal', 'amber'),
+        (2, 'm2-5-majstor',    'Majstor zlatnog meda',  '50 lekcija Nivoa 2 — pravi majstor zlatnog meda.', 50, 'medal', 'orange'),
+        (2, 'm2-6-radilica',   'Vrijedna radilica',     '60 lekcija Nivoa 2 — vrijedna pčela radilica.', 60, 'medal', 'yellow'),
+        (2, 'm2-7-kraljica',   'Kraljica Zlatne košnice','70 lekcija Nivoa 2 — kraljica Zlatne košnice!', 70, 'medal', 'amber'),
+        (3, 'm3-1-istrazivac', 'Mudri istraživač',      '10 lekcija Nivoa 3 — istražuješ mudrost.',      10, 'medal', 'violet'),
+        (3, 'm3-2-ucitelj',    'Učitelj mladih',        '20 lekcija Nivoa 3 — učiš druge.',              20, 'medal', 'orange'),
+        (3, 'm3-3-pjesnik',    'Pjesnik košnice',       '30 lekcija Nivoa 3 — pjesnik zlatnih saća.',    30, 'medal', 'yellow'),
+        (3, 'm3-4-astronom',   'Astronom polja',        '40 lekcija Nivoa 3 — poznaješ zvijezde i polja.', 40, 'medal', 'violet'),
+        (3, 'm3-5-hafiz',      'Hafiz nektara',         '50 lekcija Nivoa 3 — pamtiš sve riznice znanja.', 50, 'medal', 'orange'),
+        (3, 'm3-6-mudrac',     'Mudrac saća',           '60 lekcija Nivoa 3 — mudrac među pčelama.',     60, 'medal', 'yellow'),
+        (3, 'm3-7-kralj',      'Kralj Košnice mudrosti','70 lekcija Nivoa 3 — kralj Košnice mudrosti!',  70, 'medal', 'violet')
+      ON CONFLICT (slug) DO NOTHING;
+    `);
 
     logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje) ready");
   } catch (e) {
