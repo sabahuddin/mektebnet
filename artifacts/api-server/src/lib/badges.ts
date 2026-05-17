@@ -66,7 +66,7 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
   },
   lekcije_100: {
     id: "lekcije_100",
-    naziv: "Mali huffaz",
+    naziv: "Mali hafiz",
     opis: "Završio si 100 lekcija",
     ikona: "🏆",
     bojaGradient: "from-yellow-400 to-orange-500",
