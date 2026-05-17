@@ -641,7 +641,7 @@ export default function UcenikProfilPage() {
                                 }`}
                               >
                                 <img
-                                  src={`${import.meta.env.BASE_URL}medaljoni/nivo${m.nivo}-${m.posAfterRedoslijed}-lekcija.png`}
+                                  src={`${import.meta.env.BASE_URL}medaljoni/nivo${m.nivo}-${m.posAfterRedoslijed}-lekcija.png?v=2`}
                                   alt={m.naziv}
                                   className="w-full h-full object-contain"
                                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -763,7 +763,7 @@ export default function UcenikProfilPage() {
                           >
                             <div className={`aspect-square rounded-2xl flex items-center justify-center transition-all ${b.earned ? "hover:scale-105 cursor-pointer" : "grayscale opacity-50 cursor-pointer"}`}>
                               <img
-                                src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png`}
+                                src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png?v=2`}
                                 alt={b.naziv}
                                 className="w-full h-full object-contain"
                                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -887,7 +887,7 @@ export default function UcenikProfilPage() {
                               >
                                 <div className={`aspect-square rounded-2xl flex items-center justify-center transition-all ${b.earned ? "hover:scale-105 cursor-pointer" : "grayscale opacity-50 cursor-pointer"}`}>
                                   <img
-                                    src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png`}
+                                    src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png?v=2`}
                                     alt={b.naziv}
                                     className="w-full h-full object-contain"
                                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -1301,7 +1301,7 @@ export default function UcenikProfilPage() {
                   <div className="flex flex-col items-center gap-3">
                     <div className={`w-24 h-24 flex items-center justify-center ${selectedBadge.earned ? "" : "grayscale opacity-60"}`}>
                       <img
-                        src={`${import.meta.env.BASE_URL}bedzevi/${selectedBadge.id}.png`}
+                        src={`${import.meta.env.BASE_URL}bedzevi/${selectedBadge.id}.png?v=2`}
                         alt={selectedBadge.naziv}
                         className="w-full h-full object-contain"
                         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}

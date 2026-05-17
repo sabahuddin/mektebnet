@@ -215,7 +215,7 @@ export default function Progress() {
               <Card className={`p-6 flex flex-col items-center text-center h-full transition-all ${isEarned ? 'bg-white border-primary/30 shadow-md shadow-primary/5' : 'bg-muted/50 border-dashed opacity-60 grayscale'}`}>
                 <div className="w-20 h-20 flex items-center justify-center mb-4">
                   <img
-                    src={`${import.meta.env.BASE_URL}bedzevi/${badge.id}.png`}
+                    src={`${import.meta.env.BASE_URL}bedzevi/${badge.id}.png?v=2`}
                     alt={badge.naziv}
                     className={`w-full h-full object-contain ${isEarned ? 'drop-shadow-md' : ''}`}
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
