@@ -102,7 +102,7 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
   // === AFERIMI / MED (hasanati) ===
   hasanati_100: {
     id: "hasanati_100",
-    naziv: "100 aferima",
+    naziv: "100 kapljica meda",
     opis: "Sakupio si 100 kapljica meda",
     ikona: "🍯",
     bojaGradient: "from-amber-300 to-yellow-400",
