@@ -1,6 +1,12 @@
 // Katalog bedževa za učenike. Auto-dodjela na osnovu napretka.
 // Bedževi se čuvaju u student_progress.badges kao array { id, earnedAt }.
 // Evaluacija je idempotentna — može se zvati pri svakom updateu napretka.
+//
+// NAPOMENA O NAZIVIMA: nazivi/opisi su usklađeni sa korisničkim prijedlogom
+// (pčelarska tematika — košnice, saće, pčele). ID-jevi ostaju isti zbog
+// historijskih podataka u student_progress.badges. Pragovi se nisu mijenjali
+// osim novih dodatih nivoa (hasanati 100/250/2000/5000, kvizovi 5/25/50,
+// bez_greske i sjajni_odgovori za 100% rezultate).
 
 import { db } from "@workspace/db";
 import {
@@ -23,17 +29,20 @@ export interface BadgeMeta {
 }
 
 export const BADGE_CATALOG: Record<string, BadgeMeta> = {
+  // === PRVI KORACI ===
   prvi_korak: {
     id: "prvi_korak",
-    naziv: "Prvi koraci",
+    naziv: "Prva kap meda",
     opis: "Završio si svoju prvu lekciju",
-    ikona: "🌱",
+    ikona: "🍯",
     bojaGradient: "from-emerald-400 to-teal-500",
     uslov: "1 lekcija",
   },
+
+  // === LEKCIJE (Ilmihal) ===
   lekcije_10: {
     id: "lekcije_10",
-    naziv: "Marljivi učenik",
+    naziv: "Prvačić",
     opis: "Završio si 10 lekcija",
     ikona: "📚",
     bojaGradient: "from-blue-400 to-indigo-500",
@@ -41,7 +50,7 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
   },
   lekcije_30: {
     id: "lekcije_30",
-    naziv: "Vrijedni hafiz znanja",
+    naziv: "Marljivi učenik",
     opis: "Završio si 30 lekcija",
     ikona: "📖",
     bojaGradient: "from-indigo-400 to-purple-500",
@@ -49,7 +58,7 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
   },
   lekcije_50: {
     id: "lekcije_50",
-    naziv: "Posvećenik znanja",
+    naziv: "Putnik znanja",
     opis: "Završio si 50 lekcija",
     ikona: "🎓",
     bojaGradient: "from-purple-400 to-violet-600",
@@ -63,6 +72,8 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
     bojaGradient: "from-yellow-400 to-orange-500",
     uslov: "100 lekcija",
   },
+
+  // === STREAK (učenje uzastopno) ===
   streak_3: {
     id: "streak_3",
     naziv: "Postojanost",
@@ -87,9 +98,27 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
     bojaGradient: "from-cyan-400 to-blue-600",
     uslov: "30 dana zaredom",
   },
+
+  // === AFERIMI / MED (hasanati) ===
+  hasanati_100: {
+    id: "hasanati_100",
+    naziv: "100 aferima",
+    opis: "Sakupio si 100 kapljica meda",
+    ikona: "🍯",
+    bojaGradient: "from-amber-300 to-yellow-400",
+    uslov: "100 kapljica meda",
+  },
+  hasanati_250: {
+    id: "hasanati_250",
+    naziv: "Mala košnica",
+    opis: "Sakupio si 250 kapljica meda",
+    ikona: "🐝",
+    bojaGradient: "from-amber-400 to-yellow-500",
+    uslov: "250 kapljica meda",
+  },
   hasanati_500: {
     id: "hasanati_500",
-    naziv: "500 kapljica meda",
+    naziv: "Pola košnice",
     opis: "Sakupio si 500 kapljica meda",
     ikona: "🍯",
     bojaGradient: "from-amber-400 to-yellow-600",
@@ -97,57 +126,121 @@ export const BADGE_CATALOG: Record<string, BadgeMeta> = {
   },
   hasanati_1000: {
     id: "hasanati_1000",
-    naziv: "1000 kapljica meda",
+    naziv: "Puna košnica",
     opis: "Sakupio si 1000 kapljica meda",
     ikona: "🍯",
     bojaGradient: "from-yellow-500 to-amber-700",
     uslov: "1000 kapljica meda",
   },
+  hasanati_2000: {
+    id: "hasanati_2000",
+    naziv: "Saće na vidiku",
+    opis: "Sakupio si 2000 kapljica meda",
+    ikona: "🟨",
+    bojaGradient: "from-amber-500 to-orange-600",
+    uslov: "2000 kapljica meda",
+  },
+  hasanati_5000: {
+    id: "hasanati_5000",
+    naziv: "Zlatno saće",
+    opis: "Sakupio si 5000 kapljica meda",
+    ikona: "🏵️",
+    bojaGradient: "from-yellow-400 to-amber-600",
+    uslov: "5000 kapljica meda",
+  },
+
+  // === KVIZOVI (broj riješenih) ===
   prvi_kviz: {
     id: "prvi_kviz",
-    naziv: "Prvi kviz",
+    naziv: "Prvi kviz riješen",
     opis: "Riješio si svoj prvi kviz",
     ikona: "🧠",
     bojaGradient: "from-sky-400 to-cyan-500",
     uslov: "1 kviz",
   },
+  kvizovi_5: {
+    id: "kvizovi_5",
+    naziv: "Pet kvizova iza mene",
+    opis: "Riješio si 5 kvizova",
+    ikona: "🎯",
+    bojaGradient: "from-cyan-400 to-sky-500",
+    uslov: "5 kvizova",
+  },
   kvizovi_10: {
     id: "kvizovi_10",
-    naziv: "10 kvizova",
+    naziv: "10 kvizova iza mene",
     opis: "Riješio si 10 kvizova",
     ikona: "🎯",
     bojaGradient: "from-fuchsia-400 to-pink-500",
     uslov: "10 kvizova",
   },
-  kviz_majstor: {
-    id: "kviz_majstor",
+  kvizovi_25: {
+    id: "kvizovi_25",
+    naziv: "Kviz znalac",
+    opis: "Riješio si 25 kvizova",
+    ikona: "🧩",
+    bojaGradient: "from-pink-500 to-rose-600",
+    uslov: "25 kvizova",
+  },
+  kvizovi_50: {
+    id: "kvizovi_50",
     naziv: "Kviz majstor",
-    opis: "10 kvizova sa rezultatom 80% ili više",
+    opis: "Riješio si 50 kvizova",
     ikona: "🥇",
     bojaGradient: "from-amber-500 to-orange-600",
+    uslov: "50 kvizova",
+  },
+
+  // === KVIZOVI (kvalitet rezultata) ===
+  // Historijski "kviz_majstor" — 10 kvizova ≥ 80%. Preimenovan u "Sjajni rezultati"
+  // (sheet koristi "Kviz majstor" za 50 riješenih kvizova, novi `kvizovi_50`).
+  kviz_majstor: {
+    id: "kviz_majstor",
+    naziv: "Sjajni rezultati",
+    opis: "10 kvizova sa rezultatom 80% ili više",
+    ikona: "🌟",
+    bojaGradient: "from-amber-500 to-yellow-600",
     uslov: "10 kvizova ≥ 80%",
   },
+  bez_greske: {
+    id: "bez_greske",
+    naziv: "Bez greške",
+    opis: "Riješio si kviz sa 100% tačnih odgovora",
+    ikona: "✨",
+    bojaGradient: "from-emerald-400 to-green-600",
+    uslov: "1 kviz sa 100%",
+  },
+  sjajni_odgovori: {
+    id: "sjajni_odgovori",
+    naziv: "Sjajni odgovori",
+    opis: "5 kvizova sa 100% tačnih odgovora",
+    ikona: "💫",
+    bojaGradient: "from-teal-400 to-emerald-600",
+    uslov: "5 kvizova sa 100%",
+  },
+
+  // === NIVOI ILMIHALA (pčelarska metafora) ===
   nivo_1_complete: {
     id: "nivo_1_complete",
-    naziv: "Svršeni početnik",
+    naziv: "Pčela radilica",
     opis: "Završio si sve lekcije nivoa 1",
-    ikona: "🥉",
+    ikona: "🐝",
     bojaGradient: "from-emerald-500 to-green-700",
     uslov: "Sve lekcije nivoa 1",
   },
   nivo_2_complete: {
     id: "nivo_2_complete",
-    naziv: "Napredni učenik",
+    naziv: "Vlasnik košnice",
     opis: "Završio si sve lekcije nivoa 2",
-    ikona: "🥈",
+    ikona: "🍯",
     bojaGradient: "from-blue-500 to-indigo-700",
     uslov: "Sve lekcije nivoa 2",
   },
   nivo_3_complete: {
     id: "nivo_3_complete",
-    naziv: "Hafiz ilmihala",
+    naziv: "Matica",
     opis: "Završio si sve lekcije nivoa 3",
-    ikona: "🥇",
+    ikona: "👑",
     bojaGradient: "from-violet-500 to-purple-700",
     uslov: "Sve lekcije nivoa 3",
   },
@@ -165,6 +258,7 @@ export interface ProgressSnapshot {
   completedByNivo: Record<number, { gotov: number; ukupno: number }>;
   quizCount: number;
   quizPassedCount: number; // procenat >= 80
+  quizPerfectCount: number; // procenat == 100
 }
 
 /**
@@ -194,12 +288,21 @@ export function computeBadgeProgress(snap: ProgressSnapshot): Record<string, Bad
   out.streak_7 = { current: Math.min(snap.streakDays, 7), target: 7 };
   out.streak_30 = { current: Math.min(snap.streakDays, 30), target: 30 };
 
+  out.hasanati_100 = { current: Math.min(snap.totalHasanat, 100), target: 100 };
+  out.hasanati_250 = { current: Math.min(snap.totalHasanat, 250), target: 250 };
   out.hasanati_500 = { current: Math.min(snap.totalHasanat, 500), target: 500 };
   out.hasanati_1000 = { current: Math.min(snap.totalHasanat, 1000), target: 1000 };
+  out.hasanati_2000 = { current: Math.min(snap.totalHasanat, 2000), target: 2000 };
+  out.hasanati_5000 = { current: Math.min(snap.totalHasanat, 5000), target: 5000 };
 
   out.prvi_kviz = { current: Math.min(snap.quizCount, 1), target: 1 };
+  out.kvizovi_5 = { current: Math.min(snap.quizCount, 5), target: 5 };
   out.kvizovi_10 = { current: Math.min(snap.quizCount, 10), target: 10 };
+  out.kvizovi_25 = { current: Math.min(snap.quizCount, 25), target: 25 };
+  out.kvizovi_50 = { current: Math.min(snap.quizCount, 50), target: 50 };
   out.kviz_majstor = { current: Math.min(snap.quizPassedCount, 10), target: 10 };
+  out.bez_greske = { current: Math.min(snap.quizPerfectCount, 1), target: 1 };
+  out.sjajni_odgovori = { current: Math.min(snap.quizPerfectCount, 5), target: 5 };
 
   for (const nivo of [1, 2, 3]) {
     const n = snap.completedByNivo[nivo];
@@ -224,12 +327,21 @@ export function computeEarnedBadgeIds(snap: ProgressSnapshot): string[] {
   if (snap.streakDays >= 7) ids.push("streak_7");
   if (snap.streakDays >= 30) ids.push("streak_30");
 
+  if (snap.totalHasanat >= 100) ids.push("hasanati_100");
+  if (snap.totalHasanat >= 250) ids.push("hasanati_250");
   if (snap.totalHasanat >= 500) ids.push("hasanati_500");
   if (snap.totalHasanat >= 1000) ids.push("hasanati_1000");
+  if (snap.totalHasanat >= 2000) ids.push("hasanati_2000");
+  if (snap.totalHasanat >= 5000) ids.push("hasanati_5000");
 
   if (snap.quizCount >= 1) ids.push("prvi_kviz");
+  if (snap.quizCount >= 5) ids.push("kvizovi_5");
   if (snap.quizCount >= 10) ids.push("kvizovi_10");
+  if (snap.quizCount >= 25) ids.push("kvizovi_25");
+  if (snap.quizCount >= 50) ids.push("kvizovi_50");
   if (snap.quizPassedCount >= 10) ids.push("kviz_majstor");
+  if (snap.quizPerfectCount >= 1) ids.push("bez_greske");
+  if (snap.quizPerfectCount >= 5) ids.push("sjajni_odgovori");
 
   for (const nivo of [1, 2, 3]) {
     const n = snap.completedByNivo[nivo];
@@ -296,6 +408,7 @@ export async function buildProgressSnapshot(userId: number, overrides?: { totalH
     .where(eq(kvizRezultatiTable.userId, userId));
   const quizCount = quizRows.length;
   const quizPassedCount = quizRows.filter(r => (r.procenat || 0) >= 80).length;
+  const quizPerfectCount = quizRows.filter(r => (r.procenat || 0) >= 100).length;
 
   return {
     totalHasanat,
@@ -304,6 +417,7 @@ export async function buildProgressSnapshot(userId: number, overrides?: { totalH
     completedByNivo,
     quizCount,
     quizPassedCount,
+    quizPerfectCount,
   };
 }
 
