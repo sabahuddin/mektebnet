@@ -41,6 +41,7 @@ interface IlmihalLekcija {
 
 interface MapaMedaljon {
   id: number;
+  nivo: number;
   slug: string;
   naziv: string;
   opis: string;
@@ -631,21 +632,20 @@ export default function UcenikProfilPage() {
                               data-testid={`medaljon-profil-${m.slug}`}
                             >
                               <div
-                                className={`aspect-square rounded-2xl flex items-center justify-center shadow-md transition-all ${
+                                className={`aspect-square rounded-2xl flex items-center justify-center transition-all ${
                                   earned
-                                    ? `bg-gradient-to-br ${grad} ring-4 ring-amber-200 hover:scale-105`
+                                    ? "hover:scale-105"
                                     : unlocked
-                                      ? `bg-gradient-to-br ${grad} opacity-90 animate-pulse hover:scale-105`
-                                      : "bg-gray-200 grayscale opacity-60 border border-dashed border-gray-300"
+                                      ? "animate-pulse hover:scale-105"
+                                      : "grayscale opacity-50"
                                 }`}
                               >
-                                {earned ? (
-                                  <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" strokeWidth={2.5} />
-                                ) : unlocked ? (
-                                  <Medal className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" strokeWidth={2.5} />
-                                ) : (
-                                  <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" strokeWidth={2} />
-                                )}
+                                <img
+                                  src={`${import.meta.env.BASE_URL}medaljoni/nivo${m.nivo}-${m.posAfterRedoslijed}-lekcija.png`}
+                                  alt={m.naziv}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                />
                               </div>
                               <div className={`text-[10px] text-center font-bold mt-1 truncate ${earned ? "text-amber-800" : unlocked ? "text-amber-700" : "text-muted-foreground"}`}>
                                 {m.naziv}

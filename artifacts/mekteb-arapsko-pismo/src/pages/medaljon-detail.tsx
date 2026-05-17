@@ -247,9 +247,16 @@ export default function MedaljonDetailPage() {
               !lekcijeUnlocked ? "opacity-50 grayscale" : ""
             }`}
           >
-            {!lekcijeUnlocked ? <Lock className="w-14 h-14 text-white/80" /> :
-              earned || justEarned ? <Sparkles className="w-14 h-14 text-white drop-shadow-lg" /> :
-              <Medal className="w-14 h-14 text-white drop-shadow-lg" />}
+            <img
+              src={`${import.meta.env.BASE_URL}medaljoni/nivo${medaljon.nivo}-${medaljon.posAfterRedoslijed}-lekcija.png`}
+              alt={medaljon.naziv}
+              className="w-24 h-24 object-contain drop-shadow-lg"
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                img.style.display = 'none';
+              }}
+            />
+            {!lekcijeUnlocked && <Lock className="absolute w-10 h-10 text-white/90" />}
           </motion.div>
           <h2 className={`mt-4 text-2xl font-extrabold ${boje.text}`} data-testid="text-medaljon-naziv">{medaljon.naziv}</h2>
           <p className="mt-2 text-sm text-amber-800/80 px-2">{medaljon.opis}</p>
