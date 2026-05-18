@@ -405,8 +405,13 @@ async function runResidualSchema() {
       VALUES
         (1, 'Krunisanje Male košnice', ''),
         (2, 'Krunisanje Zlatne košnice', ''),
-        (3, 'Krunisanje Košnice mudrosti', '')
+        (3, 'Hatma košnica', '')
       ON CONFLICT (nivo) DO NOTHING;
+    `);
+    // Preimenuj stari naziv ako postoji u prod bazi (idempotentno).
+    await db.execute(sql`
+      UPDATE krunisanja SET naslov='Hatma košnica'
+       WHERE nivo=3 AND naslov IN ('Krunisanje Košnice mudrosti','Krunisanje Hatma košnice');
     `);
     // Medaljoni za nivo 2 i 3 — 7 etapa po nivou (pos 10..70), bojama uparenim
     // s temom košnice. PNG ikone su već u public/medaljoni/nivo{2,3}-{10..70}-lekcija.png.
