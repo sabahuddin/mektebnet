@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import h5pBundleUrl from "h5p-standalone/dist/main.bundle.js?url";
 
@@ -212,7 +212,7 @@ function classifyInitError(e: any): H5PErrorKind {
  * trivijalno krivotvoriti). Backend (POST /api/h5p/result) je jedini izvor istine
  * za hasanate i primjenjuje multiplier po pokušaju.
  */
-export function H5PPlayer({
+function H5PPlayerImpl({
   h5pPath,
   contentKey,
   onCompleted,
@@ -355,3 +355,19 @@ export function H5PPlayer({
     </div>
   );
 }
+
+/**
+ * memo + custom equality: ignoriramo `onCompleted` jer ga roditelji uvijek
+ * proslijeđuju kao novu inline arrow funkciju (npr. `(r) => handle(a.id, r)`).
+ * Bez ovoga, svaki parent re-render (npr. heartbeat tick svake sekunde) bi
+ * unmountovao i remountovao player → konstantno blinkanje "Učitavam vježbu...".
+ * onCompleted se interno čuva u ref-u pa najsvježija verzija je uvijek dostupna.
+ */
+export const H5PPlayer = memo(H5PPlayerImpl, (prev, next) => {
+  return (
+    prev.h5pPath === next.h5pPath &&
+    prev.contentKey === next.contentKey &&
+    prev.isManager === next.isManager &&
+    prev.className === next.className
+  );
+});
