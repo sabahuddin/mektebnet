@@ -223,6 +223,13 @@ export function H5PPlayer({
   const [errorInfo, setErrorInfo] = useState<H5PErrorInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const completedFiredRef = useRef(false);
+  // Drži najsvježiji onCompleted u ref-u da ga ne uvlačimo u deps useEffect-a.
+  // Inače, ako roditelj proslijedi inline arrow funkciju (npr. (r) => handle(a.id, r)),
+  // svaki render bi okidao re-mount playera → blinkanje vježbe.
+  const onCompletedRef = useRef(onCompleted);
+  useEffect(() => {
+    onCompletedRef.current = onCompleted;
+  }, [onCompleted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -280,7 +287,7 @@ export function H5PPlayer({
               if (maxScore <= 0) return;
               if (completedFiredRef.current) return;
               completedFiredRef.current = true;
-              onCompleted?.({ score, maxScore });
+              onCompletedRef.current?.({ score, maxScore });
             } catch (e) {
               console.warn("[H5PPlayer] xAPI handler greška:", e);
             }
@@ -312,7 +319,7 @@ export function H5PPlayer({
         containerRef.current.innerHTML = "";
       }
     };
-  }, [h5pPath, contentKey, onCompleted]);
+  }, [h5pPath, contentKey]);
 
   const managerHint = errorInfo && isManager ? describeManagerHint(errorInfo.kind) : null;
 
