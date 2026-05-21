@@ -817,6 +817,108 @@ interface FormProps {
   onRemoveOpcija: (i: number) => void;
 }
 
+interface LekcijaPickerProps {
+  lekcije: IlmihalLekcija[];
+  value: number | null;
+  onChange: (id: number | null) => void;
+}
+
+// Pretraživi picker lekcija — bolji od <select> sa 300+ stavki.
+// Pretražuje po naslovu, slugu i nivou ("N1", "N2", "N3").
+function LekcijaPicker({ lekcije, value, onChange }: LekcijaPickerProps) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = useMemo(
+    () => (value ? lekcije.find(l => l.id === value) ?? null : null),
+    [lekcije, value]
+  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = [...lekcije].sort((a, b) => a.nivo - b.nivo || a.naslov.localeCompare(b.naslov, "bs"));
+    if (!q) return base.slice(0, 100);
+    return base
+      .filter(l => {
+        const hay = `n${l.nivo} ${l.naslov} ${l.slug}`.toLowerCase();
+        return q.split(/\s+/).every(part => hay.includes(part));
+      })
+      .slice(0, 100);
+  }, [lekcije, query]);
+
+  return (
+    <div className="relative">
+      {selected && !open ? (
+        <div className="flex items-center gap-2 w-full px-3 py-2 border border-border rounded-xl bg-white">
+          <span className="flex-1 text-base truncate">
+            <span className="inline-block px-1.5 py-0.5 mr-2 text-xs font-bold bg-amber-100 text-amber-800 rounded">N{selected.nivo}</span>
+            {selected.naslov}
+          </span>
+          <button
+            type="button"
+            onClick={() => { setQuery(""); setOpen(true); }}
+            className="text-sm text-amber-700 hover:text-amber-900 font-semibold whitespace-nowrap"
+          >
+            Promijeni
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-muted-foreground hover:text-foreground"
+            title="Ukloni vezu sa lekcijom"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="search"
+              autoFocus={open}
+              value={query}
+              onChange={e => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => setOpen(true)}
+              placeholder="Pretraži lekcije (naziv, N1/N2/N3)…"
+              className="w-full pl-9 pr-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          {open && (
+            <div className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-border rounded-xl shadow-lg">
+              <button
+                type="button"
+                onClick={() => { onChange(null); setOpen(false); setQuery(""); }}
+                className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-amber-50 border-b border-border"
+              >
+                — nijedna —
+              </button>
+              {filtered.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground text-center">Nema rezultata za "{query}"</div>
+              ) : (
+                filtered.map(l => (
+                  <button
+                    type="button"
+                    key={l.id}
+                    onClick={() => { onChange(l.id); setOpen(false); setQuery(""); }}
+                    className={`w-full text-left px-3 py-2 text-base hover:bg-amber-50 flex items-center gap-2 ${value === l.id ? "bg-amber-100" : ""}`}
+                  >
+                    <span className="inline-block px-1.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 rounded shrink-0">N{l.nivo}</span>
+                    <span className="truncate">{l.naslov}</span>
+                  </button>
+                ))
+              )}
+              {filtered.length === 100 && (
+                <div className="px-3 py-2 text-xs text-muted-foreground text-center border-t border-border">
+                  Prikazano prvih 100 — suzi pretragu za ostalo.
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving, onSave, onCancel, onOpcijaChange, onAddOpcija, onRemoveOpcija }: FormProps) {
   return (
     <div className="bg-white border-2 border-amber-200 rounded-2xl p-5 mb-6 shadow-sm">
@@ -1033,14 +1135,11 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
           </div>
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">Lekcija (opciono)</label>
-            <select
-              value={form.lekcijaId}
-              onChange={e => setForm(prev => ({ ...prev, lekcijaId: e.target.value }))}
-              className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-            >
-              <option value="">— nijedna —</option>
-              {lekcije.map(l => <option key={l.id} value={l.id}>N{l.nivo} · {l.naslov}</option>)}
-            </select>
+            <LekcijaPicker
+              lekcije={lekcije}
+              value={form.lekcijaId === "" ? null : Number(form.lekcijaId)}
+              onChange={id => setForm(prev => ({ ...prev, lekcijaId: id === null ? "" : id }))}
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">Težina</label>
