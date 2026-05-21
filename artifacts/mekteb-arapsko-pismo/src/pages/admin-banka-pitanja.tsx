@@ -202,7 +202,12 @@ export default function AdminBankaPitanjaPage() {
     editParamHandledRef.current = true;
     window.history.replaceState({}, "", "/admin/banka-pitanja");
     apiRequest<PitanjeBanka>("GET", `/admin/banka-pitanja/${editIdNum}`, undefined, token)
-      .then((p) => startEdit(p))
+      .then((p) => {
+        // Inline editor se renderuje SAMO unutar rows.map(). Ako pitanje nije
+        // na trenutnoj stranici, dodaj ga na vrh liste da editor postane vidljiv.
+        setRows(prev => prev.some(r => r.id === p.id) ? prev : [p, ...prev]);
+        startEdit(p);
+      })
       .catch(() => {
         toast({ title: "Greška", description: `Pitanje #${editIdNum} nije pronađeno`, variant: "destructive" });
       });
