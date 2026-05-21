@@ -117,7 +117,7 @@ const slugify = (s: string) => s.toLowerCase()
   .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
 
 export default function AdminKvizEditorPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [matchEdit, paramsEdit] = useRoute<{ id: string }>("/admin/kviz/:id");
   const { toast } = useToast();
@@ -142,8 +142,9 @@ export default function AdminKvizEditorPage() {
   const [moveTarget, setMoveTarget] = useState<KvizPitanjeRow | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user || user.role !== "admin") { setLocation("/"); return; }
-  }, [user, setLocation]);
+  }, [authLoading, user, setLocation]);
 
   useEffect(() => {
     if (!token) return;
