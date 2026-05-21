@@ -131,6 +131,11 @@ export default function AdminBankaPitanjaPage() {
   const [saving, setSaving] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ pitanje: PitanjeBanka; usage: UsageInfo | null } | null>(null);
+  // Pitanje otvoreno preko ?edit=N — drži ga zakucanim na vrhu liste čak i kad
+  // loadList overwrite-uje `rows` (paginacija/filter/initial fetch). Bez ovoga
+  // inline editor (renderuje se SAMO iz rows.map()) bi nestao kad loadList
+  // završi poslije ?edit fetch-a.
+  const [pinnedEditRow, setPinnedEditRow] = useState<PitanjeBanka | null>(null);
 
   // Dinamičke kategorije iz baze (admin može dodavati/brisati).
   const [kategorije, setKategorije] = useState<KvizKategorijaApi[]>([]);
@@ -203,9 +208,9 @@ export default function AdminBankaPitanjaPage() {
     window.history.replaceState({}, "", `${import.meta.env.BASE_URL}admin/banka-pitanja`);
     apiRequest<PitanjeBanka>("GET", `/admin/banka-pitanja/${editIdNum}`, undefined, token)
       .then((p) => {
-        // Inline editor se renderuje SAMO unutar rows.map(). Ako pitanje nije
-        // na trenutnoj stranici, dodaj ga na vrh liste da editor postane vidljiv.
-        setRows(prev => prev.some(r => r.id === p.id) ? prev : [p, ...prev]);
+        // Zakucaj pitanje na vrh liste (preživi sve buduće loadList pozive,
+        // za razliku od prepend-a u rows koji bi loadList overwrite-ovao).
+        setPinnedEditRow(p);
         startEdit(p);
       })
       .catch(() => {
@@ -236,6 +241,7 @@ export default function AdminBankaPitanjaPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const startNew = () => {
+    setPinnedEditRow(null);
     setEditId(null);
     setForm(emptyForm());
     setShowForm(true);
@@ -283,7 +289,7 @@ export default function AdminBankaPitanjaPage() {
     setShowForm(true);
   };
 
-  const cancelForm = () => { setShowForm(false); setEditId(null); };
+  const cancelForm = () => { setShowForm(false); setEditId(null); setPinnedEditRow(null); };
 
   const handleOpcijaChange = (i: number, val: string) => {
     setForm(prev => {
@@ -409,6 +415,7 @@ export default function AdminBankaPitanjaPage() {
       }
       setShowForm(false);
       setEditId(null);
+      setPinnedEditRow(null);
       void loadList();
     } catch (err: any) {
       toast({ title: "Greška", description: err?.message || "Nije moguće sačuvati", variant: "destructive" });
@@ -532,7 +539,7 @@ export default function AdminBankaPitanjaPage() {
         ) : (
           <>
             <div className="space-y-2">
-              {rows.map(p => {
+              {(pinnedEditRow && !rows.some(r => r.id === pinnedEditRow.id) ? [pinnedEditRow, ...rows] : rows).map(p => {
                 const lek = p.lekcijaId ? lekcijeMap.get(p.lekcijaId) : null;
                 const isEditingThis = showForm && editId === p.id;
                 return (
