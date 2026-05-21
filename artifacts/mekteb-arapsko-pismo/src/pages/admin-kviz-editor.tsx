@@ -6,7 +6,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Save, Loader2, Plus, Trash2, X, Search, ChevronUp, ChevronDown,
-  ArrowRightLeft, BookOpenCheck, ClipboardList, Database
+  ArrowRightLeft, BookOpenCheck, ClipboardList, Database, Pencil
 } from "lucide-react";
 
 // Admin editor jednog kviza. Pravi novi kviz (kad nema id-a) ili uređuje
@@ -420,6 +420,15 @@ export default function AdminKvizEditorPage() {
                       <PitanjeAnswerPreview p={p} />
                     </div>
                     <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <a
+                        href={`/admin/banka-pitanja?edit=${p.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-lg hover:bg-amber-50 text-muted-foreground hover:text-amber-700"
+                        title="Uredi u banci pitanja (otvara u novom tabu — izmjena utiče na sve kvizove koji koriste ovo pitanje)"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </a>
                       <button onClick={() => setMoveTarget(p)} className="p-2 rounded-lg hover:bg-blue-50 text-muted-foreground hover:text-blue-600" title="Premjesti u drugi kviz">
                         <ArrowRightLeft className="w-4 h-4" />
                       </button>

@@ -929,8 +929,9 @@ export default function KvizPage() {
             <ArrowLeft className="w-4 h-4" /> Nazad
           </button>
           {user?.role === "admin" && (
-            <button onClick={() => setShowEdit(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+            <button onClick={() => setLocation(`/admin/kviz/${kviz.id}`)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+              title="Otvori novi editor kviza">
               <Pencil className="w-3.5 h-3.5" /> Uredi kviz
             </button>
           )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
@@ -175,6 +175,33 @@ export default function AdminBankaPitanjaPage() {
     apiRequest<IlmihalLekcija[]>("GET", "/content/ilmihal", undefined, token)
       .then(setLekcije)
       .catch(() => {});
+  }, [token]);
+
+  // Deep-link: ?edit=<id> → auto-otvori edit formu za to pitanje.
+  // Koristi se iz /admin/kviz/:id "Uredi u banci" prečice. Pitanje se fetch-uje
+  // pojedinačno (možda nije na trenutnoj stranici liste). URL se čisti odmah
+  // (prije fetcha) da reload ne pokrene ponovni auto-open ni na grešci.
+  // useRef guard je StrictMode-safe (state se resetuje na remount, ref ne).
+  const editParamHandledRef = useRef(false);
+  useEffect(() => {
+    if (!token || editParamHandledRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const editIdStr = params.get("edit");
+    if (!editIdStr) { editParamHandledRef.current = true; return; }
+    // Striktna validacija: samo cijeli pozitivni broj (odbij "12abc", "1.5", "-1").
+    if (!/^\d+$/.test(editIdStr)) {
+      editParamHandledRef.current = true;
+      window.history.replaceState({}, "", "/admin/banka-pitanja");
+      return;
+    }
+    const editIdNum = parseInt(editIdStr, 10);
+    editParamHandledRef.current = true;
+    window.history.replaceState({}, "", "/admin/banka-pitanja");
+    apiRequest<PitanjeBanka>("GET", `/admin/banka-pitanja/${editIdNum}`, undefined, token)
+      .then((p) => startEdit(p))
+      .catch(() => {
+        toast({ title: "Greška", description: `Pitanje #${editIdNum} nije pronađeno`, variant: "destructive" });
+      });
   }, [token]);
 
   const loadList = async () => {
