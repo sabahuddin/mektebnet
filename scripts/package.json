@@ -7,7 +7,8 @@
     "./seed-demo": "./src/seed-demo.ts",
     "./clear-demo": "./src/clear-demo.ts",
     "./seed-medena-pitanja": "./src/seed-medena-pitanja.ts",
-    "./migrate-pitanja-u-banku": "./src/migrate-pitanja-u-banku.ts"
+    "./migrate-pitanja-u-banku": "./src/migrate-pitanja-u-banku.ts",
+    "./sync-kvizovi-jsonb-u-banku": "./src/sync-kvizovi-jsonb-u-banku.ts"
   },
   "scripts": {
     "hello": "tsx ./src/hello.ts",

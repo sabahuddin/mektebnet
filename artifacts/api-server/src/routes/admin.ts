@@ -3390,4 +3390,20 @@ router.delete("/krunisanja/lekcije/:lekcijaId", async (req, res) => {
 void etapaPolaganjaTable;
 void studentKrunisanjaTable;
 
+// POST /api/admin/sync-kvizovi-jsonb-u-banku?dryRun=1 — jednokratni backfill:
+// uzima izmjene iz legacy `kvizovi.pitanja` JSONB-a (gdje je admin uređivao
+// kroz stari "Uredi kviz" modal) i prepisuje ih u `pitanja_banka`. Vidi
+// scripts/src/sync-kvizovi-jsonb-u-banku.ts za detalje algoritma.
+router.post("/sync-kvizovi-jsonb-u-banku", async (req, res) => {
+  try {
+    const dryRun = req.query["dryRun"] === "1" || req.query["dryRun"] === "true";
+    const { syncKvizoviUBanku } = await import("@workspace/scripts/sync-kvizovi-jsonb-u-banku");
+    const result = await syncKvizoviUBanku({ silent: true, dryRun, skipBackup: true });
+    res.json({ ok: true, dryRun, result });
+  } catch (err: any) {
+    console.error("[admin/sync-kvizovi-jsonb-u-banku] error", err);
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
 export default router;

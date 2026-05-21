@@ -154,7 +154,7 @@ export interface SyncResult {
   conflicts: number;
 }
 
-export async function syncKvizoviUBanku(opts: { silent?: boolean; dryRun?: boolean } = {}): Promise<SyncResult> {
+export async function syncKvizoviUBanku(opts: { silent?: boolean; dryRun?: boolean; skipBackup?: boolean } = {}): Promise<SyncResult> {
   const log = opts.silent ? () => {} : (...a: any[]) => console.log(...a);
   const dryRun = !!opts.dryRun;
 
@@ -162,7 +162,7 @@ export async function syncKvizoviUBanku(opts: { silent?: boolean; dryRun?: boole
 
   // Snapshot backup banke prije bilo kakvih izmjena.
   const allBank = await db.select().from(pitanjaBankaTable);
-  if (!dryRun) {
+  if (!dryRun && !opts.skipBackup) {
     const backupPath = `.local/banka-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
     mkdirSync(dirname(backupPath), { recursive: true });
     writeFileSync(backupPath, JSON.stringify(allBank, null, 2));
