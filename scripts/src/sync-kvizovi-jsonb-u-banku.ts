@@ -142,6 +142,20 @@ function parseLegacy(p: LegacyPitanje, ctx: string): ParsedPitanje | null {
   };
 }
 
+export interface ConflictDetail {
+  ctx: string;
+  kvizId: number;
+  kvizSlug: string;
+  kvizNaslov: string;
+  pjIdx: number;
+  targetBankaId: number;
+  targetBankaText: string;
+  newText: string;
+  conflictBankaId?: number;
+  reason: "duplicate_text" | "db_error";
+  error?: string;
+}
+
 export interface SyncResult {
   kvizovaObradjeno: number;
   pitanjaUkupno: number;
@@ -152,6 +166,7 @@ export interface SyncResult {
   unchanged: number;
   skipped: number;
   conflicts: number;
+  conflictDetails: ConflictDetail[];
 }
 
 export async function syncKvizoviUBanku(opts: { silent?: boolean; dryRun?: boolean; skipBackup?: boolean } = {}): Promise<SyncResult> {
@@ -188,6 +203,7 @@ export async function syncKvizoviUBanku(opts: { silent?: boolean; dryRun?: boole
     unchanged: 0,
     skipped: 0,
     conflicts: 0,
+    conflictDetails: [],
   };
 
   for (const k of kvizovi) {
@@ -278,6 +294,19 @@ export async function syncKvizoviUBanku(opts: { silent?: boolean; dryRun?: boole
         if (conflict.length > 0 && !linkedIds.has(conflict[0]!.id)) {
           console.warn(`  ${u.ctx} KONFLIKT: novi tekst već postoji u banci kao id=${conflict[0]!.id} — preskačem`);
           r.conflicts++;
+          const before = allBank.find((b) => b.id === u.bankaId);
+          r.conflictDetails.push({
+            ctx: u.ctx,
+            kvizId: k.id,
+            kvizSlug: k.slug,
+            kvizNaslov: k.naslov,
+            pjIdx: pitanjaJsonb.findIndex((pp) => normalize(pp.question ?? "") === u.parsed.pitanje),
+            targetBankaId: u.bankaId,
+            targetBankaText: before?.pitanje ?? "",
+            newText: u.parsed.pitanje,
+            conflictBankaId: conflict[0]!.id,
+            reason: "duplicate_text",
+          });
           continue;
         }
       }
@@ -326,6 +355,19 @@ export async function syncKvizoviUBanku(opts: { silent?: boolean; dryRun?: boole
       } catch (err: any) {
         console.warn(`  ${u.ctx} UPDATE failed: ${err?.message || err}`);
         r.conflicts++;
+        const before2 = allBank.find((b) => b.id === u.bankaId);
+        r.conflictDetails.push({
+          ctx: u.ctx,
+          kvizId: k.id,
+          kvizSlug: k.slug,
+          kvizNaslov: k.naslov,
+          pjIdx: pitanjaJsonb.findIndex((pp) => normalize(pp.question ?? "") === u.parsed.pitanje),
+          targetBankaId: u.bankaId,
+          targetBankaText: before2?.pitanje ?? "",
+          newText: u.parsed.pitanje,
+          reason: "db_error",
+          error: String(err?.message || err),
+        });
       }
     }
   }
