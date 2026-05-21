@@ -111,7 +111,7 @@ function emptyForm() {
 }
 
 export default function AdminBankaPitanjaPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -155,8 +155,12 @@ export default function AdminBankaPitanjaPage() {
   }, [kategorije]);
 
   useEffect(() => {
+    // Sačekaj da auth context završi hidraciju iz localStorage. Bez ovoga
+    // direktan ulazak (npr. /admin/banka-pitanja?edit=N u novom tabu) bi
+    // redirektovao na "/" prije nego što se user učita, pa bi query izgubili.
+    if (authLoading) return;
     if (!user || user.role !== "admin") { setLocation("/"); return; }
-  }, [user, setLocation]);
+  }, [authLoading, user, setLocation]);
 
   // Debounce search 300ms
   useEffect(() => {
