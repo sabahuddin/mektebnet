@@ -421,7 +421,7 @@ export default function AdminKvizEditorPage() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <a
-                        href={`/admin/banka-pitanja?edit=${p.id}`}
+                        href={`${import.meta.env.BASE_URL}admin/banka-pitanja?edit=${p.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-lg hover:bg-amber-50 text-muted-foreground hover:text-amber-700"

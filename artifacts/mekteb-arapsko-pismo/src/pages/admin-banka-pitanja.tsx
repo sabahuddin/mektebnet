@@ -195,12 +195,12 @@ export default function AdminBankaPitanjaPage() {
     // Striktna validacija: samo cijeli pozitivni broj (odbij "12abc", "1.5", "-1").
     if (!/^\d+$/.test(editIdStr)) {
       editParamHandledRef.current = true;
-      window.history.replaceState({}, "", "/admin/banka-pitanja");
+      window.history.replaceState({}, "", `${import.meta.env.BASE_URL}admin/banka-pitanja`);
       return;
     }
     const editIdNum = parseInt(editIdStr, 10);
     editParamHandledRef.current = true;
-    window.history.replaceState({}, "", "/admin/banka-pitanja");
+    window.history.replaceState({}, "", `${import.meta.env.BASE_URL}admin/banka-pitanja`);
     apiRequest<PitanjeBanka>("GET", `/admin/banka-pitanja/${editIdNum}`, undefined, token)
       .then((p) => {
         // Inline editor se renderuje SAMO unutar rows.map(). Ako pitanje nije
