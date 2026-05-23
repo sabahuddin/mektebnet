@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useLanguage } from "@/context/language";
+import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -93,9 +94,22 @@ type Tab = "ucenik" | "roditelj" | "mekteb";
 export default function RegisterRoditeljPage() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+  const { login } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("ucenik");
   const [isBiH, setIsBiH] = useState<boolean | null>(null);
   const [error, setError] = useState("");
+  const [demoBusy, setDemoBusy] = useState<string | null>(null);
+  const doDemoLogin = async (username: string) => {
+    setDemoBusy(username);
+    setError("");
+    try {
+      await login(username, "demo123");
+      setLocation("/");
+    } catch (e: any) {
+      setError(e?.message || "Demo prijava nije uspjela");
+      setDemoBusy(null);
+    }
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -535,6 +549,49 @@ export default function RegisterRoditeljPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Demo prijava — brzo isprobaj platformu bez registracije i pretplate. */}
+        <div className="mt-5 bg-white rounded-2xl shadow-md border border-amber-200/70 p-5">
+          <div className="text-center mb-3">
+            <p className="text-sm font-extrabold text-amber-900">Želite samo isprobati?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Prijavite se kao demo korisnik — bez registracije.</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => doDemoLogin("demo.tarik.avdic")}
+              disabled={demoBusy !== null}
+              className="w-full h-11 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
+              data-testid="button-demo-ucenik"
+            >
+              <GraduationCap className="w-4 h-4 text-amber-700" />
+              {demoBusy === "demo.tarik.avdic" ? "Prijavljujem..." : "Demo učenik (Tarik Avdić)"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => doDemoLogin("demo.roditelj.amir")}
+              disabled={demoBusy !== null}
+              className="w-full h-11 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
+              data-testid="button-demo-roditelj"
+            >
+              <Users className="w-4 h-4 text-amber-700" />
+              {demoBusy === "demo.roditelj.amir" ? "Prijavljujem..." : "Demo roditelj (Amir)"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => doDemoLogin("demo.muallim")}
+              disabled={demoBusy !== null}
+              className="w-full h-11 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
+              data-testid="button-demo-muallim"
+            >
+              <Building2 className="w-4 h-4 text-amber-700" />
+              {demoBusy === "demo.muallim" ? "Prijavljujem..." : "Demo muallim"}
+            </Button>
           </div>
         </div>
 
