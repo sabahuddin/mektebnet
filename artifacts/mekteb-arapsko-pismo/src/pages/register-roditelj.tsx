@@ -89,7 +89,7 @@ function CaptchaField({ captcha, value, onChange, label }: {
   );
 }
 
-type Tab = "ucenik" | "roditelj" | "mekteb";
+type Tab = "ucenik" | "roditelj" | "mekteb" | "demo";
 
 export default function RegisterRoditeljPage() {
   const [, setLocation] = useLocation();
@@ -293,6 +293,7 @@ export default function RegisterRoditeljPage() {
     { key: "ucenik", label: t("register.ucenik"), icon: <GraduationCap className="w-4 h-4" /> },
     { key: "roditelj", label: t("register.roditelj"), icon: <Users className="w-4 h-4" /> },
     { key: "mekteb", label: t("register.mekteb"), icon: <Building2 className="w-4 h-4" /> },
+    { key: "demo", label: "Demo", icon: <KeyRound className="w-4 h-4" /> },
   ];
 
   return (
@@ -548,50 +549,55 @@ export default function RegisterRoditeljPage() {
                   </form>
                 </motion.div>
               )}
-            </AnimatePresence>
-          </div>
-        </div>
 
-        {/* Demo prijava — brzo isprobaj platformu bez registracije i pretplate. */}
-        <div className="mt-5 bg-white rounded-2xl shadow-md border border-amber-200/70 p-5">
-          <div className="text-center mb-3">
-            <p className="text-sm font-extrabold text-amber-900">Želite samo isprobati?</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Prijavite se kao demo korisnik — bez registracije.</p>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => doDemoLogin("demo.tarik.avdic")}
-              disabled={demoBusy !== null}
-              className="w-full h-11 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
-              data-testid="button-demo-ucenik"
-            >
-              <GraduationCap className="w-4 h-4 text-amber-700" />
-              {demoBusy === "demo.tarik.avdic" ? "Prijavljujem..." : "Demo učenik (Tarik Avdić)"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => doDemoLogin("demo.roditelj.amir")}
-              disabled={demoBusy !== null}
-              className="w-full h-11 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
-              data-testid="button-demo-roditelj"
-            >
-              <Users className="w-4 h-4 text-amber-700" />
-              {demoBusy === "demo.roditelj.amir" ? "Prijavljujem..." : "Demo roditelj (Amir)"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => doDemoLogin("demo.muallim")}
-              disabled={demoBusy !== null}
-              className="w-full h-11 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
-              data-testid="button-demo-muallim"
-            >
-              <Building2 className="w-4 h-4 text-amber-700" />
-              {demoBusy === "demo.muallim" ? "Prijavljujem..." : "Demo muallim"}
-            </Button>
+              {activeTab === "demo" && (
+                <motion.div key="demo" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+                    <p className="text-sm text-foreground">
+                      <strong>Demo prijava</strong> — isprobajte platformu bez registracije i pretplate. Odaberite ulogu:
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => doDemoLogin("demo.tarik.avdic")}
+                      disabled={demoBusy !== null}
+                      className="w-full h-12 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
+                      data-testid="button-demo-ucenik"
+                    >
+                      <GraduationCap className="w-4 h-4 text-amber-700" />
+                      {demoBusy === "demo.tarik.avdic" ? "Prijavljujem..." : "Demo učenik (Tarik Avdić)"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => doDemoLogin("demo.roditelj.amir")}
+                      disabled={demoBusy !== null}
+                      className="w-full h-12 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
+                      data-testid="button-demo-roditelj"
+                    >
+                      <Users className="w-4 h-4 text-amber-700" />
+                      {demoBusy === "demo.roditelj.amir" ? "Prijavljujem..." : "Demo roditelj (Amir)"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => doDemoLogin("demo.muallim")}
+                      disabled={demoBusy !== null}
+                      className="w-full h-12 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
+                      data-testid="button-demo-muallim"
+                    >
+                      <Building2 className="w-4 h-4 text-amber-700" />
+                      {demoBusy === "demo.muallim" ? "Prijavljujem..." : "Demo muallim"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center mt-1">
+                      Demo računi su zajednički — molimo ne mijenjajte lične podatke.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
