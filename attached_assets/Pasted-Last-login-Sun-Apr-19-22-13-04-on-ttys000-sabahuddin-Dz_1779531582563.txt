@@ -1,0 +1,308 @@
+Last login: Sun Apr 19 22:13:04 on ttys000
+sabahuddin@Dzemats-iMac ~ % ssh root@91.98.234.55
+The authenticity of host '91.98.234.55 (91.98.234.55)' can't be established.
+ED25519 key fingerprint is SHA256:1YtFj9mCnlkIRxxCo6PeuQb52vyk300KAcWX4Y2kFaE.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '91.98.234.55' (ED25519) to the list of known hosts.
+root@91.98.234.55's password: 
+Welcome to Ubuntu 24.04.3 LTS (GNU/Linux 6.8.0-101-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Sat May 23 10:17:01 AM UTC 2026
+
+  System load:           0.19
+  Usage of /:            16.7% of 149.92GB
+  Memory usage:          47%
+  Swap usage:            0%
+  Processes:             310
+  Users logged in:       0
+  IPv4 address for eth0: 91.98.234.55
+  IPv6 address for eth0: 2a01:4f8:1c1a:53d3::1
+
+  => There is 1 zombie process.
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+70 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+1 additional security update can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+
+*** System restart required ***
+Last login: Thu May 21 10:19:54 2026 from 10.0.1.11
+root@dzematapp-server1:~# cd /data/coolify/source
+root@dzematapp-server1:/data/coolify/source# docker exec -it coolify php artisan
+Laravel Framework 12.21.0
+
+Usage:
+  command [options] [arguments]
+
+Options:
+  -h, --help            Display help for the given command. When no command is given display help for the list command
+      --silent          Do not output any message
+  -q, --quiet           Only errors are displayed. All other output is suppressed
+  -V, --version         Display this application version
+      --ansi|--no-ansi  Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction  Do not ask any interactive question
+      --env[=ENV]       The environment the command should run under
+  -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+
+Available commands:
+  about                                 Display basic information about your application
+  clear-compiled                        Remove the compiled class file
+  completion                            Dump the shell completion script
+  db                                    Start a new database CLI session
+  dev                                   Helper commands for development.
+  docs                                  Access the Laravel documentation
+  down                                  Put the application into maintenance / demo mode
+  emails                                Send out test / prod emails
+  env                                   Display the current framework environment
+  help                                  Display help for a command
+  horizon                               Start a master supervisor in the foreground
+  inspire                               Display an inspiring quote
+  list                                  List commands
+  migrate                               Run the database migrations
+  optimize                              Cache framework bootstrap, configuration, and metadata to increase performance
+  pail                                  Tails the application logs.
+  serve                                 Serve the application on the PHP development server
+  tinker                                Interact with your application
+  ui                                    Swap the front-end scaffolding for the application
+  up                                    Bring the application out of maintenance mode
+ activitylog
+  activitylog:clean                     Clean up old records from the activity log.
+ admin
+  admin:delete-user                     Delete a user with comprehensive resource cleanup and phase-by-phase confirmation (works on cloud and self-hosted)
+ app
+  app:demo-notify                       Send a demo notification, to a given channel. Run to see options.
+  app:init                              Cleanup instance related stuffs
+ auth
+  auth:clear-resets                     Flush expired password reset tokens
+ cache
+  cache:clear                           Flush the application cache
+  cache:forget                          Remove an item from the cache
+  cache:prune-stale-tags                Prune stale cache tags from the cache (Redis only)
+ channel
+  channel:list                          List all registered private broadcast channels
+ check
+  check:deployment-queue                Check application deployment queue.
+ cleanup
+  cleanup:database                      Cleanup database
+  cleanup:deployment-queue              Cleanup application deployment queue.
+  cleanup:names                         Sanitize name fields by removing invalid characters (keeping only letters, numbers, spaces, dashes, underscores, dots, slashes, colons, parentheses)
+  cleanup:redis                         Cleanup Redis (Horizon jobs, metrics, overlapping queues, cache locks, and related data)
+  cleanup:stucked-resources             Cleanup Stucked Resources
+  cleanup:unreachable-servers           Cleanup Unreachable Servers (7 days)
+ cloud
+  cloud:fix-subscription                Fix Cloud subscriptions
+  cloud:restore-database                Restore a PostgreSQL database from a dump file (development mode only)
+ config
+  config:cache                          Create a cache file for faster configuration loading
+  config:clear                          Remove the configuration cache file
+  config:publish                        Publish configuration files to your application
+  config:show                           Display all of the values for a given configuration file or key
+ data
+  data:cache-structures                 Cache the internal data structures
+ db
+  db:monitor                            Monitor the number of connections on the specified database
+  db:seed                               Seed the database with records
+  db:show                               Display information about the given database
+  db:table                              Display information about the given database table
+  db:wipe                               Drop all tables, views, and types
+ env
+  env:decrypt                           Decrypt an environment file
+  env:encrypt                           Encrypt an environment file
+ event
+  event:cache                           Discover and cache the application's events and listeners
+  event:clear                           Clear all cached events and listeners
+  event:list                            List the application's events and listeners
+ fortify
+  fortify:install                       Install all of the Fortify resources
+ generate
+  generate:openapi                      Generate OpenApi file.
+  generate:services                     Generates service-templates json file based on /templates/compose directory
+ horizon
+  horizon:clear                         Delete all of the jobs from the specified queue
+  horizon:clear-metrics                 Delete metrics for all jobs and queues
+  horizon:continue                      Instruct the master supervisor to continue processing jobs
+  horizon:continue-supervisor           Instruct the supervisor to continue processing jobs
+  horizon:forget                        Delete a failed queue job
+  horizon:install                       Install all of the Horizon resources
+  horizon:list                          List all of the deployed machines
+  horizon:manage                        Manage horizon
+  horizon:pause                         Pause the master supervisor
+  horizon:pause-supervisor              Pause a supervisor
+  horizon:publish                       Publish all of the Horizon resources
+  horizon:purge                         Terminate any rogue Horizon processes
+  horizon:snapshot                      Store a snapshot of the queue metrics
+  horizon:status                        Get the current status of Horizon
+  horizon:supervisor-status             Show the status for a given supervisor
+  horizon:supervisors                   List all of the supervisors
+  horizon:terminate                     Terminate the master supervisor so it can be restarted
+ install
+  install:api                           Create an API routes file and install Laravel Sanctum or Laravel Passport
+  install:broadcasting                  Create a broadcasting channel routes file
+ key
+  key:generate                          Set the application key
+ lang
+  lang:publish                          Publish all language files that are available for customization
+ livewire
+  livewire:attribute                    Create a new Livewire attribute class
+  livewire:configure-s3-upload-cleanup  Configure temporary file upload s3 directory to automatically cleanup files older than 24hrs
+  livewire:copy                         Copy a Livewire component
+  livewire:delete                       Delete a Livewire component
+  livewire:form                         Create a new Livewire form class
+  livewire:layout                       Create a new app layout file
+  livewire:make                         Create a new Livewire component
+  livewire:move                         Move a Livewire component
+  livewire:publish                      Publish Livewire configuration
+  livewire:stubs                        Publish Livewire stubs
+  livewire:upgrade                      Interactive upgrade helper to migrate from v2 to v3
+ logs
+  logs:scheduled                        View scheduled backups and tasks logs with optional filtering
+ make
+  make:action                           Create a new Action
+  make:cache-table                      [cache:table] Create a migration for the cache database table
+  make:cast                             Create a new custom Eloquent cast class
+  make:channel                          Create a new channel class
+  make:class                            Create a new class
+  make:command                          Create a new Artisan command
+  make:component                        Create a new view component class
+  make:controller                       Create a new controller class
+  make:data                             Create a new data class
+  make:enum                             Create a new enum
+  make:event                            Create a new event class
+  make:exception                        Create a new custom exception class
+  make:factory                          Create a new model factory
+  make:interface                        Create a new interface
+  make:job                              Create a new job class
+  make:job-middleware                   Create a new job middleware class
+  make:listener                         Create a new event listener class
+  make:livewire                         Create a new Livewire component
+  make:mail                             Create a new email class
+  make:middleware                       Create a new HTTP middleware class
+  make:migration                        Create a new migration file
+  make:model                            Create a new Eloquent model class
+  make:notification                     Create a new notification class
+  make:notifications-table              [notifications:table] Create a migration for the notifications table
+  make:observer                         Create a new observer class
+  make:policy                           Create a new policy class
+  make:provider                         Create a new service provider class
+  make:queue-batches-table              [queue:batches-table] Create a migration for the batches database table
+  make:queue-failed-table               [queue:failed-table] Create a migration for the failed queue jobs database table
+  make:queue-table                      [queue:table] Create a migration for the queue jobs database table
+  make:request                          Create a new form request class
+  make:resource                         Create a new resource
+  make:rule                             Create a new validation rule
+  make:scope                            Create a new scope class
+  make:seeder                           Create a new seeder class
+  make:session-table                    [session:table] Create a migration for the session database table
+  make:test                             Create a new test class
+  make:trait                            Create a new trait
+  make:view                             Create a new view
+ migrate
+  migrate:fresh                         Drop all tables and re-run all migrations
+  migrate:install                       Create the migration repository
+  migrate:refresh                       Reset and re-run all migrations
+  migrate:reset                         Rollback all database migrations
+  migrate:rollback                      Rollback the last database migration
+  migrate:status                        Show the status of each migration
+ model
+  model:prune                           Prune models that are no longer needed
+  model:show                            Show information about an Eloquent model
+ optimize
+  optimize:clear                        Remove the cached bootstrap files
+ package
+  package:discover                      Rebuild the cached package manifest
+ purify
+  purify:clear                          Flush the HTML purifier serializer cache
+ queue
+  queue:clear                           Delete all of the jobs from the specified queue
+  queue:failed                          List all of the failed queue jobs
+  queue:flush                           Flush all of the failed queue jobs
+  queue:forget                          Delete a failed queue job
+  queue:listen                          Listen to a given queue
+  queue:monitor                         Monitor the size of the specified queues
+  queue:prune-batches                   Prune stale entries from the batches database
+  queue:prune-failed                    Prune stale entries from the failed jobs table
+  queue:restart                         Restart queue worker daemons after their current job
+  queue:retry                           Retry a failed queue job
+  queue:retry-batch                     Retry the failed jobs for a batch
+  queue:work                            Start processing jobs on the queue as a daemon
+ ray
+  ray:clean                             Remove all Ray calls from your codebase.
+  ray:publish-config                    Create the Laravel Ray config file in project root.
+ root
+  root:change-email                     Change Root Email
+  root:reset-password                   Reset Root Password
+ route
+  route:cache                           Create a route cache file for faster route registration
+  route:clear                           Remove the route cache file
+  route:list                            List all registered routes
+ sanctum
+  sanctum:prune-expired                 Prune tokens expired for more than specified number of hours
+ schedule
+  schedule:clear-cache                  Delete the cached mutex files created by scheduler
+  schedule:interrupt                    Interrupt the current schedule run
+  schedule:list                         List all scheduled tasks
+  schedule:run                          Run the scheduled commands
+  schedule:run-manual                   Manually run scheduled database backups and tasks when cron fails
+  schedule:test                         Run a scheduled command
+  schedule:work                         Start the schedule worker
+ schema
+  schema:dump                           Dump the given database schema
+ search
+  search:clear                          Clear the global search cache for testing or manual refresh
+ sentry
+  sentry:publish                        Publishes and configures the Sentry config.
+  sentry:test                           Generate a test event and send it to Sentry
+ services
+  services:delete                       Delete a service from the database
+  services:update-versions              Update service template files with latest Docker image versions from registries
+ start
+  start:horizon                         Start Horizon
+  start:migration                       Start Migration
+  start:scheduler                       Start Scheduler
+  start:seeder                          Start Seeder
+ storage
+  storage:link                          Create the symbolic links configured for the application
+  storage:unlink                        Delete existing symbolic links configured for the application
+ structure-scouts
+  structure-scouts:cache                Cache discoverers within your application
+  structure-scouts:clear                Clear cached discoverers within your application
+ stub
+  stub:publish                          Publish all stubs that are available for customization
+ sync
+  sync:bunny                            Sync files to BunnyCDN
+ traefik
+  traefik:check-version                 Check Traefik proxy versions on all servers and send notifications for outdated versions
+ ui
+  ui:auth                               Scaffold basic login and registration views and routes
+  ui:controllers                        Scaffold the authentication controllers
+ uploads
+  uploads:clear                         Clears the chunks upload directory. Deletes only .part objects.
+ vendor
+  vendor:publish                        Publish any publishable assets from vendor packages
+ view
+  view:cache                            Compile all of the application's Blade templates
+  view:clear                            Clear all compiled view files
+ webfonts
+  webfonts:add                          Add web fonts to the project
+root@dzematapp-server1:/data/coolify/source# tinker
+Command 'tinker' not found, did you mean:
+  command 'ticker' from snap ticker (5.0.6)
+  command 'ticker' from deb ticker (1.14)
+See 'snap info <snapname>' for additional versions.
+root@dzematapp-server1:/data/coolify/source# $u = \App\Models\User::orderBy('id')->first(); echo $u->email; $u->update(['password' => bcrypt('NovaSifra123!')]);
+-bash: syntax error near unexpected token `('
+root@dzematapp-server1:/data/coolify/source# 
