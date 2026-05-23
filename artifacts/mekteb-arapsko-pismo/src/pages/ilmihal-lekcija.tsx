@@ -3048,9 +3048,38 @@ export default function IlmihalLekcijaPage() {
             })()}
           </div>
         ) : (
-          /* Fallback: if no sections parsed, render raw HTML */
-          <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-6 mb-6">
-            <RjecnikContent html={lekcija.contentHtml} />
+          /* Fallback: ako nema akordion sekcija (lekcija sa čistim <p> sadržajem),
+             renderujemo raw HTML + kviz box ispod (ako lekcija ima kvizPitanja).
+             Bez ovoga, učenik nikad ne vidi kviz pa "Završeno" ostaje zaključano. */
+          <div className="flex flex-col gap-3 mb-6">
+            <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-6">
+              <RjecnikContent html={lekcija.contentHtml} />
+            </div>
+            {lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 && (
+              <LekcijaKvizBox
+                key="lekcija-kviz-fallback"
+                pitanja={lekcija.kvizPitanja}
+                lekcijaId={lekcija.id}
+                isAdmin={user?.role === "admin"}
+                token={token}
+                onSaved={(novaPitanja) => setLekcija(prev => prev ? { ...prev, kvizPitanja: novaPitanja } : prev)}
+                onPassed={handleQuizPassed}
+                alreadyPassed={quizPassed}
+                defaultOpen={lekcijaHasQuiz && !quizPassed && !completed}
+              />
+            )}
+            {user?.role === "admin" && token && (!lekcija.kvizPitanja || lekcija.kvizPitanja.length === 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLekcija(prev => prev ? { ...prev, kvizPitanja: [{ question: "", options: ["", "", "", ""], answer: "" }] } : prev);
+                }}
+                className="w-full ring-2 ring-inset ring-teal-200 bg-teal-50 hover:bg-teal-100 rounded-2xl px-5 py-4 flex items-center justify-center gap-2 text-sm font-bold text-teal-800 transition-colors"
+                data-testid="button-dodaj-kviz-fallback"
+              >
+                <Plus className="w-4 h-4" /> Dodaj kviz "Provjeri znanje"
+              </button>
+            )}
           </div>
         )}
 
