@@ -12,11 +12,44 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MaskotaPrazanState } from "@/components/maskota";
+import { formatScreentime, isOnline } from "@/lib/utils";
+
+function formatScreentimeShort(sec: number | null | undefined): string {
+  const s = sec ?? 0;
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function MyScreentimeBadgeRoditelj() {
+  const { token } = useAuth();
+  const [data, setData] = useState<{ totalScreentimeSec: number } | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<{ totalScreentimeSec: number; lastSeenAt: string | null }>("GET", "/aktivnost/me", undefined, token)
+      .then(setData).catch(() => {});
+  }, [token]);
+  return (
+    <div className="flex items-center gap-3 bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl px-4 py-3 mb-4" data-testid="card-moje-vrijeme-roditelj">
+      <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center shrink-0">
+        <Clock className="w-5 h-5 text-teal-700" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] font-bold text-teal-700/80 uppercase tracking-wide">Moje vrijeme na platformi</div>
+        <div className="text-lg font-extrabold text-teal-800 leading-tight">{formatScreentimeShort(data?.totalScreentimeSec)}</div>
+      </div>
+    </div>
+  );
+}
 
 interface Dijete {
   id: number;
   displayName: string;
   username: string;
+  lastSeenAt?: string | null;
+  totalScreentimeSec?: number | null;
 }
 
 interface Prisustvo {
@@ -282,6 +315,25 @@ function DijeteContent({
               <div className="text-[10px] text-orange-700/80 font-bold uppercase mt-1 tracking-wide">Dana niz</div>
             </div>
           </>
+        )}
+      </div>
+
+      <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center shrink-0">
+          <Clock className="w-4 h-4 text-teal-700" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] text-teal-700/80 font-bold uppercase tracking-wide">Vrijeme na platformi</div>
+          <div className="text-base font-extrabold text-teal-800 leading-tight">
+            {formatScreentime(dijete.totalScreentimeSec)}
+          </div>
+        </div>
+        {dijete.lastSeenAt && (
+          <div className="text-[10px] text-teal-700/80 font-bold text-right shrink-0">
+            {isOnline(dijete.lastSeenAt)
+              ? <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>Online</span>
+              : <>Zadnji put:<br/>{new Date(dijete.lastSeenAt).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
+          </div>
         )}
       </div>
 
@@ -713,6 +765,7 @@ export default function RoditeljPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
+        <MyScreentimeBadgeRoditelj />
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6 border-b border-border/40">
           {topTabs.map(tab => (
             <button key={String(tab.id)} onClick={() => setActiveTab(tab.id)}

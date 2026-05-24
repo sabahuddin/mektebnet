@@ -22,6 +22,34 @@ interface Stats {
   danasnjePrisustvo?: number;
 }
 
+function formatScreentimeShort(sec: number | null | undefined): string {
+  const s = sec ?? 0;
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function MyScreentimeBadge() {
+  const { token } = useAuth();
+  const [data, setData] = useState<{ totalScreentimeSec: number } | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<{ totalScreentimeSec: number; lastSeenAt: string | null }>("GET", "/aktivnost/me", undefined, token)
+      .then(setData).catch(() => {});
+  }, [token]);
+  return (
+    <div className="hidden sm:flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-3 py-1.5" title="Vaše ukupno vrijeme provedeno u Mektebu" data-testid="badge-moje-vrijeme">
+      <Clock className="w-4 h-4 text-teal-700" />
+      <div className="text-xs">
+        <div className="text-[9px] font-bold text-teal-700/70 uppercase leading-none">Moje vrijeme</div>
+        <div className="font-extrabold text-teal-800 leading-tight">{formatScreentimeShort(data?.totalScreentimeSec)}</div>
+      </div>
+    </div>
+  );
+}
+
 interface DashboardStats {
   ukupnoUcenika: number;
   aktivnihUcenika: number;
@@ -655,7 +683,8 @@ export default function MuallimPanel() {
           <div className="w-10 h-10 bg-gradient-to-br from-secondary to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-xl font-extrabold text-foreground">Muallim panel</h1>
+          <h1 className="text-xl font-extrabold text-foreground flex-1">Muallim panel</h1>
+          <MyScreentimeBadge />
         </div>
 
         {/* H5P statistika, H5P uputstvo i Profil su sada tabovi (ne više

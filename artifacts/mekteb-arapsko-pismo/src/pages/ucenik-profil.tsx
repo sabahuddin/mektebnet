@@ -184,6 +184,36 @@ function ChangePasswordCard() {
   );
 }
 
+function formatScreentimeShort(sec: number | null | undefined): string {
+  const s = sec ?? 0;
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function MyScreentimeCard() {
+  const { token } = useAuth();
+  const [data, setData] = useState<{ totalScreentimeSec: number; lastSeenAt: string | null } | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<{ totalScreentimeSec: number; lastSeenAt: string | null }>("GET", "/aktivnost/me", undefined, token)
+      .then(setData).catch(() => {});
+  }, [token]);
+  return (
+    <div className="flex items-center gap-3 bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-4 mb-4" data-testid="card-moje-vrijeme">
+      <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center shrink-0">
+        <Clock className="w-5 h-5 text-teal-700" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] font-bold text-teal-700/80 uppercase tracking-wide">Moje vrijeme na platformi</div>
+        <div className="text-xl font-extrabold text-teal-800 leading-tight">{formatScreentimeShort(data?.totalScreentimeSec)}</div>
+      </div>
+    </div>
+  );
+}
+
 function formatEarnedDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -421,6 +451,7 @@ export default function UcenikProfilPage() {
 
             {activeTab === "moj-put" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <MyScreentimeCard />
                 {/* Hero stats — Duolingo style */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <motion.div

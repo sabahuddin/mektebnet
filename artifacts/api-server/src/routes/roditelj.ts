@@ -257,6 +257,8 @@ router.get("/djeca-summary", async (req, res) => {
           displayName: d.displayName,
           role: d.role,
           createdAt: d.createdAt,
+          lastSeenAt: d.lastSeenAt,
+          totalScreentimeSec: d.totalScreentimeSec,
           profil,
         },
         summary,
