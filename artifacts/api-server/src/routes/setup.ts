@@ -65,7 +65,7 @@ router.get("/", async (req, res) => {
         mekteb_id INTEGER,
         licence_count INTEGER NOT NULL DEFAULT 30,
         licences_used INTEGER NOT NULL DEFAULT 0,
-        tekuca_skolska_godina VARCHAR(20) DEFAULT '2024/2025',
+        tekuca_skolska_godina VARCHAR(30) DEFAULT 'Mektebska 2025/26',
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);

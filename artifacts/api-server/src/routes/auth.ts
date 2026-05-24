@@ -443,7 +443,7 @@ async function getOnlineMektebGroupForAge(godine: number) {
   [grupa] = await db.insert(grupeTable).values({
     muallimId: onlineMuallim.id,
     naziv,
-    skolskaGodina: "2024/2025",
+    skolskaGodina: "Mektebska 2025/26",
     daniNastave: [],
     vrijemeNastave: "",
   }).returning();
