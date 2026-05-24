@@ -1332,13 +1332,51 @@ router.post("/print-kartice", async (req, res) => {
     const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
       .from(usersTable).where(inArray(usersTable.id, allowedIds));
 
+    // Roditelji povezani sa ovim učenicima (samo "approved" veze).
+    // Jedan roditelj može imati više djece → reset šifre radimo SAMO JEDNOM
+    // po roditelju, ista se lozinka pojavljuje na svim karticama te djece.
+    const veze = await db.select({
+      roditeljId: roditeljUcenikTable.roditeljId,
+      ucenikId: roditeljUcenikTable.ucenikId,
+    }).from(roditeljUcenikTable).where(and(
+      inArray(roditeljUcenikTable.ucenikId, allowedIds),
+      eq(roditeljUcenikTable.status, "approved"),
+    ));
+    const uniqueRoditeljIds = [...new Set(veze.map(v => v.roditeljId))];
+    const roditeljiData = uniqueRoditeljIds.length > 0
+      ? await db.select({ id: usersTable.id, username: usersTable.username, displayName: usersTable.displayName })
+          .from(usersTable).where(inArray(usersTable.id, uniqueRoditeljIds))
+      : [];
+    const roditeljNewPass = new Map<number, { username: string; displayName: string | null; password: string }>();
+    for (const r of roditeljiData) {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const newPass = `Mekteb${rand}`;
+      const hash = await bcrypt.hash(newPass, 10);
+      await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, r.id));
+      roditeljNewPass.set(r.id, { username: r.username, displayName: r.displayName, password: newPass });
+    }
+    // Mapa ucenikId → niz roditelja (najčešće 0 ili 1, rijetko više).
+    const roditeljiPoUceniku = new Map<number, Array<{ username: string; displayName: string | null; password: string }>>();
+    for (const v of veze) {
+      const r = roditeljNewPass.get(v.roditeljId);
+      if (!r) continue;
+      if (!roditeljiPoUceniku.has(v.ucenikId)) roditeljiPoUceniku.set(v.ucenikId, []);
+      roditeljiPoUceniku.get(v.ucenikId)!.push(r);
+    }
+
     const results = [];
     for (const u of users) {
       const rand = Math.floor(1000 + Math.random() * 9000);
       const newPass = `Mekteb${rand}`;
       const hash = await bcrypt.hash(newPass, 10);
       await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, u.id));
-      results.push({ id: u.id, displayName: u.displayName, username: u.username, generatedPassword: newPass });
+      results.push({
+        id: u.id,
+        displayName: u.displayName,
+        username: u.username,
+        generatedPassword: newPass,
+        roditelji: roditeljiPoUceniku.get(u.id) || [],
+      });
     }
 
     res.json(results);
