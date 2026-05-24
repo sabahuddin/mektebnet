@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { isOnline, formatScreentime } from "@/lib/utils";
+import { LekcijaPicker } from "@/components/LekcijaPicker";
 
 interface Ucenik {
   id: number;
@@ -762,17 +763,13 @@ export default function UcenikPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-muted-foreground block mb-1">Lekcija (opciono)</label>
-                      <select
+                      <label className="text-xs font-bold text-muted-foreground block mb-1">Lekcija</label>
+                      <LekcijaPicker
+                        lekcije={ilmihalLekcije}
                         value={newZadaca.lekcijaNaslov}
-                        onChange={e => setNewZadaca(z => ({ ...z, lekcijaNaslov: e.target.value }))}
-                        className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                      >
-                        <option value="">— bez lekcije —</option>
-                        {ilmihalLekcije.map(l => (
-                          <option key={l.id} value={l.naslov}>Nivo {l.nivo}: {l.naslov}</option>
-                        ))}
-                      </select>
+                        onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v }))}
+                        placeholder="Pretraži lekciju ili upiši broj…"
+                      />
                     </div>
                   </div>
                   <Button
