@@ -1349,6 +1349,10 @@ router.post("/print-kartice", async (req, res) => {
       : [];
     const roditeljNewPass = new Map<number, { username: string; displayName: string | null; password: string }>();
     for (const r of roditeljiData) {
+      if (r.username.toLowerCase().startsWith("demo.")) {
+        roditeljNewPass.set(r.id, { username: r.username, displayName: r.displayName, password: "demo123" });
+        continue;
+      }
       const rand = Math.floor(1000 + Math.random() * 9000);
       const newPass = `Mekteb${rand}`;
       const hash = await bcrypt.hash(newPass, 10);
@@ -1366,10 +1370,16 @@ router.post("/print-kartice", async (req, res) => {
 
     const results = [];
     for (const u of users) {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      const newPass = `Mekteb${rand}`;
-      const hash = await bcrypt.hash(newPass, 10);
-      await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, u.id));
+      const isDemo = u.username.toLowerCase().startsWith("demo.");
+      let newPass: string;
+      if (isDemo) {
+        newPass = "demo123";
+      } else {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        newPass = `Mekteb${rand}`;
+        const hash = await bcrypt.hash(newPass, 10);
+        await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, u.id));
+      }
       results.push({
         id: u.id,
         displayName: u.displayName,
@@ -2441,6 +2451,10 @@ router.post("/ucenik/:id/reset-password", async (req, res) => {
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, ucenikId));
     if (!user || user.role !== "ucenik") { res.status(404).json({ error: "Učenik ne postoji" }); return; }
+    if (user.username.toLowerCase().startsWith("demo.")) {
+      res.status(403).json({ error: "Demo nalozima nije dozvoljena promjena šifre." });
+      return;
+    }
 
     const customRaw = (req.body?.password as string | undefined)?.trim();
     let newPassword: string;
@@ -2849,6 +2863,10 @@ router.post("/roditelj/:id/reset-password", async (req, res) => {
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, roditeljId));
     if (!user || user.role !== "roditelj") { res.status(404).json({ error: "Roditelj ne postoji" }); return; }
+    if (user.username.toLowerCase().startsWith("demo.")) {
+      res.status(403).json({ error: "Demo nalozima nije dozvoljena promjena šifre." });
+      return;
+    }
 
     // Provjera vlasništva: roditelj mora biti povezan sa BAREM JEDNIM
     // učenikom čiji je muallim ovaj korisnik (osim za admina).

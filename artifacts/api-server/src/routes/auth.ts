@@ -291,6 +291,10 @@ router.post("/change-password", requireAuth, async (req, res) => {
     }
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!user) { res.status(404).json({ error: "Korisnik nije pronađen" }); return; }
+    if (user.username.toLowerCase().startsWith("demo.") || user.username.toLowerCase() === "demo") {
+      res.status(403).json({ error: "Demo nalozima nije dozvoljena promjena šifre." });
+      return;
+    }
     const ok = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!ok) { res.status(401).json({ error: "Trenutna šifra nije ispravna" }); return; }
     const passwordHash = await bcrypt.hash(newPassword, 10);
