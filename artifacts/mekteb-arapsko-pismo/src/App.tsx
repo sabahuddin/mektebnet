@@ -17,6 +17,7 @@ import ResetSifraPage from "./pages/reset-sifra";
 
 // Main pages
 import Home from "./pages/home";
+import VodicPage from "./pages/vodic";
 import NotFound from "@/pages/not-found";
 
 // Arapsko pismo module
@@ -98,6 +99,7 @@ function Router() {
     <Switch>
       {/* Root */}
       <Route path="/" component={Home} />
+      <Route path="/vodic" component={VodicPage} />
 
       {/* Auth */}
       <Route path="/login" component={LoginPage} />

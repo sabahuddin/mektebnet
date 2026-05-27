@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -126,6 +126,7 @@ export function Layout({ children }: LayoutProps) {
     { href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle },
     { href: "/citaonica", label: t("nav.citaonica"), icon: Library },
     { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
+    { href: "/vodic", label: "Vodič", icon: BookMarked },
     user?.role === "admin"
       ? { href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap }
       : { href: "#sufara", label: t("nav.sufara"), icon: GraduationCap, onClick: sufaraComingSoon },
