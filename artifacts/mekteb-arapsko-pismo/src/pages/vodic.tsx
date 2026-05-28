@@ -111,11 +111,11 @@ export default function VodicPage() {
           <p className="text-lg text-muted-foreground font-medium mt-3 max-w-2xl mx-auto">
             Kompletan pregled islamske edukativne platforme — što nudi, kako funkcionira i kako svaka uloga koristi alate za učenje.
           </p>
-          <div className="mt-6 flex items-center justify-center gap-3 print:hidden">
-            <Button onClick={handlePrint} className="rounded-xl font-bold gap-2">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 print:hidden">
+            <Button onClick={handlePrint} className="rounded-xl font-bold gap-2 w-full sm:w-auto">
               <Printer className="w-4 h-4" /> Preuzmi PDF / Printaj
             </Button>
-            <Button variant="outline" asChild className="rounded-xl font-bold gap-2">
+            <Button variant="outline" asChild className="rounded-xl font-bold gap-2 w-full sm:w-auto">
               <Link href="/login">
                 <Download className="w-4 h-4" /> Isprobaj platformu
               </Link>
