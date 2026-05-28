@@ -324,7 +324,7 @@ export default function GlavniGradovi() {
                   <RefreshCw className="w-4 h-4 mr-1" /> Igraj opet
                 </Button>
                 <Button variant="outline" onClick={() => setLocation("/igrice/ljestvica")} className="rounded-2xl">
-                  Ljestvica
+                  Tabela
                 </Button>
                 <Link href="/igrice">
                   <Button variant="ghost" className="rounded-2xl">Natrag na Igrice</Button>

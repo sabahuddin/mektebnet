@@ -162,7 +162,7 @@ export default function VodicPage() {
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div>
                 <p className="text-foreground font-medium leading-relaxed mb-4">
-                  U islamskoj tradiciji pčele su spomenute u Kur'anu (Surat an-Nahl) kao primjer organizacije, predanosti i korisnosti. Naša maskota — <strong>Mektebska pčela</strong> — prati učenike kroz cijelu platformu: slavi uspjehe, podsjeća na zadaće, bodri kod grešaka i leti bočno kroz ekran kao znatiželjan pratilac.
+                  U islamskoj tradiciji pčele su spomenute u Kur'anu (Sura En-Nahl) kao primjer organizacije, predanosti i korisnosti. Naša maskota — <strong>Mektebska pčela</strong> — prati učenike kroz cijelu platformu: slavi uspjehe, podsjeća na zadaće, bodri kod grešaka i leti bočno kroz ekran kao znatiželjan pratilac.
                 </p>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2"><Sparkles className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" /> Radoznalost i stalno učenje</li>
@@ -197,7 +197,7 @@ export default function VodicPage() {
               </div>
               <h4 className="font-bold text-foreground mb-1">Aferimi ⭐</h4>
               <p className="text-sm text-muted-foreground">
-                Bodovi za točne odgovore u kvizovima. Sakupi što više Aferima i usporedi se s drugima na ljestvici.
+                Bodovi za tačne odgovore u kvizovima. Sakupi što više Aferima i takmiči se s drugima na tabeli.
               </p>
             </div>
             <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-200 p-6">
@@ -206,7 +206,7 @@ export default function VodicPage() {
               </div>
               <h4 className="font-bold text-foreground mb-1">Kapi meda</h4>
               <p className="text-sm text-muted-foreground">
-                Valuta za igrice. Učenik zarađuje kapi meda učeći lekcije i rješavajući kvizove, potroši ih u igricama.
+                Postignuti rezultat učenika. Učenik zarađuje kapi meda učeći lekcije i rješavajući kvizove — s njima zarađuje vrijeme za igrice. Same kapi meda ostaju kao trajno postignuće.
               </p>
             </div>
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 p-6">
@@ -249,7 +249,7 @@ export default function VodicPage() {
                 <Clock className="w-4 h-4 text-primary" /> Vremenski budžet za igrice
               </h5>
               <p className="text-sm text-muted-foreground">
-                Igrice nisu beskonačno dostupne — učenik zarađuje vremenski kredit učeći, a roditelj kontrolira koliko sati dnevno dijete može igrati. Kada kredit istekne, vrati se učenju da bi zaradio više.
+                Igrice nisu beskonačno dostupne — učenik zarađuje vremenski kredit učeći (kroz kapi meda), a roditelj prati koliko vremena dijete provodi u igricama. Kada kredit istekne, vrati se učenju da bi zaradio više.
               </p>
             </div>
             <div className="bg-white rounded-2xl border border-border/40 p-5">
@@ -331,7 +331,7 @@ export default function VodicPage() {
                   <h3 className="text-xl font-bold text-foreground">Igrice</h3>
                 </div>
                 <p className="text-muted-foreground text-sm mb-4">
-                  Edukativne igrice koje učenik otključava kapi meda: Pamti par, Brzi kviz, Glavni gradovi, Zastave svijeta, Mektebsko saće, Medena staza, Pčelin let, Ljestvica Aferima. Svaka igrica nosi Aferime kao nagradu za uspjeh. Roditelj kontrolira dnevno vrijeme igranja.
+                  Edukativne igrice koje učenik otključava vremenskim kreditom zarađenim kroz kapi meda: Pamti par, Brzi kviz, Glavni gradovi, Zastave svijeta, Mektebsko saće, Medena staza, Pčelin let, Tabela Aferima. Svaka igrica nosi Aferime kao nagradu za uspjeh. Roditelj prati napredak i vrijeme igranja.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
@@ -342,7 +342,7 @@ export default function VodicPage() {
                     { icon: Hexagon, label: "Mektebsko saće" },
                     { icon: Flower2, label: "Medena staza" },
                     { icon: Bird, label: "Pčelin let" },
-                    { icon: Trophy, label: "Ljestvica" },
+                    { icon: Trophy, label: "Tabela" },
                   ].map((g, i) => (
                     <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/40 text-sm font-bold text-foreground">
                       <g.icon className="w-4 h-4 text-primary" /> {g.label}
@@ -363,7 +363,7 @@ export default function VodicPage() {
                   <span className="ml-auto px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-bold">Uskoro</span>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                  Modul za učenje arapskog pisma i tecvida. Uključuje kartu harfova, interaktivne lekcije i vježbe prepoznavanja. Trenutno u izradi.
+                  Modul za učenje arapskog pisma i tedžvida. Uključuje kartu harfova, interaktivne lekcije i vježbe prepoznavanja. Trenutno u izradi.
                 </p>
               </div>
             </div>
@@ -387,12 +387,12 @@ export default function VodicPage() {
             color="bg-emerald-50/50"
             modules={[
               { icon: BookOpen, title: "Ilmihal lekcije", desc: "231 lekcija u 3 nivoa, interaktivna mapa puta, medaljoni i etape." },
-              { icon: HelpCircle, title: "Kvizovi", desc: "43+ kvizova, Aferime za točne odgovore, saće grešaka za ponavljanje." },
+              { icon: HelpCircle, title: "Kvizovi", desc: "43+ kvizova, Aferime za tačne odgovore, saće grešaka za ponavljanje." },
               { icon: Library, title: "Čitaonica", desc: "Životne priče poslanika sa ilustracijama i audio zapisima." },
-              { icon: Gamepad2, title: "Igrice", desc: "8 edukativnih igrica otključanih kapi meda, sa vremenskim budžetom." },
+              { icon: Gamepad2, title: "Igrice", desc: "8 edukativnih igrica otključanih vremenskim kreditom (kapi meda → vrijeme za igru)." },
               { icon: Wrench, title: "Popravi saće", desc: "Ponovi i popravi svaku grešku iz prethodnih kvizova." },
               { icon: Target, title: "Misije", desc: "Dnevni i sedmični izazovi sa nagradama." },
-              { icon: Trophy, title: "Ljestvica", desc: "Usporedi svoj rezultat s drugim učenicima u grupi." },
+              { icon: Trophy, title: "Tabela", desc: "Takmiči se i uporedi svoj rezultat s drugim učenicima u grupi." },
               { icon: Star, title: "Moj profil", desc: "Pregled napretka, statistike, završenih lekcija i osvojenih nagrada." },
             ]}
             screenshot={{ src: IMG("nivo1-mapa"), alt: "Mapa puta učenika", caption: "Učenik kreće od lekcije 1 i napreduje kroz mapu puta" }}
@@ -454,7 +454,7 @@ export default function VodicPage() {
             </div>
             <div className="bg-white rounded-2xl border border-border/40 p-6 text-center">
               <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-black">2</div>
-              <h4 className="font-bold text-foreground mb-1">Istraga</h4>
+              <h4 className="font-bold text-foreground mb-1">Pretraga</h4>
               <p className="text-sm text-muted-foreground">Pogledaj module, isprobaj demo prijavu, istraži lekcije i kvizove.</p>
             </div>
             <div className="bg-white rounded-2xl border border-border/40 p-6 text-center">

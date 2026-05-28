@@ -106,7 +106,7 @@ export default function Ljestvica() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed">
-          <p className="font-bold text-foreground mb-2">Ljestvica je dostupna prijavljenim učenicima</p>
+          <p className="font-bold text-foreground mb-2">Tabela je dostupna prijavljenim učenicima</p>
           <Link href="/login" className="text-primary font-bold underline">Prijavi se</Link>
         </Card>
       </Layout>
@@ -116,7 +116,7 @@ export default function Ljestvica() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-ljestvica">
-          <p className="font-bold text-foreground mb-2">Ljestvica je dostupna samo učeničkim nalozima</p>
+          <p className="font-bold text-foreground mb-2">Tabela je dostupna samo učeničkim nalozima</p>
           <Link href="/igrice" className="text-primary font-bold underline">Nazad</Link>
         </Card>
       </Layout>
@@ -137,7 +137,7 @@ export default function Ljestvica() {
           </Button>
         </Link>
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
-          <Trophy className="w-7 h-7 text-amber-500" /> Ljestvica
+          <Trophy className="w-7 h-7 text-amber-500" /> Tabela
         </h1>
         <Button
           variant="ghost"

@@ -267,7 +267,7 @@ export default function IgricePage() {
               <Trophy className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="font-extrabold text-lg text-foreground">Ljestvica</p>
+              <p className="font-extrabold text-lg text-foreground">Tabela</p>
               <p className="text-sm text-muted-foreground">Pogledaj najbolje rezultate u svojoj grupi, mektebu i globalno.</p>
             </div>
           </div>

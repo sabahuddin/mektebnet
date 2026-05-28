@@ -68,7 +68,7 @@ function isUniqueViolation(e: any) {
   return e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
 }
 
-// Strict varijanta — pokušava točno jednom sa zadatim sufiksom. Baca na
+// Strict varijanta — pokušava tačno jednom sa zadatim sufiksom. Baca na
 // koliziji. Koristi se u retry petljama gdje suffix mora biti tačan (par).
 async function tryInsertUser(
   tx: Tx,

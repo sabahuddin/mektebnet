@@ -56,7 +56,7 @@ router.use(requireAuth);
 // sve ostale admin rute ostaju strogo admin-only.
 router.use((req, res, next) => {
   const role = (req as unknown as { user?: { role?: string } }).user?.role;
-  // Boundary-safe prefix: točno "/prilozi" ili podruta "/prilozi/...".
+  // Boundary-safe prefix: tačno "/prilozi" ili podruta "/prilozi/...".
   // Sprječava buduće slučajeve gdje bi nova ruta tipa "/priloziXYZ" slučajno
   // postala dostupna i muallim-u zbog naivnog startsWith-a.
   const isPriloziRoute = req.path === "/prilozi" || req.path.startsWith("/prilozi/");
