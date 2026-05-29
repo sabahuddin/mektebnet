@@ -1,2 +1,3 @@
 - [Git push na ovom projektu](git-push.md) — `github` remote ima stari/expired token u URL-u; koristi `GITHUB_TOKEN` secret umjesto toga.
+- [Dev vs prod banka pitanja](dev-prod-banka.md) — dev DB ima staru 3513-redovnu banku; živa produkcija (self-hosted 2724) je jedini izvor istine.
 - [Background procesi se zamrznu](background-jobs-freeze.md) — nohup/long-running poslovi stanu između tool poziva; vozi duge poslove kao bounded foreground chunkove, resumable.
