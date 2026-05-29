@@ -2,39 +2,54 @@ import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb, ind
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-// Centralna banka pitanja — kategorije i vrste pitanja koje admin koristi pri
-// kreiranju pitanja u banci. `KVIZ_KATEGORIJE` je pedagoški širok set:
-// vjerovanje (akida), namaz/ibadet, ahlak (lijepo ponašanje), historija,
-// Bosna i njena baština, sure i ajeti, dove i zikrovi, halal/haram, Kuran,
-// Sufara (osnove arapskog), opće znanje. Admin može ostaviti `null` ako
-// pitanje ne pripada nijednoj jasnoj kategoriji.
+// Centralna banka pitanja — kategorije su usklađene sa NPP 2018 (službeni
+// nastavni plan Islamske zajednice). Postoje 5 glavnih kategorija (predmeta)
+// i prateći tagovi za pod-teme. Tagovi se koriste za filtriranje unutar
+// glavne kategorije; ne vide ih polaznici, već admin prilikom kreiranja sadržaja.
 export const KVIZ_KATEGORIJE = [
-  "vjerovanje",
-  "namaz",
+  "akaid",
+  "ibadet",
   "ahlak",
   "historija",
   "bosna",
-  "sure",
-  "dove",
-  "halal_haram",
-  "kuran",
-  "sufara",
-  "opce",
 ] as const;
 export type KvizKategorija = (typeof KVIZ_KATEGORIJE)[number];
 
 export const KVIZ_KATEGORIJE_META: Record<KvizKategorija, { naziv: string; ikona: string }> = {
-  vjerovanje: { naziv: "Vjerovanje (Akida)", ikona: "⭐" },
-  namaz: { naziv: "Namaz i ibadeti", ikona: "🕌" },
-  ahlak: { naziv: "Lijepo ponašanje (Ahlak)", ikona: "💝" },
-  historija: { naziv: "Islamska historija", ikona: "📜" },
+  akaid: { naziv: "Akaid — vjerovanje", ikona: "⭐" },
+  ibadet: { naziv: "Ibadet i praksa", ikona: "🕌" },
+  ahlak: { naziv: "Ahlak — lijepo ponašanje", ikona: "💝" },
+  historija: { naziv: "Historija islama", ikona: "📜" },
   bosna: { naziv: "Bosna i naša baština", ikona: "🇧🇦" },
-  sure: { naziv: "Sure i ajeti", ikona: "📖" },
-  dove: { naziv: "Dove i zikrovi", ikona: "🤲" },
-  halal_haram: { naziv: "Halal i haram", ikona: "⚖️" },
-  kuran: { naziv: "Kur'an", ikona: "📕" },
-  sufara: { naziv: "Sufara — arapsko pismo", ikona: "ﺃ" },
-  opce: { naziv: "Opće znanje", ikona: "💡" },
+};
+
+// Tagovi — pod-teme unutar glavne kategorije. Svaki tag pripada tačno jednoj
+// glavnoj kategoriji. Admin koristi tagove za filtriranje u banci pitanja.
+export const KVIZ_TAGOVI = [
+  // Akaid (7)
+  "allah", "meleki", "knjige", "poslanici", "ahiret", "kuran", "sure",
+  // Ibadet (8)
+  "namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram",
+  // Ahlak (6)
+  "ponasanje", "obici", "ljubaznost", "postenje", "srdacnost", "pomaganje",
+  // Historija (5)
+  "zivot_poslanika", "ashabi", "islamska_civilizacija", "osvajanja", "kalifi",
+  // Bosna (6)
+  "nas_ucenjaci", "dzamije", "tradicije", "ilahije", "manastiri", "dijaspora",
+] as const;
+export type KvizTag = (typeof KVIZ_TAGOVI)[number];
+
+export const KVIZ_TAG_KATEGORIJA_MAP: Record<KvizTag, KvizKategorija> = {
+  allah: "akaid", meleki: "akaid", knjige: "akaid", poslanici: "akaid",
+  ahiret: "akaid", kuran: "akaid", sure: "akaid", ajeti: "akaid",
+  namaz: "ibadet", abdest: "ibadet", post: "ibadet", zekat: "ibadet",
+  hadz: "ibadet", dove: "ibadet", zikrovi: "ibadet", halal_haram: "ibadet",
+  ponasanje: "ahlak", obici: "ahlak", ljubaznost: "ahlak", postenje: "ahlak",
+  srdacnost: "ahlak", pomaganje: "ahlak",
+  zivot_poslanika: "historija", ashabi: "historija", islamska_civilizacija: "historija",
+  osvajanja: "historija", kalifi: "historija",
+  nas_ucenjaci: "bosna", dzamije: "bosna", tradicije: "bosna", ilahije: "bosna",
+  manastiri: "bosna", dijaspora: "bosna",
 };
 
 // Vrsta pitanja u banci.
@@ -127,6 +142,9 @@ export const kvizoviTable = pgTable("kvizovi", {
   // lekciju. Oboje opciono — postojeći kvizovi nakon migracije će imati NULL
   // dok ih admin ne kategorizuje.
   kategorija: varchar("kategorija", { length: 60 }),
+  // Tagovi — pod-teme unutar glavne kategorije (npr. "namaz" unutar "ibadet").
+  // JSON niz stringova. Prazan niz = nema tagova. Validira se na backendu.
+  tagovi: jsonb("tagovi").$type<string[]>().notNull().default([]),
   lekcijaId: integer("lekcija_id"),
   opis: text("opis").notNull().default(""),
   // Koliko nasumičnih pitanja se generira po sesiji kad učenik pokrene kviz.
@@ -175,6 +193,9 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   slika: varchar("slika", { length: 500 }),
   vrsta: varchar("vrsta", { length: 20 }).notNull().default("single"),
   kategorija: varchar("kategorija", { length: 60 }),
+  // Tagovi — pod-teme unutar glavne kategorije (npr. "namaz" unutar "ibadet").
+  // JSON niz stringova. Admin koristi za filtriranje u banci pitanja.
+  tagovi: jsonb("tagovi").$type<string[]>().notNull().default([]),
   // Veza za konkretnu Ilmihal lekciju (opciono). Kasnije se može koristiti
   // za "predloži pitanje za ovu lekciju" UX.
   lekcijaId: integer("lekcija_id"),

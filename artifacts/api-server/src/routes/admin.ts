@@ -1457,7 +1457,7 @@ router.post("/ilmihal/delete-batch", async (req, res) => {
 // PUT /api/admin/kvizovi/:id — Update quiz questions/title
 router.put("/kvizovi/:id", async (req, res) => {
   try {
-    const { pitanja, naslov, isPublished, kategorija, lekcijaId, opis, modul, nivo, variant } = req.body;
+    const { pitanja, naslov, isPublished, kategorija, tagovi, lekcijaId, opis, modul, nivo, variant } = req.body;
     const updates: Record<string, any> = {};
     if (pitanja !== undefined) {
       updates.pitanja = typeof pitanja === "string" ? pitanja : JSON.stringify(pitanja);
@@ -1465,6 +1465,7 @@ router.put("/kvizovi/:id", async (req, res) => {
     if (naslov !== undefined) updates.naslov = naslov;
     if (isPublished !== undefined) updates.isPublished = isPublished;
     if (kategorija !== undefined) updates.kategorija = kategorija || null;
+    if (tagovi !== undefined) updates.tagovi = Array.isArray(tagovi) ? tagovi : (tagovi ? [tagovi] : []);
     if (lekcijaId !== undefined) updates.lekcijaId = lekcijaId || null;
     if (opis !== undefined) updates.opis = opis || "";
     if (modul !== undefined) updates.modul = modul;
@@ -1481,7 +1482,7 @@ router.put("/kvizovi/:id", async (req, res) => {
 // posebno kroz POST /kvizovi/:id/dodaj-pitanja iz banke.
 router.post("/kvizovi", async (req, res) => {
   try {
-    const { naslov, slug, modul, nivo, variant, kategorija, lekcijaId, opis, isPublished } = req.body || {};
+    const { naslov, slug, modul, nivo, variant, kategorija, tagovi, lekcijaId, opis, isPublished } = req.body || {};
     if (!naslov || !slug) {
       res.status(400).json({ error: "naslov i slug su obavezni" });
       return;
@@ -1493,6 +1494,7 @@ router.post("/kvizovi", async (req, res) => {
       nivo: nivo ?? null,
       variant: variant || "normal",
       kategorija: kategorija || null,
+      tagovi: Array.isArray(tagovi) ? tagovi : (tagovi ? [tagovi] : []),
       lekcijaId: lekcijaId || null,
       opis: opis || "",
       isPublished: isPublished ?? true,
@@ -1732,6 +1734,7 @@ router.get("/banka-pitanja", async (req, res) => {
   try {
     const search = (req.query["search"] as string | undefined)?.trim() || "";
     const kategorija = (req.query["kategorija"] as string | undefined) || "";
+    const tag = (req.query["tag"] as string | undefined) || "";
     const lekcijaIdRaw = req.query["lekcijaId"] as string | undefined;
     const lekcijaId = lekcijaIdRaw ? parseInt(lekcijaIdRaw) : undefined;
     const page = Math.max(1, parseInt((req.query["page"] as string) || "1") || 1);
@@ -1740,6 +1743,7 @@ router.get("/banka-pitanja", async (req, res) => {
     const filters = [] as any[];
     if (search) filters.push(sql`${pitanjaBankaTable.pitanje} ILIKE ${"%" + search + "%"}`);
     if (kategorija) filters.push(eq(pitanjaBankaTable.kategorija, kategorija));
+    if (tag) filters.push(sql`${pitanjaBankaTable.tagovi} ? ${tag}`);
     if (lekcijaId) filters.push(eq(pitanjaBankaTable.lekcijaId, lekcijaId));
     const whereClause = filters.length ? and(...filters) : undefined;
 
@@ -1764,20 +1768,24 @@ router.get("/banka-pitanja", async (req, res) => {
 });
 
 // GET /api/admin/banka-pitanja/kategorije — meta za UI dropdowns
-// Vraća admin-definisane kategorije iz baze + (fallback) hardcoded set
-// ako tabela još nije seedovana.
+// Vraća hijerarhiju: 5 glavnih kategorija (NPP 2018) + tagovi za filtriranje.
 router.get("/banka-pitanja/kategorije", async (_req, res) => {
   try {
-    const rows = await db.select().from(kvizKategorijeTable)
-      .orderBy(asc(kvizKategorijeTable.redoslijed), asc(kvizKategorijeTable.id));
-    if (rows.length > 0) {
-      res.json({ kategorije: rows.map(r => r.slug), kategorijeRows: rows });
-      return;
-    }
+    const { KVIZ_KATEGORIJE, KVIZ_KATEGORIJE_META, KVIZ_TAGOVI, KVIZ_TAG_KATEGORIJA_MAP } = await import("@workspace/db/schema");
+    const kategorije = KVIZ_KATEGORIJE.map(k => ({
+      slug: k,
+      naziv: KVIZ_KATEGORIJE_META[k].naziv,
+      ikona: KVIZ_KATEGORIJE_META[k].ikona,
+    }));
+    const tagovi = KVIZ_TAGOVI.map(t => ({
+      slug: t,
+      kategorija: KVIZ_TAG_KATEGORIJA_MAP[t],
+    }));
+    res.json({ kategorije, tagovi });
   } catch (err) {
-    console.error("[GET /admin/banka-pitanja/kategorije] DB read failed, falling back", err);
+    console.error("[GET /admin/banka-pitanja/kategorije]", err);
+    res.status(500).json({ error: "Greška servera" });
   }
-  res.json({ kategorije: KVIZ_KATEGORIJE });
 });
 
 // ── KVIZ KATEGORIJE (admin CRUD) ───────────────────────────────────────────────
@@ -1972,9 +1980,10 @@ function normalizePitanjeBody(body: any) {
   const objasnjenje = String(body?.objasnjenje || "").trim();
   const slika = body?.slika ? String(body.slika) : null;
   const kategorija = body?.kategorija ? String(body.kategorija) : null;
+  const tagovi = Array.isArray(body?.tagovi) ? body.tagovi.map((t: any) => String(t).trim().toLowerCase()).filter(Boolean) : (body?.tagovi ? [String(body.tagovi).trim().toLowerCase()] : []);
   const lekcijaId = body?.lekcijaId ? parseInt(body.lekcijaId) || null : null;
   const tezina = body?.tezina ? Math.max(1, Math.min(3, parseInt(body.tezina) || 1)) : 1;
-  return { pitanje, opcije, correctIndex, correctIndexes, correctOrder, meta, objasnjenje, slika, vrsta, kategorija, lekcijaId, tezina };
+  return { pitanje, opcije, correctIndex, correctIndexes, correctOrder, meta, objasnjenje, slika, vrsta, kategorija, tagovi, lekcijaId, tezina };
 }
 
 function validatePitanjeData(d: ReturnType<typeof normalizePitanjeBody>): string | null {

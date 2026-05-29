@@ -12,12 +12,15 @@ import {
 
 // Banka pitanja — centralni admin UI za sva kviz pitanja.
 // Backend rute u admin.ts:
-//   GET    /admin/banka-pitanja?search=&kategorija=&page=&pageSize=
+//   GET    /admin/banka-pitanja?search=&kategorija=&tag=&page=&pageSize=
 //   GET    /admin/banka-pitanja/:id
 //   GET    /admin/banka-pitanja/:id/usage
 //   POST   /admin/banka-pitanja
 //   PUT    /admin/banka-pitanja/:id
 //   DELETE /admin/banka-pitanja/:id  (CASCADE briše iz svih kvizova)
+//
+// Kategorije: 5 glavnih (NPP 2018) — akaid, ibadet, ahlak, historija, bosna
+// Tagovi: pod-teme za admin filtriranje (npr. namaz, abdest, zekat…)
 
 interface PitanjeMeta {
   template?: string[];
@@ -39,6 +42,7 @@ interface PitanjeBanka {
   slika: string | null;
   vrsta: string;
   kategorija: string | null;
+  tagovi: string[];
   lekcijaId: number | null;
   tezina: number;
   createdAt: string;
@@ -78,6 +82,27 @@ interface UsageInfo {
 
 const PAGE_SIZE = 50;
 
+// 5 glavnih kategorija po NPP 2018 + tagovi
+const KATEGORIJE_LABELS: Record<string, string> = {
+  akaid: "Akaid (vjerovanje)", ibadet: "Ibadet (namaz, abdest…)",
+  ahlak: "Ahlak i moral", historija: "Historija (prvoci, proroci)",
+  bosna: "Bosna (džamije, običaji, džemat)",
+};
+const KATEGORIJA_TAGOVI: Record<string, string[]> = {
+  akaid: ["allah", "meleki", "knjige", "poslanici", "ahiret", "kuran", "sure"],
+  ibadet: ["namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram"],
+  ahlak: ["ponasanje", "obici", "ljubaznost", "postenje", "srdacnost", "pomaganje"],
+  historija: ["zivot_poslanika", "ashabi", "islamska_civilizacija", "osvajanja", "kalifi"],
+  bosna: ["nas_ucenjaci", "dzamije", "tradicije", "ilahije", "manastiri", "dijaspora"],
+};
+const TAG_LABELS: Record<string, string> = {
+  allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici", ahiret: "Ahiret", kuran: "Kuran", sure: "Sure",
+  namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž", dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram",
+  ponasanje: "Ponašanje", obici: "Običaji", ljubaznost: "Ljubaznost", postenje: "Poštenje", srdacnost: "Srdacnost", pomaganje: "Pomaganje",
+  zivot_poslanika: "Život poslanika", ashabi: "Ashabi", islamska_civilizacija: "Isl. civilizacija", osvajanja: "Osvajanja", kalifi: "Kalifi",
+  nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije", ilahije: "Ilahije", manastiri: "Manastiri", dijaspora: "Dijaspora",
+};
+
 interface KvizKategorijaApi {
   id: number;
   slug: string;
@@ -105,6 +130,7 @@ function emptyForm() {
     slika: "",
     vrsta: "single" as Vrsta,
     kategorija: "",
+    tagovi: [] as string[],
     lekcijaId: "" as string | number,
     tezina: 1,
   };
@@ -121,6 +147,7 @@ export default function AdminBankaPitanjaPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterKategorija, setFilterKategorija] = useState("");
+  const [filterTag, setFilterTag] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [lekcije, setLekcije] = useState<IlmihalLekcija[]>([]);
@@ -153,9 +180,28 @@ export default function AdminBankaPitanjaPage() {
 
   useEffect(() => { void loadKategorije(); }, [token]);
 
+  // Kategorije i tagovi iz novog hijerarhijskog endpointa (NPP 2018)
+  const [kategorijeHier, setKategorijeHier] = useState<{slug:string; naziv:string; ikona:string}[]>([]);
+  const [tagoviHier, setTagoviHier] = useState<{slug:string; kategorija:string}[]>([]);
+
+  const loadKategorijeHier = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<{kategorije:{slug:string; naziv:string; ikona:string}[]; tagovi:{slug:string; kategorija:string}[]}>("GET", "/admin/banka-pitanja/kategorije", undefined, token);
+      setKategorijeHier(data.kategorije);
+      setTagoviHier(data.tagovi);
+    } catch {
+      // tihi fallback
+    }
+  };
+  useEffect(() => { void loadKategorijeHier(); }, [token]);
+
   const kategorijeLabels = useMemo<Record<string, string>>(() => {
     const m: Record<string, string> = {};
-    kategorije.forEach(k => { m[k.slug] = k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv; });
+    // Preferiraj nove NPP kategorije
+    Object.entries(KATEGORIJE_LABELS).forEach(([k, v]) => { m[k] = v; });
+    // Fallback na stare iz baze
+    kategorije.forEach(k => { if (!m[k.slug]) m[k.slug] = k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv; });
     return m;
   }, [kategorije]);
 
@@ -177,7 +223,7 @@ export default function AdminBankaPitanjaPage() {
     if (!token) return;
     void loadList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page, debouncedSearch, filterKategorija]);
+  }, [token, page, debouncedSearch, filterKategorija, filterTag]);
 
   useEffect(() => {
     if (!token) return;
@@ -227,6 +273,7 @@ export default function AdminBankaPitanjaPage() {
         pageSize: String(PAGE_SIZE),
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(filterKategorija ? { kategorija: filterKategorija } : {}),
+        ...(filterTag ? { tag: filterTag } : {}),
       }).toString();
       const data = await apiRequest<PitanjeListResp>("GET", `/admin/banka-pitanja?${qs}`, undefined, token);
       setRows(data.rows);
@@ -283,6 +330,7 @@ export default function AdminBankaPitanjaPage() {
       slika: p.slika || "",
       vrsta,
       kategorija: p.kategorija || "",
+      tagovi: p.tagovi || [],
       lekcijaId: p.lekcijaId || "",
       tezina: p.tezina,
     });
@@ -403,6 +451,7 @@ export default function AdminBankaPitanjaPage() {
         slika: form.slika.trim() || null,
         vrsta: form.vrsta,
         kategorija: form.kategorija || null,
+        tagovi: form.tagovi || [],
         lekcijaId: form.lekcijaId ? Number(form.lekcijaId) : null,
         tezina: form.tezina,
       };
@@ -485,12 +534,25 @@ export default function AdminBankaPitanjaPage() {
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <select
               value={filterKategorija}
-              onChange={e => { setFilterKategorija(e.target.value); setPage(1); }}
+              onChange={e => { setFilterKategorija(e.target.value); setFilterTag(""); setPage(1); }}
               className="pl-10 pr-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-[180px]"
             >
               <option value="">Sve kategorije</option>
               {Object.entries(kategorijeLabels).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <select
+              value={filterTag}
+              onChange={e => { setFilterTag(e.target.value); setPage(1); }}
+              className="pl-10 pr-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-[180px]"
+            >
+              <option value="">Svi tagovi</option>
+              {filterKategorija && KATEGORIJA_TAGOVI[filterKategorija]?.map(t => (
+                <option key={t} value={t}>{TAG_LABELS[t] || t}</option>
               ))}
             </select>
           </div>
@@ -549,9 +611,14 @@ export default function AdminBankaPitanjaPage() {
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           {p.kategorija && (
                             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                              {kategorijeLabels[p.kategorija] || p.kategorija}
+                              {KATEGORIJE_LABELS[p.kategorija] || p.kategorija}
                             </span>
                           )}
+                          {p.tagovi && p.tagovi.map(t => (
+                            <span key={t} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                              {TAG_LABELS[t] || t}
+                            </span>
+                          ))}
                           {lek && (
                             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 flex items-center gap-1">
                               <BookOpenCheck className="w-3 h-3" /> {lek.naslov}
@@ -1166,14 +1233,14 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
         )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">Kategorija</label>
+            <label className="block text-sm font-semibold text-foreground mb-1">Kategorija (NPP 2018)</label>
             <select
               value={form.kategorija}
-              onChange={e => setForm(prev => ({ ...prev, kategorija: e.target.value }))}
+              onChange={e => setForm(prev => ({ ...prev, kategorija: e.target.value, tagovi: [] }))}
               className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
             >
               <option value="">— bez —</option>
-              {Object.entries(kategorijeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div>
@@ -1197,6 +1264,28 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
             </select>
           </div>
         </div>
+        {/* Tagovi — admin filtriranje */}
+        {form.kategorija && KATEGORIJA_TAGOVI[form.kategorija] && (
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">Tagovi (pod-teme)</label>
+            <div className="flex flex-wrap gap-2">
+              {KATEGORIJA_TAGOVI[form.kategorija].map(tag => {
+                const active = (form.tagovi || []).includes(tag);
+                return (
+                  <button key={tag} onClick={() => setForm(prev => {
+                    const curr = prev.tagovi || [];
+                    const next = active ? curr.filter(t => t !== tag) : [...curr, tag];
+                    return { ...prev, tagovi: next };
+                  })}
+                    className={`px-3 py-1 rounded-full text-sm font-semibold transition ${active ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"}`}>
+                    {TAG_LABELS[tag] || tag}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Tagovi služe za admin filtriranje — polaznici ih ne vide.</p>
+          </div>
+        )}
         <div>
           <label className="block text-sm font-semibold text-foreground mb-1">Slika (URL, opciono)</label>
           <input

@@ -31,6 +31,7 @@ interface Kviz {
   modul: string;
   variant: string | null;
   kategorija: string | null;
+  tagovi: string[];
   lekcijaId: number | null;
   opis: string;
   isPublished: boolean;
@@ -64,6 +65,7 @@ interface PitanjeBanka {
   vrsta: string;
   meta: PitanjeMeta | null;
   kategorija: string | null;
+  tagovi: string[];
   lekcijaId: number | null;
 }
 
@@ -106,10 +108,27 @@ function PitanjeAnswerPreview({ p }: { p: { vrsta?: string; meta: PitanjeMeta | 
 interface PitanjeListResp { total: number; page: number; pageSize: number; rows: PitanjeBanka[]; }
 interface IlmihalLekcija { id: number; nivo: number; slug: string; naslov: string; }
 
+// 5 glavnih kategorija po NPP 2018
 const KATEGORIJE_LABELS: Record<string, string> = {
-  vjerovanje: "Vjerovanje", namaz: "Namaz", ahlak: "Ahlak", historija: "Historija",
-  bosna: "Bosna", sure: "Sure", dove: "Dove", halal_haram: "Halal/Haram",
-  kuran: "Kur'an", sufara: "Sufara", opce: "Opće",
+  akaid: "Akaid (vjerovanje)", ibadet: "Ibadet (namaz, abdest…)",
+  ahlak: "Ahlak i moral", historija: "Historija (prvoci, proroci)",
+  bosna: "Bosna (džamije, običaji, džemat)" };
+const KATEGORIJE_LIST = ["akaid", "ibadet", "ahlak", "historija", "bosna"];
+
+// Tagovi po glavnoj kategoriji — za admin filtriranje
+const KATEGORIJA_TAGOVI: Record<string, string[]> = {
+  akaid: ["allah", "meleki", "knjige", "poslanici", "ahiret", "kuran", "sure", "ajeti"],
+  ibadet: ["namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram"],
+  ahlak: ["ponasanje", "obici", "ljubaznost", "postenje", "srdacnost", "pomaganje"],
+  historija: ["zivot_poslanika", "ashabi", "islamska_civilizacija", "osvajanja", "kalifi"],
+  bosna: ["nas_ucenjaci", "dzamije", "tradicije", "ilahije", "manastiri", "dijaspora"],
+};
+const TAG_LABELS: Record<string, string> = {
+  allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici", ahiret: "Ahiret", kuran: "Kuran", sure: "Sure", ajeti: "Ajeti",
+  namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž", dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram",
+  ponasanje: "Ponašanje", obici: "Običaji", ljubaznost: "Ljubaznost", postenje: "Poštenje", srdacnost: "Srdacnost", pomaganje: "Pomaganje",
+  zivot_poslanika: "Život poslanika", ashabi: "Ashabi", islamska_civilizacija: "Isl. civilizacija", osvajanja: "Osvajanja", kalifi: "Kalifi",
+  nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije", ilahije: "Ilahije", manastiri: "Manastiri", dijaspora: "Dijaspora",
 };
 
 const slugify = (s: string) => s.toLowerCase()
@@ -127,7 +146,7 @@ export default function AdminKvizEditorPage() {
 
   const [meta, setMeta] = useState<Partial<Kviz>>({
     naslov: "", slug: "", modul: "ilmihal", nivo: 1, variant: "normal",
-    kategorija: "", lekcijaId: null, opis: "", isPublished: true,
+    kategorija: "", tagovi: [], lekcijaId: null, opis: "", isPublished: true,
   });
   const [pitanja, setPitanja] = useState<KvizPitanjeRow[]>([]);
   const [loading, setLoading] = useState(!isNew);
@@ -193,6 +212,7 @@ export default function AdminKvizEditorPage() {
         nivo: meta.nivo,
         variant: meta.variant,
         kategorija: meta.kategorija || null,
+        tagovi: meta.tagovi || [],
         lekcijaId: meta.lekcijaId || null,
         opis: meta.opis || "",
         isPublished: meta.isPublished,
@@ -353,8 +373,11 @@ export default function AdminKvizEditorPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">Kategorija</label>
-              <select value={meta.kategorija || ""} onChange={e => setMeta(p => ({ ...p, kategorija: e.target.value || null }))}
+              <label className="block text-sm font-semibold mb-1">Kategorija (NPP 2018)</label>
+              <select value={meta.kategorija || ""} onChange={e => {
+                const kat = e.target.value || null;
+                setMeta(p => ({ ...p, kategorija: kat, tagovi: [] }));
+              }}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
                 <option value="">— bez —</option>
                 {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -369,6 +392,28 @@ export default function AdminKvizEditorPage() {
               </select>
             </div>
           </div>
+          {/* Tagovi — admin filtriranje (ne vide polaznici) */}
+          {meta.kategorija && KATEGORIJA_TAGOVI[meta.kategorija] && (
+            <div>
+              <label className="block text-sm font-semibold mb-1">Tagovi (pod-teme za filtriranje)</label>
+              <div className="flex flex-wrap gap-2">
+                {KATEGORIJA_TAGOVI[meta.kategorija].map(tag => {
+                  const active = (meta.tagovi || []).includes(tag);
+                  return (
+                    <button key={tag} onClick={() => setMeta(p => {
+                      const curr = p.tagovi || [];
+                      const next = active ? curr.filter(t => t !== tag) : [...curr, tag];
+                      return { ...p, tagovi: next };
+                    })}
+                      className={`px-3 py-1 rounded-full text-sm font-semibold transition ${active ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"}`}>
+                      {TAG_LABELS[tag] || tag}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Tagovi služe za admin filtriranje — polaznici ih ne vide.</p>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-semibold mb-1">Opis (opciono)</label>
             <textarea value={meta.opis || ""} onChange={e => setMeta(p => ({ ...p, opis: e.target.value }))} rows={2}
