@@ -580,6 +580,8 @@ export default function AdminBankaPitanjaPage() {
             setForm={setForm}
             lekcije={lekcije}
             kategorijeLabels={kategorijeLabels}
+            kategorijaTagovi={KATEGORIJA_TAGOVI}
+            tagLabels={TAG_LABELS}
             editId={null}
             saving={saving}
             onSave={handleSave}
@@ -679,6 +681,8 @@ export default function AdminBankaPitanjaPage() {
                           setForm={setForm}
                           lekcije={lekcije}
                           kategorijeLabels={kategorijeLabels}
+                          kategorijaTagovi={KATEGORIJA_TAGOVI}
+                          tagLabels={TAG_LABELS}
                           editId={editId}
                           saving={saving}
                           onSave={handleSave}
@@ -918,6 +922,8 @@ interface FormProps {
   setForm: React.Dispatch<React.SetStateAction<ReturnType<typeof emptyForm>>>;
   lekcije: IlmihalLekcija[];
   kategorijeLabels: Record<string, string>;
+  kategorijaTagovi: Record<string, string[]>;
+  tagLabels: Record<string, string>;
   editId: number | null;
   saving: boolean;
   onSave: () => void;
@@ -1029,7 +1035,7 @@ function LekcijaPicker({ lekcije, value, onChange }: LekcijaPickerProps) {
   );
 }
 
-function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving, onSave, onCancel, onOpcijaChange, onAddOpcija, onRemoveOpcija }: FormProps) {
+function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, kategorijaTagovi, tagLabels, editId, saving, onSave, onCancel, onOpcijaChange, onAddOpcija, onRemoveOpcija }: FormProps) {
   return (
     <div className="bg-white border-2 border-amber-200 rounded-2xl p-5 mb-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -1095,6 +1101,60 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, editId, saving,
             <option value="markWords">Pronađi grešku</option>
           </select>
         </div>
+
+        {/* Kategorija i tagovi */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">Kategorija (NPP 2018)</label>
+            <select
+              value={form.kategorija || ""}
+              onChange={e => setForm(prev => ({ ...prev, kategorija: e.target.value || "", tagovi: [] }))}
+              className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="">— Nema kategorije —</option>
+              {Object.entries(kategorijeLabels).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">Težina</label>
+            <select
+              value={form.tezina}
+              onChange={e => setForm(prev => ({ ...prev, tezina: Number(e.target.value) }))}
+              className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value={1}>Lako</option>
+              <option value={2}>Srednje</option>
+              <option value={3}>Teško</option>
+            </select>
+          </div>
+        </div>
+        {form.kategorija && kategorijaTagovi[form.kategorija] && (
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">Tagovi (pod-teme)</label>
+            <div className="flex flex-wrap gap-2">
+              {kategorijaTagovi[form.kategorija]!.map(t => {
+                const active = form.tagovi.includes(t);
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm(prev => ({
+                      ...prev,
+                      tagovi: active
+                        ? prev.tagovi.filter(x => x !== t)
+                        : [...prev.tagovi, t],
+                    }))}
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition ${active ? "bg-amber-500 text-white border-amber-500" : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"}`}
+                  >
+                    {tagLabels[t] || t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {form.vrsta === "truefalse" ? (
           <div>
