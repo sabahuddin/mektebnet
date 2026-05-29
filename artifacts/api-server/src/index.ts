@@ -206,6 +206,8 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS opis text DEFAULT '' NOT NULL;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS pitanja_po_sesiji integer;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS is_published boolean DEFAULT true NOT NULL;`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS tagovi jsonb DEFAULT '[]'::jsonb NOT NULL;`);
+    await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS tagovi jsonb DEFAULT '[]'::jsonb NOT NULL;`);
 
     // obavještenja tabela (muallim → roditelji/grupa). Iz migracije 0006.
     await db.execute(sql`
