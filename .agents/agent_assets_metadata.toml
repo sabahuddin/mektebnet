@@ -1205,3 +1205,9 @@ id = "9eVYH5bn1HxiuhDosGm0s"
 uri = "file://artifacts/mekteb-arapsko-pismo/public/images/lekcija-bg-svjetla.png"
 type = "image"
 title = "lekcija-bg-svjetla.png — trenutna slika koja se koristi za bočne trake na lekciji"
+
+[[outputs]]
+id = "Ti6SzFQ4vhk2a7UR6BOAT"
+uri = "file://README.md"
+type = "text"
+title = "Mekteb — Dokumentacija projekta (README.md)"
