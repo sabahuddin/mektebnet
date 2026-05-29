@@ -41,7 +41,7 @@ export type KvizTag = (typeof KVIZ_TAGOVI)[number];
 
 export const KVIZ_TAG_KATEGORIJA_MAP: Record<KvizTag, KvizKategorija> = {
   allah: "akaid", meleki: "akaid", knjige: "akaid", poslanici: "akaid",
-  ahiret: "akaid", kuran: "akaid", sure: "akaid", ajeti: "akaid",
+  ahiret: "akaid", kuran: "akaid", sure: "akaid",
   namaz: "ibadet", abdest: "ibadet", post: "ibadet", zekat: "ibadet",
   hadz: "ibadet", dove: "ibadet", zikrovi: "ibadet", halal_haram: "ibadet",
   ponasanje: "ahlak", obici: "ahlak", ljubaznost: "ahlak", postenje: "ahlak",

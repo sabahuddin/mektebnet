@@ -1,1 +1,2 @@
 - [Git push na ovom projektu](git-push.md) — `github` remote ima stari/expired token u URL-u; koristi `GITHUB_TOKEN` secret umjesto toga.
+- [Background procesi se zamrznu](background-jobs-freeze.md) — nohup/long-running poslovi stanu između tool poziva; vozi duge poslove kao bounded foreground chunkove, resumable.
