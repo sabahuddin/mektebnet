@@ -8,7 +8,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
@@ -2138,6 +2138,9 @@ export default function AdminPage() {
               </button>
               <button onClick={() => setLocation("/admin/kviz-novi")} className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl font-semibold hover:bg-orange-100 transition text-sm">
                 <Plus className="w-4 h-4" /> Novi kviz
+              </button>
+              <button onClick={() => setLocation("/admin/ai-import")} className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border border-violet-200 text-violet-800 rounded-xl font-semibold hover:bg-violet-100 transition text-sm">
+                <Wand2 className="w-4 h-4" /> AI uvoz kviza
               </button>
               <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
                 <BookOpen className="w-4 h-4" /> Slike bez lekcije

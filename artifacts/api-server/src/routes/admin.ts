@@ -1479,6 +1479,84 @@ router.put("/kvizovi/:id", async (req, res) => {
   }
 });
 
+// POST /api/admin/kvizovi/ai-import — uvoz kompletnog kviza (AI-generisanog).
+// Prima JSON: { naslov, slug, kategorija, tagovi, opis?, pitanja: [...] }.
+// Svako pitanje se dedup-uje po tekstu (UNIQUE na pitanja_banka.pitanje). Ako
+// pitanje već postoji, koristi se postojeći ID; inaće se kreira u banci.
+// Na kraju se kreira kviz i linkuju sva pitanja.
+router.post("/kvizovi/ai-import", async (req, res) => {
+  try {
+    const { naslov, slug, kategorija, tagovi, opis, pitanja } = req.body || {};
+    if (!naslov || !slug) { res.status(400).json({ error: "naslov i slug su obavezni" }); return; }
+    if (!Array.isArray(pitanja) || pitanja.length === 0) { res.status(400).json({ error: "pitanja mora biti niz sa barem jednim pitanjem" }); return; }
+
+    const userId = (req as any).user?.id;
+    const slugClean = String(slug).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+    if (!slugClean) { res.status(400).json({ error: "Slug mora sadržavati a-z, 0-9 ili _" }); return; }
+
+    const result = await db.transaction(async (tx) => {
+      // 1) Kreiraj kviz
+      const [kviz] = await tx.insert(kvizoviTable).values({
+        naslov: String(naslov).trim(),
+        slug: slugClean,
+        modul: "ilmihal",
+        variant: "normal",
+        kategorija: kategorija ? String(kategorija) : null,
+        tagovi: Array.isArray(tagovi) ? tagovi.map(String) : [],
+        opis: opis ? String(opis) : "",
+        isPublished: true,
+        pitanja: [],
+      }).returning();
+
+      // 2) Pitanja — dedup po tekstu
+      const pitanjeIds: number[] = [];
+      for (const q of pitanja) {
+        const normalized = normalizePitanjeBody(q);
+        const err = validatePitanjeData(normalized);
+        if (err) {
+          // Preskoči nevalidna pitanja i loguj
+          console.warn(`[ai-import] Preskočeno pitanje: ${err}`, normalized.pitanje.slice(0, 80));
+          continue;
+        }
+        // Provjeri da li pitanje već postoji
+        const [existing] = await tx.select({ id: pitanjaBankaTable.id }).from(pitanjaBankaTable)
+          .where(sql`LOWER(TRIM(${pitanjaBankaTable.pitanje})) = LOWER(TRIM(${normalized.pitanje}))`)
+          .limit(1);
+        let pid: number;
+        if (existing) {
+          pid = existing.id;
+        } else {
+          const [created] = await tx.insert(pitanjaBankaTable).values({
+            ...normalized,
+            createdBy: userId || null,
+          }).returning();
+          pid = created.id;
+        }
+        pitanjeIds.push(pid);
+      }
+
+      if (pitanjeIds.length === 0) {
+        throw new Error("Nijedno validno pitanje nije pronađeno ili kreirano");
+      }
+
+      // 3) Linkuj pitanja u kviz
+      const values = pitanjeIds.map((pid, i) => ({ kvizId: kviz.id, pitanjeId: pid, redoslijed: i }));
+      await tx.insert(kvizPitanjaTable).values(values).onConflictDoNothing();
+
+      return { kvizId: kviz.id, naslov: kviz.naslov, slug: kviz.slug, ukupnoPitanja: pitanjeIds.length };
+    });
+
+    res.status(201).json({ success: true, ...result });
+  } catch (err: any) {
+    if (String(err?.message || "").includes("unique") || String(err?.message || "").includes("violation")) {
+      res.status(409).json({ error: "Slug kviza već postoji. Izaberi drugi slug." });
+      return;
+    }
+    console.error("[POST /kvizovi/ai-import]", err);
+    res.status(500).json({ error: err?.message || "Greška servera" });
+  }
+});
+
 // POST /api/admin/kvizovi — Create new (empty) quiz. Pitanja se dodaju
 // posebno kroz POST /kvizovi/:id/dodaj-pitanja iz banke.
 router.post("/kvizovi", async (req, res) => {

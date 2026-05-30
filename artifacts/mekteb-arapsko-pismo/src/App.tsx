@@ -56,6 +56,7 @@ import AdminRjecnikPage from "./pages/admin-rjecnik";
 import AdminOrphanUploadsPage from "./pages/admin-orphan-uploads";
 import AdminBankaPitanjaPage from "./pages/admin-banka-pitanja";
 import AdminKvizEditorPage from "./pages/admin-kviz-editor";
+import AdminAiImportPage from "./pages/admin-ai-import";
 import AdminCitaonicaPage from "./pages/admin-citaonica";
 import AdminEtapePage from "./pages/admin-etape";
 import KrunisanjeNivoPage from "./pages/krunisanje";
@@ -167,6 +168,7 @@ function Router() {
       <Route path="/admin/banka-pitanja" component={AdminBankaPitanjaPage} />
       <Route path="/admin/kviz/:id" component={AdminKvizEditorPage} />
       <Route path="/admin/kviz-novi" component={AdminKvizEditorPage} />
+      <Route path="/admin/ai-import" component={AdminAiImportPage} />
       <Route path="/admin/citaonica" component={AdminCitaonicaPage} />
       <Route path="/admin/etape" component={AdminEtapePage} />
       <Route path="/admin" component={AdminPage} />
