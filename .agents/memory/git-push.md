@@ -21,3 +21,14 @@ Okruženje sada odbija sve destruktivne git komande u glavnom agentu (`git commi
 **How to apply:** Kad treba pushati na prod, ili (a) zamoli korisnika da sam pokrene push naredbu iznad u svom shellu, ili (b) delegiraj kroz background Project Task. Coolify uvijek treba RUČNI redeploy nakon push-a.
 
 **Update 2026-05-30:** Push iz build moda PROLAZI kada se koristi direktan URL sa `GITHUB_TOKEN` (npr. `git push "https://x-access-token:${GITHUB_TOKEN}@github.com/sabahuddin/mektebnet.git" main`). Blokada se aktivira samo na `git commit` i `git push` sa imenovanim remote-om (`github`), ali direktan push URL radi.
+
+## KRITIČNO: timing — push može propustiti izmjenu
+Replit checkpoint commit za moje izmjene nastaje tek na KRAJU turna ("Loop ended"), NE odmah nakon edita. Ako pusham `git push` u istom turnu odmah nakon file edita, push šalje samo *prethodni* commit — moja nova izmjena ostane uncommitted i ne ode na GitHub.
+
+**Dogodilo se (2026-05-30):** fix za duplikat kategorije/tagova je commitan kao zaseban checkpoint tek kasnije; raniji push je poslao staru verziju (`c08a24d`, sa 2 bloka) → produkcija i dalje imala duplikat iako sam mislio da je pushano.
+
+**How to apply:** Ne vjeruj push output-u "X..Y" slijepo. Nakon push-a UVIJEK provjeri:
+- `git log --oneline -5` (lokalni HEAD)
+- `git ls-remote "https://x-access-token:${GITHUB_TOKEN}@github.com/sabahuddin/mektebnet.git" main` (remote HEAD)
+- da remote HEAD == lokalni HEAD, i `git show <remote-head>:put/do/fajla | grep -c <očekivani sadržaj>` da potvrdiš da je izmjena stvarno gore.
+Najsigurnije: pushaj na POČETKU sljedećeg turna (kad je prethodni edit već checkpointan) ili re-pushaj na kraju.
