@@ -797,6 +797,11 @@ function KategorijeManagerModal({
   const [novaIkona, setNovaIkona] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState<KvizKategorijaApi | null>(null);
+  // Uređivanje kategorije
+  const [editingKat, setEditingKat] = useState<KvizKategorijaApi | null>(null);
+  const [editKatNaziv, setEditKatNaziv] = useState("");
+  const [editKatSlug, setEditKatSlug] = useState("");
+  const [editKatIkona, setEditKatIkona] = useState("");
 
   // Tagovi (pod-teme) — zaseban CRUD; lista se učitava iz /admin/kviz-tagovi.
   const [tagovi, setTagovi] = useState<KvizTagApi[]>([]);
@@ -805,6 +810,11 @@ function KategorijeManagerModal({
   const [noviTagKat, setNoviTagKat] = useState("");
   const [savingTag, setSavingTag] = useState(false);
   const [confirmingTag, setConfirmingTag] = useState<KvizTagApi | null>(null);
+  // Uređivanje taga
+  const [editingTag, setEditingTag] = useState<KvizTagApi | null>(null);
+  const [editTagNaziv, setEditTagNaziv] = useState("");
+  const [editTagSlug, setEditTagSlug] = useState("");
+  const [editTagKat, setEditTagKat] = useState("");
 
   const loadTagovi = async () => {
     try {
@@ -845,6 +855,30 @@ function KategorijeManagerModal({
     } finally { setSaving(false); }
   };
 
+  const uredi = async (k: KvizKategorijaApi) => {
+    if (!editKatNaziv.trim()) { toast({ title: "Greška", description: "Naziv je obavezan", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      await apiRequest("PUT", `/admin/kviz-kategorije/${k.id}`, {
+        slug: editKatSlug.trim() || undefined,
+        naziv: editKatNaziv.trim(),
+        ikona: editKatIkona.trim() || null,
+      }, token);
+      toast({ title: "Sačuvano", description: `Kategorija "${editKatNaziv.trim()}" ažurirana` });
+      setEditingKat(null);
+      onChanged();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće sačuvati", variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  const startEditKat = (k: KvizKategorijaApi) => {
+    setEditingKat(k);
+    setEditKatNaziv(k.naziv);
+    setEditKatSlug(k.slug);
+    setEditKatIkona(k.ikona || "");
+  };
+
   const dodajTag = async () => {
     if (!noviTagNaziv.trim() || !noviTagKat) {
       toast({ title: "Greška", description: "Naziv i glavna kategorija su obavezni", variant: "destructive" });
@@ -877,6 +911,31 @@ function KategorijeManagerModal({
     } catch (err: any) {
       toast({ title: "Greška", description: err?.message || "Nije moguće obrisati tag", variant: "destructive" });
     } finally { setSavingTag(false); }
+  };
+
+  const urediTag = async (t: KvizTagApi) => {
+    if (!editTagNaziv.trim()) { toast({ title: "Greška", description: "Naziv je obavezan", variant: "destructive" }); return; }
+    setSavingTag(true);
+    try {
+      await apiRequest("PUT", `/admin/kviz-tagovi/${t.id}`, {
+        slug: editTagSlug.trim() || undefined,
+        naziv: editTagNaziv.trim(),
+        kategorija: editTagKat,
+      }, token);
+      toast({ title: "Sačuvano", description: `Tag "${editTagNaziv.trim()}" ažuriran` });
+      setEditingTag(null);
+      await loadTagovi();
+      onChanged();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće sačuvati tag", variant: "destructive" });
+    } finally { setSavingTag(false); }
+  };
+
+  const startEditTag = (t: KvizTagApi) => {
+    setEditingTag(t);
+    setEditTagNaziv(t.naziv);
+    setEditTagSlug(t.slug);
+    setEditTagKat(t.kategorija);
   };
 
   return (
@@ -935,22 +994,64 @@ function KategorijeManagerModal({
           {kategorije.length === 0 ? (
             <p className="text-center text-muted-foreground py-6">Nema kategorija. Dodaj prvu iznad.</p>
           ) : kategorije.map(k => (
-            <div key={k.id} className="flex items-center gap-3 px-3 py-2 border border-border rounded-lg">
-              <span className="text-xl shrink-0 w-6 text-center">{k.ikona || "•"}</span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-foreground truncate">{k.naziv}</div>
-                <div className="text-xs text-muted-foreground">
-                  <span className="font-mono">{k.slug}</span> · {k.brojPitanja || 0} pitanja
+            <div key={k.id} className="px-3 py-2 border border-border rounded-lg">
+              {editingKat?.id === k.id ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                  <input
+                    value={editKatNaziv}
+                    onChange={e => setEditKatNaziv(e.target.value)}
+                    placeholder="Naziv"
+                    className="px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <input
+                    value={editKatSlug}
+                    onChange={e => setEditKatSlug(e.target.value)}
+                    placeholder="slug"
+                    className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <input
+                    value={editKatIkona}
+                    onChange={e => setEditKatIkona(e.target.value)}
+                    placeholder="ikona (emoji)"
+                    maxLength={4}
+                    className="px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
                 </div>
-              </div>
-              <button
-                onClick={() => setConfirming(k)}
-                className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition"
-                title="Obriši kategoriju"
-                data-testid={`btn-obrisi-kategoriju-${k.slug}`}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-xl shrink-0 w-6 text-center">{k.ikona || "•"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-foreground truncate">{k.naziv}</div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-mono">{k.slug}</span> · {k.brojPitanja || 0} pitanja
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => startEditKat(k)}
+                    className="p-2 rounded-lg hover:bg-amber-50 text-muted-foreground hover:text-amber-600 transition"
+                    title="Uredi kategoriju"
+                    data-testid={`btn-uredi-kategoriju-${k.slug}`}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setConfirming(k)}
+                    className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition"
+                    title="Obriši kategoriju"
+                    data-testid={`btn-obrisi-kategoriju-${k.slug}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {editingKat?.id === k.id && (
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setEditingKat(null)} className="px-3 py-1.5 rounded-lg border border-border font-semibold text-sm hover:bg-muted">Odustani</button>
+                  <button onClick={() => uredi(k)} disabled={saving} className="px-3 py-1.5 rounded-lg bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 disabled:opacity-50">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sačuvaj"}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1014,21 +1115,64 @@ function KategorijeManagerModal({
                 <div key={g.kljuc} className="mb-3">
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">{g.naslov}</div>
                   {g.lista.map(t => (
-                    <div key={t.id} className="flex items-center gap-3 px-3 py-2 border border-border rounded-lg mb-1">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-foreground truncate">{t.naziv}</div>
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-mono">{t.slug}</span> · {t.brojPitanja || 0} pitanja
+                    <div key={t.id} className="px-3 py-2 border border-border rounded-lg mb-1">
+                      {editingTag?.id === t.id ? (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                            <input
+                              value={editTagNaziv}
+                              onChange={e => setEditTagNaziv(e.target.value)}
+                              placeholder="Naziv"
+                              className="px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            />
+                            <input
+                              value={editTagSlug}
+                              onChange={e => setEditTagSlug(e.target.value)}
+                              placeholder="slug"
+                              className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            />
+                            <select
+                              value={editTagKat}
+                              onChange={e => setEditTagKat(e.target.value)}
+                              className="px-3 py-2 border border-border rounded-lg text-base bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            >
+                              <option value="">— glavna kategorija —</option>
+                              {kategorije.map(k => <option key={k.id} value={k.slug}>{k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv}</option>)}
+                            </select>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => setEditingTag(null)} className="px-3 py-1.5 rounded-lg border border-border font-semibold text-sm hover:bg-muted">Odustani</button>
+                            <button onClick={() => urediTag(t)} disabled={savingTag} className="px-3 py-1.5 rounded-lg bg-teal-500 text-white font-semibold text-sm hover:bg-teal-600 disabled:opacity-50">
+                              {savingTag ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sačuvaj"}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-foreground truncate">{t.naziv}</div>
+                            <div className="text-xs text-muted-foreground">
+                              <span className="font-mono">{t.slug}</span> · {t.brojPitanja || 0} pitanja
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => startEditTag(t)}
+                            className="p-2 rounded-lg hover:bg-teal-50 text-muted-foreground hover:text-teal-600 transition"
+                            title="Uredi tag"
+                            data-testid={`btn-uredi-tag-${t.slug}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setConfirmingTag(t)}
+                            className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition"
+                            title="Obriši tag"
+                            data-testid={`btn-obrisi-tag-${t.slug}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                      </div>
-                      <button
-                        onClick={() => setConfirmingTag(t)}
-                        className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition"
-                        title="Obriši tag"
-                        data-testid={`btn-obrisi-tag-${t.slug}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      )}
                     </div>
                   ))}
                 </div>
