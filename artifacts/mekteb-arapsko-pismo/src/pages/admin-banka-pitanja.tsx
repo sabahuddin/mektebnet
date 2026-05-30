@@ -88,13 +88,6 @@ const KATEGORIJE_LABELS: Record<string, string> = {
   ahlak: "Ahlak i moral", historija: "Historija (prvoci, proroci)",
   bosna: "Bosna (džamije, običaji, džemat)",
 };
-const KATEGORIJA_TAGOVI: Record<string, string[]> = {
-  akaid: ["allah", "meleki", "knjige", "poslanici", "ahiret", "kuran", "sure"],
-  ibadet: ["namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram"],
-  ahlak: ["ponasanje", "obici", "ljubaznost", "postenje", "srdacnost", "pomaganje"],
-  historija: ["zivot_poslanika", "ashabi", "islamska_civilizacija", "osvajanja", "kalifi"],
-  bosna: ["nas_ucenjaci", "dzamije", "tradicije", "ilahije", "manastiri", "dijaspora"],
-};
 const TAG_LABELS: Record<string, string> = {
   allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici", ahiret: "Ahiret", kuran: "Kuran", sure: "Sure",
   namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž", dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram",
@@ -182,12 +175,12 @@ export default function AdminBankaPitanjaPage() {
 
   // Kategorije i tagovi iz novog hijerarhijskog endpointa (NPP 2018)
   const [kategorijeHier, setKategorijeHier] = useState<{slug:string; naziv:string; ikona:string}[]>([]);
-  const [tagoviHier, setTagoviHier] = useState<{slug:string; kategorija:string}[]>([]);
+  const [tagoviHier, setTagoviHier] = useState<{slug:string; naziv:string; kategorija:string}[]>([]);
 
   const loadKategorijeHier = async () => {
     if (!token) return;
     try {
-      const data = await apiRequest<{kategorije:{slug:string; naziv:string; ikona:string}[]; tagovi:{slug:string; kategorija:string}[]}>("GET", "/admin/banka-pitanja/kategorije", undefined, token);
+      const data = await apiRequest<{kategorije:{slug:string; naziv:string; ikona:string}[]; tagovi:{slug:string; naziv:string; kategorija:string}[]}>("GET", "/admin/banka-pitanja/kategorije", undefined, token);
       setKategorijeHier(data.kategorije);
       setTagoviHier(data.tagovi);
     } catch {
@@ -196,14 +189,30 @@ export default function AdminBankaPitanjaPage() {
   };
   useEffect(() => { void loadKategorijeHier(); }, [token]);
 
+  // DB je izvor istine: katalog kategorija/tagova dolazi iz hijerarhijskog
+  // endpointa. Konstante (KATEGORIJE_LABELS / TAG_LABELS) ostaju samo kao
+  // cosmetic fallback labela za legacy slug koji više nije u katalogu.
   const kategorijeLabels = useMemo<Record<string, string>>(() => {
     const m: Record<string, string> = {};
-    // Preferiraj nove NPP kategorije
-    Object.entries(KATEGORIJE_LABELS).forEach(([k, v]) => { m[k] = v; });
-    // Fallback na stare iz baze
-    kategorije.forEach(k => { if (!m[k.slug]) m[k.slug] = k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv; });
+    kategorijeHier.forEach(k => { m[k.slug] = k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv; });
     return m;
-  }, [kategorije]);
+  }, [kategorijeHier]);
+
+  const kategorijaTagovi = useMemo<Record<string, string[]>>(() => {
+    const m: Record<string, string[]> = {};
+    tagoviHier.forEach(t => { (m[t.kategorija] ||= []).push(t.slug); });
+    return m;
+  }, [tagoviHier]);
+
+  const tagLabels = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    tagoviHier.forEach(t => { m[t.slug] = t.naziv; });
+    return m;
+  }, [tagoviHier]);
+
+  // Labela za badževe — DB katalog, pa fallback na konstantu, pa sirovi slug.
+  const katLabel = (slug: string) => kategorijeLabels[slug] || KATEGORIJE_LABELS[slug] || slug;
+  const tagLabel = (slug: string) => tagLabels[slug] || TAG_LABELS[slug] || slug;
 
   useEffect(() => {
     // Sačekaj da auth context završi hidraciju iz localStorage. Bez ovoga
@@ -551,8 +560,8 @@ export default function AdminBankaPitanjaPage() {
               className="pl-10 pr-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-[180px]"
             >
               <option value="">Svi tagovi</option>
-              {filterKategorija && KATEGORIJA_TAGOVI[filterKategorija]?.map(t => (
-                <option key={t} value={t}>{TAG_LABELS[t] || t}</option>
+              {filterKategorija && kategorijaTagovi[filterKategorija]?.map(t => (
+                <option key={t} value={t}>{tagLabels[t] || t}</option>
               ))}
             </select>
           </div>
@@ -580,8 +589,8 @@ export default function AdminBankaPitanjaPage() {
             setForm={setForm}
             lekcije={lekcije}
             kategorijeLabels={kategorijeLabels}
-            kategorijaTagovi={KATEGORIJA_TAGOVI}
-            tagLabels={TAG_LABELS}
+            kategorijaTagovi={kategorijaTagovi}
+            tagLabels={tagLabels}
             editId={null}
             saving={saving}
             onSave={handleSave}
@@ -613,12 +622,12 @@ export default function AdminBankaPitanjaPage() {
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           {p.kategorija && (
                             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                              {KATEGORIJE_LABELS[p.kategorija] || p.kategorija}
+                              {katLabel(p.kategorija)}
                             </span>
                           )}
                           {p.tagovi && p.tagovi.map(t => (
                             <span key={t} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                              {TAG_LABELS[t] || t}
+                              {tagLabel(t)}
                             </span>
                           ))}
                           {lek && (
@@ -681,8 +690,8 @@ export default function AdminBankaPitanjaPage() {
                           setForm={setForm}
                           lekcije={lekcije}
                           kategorijeLabels={kategorijeLabels}
-                          kategorijaTagovi={KATEGORIJA_TAGOVI}
-                          tagLabels={TAG_LABELS}
+                          kategorijaTagovi={kategorijaTagovi}
+                          tagLabels={tagLabels}
                           editId={editId}
                           saving={saving}
                           onSave={handleSave}
@@ -725,7 +734,7 @@ export default function AdminBankaPitanjaPage() {
             kategorije={kategorije}
             token={token!}
             onClose={() => setShowKatManager(false)}
-            onChanged={() => { void loadKategorije(); void loadList(); }}
+            onChanged={() => { void loadKategorije(); void loadKategorijeHier(); void loadList(); }}
           />
         )}
 
@@ -765,6 +774,15 @@ export default function AdminBankaPitanjaPage() {
 // Admin panel za dodavanje/brisanje kategorija pitanja. Brisanje NE briše
 // pitanja — ona ostaju u bazi sa starim slug-om. Promjena slug-a postojeće
 // kategorije automatski premjesti pitanja (server-side transakcija).
+interface KvizTagApi {
+  id: number;
+  slug: string;
+  naziv: string;
+  kategorija: string;
+  redoslijed: number;
+  brojPitanja?: number;
+}
+
 function KategorijeManagerModal({
   kategorije, token, onClose, onChanged,
 }: {
@@ -779,6 +797,24 @@ function KategorijeManagerModal({
   const [novaIkona, setNovaIkona] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState<KvizKategorijaApi | null>(null);
+
+  // Tagovi (pod-teme) — zaseban CRUD; lista se učitava iz /admin/kviz-tagovi.
+  const [tagovi, setTagovi] = useState<KvizTagApi[]>([]);
+  const [noviTagNaziv, setNoviTagNaziv] = useState("");
+  const [noviTagSlug, setNoviTagSlug] = useState("");
+  const [noviTagKat, setNoviTagKat] = useState("");
+  const [savingTag, setSavingTag] = useState(false);
+  const [confirmingTag, setConfirmingTag] = useState<KvizTagApi | null>(null);
+
+  const loadTagovi = async () => {
+    try {
+      const data = await apiRequest<KvizTagApi[]>("GET", "/admin/kviz-tagovi", undefined, token);
+      setTagovi(data);
+    } catch {
+      // tiho
+    }
+  };
+  useEffect(() => { void loadTagovi(); }, [token]);
 
   const dodaj = async () => {
     if (!noviNaziv.trim()) { toast({ title: "Greška", description: "Naziv je obavezan", variant: "destructive" }); return; }
@@ -809,6 +845,40 @@ function KategorijeManagerModal({
     } finally { setSaving(false); }
   };
 
+  const dodajTag = async () => {
+    if (!noviTagNaziv.trim() || !noviTagKat) {
+      toast({ title: "Greška", description: "Naziv i glavna kategorija su obavezni", variant: "destructive" });
+      return;
+    }
+    setSavingTag(true);
+    try {
+      await apiRequest("POST", "/admin/kviz-tagovi", {
+        naziv: noviTagNaziv.trim(),
+        slug: noviTagSlug.trim() || undefined,
+        kategorija: noviTagKat,
+      }, token);
+      toast({ title: "Dodano", description: `Tag "${noviTagNaziv.trim()}"` });
+      setNoviTagNaziv(""); setNoviTagSlug(""); setNoviTagKat("");
+      await loadTagovi();
+      onChanged();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće dodati tag", variant: "destructive" });
+    } finally { setSavingTag(false); }
+  };
+
+  const obrisiTag = async (t: KvizTagApi) => {
+    setSavingTag(true);
+    try {
+      await apiRequest("DELETE", `/admin/kviz-tagovi/${t.id}`, undefined, token);
+      toast({ title: "Obrisano", description: `Tag "${t.naziv}" uklonjen` });
+      setConfirmingTag(null);
+      await loadTagovi();
+      onChanged();
+    } catch (err: any) {
+      toast({ title: "Greška", description: err?.message || "Nije moguće obrisati tag", variant: "destructive" });
+    } finally { setSavingTag(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -817,7 +887,7 @@ function KategorijeManagerModal({
             <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
               <Tag className="w-5 h-5 text-amber-600" />
             </div>
-            <h3 className="font-extrabold text-lg text-foreground">Kategorije pitanja</h3>
+            <h3 className="font-extrabold text-lg text-foreground">Kategorije i tagovi</h3>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
         </div>
@@ -885,6 +955,88 @@ function KategorijeManagerModal({
           ))}
         </div>
 
+        {/* ── TAGOVI (pod-teme) ────────────────────────────────────────── */}
+        <div className="mt-6 pt-5 border-t border-border">
+          <h4 className="font-extrabold text-base text-foreground mb-3">Tagovi (pod-teme)</h4>
+          <div className="bg-teal-50/50 border border-teal-200 rounded-xl p-4 mb-4">
+            <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2"><Plus className="w-4 h-4" /> Dodaj novi tag</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+              <input
+                value={noviTagNaziv}
+                onChange={e => setNoviTagNaziv(e.target.value)}
+                placeholder="Naziv (npr. Tedžvid)"
+                className="px-3 py-2 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-teal-400"
+                data-testid="input-novi-tag-naziv"
+              />
+              <input
+                value={noviTagSlug}
+                onChange={e => setNoviTagSlug(e.target.value)}
+                placeholder="slug (auto)"
+                className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                data-testid="input-novi-tag-slug"
+              />
+              <select
+                value={noviTagKat}
+                onChange={e => setNoviTagKat(e.target.value)}
+                className="px-3 py-2 border border-border rounded-lg text-base bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+                data-testid="select-novi-tag-kategorija"
+              >
+                <option value="">— glavna kategorija —</option>
+                {kategorije.map(k => <option key={k.id} value={k.slug}>{k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={dodajTag}
+              disabled={savingTag || !noviTagNaziv.trim() || !noviTagKat}
+              className="px-4 py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 disabled:opacity-50"
+              data-testid="btn-dodaj-tag"
+            >
+              {savingTag ? <Loader2 className="w-4 h-4 animate-spin" /> : "Dodaj tag"}
+            </button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Tag mora pripadati jednoj glavnoj kategoriji. Slug se generiše automatski (a-z, 0-9, _).
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            {tagovi.length === 0 ? (
+              <p className="text-center text-muted-foreground py-6">Nema tagova. Dodaj prvi iznad.</p>
+            ) : (() => {
+              const katSlugs = new Set(kategorije.map(k => k.slug));
+              const grupe: { kljuc: string; naslov: string; lista: KvizTagApi[] }[] = kategorije.map(k => ({
+                kljuc: k.slug,
+                naslov: k.ikona ? `${k.ikona} ${k.naziv}` : k.naziv,
+                lista: tagovi.filter(t => t.kategorija === k.slug),
+              }));
+              const orphan = tagovi.filter(t => !katSlugs.has(t.kategorija));
+              if (orphan.length > 0) grupe.push({ kljuc: "__orphan__", naslov: "Bez kategorije", lista: orphan });
+              return grupe.filter(g => g.lista.length > 0).map(g => (
+                <div key={g.kljuc} className="mb-3">
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">{g.naslov}</div>
+                  {g.lista.map(t => (
+                    <div key={t.id} className="flex items-center gap-3 px-3 py-2 border border-border rounded-lg mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-foreground truncate">{t.naziv}</div>
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-mono">{t.slug}</span> · {t.brojPitanja || 0} pitanja
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setConfirmingTag(t)}
+                        className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition"
+                        title="Obriši tag"
+                        data-testid={`btn-obrisi-tag-${t.slug}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+
         {confirming && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setConfirming(null)}>
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl" onClick={e => e.stopPropagation()}>
@@ -907,6 +1059,33 @@ function KategorijeManagerModal({
                 <button onClick={() => setConfirming(null)} className="px-4 py-2 rounded-xl border border-border font-semibold hover:bg-muted">Odustani</button>
                 <button onClick={() => obrisi(confirming)} disabled={saving} className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Obriši"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmingTag && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setConfirmingTag(null)}>
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="font-extrabold text-lg text-foreground">Obrisati tag?</h3>
+              </div>
+              <p className="text-base text-muted-foreground mb-2">
+                <strong>{confirmingTag.naziv}</strong> ({confirmingTag.brojPitanja || 0} pitanja)
+              </p>
+              {(confirmingTag.brojPitanja || 0) > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm text-amber-800">
+                  Tag će biti uklonjen iz svih {confirmingTag.brojPitanja} pitanja. Sama pitanja ostaju u banci.
+                </div>
+              )}
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setConfirmingTag(null)} className="px-4 py-2 rounded-xl border border-border font-semibold hover:bg-muted">Odustani</button>
+                <button onClick={() => obrisiTag(confirmingTag)} disabled={savingTag} className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50">
+                  {savingTag ? <Loader2 className="w-4 h-4 animate-spin" /> : "Obriši"}
                 </button>
               </div>
             </div>
@@ -1300,7 +1479,7 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, kategorijaTagov
               className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
             >
               <option value="">— bez —</option>
-              {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {Object.entries(kategorijeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div>
@@ -1325,11 +1504,11 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, kategorijaTagov
           </div>
         </div>
         {/* Tagovi — admin filtriranje */}
-        {form.kategorija && KATEGORIJA_TAGOVI[form.kategorija] && (
+        {form.kategorija && kategorijaTagovi[form.kategorija] && (
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">Tagovi (pod-teme)</label>
             <div className="flex flex-wrap gap-2">
-              {KATEGORIJA_TAGOVI[form.kategorija].map(tag => {
+              {kategorijaTagovi[form.kategorija].map(tag => {
                 const active = (form.tagovi || []).includes(tag);
                 return (
                   <button key={tag} onClick={() => setForm(prev => {
@@ -1338,7 +1517,7 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, kategorijaTagov
                     return { ...prev, tagovi: next };
                   })}
                     className={`px-3 py-1 rounded-full text-sm font-semibold transition ${active ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"}`}>
-                    {TAG_LABELS[tag] || tag}
+                    {tagLabels[tag] || tag}
                   </button>
                 );
               })}

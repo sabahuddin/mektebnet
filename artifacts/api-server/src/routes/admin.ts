@@ -40,6 +40,7 @@ import {
   knjige,
   kategorijeKnjigeTable,
   kvizKategorijeTable,
+  kvizTagoviTable,
   medaljoniTable,
   krunisanjaTable,
   krunisanjeLekcijeTable,
@@ -1771,17 +1772,14 @@ router.get("/banka-pitanja", async (req, res) => {
 // Vraća hijerarhiju: 5 glavnih kategorija (NPP 2018) + tagovi za filtriranje.
 router.get("/banka-pitanja/kategorije", async (_req, res) => {
   try {
-    const { KVIZ_KATEGORIJE, KVIZ_KATEGORIJE_META, KVIZ_TAGOVI, KVIZ_TAG_KATEGORIJA_MAP } = await import("@workspace/db/schema");
-    const kategorije = KVIZ_KATEGORIJE.map(k => ({
-      slug: k,
-      naziv: KVIZ_KATEGORIJE_META[k].naziv,
-      ikona: KVIZ_KATEGORIJE_META[k].ikona,
-    }));
-    const tagovi = KVIZ_TAGOVI.map(t => ({
-      slug: t,
-      kategorija: KVIZ_TAG_KATEGORIJA_MAP[t],
-    }));
-    res.json({ kategorije, tagovi });
+    const kategorijeRows = await db.select().from(kvizKategorijeTable)
+      .orderBy(asc(kvizKategorijeTable.redoslijed), asc(kvizKategorijeTable.id));
+    const tagoviRows = await db.select().from(kvizTagoviTable)
+      .orderBy(asc(kvizTagoviTable.redoslijed), asc(kvizTagoviTable.id));
+    res.json({
+      kategorije: kategorijeRows.map(k => ({ slug: k.slug, naziv: k.naziv, ikona: k.ikona })),
+      tagovi: tagoviRows.map(t => ({ slug: t.slug, naziv: t.naziv, kategorija: t.kategorija })),
+    });
   } catch (err) {
     console.error("[GET /admin/banka-pitanja/kategorije]", err);
     res.status(500).json({ error: "Greška servera" });
@@ -1888,6 +1886,134 @@ router.delete("/kviz-kategorije/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("[DELETE /admin/kviz-kategorije/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── KVIZ TAGOVI (admin CRUD) ───────────────────────────────────────────────────
+// Admin-definisani tagovi (pod-teme), vezani za glavnu kategoriju preko `kategorija`
+// slug-a. Referenciraju se iz `pitanja_banka.tagovi` (jsonb array). Brisanje taga
+// ga skida iz svih pitanja (transakcija); preimenovanje slug-a kaskadno ažurira
+// pitanja.
+
+// GET /api/admin/kviz-tagovi — svi tagovi + broj pitanja u svakom
+router.get("/kviz-tagovi", async (_req, res) => {
+  try {
+    const tagovi = await db.select().from(kvizTagoviTable)
+      .orderBy(asc(kvizTagoviTable.redoslijed), asc(kvizTagoviTable.id));
+    const countRes: any = await db.execute(sql`
+      SELECT tag, COUNT(*)::int AS broj
+      FROM pitanja_banka, jsonb_array_elements_text(tagovi) AS tag
+      GROUP BY tag
+    `);
+    const countMap = new Map((countRes.rows ?? []).map((c: any) => [c.tag, Number(c.broj)]));
+    res.json(tagovi.map(t => ({ ...t, brojPitanja: countMap.get(t.slug) ?? 0 })));
+  } catch (err) {
+    console.error("[GET /admin/kviz-tagovi]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/kviz-tagovi — dodaj novi tag
+router.post("/kviz-tagovi", async (req, res) => {
+  try {
+    const { slug, naziv, kategorija, redoslijed } = req.body || {};
+    if (!naziv || !kategorija) { res.status(400).json({ error: "naziv i kategorija su obavezni" }); return; }
+    const base = slug || naziv;
+    const slugClean = String(base).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+    if (!slugClean) { res.status(400).json({ error: "Slug mora sadržavati a-z, 0-9 ili _" }); return; }
+    const [kat] = await db.select().from(kvizKategorijeTable).where(eq(kvizKategorijeTable.slug, String(kategorija)));
+    if (!kat) { res.status(400).json({ error: "Glavna kategorija ne postoji" }); return; }
+    const [created] = await db.insert(kvizTagoviTable).values({
+      slug: slugClean,
+      naziv: String(naziv).trim(),
+      kategorija: String(kategorija),
+      redoslijed: typeof redoslijed === "number" ? redoslijed : 100,
+    }).returning();
+    res.status(201).json(created);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Tag sa istim slugom već postoji" });
+      return;
+    }
+    console.error("[POST /admin/kviz-tagovi]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/kviz-tagovi/:id — izmijeni tag.
+// Ako se mijenja `slug`, kaskadno ažurira `pitanja_banka.tagovi` (zamjena u jsonb
+// nizu) u svim pitanjima koja taj tag koriste (transakcija).
+router.put("/kviz-tagovi/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    const { slug, naziv, kategorija, redoslijed } = req.body || {};
+    const [existing] = await db.select().from(kvizTagoviTable).where(eq(kvizTagoviTable.id, id));
+    if (!existing) { res.status(404).json({ error: "Tag nije pronađen" }); return; }
+    const updates: Record<string, unknown> = {};
+    if (slug !== undefined) {
+      const s = String(slug).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+      if (!s) { res.status(400).json({ error: "Slug mora sadržavati a-z, 0-9 ili _" }); return; }
+      updates["slug"] = s;
+    }
+    if (naziv !== undefined) updates["naziv"] = String(naziv).trim();
+    if (kategorija !== undefined) {
+      const [kat] = await db.select().from(kvizKategorijeTable).where(eq(kvizKategorijeTable.slug, String(kategorija)));
+      if (!kat) { res.status(400).json({ error: "Glavna kategorija ne postoji" }); return; }
+      updates["kategorija"] = String(kategorija);
+    }
+    if (redoslijed !== undefined) updates["redoslijed"] = typeof redoslijed === "number" ? redoslijed : existing.redoslijed;
+    if (Object.keys(updates).length === 0) { res.status(400).json({ error: "Nema izmjena" }); return; }
+    const newSlug = (updates["slug"] as string | undefined) ?? existing.slug;
+    const slugChanged = newSlug !== existing.slug;
+    await db.transaction(async (tx) => {
+      await tx.update(kvizTagoviTable).set(updates).where(eq(kvizTagoviTable.id, id));
+      if (slugChanged) {
+        await tx.execute(sql`
+          UPDATE pitanja_banka
+          SET tagovi = (
+            SELECT jsonb_agg(DISTINCT CASE WHEN x = ${existing.slug} THEN ${newSlug} ELSE x END)
+            FROM jsonb_array_elements_text(tagovi) AS x
+          )
+          WHERE tagovi ? ${existing.slug};
+        `);
+      }
+    });
+    const [updated] = await db.select().from(kvizTagoviTable).where(eq(kvizTagoviTable.id, id));
+    res.json(updated);
+  } catch (err: any) {
+    if (String(err?.message || "").toLowerCase().includes("unique")) {
+      res.status(409).json({ error: "Tag sa istim slugom već postoji" });
+      return;
+    }
+    console.error("[PUT /admin/kviz-tagovi/:id]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/admin/kviz-tagovi/:id — obriši tag.
+// Tag se uklanja iz `pitanja_banka.tagovi` svih pitanja (transakcija) da ne ostane
+// "siroče" u jsonb nizu.
+router.delete("/kviz-tagovi/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Neispravan id" }); return; }
+    const [existing] = await db.select().from(kvizTagoviTable).where(eq(kvizTagoviTable.id, id));
+    if (!existing) { res.json({ success: true }); return; }
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`
+        UPDATE pitanja_banka
+        SET tagovi = COALESCE((
+          SELECT jsonb_agg(x) FROM jsonb_array_elements_text(tagovi) AS x WHERE x <> ${existing.slug}
+        ), '[]'::jsonb)
+        WHERE tagovi ? ${existing.slug};
+      `);
+      await tx.delete(kvizTagoviTable).where(eq(kvizTagoviTable.id, id));
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /admin/kviz-tagovi/:id]", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

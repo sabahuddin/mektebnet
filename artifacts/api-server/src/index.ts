@@ -339,6 +339,33 @@ async function runResidualSchema() {
       `);
     }
 
+    // Kviz tagovi (admin-definisani, vezani za glavnu kategoriju). Tabela +
+    // idempotent seed iz KVIZ_TAGOVI/MAP/META ako tag još ne postoji.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS kviz_tagovi (
+        id serial PRIMARY KEY,
+        slug varchar(60) NOT NULL UNIQUE,
+        naziv varchar(120) NOT NULL,
+        kategorija varchar(60) NOT NULL,
+        redoslijed integer NOT NULL DEFAULT 100,
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    const {
+      KVIZ_TAGOVI: KT_SLUGS,
+      KVIZ_TAG_KATEGORIJA_MAP: KT_MAP,
+      KVIZ_TAGOVI_META: KT_META,
+    } = await import("@workspace/db/schema");
+    let tagIdx = 0;
+    for (const slug of KT_SLUGS) {
+      tagIdx++;
+      await db.execute(sql`
+        INSERT INTO kviz_tagovi (slug, naziv, kategorija, redoslijed)
+        VALUES (${slug}, ${KT_META[slug] ?? slug}, ${KT_MAP[slug]}, ${tagIdx * 10})
+        ON CONFLICT (slug) DO NOTHING;
+      `);
+    }
+
     // === Task #126 — Etape i krunisanje nivoa ==================================
     // Proširenja medaljona (završni ispit etape) + nove tabele za polaganja,
     // krunisanja, krunske lekcije i student passage. Vidi schema/lessons.ts.

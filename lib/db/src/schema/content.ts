@@ -52,6 +52,22 @@ export const KVIZ_TAG_KATEGORIJA_MAP: Record<KvizTag, KvizKategorija> = {
   manastiri: "bosna", dijaspora: "bosna",
 };
 
+// Čitljivi nazivi tagova — koriste se za seed `kviz_tagovi` tabele i kao
+// fallback labela u UI-ju. DB tabela je nakon seeda izvor istine (admin može
+// dodavati/brisati/preimenovati tagove).
+export const KVIZ_TAGOVI_META: Record<KvizTag, string> = {
+  allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici",
+  ahiret: "Ahiret", kuran: "Kuran", sure: "Sure",
+  namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž",
+  dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram",
+  ponasanje: "Ponašanje", obici: "Običaji", ljubaznost: "Ljubaznost",
+  postenje: "Poštenje", srdacnost: "Srdačnost", pomaganje: "Pomaganje",
+  zivot_poslanika: "Život poslanika", ashabi: "Ashabi",
+  islamska_civilizacija: "Isl. civilizacija", osvajanja: "Osvajanja", kalifi: "Kalifi",
+  nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije",
+  ilahije: "Ilahije", manastiri: "Manastiri", dijaspora: "Dijaspora",
+};
+
 // Vrsta pitanja u banci.
 // - "single":    jedan tačan odgovor među opcijama (correctIndex)
 // - "multiple":  više tačnih odgovora (correctIndexes)
@@ -296,6 +312,24 @@ export const kvizKategorijeTable = pgTable("kviz_kategorije", {
 
 export type KvizKategorijaRow = typeof kvizKategorijeTable.$inferSelect;
 export type InsertKvizKategorijaRow = typeof kvizKategorijeTable.$inferInsert;
+
+// Tagovi (pod-teme) — admin-definisani, vezani za glavnu kategoriju preko
+// `kategorija` slug-a (string match, no FK). `slug` se referencira iz
+// `pitanja_banka.tagovi` (jsonb array). Inicijalni seed iz KVIZ_TAGOVI /
+// KVIZ_TAG_KATEGORIJA_MAP / KVIZ_TAGOVI_META se ubacuje pri prvom startu
+// (vidi runResidualSchema u api-server/src/index.ts). Nakon seeda admin može
+// dodavati/brisati/preimenovati tagove kroz admin panel.
+export const kvizTagoviTable = pgTable("kviz_tagovi", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 60 }).notNull().unique(),
+  naziv: varchar("naziv", { length: 120 }).notNull(),
+  kategorija: varchar("kategorija", { length: 60 }).notNull(),
+  redoslijed: integer("redoslijed").notNull().default(100),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type KvizTagRow = typeof kvizTagoviTable.$inferSelect;
+export type InsertKvizTagRow = typeof kvizTagoviTable.$inferInsert;
 
 // User content progress (across all modules)
 export const korisnikNapredakTable = pgTable("korisnik_napredak", {
