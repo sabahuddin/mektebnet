@@ -1933,14 +1933,16 @@ router.put("/kviz-kategorije/:id", async (req, res) => {
     if (Object.keys(updates).length === 0) { res.status(400).json({ error: "Nema izmjena" }); return; }
     const newSlug = (updates["slug"] as string | undefined) ?? existing.slug;
     const slugChanged = newSlug !== existing.slug;
-    await db.transaction(async (tx) => {
-      await tx.update(kvizKategorijeTable).set(updates).where(eq(kvizKategorijeTable.id, id));
-      if (slugChanged) {
+    if (slugChanged) {
+      await db.transaction(async (tx) => {
+        await tx.update(kvizKategorijeTable).set(updates).where(eq(kvizKategorijeTable.id, id));
         await tx.update(pitanjaBankaTable)
           .set({ kategorija: newSlug })
           .where(eq(pitanjaBankaTable.kategorija, existing.slug));
-      }
-    });
+      });
+    } else {
+      await db.update(kvizKategorijeTable).set(updates).where(eq(kvizKategorijeTable.id, id));
+    }
     const [updated] = await db.select().from(kvizKategorijeTable).where(eq(kvizKategorijeTable.id, id));
     res.json(updated);
   } catch (err: any) {
@@ -2045,9 +2047,9 @@ router.put("/kviz-tagovi/:id", async (req, res) => {
     if (Object.keys(updates).length === 0) { res.status(400).json({ error: "Nema izmjena" }); return; }
     const newSlug = (updates["slug"] as string | undefined) ?? existing.slug;
     const slugChanged = newSlug !== existing.slug;
-    await db.transaction(async (tx) => {
-      await tx.update(kvizTagoviTable).set(updates).where(eq(kvizTagoviTable.id, id));
-      if (slugChanged) {
+    if (slugChanged) {
+      await db.transaction(async (tx) => {
+        await tx.update(kvizTagoviTable).set(updates).where(eq(kvizTagoviTable.id, id));
         await tx.execute(sql`
           UPDATE pitanja_banka
           SET tagovi = (
@@ -2056,8 +2058,10 @@ router.put("/kviz-tagovi/:id", async (req, res) => {
           )
           WHERE tagovi ? ${existing.slug};
         `);
-      }
-    });
+      });
+    } else {
+      await db.update(kvizTagoviTable).set(updates).where(eq(kvizTagoviTable.id, id));
+    }
     const [updated] = await db.select().from(kvizTagoviTable).where(eq(kvizTagoviTable.id, id));
     res.json(updated);
   } catch (err: any) {
