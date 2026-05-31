@@ -326,7 +326,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                 key={m?.id ?? `slot-${i}`}
                 broj={required}
                 state={earned ? "earned" : unlocked ? "unlocked" : "locked"}
-                onClick={() => m && unlocked && setLocation(`/medaljon/${m.slug}`)}
+                onClick={() => m && unlocked && setLocation(`/ilmihal/medaljon-nivo${nivo}-${i + 1}`)}
                 title={
                   m
                     ? `${m.naziv} — ${required} lekcija`
@@ -424,10 +424,9 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
             {Array.from({ length: MED_COUNT }).map((_, r) => {
               const required = (r + 1) * 10;
               const unlocked = isPrivilegedRole || completedCount >= required;
-              // Task #126: koristi STVARNI medaljon iz baze (preko mape data)
-              // i navigiraj na novi etapa detail `/medaljon/:slug` (tabovi
-              // Ponavljanje + Završni ispit), umjesto legacy "prazne lekcije"
-              // sa hardkodiranim slugom `medaljon-nivoN-NN`.
+              // Opcija B: medaljon JESTE puna lekcija. Klik vodi na
+              // `/ilmihal/medaljon-nivo{N}-{ord}` (ord = redni broj medaljona).
+              // Završetak te lekcije osvaja medaljon i otključava sljedećih 10.
               const realMed = medaljoniSorted[r] ?? null;
               const earned = realMed ? osvojeniSet.has(realMed.id) : false;
               const state: "locked" | "unlocked" | "earned" = earned
@@ -435,7 +434,6 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                 : unlocked
                   ? "unlocked"
                   : "locked";
-              const targetSlug = realMed?.slug ?? `medaljon-nivo${nivo}-${required}`;
               return (
                 <div
                   key={`med-row-${r}`}
@@ -450,7 +448,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                   <MedaljonHex
                     broj={required}
                     state={state}
-                    onClick={() => unlocked && setLocation(`/medaljon/${targetSlug}`)}
+                    onClick={() => realMed && unlocked && setLocation(`/ilmihal/medaljon-nivo${nivo}-${r + 1}`)}
                     title={
                       unlocked
                         ? realMed

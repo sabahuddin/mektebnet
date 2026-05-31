@@ -113,6 +113,44 @@ router.get("/ilmihal/:slug", async (req, res) => {
         ) as { userId: number; role?: string };
         if (decoded.role === "ucenik") {
           const studentId = String(decoded.userId);
+          // Opcija B: medaljon-lekcija (slug `medaljon-nivo{N}-{ord}`). Ova
+          // lekcija JESTE medaljon — gejtuje se posebno (sve regularne lekcije
+          // svog bloka moraju biti gotove), a NE kroz generički priorMed gate
+          // (čiji bi je redoslijed 9000+ pogrešno zaključao iza zadnje etape).
+          const medLessonMatch = lekcija.slug?.match(/^medaljon-nivo(\d+)-(\d+)$/);
+          if (medLessonMatch) {
+            const ordinal = parseInt(medLessonMatch[2], 10);
+            const medaljoniNivoa = await db
+              .select({ id: medaljoniTable.id, posAfterRedoslijed: medaljoniTable.posAfterRedoslijed })
+              .from(medaljoniTable)
+              .where(eq(medaljoniTable.nivo, lekcija.nivo))
+              .orderBy(asc(medaljoniTable.posAfterRedoslijed));
+            const target = ordinal >= 1 ? medaljoniNivoa[ordinal - 1] : undefined;
+            if (!target) {
+              // Ordinal ne mapira na stvarni medaljon nivoa (config drift) —
+              // zaključaj umjesto da propustiš (fail-closed, ne permisivno).
+              lockedReason = "Ovaj medaljon još nije konfigurisan.";
+            } else {
+              const [progRow] = await db
+                .select({ completed: studentProgressTable.completedLessons })
+                .from(studentProgressTable)
+                .where(eq(studentProgressTable.studentId, studentId))
+                .limit(1);
+              const doneSet = new Set((progRow?.completed as number[] | undefined) ?? []);
+              const trebaju = await db
+                .select({ id: ilmihalLekcijeTable.id })
+                .from(ilmihalLekcijeTable)
+                .where(and(
+                  eq(ilmihalLekcijeTable.nivo, lekcija.nivo),
+                  lte(ilmihalLekcijeTable.redoslijed, target.posAfterRedoslijed),
+                  lt(ilmihalLekcijeTable.redoslijed, 9000),
+                ));
+              const nedostaje = trebaju.filter((l) => !doneSet.has(l.id)).length;
+              if (nedostaje > 0) {
+                lockedReason = "Završi sve lekcije ovog bloka da otključaš medaljon.";
+              }
+            }
+          } else {
           // 1) Prethodno krunisanje za nivoe > 1.
           if (lekcija.nivo > 1) {
             const [prevKrun] = await db
@@ -187,6 +225,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
                   : `Završi sve lekcije etape "${priorMed.naziv}" da otključaš ovu lekciju.`;
               }
             }
+          }
           }
           if (lockedReason) {
             return res.status(403).json({
@@ -834,6 +873,36 @@ router.post("/napredak", requireAuth, async (req, res) => {
         progressDelta = await updateStudentProgressForLesson(userId, contentId, 15);
       } catch (e) {
         // Ne lomimo originalni request ako mirror padne
+      }
+    }
+
+    // Opcija B: ako je upravo PRVI put završena medaljon-lekcija
+    // (slug `medaljon-nivo{N}-{ord}`), osvoji odgovarajući medaljon. Time/kviz
+    // gate iznad već garantuje da je lekcija stvarno odrađena (uz položen
+    // mini-kviz ako ga ima), pa je ovo ekvivalent "položio etapu". Idempotentno.
+    if (zavrsen && contentType === "ilmihal" && !wasAlreadyCompleted && lekcijaSlug) {
+      const med = lekcijaSlug.match(/^medaljon-nivo(\d+)-(\d+)$/);
+      if (med) {
+        try {
+          const medNivo = parseInt(med[1], 10);
+          const ordinal = parseInt(med[2], 10);
+          if (ordinal >= 1) {
+            const medaljoni = await db
+              .select({ id: medaljoniTable.id })
+              .from(medaljoniTable)
+              .where(eq(medaljoniTable.nivo, medNivo))
+              .orderBy(asc(medaljoniTable.posAfterRedoslijed));
+            const target = medaljoni[ordinal - 1];
+            if (target) {
+              await db
+                .insert(studentMedaljoniTable)
+                .values({ studentId: String(userId), medaljonId: target.id })
+                .onConflictDoNothing();
+            }
+          }
+        } catch (e) {
+          req.log.error({ e }, "medaljon claim on lesson completion failed");
+        }
       }
     }
 

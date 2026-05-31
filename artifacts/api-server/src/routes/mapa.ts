@@ -8,7 +8,7 @@ import {
   krunisanjaTable,
   etapaPolaganjaTable,
 } from "@workspace/db/schema";
-import { eq, and, lte, asc } from "drizzle-orm";
+import { eq, and, lte, asc, notLike } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { polozeneEtapeNivoa } from "./etape.js";
 import { polozenaKrunisanja } from "./krunisanja.js";
@@ -39,7 +39,13 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
           redoslijed: ilmihalLekcijeTable.redoslijed,
         })
         .from(ilmihalLekcijeTable)
-        .where(eq(ilmihalLekcijeTable.nivo, nivo))
+        // Isključi medaljon-lekcije (slug `medaljon-nivo{N}-{ord}`) — one NISU
+        // regularna polja mape niti se broje u napredak; pristupa im se preko
+        // medaljon heksa. Bez ovog filtera bi upadale u `completedCount`.
+        .where(and(
+          eq(ilmihalLekcijeTable.nivo, nivo),
+          notLike(ilmihalLekcijeTable.slug, "medaljon-nivo%"),
+        ))
         .orderBy(asc(ilmihalLekcijeTable.redoslijed)),
       db
         .select()

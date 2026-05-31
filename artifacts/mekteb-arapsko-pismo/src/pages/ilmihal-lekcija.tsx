@@ -2711,7 +2711,7 @@ export default function IlmihalLekcijaPage() {
           {medMatch && isAdminUser && token && (
             <div className="mt-6 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300">
               <p className="text-sm text-amber-900 font-bold mb-1">
-                Zlatni medaljon — Nivo {medMatch[1]} · {medMatch[2]} lekcija
+                Zlatni medaljon — Nivo {medMatch[1]} · medaljon {medMatch[2]}
               </p>
               <p className="text-xs text-amber-800 mb-4">
                 Ova prazna lekcija još ne postoji. Klikni dugme da je kreiraš,
@@ -2720,7 +2720,7 @@ export default function IlmihalLekcijaPage() {
               <Button
                 onClick={async () => {
                   try {
-                    const naslov = `Zlatni medaljon — Nivo ${medMatch[1]} (${medMatch[2]} lekcija)`;
+                    const naslov = `Zlatni medaljon — Nivo ${medMatch[1]} (medaljon ${medMatch[2]})`;
                     await apiRequest(
                       "POST",
                       "/admin/ilmihal",
