@@ -2216,6 +2216,10 @@ export default function IlmihalLekcijaPage() {
   const [naslovDraft, setNaslovDraft] = useState("");
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [savingPredmet, setSavingPredmet] = useState(false);
+  const [predmetModalOpen, setPredmetModalOpen] = useState(false);
+  const [predmetDraft, setPredmetDraft] = useState("");
+  const [kategorijeOpcije, setKategorijeOpcije] = useState<{ slug: string; naziv: string }[]>([]);
+  const [loadingKategorije, setLoadingKategorije] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
 
   // Bočne dekoracije (pčele/saće/cvijeće) na body-ju samo dok je lekcija otvorena.
@@ -2276,21 +2280,35 @@ export default function IlmihalLekcijaPage() {
   // Admin-only: izmjena predmeta lekcije (kategorija za "Sve lekcije" filter).
   // Muallim NEMA pristup ovome — backend ruta /admin/* je admin-only middleware,
   // a UI dugme se renderuje samo za user.role === "admin".
-  const handleEditPredmet = async () => {
+  // Admin: otvori modal i učitaj kategorije (predmete) iz Banke pitanja.
+  const otvoriPredmetModal = async () => {
     if (!lekcija || !token) return;
+    setPredmetDraft(lekcija.predmet || "");
+    setPredmetModalOpen(true);
+    setLoadingKategorije(true);
+    try {
+      const data = await apiRequest<{ kategorije: { slug: string; naziv: string }[] }>(
+        "GET", "/admin/banka-pitanja/kategorije", undefined, token,
+      );
+      setKategorijeOpcije(data.kategorije || []);
+    } catch {
+      setKategorijeOpcije([]);
+    } finally {
+      setLoadingKategorije(false);
+    }
+  };
+
+  const handleSavePredmet = async () => {
+    if (!lekcija || !token) return;
+    const novi = predmetDraft.trim();
     const trenutni = lekcija.predmet || "";
-    const noviRaw = window.prompt(
-      "Predmet lekcije (npr. Akaid, Ahlak, Ibadat, Historija islama, Kur'an, Fikh).\nOstavi prazno za 'Bez predmeta'.",
-      trenutni,
-    );
-    if (noviRaw === null) return; // Otkazano
-    const novi = noviRaw.trim();
-    if (novi === trenutni) return;
+    if (novi === trenutni) { setPredmetModalOpen(false); return; }
     setSavingPredmet(true);
     try {
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { predmet: novi }, token);
       setLekcija(prev => prev ? { ...prev, predmet: novi || null } : prev);
       toast({ title: "Predmet ažuriran", description: novi ? `Predmet: ${novi}` : "Predmet uklonjen." });
+      setPredmetModalOpen(false);
     } catch (e: any) {
       toast({ title: "Greška", description: e?.message || "Ne mogu spasiti predmet.", variant: "destructive" });
     } finally {
@@ -2785,7 +2803,7 @@ export default function IlmihalLekcijaPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
               <PenLine className="w-3.5 h-3.5" /> Uredi naziv
             </button>
-            <button onClick={handleEditPredmet} disabled={savingPredmet}
+            <button onClick={otvoriPredmetModal} disabled={savingPredmet}
               title="Promijeni predmet (kategoriju) lekcije za 'Sve lekcije' filter"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors disabled:opacity-50">
               {savingPredmet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PenLine className="w-3.5 h-3.5" />}
@@ -2795,6 +2813,49 @@ export default function IlmihalLekcijaPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
               <FilePen className="w-3.5 h-3.5" /> Uredi sadržaj
             </button>
+          </div>
+        )}
+
+        {/* Predmet modal (admin) — dropdown kategorija iz Banke pitanja */}
+        {predmetModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            onClick={() => !savingPredmet && setPredmetModalOpen(false)}>
+            <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-extrabold text-base text-foreground mb-1">Predmet lekcije</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Odaberi predmet (kategoriju iz Banke pitanja). Nove predmete dodaješ u Banci pitanja.
+              </p>
+              {loadingKategorije ? (
+                <div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+              ) : (
+                <select
+                  value={predmetDraft}
+                  onChange={(e) => setPredmetDraft(e.target.value)}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm mb-4 bg-white"
+                  data-testid="select-predmet"
+                >
+                  <option value="">— Bez predmeta —</option>
+                  {kategorijeOpcije.map((k) => (
+                    <option key={k.slug} value={k.naziv}>{k.naziv}</option>
+                  ))}
+                  {predmetDraft && !kategorijeOpcije.some((k) => k.naziv === predmetDraft) && (
+                    <option value={predmetDraft}>{predmetDraft} (trenutni)</option>
+                  )}
+                </select>
+              )}
+              <div className="flex gap-2">
+                <button onClick={() => setPredmetModalOpen(false)} disabled={savingPredmet}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                  data-testid="button-predmet-odustani">
+                  Odustani
+                </button>
+                <button onClick={handleSavePredmet} disabled={savingPredmet || loadingKategorije}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  data-testid="button-predmet-sacuvaj">
+                  {savingPredmet ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Sačuvaj
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
