@@ -111,7 +111,7 @@ interface IlmihalLekcija { id: number; nivo: number; slug: string; naslov: strin
 // 5 glavnih kategorija po NPP 2018
 const KATEGORIJE_LABELS: Record<string, string> = {
   akaid: "Akaid (vjerovanje)", ibadet: "Ibadet (namaz, abdest…)",
-  ahlak: "Ahlak i moral", historija: "Historija (prvoci, proroci)",
+  ahlak: "Ahlak i moral", historija: "Historija",
   bosna: "Bosna (džamije, običaji, džemat)" };
 const KATEGORIJE_LIST = ["akaid", "ibadet", "ahlak", "historija", "bosna"];
 

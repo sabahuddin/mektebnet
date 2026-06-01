@@ -85,7 +85,7 @@ const PAGE_SIZE = 50;
 // 5 glavnih kategorija po NPP 2018 + tagovi
 const KATEGORIJE_LABELS: Record<string, string> = {
   akaid: "Akaid (vjerovanje)", ibadet: "Ibadet (namaz, abdest…)",
-  ahlak: "Ahlak i moral", historija: "Historija (prvoci, proroci)",
+  ahlak: "Ahlak i moral", historija: "Historija",
   bosna: "Bosna (džamije, običaji, džemat)",
 };
 const TAG_LABELS: Record<string, string> = {
