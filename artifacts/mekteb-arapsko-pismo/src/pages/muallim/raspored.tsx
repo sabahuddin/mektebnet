@@ -49,6 +49,8 @@ export default function MuallimRasporedPage() {
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [editPosIndex, setEditPosIndex] = useState<number | null>(null);
+  const [editPosValue, setEditPosValue] = useState("");
 
   // Naziv grupe (za zaglavlje).
   useEffect(() => {
@@ -104,6 +106,19 @@ export default function MuallimRasporedPage() {
       return next;
     });
     setDirty(true);
+  }
+
+  function startEditPos(index: number) {
+    setEditPosIndex(index);
+    setEditPosValue(String(index + 1));
+  }
+
+  function applyEditPos(from: number) {
+    const parsed = parseInt(editPosValue, 10);
+    setEditPosIndex(null);
+    if (Number.isNaN(parsed)) return;
+    const to = Math.min(Math.max(parsed, 1), lekcije.length) - 1;
+    reorder(from, to);
   }
 
   async function handleSave() {
@@ -162,7 +177,8 @@ export default function MuallimRasporedPage() {
             Posloži lekcije onim redoslijedom kojim ih obrađuješ sa ovom grupom. Učenici
             ove grupe će lekcije otključavati po tvom redoslijedu. Ako ne sačuvaš vlastiti
             raspored, koristi se zadani (globalni) redoslijed. Mijenjanje rasporeda ne briše
-            napredak učenika.
+            napredak učenika. <strong>Savjet:</strong> za veliki skok klikni na broj lekcije,
+            upiši poziciju i pritisni Enter; za sitne pomake koristi strelice ili prevuci.
           </p>
         </div>
 
@@ -220,9 +236,32 @@ export default function MuallimRasporedPage() {
                 }`}
               >
                 <GripVertical className="w-4 h-4 text-muted-foreground/50 cursor-grab shrink-0" />
-                <span className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-violet-100 text-violet-700 font-black text-sm">
-                  {i + 1}
-                </span>
+                {editPosIndex === i ? (
+                  <input
+                    type="number"
+                    min={1}
+                    max={lekcije.length}
+                    autoFocus
+                    value={editPosValue}
+                    onChange={e => setEditPosValue(e.target.value)}
+                    onFocus={e => e.target.select()}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") applyEditPos(i);
+                      else if (e.key === "Escape") setEditPosIndex(null);
+                    }}
+                    onBlur={() => applyEditPos(i)}
+                    className="w-12 h-7 shrink-0 text-center rounded-lg border-2 border-violet-400 bg-violet-50 text-violet-700 font-black text-sm outline-none focus:ring-2 focus:ring-violet-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startEditPos(i)}
+                    title="Klikni da premjestiš na tačnu poziciju"
+                    className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-violet-100 text-violet-700 font-black text-sm hover:bg-violet-200 hover:ring-2 hover:ring-violet-300 transition-colors cursor-pointer"
+                  >
+                    {i + 1}
+                  </button>
+                )}
                 <span className="flex-1 min-w-0 font-semibold text-foreground truncate">{l.naslov}</span>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
