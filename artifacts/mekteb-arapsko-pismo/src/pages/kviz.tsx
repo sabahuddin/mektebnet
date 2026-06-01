@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { Layout } from "@/components/layout";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -779,6 +779,41 @@ export default function KvizPage() {
     setOrderedItems(a);
   };
 
+  // Drag-and-drop redoslijed preko Pointer Events — radi i mišom i prstom
+  // (touchscreen). HTML5 draggable se ne koristi jer ne radi na dodir.
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const dragIdxRef = useRef<number | null>(null);
+
+  const handleReorderPointerDown = (e: React.PointerEvent, idx: number) => {
+    dragIdxRef.current = idx;
+    setDragIdx(idx);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const handleReorderPointerMove = (e: React.PointerEvent) => {
+    if (dragIdxRef.current === null) return;
+    e.preventDefault();
+    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+    const row = el?.closest("[data-reorder-idx]") as HTMLElement | null;
+    if (!row) return;
+    const overIdx = parseInt(row.getAttribute("data-reorder-idx") || "", 10);
+    const from = dragIdxRef.current;
+    if (Number.isNaN(overIdx) || overIdx === from) return;
+    setOrderedItems(prev => {
+      const a = [...prev];
+      const [it] = a.splice(from, 1);
+      a.splice(overIdx, 0, it);
+      return a;
+    });
+    dragIdxRef.current = overIdx;
+    setDragIdx(overIdx);
+  };
+
+  const handleReorderPointerUp = () => {
+    dragIdxRef.current = null;
+    setDragIdx(null);
+  };
+
   const next = () => {
     if (isLast) {
       const bodovi = Math.round((score / pitanja.length) * 100);
@@ -1083,17 +1118,31 @@ export default function KvizPage() {
             {/* ── REORDER ── */}
             {qType === "reorder" && (
               <>
-                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Poredaj stavke u tačan redosljed</p>}
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Prevuci stavke (drži i povuci) ili koristi strelice da ih poredaš u tačan redosljed</p>}
                 <div className="flex flex-col gap-2 mb-4">
                   {orderedItems.map((item, idx) => {
                     const correctOrder = [...(pitanje.items || [])].sort((a, b) => a.order - b.order).map(i => i.text);
                     const isCorrect = answered && correctOrder[idx] === item;
                     const isWrong = answered && correctOrder[idx] !== item;
                     return (
-                      <div key={item} className={`flex items-center gap-3 border-2 rounded-2xl px-4 py-3 font-medium transition-all
-                        ${isCorrect ? "border-emerald-400 bg-emerald-50 text-emerald-800" :
+                      <div key={item} data-reorder-idx={idx} className={`flex items-center gap-3 border-2 rounded-2xl px-4 py-3 font-medium transition-all
+                        ${dragIdx === idx ? "border-primary ring-2 ring-primary/30 shadow-lg scale-[1.01]" :
+                          isCorrect ? "border-emerald-400 bg-emerald-50 text-emerald-800" :
                           isWrong ? "border-red-400 bg-red-50 text-red-800" :
                           "border-border/50 bg-white"}`}>
+                        {!answered && (
+                          <button
+                            type="button"
+                            onPointerDown={e => handleReorderPointerDown(e, idx)}
+                            onPointerMove={handleReorderPointerMove}
+                            onPointerUp={handleReorderPointerUp}
+                            onPointerCancel={handleReorderPointerUp}
+                            aria-label="Prevuci da promijeniš redosljed"
+                            className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-primary p-1 -ml-1 shrink-0"
+                          >
+                            <GripVertical className="w-5 h-5" />
+                          </button>
+                        )}
                         <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">{idx + 1}</span>
                         <span className="flex-1">{item}</span>
                         {!answered && (
