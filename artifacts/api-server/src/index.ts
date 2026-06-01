@@ -598,6 +598,33 @@ async function runDataBootstrap() {
     logger.error({ err: e }, "Kategorije Čitaonice bootstrap failed (non-fatal)");
   }
 
+  // GRUPA RASPORED BOOTSTRAP (idempotentno): per-grupa redoslijed lekcija.
+  //   - Ako grupa nema redove za nivo → koristi se globalni redoslijed (default).
+  //   - Ako ima → student te grupe vidi/otključava lekcije po `pozicija`.
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS grupa_raspored (
+        id SERIAL PRIMARY KEY,
+        grupa_id INTEGER NOT NULL,
+        nivo INTEGER NOT NULL,
+        lekcija_id INTEGER NOT NULL,
+        pozicija INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS grupa_raspored_grupa_lekcija_unique_idx
+        ON grupa_raspored (grupa_id, lekcija_id);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS grupa_raspored_grupa_nivo_idx
+        ON grupa_raspored (grupa_id, nivo, pozicija);
+    `);
+    logger.info("Grupa raspored bootstrap: tabela + indeksi");
+  } catch (e) {
+    logger.error({ err: e }, "Grupa raspored bootstrap failed (non-fatal)");
+  }
+
   // ILMIHAL CLEANUP + UVODNE RIJEČI (idempotentno) — eksplicitno odobreno od strane user-a:
   //   1. Brisanje 4 duplikata/test lekcija koje "su se pojavile odnekud":
   //      Nivo 1: 'lekcija-01' (LEKCIJA 1: IMANSKI ŠARTI), 'tesbih' (sve malim slovima)

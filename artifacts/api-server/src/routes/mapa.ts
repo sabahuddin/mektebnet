@@ -8,10 +8,15 @@ import {
   krunisanjaTable,
   etapaPolaganjaTable,
 } from "@workspace/db/schema";
-import { eq, and, lte, asc, notLike } from "drizzle-orm";
+import { eq, and, lt, asc, notLike } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { polozeneEtapeNivoa } from "./etape.js";
 import { polozenaKrunisanja } from "./krunisanja.js";
+import {
+  getRasporedPositionsForStudent,
+  applyEffectiveOrder,
+  resolveEffectiveRedoslijed,
+} from "../lib/raspored.js";
 
 const router = Router();
 
@@ -121,6 +126,9 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
       }
     }
 
+    // Default: globalni redoslijed. Za prijavljenog studenta čija grupa ima
+    // raspored za ovaj nivo → preslažemo lekcije na efektivne pozicije.
+    let lekcijeOut = lekcije;
     let zavrsene: number[] = [];
     let osvojeniMedaljoni: number[] = [];
     let polozeneEtape: number[] = [];
@@ -134,6 +142,10 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
         const JWT_SECRET = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
         const payload = jwt.default.verify(authHeader.slice(7), JWT_SECRET) as { userId: number };
         const userIdStr = String(payload.userId);
+
+        // Raspored grupe (ako postoji) → efektivni redoslijed lekcija.
+        const rasporedPosMap = await getRasporedPositionsForStudent(payload.userId, nivo);
+        if (rasporedPosMap) lekcijeOut = applyEffectiveOrder(lekcije, rasporedPosMap);
 
         const [progressRow] = await db
           .select({ completedLessons: studentProgressTable.completedLessons })
@@ -160,7 +172,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     }
 
     res.json({
-      lekcije,
+      lekcije: lekcijeOut,
       medaljoni: medaljoniAug,
       krunisanje: krunisanjeMeta,
       zavrsene,
@@ -208,18 +220,25 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
       .limit(1);
     const zavrsene = new Set((progressRow?.completedLessons as number[] | undefined) ?? []);
 
-    // Sve lekcije ovog nivoa sa redoslijed <= posAfterRedoslijed moraju biti
-    // u `zavrsene`. Koristimo `medaljon.nivo` (ne hard-coded 1) tako da gating
-    // ispravno radi za Nivo 2 i 3.
-    const potrebne = await db
-      .select({ id: ilmihalLekcijeTable.id })
+    // Sve regularne lekcije ovog nivoa sa EFEKTIVNOM pozicijom <=
+    // posAfterRedoslijed moraju biti u `zavrsene`. Efektivni redoslijed poštuje
+    // raspored studentove grupe (ako postoji); inače je globalni redoslijed.
+    // Koristimo `medaljon.nivo` (ne hard-coded 1) tako da gating radi za sve
+    // nivoe. Medaljon-lekcije (redoslijed >= 9000) su isključene.
+    const regularLekcije = await db
+      .select({ id: ilmihalLekcijeTable.id, redoslijed: ilmihalLekcijeTable.redoslijed })
       .from(ilmihalLekcijeTable)
       .where(
         and(
           eq(ilmihalLekcijeTable.nivo, medaljon.nivo),
-          lte(ilmihalLekcijeTable.redoslijed, medaljon.posAfterRedoslijed),
+          lt(ilmihalLekcijeTable.redoslijed, 9000),
         ),
       );
+    const rasporedPosMap = await getRasporedPositionsForStudent(req.user!.userId, medaljon.nivo);
+    const effMap = resolveEffectiveRedoslijed(regularLekcije, rasporedPosMap);
+    const potrebne = regularLekcije.filter(
+      (l) => (effMap.get(l.id) ?? l.redoslijed) <= medaljon.posAfterRedoslijed,
+    );
     const nedostaje = potrebne.filter((l) => !zavrsene.has(l.id));
     if (nedostaje.length > 0) {
       return res.status(403).json({

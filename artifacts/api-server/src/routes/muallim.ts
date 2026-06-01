@@ -7,6 +7,7 @@ import {
   ucenikProfiliTable,
   roditeljProfiliTable,
   grupeTable,
+  grupaRasporedTable,
   roditeljUcenikTable,
   obavjestenjaTable,
   priustvoTable,
@@ -26,6 +27,7 @@ import {
 import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
+import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
@@ -1057,6 +1059,110 @@ async function verifyGrupaAccess(grupaId: number, userId: number, userRole: stri
   const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId)));
   return grupa || null;
 }
+
+// ── PER-GRUPA RASPORED LEKCIJA ──────────────────────────────────────────────
+// Muallim slaže vlastiti redoslijed lekcija za svoju grupu (po nivou). Ako
+// grupa nema raspored, student ide po globalnom `ilmihal_lekcije.redoslijed`
+// (default). Medaljon-lekcije (redoslijed >= 9000) se NE uključuju.
+
+// GET /api/muallim/grupa/:id/raspored?nivo=1
+router.get("/grupa/:id/raspored", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const nivo = parseInt(req.query.nivo as string);
+    if (!grupaId || !nivo || nivo < 1 || nivo > 3) {
+      res.status(400).json({ error: "grupaId i nivo (1-3) su obavezni" }); return;
+    }
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const lekcije = await db
+      .select({
+        id: ilmihalLekcijeTable.id,
+        slug: ilmihalLekcijeTable.slug,
+        naslov: ilmihalLekcijeTable.naslov,
+        redoslijed: ilmihalLekcijeTable.redoslijed,
+      })
+      .from(ilmihalLekcijeTable)
+      .where(and(eq(ilmihalLekcijeTable.nivo, nivo), sql`${ilmihalLekcijeTable.redoslijed} < 9000`))
+      .orderBy(asc(ilmihalLekcijeTable.redoslijed));
+
+    const posMap = await getRasporedPositions(grupaId, nivo);
+    const eff = resolveEffectiveRedoslijed(lekcije, posMap);
+    const poredano = [...lekcije].sort((a, b) => eff.get(a.id)! - eff.get(b.id)!);
+
+    res.json({
+      grupaId,
+      nivo,
+      imaRaspored: posMap !== null,
+      lekcije: poredano.map((l, i) => ({
+        lekcijaId: l.id,
+        slug: l.slug,
+        naslov: l.naslov,
+        globalniRedoslijed: l.redoslijed,
+        pozicija: i + 1,
+      })),
+    });
+  } catch (err) {
+    console.error("Raspored GET error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/muallim/grupa/:id/raspored  body: { nivo, lekcijaIds: number[] }
+router.put("/grupa/:id/raspored", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const { nivo, lekcijaIds } = req.body as { nivo?: number; lekcijaIds?: number[] };
+    if (!grupaId || !nivo || nivo < 1 || nivo > 3 || !Array.isArray(lekcijaIds) || lekcijaIds.length === 0) {
+      res.status(400).json({ error: "grupaId, nivo i lekcijaIds (niz) su obavezni" }); return;
+    }
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    // Validacija: svi lekcijaIds moraju biti regularne lekcije ovog nivoa.
+    const validne = await db
+      .select({ id: ilmihalLekcijeTable.id })
+      .from(ilmihalLekcijeTable)
+      .where(and(eq(ilmihalLekcijeTable.nivo, nivo), sql`${ilmihalLekcijeTable.redoslijed} < 9000`));
+    const validSet = new Set(validne.map((l) => l.id));
+    const seen = new Set<number>();
+    for (const id of lekcijaIds) {
+      if (!validSet.has(id)) { res.status(400).json({ error: `Lekcija ${id} ne pripada nivou ${nivo}` }); return; }
+      if (seen.has(id)) { res.status(400).json({ error: `Duplikat lekcije ${id}` }); return; }
+      seen.add(id);
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(grupaRasporedTable)
+        .where(and(eq(grupaRasporedTable.grupaId, grupaId), eq(grupaRasporedTable.nivo, nivo)));
+      await tx.insert(grupaRasporedTable).values(
+        lekcijaIds.map((lekcijaId, i) => ({ grupaId, nivo, lekcijaId, pozicija: i + 1 })),
+      );
+    });
+    res.json({ ok: true, grupaId, nivo, broj: lekcijaIds.length });
+  } catch (err) {
+    console.error("Raspored PUT error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/muallim/grupa/:id/raspored?nivo=1  → reset na default redoslijed
+router.delete("/grupa/:id/raspored", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const nivo = parseInt(req.query.nivo as string);
+    if (!grupaId || !nivo) { res.status(400).json({ error: "grupaId i nivo su obavezni" }); return; }
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    await db.delete(grupaRasporedTable)
+      .where(and(eq(grupaRasporedTable.grupaId, grupaId), eq(grupaRasporedTable.nivo, nivo)));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Raspored DELETE error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
 
 // GET /api/muallim/kalendar?grupaId=X&mjesec=YYYY-MM
 router.get("/kalendar", async (req, res) => {

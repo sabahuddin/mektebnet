@@ -22,6 +22,11 @@ import { eq, and, asc, desc, gte, lte, lt, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
+import {
+  getRasporedPositionsForStudent,
+  resolveEffectiveRedoslijed,
+  applyEffectiveOrder,
+} from "../lib/raspored.js";
 
 const router = Router();
 
@@ -78,7 +83,20 @@ router.get("/ilmihal", async (req, res) => {
           for (const r of napredakRows) if (r.zavrsen) completedSet.add(r.contentId);
 
           const enriched = lekcije.map(l => ({ ...l, zavrseno: completedSet.has(l.id) }));
-          res.json(enriched);
+          // Primijeni efektivni redoslijed po nivou (raspored grupe studenta).
+          // Grupe bez rasporeda → nepromijenjeno (globalni redoslijed).
+          const poNivou = new Map<number, typeof enriched>();
+          for (const l of enriched) {
+            const arr = poNivou.get(l.nivo) ?? [];
+            arr.push(l);
+            poNivou.set(l.nivo, arr);
+          }
+          const poredano: typeof enriched = [];
+          for (const [nv, arr] of poNivou) {
+            const posMap = await getRasporedPositionsForStudent(userId, nv);
+            poredano.push(...applyEffectiveOrder(arr, posMap));
+          }
+          res.json(poredano);
           return;
         }
       } catch {}
@@ -113,6 +131,19 @@ router.get("/ilmihal/:slug", async (req, res) => {
         ) as { userId: number; role?: string };
         if (decoded.role === "ucenik") {
           const studentId = String(decoded.userId);
+          // Efektivni redoslijed za ovog studenta: ako njegova grupa ima
+          // raspored za ovaj nivo → preslagane pozicije; inače globalni
+          // redoslijed (identitet, nula promjena za postojeće grupe).
+          const regularLekcije = await db
+            .select({ id: ilmihalLekcijeTable.id, redoslijed: ilmihalLekcijeTable.redoslijed })
+            .from(ilmihalLekcijeTable)
+            .where(and(
+              eq(ilmihalLekcijeTable.nivo, lekcija.nivo),
+              lt(ilmihalLekcijeTable.redoslijed, 9000),
+            ));
+          const rasporedPosMap = await getRasporedPositionsForStudent(decoded.userId, lekcija.nivo);
+          const effMap = resolveEffectiveRedoslijed(regularLekcije, rasporedPosMap);
+          const effLekcijaPos = effMap.get(lekcija.id) ?? lekcija.redoslijed;
           // Opcija B: medaljon-lekcija (slug `medaljon-nivo{N}-{ord}`). Ova
           // lekcija JESTE medaljon — gejtuje se posebno (sve regularne lekcije
           // svog bloka moraju biti gotove), a NE kroz generički priorMed gate
@@ -137,14 +168,9 @@ router.get("/ilmihal/:slug", async (req, res) => {
                 .where(eq(studentProgressTable.studentId, studentId))
                 .limit(1);
               const doneSet = new Set((progRow?.completed as number[] | undefined) ?? []);
-              const trebaju = await db
-                .select({ id: ilmihalLekcijeTable.id })
-                .from(ilmihalLekcijeTable)
-                .where(and(
-                  eq(ilmihalLekcijeTable.nivo, lekcija.nivo),
-                  lte(ilmihalLekcijeTable.redoslijed, target.posAfterRedoslijed),
-                  lt(ilmihalLekcijeTable.redoslijed, 9000),
-                ));
+              const trebaju = regularLekcije.filter(
+                (l) => (effMap.get(l.id) ?? l.redoslijed) <= target.posAfterRedoslijed,
+              );
               const nedostaje = trebaju.filter((l) => !doneSet.has(l.id)).length;
               if (nedostaje > 0) {
                 lockedReason = "Završi sve lekcije ovog bloka da otključaš medaljon.";
@@ -177,16 +203,16 @@ router.get("/ilmihal/:slug", async (req, res) => {
           }
           // 2) Prethodna etapa istog nivoa (medaljon sa posAfterRedoslijed < lekcija.redoslijed).
           if (!lockedReason) {
-            const priorMedaljoni = await db
+            const medaljoniNivoa = await db
               .select()
               .from(medaljoniTable)
-              .where(and(
-                eq(medaljoniTable.nivo, lekcija.nivo),
-                lt(medaljoniTable.posAfterRedoslijed, lekcija.redoslijed),
-              ))
-              .orderBy(desc(medaljoniTable.posAfterRedoslijed))
-              .limit(1);
-            const priorMed = priorMedaljoni[0];
+              .where(eq(medaljoniTable.nivo, lekcija.nivo))
+              .orderBy(desc(medaljoniTable.posAfterRedoslijed));
+            // Prethodna etapa po EFEKTIVNOM redoslijedu studenta (najveći
+            // posAfterRedoslijed koji je još uvijek ispod pozicije lekcije).
+            const priorMed = medaljoniNivoa.find(
+              (m) => m.posAfterRedoslijed < effLekcijaPos,
+            );
             // Task #126: poštuj `is_gating` toggle — ako je etapa
             // konfigurisana kao non-gating, NE blokiraj sljedeće lekcije.
             if (priorMed && priorMed.isGating) {
@@ -210,13 +236,9 @@ router.get("/ilmihal/:slug", async (req, res) => {
                   .where(eq(studentProgressTable.studentId, studentId))
                   .limit(1);
                 const doneSet = new Set((progRow?.completed as number[] | undefined) ?? []);
-                const trebaju = await db
-                  .select({ id: ilmihalLekcijeTable.id })
-                  .from(ilmihalLekcijeTable)
-                  .where(and(
-                    eq(ilmihalLekcijeTable.nivo, lekcija.nivo),
-                    lte(ilmihalLekcijeTable.redoslijed, priorMed.posAfterRedoslijed),
-                  ));
+                const trebaju = regularLekcije.filter(
+                  (l) => (effMap.get(l.id) ?? l.redoslijed) <= priorMed.posAfterRedoslijed,
+                );
                 priorPassed = trebaju.every((l) => doneSet.has(l.id));
               }
               if (!priorPassed) {

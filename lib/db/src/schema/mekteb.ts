@@ -96,6 +96,26 @@ export const obavjestenjaTable = pgTable("obavjestenja", {
   createdIdx: index("obavjestenja_created_idx").on(t.createdAt),
 }));
 
+// Per-grupa raspored lekcija — muallim slaže vlastiti redoslijed lekcija za
+// svoju grupu. Ako grupa NEMA redove za neki nivo, koristi se globalni
+// `ilmihal_lekcije.redoslijed` (default). Ako ima, server preslaže lekcije po
+// `pozicija` (1-based, kontiguirano). Medaljon-lekcije (slug `medaljon-nivo%`)
+// se NE uključuju — one ostaju checkpointi na svojim ordinalnim pozicijama.
+export const grupaRasporedTable = pgTable("grupa_raspored", {
+  id: serial("id").primaryKey(),
+  grupaId: integer("grupa_id").notNull(),
+  nivo: integer("nivo").notNull(),
+  lekcijaId: integer("lekcija_id").notNull(),
+  pozicija: integer("pozicija").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  uniqGrupaLekcija: uniqueIndex("grupa_raspored_grupa_lekcija_unique_idx").on(t.grupaId, t.lekcijaId),
+  grupaNivoIdx: index("grupa_raspored_grupa_nivo_idx").on(t.grupaId, t.nivo, t.pozicija),
+}));
+
+export type GrupaRaspored = typeof grupaRasporedTable.$inferSelect;
+export type InsertGrupaRaspored = typeof grupaRasporedTable.$inferInsert;
+
 export const insertMektebSchema = createInsertSchema(mektebiTable).omit({ id: true, createdAt: true });
 export const insertGrupaSchema = createInsertSchema(grupeTable).omit({ id: true, createdAt: true });
 export const insertUcenikProfilSchema = createInsertSchema(ucenikProfiliTable).omit({ createdAt: true, archivedAt: true });

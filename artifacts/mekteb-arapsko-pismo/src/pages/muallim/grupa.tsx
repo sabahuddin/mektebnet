@@ -8,7 +8,7 @@ import {
   ArrowLeft, Users, UserPlus, Printer, ChevronRight, ArrowRightLeft,
   Loader2, GraduationCap, X, Plus, Trash2, Star, ClipboardList, KeyRound,
   AlertTriangle, BookOpen, Copy, Check,
-  CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles,
+  CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles, ListOrdered,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -475,6 +475,7 @@ export default function GrupaPage() {
             {[
               { label: "Prisustvo", icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}`, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" },
               { label: "Plan lekcija", icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}`, color: "bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100" },
+              { label: "Raspored lekcija", icon: ListOrdered, href: `/muallim/raspored/${grupa.id}`, color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" },
               { label: "Kalendar", icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}`, color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" },
               { label: "Statistika", icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}`, color: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" },
               { label: "Zadaća", icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" },
