@@ -326,7 +326,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                 key={m?.id ?? `slot-${i}`}
                 broj={required}
                 state={earned ? "earned" : unlocked ? "unlocked" : "locked"}
-                onClick={() => m && unlocked && setLocation(`/ilmihal/medaljon-nivo${nivo}-${i + 1}`)}
+                onClick={() => m && unlocked && setLocation(`/ilmihal/medaljon-nivo${nivo}-${required}`)}
                 title={
                   m
                     ? `${m.naziv} — ${required} lekcija`
@@ -448,7 +448,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                   <MedaljonHex
                     broj={required}
                     state={state}
-                    onClick={() => realMed && unlocked && setLocation(`/ilmihal/medaljon-nivo${nivo}-${r + 1}`)}
+                    onClick={() => realMed && unlocked && setLocation(`/ilmihal/medaljon-nivo${nivo}-${required}`)}
                     title={
                       unlocked
                         ? realMed
