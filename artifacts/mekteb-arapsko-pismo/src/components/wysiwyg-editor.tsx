@@ -489,6 +489,42 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     onChange("");
   }, [editor, onChange]);
 
+  // Pretvori lekciju sa čistim <p> sadržajem (npr. DODATAK lekcije, koje se
+  // kreiraju bez ijednog akordiona) u akordion-mod: trenutni sadržaj postaje
+  // prva akordion sekcija pa admin može dodavati još preko "Nova".
+  const convertToAccordions = useCallback(() => {
+    if (!editor) return;
+    let bodyHtml = editor.getHTML();
+    // Hero se čuva u heroImage state-u i save path ga ponovo ubacuje IZNAD
+    // akordiona. Zato ga uklanjamo iz sadržaja sekcije — inače bi se duplirao.
+    if (heroImage) {
+      bodyHtml = bodyHtml
+        .replace(/<div class="hero-box">[\s\S]*?<\/div>\s*/, "")
+        .replace(/^\s*<img\s+src="[^"]*"[^>]*>\s*/, "")
+        .trim();
+    }
+    const newSection: ParsedSection = {
+      id: `section-${Date.now()}`,
+      title: "NOVA SEKCIJA",
+      iconText: "▶",
+      contentHtml: bodyHtml || "<p></p>",
+      isActive: false,
+    };
+    sectionContentsRef.current = [newSection.contentHtml];
+    switchingRef.current = true;
+    activeIdxRef.current = 0;
+    setActiveIdx(0);
+    setParsed({
+      beforeAccordions: "",
+      sections: [newSection],
+      afterAccordions: "",
+      hasAccordions: true,
+    });
+    editor.commands.setContent(newSection.contentHtml);
+    switchingRef.current = false;
+    onChange(bodyHtml);
+  }, [editor, onChange, heroImage]);
+
   const removeSection = useCallback((idx: number) => {
     if (!editor) return;
     setParsed(prev => {
@@ -868,6 +904,24 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Nova</span>
+            </button>
+          </div>
+        </div>
+      )}
+      {!parsed.hasAccordions && (
+        <div className="px-3 py-2 border-b border-gray-200 bg-amber-50/70">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-amber-800">
+              Ova lekcija nema akordion sekcija.
+            </span>
+            <button
+              type="button"
+              onClick={convertToAccordions}
+              title="Pretvori trenutni sadržaj u prvu akordion sekciju"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Dodaj akordion sekciju</span>
             </button>
           </div>
         </div>
