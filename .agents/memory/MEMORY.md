@@ -4,3 +4,4 @@
 - [Reorder UI mora podržavati touch](reorder-touch-drag.md) — djeca su na tabletima; koristi Pointer Events + elementFromPoint, ne HTML5 draggable; drži strelice kao fallback.
 - [Produkcija = jedini izvor istine](prod-redeploy-workflow.md) — korisnik uvijek gleda mekteb.net, nikad dev preview; promjene se vide tek nakon ručnog Coolify redeploya.
 - [Plain-content lekcije i akordion editor](dodatak-plain-content-editor.md) — WysiwygEditor krije sve akordion kontrole kad sadržaj nema `.lesson-accordion`; DODATAK/medaljon lekcije su plain `<p>`.
+- [NPP normalizacija predmeta](npp-predmet-normalizacija.md) — `predmet` dropdown sveden na 6 NPP oblasti; necore→"Ostali sadržaji", medaljoni bez predmeta; primjena preko idempotentne startup-migracije.
