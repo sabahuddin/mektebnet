@@ -1,9 +1,9 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X, Filter, Award } from "lucide-react";
+import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X, Filter, Award, Plus } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -25,6 +25,8 @@ const NIVO_INFO: Record<number, { naslov: string; podnaslov: string; bg: string;
 
 export default function IlmihalSvePage() {
   const { token, user } = useAuth();
+  const [, setLocation] = useLocation();
+  const isAdmin = user?.role === "admin";
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);
   // Akordion: koji nivoi su otvoreni. Po defaultu SVI ZATVORENI da
@@ -108,6 +110,39 @@ export default function IlmihalSvePage() {
   }, [groupedByNivo, trimmedQuery, predmet]);
 
   const isSearching = trimmedQuery.length > 0 || predmet.length > 0;
+
+  // Admin: kreira novu DODATAK lekciju na kraj akordiona datog nivoa.
+  // DODATAK lekcije nisu dio ilmihal-mape/progresije (isključene na serveru
+  // po slug-u `dodatak-nivo%`), pa ne kvare brojanje medaljona. Imaju punu
+  // strukturu (akordioni, vježbe) — admin ih popunjava u editoru lekcije.
+  async function createDodatak(nivo: number) {
+    if (!token) return;
+    const existing = (groupedByNivo[nivo] || []).filter((l) => l.slug.startsWith(`dodatak-nivo${nivo}-`));
+    const nums = existing
+      .map((l) => parseInt(l.slug.split("-").pop() || "0", 10))
+      .filter((x) => !Number.isNaN(x));
+    const n = (nums.length ? Math.max(...nums) : 0) + 1;
+    const slug = `dodatak-nivo${nivo}-${n}`;
+    const naslov = "DODATAK";
+    try {
+      await apiRequest(
+        "POST",
+        "/admin/ilmihal",
+        {
+          naslov,
+          slug,
+          nivo,
+          redoslijed: 9500 + n,
+          contentHtml: `<h1>${naslov}</h1><p>Dodatni sadržaj — popuni akordionima i vježbama.</p>`,
+        },
+        token,
+      );
+      setLocation(`/ilmihal/${slug}`);
+    } catch {
+      // admin može ponoviti pokušaj
+    }
+  }
+
   const total = lekcije.length;
   const done = lekcije.filter((l) => l.zavrseno).length;
   const matchCount = isSearching
@@ -278,8 +313,9 @@ export default function IlmihalSvePage() {
                           const realIdx = allItems.findIndex((x) => x.id === l.id);
                           const isDone = !!l.zavrseno;
                           const isNext = enforceProgress && realIdx === firstUndoneAll;
+                          const isDodatak = l.slug.startsWith("dodatak-nivo");
                           const isLocked =
-                            enforceProgress && !isDone && !isNext;
+                            enforceProgress && !isDone && !isNext && !isDodatak;
                           const idx = realIdx;
 
                           const rowInner = (
@@ -378,6 +414,15 @@ export default function IlmihalSvePage() {
                         });
                       })()}
                     </ol>
+                    {isAdmin && (
+                      <button
+                        onClick={() => createDodatak(nivo)}
+                        className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 border-dashed border-amber-400 text-amber-800 font-bold text-sm hover:bg-white/60 active:bg-white/80 transition-colors"
+                        data-testid={`button-add-dodatak-${nivo}`}
+                      >
+                        <Plus className="w-4 h-4" /> Dodaj DODATAK lekciju
+                      </button>
+                    )}
                   </div>
                   )}
                 </section>

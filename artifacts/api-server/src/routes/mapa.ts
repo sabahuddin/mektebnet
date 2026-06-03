@@ -50,6 +50,9 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
         .where(and(
           eq(ilmihalLekcijeTable.nivo, nivo),
           notLike(ilmihalLekcijeTable.slug, "medaljon-nivo%"),
+          // DODATAK lekcije (slug `dodatak-nivo{N}-{n}`) nisu dio mape niti
+          // progresije — dodatni sadržaj dostupan samo kroz listu svih lekcija.
+          notLike(ilmihalLekcijeTable.slug, "dodatak-nivo%"),
         ))
         .orderBy(asc(ilmihalLekcijeTable.redoslijed)),
       db

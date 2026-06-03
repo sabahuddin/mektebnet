@@ -149,7 +149,12 @@ router.get("/ilmihal/:slug", async (req, res) => {
           // svog bloka moraju biti gotove), a NE kroz generički priorMed gate
           // (čiji bi je redoslijed 9000+ pogrešno zaključao iza zadnje etape).
           const medLessonMatch = lekcija.slug?.match(/^medaljon-nivo(\d+)-(\d+)$/);
-          if (medLessonMatch) {
+          // DODATAK lekcije (slug `dodatak-nivo{N}-{n}`) nisu dio ilmihal
+          // progresije — dodatni sadržaj, uvijek dostupan (bez etapa-gatinga).
+          const dodatakMatch = lekcija.slug?.match(/^dodatak-nivo\d+/);
+          if (dodatakMatch) {
+            // bez gatinga — DODATAK je uvijek otključan
+          } else if (medLessonMatch) {
             const ordinal = parseInt(medLessonMatch[2], 10);
             const medaljoniNivoa = await db
               .select({ id: medaljoniTable.id, posAfterRedoslijed: medaljoniTable.posAfterRedoslijed })
