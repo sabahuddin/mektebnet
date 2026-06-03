@@ -562,6 +562,10 @@ export default function KvizPage() {
   const [finished, setFinished] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  // Drag-and-drop redoslijed preko Pointer Events — radi i mišom i prstom
+  // (touchscreen). HTML5 draggable se ne koristi jer ne radi na dodir.
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const dragIdxRef = useRef<number | null>(null);
 
   const triggerConfetti = () => {
     const duration = 3 * 1000;
@@ -778,11 +782,6 @@ export default function KvizPage() {
     [a[idx], a[newIdx]] = [a[newIdx], a[idx]];
     setOrderedItems(a);
   };
-
-  // Drag-and-drop redoslijed preko Pointer Events — radi i mišom i prstom
-  // (touchscreen). HTML5 draggable se ne koristi jer ne radi na dodir.
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const dragIdxRef = useRef<number | null>(null);
 
   const handleReorderPointerDown = (e: React.PointerEvent, idx: number) => {
     dragIdxRef.current = idx;
