@@ -2684,7 +2684,9 @@ export default function IlmihalLekcijaPage() {
 
   const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 3: "Nivo 3" };
   const backNivo = lekcija ? displayNivo(lekcija.nivo) : null;
-  const goBack = () => setLocation(backNivo ? `/ilmihal?nivo=${backNivo}` : "/ilmihal");
+  // Nazad vodi KORAK nazad — na snake-mapu lekcija tog nivoa (gdje učenik bira
+  // sljedeću lekciju), a NE na izbor košnica/nivoa (što djeluje kao izlazak).
+  const goBack = () => setLocation(backNivo ? `/nivo${backNivo}-mapa` : "/ilmihal");
 
   if (isLoading) {
     return (

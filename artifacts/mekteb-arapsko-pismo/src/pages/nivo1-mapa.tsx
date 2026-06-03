@@ -513,12 +513,16 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                           : "0 1px 0 rgba(255,255,255,0.6), 0 -1px 0 rgba(120,53,15,0.25)",
                       }}
                     >
-                      {isDone ? (
-                        <Check className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={3.5} />
-                      ) : (
-                        i + 1
-                      )}
+                      {i + 1}
                     </div>
+                    {isDone && (
+                      <span
+                        className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500 ring-2 ring-white flex items-center justify-center shadow-md z-10"
+                        aria-label="Završeno"
+                      >
+                        <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" strokeWidth={4} />
+                      </span>
+                    )}
                   </div>
                 </button>
               );
