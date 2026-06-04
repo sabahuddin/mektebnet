@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useState, useCallback, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -18,13 +18,22 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"prijava" | "demo">("prijava");
+  const [activeTab, setActiveTab] = useState<"prijava" | "demo">(
+    search.includes("demo") ? "demo" : "prijava"
+  );
+
+  // Kada se na login dođe sa ?tab=demo (npr. iz menija "Demo prijava"), otvori
+  // odmah Demo tab — i kada je komponenta već montirana (promjena query-ja).
+  useEffect(() => {
+    if (search.includes("demo")) setActiveTab("demo");
+  }, [search]);
   const [captcha, setCaptcha] = useState(generateCaptcha);
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [demoBusy, setDemoBusy] = useState<string | null>(null);
