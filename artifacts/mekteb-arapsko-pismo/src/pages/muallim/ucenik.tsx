@@ -4,12 +4,11 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, X, Clock } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, X, Clock, BookOpen, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { isOnline, formatScreentime, kategorijaOcjeneLabel } from "@/lib/utils";
-import { LekcijaPicker } from "@/components/LekcijaPicker";
 
 interface Ucenik {
   id: number;
@@ -45,6 +44,23 @@ interface IlmihalLekcija {
   id: number;
   naslov: string;
   nivo: number;
+}
+
+interface ZadacaPregled {
+  id: number;
+  naslov: string;
+  opis?: string | null;
+  rokDo?: string | null;
+  lekcijaNaslov?: string | null;
+  efektivniRok?: string | null;
+  status?: string;
+  uradjeno?: boolean;
+  ocjena?: number | null;
+  kapiMeda?: number;
+  noviRok?: string | null;
+  prolongCount?: number;
+  istekao?: boolean;
+  kategorija?: "zavrsene" | "aktivne";
 }
 
 interface KvizRezultat {
@@ -155,11 +171,8 @@ export default function UcenikPage() {
   const [postojeciUsername, setPostojeciUsername] = useState("");
   const [linkujemPostojeceg, setLinkujemPostojeceg] = useState(false);
 
-  // Pojedinačna zadaća za ovog učenika
-  const [ucenikGrupaId, setUcenikGrupaId] = useState<number | null>(null);
-  const [showZadacaForm, setShowZadacaForm] = useState(false);
-  const [savingZadaca, setSavingZadaca] = useState(false);
-  const [newZadaca, setNewZadaca] = useState({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" });
+  // Pregled zadaća ovog učenika (read-only). Dodavanje ide iz Muallim → Zadaća.
+  const [zadace, setZadace] = useState<ZadacaPregled[]>([]);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -173,8 +186,10 @@ export default function UcenikPage() {
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<{ pokusaji: H5PPokusaj[]; prilozi: H5PPrilogInfo[] }>("GET", `/muallim/ucenik/${ucenikId}/h5p-pokusaji`, undefined, token).catch(() => ({ pokusaji: [], prilozi: [] })),
       apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, rod]) => {
+      apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, rod, zad]) => {
       setRoditelji((rod as RoditeljVeza[]) || []);
+      setZadace((zad as ZadacaPregled[]) || []);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
       setUcenik(found || null);
       setOcjene(oc);
@@ -185,7 +200,6 @@ export default function UcenikPage() {
       setH5pPokusaji((h5pData as any).pokusaji || []);
       setH5pPrilozi((h5pData as any).prilozi || []);
       const gId = found?.profil?.grupaId || found?.grupaId;
-      setUcenikGrupaId(gId || null);
       if (gId) {
         apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
           .then(pl => {
@@ -327,31 +341,6 @@ export default function UcenikPage() {
     }
   }
 
-  async function saveZadacaForUcenik() {
-    if (!token || !id || !ucenikGrupaId || !newZadaca.naslov.trim()) {
-      toast({ title: "Naslov je obavezan", variant: "destructive" });
-      return;
-    }
-    setSavingZadaca(true);
-    try {
-      await apiRequest("POST", "/muallim/zadace", {
-        grupaId: ucenikGrupaId,
-        naslov: newZadaca.naslov.trim(),
-        opis: newZadaca.opis.trim() || null,
-        rokDo: newZadaca.rokDo || null,
-        lekcijaNaslov: newZadaca.lekcijaNaslov || null,
-        ucenikIds: [parseInt(id)],
-      }, token);
-      toast({ title: "Zadaća dodana!", description: `Pojedinačna zadaća za ${ucenik?.displayName || "učenika"}.` });
-      setShowZadacaForm(false);
-      setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" });
-    } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće dodati zadaću", variant: "destructive" });
-    } finally {
-      setSavingZadaca(false);
-    }
-  }
-
   async function copyRoditeljKredencijale() {
     if (!kreiraniRoditelj) return;
     try {
@@ -463,16 +452,6 @@ export default function UcenikPage() {
                     </span>
                   )}
                 </Button>
-                {ucenikGrupaId && (
-                  <Button
-                    onClick={() => { setShowZadacaForm(s => !s); setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" }); }}
-                    variant="outline"
-                    className="rounded-xl font-bold text-sm flex items-center gap-1.5"
-                    data-testid="btn-toggle-zadaca-ucenik"
-                  >
-                    <ClipboardList className="w-4 h-4" /> Zadaća
-                  </Button>
-                )}
                 <Button
                   onClick={() => setLocation(`/muallim/izvjestaj/ucenik/${ucenik.id}`)}
                   variant="outline"
@@ -725,76 +704,6 @@ export default function UcenikPage() {
               </motion.div>
             )}
 
-            {showZadacaForm && ucenikGrupaId && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="bg-white border border-border/50 rounded-2xl p-5 mb-6 shadow-sm"
-                data-testid="form-zadaca-ucenik"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5 text-primary" /> Pojedinačna zadaća za {ucenik.displayName}
-                  </h3>
-                  <button onClick={() => setShowZadacaForm(false)} className="p-1 hover:bg-muted rounded-lg">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground mb-3">Ova zadaća biće vidljiva samo ovom učeniku — ne cijeloj grupi.</p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">Naslov *</label>
-                    <input
-                      type="text" value={newZadaca.naslov}
-                      onChange={e => setNewZadaca(z => ({ ...z, naslov: e.target.value }))}
-                      placeholder="Npr. Nauči Fatihu napamet"
-                      className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      data-testid="input-zadaca-naslov"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">Opis</label>
-                    <textarea
-                      value={newZadaca.opis} rows={3}
-                      onChange={e => setNewZadaca(z => ({ ...z, opis: e.target.value }))}
-                      placeholder="Detalji zadaće (opciono)"
-                      className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                      data-testid="input-zadaca-opis"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground block mb-1">Rok do</label>
-                      <input
-                        type="date" value={newZadaca.rokDo}
-                        onChange={e => setNewZadaca(z => ({ ...z, rokDo: e.target.value }))}
-                        className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        data-testid="input-zadaca-rok"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground block mb-1">Lekcija</label>
-                      <LekcijaPicker
-                        lekcije={ilmihalLekcije}
-                        value={newZadaca.lekcijaNaslov}
-                        onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v }))}
-                        placeholder="Pretraži lekciju ili upiši broj…"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={saveZadacaForUcenik}
-                    disabled={savingZadaca || !newZadaca.naslov.trim()}
-                    className="w-full rounded-xl font-bold flex items-center justify-center gap-1.5"
-                    data-testid="btn-save-zadaca-ucenik"
-                  >
-                    {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardList className="w-4 h-4" />}
-                    Dodaj zadaću za {ucenik.displayName}
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
               <div className={`border border-border/50 rounded-2xl p-4 ${prisustvoPct !== null && prisustvoPct >= 80 ? "bg-emerald-50" : prisustvoPct !== null && prisustvoPct >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
                 <CalendarCheck className="w-5 h-5 text-foreground/60 mb-2" />
@@ -852,6 +761,101 @@ export default function UcenikPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Pregled zadaća učenika (read-only). Dodaje se iz Muallim → Zadaća. */}
+            <div className="bg-white border border-border/50 rounded-2xl p-5 mb-6" data-testid="section-zadace-ucenik">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h2 className="font-extrabold text-foreground flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-primary" /> Zadaće
+                  {zadace.length > 0 && (
+                    <span className="text-xs font-bold text-muted-foreground">
+                      {zadace.filter(z => (z.kategorija ?? "aktivne") !== "zavrsene").length} aktivnih · {zadace.filter(z => z.kategorija === "zavrsene").length} završenih
+                    </span>
+                  )}
+                </h2>
+              </div>
+              {zadace.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Učenik trenutno nema zadanih zadaća.</p>
+              ) : (
+                <div className="space-y-3">
+                  {[...zadace].sort((a, b) => {
+                    const ad = a.kategorija === "zavrsene" ? 1 : 0;
+                    const bd = b.kategorija === "zavrsene" ? 1 : 0;
+                    if (ad !== bd) return ad - bd;
+                    const ar = a.efektivniRok ?? a.rokDo ?? "9999-99-99";
+                    const br = b.efektivniRok ?? b.rokDo ?? "9999-99-99";
+                    return ar.localeCompare(br);
+                  }).map(z => {
+                    const efektivni = z.efektivniRok ?? z.rokDo ?? null;
+                    const parseLocal = (s?: string | null) => {
+                      if (!s) return null;
+                      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+                      if (!m) return null;
+                      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+                      return isNaN(d.getTime()) ? null : d;
+                    };
+                    const today = new Date(); today.setHours(0, 0, 0, 0);
+                    const rokDate = parseLocal(efektivni);
+                    const daysLeft = rokDate ? Math.round((rokDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                    const isDone = z.kategorija === "zavrsene";
+                    const isOverdue = !isDone && daysLeft !== null && daysLeft < 0;
+                    const isUrgent = !isDone && daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
+                    const rokColor = isDone ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                      : isOverdue ? "bg-red-100 text-red-700 border-red-300"
+                      : isUrgent ? "bg-amber-100 text-amber-700 border-amber-300"
+                      : daysLeft !== null ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                      : "bg-muted text-muted-foreground border-border";
+                    const rokDisplay = efektivni ? efektivni.slice(0, 10).split("-").reverse().join(".") : "";
+                    const rokLabel = isDone ? "Završeno"
+                      : !efektivni ? "Bez roka"
+                      : isOverdue ? `Rok prošao (${rokDisplay})`
+                      : daysLeft === 0 ? "Rok je danas!"
+                      : daysLeft === 1 ? "Rok je sutra"
+                      : `Još ${daysLeft} dana (${rokDisplay})`;
+
+                    return (
+                      <div key={z.id} data-testid={`zadaca-ucenik-${z.id}`}
+                        className={`border-2 rounded-2xl p-4 ${isDone ? "border-emerald-200" : isOverdue ? "border-red-200" : isUrgent ? "border-amber-200" : "border-border/50"}`}>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className={`p-2 rounded-xl ${isDone ? "bg-emerald-50" : isOverdue ? "bg-red-50" : isUrgent ? "bg-amber-50" : "bg-violet-50"}`}>
+                              {isDone ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : isOverdue ? <AlertCircle className="w-5 h-5 text-red-600" /> : <FileText className="w-5 h-5 text-violet-600" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-extrabold text-foreground text-base">{z.naslov}</h3>
+                              {z.lekcijaNaslov && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  <BookOpen className="w-3 h-3 inline mr-1" />{z.lekcijaNaslov}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold border ${rokColor}`}>
+                            <Clock className="w-3 h-3" /> {rokLabel}
+                          </span>
+                        </div>
+                        {z.opis && (
+                          <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-2 pl-12">{z.opis}</p>
+                        )}
+                        {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
+                          <div className="flex flex-wrap items-center gap-2 mt-3 pl-12">
+                            {(z.ocjena ?? null) !== null && (
+                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Ocjena: {z.ocjena}</span>
+                            )}
+                            {(z.kapiMeda ?? 0) > 0 && (
+                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">+{z.kapiMeda} kapi meda</span>
+                            )}
+                            {(z.prolongCount ?? 0) > 0 && (
+                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700">Prolongirano ×{z.prolongCount}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* H5P pokušaji — drilldown sa /muallim/h5p-statistika */}

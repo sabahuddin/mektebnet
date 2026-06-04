@@ -2606,6 +2606,76 @@ router.get("/zadace/:id/pregled", async (req, res) => {
   }
 });
 
+// GET /api/muallim/ucenik/:id/zadace — pregled svih zadaća jednog učenika
+// (read-only): aktivne grupne + pojedinačne zadaće sa statusom tog učenika.
+router.get("/ucenik/:id/zadace", async (req, res) => {
+  try {
+    const muallimId = req.user!.userId;
+    const ucenikId = parseInt(req.params.id);
+    if (!ucenikId) { res.status(400).json({ error: "ID učenika nevalidan" }); return; }
+
+    // Vlasništvo: učenik mora biti u grupi ovog muallima (admin zaobilazi).
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(req.user!.role === "admin"
+        ? eq(ucenikProfiliTable.userId, ucenikId)
+        : and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+    if (!profil) { res.status(403).json({ error: "Učenik nije vaš" }); return; }
+    if (!profil.grupaId) { res.json([]); return; }
+
+    const grupneZadace = await db.select().from(zadaceTable)
+      .where(and(eq(zadaceTable.grupaId, profil.grupaId), eq(zadaceTable.isActive, true)))
+      .orderBy(desc(zadaceTable.createdAt));
+    if (grupneZadace.length === 0) { res.json([]); return; }
+
+    const targets = await db.select().from(zadaceUceniciTable)
+      .where(inArray(zadaceUceniciTable.zadacaId, grupneZadace.map(z => z.id)));
+    const targetMap = new Map<number, Set<number>>();
+    for (const t of targets) {
+      if (!targetMap.has(t.zadacaId)) targetMap.set(t.zadacaId, new Set());
+      targetMap.get(t.zadacaId)!.add(t.ucenikId);
+    }
+
+    // Vidljive ovom učeniku: bez targeta = cijela grupa; inače mora biti adresat.
+    const visible = grupneZadace.filter(z => {
+      const targeted = targetMap.get(z.id);
+      if (!targeted) return true;
+      return targeted.has(ucenikId);
+    });
+    if (visible.length === 0) { res.json([]); return; }
+
+    const statusi = await db.select().from(zadaceStatusTable).where(and(
+      inArray(zadaceStatusTable.zadacaId, visible.map(z => z.id)),
+      eq(zadaceStatusTable.ucenikId, ucenikId),
+    ));
+    const statusMap = new Map(statusi.map(s => [s.zadacaId, s]));
+    const today = new Date().toISOString().split("T")[0];
+
+    const withStatus = visible.map(z => {
+      const s = statusMap.get(z.id);
+      const status = s?.status ?? "na_cekanju";
+      const efektivniRok = s?.noviRok ?? z.rokDo ?? null;
+      const kategorija = status === "zavrseno" ? "zavrsene" : "aktivne";
+      const istekao = !!(efektivniRok && efektivniRok < today);
+      return {
+        ...z,
+        efektivniRok,
+        status,
+        uradjeno: s?.uradjeno ?? false,
+        ocjena: s?.ocjena ?? null,
+        kapiMeda: s?.kapiMeda ?? 0,
+        noviRok: s?.noviRok ?? null,
+        prolongCount: s?.prolongCount ?? 0,
+        istekao,
+        kategorija,
+      };
+    });
+
+    res.json(withStatus);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // PUT /api/muallim/zadace/:id/status/:ucenikId — upsert status jednog učenika.
 // Body: { uradjeno?, ocjena?, kapiMeda?, noviRok?, oznaciZavrseno? }
 router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
