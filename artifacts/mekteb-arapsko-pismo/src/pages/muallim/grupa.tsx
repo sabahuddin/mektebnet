@@ -254,12 +254,6 @@ export default function GrupaPage() {
     setShowZadacaModal(true);
   }
 
-  function openZadacaForGroup() {
-    setZadacaTarget(null);
-    setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" });
-    setShowZadacaModal(true);
-  }
-
   async function saveZadaca() {
     if (!token || !newZadaca.naslov.trim()) {
       toast({ title: "Naslov je obavezan", variant: "destructive" });
@@ -512,14 +506,6 @@ export default function GrupaPage() {
             className="rounded-xl font-bold flex items-center gap-2">
             <Plus className="w-4 h-4" /> Dodaj postojećeg
           </Button>
-          {studentiGrupe.length > 0 && (
-            <Button variant="outline" onClick={openZadacaForGroup}
-              className="rounded-xl font-bold flex items-center gap-2"
-              data-testid="btn-zadaca-grupa"
-            >
-              <ClipboardList className="w-4 h-4" /> Zadaća za sve
-            </Button>
-          )}
           {(studentiGrupe.length > 0 || createdStudents.length > 0) && (
             <Button variant="outline" onClick={printCards} disabled={printLoading} className="rounded-xl font-bold flex items-center gap-2">
               {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} Printaj kartice
