@@ -179,24 +179,29 @@ async function runResidualSchema() {
     `);
 
     // === NORMALIZACIJA PREDMETA NA NPP STRUKTURU (idempotentno) ===
-    // Nastavni plan i program (NPP, 2017) definiše 6 oblasti: Kiraet, Akaid,
-    // Fikh, Ahlak, Historija islama + "Ostali sadržaji". Zatečene zbrkane i
+    // Nastavni plan i program (NPP, 2017) definiše 6 oblasti. Prikazni nazivi:
+    // Kiraet, Vjerovanje (Akaid), Ibadet i praksa (Fikh), Ahlak, Historija
+    // islama + "Ostali sadržaji". Zatečene zbrkane i
     // kombinovane vrijednosti (Ibadat, Ibadat / Fikh, Kur'an, Vjeronauka...) se
     // sažimaju u te kanonske kategorije da dropdown na "Sve lekcije" ne bude
     // prevelik. Idempotentno: nakon prvog prolaza stare vrijednosti više ne
     // postoje pa su naredni prolazi no-op.
-    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Fikh' WHERE predmet IN ('Ibadat', 'Ibadat / Fikh');`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet i praksa' WHERE predmet IN ('Ibadat', 'Ibadat / Fikh');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Kiraet' WHERE predmet IN ('Kur''an', 'Kur’an');`);
-    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Akaid' WHERE predmet IN ('Akaid/Ahlak', 'Akaid/Ibadat');`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Vjerovanje' WHERE predmet IN ('Akaid/Ahlak', 'Akaid/Ibadat');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Historija islama' WHERE predmet = 'Vjeronauka/Historija';`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ostali sadržaji' WHERE predmet IN ('Vjeronauka', 'Vjeronauka/Kultura', 'Kultura i tradicija');`);
+    // Catch-up rename: već normalizovani podaci (raniji redeploy) sa starim
+    // nazivima Fikh/Akaid → novi prikazni nazivi. Idempotentno.
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet i praksa' WHERE predmet='Fikh';`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Vjerovanje' WHERE predmet='Akaid';`);
 
     // Dodjela predmeta lekcijama bez oblasti (predmet IS NULL), po slug-u.
     // NULL-guard: ne dira lekcije kojima je admin već postavio predmet, pa
     // ručne izmjene ne budu pregažene na sljedećem redeployu. Medaljon-lekcije
     // (slug medaljon-nivo%) NAMJERNO ostaju bez predmeta — nisu nastavni sadržaj.
-    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Fikh' WHERE predmet IS NULL AND slug IN ('abdeski-sarti', 'namaski-sarti', 'dova-poslije-ezana', 'mubarek-dani', 'dzenaza-namaz', 'gusul', 'post-propisi', 'sunneti-namaz');`);
-    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Akaid' WHERE predmet IS NULL AND slug = 'dinski-sarti';`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet i praksa' WHERE predmet IS NULL AND slug IN ('abdeski-sarti', 'namaski-sarti', 'dova-poslije-ezana', 'mubarek-dani', 'dzenaza-namaz', 'gusul', 'post-propisi', 'sunneti-namaz');`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Vjerovanje' WHERE predmet IS NULL AND slug = 'dinski-sarti';`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ahlak' WHERE predmet IS NULL AND slug IN ('cestitost', 'ljubav-poslusnost-roditelji', 'radne-navike', 'alkohol');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Historija islama' WHERE predmet IS NULL AND slug = 'mevlud';`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ostali sadržaji' WHERE predmet IS NULL AND slug IN ('bajramske-aktivnosti', 'uvodna-rijec', 'uvodna-rijec-nivo-2', 'uvodna-rijec-nivo-3');`);
