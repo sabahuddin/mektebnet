@@ -2436,7 +2436,46 @@ router.get("/zadace", async (req, res) => {
       targetMap.set(t.zadacaId, arr);
     }
 
-    res.json(zadace.map(z => ({ ...z, ucenikIds: targetMap.get(z.id) || [] })));
+    // Završeni statusi po zadaći (status = 'zavrseno') — čuvamo i ucenikId
+    // da bismo brojali SAMO trenutne adresate (stari statusi za nekadašnje
+    // adresate / arhivirane učenike ne smiju lažno označiti zadaću završenom).
+    const statusi = await db.select({ zadacaId: zadaceStatusTable.zadacaId, ucenikId: zadaceStatusTable.ucenikId })
+      .from(zadaceStatusTable)
+      .where(and(
+        inArray(zadaceStatusTable.zadacaId, zadace.map(z => z.id)),
+        eq(zadaceStatusTable.status, "zavrseno"),
+      ));
+    const doneMap = new Map<number, Set<number>>();
+    for (const s of statusi) {
+      const set = doneMap.get(s.zadacaId) || new Set<number>();
+      set.add(s.ucenikId);
+      doneMap.set(s.zadacaId, set);
+    }
+
+    // Aktivni (ne-arhivirani) učenici po grupi — za zadaće namijenjene cijeloj
+    // grupi (bez eksplicitnih adresata).
+    const grupaIds = Array.from(new Set(zadace.map(z => z.grupaId)));
+    const grupaUcenici = await db.select({ grupaId: ucenikProfiliTable.grupaId, userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(and(inArray(ucenikProfiliTable.grupaId, grupaIds), eq(ucenikProfiliTable.isArchived, false)));
+    const grupaUceniciMap = new Map<number, number[]>();
+    for (const g of grupaUcenici) {
+      if (g.grupaId == null) continue;
+      const arr = grupaUceniciMap.get(g.grupaId) || [];
+      arr.push(g.userId);
+      grupaUceniciMap.set(g.grupaId, arr);
+    }
+
+    res.json(zadace.map(z => {
+      const ucenikIds = targetMap.get(z.id) || [];
+      // Trenutni adresati: eksplicitni ciljani učenici, inače aktivna grupa.
+      const recipients = ucenikIds.length > 0 ? ucenikIds : (grupaUceniciMap.get(z.grupaId) || []);
+      const ukupno = recipients.length;
+      const doneSet = doneMap.get(z.id);
+      const zavrsenih = doneSet ? recipients.filter(uid => doneSet.has(uid)).length : 0;
+      const completed = ukupno > 0 && zavrsenih >= ukupno;
+      return { ...z, ucenikIds, zavrsenih, ukupno, completed };
+    }));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -2735,6 +2774,44 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
         .where(eq(zadaceStatusTable.id, postojeci.id)).returning();
     } else {
       [saved] = await db.insert(zadaceStatusTable).values(values).returning();
+    }
+
+    // Ocjena iz zadaće se evidentira i u tabeli ocjene (kategorija "zadaća"),
+    // da se vidi među redovnim ocjenama učenika. Upsert preko zadaca_id —
+    // ponovna ocjena ažurira isti red; brisanje ocjene uklanja red.
+    try {
+      const [postojecaOcjena] = await db.select({ id: ocjeneTable.id }).from(ocjeneTable)
+        .where(and(eq(ocjeneTable.zadacaId, id), eq(ocjeneTable.ucenikId, ucenikId)));
+      if (ocjenaVal === null) {
+        if (postojecaOcjena) {
+          await db.delete(ocjeneTable).where(eq(ocjeneTable.id, postojecaOcjena.id));
+        }
+      } else {
+        const ocjenaNaziv = zadaca.lekcijaNaslov || zadaca.naslov || null;
+        const ocjenaDatum = new Date().toISOString().slice(0, 10);
+        if (postojecaOcjena) {
+          await db.update(ocjeneTable).set({
+            ocjena: ocjenaVal,
+            lekcijaNaziv: ocjenaNaziv,
+            grupaId: zadaca.grupaId,
+            muallimId: req.user!.userId,
+          }).where(eq(ocjeneTable.id, postojecaOcjena.id));
+        } else {
+          await db.insert(ocjeneTable).values({
+            ucenikId,
+            muallimId: req.user!.userId,
+            grupaId: zadaca.grupaId,
+            kategorija: "zadaća",
+            ocjena: ocjenaVal,
+            lekcijaNaziv: ocjenaNaziv,
+            napomena: null,
+            datum: ocjenaDatum,
+            zadacaId: id,
+          });
+        }
+      }
+    } catch (ocErr) {
+      console.error("[zadaca ocjena->ocjene]", ocErr);
     }
 
     // Kapi meda (znanjska valuta = total_hasanat) — primijeni samo razliku

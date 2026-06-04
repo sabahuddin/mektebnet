@@ -25,6 +25,8 @@ export const ocjeneTable = pgTable("ocjene", {
   lekcijaNaziv: varchar("lekcija_naziv", { length: 200 }),
   napomena: text("napomena"),
   datum: varchar("datum", { length: 20 }).notNull(),
+  // ako je ocjena nastala iz zadaće — veza na zadaću (za idempotentni upsert)
+  zadacaId: integer("zadaca_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

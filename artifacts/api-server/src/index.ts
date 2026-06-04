@@ -198,6 +198,12 @@ async function runResidualSchema() {
       END $$;
     `);
 
+    // ocjene.zadaca_id — kada muallim da ocjenu iz zadaće, ona se evidentira
+    // i u tabeli ocjene. Veza na zadaću omogućava idempotentni upsert (re-ocjena
+    // ne duplira red). Partial unique index važi samo za ocjene iz zadaće.
+    await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS zadaca_id integer;`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS ocjene_zadaca_ucenik_uidx ON ocjene (zadaca_id, ucenik_id) WHERE zadaca_id IS NOT NULL;`);
+
     // pitanja_banka.meta — jsonb kolona za interaktivne tipove (dragDrop, markWords).
     // Definisana je u Drizzle schema/content.ts, ali nije generisan novi migration
     // file (banka tabela nije u Drizzle baseline-u — kreirana ranije van Drizzle-a).

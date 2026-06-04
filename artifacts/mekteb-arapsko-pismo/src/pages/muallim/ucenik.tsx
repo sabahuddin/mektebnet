@@ -975,9 +975,9 @@ export default function UcenikPage() {
               )}
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
               {/* Kviz rezultati */}
-              <div className="bg-white border border-border/50 rounded-2xl p-5 md:col-span-2 lg:col-span-1 lg:row-span-2">
+              <div className="bg-white border border-border/50 rounded-2xl p-5">
                 <h2 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                   <ClipboardList className="w-4 h-4 text-primary" /> Rezultati kvizova
                 </h2>
@@ -1077,26 +1077,48 @@ export default function UcenikPage() {
                 {ocjene.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nema unesenih ocjena</p>
                 ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {ocjene.map(o => (
-                      <div key={o.id} className="flex items-center justify-between text-sm">
-                        <div>
-                          <span className="font-medium text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
-                          {o.lekcijaNaziv && <span className="text-primary ml-2 text-xs font-medium">({o.lekcijaNaziv})</span>}
-                          {o.napomena && <span className="text-muted-foreground ml-2">— {o.napomena}</span>}
-                          <div className="text-xs text-muted-foreground">{o.datum}</div>
-                        </div>
-                        <span className={`text-sm font-extrabold px-2.5 py-0.5 rounded-full ${OCJENA_COLORS[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
-                          {o.ocjena}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="max-h-80 overflow-y-auto -mx-1">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                          <th className="py-2 px-2 font-bold">Predmet</th>
+                          <th className="py-2 px-2 font-bold">Naziv</th>
+                          <th className="py-2 px-2 font-bold whitespace-nowrap">Datum</th>
+                          <th className="py-2 px-2 font-bold text-center">Ocjena</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ocjene.map(o => {
+                          const izZadace = o.kategorija === "zadaća";
+                          return (
+                            <tr key={o.id} className="border-t border-border/50 align-top">
+                              <td className="py-2 px-2">
+                                <span className="font-bold text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
+                                {izZadace && (
+                                  <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary align-middle">Zadaća</span>
+                                )}
+                              </td>
+                              <td className="py-2 px-2 text-foreground">
+                                {o.lekcijaNaziv || <span className="text-muted-foreground">—</span>}
+                                {o.napomena && <span className="block text-xs text-muted-foreground mt-0.5">{o.napomena}</span>}
+                              </td>
+                              <td className="py-2 px-2 text-muted-foreground whitespace-nowrap text-xs">{o.datum}</td>
+                              <td className="py-2 px-2 text-center">
+                                <span className={`inline-block text-sm font-extrabold px-2.5 py-0.5 rounded-full ${OCJENA_COLORS[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
+                                  {o.ocjena}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
 
               {/* Prisustvo — mjesečno + detalji */}
-              <div className="bg-white border border-border/50 rounded-2xl p-5 md:col-span-2 lg:col-span-2">
+              <div className="bg-white border border-border/50 rounded-2xl p-5 md:col-span-2">
                 <h2 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                   <CalendarCheck className="w-4 h-4 text-primary" /> Prisustvo — pregled
                 </h2>

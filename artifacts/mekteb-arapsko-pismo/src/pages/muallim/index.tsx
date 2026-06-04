@@ -213,6 +213,9 @@ interface Zadaca {
   isActive: boolean;
   createdAt: string;
   ucenikIds?: number[];
+  zavrsenih?: number;
+  ukupno?: number;
+  completed?: boolean;
 }
 
 interface ZadacaStatusRed {
@@ -330,6 +333,7 @@ export default function MuallimPanel() {
   const [zadace, setZadace] = useState<Zadaca[]>([]);
   const [zadLoading, setZadLoading] = useState(false);
   const [showZadForm, setShowZadForm] = useState(false);
+  const [zadSubTab, setZadSubTab] = useState<"nova" | "utoku" | "zavrseno">("utoku");
   const [zadNaslov, setZadNaslov] = useState("");
   const [zadOpis, setZadOpis] = useState("");
   const [zadRok, setZadRok] = useState("");
@@ -579,6 +583,7 @@ export default function MuallimPanel() {
       setZadace(prev => [nova, ...prev]);
       setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadUcenikIds(new Set());
       setShowZadForm(false);
+      setZadSubTab("utoku");
       toast({ title: "Zadaća dodana!" });
     } catch { toast({ title: "Greška", variant: "destructive" }); }
     finally { setSavingZadaca(false); }
@@ -632,6 +637,11 @@ export default function MuallimPanel() {
         kapiMeda: saved.kapiMeda,
       });
       toast({ title: oznaciZavrseno === true ? "Označeno završenim" : "Sačuvano" });
+      // Osvježi listu zadaća da se kartica pomjeri u tab "U toku"/"Završeno".
+      if (zadGrupaId) {
+        apiRequest<Zadaca[]>("GET", `/muallim/zadace?grupaId=${zadGrupaId}`, undefined, token)
+          .then(setZadace).catch(() => {});
+      }
     } catch { toast({ title: "Greška", variant: "destructive" }); }
     finally { setSavingRedId(null); }
   }
@@ -1656,16 +1666,39 @@ export default function MuallimPanel() {
                         <ClipboardList className="w-5 h-5 text-primary" />
                         Zadaće: {grupe.find(g => g.id === zadGrupaId)?.naziv}
                       </h3>
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => { setZadGrupaId(null); setZadace([]); setZadUcenikIds(new Set()); setShowZadForm(false); }}
-                          className="text-sm text-muted-foreground hover:text-foreground font-medium">← Promijeni grupu</button>
-                        <Button onClick={() => setShowZadForm(true)} className="rounded-xl font-bold flex items-center gap-2">
-                          <Plus className="w-4 h-4" /> Nova zadaća
-                        </Button>
-                      </div>
+                      <button onClick={() => { setZadGrupaId(null); setZadace([]); setZadUcenikIds(new Set()); setShowZadForm(false); }}
+                        className="text-sm text-muted-foreground hover:text-foreground font-medium">← Promijeni grupu</button>
                     </div>
 
-                    {showZadForm && (
+                    {/* Pod-tabovi: Nova zadaća / U toku / Završeno */}
+                    {(() => {
+                      const uTokuBroj = zadace.filter(z => !z.completed).length;
+                      const zavrsenoBroj = zadace.filter(z => z.completed).length;
+                      const tabovi: { id: "nova" | "utoku" | "zavrseno"; label: string; broj?: number }[] = [
+                        { id: "nova", label: "Nova zadaća" },
+                        { id: "utoku", label: "U toku", broj: uTokuBroj },
+                        { id: "zavrseno", label: "Završeno", broj: zavrsenoBroj },
+                      ];
+                      return (
+                        <div className="flex flex-wrap gap-2">
+                          {tabovi.map(t => {
+                            const aktivan = zadSubTab === t.id;
+                            return (
+                              <button key={t.id} onClick={() => { setZadSubTab(t.id); if (t.id === "nova") setShowZadForm(true); }}
+                                className={`rounded-xl px-4 py-2.5 text-sm font-bold border transition-colors flex items-center gap-2 ${aktivan ? "bg-primary text-primary-foreground border-primary" : "bg-white text-muted-foreground border-border hover:bg-muted/40"}`}>
+                                {t.id === "nova" && <Plus className="w-4 h-4" />}
+                                {t.label}
+                                {typeof t.broj === "number" && (
+                                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${aktivan ? "bg-white/25" : "bg-muted text-muted-foreground"}`}>{t.broj}</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {zadSubTab === "nova" && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                         className="bg-white border border-border/50 rounded-2xl p-5">
                         <h4 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
@@ -1741,7 +1774,7 @@ export default function MuallimPanel() {
                           </div>
                         </div>
                         <div className="flex gap-3 mt-4 justify-end">
-                          <button onClick={() => { setShowZadForm(false); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
+                          <button onClick={() => { setShowZadForm(false); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
                             Otkaži
                           </button>
                           <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim())} className="rounded-xl font-bold">
@@ -1751,22 +1784,31 @@ export default function MuallimPanel() {
                       </motion.div>
                     )}
 
-                    {zadace.length === 0 ? (
+                    {zadSubTab !== "nova" && (() => {
+                      const filtrirane = zadace.filter(z => zadSubTab === "zavrseno" ? z.completed : !z.completed);
+                      const praznoTekst = zadSubTab === "zavrseno"
+                        ? "Nema završenih zadaća. Zadaća se prebaci ovdje kad svi učenici budu označeni završenim."
+                        : "Nema zadaća u toku. Kreiraj novu zadaću.";
+                      return filtrirane.length === 0 ? (
                       <div className="text-center py-12 text-muted-foreground bg-white rounded-2xl border border-border/50">
                         <ClipboardList className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium">Nema zadaća za ovu grupu. Kreiraj prvu zadaću.</p>
+                        <p className="font-medium">{praznoTekst}</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {zadace.map((z, i) => {
-                          const isExpired = z.rokDo && new Date(z.rokDo) < new Date();
+                        {filtrirane.map((z, i) => {
+                          const isExpired = !z.completed && z.rokDo && new Date(z.rokDo) < new Date();
                           return (
                             <motion.div key={z.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                              className={`bg-white border rounded-2xl p-5 ${isExpired ? "border-red-200 bg-red-50/30" : "border-border/50"}`}>
+                              className={`bg-white border rounded-2xl p-5 ${z.completed ? "border-emerald-200 bg-emerald-50/30" : isExpired ? "border-red-200 bg-red-50/30" : "border-border/50"}`}>
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-extrabold text-foreground text-base">{z.naslov}</h4>
+                                    {z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Završeno</span>}
+                                    {typeof z.ukupno === "number" && z.ukupno > 0 && !z.completed && (
+                                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{z.zavrsenih ?? 0}/{z.ukupno} završeno</span>
+                                    )}
                                     {isExpired && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Isteklo</span>}
                                     {z.ucenikIds && z.ucenikIds.length > 0 ? (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700" title={
@@ -1815,7 +1857,8 @@ export default function MuallimPanel() {
                           );
                         })}
                       </div>
-                    )}
+                    );
+                    })()}
                   </div>
                 )}
 
