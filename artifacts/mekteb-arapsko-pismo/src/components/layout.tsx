@@ -7,7 +7,6 @@ import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, Lo
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
 import { installAudioMute, isAudioMuted, setAudioMuted, subscribeAudioMuted } from "@/lib/audio-mute";
 import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
 
@@ -85,7 +84,6 @@ export function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
   const { t } = useLanguage();
-  const { toast } = useToast();
   const [fontLevel, setFontLevel] = useState<number>(() => {
     try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
   });
@@ -111,15 +109,9 @@ export function Layout({ children }: LayoutProps) {
     setAudioMutedState(next);
   };
 
-  // Sufara modul je javno vidljiv u navigaciji za sve, ali je sadržaj još
-  // u izradi — non-admin korisnik klikom dobije "Uskoro" toast umjesto
-  // navigacije. Admin ide direktno na /arapsko-pismo radi internog pregleda.
-  const sufaraComingSoon = () => {
-    toast({
-      title: "Uskoro 🌸",
-      description: "Sufara modul stiže uskoro, inšaAllah.",
-    });
-  };
+  // Sufara modul je još u izradi — stavka u navigaciji se prikazuje SAMO
+  // adminu (interni pregled na /arapsko-pismo). Ostali korisnici i posjetioci
+  // je ne vide dok modul ne bude gotov.
   const mainNavLinks: NavLink[] = [
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
@@ -127,9 +119,9 @@ export function Layout({ children }: LayoutProps) {
     { href: "/citaonica", label: t("nav.citaonica"), icon: Library },
     { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
     { href: "/vodic", label: "Vodič", icon: BookMarked },
-    user?.role === "admin"
-      ? { href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap }
-      : { href: "#sufara", label: t("nav.sufara"), icon: GraduationCap, onClick: sufaraComingSoon },
+    ...(user?.role === "admin"
+      ? [{ href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap } as NavLink]
+      : []),
     // Demo prijava — vidljiva samo neulogiranim posjetiocima. Vodi direktno na
     // login sa otvorenim "Demo" tabom, jer posjetioci ne znaju da klikom na
     // "Prijava" mogu isprobati platformu bez registracije.
