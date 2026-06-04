@@ -147,9 +147,6 @@ export default function UcenikPage() {
   });
   const h5pSectionRef = useRef<HTMLDivElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showOcjenaForm, setShowOcjenaForm] = useState(false);
-  const [newOcjena, setNewOcjena] = useState({ kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "", datum: new Date().toISOString().split("T")[0] });
-  const [savingOcjena, setSavingOcjena] = useState(false);
   const [planLekcije, setPlanLekcije] = useState<{ id: number; lekcijaNaslov: string }[]>([]);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [showResetForm, setShowResetForm] = useState(false);
@@ -173,6 +170,7 @@ export default function UcenikPage() {
 
   // Pregled zadaća ovog učenika (read-only). Dodavanje ide iz Muallim → Zadaća.
   const [zadace, setZadace] = useState<ZadacaPregled[]>([]);
+  const [zadSubTab, setZadSubTab] = useState<"utoku" | "zavrseno">("utoku");
 
   useEffect(() => {
     if (!token || !id) return;
@@ -210,28 +208,6 @@ export default function UcenikPage() {
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [token, id]);
 
-  async function saveOcjena() {
-    if (!token || !id) return;
-    setSavingOcjena(true);
-    try {
-      const oc = await apiRequest<Ocjena>("POST", "/muallim/ocjene", {
-        ucenikId: parseInt(id),
-        kategorija: newOcjena.kategorija,
-        ocjena: parseInt(String(newOcjena.ocjena)),
-        lekcijaNaziv: newOcjena.lekcijaNaziv || null,
-        napomena: newOcjena.napomena,
-        datum: newOcjena.datum,
-      }, token);
-      setOcjene(prev => [oc, ...prev]);
-      setShowOcjenaForm(false);
-      setNewOcjena({ kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "", datum: new Date().toISOString().split("T")[0] });
-      toast({ title: "Ocjena dodana!" });
-    } catch {
-      toast({ title: "Greška", description: "Nije moguće dodati ocjenu", variant: "destructive" });
-    } finally {
-      setSavingOcjena(false);
-    }
-  }
 
   async function resetPassword(forceGenerate: boolean = false) {
     if (!token || !id) return;
@@ -765,24 +741,32 @@ export default function UcenikPage() {
 
             {/* Pregled zadaća učenika (read-only). Dodaje se iz Muallim → Zadaća. */}
             <div className="bg-white border border-border/50 rounded-2xl p-5 mb-6" data-testid="section-zadace-ucenik">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4 text-primary" /> Zadaće
-                  {zadace.length > 0 && (
-                    <span className="text-xs font-bold text-muted-foreground">
-                      {zadace.filter(z => (z.kategorija ?? "aktivne") !== "zavrsene").length} aktivnih · {zadace.filter(z => z.kategorija === "zavrsene").length} završenih
-                    </span>
-                  )}
-                </h2>
-              </div>
-              {zadace.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">Učenik trenutno nema zadanih zadaća.</p>
-              ) : (
+              {(() => {
+                const utoku = zadace.filter(z => (z.kategorija ?? "aktivne") !== "zavrsene");
+                const zavrsene = zadace.filter(z => z.kategorija === "zavrsene");
+                const lista = zadSubTab === "zavrseno" ? zavrsene : utoku;
+                return (
+                <>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <h2 className="font-extrabold text-foreground flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4 text-primary" /> Zadaće
+                  </h2>
+                </div>
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => setZadSubTab("utoku")}
+                    className={`flex-1 sm:flex-none rounded-xl px-4 py-2 text-sm font-extrabold border transition-all ${zadSubTab === "utoku" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    U toku ({utoku.length})
+                  </button>
+                  <button onClick={() => setZadSubTab("zavrseno")}
+                    className={`flex-1 sm:flex-none rounded-xl px-4 py-2 text-sm font-extrabold border transition-all ${zadSubTab === "zavrseno" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    Završeno ({zavrsene.length})
+                  </button>
+                </div>
+                {lista.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">{zadSubTab === "zavrseno" ? "Nema završenih zadaća." : "Učenik trenutno nema zadaća u toku."}</p>
+                ) : (
                 <div className="space-y-3">
-                  {[...zadace].sort((a, b) => {
-                    const ad = a.kategorija === "zavrsene" ? 1 : 0;
-                    const bd = b.kategorija === "zavrsene" ? 1 : 0;
-                    if (ad !== bd) return ad - bd;
+                  {[...lista].sort((a, b) => {
                     const ar = a.efektivniRok ?? a.rokDo ?? "9999-99-99";
                     const br = b.efektivniRok ?? b.rokDo ?? "9999-99-99";
                     return ar.localeCompare(br);
@@ -855,7 +839,10 @@ export default function UcenikPage() {
                     );
                   })}
                 </div>
-              )}
+                )}
+                </>
+                );
+              })()}
             </div>
 
             {/* H5P pokušaji — drilldown sa /muallim/h5p-statistika */}
@@ -1020,59 +1007,7 @@ export default function UcenikPage() {
                   <h2 className="font-extrabold text-foreground flex items-center gap-2">
                     <Star className="w-4 h-4 text-amber-500" /> Ocjene
                   </h2>
-                  <button onClick={() => setShowOcjenaForm(!showOcjenaForm)}
-                    className="flex items-center gap-1.5 text-primary hover:text-primary/80 text-sm font-bold">
-                    <PlusCircle className="w-4 h-4" /> Dodaj
-                  </button>
                 </div>
-
-                {showOcjenaForm && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                    className="bg-muted/30 rounded-xl p-3 mb-4 space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <select value={newOcjena.kategorija} onChange={e => setNewOcjena(p => ({ ...p, kategorija: e.target.value }))}
-                        className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                        {OCJENA_KATEGORIJE.map(k => (
-                          <option key={k.value} value={k.value}>{k.label}</option>
-                        ))}
-                      </select>
-                      <select value={newOcjena.ocjena} onChange={e => setNewOcjena(p => ({ ...p, ocjena: parseInt(e.target.value) }))}
-                        className="border border-border rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                        {[6, 5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </div>
-                    <select value={newOcjena.lekcijaNaziv} onChange={e => setNewOcjena(p => ({ ...p, lekcijaNaziv: e.target.value }))}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                      <option value="">— Odaberi lekciju (opcionalno) —</option>
-                      {[1, 2, 3, 4].map(nivo => {
-                        const nivoLekcije = ilmihalLekcije.filter(l => l.nivo === nivo);
-                        if (nivoLekcije.length === 0) return null;
-                        return (
-                          <optgroup key={nivo} label={`Nivo ${nivo}`}>
-                            {nivoLekcije.map(l => (
-                              <option key={l.id} value={l.naslov}>{l.naslov}</option>
-                            ))}
-                          </optgroup>
-                        );
-                      })}
-                      {planLekcije.length > 0 && (
-                        <optgroup label="Iz plana lekcija">
-                          {planLekcije.map(l => (
-                            <option key={`pl-${l.id}`} value={l.lekcijaNaslov}>{l.lekcijaNaslov}</option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </select>
-                    <input type="date" value={newOcjena.datum} onChange={e => setNewOcjena(p => ({ ...p, datum: e.target.value }))}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white" />
-                    <input type="text" placeholder="Napomena (opcionalno)" value={newOcjena.napomena}
-                      onChange={e => setNewOcjena(p => ({ ...p, napomena: e.target.value }))}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white" />
-                    <Button onClick={saveOcjena} disabled={savingOcjena} className="w-full rounded-lg py-2 text-sm">
-                      {savingOcjena ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Sačuvaj ocjenu"}
-                    </Button>
-                  </motion.div>
-                )}
 
                 {ocjene.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nema unesenih ocjena</p>
@@ -1148,19 +1083,70 @@ export default function UcenikPage() {
                       </div>
                     )}
 
-                    <div>
-                      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Svi datumi</h3>
-                      <div className="space-y-1 max-h-52 overflow-y-auto">
-                        {[...prisustvo].reverse().map(p => (
-                          <div key={p.id} className="flex items-center justify-between text-sm py-1 border-b border-border/20 last:border-0">
-                            <span className="text-foreground font-medium">{p.datum}</span>
-                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${STATUS_COLORS[p.status] || "bg-gray-100 text-gray-700"}`}>
-                              {p.status === "prisutan" ? "Prisutan" : p.status === "odsutan" ? "Odsutan" : p.status === "zakasnio" ? "Zakasnio" : p.status === "opravdan" ? "Opravdan" : p.status}
-                            </span>
+                    {(() => {
+                      const oznaka: Record<string, { slovo: string; cls: string }> = {
+                        prisutan: { slovo: "P", cls: "bg-emerald-500" },
+                        opravdan: { slovo: "OP", cls: "bg-blue-500" },
+                        odsutan: { slovo: "O", cls: "bg-red-500" },
+                        zakasnio: { slovo: "Z", cls: "bg-amber-400" },
+                      };
+                      const prisMap = new Map<string, string>();
+                      prisustvo.forEach(p => prisMap.set(p.datum.slice(0, 10), p.status));
+                      const mjeseci = [...new Set(prisustvo.map(p => p.datum.slice(0, 7)))].sort();
+                      const dani = [...new Set(prisustvo.map(p => parseInt(p.datum.slice(8, 10), 10)))].sort((a, b) => a - b);
+                      return (
+                        <div>
+                          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Kalendar prisustva</h3>
+                          <div className="overflow-x-auto">
+                            <table className="border-separate" style={{ borderSpacing: "4px" }}>
+                              <thead>
+                                <tr>
+                                  <th className="px-1"></th>
+                                  {mjeseci.map(m => {
+                                    const [god, mj] = m.split("-");
+                                    return (
+                                      <th key={m} className="text-[11px] font-bold text-muted-foreground text-center px-1 whitespace-nowrap">
+                                        {MJESEC_NAZIVI[mj] || mj} <span className="text-muted-foreground/60">{god.slice(2)}</span>
+                                      </th>
+                                    );
+                                  })}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {dani.map(dan => (
+                                  <tr key={dan}>
+                                    <td className="text-xs font-bold text-muted-foreground text-right pr-1 w-7">{dan}.</td>
+                                    {mjeseci.map(m => {
+                                      const key = `${m}-${String(dan).padStart(2, "0")}`;
+                                      const status = prisMap.get(key);
+                                      const cfg = status ? oznaka[status] : null;
+                                      return (
+                                        <td key={m} className="text-center">
+                                          {cfg ? (
+                                            <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-[10px] font-extrabold ${cfg.cls}`}
+                                              title={`${dan}.${m.split("-")[1]}.${m.split("-")[0]}.`}>
+                                              {cfg.slovo}
+                                            </span>
+                                          ) : (
+                                            <span className="inline-block w-7 h-7 rounded-full bg-muted/40" />
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          <div className="flex flex-wrap items-center gap-3 mt-4 text-xs">
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] font-extrabold">P</span> Prisutan</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[9px] font-extrabold">OP</span> Opravdan</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[9px] font-extrabold">O</span> Odsutan</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-400 text-white text-[9px] font-extrabold">Z</span> Zakasnio</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
