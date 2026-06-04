@@ -13,6 +13,7 @@ import {
   ilmihalLekcijeTable,
   zadaceTable,
   zadaceUceniciTable,
+  zadaceStatusTable,
   etapaPolaganjaTable,
   medaljoniTable,
   studentKrunisanjaTable,
@@ -265,7 +266,40 @@ router.get("/zadace", async (req, res) => {
       return targeted.has(userId);
     });
 
-    res.json(visible);
+    // Status ovog učenika po zadaći (uradjeno, ocjena, kapi meda, novi rok,
+    // prolongacije, status). Nepostojeći red => na čekanju.
+    const statusi = visible.length > 0
+      ? await db.select().from(zadaceStatusTable).where(and(
+          inArray(zadaceStatusTable.zadacaId, visible.map(z => z.id)),
+          eq(zadaceStatusTable.ucenikId, userId),
+        ))
+      : [];
+    const statusMap = new Map(statusi.map(s => [s.zadacaId, s]));
+    const today = new Date().toISOString().split("T")[0];
+
+    const withStatus = visible.map(z => {
+      const s = statusMap.get(z.id);
+      const status = s?.status ?? "na_cekanju";
+      const prolongCount = s?.prolongCount ?? 0;
+      const efektivniRok = s?.noviRok ?? z.rokDo ?? null;
+      // Kategorija za tabove: zavrseno -> "zavrsene"; ostalo -> "aktivne".
+      const kategorija = status === "zavrseno" ? "zavrsene" : "aktivne";
+      const istekao = !!(efektivniRok && efektivniRok < today);
+      return {
+        ...z,
+        efektivniRok,
+        status,
+        uradjeno: s?.uradjeno ?? false,
+        ocjena: s?.ocjena ?? null,
+        kapiMeda: s?.kapiMeda ?? 0,
+        noviRok: s?.noviRok ?? null,
+        prolongCount,
+        istekao,
+        kategorija,
+      };
+    });
+
+    res.json(withStatus);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

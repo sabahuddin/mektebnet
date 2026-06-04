@@ -67,13 +67,36 @@ export const zadaceTable = pgTable("zadace", {
   id: serial("id").primaryKey(),
   grupaId: integer("grupa_id").notNull(),
   muallimId: integer("muallim_id").notNull(),
-  naslov: varchar("naslov", { length: 300 }).notNull(),
+  // naslov je opcionalan — nova UX koristi lekciju kao naziv zadaće.
+  naslov: varchar("naslov", { length: 300 }),
   opis: text("opis"),
   rokDo: varchar("rok_do", { length: 20 }),
   lekcijaNaslov: varchar("lekcija_naslov", { length: 300 }),
   lekcijaTip: varchar("lekcija_tip", { length: 50 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Status zadaće po učeniku — muallim pregleda zadaću za cijelu grupu iz
+// jednog panela. Jedan red po (zadaca, ucenik). Dok red ne postoji ili je
+// status "na_cekanju", zadaća je na čekanju (nije pregledana).
+export const zadaceStatusTable = pgTable("zadace_status", {
+  id: serial("id").primaryKey(),
+  zadacaId: integer("zadaca_id").notNull(),
+  ucenikId: integer("ucenik_id").notNull(),
+  // da li je učenik uradio/naučio zadaću (muallim označava)
+  uradjeno: boolean("uradjeno").notNull().default(false),
+  ocjena: integer("ocjena"),
+  kapiMeda: integer("kapi_meda").notNull().default(0),
+  // novi rok za učenika koji nije uradio/naučio (prolongacija)
+  noviRok: varchar("novi_rok", { length: 20 }),
+  prolongCount: integer("prolong_count").notNull().default(0),
+  // "na_cekanju" dok muallim ne pregleda; "zavrseno" kad označi završenom
+  status: varchar("status", { length: 20 }).notNull().default("na_cekanju"),
+  reviewedAt: timestamp("reviewed_at"),
+  muallimId: integer("muallim_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Targeting zadaće na specifične učenike (junction tabela).
@@ -102,6 +125,7 @@ export const insertPorukaSchema = createInsertSchema(porukeTable).omit({ id: tru
 export const insertKalendarSchema = createInsertSchema(mektebKalendarTable).omit({ id: true, createdAt: true });
 export const insertPlanLekcijaSchema = createInsertSchema(planLekcijaTable).omit({ id: true, createdAt: true });
 export const insertZadacaSchema = createInsertSchema(zadaceTable).omit({ id: true, createdAt: true });
+export const insertZadacaStatusSchema = createInsertSchema(zadaceStatusTable).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type Prisustvo = typeof priustvoTable.$inferSelect;
 export type Ocjena = typeof ocjeneTable.$inferSelect;
@@ -110,3 +134,4 @@ export type Certifikat = typeof certifikatiTable.$inferSelect;
 export type MektebKalendar = typeof mektebKalendarTable.$inferSelect;
 export type PlanLekcija = typeof planLekcijaTable.$inferSelect;
 export type Zadaca = typeof zadaceTable.$inferSelect;
+export type ZadacaStatus = typeof zadaceStatusTable.$inferSelect;

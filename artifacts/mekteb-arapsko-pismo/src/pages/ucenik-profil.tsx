@@ -8,7 +8,7 @@ import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
   Flame, Trophy, Sparkles, Target, Footprints, Settings, Volume2, VolumeX,
-  FileText, Clock, AlertCircle, Medal, Lock
+  FileText, Clock, AlertCircle, Medal, Lock, CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +20,7 @@ import {
   playRewardSound,
 } from "@/lib/sound-prefs";
 import { PushToggle } from "@/components/push-toggle";
+import { kategorijaOcjeneLabel } from "@/lib/utils";
 
 interface StudentProgress {
   studentId: string;
@@ -259,6 +260,15 @@ interface Zadaca {
   lekcijaNaslov?: string | null;
   lekcijaTip?: string | null;
   createdAt: string;
+  efektivniRok?: string | null;
+  status?: string;
+  uradjeno?: boolean;
+  ocjena?: number | null;
+  kapiMeda?: number;
+  noviRok?: string | null;
+  prolongCount?: number;
+  istekao?: boolean;
+  kategorija?: "zavrsene" | "aktivne";
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -291,6 +301,7 @@ export default function UcenikProfilPage() {
   const [mapaN3, setMapaN3] = useState<Nivo1MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "postavke">("moj-put");
+  const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene">("aktivne");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
   const reducedMotion = prefersReducedMotion();
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
@@ -981,7 +992,7 @@ export default function UcenikProfilPage() {
                         {profil.ocjene.slice(0, 8).map(o => (
                           <div key={o.id} className="flex items-center justify-between text-sm">
                             <div>
-                              <span className="font-medium text-foreground capitalize">{o.kategorija}</span>
+                              <span className="font-medium text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
                               {o.lekcijaNaziv && <span className="text-primary text-xs ml-1">({o.lekcijaNaziv})</span>}
                               <div className="text-xs text-muted-foreground">{o.datum}</div>
                             </div>
@@ -1029,7 +1040,7 @@ export default function UcenikProfilPage() {
                       {profil.ocjene.map(o => (
                         <div key={o.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
                           <div>
-                            <span className="font-bold text-foreground capitalize">{o.kategorija}</span>
+                            <span className="font-bold text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
                             {o.lekcijaNaziv && <span className="text-primary text-sm ml-2">({o.lekcijaNaziv})</span>}
                             {o.napomena && <span className="text-muted-foreground ml-2 text-sm">— {o.napomena}</span>}
                             <div className="text-xs text-muted-foreground mt-0.5">{o.datum}</div>
@@ -1045,22 +1056,43 @@ export default function UcenikProfilPage() {
               </motion.div>
             )}
 
-            {activeTab === "zadace" && (
+            {activeTab === "zadace" && (() => {
+              const aktivne = zadace.filter(z => (z.kategorija ?? "aktivne") !== "zavrsene");
+              const zavrsene = zadace.filter(z => z.kategorija === "zavrsene");
+              const lista = zadSubTab === "zavrsene" ? zavrsene : aktivne;
+              const sortByRok = (arr: Zadaca[]) => [...arr].sort((a, b) => {
+                const ar = a.efektivniRok ?? a.rokDo, br = b.efektivniRok ?? b.rokDo;
+                if (!ar && !br) return 0;
+                if (!ar) return 1;
+                if (!br) return -1;
+                return ar.localeCompare(br);
+              });
+              return (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                {zadace.length === 0 ? (
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => setZadSubTab("aktivne")}
+                    className={`flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-extrabold border transition-all ${zadSubTab === "aktivne" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    Aktivne ({aktivne.length})
+                  </button>
+                  <button onClick={() => setZadSubTab("zavrsene")}
+                    className={`flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-extrabold border transition-all ${zadSubTab === "zavrsene" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    Završene ({zavrsene.length})
+                  </button>
+                </div>
+
+                {lista.length === 0 ? (
                   <div className="bg-white border border-border/50 rounded-2xl p-10 text-center">
                     <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-                    <h3 className="font-extrabold text-foreground mb-1">Nema aktivnih zadaća</h3>
-                    <p className="text-sm text-muted-foreground">Tvoj muallim ti trenutno nije zadao zadaću.</p>
+                    <h3 className="font-extrabold text-foreground mb-1">
+                      {zadSubTab === "zavrsene" ? "Nema završenih zadaća" : "Nema aktivnih zadaća"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {zadSubTab === "zavrsene" ? "Završene i ocijenjene zadaće će se prikazati ovdje." : "Tvoj muallim ti trenutno nije zadao zadaću."}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {[...zadace].sort((a, b) => {
-                      if (!a.rokDo && !b.rokDo) return 0;
-                      if (!a.rokDo) return 1;
-                      if (!b.rokDo) return -1;
-                      return a.rokDo.localeCompare(b.rokDo);
-                    }).map(z => {
+                    {sortByRok(lista).map(z => {
                       const parseLocal = (s?: string | null) => {
                         if (!s) return null;
                         const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
@@ -1068,20 +1100,24 @@ export default function UcenikProfilPage() {
                         const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
                         return isNaN(d.getTime()) ? null : d;
                       };
+                      const efektivni = z.efektivniRok ?? z.rokDo ?? null;
                       const today = new Date(); today.setHours(0, 0, 0, 0);
-                      const rokDate = parseLocal(z.rokDo);
+                      const rokDate = parseLocal(efektivni);
                       const daysLeft = rokDate ? Math.round((rokDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
-                      const invalidRok = !!z.rokDo && rokDate === null;
-                      const isOverdue = daysLeft !== null && daysLeft < 0;
-                      const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
-                      const rokColor = invalidRok ? "bg-muted text-muted-foreground border-border"
+                      const invalidRok = !!efektivni && rokDate === null;
+                      const isDone = z.kategorija === "zavrsene";
+                      const isOverdue = !isDone && daysLeft !== null && daysLeft < 0;
+                      const isUrgent = !isDone && daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
+                      const rokColor = isDone ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                        : invalidRok ? "bg-muted text-muted-foreground border-border"
                         : isOverdue ? "bg-red-100 text-red-700 border-red-300"
                         : isUrgent ? "bg-amber-100 text-amber-700 border-amber-300"
                         : daysLeft !== null ? "bg-emerald-100 text-emerald-700 border-emerald-300"
                         : "bg-muted text-muted-foreground border-border";
-                      const rokDisplay = z.rokDo ? z.rokDo.slice(0, 10).split("-").reverse().join(".") : "";
-                      const rokLabel = invalidRok ? "Neispravan rok"
-                        : !z.rokDo ? "Bez roka"
+                      const rokDisplay = efektivni ? efektivni.slice(0, 10).split("-").reverse().join(".") : "";
+                      const rokLabel = isDone ? "Završeno"
+                        : invalidRok ? "Neispravan rok"
+                        : !efektivni ? "Bez roka"
                         : isOverdue ? `Rok prošao (${rokDisplay})`
                         : daysLeft === 0 ? "Rok je danas!"
                         : daysLeft === 1 ? "Rok je sutra"
@@ -1089,11 +1125,11 @@ export default function UcenikProfilPage() {
 
                       return (
                         <div key={z.id} data-testid={`zadaca-${z.id}`}
-                          className={`bg-white border-2 rounded-2xl p-5 ${isOverdue ? "border-red-200" : isUrgent ? "border-amber-200" : "border-border/50"}`}>
+                          className={`bg-white border-2 rounded-2xl p-5 ${isDone ? "border-emerald-200" : isOverdue ? "border-red-200" : isUrgent ? "border-amber-200" : "border-border/50"}`}>
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <div className="flex items-start gap-3 flex-1 min-w-0">
-                              <div className={`p-2 rounded-xl ${isOverdue ? "bg-red-50" : isUrgent ? "bg-amber-50" : "bg-violet-50"}`}>
-                                {isOverdue ? <AlertCircle className="w-5 h-5 text-red-600" /> : <FileText className="w-5 h-5 text-violet-600" />}
+                              <div className={`p-2 rounded-xl ${isDone ? "bg-emerald-50" : isOverdue ? "bg-red-50" : isUrgent ? "bg-amber-50" : "bg-violet-50"}`}>
+                                {isDone ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : isOverdue ? <AlertCircle className="w-5 h-5 text-red-600" /> : <FileText className="w-5 h-5 text-violet-600" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-extrabold text-foreground text-base">{z.naslov}</h3>
@@ -1118,13 +1154,27 @@ export default function UcenikProfilPage() {
                           {z.opis && (
                             <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-3 pl-12">{z.opis}</p>
                           )}
+                          {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
+                            <div className="flex flex-wrap items-center gap-2 mt-3 pl-12">
+                              {(z.ocjena ?? null) !== null && (
+                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Ocjena: {z.ocjena}</span>
+                              )}
+                              {(z.kapiMeda ?? 0) > 0 && (
+                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">+{z.kapiMeda} kapi meda</span>
+                              )}
+                              {(z.prolongCount ?? 0) > 0 && (
+                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700">Prolongirano ×{z.prolongCount}</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
                 )}
               </motion.div>
-            )}
+              );
+            })()}
 
             {activeTab === "kalendar" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

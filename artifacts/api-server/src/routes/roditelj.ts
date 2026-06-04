@@ -15,6 +15,7 @@ import {
   studentProgressTable,
   zadaceTable,
   zadaceUceniciTable,
+  zadaceStatusTable,
   obavjestenjaTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc, desc } from "drizzle-orm";
@@ -538,6 +539,16 @@ router.get("/zadace", async (req, res) => {
       targetMap.get(t.zadacaId)!.add(t.ucenikId);
     }
 
+    const statusi = await db.select().from(zadaceStatusTable)
+      .where(and(
+        inArray(zadaceStatusTable.zadacaId, zadace.map(z => z.id)),
+        inArray(zadaceStatusTable.ucenikId, djecaIds),
+      ));
+    const prolongMap = new Map<string, number>();
+    for (const s of statusi) {
+      prolongMap.set(`${s.zadacaId}:${s.ucenikId}`, s.prolongCount ?? 0);
+    }
+
     const result = zadace.flatMap(z => {
       const grupaDjeca = grupaToDjeca.get(z.grupaId) || [];
       const targeted = targetMap.get(z.id);
@@ -545,11 +556,13 @@ router.get("/zadace", async (req, res) => {
         ? grupaDjeca.filter(uid => targeted.has(uid))
         : grupaDjeca;
       if (adresati.length === 0) return [];
+      const prolongCount = Math.max(0, ...adresati.map(uid => prolongMap.get(`${z.id}:${uid}`) ?? 0));
       return [{
         ...z,
         grupaNaziv: grupaMap.get(z.grupaId) || null,
         djecaIds: adresati,
         djecaImena: adresati.map(uid => djecaMap.get(uid) || `#${uid}`),
+        prolongCount,
       }];
     });
 

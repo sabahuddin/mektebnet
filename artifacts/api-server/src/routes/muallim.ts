@@ -19,6 +19,7 @@ import {
   ilmihalLekcijeTable,
   zadaceTable,
   zadaceUceniciTable,
+  zadaceStatusTable,
   porukeTable,
   mektebiTable,
   h5pPokusajiTable,
@@ -2444,7 +2445,10 @@ router.get("/zadace", async (req, res) => {
 router.post("/zadace", async (req, res) => {
   try {
     const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, ucenikIds } = req.body;
-    if (!grupaId || !naslov) { res.status(400).json({ error: "grupaId i naslov su obavezni" }); return; }
+    // naslov više nije obavezan — nova UX koristi lekciju kao naziv zadaće.
+    if (!grupaId) { res.status(400).json({ error: "grupaId je obavezan" }); return; }
+    const naslovFinal = (naslov && String(naslov).trim()) || (lekcijaNaslov && String(lekcijaNaslov).trim()) || null;
+    if (!naslovFinal) { res.status(400).json({ error: "Odaberi lekciju ili unesi naslov" }); return; }
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
@@ -2463,7 +2467,7 @@ router.post("/zadace", async (req, res) => {
     const [nova] = await db.insert(zadaceTable).values({
       grupaId,
       muallimId: req.user!.userId,
-      naslov,
+      naslov: naslovFinal,
       opis: opis || null,
       rokDo: rokDo || null,
       lekcijaNaslov: lekcijaNaslov || null,
@@ -2474,14 +2478,21 @@ router.post("/zadace", async (req, res) => {
       await db.insert(zadaceUceniciTable).values(
         validUcenikIds.map(uid => ({ zadacaId: nova.id, ucenikId: uid }))
       );
+    }
 
-      // Best-effort push notifikacija učenicima — ne čekamo, ne propagiramo grešku
+    // Push notifikacija — ciljanim učenicima ili cijeloj grupi (default).
+    const notifyIds = validUcenikIds.length > 0
+      ? validUcenikIds
+      : (await db.select({ userId: ucenikProfiliTable.userId })
+          .from(ucenikProfiliTable)
+          .where(eq(ucenikProfiliTable.grupaId, grupaId))).map(u => u.userId);
+    if (notifyIds.length > 0) {
       const opisPreview = opis && typeof opis === "string" && opis.trim()
         ? (opis.trim().length > 80 ? opis.trim().slice(0, 80) + "…" : opis.trim())
         : "Otvori da vidiš detalje.";
       sendPushNotification({
-        userIds: validUcenikIds,
-        title: `Nova zadaća: ${naslov}`,
+        userIds: notifyIds,
+        title: `Nova zadaća: ${naslovFinal}`,
         body: opisPreview,
         url: "/ucenik/zadace",
         data: { type: "zadaca", zadacaId: nova.id },
@@ -2538,6 +2549,181 @@ router.delete("/zadace/:id", async (req, res) => {
     if (!entry || entry.muallimId !== req.user!.userId) { res.status(403).json({ error: "Nemaš pristup" }); return; }
     await db.delete(zadaceTable).where(eq(zadaceTable.id, id));
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// Razrješava primatelje zadaće: ako ima ciljanih (zadace_ucenici) -> oni;
+// inače cijela grupa (svi aktivni učenici grupe).
+async function resolveZadacaRecipients(zadacaId: number, grupaId: number): Promise<number[]> {
+  const targets = await db.select({ ucenikId: zadaceUceniciTable.ucenikId })
+    .from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, zadacaId));
+  if (targets.length > 0) return targets.map(t => t.ucenikId);
+  const grupa = await db.select({ userId: ucenikProfiliTable.userId })
+    .from(ucenikProfiliTable)
+    .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+  return grupa.map(g => g.userId);
+}
+
+// GET /api/muallim/zadace/:id/pregled — cijela grupa + status po učeniku.
+// Muallim iz jednog panela pregleda i ocjenjuje zadaću za sve učenike.
+router.get("/zadace/:id/pregled", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [zadaca] = await db.select().from(zadaceTable)
+      .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
+    if (!zadaca) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
+
+    const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId);
+    if (recipientIds.length === 0) { res.json({ zadaca, ucenici: [] }); return; }
+
+    const korisnici = await db.select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
+      .from(usersTable).where(inArray(usersTable.id, recipientIds));
+    const statusi = await db.select().from(zadaceStatusTable).where(eq(zadaceStatusTable.zadacaId, id));
+    const statusMap = new Map(statusi.map(s => [s.ucenikId, s]));
+
+    const ucenici = korisnici
+      .map(u => {
+        const s = statusMap.get(u.id);
+        return {
+          ucenikId: u.id,
+          displayName: u.displayName,
+          username: u.username,
+          uradjeno: s?.uradjeno ?? false,
+          ocjena: s?.ocjena ?? null,
+          kapiMeda: s?.kapiMeda ?? 0,
+          noviRok: s?.noviRok ?? null,
+          prolongCount: s?.prolongCount ?? 0,
+          status: s?.status ?? "na_cekanju",
+        };
+      })
+      .sort((a, b) => (a.displayName || "").localeCompare(b.displayName || "", "bs"));
+
+    res.json({ zadaca, ucenici });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/muallim/zadace/:id/status/:ucenikId — upsert status jednog učenika.
+// Body: { uradjeno?, ocjena?, kapiMeda?, noviRok?, oznaciZavrseno? }
+router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const ucenikId = parseInt(req.params.ucenikId);
+    const { uradjeno, ocjena, kapiMeda, noviRok, oznaciZavrseno } = req.body;
+
+    const [zadaca] = await db.select().from(zadaceTable)
+      .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
+    if (!zadaca) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
+
+    // Učenik mora biti stvarni adresat ove zadaće (spriječi pisanje statusa /
+    // dodjelu hasanata proizvoljnim korisnicima).
+    const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId);
+    if (!recipientIds.includes(ucenikId)) {
+      res.status(403).json({ error: "Učenik nije adresat ove zadaće" });
+      return;
+    }
+
+    const [postojeci] = await db.select().from(zadaceStatusTable)
+      .where(and(eq(zadaceStatusTable.zadacaId, id), eq(zadaceStatusTable.ucenikId, ucenikId)));
+
+    const prevKapi = postojeci?.kapiMeda ?? 0;
+    const newKapi = Number.isFinite(Number(kapiMeda)) ? Math.max(0, Math.trunc(Number(kapiMeda))) : prevKapi;
+    const prevNoviRok = postojeci?.noviRok ?? null;
+    const noviRokVal = noviRok ? String(noviRok) : null;
+    // prolongacija raste kad muallim postavi NOVI (drugačiji, neprazan) rok
+    const prolong = (noviRokVal && noviRokVal !== prevNoviRok)
+      ? (postojeci?.prolongCount ?? 0) + 1
+      : (postojeci?.prolongCount ?? 0);
+    const ocjenaVal = ocjena === null || ocjena === undefined || ocjena === ""
+      ? null
+      : Math.min(6, Math.max(1, Math.trunc(Number(ocjena))));
+    const uradjenoVal = typeof uradjeno === "boolean" ? uradjeno : (postojeci?.uradjeno ?? false);
+    const statusVal = oznaciZavrseno === true ? "zavrseno"
+      : oznaciZavrseno === false ? "na_cekanju"
+      : (postojeci?.status ?? "na_cekanju");
+
+    const values = {
+      zadacaId: id,
+      ucenikId,
+      uradjeno: uradjenoVal,
+      ocjena: ocjenaVal,
+      kapiMeda: newKapi,
+      noviRok: noviRokVal,
+      prolongCount: prolong,
+      status: statusVal,
+      reviewedAt: statusVal === "zavrseno" ? new Date() : (postojeci?.reviewedAt ?? null),
+      muallimId: req.user!.userId,
+      updatedAt: new Date(),
+    };
+
+    let saved;
+    if (postojeci) {
+      [saved] = await db.update(zadaceStatusTable).set(values)
+        .where(eq(zadaceStatusTable.id, postojeci.id)).returning();
+    } else {
+      [saved] = await db.insert(zadaceStatusTable).values(values).returning();
+    }
+
+    // Kapi meda (znanjska valuta = total_hasanat) — primijeni samo razliku
+    // da ponovno spremanje ne duplira nagradu.
+    const delta = newKapi - prevKapi;
+    if (delta !== 0) {
+      const studentIdStr = String(ucenikId);
+      try {
+        await db.execute(sql`
+          INSERT INTO student_progress (student_id, total_hasanat, total_med, completed_lessons, badges, streak_days, last_activity_date, created_at, updated_at)
+          VALUES (${studentIdStr}, ${Math.max(0, delta)}, 0, '[]'::jsonb, '[]'::jsonb, 0, NULL, NOW(), NOW())
+          ON CONFLICT (student_id) DO UPDATE
+            SET total_hasanat = GREATEST(0, student_progress.total_hasanat + ${delta}),
+                updated_at = NOW()
+        `);
+      } catch (medErr) {
+        console.error("[zadaca kapi meda]", medErr);
+      }
+    }
+
+    res.json(saved);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/zadace-pregled-badge — broj zadaća kojima je rok prošao
+// a nisu sve pregledane (status != zavrseno). Crvena notifikacija.
+router.get("/zadace-pregled-badge", async (req, res) => {
+  try {
+    const grupaId = req.query.grupaId ? parseInt(req.query.grupaId as string) : undefined;
+    const today = new Date().toISOString().split("T")[0];
+    const baseWhere = grupaId
+      ? and(eq(zadaceTable.muallimId, req.user!.userId), eq(zadaceTable.grupaId, grupaId), eq(zadaceTable.isActive, true))
+      : and(eq(zadaceTable.muallimId, req.user!.userId), eq(zadaceTable.isActive, true));
+    const zadace = await db.select().from(zadaceTable).where(baseWhere);
+    if (zadace.length === 0) { res.json({ count: 0 }); return; }
+
+    // Status rows samo za ove zadaće, indeksirano po (zadacaId, ucenikId).
+    const statusi = await db.select().from(zadaceStatusTable)
+      .where(inArray(zadaceStatusTable.zadacaId, zadace.map(z => z.id)));
+    const statusMap = new Map<string, typeof statusi[number]>();
+    for (const s of statusi) statusMap.set(`${s.zadacaId}:${s.ucenikId}`, s);
+
+    let count = 0;
+    for (const z of zadace) {
+      const recipients = await resolveZadacaRecipients(z.id, z.grupaId);
+      if (recipients.length === 0) continue;
+      // Zadaća se broji ako bar jedan adresat ima prošli EFEKTIVNI rok
+      // (per-učenik noviRok ?? zadaca.rokDo) a nije označen završenim.
+      const hasOverdueUnreviewed = recipients.some(uid => {
+        const s = statusMap.get(`${z.id}:${uid}`);
+        const efektivni = s?.noviRok ?? z.rokDo;
+        if (!efektivni || efektivni >= today) return false;
+        return (s?.status ?? "na_cekanju") !== "zavrseno";
+      });
+      if (hasOverdueUnreviewed) count++;
+    }
+    res.json({ count });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

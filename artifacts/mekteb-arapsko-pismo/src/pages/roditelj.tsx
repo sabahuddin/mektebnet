@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MaskotaPrazanState } from "@/components/maskota";
-import { formatScreentime, isOnline } from "@/lib/utils";
+import { formatScreentime, isOnline, kategorijaOcjeneLabel } from "@/lib/utils";
 
 function formatScreentimeShort(sec: number | null | undefined): string {
   const s = sec ?? 0;
@@ -151,6 +151,7 @@ interface ZadacaRoditelj {
   grupaNaziv?: string | null;
   djecaIds: number[];
   djecaImena: string[];
+  prolongCount?: number;
 }
 
 function fmtMinSec(s: number): string {
@@ -501,7 +502,7 @@ function DijeteContent({
               {[...ocjene].sort((a, b) => b.datum.localeCompare(a.datum)).map(o => (
                 <div key={o.id} className="flex items-center justify-between text-sm">
                   <div>
-                    <span className="font-medium text-foreground capitalize">{o.kategorija}</span>
+                    <span className="font-medium text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
                     {o.napomena && <span className="text-muted-foreground ml-2">— {o.napomena}</span>}
                     <span className="text-muted-foreground ml-2 text-xs">{o.datum}</span>
                   </div>
@@ -611,6 +612,11 @@ function DijeteContent({
                       {z.lekcijaNaslov && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <BookOpen className="w-3 h-3" /> {z.lekcijaNaslov}
+                        </span>
+                      )}
+                      {(z.prolongCount ?? 0) > 0 && (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                          Prolongirano ×{z.prolongCount}
                         </span>
                       )}
                     </div>

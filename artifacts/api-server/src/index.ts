@@ -157,6 +157,47 @@ async function runResidualSchema() {
       END $$;
     `);
 
+    // zadace.naslov — sada opcionalan (nova UX koristi lekciju kao naziv).
+    // Stare baze imaju NOT NULL; drop constraint idempotentno.
+    await db.execute(sql`ALTER TABLE zadace ALTER COLUMN naslov DROP NOT NULL;`);
+
+    // zadace_status — status zadaće po učeniku (muallim pregleda iz jednog
+    // panela za cijelu grupu). Jedan red po (zadaca, ucenik). Nepostojeći red
+    // ili status='na_cekanju' => zadaća na čekanju (nepregledana).
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS zadace_status (
+        id serial PRIMARY KEY,
+        zadaca_id integer NOT NULL,
+        ucenik_id integer NOT NULL,
+        uradjeno boolean NOT NULL DEFAULT false,
+        ocjena integer,
+        kapi_meda integer NOT NULL DEFAULT 0,
+        novi_rok varchar(20),
+        prolong_count integer NOT NULL DEFAULT 0,
+        status varchar(20) NOT NULL DEFAULT 'na_cekanju',
+        reviewed_at timestamp,
+        muallim_id integer,
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS zadace_status_zadaca_ucenik_uidx ON zadace_status (zadaca_id, ucenik_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS zadace_status_ucenik_idx ON zadace_status (ucenik_id);`);
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'zadace_status_zadaca_id_fkey'
+            AND conrelid = 'zadace_status'::regclass
+        ) THEN
+          ALTER TABLE zadace_status
+            ADD CONSTRAINT zadace_status_zadaca_id_fkey
+            FOREIGN KEY (zadaca_id) REFERENCES zadace(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
+
     // pitanja_banka.meta — jsonb kolona za interaktivne tipove (dragDrop, markWords).
     // Definisana je u Drizzle schema/content.ts, ali nije generisan novi migration
     // file (banka tabela nije u Drizzle baseline-u — kreirana ranije van Drizzle-a).

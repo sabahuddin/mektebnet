@@ -15,6 +15,7 @@ import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { LekcijaPicker } from "@/components/LekcijaPicker";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -214,6 +215,20 @@ interface Zadaca {
   ucenikIds?: number[];
 }
 
+interface ZadacaStatusRed {
+  ucenikId: number;
+  displayName: string;
+  username: string;
+  uradjeno: boolean;
+  ocjena: number | null;
+  kapiMeda: number;
+  noviRok: string | null;
+  prolongCount: number;
+  status: string;
+}
+
+const KAPI_MEDA_OPCIJE = [0, 10, 20, 30];
+
 const TIP_COLORS: Record<string, { bg: string; border: string; text: string; label: string }> = {
   mekteb: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-700", label: "Mekteb" },
   ferije: { bg: "bg-red-100", border: "border-red-400", text: "text-red-700", label: "Ferije" },
@@ -321,6 +336,11 @@ export default function MuallimPanel() {
   const [zadLekcija, setZadLekcija] = useState("");
   const [zadUcenikIds, setZadUcenikIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
+  // Pregled (review) panel za cijelu grupu
+  const [pregledZadaca, setPregledZadaca] = useState<Zadaca | null>(null);
+  const [pregledUcenici, setPregledUcenici] = useState<ZadacaStatusRed[]>([]);
+  const [pregledLoading, setPregledLoading] = useState(false);
+  const [savingRedId, setSavingRedId] = useState<number | null>(null);
 
   const loadPendingRoditelji = async () => {
     if (!token) return;
@@ -540,12 +560,17 @@ export default function MuallimPanel() {
   }, [token, zadGrupaId]);
 
   async function saveZadaca() {
-    if (!token || !zadGrupaId || !zadNaslov.trim()) return;
+    if (!token || !zadGrupaId) return;
+    // Lekcija je naziv zadaće; ako nema lekcije, opis je obavezan.
+    if (!zadLekcija.trim() && !zadOpis.trim()) {
+      toast({ title: "Odaberi lekciju ili upiši opis", variant: "destructive" });
+      return;
+    }
     setSavingZadaca(true);
     try {
       const nova = await apiRequest<Zadaca>("POST", "/muallim/zadace", {
         grupaId: zadGrupaId,
-        naslov: zadNaslov.trim(),
+        naslov: zadLekcija.trim() || zadOpis.trim().slice(0, 80),
         opis: zadOpis.trim() || null,
         rokDo: zadRok || null,
         lekcijaNaslov: zadLekcija || null,
@@ -566,6 +591,49 @@ export default function MuallimPanel() {
       setZadace(prev => prev.filter(z => z.id !== id));
       toast({ title: "Zadaća obrisana" });
     } catch { toast({ title: "Greška", variant: "destructive" }); }
+  }
+
+  async function openPregled(z: Zadaca) {
+    if (!token) return;
+    setPregledZadaca(z);
+    setPregledUcenici([]);
+    setPregledLoading(true);
+    try {
+      const data = await apiRequest<{ zadaca: Zadaca; ucenici: ZadacaStatusRed[] }>(
+        "GET", `/muallim/zadace/${z.id}/pregled`, undefined, token);
+      setPregledUcenici(data.ucenici);
+    } catch { toast({ title: "Greška pri učitavanju pregleda", variant: "destructive" }); }
+    finally { setPregledLoading(false); }
+  }
+
+  function updatePregledRed(ucenikId: number, patch: Partial<ZadacaStatusRed>) {
+    setPregledUcenici(prev => prev.map(r => r.ucenikId === ucenikId ? { ...r, ...patch } : r));
+  }
+
+  async function saveStatusRed(red: ZadacaStatusRed, oznaciZavrseno?: boolean) {
+    if (!token || !pregledZadaca) return;
+    setSavingRedId(red.ucenikId);
+    try {
+      const saved = await apiRequest<any>(
+        "PUT", `/muallim/zadace/${pregledZadaca.id}/status/${red.ucenikId}`,
+        {
+          uradjeno: red.uradjeno,
+          ocjena: red.ocjena,
+          kapiMeda: red.kapiMeda,
+          noviRok: red.noviRok || null,
+          ...(oznaciZavrseno !== undefined ? { oznaciZavrseno } : {}),
+        }, token);
+      updatePregledRed(red.ucenikId, {
+        status: saved.status,
+        prolongCount: saved.prolongCount,
+        noviRok: saved.noviRok,
+        uradjeno: saved.uradjeno,
+        ocjena: saved.ocjena,
+        kapiMeda: saved.kapiMeda,
+      });
+      toast({ title: oznaciZavrseno === true ? "Označeno završenim" : "Sačuvano" });
+    } catch { toast({ title: "Greška", variant: "destructive" }); }
+    finally { setSavingRedId(null); }
   }
 
   async function deleteUcenik(ucenikId: number) {
@@ -1605,10 +1673,13 @@ export default function MuallimPanel() {
                         </h4>
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div className="sm:col-span-2">
-                            <label className="text-sm font-bold text-muted-foreground block mb-1">Naslov *</label>
-                            <input type="text" value={zadNaslov} onChange={e => setZadNaslov(e.target.value)}
-                              placeholder="npr. Nauči suru El-Fatiha"
-                              className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                            <label className="text-sm font-bold text-muted-foreground block mb-1">Lekcija</label>
+                            <LekcijaPicker
+                              lekcije={dostupneLekcije}
+                              value={zadLekcija}
+                              onChange={setZadLekcija}
+                              placeholder="Pretraži i odaberi lekciju..."
+                            />
                           </div>
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">Opis (opcionalno)</label>
@@ -1616,24 +1687,14 @@ export default function MuallimPanel() {
                               placeholder="Detalji zadaće..."
                               className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                           </div>
-                          <div>
+                          <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">Rok do</label>
                             <input type="date" value={zadRok} onChange={e => setZadRok(e.target.value)}
                               className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
                           </div>
-                          <div>
-                            <label className="text-sm font-bold text-muted-foreground block mb-1">Povezana lekcija</label>
-                            <select value={zadLekcija} onChange={e => setZadLekcija(e.target.value)}
-                              className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                              <option value="">— Bez lekcije —</option>
-                              {dostupneLekcije.map(l => (
-                                <option key={l.id} value={l.naslov}>N{l.nivo} · {l.naslov}</option>
-                              ))}
-                            </select>
-                          </div>
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">
-                              Adresati {zadUcenikIds.size === 0 ? "(cijela grupa)" : `(${zadUcenikIds.size} učenik/a)`}
+                              Učenici {zadUcenikIds.size === 0 ? "(cijela grupa)" : `(${zadUcenikIds.size} učenik/a)`}
                             </label>
                             {(() => {
                               const grupaUcenici = ucenici.filter(u => u.grupaId === zadGrupaId && u.aktivanStatus);
@@ -1683,7 +1744,7 @@ export default function MuallimPanel() {
                           <button onClick={() => { setShowZadForm(false); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
                             Otkaži
                           </button>
-                          <Button onClick={saveZadaca} disabled={savingZadaca || !zadNaslov.trim()} className="rounded-xl font-bold">
+                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim())} className="rounded-xl font-bold">
                             {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> Sačuvaj</>}
                           </Button>
                         </div>
@@ -1739,16 +1800,146 @@ export default function MuallimPanel() {
                                     </span>
                                   </div>
                                 </div>
-                                <button onClick={() => deleteZadaca(z.id)}
-                                  className="text-red-400 hover:text-red-600 p-2 shrink-0">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <Button onClick={() => openPregled(z)} variant="outline" size="sm"
+                                    className="rounded-xl font-bold flex items-center gap-1.5">
+                                    <Eye className="w-4 h-4" /> Pregled
+                                  </Button>
+                                  <button onClick={() => deleteZadaca(z.id)}
+                                    className="text-red-400 hover:text-red-600 p-2">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </div>
                             </motion.div>
                           );
                         })}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* PREGLED PANEL — cijela grupa, jedan ekran */}
+                {pregledZadaca && (
+                  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
+                    onClick={() => setPregledZadaca(null)}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+                      onClick={e => e.stopPropagation()}
+                      className="bg-white w-full sm:max-w-2xl max-h-[92vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
+                      <div className="flex items-start justify-between gap-3 p-5 border-b border-border/50">
+                        <div className="min-w-0">
+                          <h3 className="font-extrabold text-foreground text-lg truncate">{pregledZadaca.naslov}</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Pregled za cijelu grupu — označi urađeno, ocjenu i kapi meda.
+                          </p>
+                        </div>
+                        <button onClick={() => setPregledZadaca(null)} className="text-muted-foreground hover:text-foreground p-1 shrink-0">
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <div className="overflow-y-auto p-4 space-y-3">
+                        {pregledLoading ? (
+                          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)
+                        ) : pregledUcenici.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-8 font-medium">Nema učenika za ovu zadaću.</p>
+                        ) : (
+                          pregledUcenici.map(red => {
+                            const zavrseno = red.status === "zavrseno";
+                            return (
+                              <div key={red.ucenikId}
+                                className={`rounded-2xl border p-4 ${zavrseno ? "border-emerald-200 bg-emerald-50/40" : "border-border/60 bg-white"}`}>
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-extrabold text-foreground truncate">{red.displayName}</span>
+                                    {zavrseno && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                                    {red.prolongCount > 0 && (
+                                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 shrink-0">
+                                        Prolongirano ×{red.prolongCount}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {!zavrseno && (
+                                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">Na čekanju</span>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  {/* Uradjeno da/ne */}
+                                  <div>
+                                    <label className="text-xs font-bold text-muted-foreground block mb-1">Zadaća</label>
+                                    <div className="flex gap-1.5">
+                                      <button type="button" onClick={() => updatePregledRed(red.ucenikId, { uradjeno: true })}
+                                        className={`flex-1 rounded-lg px-2 py-1.5 text-sm font-bold border transition-colors ${red.uradjeno ? "bg-emerald-600 text-white border-emerald-600" : "bg-white border-border text-muted-foreground hover:bg-muted"}`}>
+                                        Da
+                                      </button>
+                                      <button type="button" onClick={() => updatePregledRed(red.ucenikId, { uradjeno: false })}
+                                        className={`flex-1 rounded-lg px-2 py-1.5 text-sm font-bold border transition-colors ${!red.uradjeno ? "bg-red-500 text-white border-red-500" : "bg-white border-border text-muted-foreground hover:bg-muted"}`}>
+                                        Ne
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Ocjena 1-6 */}
+                                  <div>
+                                    <label className="text-xs font-bold text-muted-foreground block mb-1">Ocjena</label>
+                                    <select value={red.ocjena ?? ""}
+                                      onChange={e => updatePregledRed(red.ucenikId, { ocjena: e.target.value ? Number(e.target.value) : null })}
+                                      className="w-full border border-border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                      <option value="">—</option>
+                                      {[1, 2, 3, 4, 5, 6].map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                  </div>
+
+                                  {/* Kapi meda */}
+                                  <div>
+                                    <label className="text-xs font-bold text-muted-foreground block mb-1">Kapi meda</label>
+                                    <div className="flex gap-1">
+                                      {KAPI_MEDA_OPCIJE.map(k => (
+                                        <button key={k} type="button" onClick={() => updatePregledRed(red.ucenikId, { kapiMeda: k })}
+                                          className={`flex-1 rounded-lg px-1 py-1.5 text-sm font-bold border transition-colors ${red.kapiMeda === k ? "bg-amber-500 text-white border-amber-500" : "bg-white border-border text-muted-foreground hover:bg-muted"}`}>
+                                          {k === 0 ? "0" : `+${k}`}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Novi termin (prolongacija) */}
+                                  <div>
+                                    <label className="text-xs font-bold text-muted-foreground block mb-1">Novi termin</label>
+                                    <input type="date" value={red.noviRok ?? ""}
+                                      onChange={e => updatePregledRed(red.ucenikId, { noviRok: e.target.value || null })}
+                                      className="w-full border border-border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 mt-3 justify-end">
+                                  <Button variant="outline" size="sm" disabled={savingRedId === red.ucenikId}
+                                    onClick={() => saveStatusRed(red)}
+                                    className="rounded-lg font-bold">
+                                    {savingRedId === red.ucenikId ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sačuvaj"}
+                                  </Button>
+                                  {!zavrseno ? (
+                                    <Button size="sm" disabled={savingRedId === red.ucenikId}
+                                      onClick={() => saveStatusRed(red, true)}
+                                      className="rounded-lg font-bold flex items-center gap-1.5">
+                                      <CheckCircle2 className="w-4 h-4" /> Završeno
+                                    </Button>
+                                  ) : (
+                                    <Button variant="outline" size="sm" disabled={savingRedId === red.ucenikId}
+                                      onClick={() => saveStatusRed(red, false)}
+                                      className="rounded-lg font-bold">
+                                      Vrati na čekanje
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </motion.div>
                   </div>
                 )}
               </motion.div>

@@ -8,7 +8,7 @@ import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardLis
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { isOnline, formatScreentime } from "@/lib/utils";
+import { isOnline, formatScreentime, kategorijaOcjeneLabel } from "@/lib/utils";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
 
 interface Ucenik {
@@ -100,6 +100,16 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const OCJENA_COLORS = ["", "bg-red-100 text-red-700", "bg-orange-100 text-orange-700", "bg-amber-100 text-amber-700", "bg-blue-100 text-blue-700", "bg-emerald-100 text-emerald-700", "bg-emerald-200 text-emerald-800"];
+// Aktivne kategorije ocjena (vrijednost -> prikaz). Vrijednosti su stabilne radi
+// kompatibilnosti sa starim ocjenama; mijenja se samo prikazni naziv.
+const OCJENA_KATEGORIJE: { value: string; label: string }[] = [
+  { value: "napamet", label: "Učenje" },
+  { value: "usmeno", label: "Usmeno" },
+  { value: "pismeno", label: "Pismeno" },
+  { value: "prakticno", label: "Praktično" },
+  { value: "zadaća", label: "Zadaća" },
+  { value: "vladanje", label: "Ponašanje" },
+];
 
 export default function UcenikPage() {
   const { id } = useParams<{ id: string }>();
@@ -1018,13 +1028,9 @@ export default function UcenikPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <select value={newOcjena.kategorija} onChange={e => setNewOcjena(p => ({ ...p, kategorija: e.target.value }))}
                         className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                        <option value="usmeno">Usmeno</option>
-                        <option value="pismeno">Pismeno</option>
-                        <option value="napamet">Napamet</option>
-                        <option value="domaći">Domaći</option>
-                        <option value="zadaća">Zadaća</option>
-                        <option value="aktivnost">Aktivnost</option>
-                        <option value="vladanje">Vladanje</option>
+                        {OCJENA_KATEGORIJE.map(k => (
+                          <option key={k.value} value={k.value}>{k.label}</option>
+                        ))}
                       </select>
                       <select value={newOcjena.ocjena} onChange={e => setNewOcjena(p => ({ ...p, ocjena: parseInt(e.target.value) }))}
                         className="border border-border rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
@@ -1071,7 +1077,7 @@ export default function UcenikPage() {
                     {ocjene.map(o => (
                       <div key={o.id} className="flex items-center justify-between text-sm">
                         <div>
-                          <span className="font-medium text-foreground capitalize">{o.kategorija}</span>
+                          <span className="font-medium text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
                           {o.lekcijaNaziv && <span className="text-primary ml-2 text-xs font-medium">({o.lekcijaNaziv})</span>}
                           {o.napomena && <span className="text-muted-foreground ml-2">— {o.napomena}</span>}
                           <div className="text-xs text-muted-foreground">{o.datum}</div>

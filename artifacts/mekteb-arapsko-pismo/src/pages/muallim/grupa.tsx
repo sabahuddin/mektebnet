@@ -80,6 +80,7 @@ export default function GrupaPage() {
   const [printLoading, setPrintLoading] = useState(false);
 
   const [grupa, setGrupa] = useState<Grupa | null>(null);
+  const [zadacaBadge, setZadacaBadge] = useState(0);
   const [studentiGrupe, setStudentiGrupe] = useState<Ucenik[]>([]);
   const [sviStudenti, setSviStudenti] = useState<Ucenik[]>([]);
   const [sveGrupe, setSveGrupe] = useState<Grupa[]>([]);
@@ -142,6 +143,8 @@ export default function GrupaPage() {
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
       setIlmihalLekcije(lekcije);
     }).catch(() => {}).finally(() => setIsLoading(false));
+    apiRequest<{ count: number }>("GET", `/muallim/zadace-pregled-badge?grupaId=${grupaId}`, undefined, token)
+      .then(r => setZadacaBadge(r?.count ?? 0)).catch(() => {});
   }, [token, grupaId]);
 
   function refreshStudents() {
@@ -478,7 +481,7 @@ export default function GrupaPage() {
               { label: "Raspored lekcija", icon: ListOrdered, href: `/muallim/raspored/${grupa.id}`, color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" },
               { label: "Kalendar", icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}`, color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" },
               { label: "Statistika", icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}`, color: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" },
-              { label: "Zadaća", icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" },
+              { label: "Zadaća", icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100", badge: zadacaBadge },
               { label: "Izvještaji", icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}`, color: "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100" },
               { label: "Roditelji", icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}`, color: "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100" },
               { label: "H5P statistika", icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}`, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" },
@@ -486,10 +489,15 @@ export default function GrupaPage() {
               <Link
                 key={card.label}
                 href={card.href}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${card.color}`}
+                className={`relative flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${card.color}`}
               >
                 <card.icon className="w-4 h-4 shrink-0" />
                 <span className="truncate">{card.label}</span>
+                {(card.badge ?? 0) > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-red-600 text-white text-[11px] font-black shadow-md">
+                    {card.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

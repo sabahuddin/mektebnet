@@ -29,3 +29,20 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+// Prikazni nazivi kategorija ocjena. Vrijednosti u bazi su stabilne radi
+// kompatibilnosti; ovdje se preslikavaju u trenutne nazive (uklj. legacy).
+export const KATEGORIJA_OCJENE_LABELS: Record<string, string> = {
+  napamet: "Učenje",
+  usmeno: "Usmeno",
+  pismeno: "Pismeno",
+  prakticno: "Praktično",
+  "zadaća": "Zadaća",
+  vladanje: "Ponašanje",
+  "domaći": "Domaći",
+  aktivnost: "Aktivnost",
+};
+
+export function kategorijaOcjeneLabel(kat: string): string {
+  return KATEGORIJA_OCJENE_LABELS[kat] || kat;
+}
