@@ -451,6 +451,38 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   }
 }
 
+/* Embed vježba (LearningApps, Wordwall, ...) ubačena unutar sadržaja lekcije.
+   Bare .lesson-embed selektor pokriva sve render staze: učenik (RjecnikContent
+   i priprema), admin editor-preview i živi Tiptap editor. */
+.lesson-embed {
+  width: 100%;
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.lesson-embed iframe {
+  display: block;
+  width: 100%;
+  height: 480px;
+  border: 0;
+}
+@media (max-width: 640px) {
+  .lesson-embed iframe {
+    height: 420px;
+  }
+}
+/* U editoru: označi node isprekidanim okvirom i onemogući interakciju s
+   iframe-om da bi se mogao selektovati/obrisati. */
+.wysiwyg-editor-content .ProseMirror .lesson-embed {
+  outline: 2px dashed #c4b5fd;
+  outline-offset: 2px;
+}
+.wysiwyg-editor-content .ProseMirror .lesson-embed iframe {
+  pointer-events: none;
+}
+
 /* Quiz question images */
 .edu-image {
   border: 2px solid rgb(36, 143, 146);

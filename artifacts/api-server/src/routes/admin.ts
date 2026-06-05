@@ -373,6 +373,43 @@ function isWhitelistedHost(url: string): boolean {
   }
 }
 
+// Sadržaj lekcije (contentHtml) smije sadržavati <iframe> SAMO sa whitelist-ovanih
+// edukativnih izvora (isti kao embed prilozi) + YouTube. Doc upload vraća čisti
+// tekst (bez iframe-a), pa su to jedini legitimni izvori. Ovo zatvara bypass:
+// admin/muallim bi kroz HTML-mode editora mogao zalijepiti proizvoljan iframe
+// koji se onda prikazuje djeci. Vraća listu nedozvoljenih src-ova (prazna = OK).
+const CONTENT_IFRAME_WHITELIST = [
+  ...EMBED_WHITELIST,
+  "youtube.com",
+  "youtube-nocookie.com",
+];
+
+function findDisallowedIframeSrcs(html: string): string[] {
+  if (!html || typeof html !== "string") return [];
+  const bad: string[] = [];
+  const iframeRe = /<iframe\b[^>]*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = iframeRe.exec(html)) !== null) {
+    const tag = m[0];
+    const srcM = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+    const src = srcM ? srcM[1] : "";
+    let ok = false;
+    if (src) {
+      try {
+        const u = new URL(src);
+        if (u.protocol === "https:" || u.protocol === "http:") {
+          const host = u.hostname.toLowerCase();
+          ok = CONTENT_IFRAME_WHITELIST.some(d => host === d || host.endsWith("." + d));
+        }
+      } catch {
+        ok = false;
+      }
+    }
+    if (!ok) bad.push(src || "(iframe bez src)");
+  }
+  return bad;
+}
+
 // Dozvoljene vrijednosti kapi meda za embed vježbu (admin postavlja).
 // 0 = bez nagrade (samo informativna/dekorativna vježba).
 // Limit do 10 jer cijela lekcija nosi 30 — embed ne smije nadjačati učenje.
@@ -1336,6 +1373,15 @@ router.put("/ilmihal/:id", async (req, res) => {
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) {
+      // Sigurnost: odbij snimanje ako sadržaj ima iframe sa nedozvoljenog izvora
+      // (zatvara HTML-mode bypass — vidi findDisallowedIframeSrcs).
+      const badEmbeds = findDisallowedIframeSrcs(typeof contentHtml === "string" ? contentHtml : "");
+      if (badEmbeds.length > 0) {
+        return res.status(400).json({
+          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
+          detail: badEmbeds.slice(0, 3),
+        });
+      }
       // Auto-clean before save: remove duplicate priprema accordions, upgrade old design.
       const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
       updates.contentHtml = regeneratePripremaInHtml(contentHtml);

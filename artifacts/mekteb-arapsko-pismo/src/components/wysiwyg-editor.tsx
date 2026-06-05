@@ -21,7 +21,8 @@ import {
   BookOpen, AlertTriangle, TableIcon,
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
   Maximize, RectangleHorizontal, Square, Loader2,
-  FolderOpen, X, Copy, Check, FileText, Minus, Music, Youtube as YoutubeIcon
+  FolderOpen, X, Copy, Check, FileText, Minus, Music, Youtube as YoutubeIcon,
+  Puzzle
 } from "lucide-react";
 import { parsePripremaContent, renderPripremaContent, type PripremaStruct } from "@/lib/priprema-design";
 
@@ -97,6 +98,87 @@ const AudioBlock = Node.create({
     const attrs: Record<string, any> = { src, controls: "true", preload: "metadata", class: "lesson-audio" };
     if (title) attrs["data-title"] = title;
     return ["audio", mergeAttributes(attrs)];
+  },
+});
+
+// Embed vježba (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet,
+// Mentimeter, H5P.org) — ubacuje se UNUTAR sadržaja akordiona. Tiptap inače
+// izbaci svaki nepoznati <iframe> pri snimanju (preživi samo YouTube); ovaj
+// node ga čini dijelom šeme pa preživi save i renderuje se učeniku.
+// Whitelist i logika izvlačenja URL-a su preslikani sa servera (admin.ts).
+// NAPOMENA: ove vježbe NE donose kapi meda — čisto prikaz za vježbanje.
+const EMBED_WHITELIST = [
+  "learningapps.org",
+  "wordwall.net",
+  "view.genial.ly",
+  "genial.ly",
+  "quizizz.com",
+  "kahoot.it",
+  "kahoot.com",
+  "padlet.com",
+  "mentimeter.com",
+  "embed.mentimeter.com",
+  "h5p.org",
+];
+
+function extractEmbedSrc(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed) && !/<iframe/i.test(trimmed)) {
+    return trimmed.length <= 2000 ? trimmed : null;
+  }
+  const m = trimmed.match(/<iframe[^>]+src\s*=\s*["']([^"']+)["']/i);
+  if (m && m[1]) {
+    const src = m[1];
+    if (/^https?:\/\//i.test(src) && src.length <= 2000) return src;
+  }
+  return null;
+}
+
+function isWhitelistedEmbedHost(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const host = u.hostname.toLowerCase();
+    return EMBED_WHITELIST.some(d => host === d || host.endsWith("." + d));
+  } catch {
+    return false;
+  }
+}
+
+const EmbedExercise = Node.create({
+  name: "embedExercise",
+  group: "block",
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+    };
+  },
+  parseHTML() {
+    return [{
+      tag: "div.lesson-embed",
+      getAttrs: (el) => {
+        const iframe = (el as HTMLElement).querySelector("iframe");
+        const src = iframe?.getAttribute("src") || null;
+        // Sigurnost: zadrži samo whitelist-ovane izvore (zaobiđe HTML-mode bypass).
+        if (!src || !isWhitelistedEmbedHost(src)) return false;
+        return { src };
+      },
+    }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const { src } = HTMLAttributes;
+    return ["div", { class: "lesson-embed" },
+      ["iframe", mergeAttributes({
+        src,
+        loading: "lazy",
+        allowfullscreen: "true",
+        allow: "fullscreen",
+      })],
+    ];
   },
 });
 
@@ -272,6 +354,7 @@ const editorExtensions = [
   InfoBox,
   InfoCard,
   AudioBlock,
+  EmbedExercise,
   Youtube.configure({
     controls: true,
     nocookie: true,
@@ -1037,6 +1120,21 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           title="Umetni YouTube video"
         >
           <YoutubeIcon className="w-4 h-4 text-red-600" />
+        </MenuButton>
+        <MenuButton
+          onClick={() => {
+            const input = window.prompt("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org:");
+            if (!input) return;
+            const src = extractEmbedSrc(input);
+            if (!src || !isWhitelistedEmbedHost(src)) {
+              toast({ title: "Neispravan ili nedozvoljen embed", description: "Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org.", variant: "destructive" });
+              return;
+            }
+            editor.chain().focus().insertContent({ type: "embedExercise", attrs: { src } }).run();
+          }}
+          title="Umetni interaktivnu vježbu (embed)"
+        >
+          <Puzzle className="w-4 h-4 text-purple-600" />
         </MenuButton>
         <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
