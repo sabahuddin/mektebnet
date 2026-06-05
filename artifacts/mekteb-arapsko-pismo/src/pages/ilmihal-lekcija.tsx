@@ -1434,6 +1434,8 @@ function PriloziSection({
   const [embedReward, setEmbedReward] = useState<0 | 3 | 5 | 10>(5);
   const [savingEmbed, setSavingEmbed] = useState(false);
   const [openEmbed, setOpenEmbed] = useState<Prilog | null>(null);
+  // H5P vježba se otvara u popup-u (kao embed), ne inline punom širinom.
+  const [openH5p, setOpenH5p] = useState<Prilog | null>(null);
   // Edit embed (samo admin) — modal sa label + hasanatReward.
   const [editEmbed, setEditEmbed] = useState<Prilog | null>(null);
   const [editEmbedLabel, setEditEmbedLabel] = useState("");
@@ -1939,8 +1941,8 @@ function PriloziSection({
                     }
                     // a.url backend već vraća kao apsolutnu putanju from origin (npr.
                     // "/uploads/h5p/12"). NE prefixaj sa apiBase ("/api") — statički
-                    // sadržaj se servira iz "/uploads", ne "/api/uploads".
-                    const h5pUrl = isH5p ? a.url : null;
+                    // sadržaj se servira iz "/uploads", ne "/api/uploads". Sam URL se
+                    // koristi u H5P popup-u (vidi openH5p Dialog), ne više inline.
                     const attemptKey = h5pAttemptKey[a.id] ?? 0;
                     // Attempt-aware nagrada: koliko hasanata je moguće osvojiti za
                     // sljedeći pokušaj na ovoj vježbi (uzima u obzir prošle pokušaje).
@@ -1963,23 +1965,30 @@ function PriloziSection({
                               )}
                             </div>
                             <p className="text-sm text-gray-400 truncate">
-                              {isH5p ? "Interaktivna vježba (H5P)" : isEmbed ? "Embed vježba (bez kapi meda)" : isUrl ? targetUrl : formatFileSize(a.fileSize)}
+                              {isH5p
+                                ? (maxNext > 0
+                                    ? `Interaktivna vježba — Pokušaj ${att?.nextAttemptNo ?? 1} · do ${maxNext} ${maxNext === 1 ? "kap meda" : "kapi meda"} 🍯`
+                                    : `Interaktivna vježba — Pokušaj ${att?.nextAttemptNo ?? 1} · bez kapi meda`)
+                                : isEmbed ? "Embed vježba (bez kapi meda)" : isUrl ? targetUrl : formatFileSize(a.fileSize)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {isH5p ? (
                               <button
                                 onClick={() => {
+                                  // Svaki put kad se otvori popup: nova instanca
+                                  // playera (contentKey se mijenja) + osvježen
+                                  // brojač pokušaja da badge pokaže tačan
+                                  // "Pokušaj X — Y%".
                                   setH5pAttemptKey(prev => ({ ...prev, [a.id]: attemptKey + 1 }));
-                                  // Osvježi brojač pokušaja — ako je prethodni
-                                  // rezultat već stigao serveru, badge će sad
-                                  // pokazati tačan novi "Pokušaj X — Y%".
                                   void refreshH5pAttempts(a.id);
+                                  setOpenH5p(a);
                                 }}
                                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
-                                title="Pokušaj ponovo"
+                                title="Otvori vježbu"
+                                data-testid={`h5p-open-${a.id}`}
                               >
-                                <Sparkles className="w-4 h-4" /> Ponovi
+                                <Sparkles className="w-4 h-4" /> Otvori vježbu
                               </button>
                             ) : isUrl ? (
                               <a
@@ -2017,49 +2026,6 @@ function PriloziSection({
                             )}
                           </div>
                         </div>
-                        {isH5p && h5pUrl && (
-                          <div className="mt-2 rounded-lg overflow-hidden bg-white border border-purple-100">
-                            {/* Attempt-aware header — pokazuje učeniku unaprijed koji
-                                je ovo pokušaj, koliki je % nagrade i do koliko kapi meda
-                                konkretno može dobiti (sve uzima u obzir prethodne
-                                pokušaje). Format: "Pokušaj X — Y% nagrade · do N kapi meda". */}
-                            <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center gap-2">
-                              <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                              <p className="text-sm font-semibold text-purple-700">
-                                {maxNext > 0
-                                  ? <>
-                                      Pokušaj <span className="text-purple-900">{att?.nextAttemptNo ?? 1}</span>
-                                      {" — "}
-                                      <span className="text-purple-900">{Math.round(nextMult * 100)}% nagrade</span>
-                                      {" · možeš osvojiti do "}
-                                      <span className="text-purple-900">{maxNext} {maxNext === 1 ? "kap meda" : "kapi meda"} 🍯</span>
-                                    </>
-                                  : <>
-                                      Pokušaj <span className="text-purple-900">{att?.nextAttemptNo ?? 1}</span>
-                                      {" — "}
-                                      <span className="text-purple-900">više pokušaja ne donosi kapi meda</span>
-                                      {" (već "}{Math.max(0, (att?.nextAttemptNo ?? 1) - 1)} pokušaja{")"}
-                                    </>
-                                }
-                              </p>
-                            </div>
-                            <Suspense fallback={
-                              <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
-                                <Loader2 className="w-4 h-4 animate-spin" /> Učitavam vježbu...
-                              </div>
-                            }>
-                              <H5PPlayerLazy
-                                h5pPath={h5pUrl}
-                                contentKey={`${a.id}-${attemptKey}`}
-                                onCompleted={(r) => handleH5pCompleted(a.id, r.score, r.maxScore)}
-                                isManager={canManage}
-                              />
-                            </Suspense>
-                            <p className="px-3 py-2 text-xs text-purple-500 bg-purple-50/60">
-                              Maks. 50 kapi meda. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
-                            </p>
-                          </div>
-                        )}
                         {ytEmbed && (
                           <YouTubeEmbed src={ytEmbed} title={a.originalName} />
                         )}
@@ -2133,6 +2099,75 @@ function PriloziSection({
                             </Button>
                           </div>
                         )}
+                      </>
+                    );
+                  })()}
+                </DialogContent>
+              </Dialog>
+
+              {/* Popup za H5P vježbu — otvara se klikom na "Otvori vježbu", umjesto
+                  inline prikaza punom širinom. Attempt-aware header gore, player u
+                  scroll-abilnom dijelu, napomena o kapima meda u footeru.
+                  CelebrationModal (z-[60]) se prikazuje IZNAD ovog popupa (z-50). */}
+              <Dialog open={!!openH5p} onOpenChange={(o) => { if (!o) setOpenH5p(null); }}>
+                <DialogContent
+                  className="p-0 gap-0 max-w-[100vw] sm:max-w-[95vw] md:max-w-4xl w-full h-[100dvh] sm:h-[92vh] sm:rounded-2xl rounded-none overflow-hidden flex flex-col"
+                  data-testid="h5p-modal"
+                >
+                  {openH5p && (() => {
+                    const a = openH5p;
+                    const aKey = h5pAttemptKey[a.id] ?? 0;
+                    const aAtt = h5pAttempts[a.id];
+                    const aMult = aAtt?.nextMultiplier ?? 1;
+                    const aMax = Math.round(50 * aMult);
+                    const aUrl = a.url;
+                    return (
+                      <>
+                        <div className="px-4 py-3 bg-purple-50 border-b border-purple-200 flex items-center gap-2 flex-shrink-0">
+                          <span className="text-2xl flex-shrink-0">🧩</span>
+                          <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-purple-900 truncate">
+                            {a.originalName}
+                          </DialogTitle>
+                        </div>
+                        <div className="px-4 py-2 bg-purple-50/70 border-b border-purple-100 flex items-center gap-2 flex-shrink-0">
+                          <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                          <p className="text-sm font-semibold text-purple-700">
+                            {aMax > 0
+                              ? <>
+                                  Pokušaj <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
+                                  {" — "}
+                                  <span className="text-purple-900">{Math.round(aMult * 100)}% nagrade</span>
+                                  {" · možeš osvojiti do "}
+                                  <span className="text-purple-900">{aMax} {aMax === 1 ? "kap meda" : "kapi meda"} 🍯</span>
+                                </>
+                              : <>
+                                  Pokušaj <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
+                                  {" — "}
+                                  <span className="text-purple-900">više pokušaja ne donosi kapi meda</span>
+                                  {" (već "}{Math.max(0, (aAtt?.nextAttemptNo ?? 1) - 1)} pokušaja{")"}
+                                </>
+                            }
+                          </p>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-white">
+                          {aUrl && (
+                            <Suspense fallback={
+                              <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
+                                <Loader2 className="w-4 h-4 animate-spin" /> Učitavam vježbu...
+                              </div>
+                            }>
+                              <H5PPlayerLazy
+                                h5pPath={aUrl}
+                                contentKey={`${a.id}-${aKey}`}
+                                onCompleted={(r) => handleH5pCompleted(a.id, r.score, r.maxScore)}
+                                isManager={canManage}
+                              />
+                            </Suspense>
+                          )}
+                        </div>
+                        <p className="px-4 py-2 text-xs text-purple-500 bg-purple-50/60 flex-shrink-0">
+                          Maks. 50 kapi meda. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
+                        </p>
                       </>
                     );
                   })()}
