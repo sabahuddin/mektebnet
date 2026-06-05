@@ -1,6 +1,13 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
-import h5pBundleUrl from "h5p-standalone/dist/main.bundle.js?url";
+
+// h5p-standalone runtime se servira iz public/h5p-standalone/ (kopira ga
+// scripts/copy-h5p-standalone.mjs prije dev/build). Reference idu preko
+// BASE_URL (koji već ima trailing slash) tako da rade i u dev-u i produkciji
+// bez obzira na Vite hash-ovanje. Statičko serviranje očuva relativne ../fonts
+// i ../images puteve iz h5p.css.
+const H5P_RUNTIME_BASE = `${import.meta.env.BASE_URL}h5p-standalone`;
+const h5pBundleUrl = `${H5P_RUNTIME_BASE}/main.bundle.js`;
 
 let h5pBundleLoadPromise: Promise<void> | null = null;
 
@@ -254,11 +261,10 @@ function H5PPlayerImpl({
         if (!H5PCtor) {
           throw new H5PInitError("library", "H5P biblioteka nije dostupna nakon učitavanja");
         }
-        const frameJsBase = h5pBundleUrl.replace(/\/main\.bundle\.js.*$/, "");
         await new H5PCtor(containerRef.current, {
           h5pJsonPath: h5pPath,
-          frameJs: `${frameJsBase}/frame.bundle.js`,
-          frameCss: `${frameJsBase}/styles/h5p.css`,
+          frameJs: `${H5P_RUNTIME_BASE}/frame.bundle.js`,
+          frameCss: `${H5P_RUNTIME_BASE}/styles/h5p.css`,
         });
         if (cancelled) return;
 

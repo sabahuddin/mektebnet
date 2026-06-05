@@ -13,6 +13,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+echo "==> Copying h5p-standalone runtime to public/..."
+node scripts/copy-h5p-standalone.mjs
+
 echo "==> Building web bundle for mobile (production API)..."
 # PORT je potreban samo za config eval (artifact koristi $PORT u dev serveru);
 # pri buildu vrijednost se ignorira, ali config crashuje bez nje.

@@ -21,3 +21,6 @@ android/captures/
 # Capacitor regenerirani bundled web assets (generišu se iz dist/public)
 ios/App/App/public/
 android/app/src/main/assets/public/
+
+# h5p-standalone runtime — generiše scripts/copy-h5p-standalone.mjs prije dev/build iz node_modules.
+public/h5p-standalone/
