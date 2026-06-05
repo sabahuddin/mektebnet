@@ -25,6 +25,11 @@ interface AnalyticsData {
   nedavniRezultati: { id: number; userId: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string; username: string; displayName: string }[];
 }
 
+interface OnlineData {
+  ukupno: number;
+  poLokaciji: { country: string | null; city: string | null; broj: number }[];
+}
+
 interface KvizStatistika {
   id: number;
   naslov: string;
@@ -1344,6 +1349,7 @@ export default function AdminPage() {
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [online, setOnline] = useState<OnlineData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [showDodajMuallim, setShowDodajMuallim] = useState(false);
@@ -1423,6 +1429,14 @@ export default function AdminPage() {
     }
   };
 
+  const loadOnline = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<OnlineData>("GET", "/admin/online", undefined, token);
+      setOnline(data);
+    } catch {}
+  };
+
   const loadKvizStatistike = async () => {
     if (!token || kvizStatistike.length > 0) return;
     setKvizLoading(true);
@@ -1444,6 +1458,12 @@ export default function AdminPage() {
 
   useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); }, [token]);
   useEffect(() => { if (activeTab === "analitika") loadAnalytics(); }, [activeTab]);
+  useEffect(() => {
+    if (activeMainTab !== "korisnici" || activeTab !== "analitika") return;
+    loadOnline();
+    const id = setInterval(loadOnline, 30000);
+    return () => clearInterval(id);
+  }, [activeMainTab, activeTab, token]);
   useEffect(() => { if (activeTab === "rezultati") loadKvizStatistike(); }, [activeTab]);
   useEffect(() => { if (activeTab === "statistika") loadStatistikaSadrzaja(); }, [activeTab]);
 
@@ -1658,6 +1678,44 @@ export default function AdminPage() {
         {/* ── TAB: ANALITIKA ── */}
         {activeTab === "analitika" && (
           <div className="space-y-6">
+            {/* Trenutno online */}
+            <div className="bg-white border border-border/50 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h3 className="font-extrabold text-foreground flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                  </span>
+                  Trenutno online
+                </h3>
+                <span className="text-xs text-muted-foreground">Aktivni u zadnjih 5 min · osvježava se svakih 30 s</span>
+              </div>
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-4xl font-extrabold text-green-600">{online?.ukupno ?? 0}</span>
+                <span className="text-muted-foreground text-sm">{(() => {
+                  const n = online?.ukupno ?? 0;
+                  const mod10 = n % 10, mod100 = n % 100;
+                  const rijec = (mod10 === 1 && mod100 !== 11) ? "osoba" : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) ? "osobe" : "osoba";
+                  return `${rijec} online`;
+                })()}</span>
+              </div>
+              {online && online.poLokaciji.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {online.poLokaciji.map((l, i) => (
+                    <div key={i} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        <Globe className="w-4 h-4 inline-block mr-1.5 text-purple-500 align-text-bottom" />
+                        {l.city && l.city !== "Unknown" ? `${l.city}, ` : ""}{l.country || "Nepoznato"}
+                      </span>
+                      <span className="text-sm font-extrabold text-foreground ml-2">{l.broj}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm py-2">Trenutno nema aktivnih posjetilaca.</p>
+              )}
+            </div>
+
             {analyticsLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
