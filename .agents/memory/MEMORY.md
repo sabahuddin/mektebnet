@@ -3,6 +3,7 @@
 - [Background procesi se zamrznu](background-jobs-freeze.md) — nohup/long-running poslovi stanu između tool poziva; vozi duge poslove kao bounded foreground chunkove, resumable.
 - [Reorder UI mora podržavati touch](reorder-touch-drag.md) — djeca su na tabletima; koristi Pointer Events + elementFromPoint, ne HTML5 draggable; drži strelice kao fallback.
 - [Produkcija = jedini izvor istine](prod-redeploy-workflow.md) — korisnik uvijek gleda mekteb.net, nikad dev preview; promjene se vide tek nakon ručnog Coolify redeploya.
+- [Poređenje arapskog teksta](arabic-text-matching.md) — alquran.cloud Uthmani ima nekanonski redoslijed harakata; nikad ne poredi egzaktno, normalizuj pa odsijeci bismillu po tokenima.
 - [H5P runtime asseti u Vite buildu](h5p-standalone-assets.md) — h5p-standalone se servira iz public/, ne preko ?url; Vite hash je lomio frameJs put (prod-only "Unexpected token '<'").
 - [Zadaća kapi meda vs total_med](zadaca-kapi-meda.md) — muallim-dodijeljene "kapi meda" idu na total_hasanat (znanje), NE total_med (igrice/Aferimi).
 - [Plain-content lekcije i akordion editor](dodatak-plain-content-editor.md) — WysiwygEditor krije sve akordion kontrole kad sadržaj nema `.lesson-accordion`; DODATAK/medaljon lekcije su plain `<p>`.
