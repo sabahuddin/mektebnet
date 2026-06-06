@@ -45,6 +45,7 @@ import CitaonicaKnjigaPage from "./pages/citaonica-knjiga";
 // Kur'an
 import KuranPage from "./pages/kuran";
 import KuranSuraPage from "./pages/kuran-sura";
+import KuranStranicaPage from "./pages/kuran-stranica";
 
 // Roditelj panel
 import RoditeljPage from "./pages/roditelj";
@@ -143,6 +144,7 @@ function Router() {
 
       {/* Kur'an */}
       <Route path="/kuran" component={KuranPage} />
+      <Route path="/kuran/stranica/:p" component={KuranStranicaPage} />
       <Route path="/kuran/:n" component={KuranSuraPage} />
 
       {/* Roditelj panel */}

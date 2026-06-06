@@ -91,15 +91,80 @@ export async function fetchSurah(n: number): Promise<{ meta: SurahMeta; ayahs: A
 
 const pad3 = (n: number) => String(n).padStart(3, "0");
 
-/** Audio jednog ajeta — Husari Mu'allim ("prouči pa ponovi"), vanjski server. */
-export function ayahAudioUrl(surah: number, ayahInSurah: number): string {
-  return `https://everyayah.com/data/Husary_Muallim_128kbps/${pad3(surah)}${pad3(ayahInSurah)}.mp3`;
+// Učači (vanjski server everyayah.com). Folder = identifikator izvora.
+export interface Reciter {
+  id: string;
+  label: string;
+  folder: string;
 }
 
-/** Latinični naziv sure bez "Al-/At-/..." varijacija — koristimo englishName
- *  kakav daje API (ustaljena transliteracija). */
-export function surahLatinName(meta: SurahMeta): string {
-  return meta.englishName;
+export const RECITERS: Reciter[] = [
+  { id: "husary_muallim", label: "Husari — Mu'allim (prouči pa ponovi)", folder: "Husary_Muallim_128kbps" },
+  { id: "husary", label: "Husari — Murettel", folder: "Husary_128kbps" },
+  { id: "minshawy", label: "Menšavi — Murettel", folder: "Minshawy_Murattal_128kbps" },
+];
+
+export const DEFAULT_RECITER_ID = "husary_muallim";
+
+export function reciterById(id: string): Reciter {
+  return RECITERS.find((r) => r.id === id) ?? RECITERS[0];
+}
+
+/** Audio jednog ajeta sa odabranog učača (vanjski server). */
+export function ayahAudioUrl(surah: number, ayahInSurah: number, reciterFolder: string): string {
+  return `https://everyayah.com/data/${reciterFolder}/${pad3(surah)}${pad3(ayahInSurah)}.mp3`;
+}
+
+// Bosanski (latinični) nazivi sura — preuzeto sa islam.ba radi ujednačene
+// transliteracije (npr. "El-Bekara", "Ali Imran", "Ja-Sin").
+const BOSNIAN_NAMES: string[] = [
+  "El-Fatiha", "El-Bekara", "Ali Imran", "En-Nisa", "El-Maida", "El-Anam",
+  "El-Araf", "El-Enfal", "Et-Tevba", "Junus", "Hud", "Jusuf", "Er-Rad",
+  "Ibrahim", "El-Hidžr", "En-Nahl", "El-Isra", "El-Kehf", "Merjem", "Ta-Ha",
+  "El-Enbija", "El-Hadždž", "El-Muminun", "En-Nur", "El-Furkan", "Eš-Šuara",
+  "En-Neml", "El-Kasas", "El-Ankebut", "Er-Rum", "Lukman", "Es-Sedžda",
+  "El-Ahzab", "Saba", "Fatir", "Ja-Sin", "Es-Saffat", "Sad", "Ez-Zumar",
+  "El-Mumin", "Fussilat", "Eš-Šura", "Ez-Zuhruf", "Ed-Duhan", "El-Džasija",
+  "El-Ahkaf", "Muhammed", "El-Feth", "El-Hudžurat", "Kaf", "Ed-Darijat",
+  "Et-Tur", "En-Nedžm", "El-Kamer", "Er-Rahman", "El-Vakia", "El-Hadid",
+  "El-Mudžadela", "El-Hašr", "El-Mumtahina", "Es-Saff", "El-Džumua",
+  "El-Munafikun", "Et-Tegabun", "Et-Talak", "Et-Tahrim", "El-Mulk", "El-Kalem",
+  "El-Hakka", "El-Mearidž", "Nuh", "El-Džinn", "El-Muzemmil", "El-Muddessir",
+  "El-Kijama", "El-Insan", "El-Mursalat", "En-Naba", "En-Naziat", "Abasa",
+  "Et-Takvir", "El-Infitar", "El-Mutaffifun", "El-Inšikak", "El-Burudž",
+  "Et-Tarik", "El-'Ala", "El-Gašija", "El-Fedžr", "El-Beled", "Eš-Šems",
+  "El-Lejl", "Ed-Duha", "El-Inširah", "Et-Tin", "El-Alek", "El-Kadr",
+  "El-Bejjina", "Ez-Zilzal", "El-Adijat", "El-Karia", "Et-Tekasur", "El-Asr",
+  "El-Humaza", "El-Fil", "Kurejš", "El-Maun", "El-Kevser", "El-Kafirun",
+  "En-Nasr", "El-Leheb", "El-Ihlas", "El-Felek", "En-Nas",
+];
+
+/** Bosanski naziv sure (1-114). Fallback na prazan string van opsega. */
+export function surahBosnianName(surahNumber: number): string {
+  return BOSNIAN_NAMES[surahNumber - 1] ?? "";
+}
+
+export interface PageAyah extends Ayah {
+  surah: number; // broj sure kojoj ajet pripada
+  surahArabicName: string; // arapski naziv sure (za zaglavlje na stranici)
+}
+
+export const QURAN_PAGES = 604;
+
+/** Učitava jednu Mushaf stranicu (1-604). Ajeti mogu pripadati više sura. */
+export async function fetchPage(p: number): Promise<PageAyah[]> {
+  const r = await fetch(`${API}/page/${p}/quran-uthmani`);
+  if (!r.ok) throw new Error("Neuspješno učitavanje stranice.");
+  const j = await r.json();
+  const ayahs = j?.data?.ayahs;
+  if (!Array.isArray(ayahs)) throw new Error("Neispravan odgovor servera (stranica).");
+  return ayahs.map((a: any) => ({
+    number: a.number,
+    numberInSurah: a.numberInSurah,
+    surah: a.surah?.number,
+    surahArabicName: (a.surah?.name ?? "").replace(/^سُورَةُ\s*/, ""),
+    text: cleanAyahText(a.surah?.number, a.numberInSurah, a.text),
+  }));
 }
 
 export function revelationLabel(type: string): string {

@@ -7,6 +7,7 @@ import { BookOpen, Search, ChevronLeft } from "lucide-react";
 import {
   fetchSurahList,
   revelationLabel,
+  surahBosnianName,
   type SurahMeta,
 } from "@/lib/quran";
 
@@ -28,6 +29,7 @@ export default function KuranPage() {
     if (!s) return sure;
     return sure.filter(
       (x) =>
+        surahBosnianName(x.number).toLowerCase().includes(s) ||
         x.englishName.toLowerCase().includes(s) ||
         x.englishNameTranslation.toLowerCase().includes(s) ||
         String(x.number).includes(s) ||
@@ -66,16 +68,26 @@ export default function KuranPage() {
           </div>
         </div>
 
-        {/* Pretraga */}
-        <div className="relative mb-5">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Traži suru (npr. Bekare, Yasin, 36...)"
-            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border bg-white text-foreground font-semibold placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
-            data-testid="input-trazi-suru"
-          />
+        {/* Pretraga + ulaz u Mushaf (po stranici) */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Traži suru (npr. El-Bekara, Ja-Sin, 36...)"
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border bg-white text-foreground font-semibold placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              data-testid="input-trazi-suru"
+            />
+          </div>
+          <Link
+            href="/kuran/stranica/1"
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white border border-card-border font-bold text-sm text-foreground hover:border-primary/40 hover:shadow-md transition-all"
+            data-testid="link-mushaf-stranice"
+          >
+            <BookOpen className="w-4 h-4 text-primary" />
+            Po stranici (Mushaf)
+          </Link>
         </div>
 
         {error && (
@@ -112,11 +124,11 @@ export default function KuranPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-extrabold text-foreground truncate">
-                        {s.englishName}
+                        {surahBosnianName(s.number)}
                       </span>
                       <span
                         className="text-primary text-xl shrink-0"
-                        style={{ fontFamily: "'Amiri Quran', serif" }}
+                        style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }}
                         dir="rtl"
                       >
                         {s.name.replace(/^سُورَةُ\s*/, "")}
