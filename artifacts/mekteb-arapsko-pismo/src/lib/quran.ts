@@ -144,6 +144,16 @@ export function surahBosnianName(surahNumber: number): string {
   return BOSNIAN_NAMES[surahNumber - 1] ?? "";
 }
 
+/**
+ * Naziv sure za prikaz: skida "سُورَةُ " prefiks i završne harakate (genitivnu
+ * kasru i sl.) da ostane kanonski oblik (npr. "الْمَائِدَةِ" -> "الْمَائِدَة").
+ */
+export function surahArabicDisplayName(rawName: string): string {
+  return rawName
+    .replace(/^سُورَةُ\s*/, "")
+    .replace(/[\u064B-\u0652\u0670]+$/u, "");
+}
+
 export interface PageAyah extends Ayah {
   surah: number; // broj sure kojoj ajet pripada
   surahArabicName: string; // arapski naziv sure (za zaglavlje na stranici)
@@ -162,7 +172,7 @@ export async function fetchPage(p: number): Promise<PageAyah[]> {
     number: a.number,
     numberInSurah: a.numberInSurah,
     surah: a.surah?.number,
-    surahArabicName: (a.surah?.name ?? "").replace(/^سُورَةُ\s*/, ""),
+    surahArabicName: surahArabicDisplayName(a.surah?.name ?? ""),
     text: cleanAyahText(a.surah?.number, a.numberInSurah, a.text),
   }));
 }

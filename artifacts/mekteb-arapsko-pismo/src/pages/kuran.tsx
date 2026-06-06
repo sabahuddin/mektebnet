@@ -8,6 +8,7 @@ import {
   fetchSurahList,
   revelationLabel,
   surahBosnianName,
+  surahArabicDisplayName,
   type SurahMeta,
 } from "@/lib/quran";
 
@@ -124,7 +125,7 @@ export default function KuranPage() {
                         style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }}
                         dir="rtl"
                       >
-                        {s.name.replace(/^سُورَةُ\s*/, "")}
+                        {surahArabicDisplayName(s.name)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-semibold mt-0.5">

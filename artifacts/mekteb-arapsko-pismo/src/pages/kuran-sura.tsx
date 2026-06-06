@@ -11,6 +11,7 @@ import {
   revelationLabel,
   surahHasBismillahHeader,
   surahBosnianName,
+  surahArabicDisplayName,
   BISMILLAH,
   type Ayah,
   type SurahMeta,
@@ -98,12 +99,9 @@ export default function KuranSuraPage() {
                 style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }}
                 dir="rtl"
               >
-                {meta.name.replace(/^سُورَةُ\s*/, "")}
+                {surahArabicDisplayName(meta.name)}
               </div>
               <div className="font-black text-lg">{bosanski}</div>
-              <div className="text-white/75 text-sm font-semibold">
-                {meta.englishNameTranslation}
-              </div>
             </div>
           </div>
         ) : null}
