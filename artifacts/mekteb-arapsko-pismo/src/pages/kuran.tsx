@@ -49,15 +49,8 @@ export default function KuranPage() {
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-black leading-tight">Kur'an Časni</h1>
-                <p className="text-white/80 text-sm font-semibold">
-                  Učenje uz Husari Mu'allim — prouči pa ponovi
-                </p>
               </div>
             </div>
-            <p className="text-white/85 text-sm mt-3 max-w-xl">
-              Odaberi suru, klikni na ajet i slušaj učenje. Aktivni ajet se boji i
-              prati se dok se uči.
-            </p>
           </div>
           <div
             className="pointer-events-none absolute -bottom-6 -left-2 text-[7rem] leading-none font-black text-white/10 select-none"
