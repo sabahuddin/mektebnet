@@ -2149,7 +2149,7 @@ function PriloziSection({
                             }
                           </p>
                         </div>
-                        <div className="flex-1 overflow-auto bg-white">
+                        <div className="flex-1 overflow-auto bg-white px-4 sm:px-6 py-4">
                           {aUrl && (
                             <Suspense fallback={
                               <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
