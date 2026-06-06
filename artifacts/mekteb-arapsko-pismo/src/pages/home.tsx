@@ -33,6 +33,19 @@ export default function Home() {
   // ruta i dalje radi za adminstratore (i muallime, ako bude trebalo testirati).
   const MODULES: ModuleCard[] = [
     {
+      href: "/kuran",
+      icon: BookMarked,
+      label: "Kur'an Časni",
+      desc: "Čitanje Kur'ana sa više učača, odabirom sure i stranice (Mushaf)",
+      color: "from-teal-500 to-emerald-600",
+      bg: "bg-teal-50",
+      border: "border-teal-200",
+      text: "text-teal-700",
+      count: "114 sura",
+      beePose: "pcela-cita-kuran.png",
+      beeAlt: "Pčela uči Kur'an",
+    },
+    {
       href: "/ilmihal",
       icon: BookOpen,
       label: t("nav.ilmihal"),
