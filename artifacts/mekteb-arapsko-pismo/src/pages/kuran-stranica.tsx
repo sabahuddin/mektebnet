@@ -91,14 +91,15 @@ export default function KuranStranicaPage() {
           <div className="text-xs font-bold uppercase tracking-wider text-white/70 text-center mb-3">
             Mushaf · stranica {pageNum} / {QURAN_PAGES}
           </div>
+          {/* RTL redoslijed (kao Mushaf): Sljedeća lijevo, Prethodna desno */}
           <div className="flex items-center justify-center gap-2">
             <button
-              onClick={() => goToPage(pageNum - 1)}
-              disabled={pageNum <= 1}
+              onClick={() => goToPage(pageNum + 1)}
+              disabled={pageNum >= QURAN_PAGES}
               className="px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-sm disabled:opacity-40 transition-colors"
-              data-testid="btn-prethodna-stranica"
+              data-testid="btn-sljedeca-stranica"
             >
-              ← Prethodna
+              ← Sljedeća
             </button>
             <form
               onSubmit={(e) => {
@@ -124,12 +125,12 @@ export default function KuranStranicaPage() {
               </button>
             </form>
             <button
-              onClick={() => goToPage(pageNum + 1)}
-              disabled={pageNum >= QURAN_PAGES}
+              onClick={() => goToPage(pageNum - 1)}
+              disabled={pageNum <= 1}
               className="px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-sm disabled:opacity-40 transition-colors"
-              data-testid="btn-sljedeca-stranica"
+              data-testid="btn-prethodna-stranica"
             >
-              Sljedeća →
+              Prethodna →
             </button>
           </div>
         </div>

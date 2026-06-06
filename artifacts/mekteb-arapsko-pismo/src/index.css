@@ -6,7 +6,8 @@
 /* Mushaf/Diyanet stil — KFGQPC HAFS Uthmanic (lokalno hostan) */
 @font-face {
   font-family: 'UthmanicHafs';
-  src: url('/fonts/UthmanicHafs.woff2') format('woff2');
+  src: url('/fonts/hafs.woff2') format('woff2'),
+       url('/fonts/hafs.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

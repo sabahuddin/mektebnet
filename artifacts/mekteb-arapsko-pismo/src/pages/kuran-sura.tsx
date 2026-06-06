@@ -145,22 +145,22 @@ export default function KuranSuraPage() {
         {/* Navigacija prethodna/sljedeća sura */}
         {!isLoading && meta && (
           <div className="flex items-center justify-between mt-6 gap-3">
-            {surahNum > 1 ? (
-              <Link
-                href={`/kuran/${surahNum - 1}`}
-                className="flex-1 text-center py-2.5 rounded-xl bg-white border border-card-border font-bold text-sm hover:border-primary/40 transition-colors"
-              >
-                ← Prethodna sura
-              </Link>
-            ) : (
-              <span className="flex-1" />
-            )}
             {surahNum < 114 ? (
               <Link
                 href={`/kuran/${surahNum + 1}`}
                 className="flex-1 text-center py-2.5 rounded-xl bg-white border border-card-border font-bold text-sm hover:border-primary/40 transition-colors"
               >
-                Sljedeća sura →
+                ← Sljedeća sura
+              </Link>
+            ) : (
+              <span className="flex-1" />
+            )}
+            {surahNum > 1 ? (
+              <Link
+                href={`/kuran/${surahNum - 1}`}
+                className="flex-1 text-center py-2.5 rounded-xl bg-white border border-card-border font-bold text-sm hover:border-primary/40 transition-colors"
+              >
+                Prethodna sura →
               </Link>
             ) : (
               <span className="flex-1" />
