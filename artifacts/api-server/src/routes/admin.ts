@@ -2652,7 +2652,14 @@ router.get("/muallim-pregled", async (req, res) => {
       email: usersTable.email,
       isActive: usersTable.isActive,
       createdAt: usersTable.createdAt,
-    }).from(usersTable).where(eq(usersTable.role, "muallim")).orderBy(usersTable.displayName);
+      isGlavni: muallimProfiliTable.isGlavni,
+      mektebNaziv: mektebiTable.naziv,
+      mektebGrad: mektebiTable.grad,
+    }).from(usersTable)
+      .leftJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
+      .leftJoin(mektebiTable, eq(mektebiTable.id, muallimProfiliTable.mektebId))
+      .where(eq(usersTable.role, "muallim"))
+      .orderBy(usersTable.displayName);
 
     const grupe = await db.select({
       id: grupeTable.id,
