@@ -56,7 +56,7 @@ export default function KuranPage() {
           <div
             className="pointer-events-none absolute -bottom-6 -left-2 text-[7rem] leading-none font-black text-white/10 select-none"
             aria-hidden="true"
-            style={{ fontFamily: "'Amiri Quran', serif" }}
+            style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }}
           >
             ﷽
           </div>
