@@ -1433,6 +1433,9 @@ export default function AdminPage() {
   const [rasporediKorisnik, setRasporediKorisnik] = useState<Korisnik | null>(null);
   const [mektebiOpcije, setMektebiOpcije] = useState<MektebOpcija[]>([]);
   const [muallimAkcija, setMuallimAkcija] = useState<number | null>(null);
+  const [noviDzematZa, setNoviDzematZa] = useState<number | null>(null);
+  const [noviDzematNaziv, setNoviDzematNaziv] = useState("");
+  const [noviDzematGrad, setNoviDzematGrad] = useState("");
   const [grupeAll, setGrupeAll] = useState<GrupaAll[]>([]);
   const [deleteKorisnik, setDeleteKorisnik] = useState<Korisnik | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -1553,6 +1556,24 @@ export default function AdminPage() {
       await loadMuallimPregled();
     } catch (e: any) {
       toast({ title: "Greška", description: e?.message || "Nije moguće promijeniti limit", variant: "destructive" });
+    } finally {
+      setMuallimAkcija(null);
+    }
+  };
+
+  const kreirajIDodijeliDzemat = async (userId: number) => {
+    if (!token) return;
+    const naziv = noviDzematNaziv.trim();
+    if (!naziv) { toast({ title: "Greška", description: "Unesite naziv džemata", variant: "destructive" }); return; }
+    setMuallimAkcija(userId);
+    try {
+      const novi = await apiRequest<{ id: number }>("POST", "/admin/mektebi", { naziv, grad: noviDzematGrad.trim() || null }, token);
+      await apiRequest("PUT", `/admin/muallim/${userId}/mekteb`, { mektebId: novi.id }, token);
+      toast({ title: "Sačuvano", description: `Džemat "${naziv}" kreiran i dodijeljen` });
+      setNoviDzematZa(null); setNoviDzematNaziv(""); setNoviDzematGrad("");
+      await Promise.all([loadMuallimPregled(), loadMektebiOpcije()]);
+    } catch {
+      toast({ title: "Greška", description: "Nije moguće kreirati džemat", variant: "destructive" });
     } finally {
       setMuallimAkcija(null);
     }
@@ -1767,17 +1788,50 @@ export default function AdminPage() {
                           <div className="flex flex-wrap items-center gap-3">
                             <div className="flex flex-col gap-1">
                               <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Džemat</label>
-                              <select
-                                value={m.mektebId ?? ""}
-                                disabled={muallimAkcija === m.id}
-                                onChange={e => dodijeliMekteb(m.id, e.target.value === "" ? null : parseInt(e.target.value))}
-                                className="border border-border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[200px]"
-                              >
-                                <option value="">Bez džemata</option>
-                                {mektebiOpcije.map(o => (
-                                  <option key={o.id} value={o.id}>{o.naziv}{o.grad ? `, ${o.grad}` : ""}</option>
-                                ))}
-                              </select>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={m.mektebId ?? ""}
+                                  disabled={muallimAkcija === m.id}
+                                  onChange={e => dodijeliMekteb(m.id, e.target.value === "" ? null : parseInt(e.target.value))}
+                                  className="border border-border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[200px]"
+                                >
+                                  <option value="">Bez džemata</option>
+                                  {mektebiOpcije.map(o => (
+                                    <option key={o.id} value={o.id}>{o.naziv}{o.grad ? `, ${o.grad}` : ""}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => { setNoviDzematZa(noviDzematZa === m.id ? null : m.id); setNoviDzematNaziv(""); setNoviDzematGrad(""); }}
+                                  className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
+                                >
+                                  {noviDzematZa === m.id ? "Otkaži" : "+ Novi džemat"}
+                                </button>
+                              </div>
+                              {noviDzematZa === m.id && (
+                                <div className="flex flex-wrap items-center gap-2 mt-1 bg-white border border-border rounded-lg p-2">
+                                  <input
+                                    type="text" placeholder="Naziv džemata"
+                                    value={noviDzematNaziv}
+                                    onChange={e => setNoviDzematNaziv(e.target.value)}
+                                    className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[180px]"
+                                  />
+                                  <input
+                                    type="text" placeholder="Grad (opcionalno)"
+                                    value={noviDzematGrad}
+                                    onChange={e => setNoviDzematGrad(e.target.value)}
+                                    className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[140px]"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={muallimAkcija === m.id || !noviDzematNaziv.trim()}
+                                    onClick={() => kreirajIDodijeliDzemat(m.id)}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                  >
+                                    Kreiraj i dodijeli
+                                  </button>
+                                </div>
+                              )}
                             </div>
                             <div className="flex flex-col gap-1">
                               <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Glavni muallim</label>
