@@ -1264,6 +1264,98 @@ router.put("/muallim/:id/licence", async (req, res) => {
   }
 });
 
+// PUT /api/admin/muallim/:id/mekteb - dodijeli/promijeni džemat postojećem muallimu
+router.put("/muallim/:id/mekteb", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const raw = req.body.mektebId;
+    const targetMektebId = raw === null || raw === undefined || raw === "" ? null : parseInt(raw);
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (!user || user.role !== "muallim") { res.status(404).json({ error: "Muallim nije pronađen" }); return; }
+
+    if (targetMektebId !== null) {
+      const [m] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, targetMektebId));
+      if (!m) { res.status(404).json({ error: "Džemat nije pronađen" }); return; }
+    }
+
+    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+
+    // Ako se muallim premješta iz džemata u kojem je bio glavni, skidamo glavni status i pointer.
+    if (profil && profil.mektebId && profil.mektebId !== targetMektebId) {
+      await db.update(mektebiTable).set({ glavniMuallimId: null })
+        .where(and(eq(mektebiTable.id, profil.mektebId), eq(mektebiTable.glavniMuallimId, userId)));
+    }
+
+    if (profil) {
+      const upd: Record<string, any> = { mektebId: targetMektebId };
+      if (profil.mektebId !== targetMektebId && profil.isGlavni) upd.isGlavni = false;
+      await db.update(muallimProfiliTable).set(upd).where(eq(muallimProfiliTable.userId, userId));
+    } else {
+      await db.insert(muallimProfiliTable).values({ userId, mektebId: targetMektebId });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/muallim/:id/glavni - proglasi/skini glavnog muallima
+router.put("/muallim/:id/glavni", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const isGlavni = req.body.isGlavni === true;
+
+    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+    if (!profil) { res.status(404).json({ error: "Muallim profil nije pronađen" }); return; }
+
+    if (isGlavni) {
+      if (!profil.mektebId) { res.status(400).json({ error: "Muallim prvo mora biti dodijeljen džematu." }); return; }
+      const mektebId = profil.mektebId;
+      // Jedan glavni po džematu: prvo skini status svim ostalima, pa postavi cilj.
+      await db.transaction(async (tx) => {
+        await tx.update(muallimProfiliTable).set({ isGlavni: false })
+          .where(and(eq(muallimProfiliTable.mektebId, mektebId), eq(muallimProfiliTable.isGlavni, true)));
+        await tx.update(muallimProfiliTable).set({ isGlavni: true }).where(eq(muallimProfiliTable.userId, userId));
+        await tx.update(mektebiTable).set({ glavniMuallimId: userId }).where(eq(mektebiTable.id, mektebId));
+      });
+    } else {
+      await db.update(muallimProfiliTable).set({ isGlavni: false }).where(eq(muallimProfiliTable.userId, userId));
+      if (profil.mektebId) {
+        await db.update(mektebiTable).set({ glavniMuallimId: null })
+          .where(and(eq(mektebiTable.id, profil.mektebId), eq(mektebiTable.glavniMuallimId, userId)));
+      }
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/mekteb/:id/dozvoljeno-muallima - povećaj/postavi dozvoljeni broj muallima
+router.put("/mekteb/:id/dozvoljeno-muallima", async (req, res) => {
+  try {
+    const mektebId = parseInt(req.params.id);
+    const dozvoljeno = parseInt(req.body.dozvoljenoMuallima);
+    if (!dozvoljeno || dozvoljeno < 1 || dozvoljeno > 99) {
+      res.status(400).json({ error: "Broj muallima mora biti između 1 i 99" }); return;
+    }
+    const [m] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId));
+    if (!m) { res.status(404).json({ error: "Džemat nije pronađen" }); return; }
+
+    const postojeci = await db.select({ userId: muallimProfiliTable.userId })
+      .from(muallimProfiliTable).where(eq(muallimProfiliTable.mektebId, mektebId));
+    if (dozvoljeno < postojeci.length) {
+      res.status(400).json({ error: `Već postoji ${postojeci.length} muallima u ovom džematu` }); return;
+    }
+
+    await db.update(mektebiTable).set({ dozvoljenoMuallima: dozvoljeno }).where(eq(mektebiTable.id, mektebId));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // GET/POST /api/admin/mektebi
 router.get("/mektebi", async (req, res) => {
   const lista = await db.select().from(mektebiTable);
@@ -2749,8 +2841,10 @@ router.get("/muallim-pregled", async (req, res) => {
       isActive: usersTable.isActive,
       createdAt: usersTable.createdAt,
       isGlavni: muallimProfiliTable.isGlavni,
+      mektebId: muallimProfiliTable.mektebId,
       mektebNaziv: mektebiTable.naziv,
       mektebGrad: mektebiTable.grad,
+      dozvoljenoMuallima: mektebiTable.dozvoljenoMuallima,
     }).from(usersTable)
       .leftJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
       .leftJoin(mektebiTable, eq(mektebiTable.id, muallimProfiliTable.mektebId))

@@ -104,9 +104,17 @@ interface MuallimPregled {
   brojUcenika: number;
   aktivniUcenici: number;
   isGlavni: boolean | null;
+  mektebId: number | null;
   mektebNaziv: string | null;
   mektebGrad: string | null;
+  dozvoljenoMuallima: number | null;
   grupe: { id: number; naziv: string; skolskaGodina: string; isActive: boolean; brojUcenika: number; aktivniUcenika: number }[];
+}
+
+interface MektebOpcija {
+  id: number;
+  naziv: string;
+  grad: string | null;
 }
 
 interface GrupaAll {
@@ -1423,6 +1431,8 @@ export default function AdminPage() {
   const muallimiPrikaz = pripremiMuallime(muallimPregled, muallimSearch, muallimSort);
 
   const [rasporediKorisnik, setRasporediKorisnik] = useState<Korisnik | null>(null);
+  const [mektebiOpcije, setMektebiOpcije] = useState<MektebOpcija[]>([]);
+  const [muallimAkcija, setMuallimAkcija] = useState<number | null>(null);
   const [grupeAll, setGrupeAll] = useState<GrupaAll[]>([]);
   const [deleteKorisnik, setDeleteKorisnik] = useState<Korisnik | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -1498,7 +1508,57 @@ export default function AdminPage() {
     } catch {}
   };
 
-  useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); }, [token]);
+  const loadMektebiOpcije = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<MektebOpcija[]>("GET", "/admin/mektebi", undefined, token);
+      setMektebiOpcije(data);
+    } catch {}
+  };
+
+  const dodijeliMekteb = async (userId: number, mektebId: number | null) => {
+    if (!token) return;
+    setMuallimAkcija(userId);
+    try {
+      await apiRequest("PUT", `/admin/muallim/${userId}/mekteb`, { mektebId }, token);
+      toast({ title: "Sačuvano", description: "Džemat ažuriran" });
+      await loadMuallimPregled();
+    } catch {
+      toast({ title: "Greška", description: "Nije moguće promijeniti džemat", variant: "destructive" });
+    } finally {
+      setMuallimAkcija(null);
+    }
+  };
+
+  const postaviGlavni = async (userId: number, isGlavni: boolean) => {
+    if (!token) return;
+    setMuallimAkcija(userId);
+    try {
+      await apiRequest("PUT", `/admin/muallim/${userId}/glavni`, { isGlavni }, token);
+      toast({ title: "Sačuvano", description: isGlavni ? "Postavljen kao glavni muallim" : "Skinut status glavnog" });
+      await loadMuallimPregled();
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće promijeniti status", variant: "destructive" });
+    } finally {
+      setMuallimAkcija(null);
+    }
+  };
+
+  const postaviDozvoljeno = async (mektebId: number, dozvoljenoMuallima: number) => {
+    if (!token) return;
+    setMuallimAkcija(mektebId);
+    try {
+      await apiRequest("PUT", `/admin/mekteb/${mektebId}/dozvoljeno-muallima`, { dozvoljenoMuallima }, token);
+      toast({ title: "Sačuvano", description: `Dozvoljeno muallima: ${dozvoljenoMuallima}` });
+      await loadMuallimPregled();
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće promijeniti limit", variant: "destructive" });
+    } finally {
+      setMuallimAkcija(null);
+    }
+  };
+
+  useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); loadMektebiOpcije(); }, [token]);
   useEffect(() => { if (activeTab === "analitika") loadAnalytics(); }, [activeTab, analyticsPeriod]);
   useEffect(() => {
     if (activeMainTab !== "korisnici" || activeTab !== "analitika") return;
@@ -1702,6 +1762,64 @@ export default function AdminPage() {
                     {expandedMuallim === m.id && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                         className="px-4 pb-4">
+                        {/* Admin kontrole: džemat, glavni, dozvoljeni broj muallima */}
+                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-3 flex flex-col gap-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Džemat</label>
+                              <select
+                                value={m.mektebId ?? ""}
+                                disabled={muallimAkcija === m.id}
+                                onChange={e => dodijeliMekteb(m.id, e.target.value === "" ? null : parseInt(e.target.value))}
+                                className="border border-border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[200px]"
+                              >
+                                <option value="">Bez džemata</option>
+                                {mektebiOpcije.map(o => (
+                                  <option key={o.id} value={o.id}>{o.naziv}{o.grad ? `, ${o.grad}` : ""}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Glavni muallim</label>
+                              <button
+                                disabled={muallimAkcija === m.id || !m.mektebId}
+                                onClick={() => postaviGlavni(m.id, !m.isGlavni)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ${m.isGlavni ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-muted text-foreground hover:bg-muted/70"}`}
+                                title={!m.mektebId ? "Muallim prvo mora imati džemat" : undefined}
+                              >
+                                {m.isGlavni ? "Skini status glavnog" : "Postavi za glavnog"}
+                              </button>
+                            </div>
+                            {m.mektebId && (
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Dozvoljeno muallima u džematu</label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number" min={1} max={99}
+                                    defaultValue={m.dozvoljenoMuallima ?? 1}
+                                    disabled={muallimAkcija === m.mektebId}
+                                    id={`dozv-${m.mektebId}`}
+                                    className="border border-border rounded-lg px-3 py-1.5 text-sm w-20 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  />
+                                  <button
+                                    disabled={muallimAkcija === m.mektebId}
+                                    onClick={() => {
+                                      const el = document.getElementById(`dozv-${m.mektebId}`) as HTMLInputElement | null;
+                                      const val = parseInt(el?.value || "");
+                                      if (val && m.mektebId) postaviDozvoljeno(m.mektebId, val);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                  >
+                                    Sačuvaj
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Glavni muallim može sam dodavati kolege u svoj džemat do dozvoljenog broja.
+                          </p>
+                        </div>
                         {m.grupe.length > 0 ? (
                           <div className="bg-muted/30 rounded-xl overflow-hidden">
                             <table className="w-full text-sm">
