@@ -3,6 +3,7 @@
 - [Background procesi se zamrznu](background-jobs-freeze.md) — nohup/long-running poslovi stanu između tool poziva; vozi duge poslove kao bounded foreground chunkove, resumable.
 - [Reorder UI mora podržavati touch](reorder-touch-drag.md) — djeca su na tabletima; koristi Pointer Events + elementFromPoint, ne HTML5 draggable; drži strelice kao fallback.
 - [Produkcija = jedini izvor istine](prod-redeploy-workflow.md) — korisnik uvijek gleda mekteb.net, nikad dev preview; promjene se vide tek nakon ručnog Coolify redeploya.
+- [Unicode u HTTP headerima](http-header-unicode.md) — bošnjački znakovi (đ/ć/š) u Content-Disposition filename ruše setHeader (ERR_INVALID_CHAR); koristi RFC5987 filename*=UTF-8''.
 - [Glavni muallim invarijanta](glavni-muallim-invarijanta.md) — tačno jedan glavni po džematu; drži usklađeno is_glavni i mektebi.glavni_muallim_id (promocija u transakciji demotuje ostale).
 - [E2E testiranje zaštićenih ruta](e2e-jwt-testing.md) — dev DB nema aktivnog glavnog muallima; potpiši HS256 JWT ručno umjesto logina (sandbox nema process.env).
 - [Mekteb dokumenti — privatni fajlovi](mekteb-dokumenti-access.md) — "samo-za-mekteb" PDF ne ide na javni /uploads; blokirani poddirektorij + autorizovana ruta + openAuthorizedFile.

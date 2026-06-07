@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, varchar, date, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -37,6 +37,10 @@ export const grupeTable = pgTable("grupe", {
   muallimId: integer("muallim_id").notNull(),
   naziv: varchar("naziv", { length: 100 }).notNull(),
   skolskaGodina: varchar("skolska_godina", { length: 20 }).notNull(),
+  // Datumi početka i kraja mektebske godine za ovu grupu. Služe za prikaz i
+  // kao trigger za "kraj godine" (izvještaj/izvoz). Nullable za stare grupe.
+  datumPocetka: date("datum_pocetka"),
+  datumKraja: date("datum_kraja"),
   daniNastave: jsonb("dani_nastave").$type<string[]>().default([]),
   vrijemeNastave: varchar("vrijeme_nastave", { length: 20 }),
   isActive: boolean("is_active").notNull().default(true),

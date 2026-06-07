@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { Layout } from "@/components/layout";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpen, CheckSquare, Square, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -77,6 +77,7 @@ export default function MuallimIzvjestajPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(true);
   const [pickerSearch, setPickerSearch] = useState("");
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -122,6 +123,44 @@ export default function MuallimIzvjestajPage() {
 
   function handlePrint() {
     window.print();
+  }
+
+  // Excel izvoz je po grupi (3 lista: prisustvo, ocjene, zbirni izvještaj).
+  const excelGrupaId: number | null =
+    matchGrupa && paramsGrupa?.id ? parseInt(paramsGrupa.id)
+    : (data?.tip === "ucenik" ? (data.ucenici[0]?.grupaId ?? null) : null);
+
+  async function handleExportExcel() {
+    if (excelGrupaId == null) return;
+    setExportingExcel(true);
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiBase()}/muallim/grupa/${excelGrupaId}/izvjestaj-excel`, { headers });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Greška pri izvozu" }));
+        throw new Error(err.error || "Greška pri izvozu");
+      }
+      const disp = res.headers.get("Content-Disposition") || "";
+      const mStar = disp.match(/filename\*=UTF-8''([^;]+)/i);
+      const mPlain = disp.match(/filename="?([^";]+)"?/i);
+      const filename = mStar ? decodeURIComponent(mStar[1])
+        : mPlain ? mPlain[1]
+        : `izvjestaj_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      setError(e?.message || "Greška pri izvozu u Excel");
+    } finally {
+      setExportingExcel(false);
+    }
   }
 
   const today = new Date().toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -179,13 +218,27 @@ export default function MuallimIzvjestajPage() {
           >
             <ArrowLeft className="w-4 h-4" /> Nazad
           </button>
-          <Button
-            onClick={handlePrint}
-            className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
-            data-testid="btn-print"
-          >
-            <Printer className="w-4 h-4" /> Štampaj / Sačuvaj kao PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            {excelGrupaId != null && (
+              <Button
+                onClick={handleExportExcel}
+                disabled={exportingExcel}
+                variant="outline"
+                className="rounded-xl font-bold text-sm flex items-center gap-2"
+                data-testid="btn-export-excel"
+              >
+                {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+                Izvezi Excel
+              </Button>
+            )}
+            <Button
+              onClick={handlePrint}
+              className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
+              data-testid="btn-print"
+            >
+              <Printer className="w-4 h-4" /> Štampaj / Sačuvaj kao PDF
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -227,7 +280,7 @@ export default function MuallimIzvjestajPage() {
                 )}
                 <p className="text-xs text-muted-foreground pt-1">
                   Muallim: <span className="font-bold text-foreground">{data.muallimDisplayName}</span>
-                  {data.skolskaGodina && <> · Školska godina: <span className="font-bold text-foreground">{data.skolskaGodina}</span></>}
+                  {data.skolskaGodina && <> · Mektebska godina: <span className="font-bold text-foreground">{data.skolskaGodina}</span></>}
                 </p>
               </div>
             </div>

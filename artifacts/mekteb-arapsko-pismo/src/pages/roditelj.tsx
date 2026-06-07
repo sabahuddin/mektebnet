@@ -204,6 +204,9 @@ function DijeteContent({
   const [childSubTab, setChildSubTab] = useState<ChildSubTab>("kalendar");
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
+  const [godine, setGodine] = useState<string[]>([]);
+  const [tekucaGodina, setTekucaGodina] = useState<string | null>(null);
+  const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<BedzInfo | null>(null);
   const [kalendarEntries, setKalendarEntries] = useState<KalendarEntry[]>([]);
@@ -217,16 +220,25 @@ function DijeteContent({
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
+  // Reset odabira godine kad se promijeni dijete (svako dijete ima svoje godine).
+  useEffect(() => {
+    setSelectedGodina(null);
+    apiRequest<{ godine: string[]; tekuca: string | null }>("GET", `/roditelj/godine/${dijete.id}`, undefined, token)
+      .then((d) => { setGodine(d.godine || []); setTekucaGodina(d.tekuca ?? null); })
+      .catch(() => { setGodine([]); setTekucaGodina(null); });
+  }, [dijete.id, token]);
+
   useEffect(() => {
     setDetailLoading(true);
+    const q = selectedGodina ? `?mektebskaGodina=${encodeURIComponent(selectedGodina)}` : "";
     Promise.all([
-      apiRequest<Prisustvo[]>("GET", `/roditelj/prisustvo/${dijete.id}`, undefined, token),
-      apiRequest<Ocjena[]>("GET", `/roditelj/ocjene/${dijete.id}`, undefined, token),
+      apiRequest<Prisustvo[]>("GET", `/roditelj/prisustvo/${dijete.id}${q}`, undefined, token),
+      apiRequest<Ocjena[]>("GET", `/roditelj/ocjene/${dijete.id}${q}`, undefined, token),
     ])
       .then(([prs, oc]) => { setPrisustvo(prs); setOcjene(oc); })
       .catch(() => {})
       .finally(() => setDetailLoading(false));
-  }, [dijete.id, token]);
+  }, [dijete.id, token, selectedGodina]);
 
   useEffect(() => {
     setKalendarLoading(true);
@@ -238,11 +250,12 @@ function DijeteContent({
 
   useEffect(() => {
     setZadaceLoading(true);
-    apiRequest<ZadacaRoditelj[]>("GET", "/roditelj/zadace", undefined, token)
+    const q = selectedGodina ? `?mektebskaGodina=${encodeURIComponent(selectedGodina)}` : "";
+    apiRequest<ZadacaRoditelj[]>("GET", `/roditelj/zadace/${dijete.id}${q}`, undefined, token)
       .then(setZadace)
       .catch(() => setZadace([]))
       .finally(() => setZadaceLoading(false));
-  }, [token]);
+  }, [token, dijete.id, selectedGodina]);
 
   useEffect(() => {
     setDokumenti(null);
@@ -309,6 +322,19 @@ function DijeteContent({
           <div className="font-extrabold text-foreground truncate">{dijete.displayName}</div>
           <div className="text-xs text-muted-foreground font-mono truncate">{dijete.username}</div>
         </div>
+        {godine.length > 0 && (
+          <select
+            data-testid="select-mektebska-godina-dijete"
+            value={selectedGodina ?? tekucaGodina ?? godine[0] ?? ""}
+            onChange={(e) => setSelectedGodina(e.target.value)}
+            className="rounded-xl border border-border/60 bg-white px-3 py-2 text-sm font-bold text-foreground shrink-0"
+            title="Mektebska godina"
+          >
+            {godine.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

@@ -24,6 +24,7 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../lib/badges.js";
 import { computeGameStats } from "./games.js";
 import { streamDokument } from "../lib/dokumenti.js";
+import { getStudentGodine, razrijesiGodinu } from "../lib/mektebska-godina.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
@@ -315,7 +316,14 @@ router.get("/prisustvo/:ucenikId", async (req, res) => {
       ));
     if (!veza) { res.status(403).json({ error: "Nemate pristup" }); return; }
 
-    const prisustvo = await db.select().from(priustvoTable).where(eq(priustvoTable.ucenikId, ucenikId));
+    let prisustvo = await db.select().from(priustvoTable).where(eq(priustvoTable.ucenikId, ucenikId));
+
+    const godineInfo = await getStudentGodine(ucenikId);
+    const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);
+    if (odabir.grupaIds) {
+      const grupeSet = new Set(odabir.grupaIds);
+      prisustvo = prisustvo.filter(p => p.grupaId != null && grupeSet.has(p.grupaId));
+    }
     res.json(prisustvo);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -334,8 +342,110 @@ router.get("/ocjene/:ucenikId", async (req, res) => {
       ));
     if (!veza) { res.status(403).json({ error: "Nemate pristup" }); return; }
 
-    const ocjene = await db.select().from(ocjeneTable).where(eq(ocjeneTable.ucenikId, ucenikId));
+    let ocjene = await db.select().from(ocjeneTable).where(eq(ocjeneTable.ucenikId, ucenikId));
+
+    const godineInfo = await getStudentGodine(ucenikId);
+    const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);
+    if (odabir.grupaIds) {
+      const grupeSet = new Set(odabir.grupaIds);
+      ocjene = ocjene.filter(o =>
+        (o.grupaId != null && grupeSet.has(o.grupaId)) ||
+        (o.grupaId == null && odabir.jeTekuca),
+      );
+    }
     res.json(ocjene);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/zadace/:ucenikId — zadaće jednog djeteta, filtrirano po
+// mektebskoj godini (default = tekuća). Vraća isti oblik kao /roditelj/zadace
+// (sa djecaIds/djecaImena radi kompatibilnosti frontenda).
+router.get("/zadace/:ucenikId", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    const [veza] = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, req.user!.userId),
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (!veza) { res.status(403).json({ error: "Nemate pristup" }); return; }
+
+    const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+
+    const godineInfo = await getStudentGodine(ucenikId);
+    const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);
+    // grupaIds === null → nema filtera (tekuća grupa); [] → tražena godina nema grupa → prazno.
+    const grupeZaZadace = odabir.grupaIds === null
+      ? (profil?.grupaId ? [profil.grupaId] : [])
+      : odabir.grupaIds;
+    if (grupeZaZadace.length === 0) { res.json([]); return; }
+
+    const [dijete] = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
+      .from(usersTable).where(eq(usersTable.id, ucenikId));
+    const djetetovoIme = dijete?.displayName || `#${ucenikId}`;
+
+    const grupe = await db.select().from(grupeTable).where(inArray(grupeTable.id, grupeZaZadace));
+    const grupaMap = new Map(grupe.map(g => [g.id, g.naziv]));
+
+    const allGroupZadace = await db.select().from(zadaceTable)
+      .where(and(inArray(zadaceTable.grupaId, grupeZaZadace), eq(zadaceTable.isActive, true)))
+      .orderBy(desc(zadaceTable.createdAt));
+    if (allGroupZadace.length === 0) { res.json([]); return; }
+
+    const targets = await db.select().from(zadaceUceniciTable)
+      .where(inArray(zadaceUceniciTable.zadacaId, allGroupZadace.map(z => z.id)));
+    const targetMap = new Map<number, Set<number>>();
+    for (const t of targets) {
+      if (!targetMap.has(t.zadacaId)) targetMap.set(t.zadacaId, new Set());
+      targetMap.get(t.zadacaId)!.add(t.ucenikId);
+    }
+
+    // Vidljive ovom djetetu: bez targeta = cijela grupa; sa targetom = mora biti adresat.
+    const visible = allGroupZadace.filter(z => {
+      const targeted = targetMap.get(z.id);
+      if (!targeted) return true;
+      return targeted.has(ucenikId);
+    });
+    if (visible.length === 0) { res.json([]); return; }
+
+    const statusi = await db.select().from(zadaceStatusTable)
+      .where(and(
+        inArray(zadaceStatusTable.zadacaId, visible.map(z => z.id)),
+        eq(zadaceStatusTable.ucenikId, ucenikId),
+      ));
+    const prolongMap = new Map(statusi.map(s => [s.zadacaId, s.prolongCount ?? 0]));
+
+    const result = visible.map(z => ({
+      ...z,
+      grupaNaziv: grupaMap.get(z.grupaId) || null,
+      djecaIds: [ucenikId],
+      djecaImena: [djetetovoIme],
+      prolongCount: prolongMap.get(z.id) ?? 0,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/godine/:ucenikId — mektebske godine za dijete + tekuća
+router.get("/godine/:ucenikId", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    const [veza] = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, req.user!.userId),
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (!veza) { res.status(403).json({ error: "Nemate pristup" }); return; }
+
+    const info = await getStudentGodine(ucenikId);
+    res.json({ godine: info.godine, tekuca: info.tekuca });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

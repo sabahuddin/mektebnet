@@ -1008,7 +1008,7 @@ export default function MuallimPanel() {
                       bg: "bg-emerald-50",
                     },
                     {
-                      label: "Školska godina",
+                      label: "Mektebska godina",
                       value: dashboardStats?.skolskaGodina || grupe[0]?.skolskaGodina || "—",
                       sub: "tekuća",
                       icon: Clock, color: "text-violet-600", bg: "bg-violet-50",

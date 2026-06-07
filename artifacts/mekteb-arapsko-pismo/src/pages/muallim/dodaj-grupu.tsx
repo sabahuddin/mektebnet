@@ -15,6 +15,8 @@ export default function DodajGrupuPage() {
   const { toast } = useToast();
   const [naziv, setNaziv] = useState("");
   const [skolskaGodina, setSkolskaGodina] = useState("Mektebska 2025/26");
+  const [datumPocetka, setDatumPocetka] = useState("");
+  const [datumKraja, setDatumKraja] = useState("");
   const [vrijemeNastave, setVrijemeNastave] = useState("");
   const [daniNastave, setDaniNastave] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +33,8 @@ export default function DodajGrupuPage() {
       await apiRequest("POST", "/muallim/grupe", {
         naziv: naziv.trim(),
         skolskaGodina,
+        datumPocetka: datumPocetka || null,
+        datumKraja: datumKraja || null,
         vrijemeNastave,
         daniNastave,
       }, token);
@@ -76,7 +80,7 @@ export default function DodajGrupuPage() {
           </div>
 
           <div>
-            <label className="text-sm font-bold text-foreground mb-1.5 block">Školska godina</label>
+            <label className="text-sm font-bold text-foreground mb-1.5 block">Mektebska godina</label>
             <input
               type="text"
               value={skolskaGodina}
@@ -84,6 +88,28 @@ export default function DodajGrupuPage() {
               placeholder="Mektebska 2025/26"
               className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-bold text-foreground mb-1.5 block">Početak mektebske godine</label>
+              <input
+                type="date"
+                value={datumPocetka}
+                onChange={e => setDatumPocetka(e.target.value)}
+                className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-bold text-foreground mb-1.5 block">Kraj mektebske godine</label>
+              <input
+                type="date"
+                value={datumKraja}
+                min={datumPocetka || undefined}
+                onChange={e => setDatumKraja(e.target.value)}
+                className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
+              />
+            </div>
           </div>
 
           <div>

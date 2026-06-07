@@ -24,6 +24,7 @@ import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists } from 
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges, buildProgressSnapshot, computeBadgeProgress } from "../lib/badges.js";
 import { streamDokument } from "../lib/dokumenti.js";
+import { getStudentGodine, razrijesiGodinu } from "../lib/mektebska-godina.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
@@ -55,13 +56,30 @@ router.get("/profil", async (req, res) => {
       muallim = m || null;
     }
 
-    const ocjene = await db.select().from(ocjeneTable)
+    // Filter po mektebskoj godini (vremenska granica). Default = tekuća godina.
+    // Napredak (lekcije/med/aferimi/kvizovi) se NE filtrira — uvijek kumulativno.
+    const godineInfo = await getStudentGodine(userId);
+    const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);
+    const filterGrupe = odabir.grupaIds; // null = bez filtera (prikaži sve)
+
+    let ocjene = await db.select().from(ocjeneTable)
       .where(eq(ocjeneTable.ucenikId, userId))
       .orderBy(desc(ocjeneTable.createdAt));
 
-    const prisustvo = await db.select().from(priustvoTable)
+    let prisustvo = await db.select().from(priustvoTable)
       .where(eq(priustvoTable.ucenikId, userId))
       .orderBy(desc(priustvoTable.createdAt));
+
+    if (filterGrupe) {
+      const grupeSet = new Set(filterGrupe);
+      // Ocjene: prikaži one iz odabrane godine; ocjene bez grupe (legacy) samo
+      // u tekućoj godini (da se ništa ne sakrije u default prikazu).
+      ocjene = ocjene.filter(o =>
+        (o.grupaId != null && grupeSet.has(o.grupaId)) ||
+        (o.grupaId == null && odabir.jeTekuca),
+      );
+      prisustvo = prisustvo.filter(p => p.grupaId != null && grupeSet.has(p.grupaId));
+    }
 
     const kvizovi = await db.select().from(kvizRezultatiTable)
       .where(eq(kvizRezultatiTable.userId, userId))
@@ -193,7 +211,24 @@ router.get("/profil", async (req, res) => {
       polozenaKrunisanja: polozenaKrunisanjaList,
     };
 
-    res.json({ user, profil, grupa, muallim, ocjene, prisustvo, kvizovi, napredak });
+    const mektebskaGodina = {
+      odabrana: odabir.godina,
+      tekuca: godineInfo.tekuca,
+      godine: godineInfo.godine,
+    };
+
+    res.json({ user, profil, grupa, muallim, ocjene, prisustvo, kvizovi, napredak, mektebskaGodina });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/ucenik/godine — lista mektebskih godina za učenika + tekuća
+router.get("/godine", async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const info = await getStudentGodine(userId);
+    res.json({ godine: info.godine, tekuca: info.tekuca });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -204,10 +239,19 @@ router.get("/kalendar", async (req, res) => {
   try {
     const userId = req.user!.userId;
     const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
-    if (!profil?.grupaId) { res.json([]); return; }
+
+    // Filter po mektebskoj godini — kalendar grupa(e) odabrane godine.
+    const godineInfo = await getStudentGodine(userId);
+    const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);
+    // grupaIds === null → nema filtera (prikaži tekuću grupu); [] → tražena godina
+    // nema grupa za ovog učenika → prazno (konzistentno s ocjenama/prisustvom).
+    const grupeZaKalendar = odabir.grupaIds === null
+      ? (profil?.grupaId ? [profil.grupaId] : [])
+      : odabir.grupaIds;
+    if (grupeZaKalendar.length === 0) { res.json([]); return; }
 
     const entries = await db.select().from(mektebKalendarTable)
-      .where(eq(mektebKalendarTable.grupaId, profil.grupaId))
+      .where(inArray(mektebKalendarTable.grupaId, grupeZaKalendar))
       .orderBy(asc(mektebKalendarTable.datum));
 
     res.json(entries);
@@ -245,10 +289,24 @@ router.get("/zadace", async (req, res) => {
   try {
     const userId = req.user!.userId;
     const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
-    if (!profil?.grupaId) { res.json([]); return; }
+
+    // Odabir mektebske godine: tekuća = aktivna grupa učenika; prošla = grupe te
+    // godine u kojima učenik ima trag (status/target zadaće).
+    const godineInfo = await getStudentGodine(userId);
+    const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);
+
+    // grupaIds === null → nema filtera (tekuća grupa); [] → tražena godina nema
+    // grupa za ovog učenika → prazno (konzistentno s ocjenama/prisustvom).
+    let grupeZaZadace: number[];
+    if (odabir.grupaIds === null) {
+      grupeZaZadace = profil?.grupaId ? [profil.grupaId] : [];
+    } else {
+      grupeZaZadace = odabir.grupaIds;
+    }
+    if (grupeZaZadace.length === 0) { res.json([]); return; }
 
     const allGroupZadace = await db.select().from(zadaceTable)
-      .where(and(eq(zadaceTable.grupaId, profil.grupaId), eq(zadaceTable.isActive, true)))
+      .where(and(inArray(zadaceTable.grupaId, grupeZaZadace), eq(zadaceTable.isActive, true)))
       .orderBy(desc(zadaceTable.createdAt));
 
     if (allGroupZadace.length === 0) { res.json([]); return; }

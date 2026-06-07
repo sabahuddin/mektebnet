@@ -243,6 +243,7 @@ interface ProfilData {
     polozeneEtape?: { medaljonId: number; nivo: number; naziv: string; slug: string; polozenoAt: string; procenat: number }[];
     polozenaKrunisanja?: { krunisanjeId: number; nivo: number; naslov: string | null; polozenoAt: string; procenat: number }[];
   };
+  mektebskaGodina?: { odabrana: string | null; tekuca: string | null; godine: string[] };
 }
 
 interface MektebDokument {
@@ -318,6 +319,8 @@ export default function UcenikProfilPage() {
   const [mapaN2, setMapaN2] = useState<Nivo1MapaData | null>(null);
   const [mapaN3, setMapaN3] = useState<Nivo1MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Odabrana mektebska godina (null = default/tekuća; server vraća odabranu).
+  const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "dokumenti" | "postavke">("moj-put");
   const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
   const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene">("aktivne");
@@ -330,19 +333,20 @@ export default function UcenikProfilPage() {
 
   useEffect(() => {
     if (!token) return;
-    apiRequest<ProfilData>("GET", "/ucenik/profil", undefined, token)
+    const q = selectedGodina ? `?mektebskaGodina=${encodeURIComponent(selectedGodina)}` : "";
+    apiRequest<ProfilData>("GET", `/ucenik/profil${q}`, undefined, token)
       .then(data => {
         setProfil(data);
         return Promise.all([
-          apiRequest<KalendarEntry[]>("GET", "/ucenik/kalendar", undefined, token).catch(() => []),
+          apiRequest<KalendarEntry[]>("GET", `/ucenik/kalendar${q}`, undefined, token).catch(() => []),
           apiRequest<PlanLekcija[]>("GET", "/ucenik/plan-lekcija", undefined, token).catch(() => []),
-          apiRequest<Zadaca[]>("GET", "/ucenik/zadace", undefined, token).catch(() => []),
+          apiRequest<Zadaca[]>("GET", `/ucenik/zadace${q}`, undefined, token).catch(() => []),
         ]);
       })
       .then(([k, p, z]) => { setKalendar(k); setPlanLekcija(p); setZadace(z); })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [token]);
+  }, [token, selectedGodina]);
 
   // Mekteb dokumenti (pravila, kućni red...) — vidljivi učeniku.
   useEffect(() => {
@@ -465,9 +469,24 @@ export default function UcenikProfilPage() {
                   {profil.muallim && <span> · Muallim: {profil.muallim.displayName}</span>}
                 </p>
               </div>
-              <Button variant="outline" className="rounded-xl" onClick={() => setLocation("/poruke")}>
-                <MessageSquare className="w-4 h-4 mr-1" /> Poruke
-              </Button>
+              <div className="flex items-center gap-2">
+                {profil.mektebskaGodina && profil.mektebskaGodina.godine.length > 0 && (
+                  <select
+                    data-testid="select-mektebska-godina"
+                    value={selectedGodina ?? profil.mektebskaGodina.odabrana ?? ""}
+                    onChange={(e) => setSelectedGodina(e.target.value)}
+                    className="rounded-xl border border-border/60 bg-white px-3 py-2 text-sm font-bold text-foreground"
+                    title="Mektebska godina"
+                  >
+                    {profil.mektebskaGodina.godine.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                )}
+                <Button variant="outline" className="rounded-xl" onClick={() => setLocation("/poruke")}>
+                  <MessageSquare className="w-4 h-4 mr-1" /> Poruke
+                </Button>
+              </div>
             </div>
 
             <div className="flex gap-2 mb-6 flex-wrap">

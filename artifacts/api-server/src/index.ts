@@ -204,6 +204,12 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS zadaca_id integer;`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS ocjene_zadaca_ucenik_uidx ON ocjene (zadaca_id, ucenik_id) WHERE zadaca_id IS NOT NULL;`);
 
+    // grupe.datum_pocetka / datum_kraja — datumi mektebske godine za grupu.
+    // Definisani u Drizzle schema/mekteb.ts; idempotentno dodajemo na svaki
+    // start da se produkcija auto-update-a bez ručne migracije.
+    await db.execute(sql`ALTER TABLE grupe ADD COLUMN IF NOT EXISTS datum_pocetka date;`);
+    await db.execute(sql`ALTER TABLE grupe ADD COLUMN IF NOT EXISTS datum_kraja date;`);
+
     // pitanja_banka.meta — jsonb kolona za interaktivne tipove (dragDrop, markWords).
     // Definisana je u Drizzle schema/content.ts, ali nije generisan novi migration
     // file (banka tabela nije u Drizzle baseline-u — kreirana ranije van Drizzle-a).

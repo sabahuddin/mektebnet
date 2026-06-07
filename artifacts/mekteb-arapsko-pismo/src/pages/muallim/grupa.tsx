@@ -19,8 +19,17 @@ interface Grupa {
   id: number;
   naziv: string;
   skolskaGodina: string;
+  datumPocetka?: string | null;
+  datumKraja?: string | null;
   daniNastave: string[];
   vrijemeNastave: string;
+}
+
+function fmtDatum(s?: string | null) {
+  if (!s) return null;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 interface Ucenik {
@@ -458,6 +467,11 @@ export default function GrupaPage() {
               {grupa.daniNastave?.length > 0 && ` · ${grupa.daniNastave.join(", ")}`}
               {grupa.vrijemeNastave && ` · ${grupa.vrijemeNastave}`}
             </p>
+            {(grupa.datumPocetka || grupa.datumKraja) && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Mektebska godina: {fmtDatum(grupa.datumPocetka) || "—"} – {fmtDatum(grupa.datumKraja) || "—"}
+              </p>
+            )}
           </div>
           <div className="text-right">
             <div className="text-3xl font-black text-secondary">{studentiGrupe.length}</div>

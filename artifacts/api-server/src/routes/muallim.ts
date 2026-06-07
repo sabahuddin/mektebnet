@@ -627,13 +627,15 @@ router.get("/grupe", async (req, res) => {
 // POST /api/muallim/grupe
 router.post("/grupe", async (req, res) => {
   try {
-    const { naziv, skolskaGodina, daniNastave, vrijemeNastave } = req.body;
+    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, datumPocetka, datumKraja } = req.body;
     const [nova] = await db.insert(grupeTable).values({
       muallimId: req.user!.userId,
       naziv,
       skolskaGodina,
       daniNastave: daniNastave || [],
       vrijemeNastave,
+      datumPocetka: datumPocetka || null,
+      datumKraja: datumKraja || null,
     }).returning();
     res.status(201).json(nova);
   } catch (err) {
@@ -644,9 +646,9 @@ router.post("/grupe", async (req, res) => {
 // PUT /api/muallim/grupe/:id
 router.put("/grupe/:id", async (req, res) => {
   try {
-    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive } = req.body;
+    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja } = req.body;
     const [updated] = await db.update(grupeTable)
-      .set({ naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive })
+      .set({ naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja })
       .where(and(eq(grupeTable.id, parseInt(req.params.id)), eq(grupeTable.muallimId, req.user!.userId)))
       .returning();
     res.json(updated);
@@ -2855,7 +2857,7 @@ router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
     const safeNaziv = ((grupa as any).naziv || "grupa").replace(/[^a-zA-Z0-9\u00C0-\u024F\u0100-\u017F_\- ]/g, "").trim().substring(0, 50);
     const filename = `izvjestaj_${safeNaziv}_${new Date().toISOString().split("T")[0]}.xlsx`;
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Disposition", `attachment; filename="izvjestaj.xlsx"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.send(Buffer.from(buf));
   } catch (err) {
     console.error("Excel export error:", err);
