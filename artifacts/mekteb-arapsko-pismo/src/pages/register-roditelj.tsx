@@ -52,7 +52,7 @@ const MEKTEB_PAKETI: Array<{
 const DRZAVE = [
   "Bosna i Hercegovina", "Hrvatska", "Srbija", "Crna Gora", "Kosovo",
   "S. Makedonija", "Slovenija", "Italija", "Austrija", "Njemačka",
-  "Francuska", "Benelux", "Švedska", "Norveška", "Finska", "UK", "USA", "Australija"
+  "Švicarska", "Francuska", "Benelux", "Švedska", "Norveška", "Finska", "UK", "USA", "Australija"
 ];
 
 function generateCaptcha(): { a: number; b: number; answer: number } {
