@@ -192,6 +192,7 @@ function Router() {
       <Route path="/muallim" component={MuallimPanel} />
       <Route path="/muallim/dodaj-ucenika" component={MuallimDodajUcenikaPage} />
       <Route path="/muallim/dodaj-grupu" component={MuallimDodajGrupuPage} />
+      <Route path="/muallim/grupa/:id/uredi" component={MuallimDodajGrupuPage} />
       <Route path="/muallim/prisustvo/:grupaId" component={MuallimPrisustvoPage} />
       <Route path="/muallim/ucenik/:id" component={MuallimUcenikPage} />
       <Route path="/muallim/grupa/:id" component={MuallimGrupaPage} />

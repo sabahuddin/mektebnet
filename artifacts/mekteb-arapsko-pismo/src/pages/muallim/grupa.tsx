@@ -8,7 +8,7 @@ import {
   ArrowLeft, Users, UserPlus, Printer, ChevronRight, ArrowRightLeft,
   Loader2, GraduationCap, X, Plus, Trash2, Star, ClipboardList, KeyRound,
   AlertTriangle, BookOpen, Copy, Check,
-  CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles, ListOrdered,
+  CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles, ListOrdered, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -452,6 +452,13 @@ export default function GrupaPage() {
             <span className="font-extrabold text-foreground truncate">{grupa.naziv}</span>
             <span className="text-xs text-muted-foreground hidden sm:inline">· {studentiGrupe.length} učenika</span>
           </div>
+          <button
+            onClick={() => setLocation(`/muallim/grupa/${grupa.id}/uredi`)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold text-sm transition-colors shrink-0"
+            data-testid="btn-uredi-grupu"
+          >
+            <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">Uredi</span>
+          </button>
         </div>
       </div>
 

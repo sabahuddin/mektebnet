@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useParams } from "wouter";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -9,8 +9,26 @@ import { useToast } from "@/hooks/use-toast";
 
 const DANI = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja"];
 
+interface Grupa {
+  id: number;
+  naziv: string;
+  skolskaGodina: string;
+  datumPocetka?: string | null;
+  datumKraja?: string | null;
+  daniNastave: string[];
+  vrijemeNastave: string;
+}
+
+function dateInput(s?: string | null) {
+  if (!s) return "";
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
 export default function DodajGrupuPage() {
   const [, setLocation] = useLocation();
+  const params = useParams();
+  const editId = params.id ? parseInt(params.id) : null;
+  const isEdit = editId !== null;
   const { token } = useAuth();
   const { toast } = useToast();
   const [naziv, setNaziv] = useState("");
@@ -20,6 +38,31 @@ export default function DodajGrupuPage() {
   const [vrijemeNastave, setVrijemeNastave] = useState("");
   const [daniNastave, setDaniNastave] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(isEdit);
+  const [loaded, setLoaded] = useState(!isEdit);
+
+  useEffect(() => {
+    if (!isEdit || !token) return;
+    setIsFetching(true);
+    apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token)
+      .then(grupe => {
+        const g = grupe.find(x => x.id === editId);
+        if (!g) {
+          toast({ title: "Greška", description: "Grupa nije pronađena", variant: "destructive" });
+          setLocation("/muallim?tab=grupe");
+          return;
+        }
+        setNaziv(g.naziv || "");
+        setSkolskaGodina(g.skolskaGodina || "");
+        setDatumPocetka(dateInput(g.datumPocetka));
+        setDatumKraja(dateInput(g.datumKraja));
+        setVrijemeNastave(g.vrijemeNastave || "");
+        setDaniNastave(g.daniNastave || []);
+        setLoaded(true);
+      })
+      .catch(() => toast({ title: "Greška", description: "Nije moguće učitati grupu", variant: "destructive" }))
+      .finally(() => setIsFetching(false));
+  }, [isEdit, editId, token]);
 
   function toggleDan(dan: string) {
     setDaniNastave(prev => prev.includes(dan) ? prev.filter(d => d !== dan) : [...prev, dan]);
@@ -27,21 +70,28 @@ export default function DodajGrupuPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!token || !naziv.trim()) return;
+    if (!token || !naziv.trim() || !loaded) return;
     setIsLoading(true);
     try {
-      await apiRequest("POST", "/muallim/grupe", {
+      const payload = {
         naziv: naziv.trim(),
         skolskaGodina,
         datumPocetka: datumPocetka || null,
         datumKraja: datumKraja || null,
         vrijemeNastave,
         daniNastave,
-      }, token);
-      toast({ title: "Grupa kreirana!", description: `"${naziv}" je uspješno dodana` });
-      setLocation("/muallim");
+      };
+      if (isEdit) {
+        await apiRequest("PUT", `/muallim/grupe/${editId}`, payload, token);
+        toast({ title: "Sačuvano!", description: `Grupa "${naziv}" je ažurirana` });
+        setLocation(`/muallim/grupa/${editId}`);
+      } else {
+        await apiRequest("POST", "/muallim/grupe", payload, token);
+        toast({ title: "Grupa kreirana!", description: `"${naziv}" je uspješno dodana` });
+        setLocation("/muallim");
+      }
     } catch {
-      toast({ title: "Greška", description: "Nije moguće kreirati grupu", variant: "destructive" });
+      toast({ title: "Greška", description: isEdit ? "Nije moguće sačuvati izmjene" : "Nije moguće kreirati grupu", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +101,7 @@ export default function DodajGrupuPage() {
     <Layout>
       <div className="max-w-lg mx-auto">
         <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Nazad na panel
+          <ArrowLeft className="w-4 h-4" /> Nazad
         </button>
 
         <div className="flex items-center gap-4 mb-8">
@@ -59,11 +109,19 @@ export default function DodajGrupuPage() {
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Nova grupa</h1>
-            <p className="text-muted-foreground text-sm">Kreiranje razreda / grupe učenika</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{isEdit ? "Uredi grupu" : "Nova grupa"}</h1>
+            <p className="text-muted-foreground text-sm">{isEdit ? "Izmjena podataka grupe" : "Kreiranje razreda / grupe učenika"}</p>
           </div>
         </div>
 
+        {isFetching ? (
+          <div className="bg-white border border-border/50 rounded-2xl p-8 text-center text-muted-foreground">Učitavanje...</div>
+        ) : !loaded ? (
+          <div className="bg-white border border-border/50 rounded-2xl p-8 text-center space-y-4">
+            <p className="text-muted-foreground">Nije moguće učitati podatke grupe.</p>
+            <Button onClick={() => setLocation("/muallim?tab=grupe")} variant="outline" className="rounded-xl font-bold">Nazad na grupe</Button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-6 space-y-5">
           <div>
             <label className="text-sm font-bold text-foreground mb-1.5 block">
@@ -145,9 +203,10 @@ export default function DodajGrupuPage() {
 
           <Button type="submit" disabled={isLoading || !naziv.trim()} className="w-full rounded-xl font-bold py-3">
             <GraduationCap className="w-4 h-4 mr-2" />
-            {isLoading ? "Kreiranje..." : "Kreiraj grupu"}
+            {isLoading ? (isEdit ? "Spremanje..." : "Kreiranje...") : (isEdit ? "Sačuvaj izmjene" : "Kreiraj grupu")}
           </Button>
         </form>
+        )}
       </div>
     </Layout>
   );

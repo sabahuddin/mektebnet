@@ -647,8 +647,16 @@ router.post("/grupe", async (req, res) => {
 router.put("/grupe/:id", async (req, res) => {
   try {
     const { naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja } = req.body;
+    const updateData: Record<string, unknown> = {};
+    if (naziv !== undefined) updateData.naziv = naziv;
+    if (skolskaGodina !== undefined) updateData.skolskaGodina = skolskaGodina;
+    if (daniNastave !== undefined) updateData.daniNastave = daniNastave;
+    if (vrijemeNastave !== undefined) updateData.vrijemeNastave = vrijemeNastave;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (datumPocetka !== undefined) updateData.datumPocetka = datumPocetka;
+    if (datumKraja !== undefined) updateData.datumKraja = datumKraja;
     const [updated] = await db.update(grupeTable)
-      .set({ naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja })
+      .set(updateData)
       .where(and(eq(grupeTable.id, parseInt(req.params.id)), eq(grupeTable.muallimId, req.user!.userId)))
       .returning();
     res.json(updated);
