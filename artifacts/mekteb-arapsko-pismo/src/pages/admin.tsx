@@ -17,13 +17,30 @@ import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 
 interface AnalyticsData {
+  period?: string;
+  granularity?: "hour" | "day";
+  kpi?: {
+    posjete: number; posjetePrev: number;
+    jedinstveni: number; jedinstveniPrev: number;
+    registracije: number; registracijePrev: number;
+    kvizovi: number; kvizoviPrev: number;
+  };
   registracijePoMjesecu: { datum: string; broj: number }[];
   posjetePoDrzavi: { country: string; broj: number }[];
+  najposjecenijeStranice?: { path: string; broj: number }[];
+  uredjaji?: { tip: string; broj: number }[];
   kvizRezultati: { kvizNaslov: string; pokusaji: number; prosjecniProcenat: number; prosjecniBodovi: number; najvisiBodovi: number }[];
   aktivnostPosmjenama: { datum: string; broj: number }[];
   korisnikStats: { role: string; aktivni: number; neaktivni: number }[];
   nedavniRezultati: { id: number; userId: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string; username: string; displayName: string }[];
 }
+
+type AnalyticsPeriod = "danas" | "7d" | "30d";
+const PERIOD_LABELS: Record<AnalyticsPeriod, string> = {
+  danas: "Danas",
+  "7d": "Zadnjih 7 dana",
+  "30d": "Zadnjih 30 dana",
+};
 
 interface OnlineData {
   ukupno: number;
@@ -1370,6 +1387,7 @@ export default function AdminPage() {
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>("30d");
   const [online, setOnline] = useState<OnlineData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -1441,10 +1459,10 @@ export default function AdminPage() {
   };
 
   const loadAnalytics = async () => {
-    if (!token || analytics) return;
+    if (!token) return;
     setAnalyticsLoading(true);
     try {
-      const data = await apiRequest<AnalyticsData>("GET", "/admin/analytics", undefined, token);
+      const data = await apiRequest<AnalyticsData>("GET", `/admin/analytics?period=${analyticsPeriod}`, undefined, token);
       setAnalytics(data);
     } catch {
       toast({ title: "Greška", description: "Analitika nedostupna", variant: "destructive" });
@@ -1481,7 +1499,7 @@ export default function AdminPage() {
   };
 
   useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); }, [token]);
-  useEffect(() => { if (activeTab === "analitika") loadAnalytics(); }, [activeTab]);
+  useEffect(() => { if (activeTab === "analitika") loadAnalytics(); }, [activeTab, analyticsPeriod]);
   useEffect(() => {
     if (activeMainTab !== "korisnici" || activeTab !== "analitika") return;
     loadOnline();
@@ -1766,22 +1784,72 @@ export default function AdminPage() {
               )}
             </div>
 
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-bold text-muted-foreground mr-1">Period:</span>
+              {(["danas", "7d", "30d"] as AnalyticsPeriod[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setAnalyticsPeriod(p)}
+                  className={`text-sm font-bold px-3.5 py-1.5 rounded-full border transition-colors ${
+                    analyticsPeriod === p
+                      ? "bg-teal-600 text-white border-teal-600"
+                      : "bg-white text-foreground border-border/60 hover:bg-muted/50"
+                  }`}
+                >
+                  {PERIOD_LABELS[p]}
+                </button>
+              ))}
+            </div>
+
             {analyticsLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
               </div>
             ) : analytics ? (
               <>
+                {analytics.kpi && (() => {
+                  const promjena = (sad: number, prije: number) => {
+                    if (prije === 0) return sad > 0 ? 100 : 0;
+                    return Math.round(((sad - prije) / prije) * 100);
+                  };
+                  const kartice = [
+                    { naslov: "Posjete", vrijednost: analytics.kpi.posjete, prev: analytics.kpi.posjetePrev, icon: TrendingUp, boja: "text-teal-600" },
+                    { naslov: "Jedinstveni posjetioci", vrijednost: analytics.kpi.jedinstveni, prev: analytics.kpi.jedinstveniPrev, icon: Users, boja: "text-blue-600" },
+                    { naslov: "Nove registracije", vrijednost: analytics.kpi.registracije, prev: analytics.kpi.registracijePrev, icon: UserCog, boja: "text-indigo-600" },
+                    { naslov: "Završeni kvizovi", vrijednost: analytics.kpi.kvizovi, prev: analytics.kpi.kvizoviPrev, icon: Award, boja: "text-amber-600" },
+                  ];
+                  return (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {kartice.map(k => {
+                        const p = promjena(k.vrijednost, k.prev);
+                        const Icon = k.icon;
+                        return (
+                          <div key={k.naslov} className="bg-white border border-border/50 rounded-2xl p-4">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-bold text-muted-foreground">{k.naslov}</span>
+                              <Icon className={`w-4 h-4 ${k.boja}`} />
+                            </div>
+                            <div className="text-2xl font-extrabold text-foreground">{k.vrijednost.toLocaleString("bs")}</div>
+                            <div className={`text-xs font-bold mt-1 ${p > 0 ? "text-emerald-600" : p < 0 ? "text-red-500" : "text-muted-foreground"}`}>
+                              {p > 0 ? "▲" : p < 0 ? "▼" : "■"} {Math.abs(p)}% vs prethodni period
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <TrendingUp className="w-5 h-5 text-teal-600" /> Posjete (zadnjih 30 dana)
+                      <TrendingUp className="w-5 h-5 text-teal-600" /> Posjete ({PERIOD_LABELS[analyticsPeriod].toLowerCase()})
                     </h3>
                     {analytics.aktivnostPosmjenama.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>
                         <LineChart data={analytics.aktivnostPosmjenama}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+                          <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.length > 5 ? d.slice(5) : d} />
                           <YAxis tick={{ fontSize: 11 }} />
                           <Tooltip labelFormatter={l => `Datum: ${l}`} />
                           <Line type="monotone" dataKey="broj" stroke="#0d9488" strokeWidth={2} dot={false} />
@@ -1794,13 +1862,13 @@ export default function AdminPage() {
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <Users className="w-5 h-5 text-blue-600" /> Nove registracije (30 dana)
+                      <Users className="w-5 h-5 text-blue-600" /> Nove registracije ({PERIOD_LABELS[analyticsPeriod].toLowerCase()})
                     </h3>
                     {analytics.registracijePoMjesecu.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>
                         <BarChart data={analytics.registracijePoMjesecu}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+                          <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.length > 5 ? d.slice(5) : d} />
                           <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                           <Tooltip labelFormatter={l => `Datum: ${l}`} />
                           <Bar dataKey="broj" fill="#3b82f6" radius={[6, 6, 0, 0]} />
@@ -1833,6 +1901,61 @@ export default function AdminPage() {
                       </ResponsiveContainer>
                     ) : (
                       <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o posjetama</p>
+                    )}
+                  </div>
+
+                  <div className="bg-white border border-border/50 rounded-2xl p-5">
+                    <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
+                      <FileText className="w-5 h-5 text-rose-600" /> Najposjećenije stranice
+                    </h3>
+                    {analytics.najposjecenijeStranice && analytics.najposjecenijeStranice.length > 0 ? (
+                      <div className="space-y-2">
+                        {analytics.najposjecenijeStranice.map(s => {
+                          const max = analytics.najposjecenijeStranice![0].broj || 1;
+                          return (
+                            <div key={s.path}>
+                              <div className="flex items-center justify-between text-sm mb-1">
+                                <span className="font-medium text-foreground truncate mr-2" title={s.path}>{s.path}</span>
+                                <span className="font-extrabold text-foreground shrink-0">{s.broj.toLocaleString("bs")}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
+                                <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.max(4, (s.broj / max) * 100)}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o stranicama</p>
+                    )}
+                  </div>
+
+                  <div className="bg-white border border-border/50 rounded-2xl p-5">
+                    <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
+                      <BarChart3 className="w-5 h-5 text-emerald-600" /> Posjete po uređajima
+                    </h3>
+                    {analytics.uredjaji && analytics.uredjaji.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <PieChart>
+                          <Pie
+                            data={analytics.uredjaji}
+                            dataKey="broj"
+                            nameKey="tip"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={90}
+                            label={(e: any) => `${e.tip} (${e.broj})`}
+                            labelLine={false}
+                          >
+                            {analytics.uredjaji.map((u, i) => (
+                              <Cell key={u.tip} fill={["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6"][i % 4]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => `${value} posjeta`} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o uređajima</p>
                     )}
                   </div>
                 </div>

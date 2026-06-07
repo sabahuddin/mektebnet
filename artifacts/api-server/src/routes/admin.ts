@@ -2475,16 +2475,80 @@ router.get("/analytics", async (req, res) => {
     }
   };
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // Period: "danas" | "7d" | "30d" (default 30d). "danas" = od ponoći po Sarajevo vremenu.
+  const period = ((req.query.period as string) || "30d");
+  const now = new Date();
+  let windowStart: Date;
+  if (period === "danas") {
+    const saraWall = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Sarajevo" }));
+    const msOdPonoci = saraWall.getHours() * 3600000 + saraWall.getMinutes() * 60000 + saraWall.getSeconds() * 1000 + saraWall.getMilliseconds();
+    windowStart = new Date(now.getTime() - msOdPonoci);
+  } else if (period === "7d") {
+    windowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else {
+    windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+  const duration = now.getTime() - windowStart.getTime();
+  const prevStart = new Date(windowStart.getTime() - duration);
+  const granularity: "hour" | "day" = period === "danas" ? "hour" : "day";
+
+  const bucketPosjete = granularity === "hour"
+    ? sql<string>`to_char(${posjeteTable.createdAt}, 'HH24:00')`
+    : sql<string>`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`;
+  const bucketReg = granularity === "hour"
+    ? sql<string>`to_char(${usersTable.createdAt}, 'HH24:00')`
+    : sql<string>`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`;
+
+  // ── KPI sažeci (tekući period + prethodni jednaki period za % promjenu) ──
+  const posjeteAgg = (await safe("posjeteAgg", () =>
+    db.select({
+      broj: sql<number>`count(*)::int`,
+      uniq: sql<number>`count(distinct ${posjeteTable.ip})::int`,
+    }).from(posjeteTable).where(gte(posjeteTable.createdAt, windowStart)),
+    [] as { broj: number; uniq: number }[],
+  ))[0] ?? { broj: 0, uniq: 0 };
+
+  const posjetePrevAgg = (await safe("posjetePrevAgg", () =>
+    db.select({
+      broj: sql<number>`count(*)::int`,
+      uniq: sql<number>`count(distinct ${posjeteTable.ip})::int`,
+    }).from(posjeteTable).where(and(gte(posjeteTable.createdAt, prevStart), lt(posjeteTable.createdAt, windowStart))),
+    [] as { broj: number; uniq: number }[],
+  ))[0] ?? { broj: 0, uniq: 0 };
+
+  const regNow = (await safe("regNow", () =>
+    db.select({ broj: sql<number>`count(*)::int` }).from(usersTable).where(gte(usersTable.createdAt, windowStart)),
+    [] as { broj: number }[],
+  ))[0]?.broj ?? 0;
+  const regPrev = (await safe("regPrev", () =>
+    db.select({ broj: sql<number>`count(*)::int` }).from(usersTable).where(and(gte(usersTable.createdAt, prevStart), lt(usersTable.createdAt, windowStart))),
+    [] as { broj: number }[],
+  ))[0]?.broj ?? 0;
+
+  const kvizNow = (await safe("kvizNow", () =>
+    db.select({ broj: sql<number>`count(*)::int` }).from(kvizRezultatiTable).where(gte(kvizRezultatiTable.completedAt, windowStart)),
+    [] as { broj: number }[],
+  ))[0]?.broj ?? 0;
+  const kvizPrev = (await safe("kvizPrev", () =>
+    db.select({ broj: sql<number>`count(*)::int` }).from(kvizRezultatiTable).where(and(gte(kvizRezultatiTable.completedAt, prevStart), lt(kvizRezultatiTable.completedAt, windowStart))),
+    [] as { broj: number }[],
+  ))[0]?.broj ?? 0;
+
+  const kpi = {
+    posjete: posjeteAgg.broj, posjetePrev: posjetePrevAgg.broj,
+    jedinstveni: posjeteAgg.uniq, jedinstveniPrev: posjetePrevAgg.uniq,
+    registracije: regNow, registracijePrev: regPrev,
+    kvizovi: kvizNow, kvizoviPrev: kvizPrev,
+  };
 
   const registracijePoMjesecu = await safe("registracijePoMjesecu", () =>
     db.select({
-      datum: sql<string>`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`,
+      datum: bucketReg,
       broj: sql<number>`count(*)::int`,
     }).from(usersTable)
-      .where(gte(usersTable.createdAt, thirtyDaysAgo))
-      .groupBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`)
-      .orderBy(sql`to_char(${usersTable.createdAt}, 'YYYY-MM-DD')`),
+      .where(gte(usersTable.createdAt, windowStart))
+      .groupBy(bucketReg)
+      .orderBy(bucketReg),
     [] as { datum: string; broj: number }[],
   );
 
@@ -2493,7 +2557,7 @@ router.get("/analytics", async (req, res) => {
       country: posjeteTable.country,
       broj: sql<number>`count(*)::int`,
     }).from(posjeteTable)
-      .where(and(gte(posjeteTable.createdAt, thirtyDaysAgo), isNotNull(posjeteTable.country)))
+      .where(and(gte(posjeteTable.createdAt, windowStart), isNotNull(posjeteTable.country)))
       .groupBy(posjeteTable.country)
       .orderBy(sql`count(*) desc`)
       .limit(20),
@@ -2502,13 +2566,40 @@ router.get("/analytics", async (req, res) => {
 
   const aktivnostPosmjenama = await safe("aktivnostPosmjenama", () =>
     db.select({
-      datum: sql<string>`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`,
+      datum: bucketPosjete,
       broj: sql<number>`count(*)::int`,
     }).from(posjeteTable)
-      .where(gte(posjeteTable.createdAt, thirtyDaysAgo))
-      .groupBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`)
-      .orderBy(sql`to_char(${posjeteTable.createdAt}, 'YYYY-MM-DD')`),
+      .where(gte(posjeteTable.createdAt, windowStart))
+      .groupBy(bucketPosjete)
+      .orderBy(bucketPosjete),
     [] as { datum: string; broj: number }[],
+  );
+
+  const najposjecenijeStranice = await safe("najposjecenijeStranice", () =>
+    db.select({
+      path: posjeteTable.path,
+      broj: sql<number>`count(*)::int`,
+    }).from(posjeteTable)
+      .where(gte(posjeteTable.createdAt, windowStart))
+      .groupBy(posjeteTable.path)
+      .orderBy(sql`count(*) desc`)
+      .limit(8),
+    [] as { path: string; broj: number }[],
+  );
+
+  const deviceExpr = sql<string>`case
+    when ${posjeteTable.userAgent} ilike '%ipad%' or ${posjeteTable.userAgent} ilike '%tablet%' or (${posjeteTable.userAgent} ilike '%android%' and ${posjeteTable.userAgent} not ilike '%mobile%') then 'Tablet'
+    when ${posjeteTable.userAgent} ilike '%mobile%' or ${posjeteTable.userAgent} ilike '%iphone%' or ${posjeteTable.userAgent} ilike '%android%' then 'Mobitel'
+    else 'Računar' end`;
+  const uredjaji = await safe("uredjaji", () =>
+    db.select({
+      tip: deviceExpr,
+      broj: sql<number>`count(*)::int`,
+    }).from(posjeteTable)
+      .where(and(gte(posjeteTable.createdAt, windowStart), isNotNull(posjeteTable.userAgent)))
+      .groupBy(deviceExpr)
+      .orderBy(sql`count(*) desc`),
+    [] as { tip: string; broj: number }[],
   );
 
   const kvizRezultati = await safe("kvizRezultati", () =>
@@ -2565,8 +2656,13 @@ router.get("/analytics", async (req, res) => {
   );
 
   res.json({
+    period,
+    granularity,
+    kpi,
     registracijePoMjesecu,
     posjetePoDrzavi,
+    najposjecenijeStranice,
+    uredjaji,
     kvizRezultati,
     aktivnostPosmjenama,
     korisnikStats,
