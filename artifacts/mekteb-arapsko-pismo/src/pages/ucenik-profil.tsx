@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
   Flame, Trophy, Sparkles, Target, Footprints, Settings, Volume2, VolumeX,
-  FileText, Clock, AlertCircle, Medal, Lock, CheckCircle2
+  FileText, Clock, AlertCircle, Medal, Lock, CheckCircle2, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -244,6 +245,22 @@ interface ProfilData {
   };
 }
 
+interface MektebDokument {
+  id: number;
+  naziv: string;
+  opis: string | null;
+  originalName: string;
+  storedName: string;
+  fileSize: number;
+  createdAt: string | null;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
 interface KalendarEntry {
   id: number; datum: string; tip: string; opis?: string;
 }
@@ -289,6 +306,7 @@ const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 
 export default function UcenikProfilPage() {
   const { user, token } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [profil, setProfil] = useState<ProfilData | null>(null);
   const [kalendar, setKalendar] = useState<KalendarEntry[]>([]);
@@ -300,7 +318,8 @@ export default function UcenikProfilPage() {
   const [mapaN2, setMapaN2] = useState<Nivo1MapaData | null>(null);
   const [mapaN3, setMapaN3] = useState<Nivo1MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "postavke">("moj-put");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "dokumenti" | "postavke">("moj-put");
+  const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
   const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene">("aktivne");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
   const reducedMotion = prefersReducedMotion();
@@ -323,6 +342,14 @@ export default function UcenikProfilPage() {
       .then(([k, p, z]) => { setKalendar(k); setPlanLekcija(p); setZadace(z); })
       .catch(() => {})
       .finally(() => setIsLoading(false));
+  }, [token]);
+
+  // Mekteb dokumenti (pravila, kućni red...) — vidljivi učeniku.
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<MektebDokument[]>("GET", "/ucenik/dokumenti", undefined, token)
+      .then(setDokumenti)
+      .catch(() => setDokumenti([]));
   }, [token]);
 
   useEffect(() => {
@@ -385,6 +412,7 @@ export default function UcenikProfilPage() {
     { id: "zadace", label: "Zadaće", icon: FileText, badge: zadace.length },
     { id: "kalendar", label: "Kalendar", icon: Calendar },
     { id: "kvizovi", label: "Kvizovi", icon: ClipboardList },
+    { id: "dokumenti", label: "Dokumenti", icon: FileText, badge: dokumenti?.length ?? 0 },
     { id: "postavke", label: "Postavke", icon: Settings },
   ] as const;
 
@@ -1382,6 +1410,42 @@ export default function UcenikProfilPage() {
                             {r.completedAt ? new Date(r.completedAt).toLocaleDateString("bs-BA") : "—"}
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "dokumenti" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="bg-white border border-border/50 rounded-2xl p-5">
+                  <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-1">
+                    <FileText className="w-5 h-5 text-primary" /> Dokumenti mekteba
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">Pravila, kućni red i druga obavještenja tvog mekteba.</p>
+                  {dokumenti === null ? (
+                    <div className="flex flex-col gap-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
+                  ) : dokumenti.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">Još nema dokumenata.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {dokumenti.map(d => (
+                        <button
+                          key={d.id}
+                          onClick={() => openAuthorizedFile(`/ucenik/dokumenti/${d.id}/file`, token).catch((e: any) => toast({ title: "Greška", description: e?.message || "Otvaranje nije uspjelo", variant: "destructive" }))}
+                          className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border/40 hover:bg-muted/30 transition-all"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-foreground truncate">{d.naziv}</p>
+                            {d.opis && <p className="text-sm text-muted-foreground truncate">{d.opis}</p>}
+                            <p className="text-xs text-muted-foreground/70 mt-0.5">{formatFileSize(d.fileSize)}</p>
+                          </div>
+                          <Download className="w-5 h-5 text-muted-foreground shrink-0" />
+                        </button>
                       ))}
                     </div>
                   )}

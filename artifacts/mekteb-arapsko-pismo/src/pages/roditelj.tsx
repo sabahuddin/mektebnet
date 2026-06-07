@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { apiRequest, getApiBase } from "@/lib/api";
+import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
-import { CalendarCheck, Star, Link2, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Award, Settings, Megaphone, MessageSquare, User as UserIcon, Calendar, ClipboardList, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { CalendarCheck, Star, Link2, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Award, Settings, Megaphone, MessageSquare, User as UserIcon, Calendar, ClipboardList, ChevronLeft, ChevronRight, Clock, FileText, Download } from "lucide-react";
 import { PushToggle } from "@/components/push-toggle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -170,7 +170,23 @@ const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const MJESEC_NAZIVI = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
 
 type TopTab = "obavjestenja" | "poruke" | "profil" | number;
-type ChildSubTab = "kalendar" | "zadaca" | "ocjene" | "prisustvo";
+type ChildSubTab = "kalendar" | "zadaca" | "ocjene" | "prisustvo" | "dokumenti";
+
+interface MektebDokument {
+  id: number;
+  naziv: string;
+  opis: string | null;
+  originalName: string;
+  storedName: string;
+  fileSize: number;
+  createdAt: string | null;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
 
 function DijeteContent({
   dijete,
@@ -194,6 +210,7 @@ function DijeteContent({
   const [kalendarLoading, setKalendarLoading] = useState(false);
   const [zadace, setZadace] = useState<ZadacaRoditelj[]>([]);
   const [zadaceLoading, setZadaceLoading] = useState(false);
+  const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
@@ -226,6 +243,13 @@ function DijeteContent({
       .catch(() => setZadace([]))
       .finally(() => setZadaceLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    setDokumenti(null);
+    apiRequest<MektebDokument[]>("GET", `/roditelj/dijete/${dijete.id}/dokumenti`, undefined, token)
+      .then(setDokumenti)
+      .catch(() => setDokumenti([]));
+  }, [dijete.id, token]);
 
   const filteredZadace = useMemo(() =>
     zadace.filter(z => z.djecaIds.includes(dijete.id)),
@@ -272,6 +296,7 @@ function DijeteContent({
     { id: "zadaca", label: "Zadaća", icon: ClipboardList },
     { id: "ocjene", label: "Ocjene", icon: Star },
     { id: "prisustvo", label: "Prisustvo", icon: CalendarCheck },
+    { id: "dokumenti", label: "Dokumenti", icon: FileText },
   ];
 
   return (
@@ -623,6 +648,37 @@ function DijeteContent({
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {childSubTab === "dokumenti" && (
+        <div className="bg-white border border-border/50 rounded-2xl p-4">
+          <p className="text-sm text-muted-foreground mb-4">Pravila, kućni red i druga obavještenja mekteba.</p>
+          {dokumenti === null ? (
+            <div className="flex flex-col gap-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
+          ) : dokumenti.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Još nema dokumenata.</p>
+          ) : (
+            <div className="space-y-2">
+              {dokumenti.map(d => (
+                <button
+                  key={d.id}
+                  onClick={() => openAuthorizedFile(`/roditelj/dijete/${dijete.id}/dokumenti/${d.id}/file`, token).catch((e: any) => alert(e?.message || "Otvaranje dokumenta nije uspjelo"))}
+                  className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border/40 hover:bg-muted/30 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-foreground truncate">{d.naziv}</p>
+                    {d.opis && <p className="text-sm text-muted-foreground truncate">{d.opis}</p>}
+                    <p className="text-xs text-muted-foreground/70 mt-0.5">{formatFileSize(d.fileSize)}</p>
+                  </div>
+                  <Download className="w-5 h-5 text-muted-foreground shrink-0" />
+                </button>
+              ))}
             </div>
           )}
         </div>

@@ -120,6 +120,25 @@ export const grupaRasporedTable = pgTable("grupa_raspored", {
   grupaNivoIdx: index("grupa_raspored_grupa_nivo_idx").on(t.grupaId, t.nivo, t.pozicija),
 }));
 
+// Mekteb-nivo dokumenti (PDF): pravila, kućni red i sl. Uploaduje ih glavni
+// muallim; vidljivi su svim učenicima i roditeljima tog mekteba.
+export const mektebDokumentiTable = pgTable("mekteb_dokumenti", {
+  id: serial("id").primaryKey(),
+  mektebId: integer("mekteb_id").notNull(),
+  naziv: varchar("naziv", { length: 200 }).notNull(),
+  opis: text("opis"),
+  originalName: text("original_name").notNull(),
+  storedName: varchar("stored_name", { length: 300 }).notNull(),
+  fileSize: integer("file_size").notNull().default(0),
+  mimeType: varchar("mime_type", { length: 100 }).notNull().default("application/pdf"),
+  uploadedByUserId: integer("uploaded_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  mektebIdx: index("mekteb_dokumenti_mekteb_idx").on(t.mektebId),
+}));
+
+export type MektebDokument = typeof mektebDokumentiTable.$inferSelect;
+
 export type GrupaRaspored = typeof grupaRasporedTable.$inferSelect;
 export type InsertGrupaRaspored = typeof grupaRasporedTable.$inferInsert;
 

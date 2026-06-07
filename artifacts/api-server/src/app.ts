@@ -85,8 +85,25 @@ function parseCookie(header: string | undefined, name: string): string | null {
   return null;
 }
 function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
+  // Kanonikaliziramo putanju PRIJE provjere kako se zabrana ne bi mogla zaobići
+  // varijantama URL-a (`/./`, `//`, encoded segmenti) koje static sloj svejedno
+  // resolve-a u isti fajl.
+  let decoded = req.path;
+  try { decoded = decodeURIComponent(req.path); } catch { /* zadrži original */ }
+  const normPath = path.posix
+    .normalize("/" + decoded.replace(/\\/g, "/"))
+    .replace(/\/{2,}/g, "/");
+  const firstSeg = normPath.split("/").filter(Boolean)[0];
+
+  // Mekteb dokumenti (pravila, kućni red...) NISU javni — direktni static pristup
+  // je blokiran; serviraju se isključivo kroz autorizovane API rute koje provjeravaju
+  // role i pripadnost mektebu (muallim/ucenik/roditelj /dokumenti/:id/file).
+  if (firstSeg === "mekteb-dokumenti") {
+    res.status(403).json({ error: "Pristup nije dozvoljen" });
+    return;
+  }
   // Samo /h5p/... pod /uploads ide kroz auth — ostalo (npr. /pdfs/, /images/) prolazi.
-  if (!req.path.startsWith("/h5p/")) return next();
+  if (firstSeg !== "h5p") return next();
   const cookieToken = parseCookie(req.headers.cookie, "mekteb_h5p_session");
   const headerToken = req.headers.authorization?.startsWith("Bearer ")
     ? req.headers.authorization.slice(7)

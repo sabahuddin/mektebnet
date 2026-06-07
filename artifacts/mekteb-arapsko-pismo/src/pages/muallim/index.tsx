@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
   Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound
+  Heart, School, Copy, KeyRound, Upload
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -284,11 +284,27 @@ interface MektebStatsAll {
   }[];
 }
 
+interface MektebDokument {
+  id: number;
+  naziv: string;
+  opis: string | null;
+  originalName: string;
+  storedName: string;
+  fileSize: number;
+  createdAt: string | null;
+}
+
 function formatScreentime(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   if (h > 0) return `${h}h ${m}min`;
   return `${m}min`;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
 }
 
 export default function MuallimPanel() {
@@ -342,6 +358,11 @@ export default function MuallimPanel() {
   const [kreiranMuallim, setKreiranMuallim] = useState<{ displayName: string; username: string; generatedPassword: string } | null>(null);
   const [muallimSaving, setMuallimSaving] = useState(false);
   const [mektebStatsAll, setMektebStatsAll] = useState<MektebStatsAll | null>(null);
+  const [mektebDokumenti, setMektebDokumenti] = useState<MektebDokument[] | null>(null);
+  const [dokNaziv, setDokNaziv] = useState("");
+  const [dokOpis, setDokOpis] = useState("");
+  const [dokFile, setDokFile] = useState<File | null>(null);
+  const [dokUploading, setDokUploading] = useState(false);
 
   const [selectedGrupaId, setSelectedGrupaId] = useState<number | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
@@ -445,6 +466,46 @@ export default function MuallimPanel() {
       .catch(() => {})
       .finally(() => setKalendarSveLoading(false));
   }, [token, activeTab, kalendarMode, kalendarSve]);
+
+  // Učitaj mekteb dokumente kad glavni muallim otvori "Mekteb" tab.
+  useEffect(() => {
+    if (!token || activeTab !== "mekteb") return;
+    apiRequest<MektebDokument[]>("GET", "/muallim/mekteb/dokumenti", undefined, token)
+      .then(setMektebDokumenti)
+      .catch(() => setMektebDokumenti([]));
+  }, [token, activeTab]);
+
+  async function handleUploadDokument() {
+    if (!token || !dokFile) return;
+    setDokUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", dokFile);
+      fd.append("naziv", dokNaziv.trim());
+      fd.append("opis", dokOpis.trim());
+      const created = await apiRequest<MektebDokument>("POST", "/muallim/mekteb/dokumenti", fd, token, true);
+      setMektebDokumenti(prev => [created, ...(prev || [])]);
+      setDokNaziv("");
+      setDokOpis("");
+      setDokFile(null);
+      toast({ title: "Dokument dodan", description: created.naziv });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Upload nije uspio", variant: "destructive" });
+    } finally {
+      setDokUploading(false);
+    }
+  }
+
+  async function handleDeleteDokument(id: number) {
+    if (!token) return;
+    if (!window.confirm("Obrisati ovaj dokument?")) return;
+    try {
+      await apiRequest("DELETE", `/muallim/mekteb/dokumenti/${id}`, undefined, token);
+      setMektebDokumenti(prev => (prev || []).filter(d => d.id !== id));
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Brisanje nije uspjelo", variant: "destructive" });
+    }
+  }
 
   async function handleApproveRoditelj(roditeljUcenikId: number, approved: boolean) {
     if (!token) return;
@@ -1865,6 +1926,91 @@ export default function MuallimPanel() {
             {/* MEKTEB STATISTIKA (samo glavni muallim) */}
             {activeTab === "mekteb" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                {/* DOKUMENTI — pravila, kućni red, obavještenja (PDF) */}
+                <div className="bg-white rounded-2xl border border-border/50 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="w-4 h-4 text-primary" />
+                    <h3 className="font-bold text-sm text-foreground">Dokumenti mekteba</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Dodajte PDF dokumente (pravila, kućni red, obavještenja). Vidljivi su svim učenicima i roditeljima u mektebu.
+                  </p>
+
+                  <div className="bg-muted/30 rounded-xl p-4 mb-4 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={dokNaziv}
+                        onChange={e => setDokNaziv(e.target.value)}
+                        placeholder="Naziv dokumenta (npr. Kućni red)"
+                        className="w-full rounded-lg border border-border/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <input
+                        type="text"
+                        value={dokOpis}
+                        onChange={e => setDokOpis(e.target.value)}
+                        placeholder="Kratak opis (neobavezno)"
+                        className="w-full rounded-lg border border-border/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="inline-flex items-center gap-2 cursor-pointer rounded-lg border border-border/60 bg-white px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/50">
+                        <Upload className="w-4 h-4 text-muted-foreground" />
+                        {dokFile ? dokFile.name : "Odaberi PDF"}
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          className="hidden"
+                          onChange={e => setDokFile(e.target.files?.[0] || null)}
+                        />
+                      </label>
+                      <button
+                        onClick={handleUploadDokument}
+                        disabled={!dokFile || !dokNaziv.trim() || dokUploading}
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50 hover:bg-primary/90 transition-all"
+                      >
+                        {dokUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        Dodaj dokument
+                      </button>
+                      <span className="text-xs text-muted-foreground">Samo PDF, do 20 MB.</span>
+                    </div>
+                  </div>
+
+                  {mektebDokumenti === null ? (
+                    <div className="flex flex-col gap-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
+                  ) : mektebDokumenti.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Još nema dodanih dokumenata.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {mektebDokumenti.map(d => (
+                        <div key={d.id} className="flex items-center gap-3 rounded-xl border border-border/40 p-3">
+                          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-sm text-foreground truncate">{d.naziv}</div>
+                            {d.opis && <div className="text-xs text-muted-foreground truncate">{d.opis}</div>}
+                            <div className="text-xs text-muted-foreground/70 mt-0.5">{formatFileSize(d.fileSize)}</div>
+                          </div>
+                          <button
+                            onClick={() => openAuthorizedFile(`/muallim/mekteb/dokumenti/${d.id}/file`, token).catch((e: any) => toast({ title: "Greška", description: e?.message || "Otvaranje nije uspjelo", variant: "destructive" }))}
+                            className="inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted/50"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Otvori
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDokument(d.id)}
+                            className="inline-flex items-center justify-center rounded-lg border border-destructive/30 text-destructive p-1.5 hover:bg-destructive/10"
+                            aria-label="Obriši dokument"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {!mektebStatsAll ? (
                   <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
                 ) : (

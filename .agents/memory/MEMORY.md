@@ -3,6 +3,8 @@
 - [Background procesi se zamrznu](background-jobs-freeze.md) — nohup/long-running poslovi stanu između tool poziva; vozi duge poslove kao bounded foreground chunkove, resumable.
 - [Reorder UI mora podržavati touch](reorder-touch-drag.md) — djeca su na tabletima; koristi Pointer Events + elementFromPoint, ne HTML5 draggable; drži strelice kao fallback.
 - [Produkcija = jedini izvor istine](prod-redeploy-workflow.md) — korisnik uvijek gleda mekteb.net, nikad dev preview; promjene se vide tek nakon ručnog Coolify redeploya.
+- [E2E testiranje zaštićenih ruta](e2e-jwt-testing.md) — dev DB nema aktivnog glavnog muallima; potpiši HS256 JWT ručno umjesto logina (sandbox nema process.env).
+- [Mekteb dokumenti — privatni fajlovi](mekteb-dokumenti-access.md) — "samo-za-mekteb" PDF ne ide na javni /uploads; blokirani poddirektorij + autorizovana ruta + openAuthorizedFile.
 - [API-server schema i dev reload](api-server-schema-i-reload.md) — nove kolone idu kao idempotentni ALTER IF NOT EXISTS u residual-schema u index.ts (NE drizzle-kit push); api-server dev treba restart_workflow nakon backend izmjena.
 - [Kur'an font i RTL nav](kuran-font-rtl.md) — koristi islam.ba "hafs" font (generički subset loše crta ۟); u Kur'anu Sljedeća=lijevo, Prethodna=desno.
 - [Poređenje arapskog teksta](arabic-text-matching.md) — alquran.cloud Uthmani ima nekanonski redoslijed harakata; nikad ne poredi egzaktno, normalizuj pa odsijeci bismillu po tokenima.

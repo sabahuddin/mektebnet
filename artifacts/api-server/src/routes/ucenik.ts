@@ -18,10 +18,12 @@ import {
   medaljoniTable,
   studentKrunisanjaTable,
   krunisanjaTable,
+  mektebDokumentiTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges, buildProgressSnapshot, computeBadgeProgress } from "../lib/badges.js";
+import { streamDokument } from "../lib/dokumenti.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
@@ -300,6 +302,54 @@ router.get("/zadace", async (req, res) => {
     });
 
     res.json(withStatus);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/ucenik/dokumenti — mekteb-nivo PDF dokumenti (pravila, kućni red...)
+// vidljivi učeniku. Razrješava mektebId iz učeničkog profila.
+router.get("/dokumenti", async (req, res) => {
+  try {
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.userId, req.user!.userId));
+    if (!profil?.mektebId) {
+      res.json([]);
+      return;
+    }
+    const docs = await db.select().from(mektebDokumentiTable)
+      .where(eq(mektebDokumentiTable.mektebId, profil.mektebId))
+      .orderBy(desc(mektebDokumentiTable.createdAt));
+    res.json(docs.map(d => ({
+      id: d.id,
+      naziv: d.naziv,
+      opis: d.opis,
+      originalName: d.originalName,
+      storedName: d.storedName,
+      fileSize: d.fileSize,
+      createdAt: d.createdAt,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/ucenik/dokumenti/:id/file — autorizovani download dokumenta učenikovog mekteba.
+router.get("/dokumenti/:id/file", async (req, res) => {
+  try {
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.userId, req.user!.userId));
+    if (!profil?.mektebId) {
+      res.status(404).json({ error: "Dokument nije pronađen" });
+      return;
+    }
+    const id = parseInt(req.params.id, 10);
+    const [doc] = await db.select().from(mektebDokumentiTable).where(eq(mektebDokumentiTable.id, id));
+    if (!doc || doc.mektebId !== profil.mektebId) {
+      res.status(404).json({ error: "Dokument nije pronađen" });
+      return;
+    }
+    streamDokument(res, doc);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

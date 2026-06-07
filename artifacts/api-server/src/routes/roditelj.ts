@@ -17,11 +17,13 @@ import {
   zadaceUceniciTable,
   zadaceStatusTable,
   obavjestenjaTable,
+  mektebDokumentiTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../lib/badges.js";
 import { computeGameStats } from "./games.js";
+import { streamDokument } from "../lib/dokumenti.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
@@ -614,6 +616,88 @@ router.get("/obavjestenja", async (req, res) => {
     })));
   } catch (err) {
     console.error("roditelj obavjestenja error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/dijete/:ucenikId/dokumenti — mekteb-nivo PDF dokumenti
+// vidljivi roditelju za odabrano dijete. Provjerava odobrenu vezu i razrješava
+// mektebId iz profila djeteta.
+router.get("/dijete/:ucenikId/dokumenti", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    if (!Number.isFinite(ucenikId)) {
+      res.status(400).json({ error: "Neispravan ID učenika" });
+      return;
+    }
+    const [veza] = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, req.user!.userId),
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (!veza) {
+      res.status(403).json({ error: "Nemate pristup ovom učeniku" });
+      return;
+    }
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.userId, ucenikId));
+    if (!profil?.mektebId) {
+      res.json([]);
+      return;
+    }
+    const docs = await db.select().from(mektebDokumentiTable)
+      .where(eq(mektebDokumentiTable.mektebId, profil.mektebId))
+      .orderBy(desc(mektebDokumentiTable.createdAt));
+    res.json(docs.map(d => ({
+      id: d.id,
+      naziv: d.naziv,
+      opis: d.opis,
+      originalName: d.originalName,
+      storedName: d.storedName,
+      fileSize: d.fileSize,
+      createdAt: d.createdAt,
+    })));
+  } catch (err) {
+    console.error("roditelj dokumenti error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/dijete/:ucenikId/dokumenti/:id/file — autorizovani download.
+// Provjerava odobrenu vezu roditelj-dijete i pripadnost dokumenta mektebu djeteta.
+router.get("/dijete/:ucenikId/dokumenti/:id/file", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    if (!Number.isFinite(ucenikId)) {
+      res.status(400).json({ error: "Neispravan ID učenika" });
+      return;
+    }
+    const [veza] = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, req.user!.userId),
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (!veza) {
+      res.status(403).json({ error: "Nemate pristup ovom učeniku" });
+      return;
+    }
+    const [profil] = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.userId, ucenikId));
+    if (!profil?.mektebId) {
+      res.status(404).json({ error: "Dokument nije pronađen" });
+      return;
+    }
+    const id = parseInt(req.params.id, 10);
+    const [doc] = await db.select().from(mektebDokumentiTable).where(eq(mektebDokumentiTable.id, id));
+    if (!doc || doc.mektebId !== profil.mektebId) {
+      res.status(404).json({ error: "Dokument nije pronađen" });
+      return;
+    }
+    streamDokument(res, doc);
+  } catch (err) {
+    console.error("roditelj dokument file error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

@@ -37,3 +37,20 @@ export async function apiRequest<T = unknown>(
 export function getApiBase() {
   return API_BASE;
 }
+
+// Dohvati zaštićeni fajl (PDF dokument) uz Authorization i otvori ga u novom tabu.
+// Mekteb dokumenti više nisu javni — serviraju se kroz autorizovane rute, pa se
+// ne mogu otvoriti običnim <a href>. Vraćamo blob URL i otvaramo ga.
+export async function openAuthorizedFile(path: string, token?: string | null): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Greška pri otvaranju dokumenta" }));
+    throw new Error(err.error || "Greška pri otvaranju dokumenta");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener,noreferrer");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}

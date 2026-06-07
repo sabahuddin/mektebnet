@@ -1,5 +1,8 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -22,6 +25,7 @@ import {
   zadaceStatusTable,
   porukeTable,
   mektebiTable,
+  mektebDokumentiTable,
   h5pPokusajiTable,
   prilozi,
 } from "@workspace/db/schema";
@@ -29,6 +33,7 @@ import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
+import { mektebDokumentiDir, streamDokument, deleteDokumentFajl } from "../lib/dokumenti.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
@@ -467,6 +472,144 @@ router.get("/mekteb/statistika", async (req, res) => {
     });
   } catch (err) {
     console.error("Mekteb statistika error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ── MEKTEB DOKUMENTI (PDF) ──────────────────────────────────────────────────
+// Glavni muallim uploaduje PDF dokumente na nivou mekteba (pravila, kućni red...).
+// Učenici i roditelji ih čitaju preko vlastitih ruta. Fajlovi se čuvaju u zasebnom
+// poddirektoriju (`mekteb-dokumenti`) koji je BLOKIRAN za direktni static pristup
+// (vidi app.ts) — serviraju se isključivo kroz autorizovane rute (provjera role +
+// pripadnost mektebu), da PDF ne bi bio javno dostupan svima s URL-om.
+const dokumentStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, mektebDokumentiDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
+  },
+});
+const dokumentUpload = multer({
+  storage: dokumentStorage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (/\.pdf$/i.test(path.extname(file.originalname))) cb(null, true);
+    else cb(new Error("Dozvoljen je samo PDF format"));
+  },
+});
+
+// GET /api/muallim/mekteb/dokumenti — lista dokumenata mekteba (glavni only).
+router.get("/mekteb/dokumenti", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      return;
+    }
+    const docs = await db.select().from(mektebDokumentiTable)
+      .where(eq(mektebDokumentiTable.mektebId, ctx.mektebId))
+      .orderBy(desc(mektebDokumentiTable.createdAt));
+    res.json(docs.map(d => ({
+      id: d.id,
+      naziv: d.naziv,
+      opis: d.opis,
+      originalName: d.originalName,
+      storedName: d.storedName,
+      fileSize: d.fileSize,
+      createdAt: d.createdAt,
+    })));
+  } catch (err) {
+    console.error("Mekteb dokumenti list error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/mekteb/dokumenti — upload PDF (glavni only). multipart/form-data:
+// file (PDF), naziv (obavezno), opis (opciono).
+router.post("/mekteb/dokumenti", (req, res) => {
+  dokumentUpload.single("file")(req, res, async (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? (err.code === "LIMIT_FILE_SIZE" ? "Fajl prevelik (max 20MB)" : err.message)
+        : err.message || "Greška pri uploadu";
+      return res.status(400).json({ error: msg });
+    }
+    try {
+      const ctx = await getMektebCtx(req.user!.userId);
+      if (!ctx?.mektebId || !ctx.isGlavni) {
+        if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+        return res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      }
+      if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+      const naziv = String(req.body?.naziv || "").trim() || req.file.originalname.replace(/\.pdf$/i, "");
+      const opis = String(req.body?.opis || "").trim() || null;
+      const [created] = await db.insert(mektebDokumentiTable).values({
+        mektebId: ctx.mektebId,
+        naziv: naziv.slice(0, 200),
+        opis,
+        originalName: req.file.originalname,
+        storedName: req.file.filename,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype || "application/pdf",
+        uploadedByUserId: req.user!.userId,
+      }).returning();
+      return res.status(201).json({
+        id: created.id,
+        naziv: created.naziv,
+        opis: created.opis,
+        originalName: created.originalName,
+        storedName: created.storedName,
+        fileSize: created.fileSize,
+        createdAt: created.createdAt,
+      });
+    } catch (e: any) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+      console.error("Mekteb dokument upload error:", e);
+      return res.status(500).json({ error: "Greška servera" });
+    }
+  });
+});
+
+// DELETE /api/muallim/mekteb/dokumenti/:id — obriši dokument + fajl (glavni only).
+router.delete("/mekteb/dokumenti/:id", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      return;
+    }
+    const id = parseInt(req.params.id, 10);
+    const [doc] = await db.select().from(mektebDokumentiTable).where(eq(mektebDokumentiTable.id, id));
+    if (!doc || doc.mektebId !== ctx.mektebId) {
+      res.status(404).json({ error: "Dokument nije pronađen" });
+      return;
+    }
+    deleteDokumentFajl(doc.storedName);
+    await db.delete(mektebDokumentiTable).where(eq(mektebDokumentiTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Mekteb dokument delete error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/mekteb/dokumenti/:id/file — autorizovani download (glavni only).
+router.get("/mekteb/dokumenti/:id/file", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      return;
+    }
+    const id = parseInt(req.params.id, 10);
+    const [doc] = await db.select().from(mektebDokumentiTable).where(eq(mektebDokumentiTable.id, id));
+    if (!doc || doc.mektebId !== ctx.mektebId) {
+      res.status(404).json({ error: "Dokument nije pronađen" });
+      return;
+    }
+    streamDokument(res, doc);
+  } catch (err) {
+    console.error("Mekteb dokument file error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

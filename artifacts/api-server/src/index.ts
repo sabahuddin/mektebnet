@@ -581,7 +581,25 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS glavni_muallim_id integer;`);
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS dozvoljeno_muallima integer DEFAULT 1 NOT NULL;`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima) ready");
+    // Mekteb-nivo PDF dokumenti (pravila, kućni red...) — glavni muallim uploaduje,
+    // učenici i roditelji čitaju.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS mekteb_dokumenti (
+        id serial PRIMARY KEY NOT NULL,
+        mekteb_id integer NOT NULL,
+        naziv varchar(200) NOT NULL,
+        opis text,
+        original_name text NOT NULL,
+        stored_name varchar(300) NOT NULL,
+        file_size integer DEFAULT 0 NOT NULL,
+        mime_type varchar(100) DEFAULT 'application/pdf' NOT NULL,
+        uploaded_by_user_id integer,
+        created_at timestamp DEFAULT now()
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS mekteb_dokumenti_mekteb_idx ON mekteb_dokumenti (mekteb_id);`);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + mekteb_dokumenti) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }
