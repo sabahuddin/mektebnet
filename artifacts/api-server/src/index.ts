@@ -574,7 +574,14 @@ async function runResidualSchema() {
     await db.execute(sql`UPDATE medaljoni SET boja='silver' WHERE nivo=2 AND boja <> 'silver';`);
     await db.execute(sql`UPDATE medaljoni SET boja='gold' WHERE nivo=3 AND boja <> 'gold';`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje) ready");
+    // === Mekteb (škola) iznad muallima ========================================
+    // Glavni (admin) muallim, kreiranje muallimskih naloga, limit po paketu,
+    // zbirna statistika mekteba. Idempotentne kolone (dosad ručno preko psql).
+    await db.execute(sql`ALTER TABLE muallim_profili ADD COLUMN IF NOT EXISTS is_glavni boolean DEFAULT false NOT NULL;`);
+    await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS glavni_muallim_id integer;`);
+    await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS dozvoljeno_muallima integer DEFAULT 1 NOT NULL;`);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

@@ -5,6 +5,7 @@ import { db } from "@workspace/db";
 import {
   usersTable,
   muallimProfiliTable,
+  mektebiTable,
   ucenikProfiliTable,
   roditeljProfiliTable,
   roditeljUcenikTable,
@@ -633,8 +634,12 @@ router.post("/register-mekteb", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const trialUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    // Atomarno: muallim user + muallim profil. Bez ovoga, ako profil insert padne,
-    // ostaje muallim user bez profila i licence count-a.
+    const dozvoljenoMuallima = Math.max(1, parseInt(String(koliko_muallima), 10) || 1);
+
+    // Atomarno: mekteb + glavni muallim user + muallim profil. Glavni muallim je
+    // onaj ko registruje mekteb; jedino on kreira/briše ostale muallime i vidi
+    // zbirnu statistiku mekteba. Bez ovoga, ako neki insert padne, ostaje
+    // nedosljedno stanje (muallim bez profila ili mekteb bez glavnog).
     const muallimUser = await db.transaction(async (tx) => {
       const [u] = await tx.insert(usersTable).values({
         username: usernameClean,
@@ -645,8 +650,17 @@ router.post("/register-mekteb", async (req, res) => {
         isActive: false,
         trialUntil,
       }).returning();
+      const [mekteb] = await tx.insert(mektebiTable).values({
+        naziv: nazivMekteba.trim(),
+        grad: grad.trim(),
+        kontaktEmail: email.trim(),
+        glavniMuallimId: u.id,
+        dozvoljenoMuallima,
+      }).returning();
       await tx.insert(muallimProfiliTable).values({
         userId: u.id,
+        mektebId: mekteb.id,
+        isGlavni: true,
         licenceCount,
         licencesUsed: 0,
       });

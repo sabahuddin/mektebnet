@@ -10,6 +10,10 @@ export const mektebiTable = pgTable("mektebi", {
   adresa: text("adresa"),
   kontaktEmail: varchar("kontakt_email", { length: 255 }),
   kontaktTel: varchar("kontakt_tel", { length: 50 }),
+  // userId glavnog (admin) muallima — onaj ko je registrovao mekteb.
+  glavniMuallimId: integer("glavni_muallim_id"),
+  // Koliko muallimskih naloga je dozvoljeno (uključujući glavnog).
+  dozvoljenoMuallima: integer("dozvoljeno_muallima").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -18,6 +22,9 @@ export const mektebiTable = pgTable("mektebi", {
 export const muallimProfiliTable = pgTable("muallim_profili", {
   userId: integer("user_id").notNull().unique(),
   mektebId: integer("mekteb_id"),
+  // Glavni (admin) muallim mekteba — jedini kreira/briše ostale muallime i
+  // vidi zbirnu statistiku cijelog mekteba. Obični muallim vidi samo svoje grupe.
+  isGlavni: boolean("is_glavni").notNull().default(false),
   licenceCount: integer("licence_count").notNull().default(30),
   licencesUsed: integer("licences_used").notNull().default(0),
   tekucaSkolskaGodina: varchar("tekuca_skolska_godina", { length: 30 }).default("Mektebska 2025/26"),

@@ -160,8 +160,313 @@ router.get("/info", async (req, res) => {
   try {
     const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, req.user!.userId));
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
-    res.json({ ...user, profil: profil || null });
+    let mektebNaziv: string | null = null;
+    if (profil?.mektebId) {
+      const [m] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, profil.mektebId));
+      mektebNaziv = m?.naziv ?? null;
+    }
+    res.json({
+      ...user,
+      profil: profil || null,
+      isGlavni: profil?.isGlavni ?? false,
+      mektebNaziv,
+    });
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// ===========================================================================
+// MEKTEB (škola) — glavni muallim administracija
+// Glavni (admin) muallim je onaj ko je registrovao mekteb. Jedino on kreira/
+// briše ostale muallimske naloge i vidi zbirnu statistiku cijelog mekteba.
+// Obični muallim NEMA pristup ovim rutama.
+// ===========================================================================
+
+// Helper: vrati mekteb-kontekst muallima ({ mektebId, isGlavni }) ili null.
+async function getMektebCtx(userId: number) {
+  const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+  if (!profil) return null;
+  return { mektebId: profil.mektebId ?? null, isGlavni: profil.isGlavni ?? false, licenceCount: profil.licenceCount };
+}
+
+// GET /api/muallim/mekteb/info — osnovni podaci o mektebu trenutnog muallima.
+router.get("/mekteb/info", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId) {
+      res.json({ hasMekteb: false, isGlavni: false });
+      return;
+    }
+    const [m] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, ctx.mektebId));
+    const muallimi = await db.select({ userId: muallimProfiliTable.userId })
+      .from(muallimProfiliTable).where(eq(muallimProfiliTable.mektebId, ctx.mektebId));
+    res.json({
+      hasMekteb: true,
+      isGlavni: ctx.isGlavni,
+      naziv: m?.naziv ?? null,
+      grad: m?.grad ?? null,
+      dozvoljenoMuallima: m?.dozvoljenoMuallima ?? 1,
+      brojMuallima: muallimi.length,
+      slobodnoMjesta: Math.max(0, (m?.dozvoljenoMuallima ?? 1) - muallimi.length),
+    });
+  } catch (err) {
+    console.error("Mekteb info error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/mekteb/muallimi — lista muallima u mektebu (glavni only).
+router.get("/mekteb/muallimi", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      return;
+    }
+    const profili = await db.select().from(muallimProfiliTable)
+      .where(eq(muallimProfiliTable.mektebId, ctx.mektebId));
+    const ids = profili.map(p => p.userId);
+    const users = ids.length > 0
+      ? await db.select({ id: usersTable.id, username: usersTable.username, displayName: usersTable.displayName, isActive: usersTable.isActive })
+          .from(usersTable).where(inArray(usersTable.id, ids))
+      : [];
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    const lista = await Promise.all(profili.map(async (p) => {
+      const grupe = await db.select({ id: grupeTable.id }).from(grupeTable).where(eq(grupeTable.muallimId, p.userId));
+      const ucenici = await db.select({ id: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
+        .where(and(eq(ucenikProfiliTable.muallimId, p.userId), eq(ucenikProfiliTable.isArchived, false)));
+      const u = userMap.get(p.userId);
+      return {
+        userId: p.userId,
+        username: u?.username ?? null,
+        displayName: u?.displayName ?? "Nepoznat",
+        isActive: u?.isActive ?? false,
+        isGlavni: p.isGlavni ?? false,
+        brojGrupa: grupe.length,
+        brojUcenika: ucenici.length,
+      };
+    }));
+    lista.sort((a, b) => Number(b.isGlavni) - Number(a.isGlavni) || a.displayName.localeCompare(b.displayName));
+    res.json(lista);
+  } catch (err) {
+    console.error("Mekteb muallimi error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/mekteb/muallimi — kreiraj novog muallima (glavni only).
+// Vraća plaintext kredencijale JEDNOM (ne čuvaju se) da ih glavni podijeli.
+router.post("/mekteb/muallimi", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      return;
+    }
+    const displayName = String(req.body?.displayName || "").trim();
+    if (!displayName) {
+      res.status(400).json({ error: "Ime i prezime muallima je obavezno" });
+      return;
+    }
+
+    const [m] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, ctx.mektebId));
+    const dozvoljeno = m?.dozvoljenoMuallima ?? 1;
+    const postojeci = await db.select({ userId: muallimProfiliTable.userId })
+      .from(muallimProfiliTable).where(eq(muallimProfiliTable.mektebId, ctx.mektebId));
+    if (postojeci.length >= dozvoljeno) {
+      res.status(409).json({ error: `Dostigli ste limit muallimskih naloga (${dozvoljeno}). Za više kontaktirajte podršku.` });
+      return;
+    }
+
+    const suffix = randomSuffix();
+    const password = generateMektebPassword(suffix);
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const created = await db.transaction(async (tx) => {
+      let row: NewUserRow | null = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { username } = generateUsername(displayName, attempt === 0 ? suffix : randomSuffix());
+        try {
+          const [u] = await tx.insert(usersTable).values({
+            username,
+            passwordHash,
+            displayName,
+            role: "muallim",
+            isActive: true,
+          }).returning();
+          row = u;
+          break;
+        } catch (e: any) {
+          if (attempt === 4 || !isUniqueViolation(e)) throw e;
+        }
+      }
+      if (!row) throw new Error("USERNAME_COLLISION");
+      await tx.insert(muallimProfiliTable).values({
+        userId: row.id,
+        mektebId: ctx.mektebId,
+        isGlavni: false,
+        licenceCount: ctx.licenceCount ?? 30,
+        licencesUsed: 0,
+      });
+      return row;
+    });
+
+    res.status(201).json({
+      userId: created.id,
+      displayName: created.displayName,
+      username: created.username,
+      generatedPassword: password,
+    });
+  } catch (err) {
+    console.error("Mekteb create muallim error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/muallim/mekteb/muallimi/:id — obriši muallima (glavni only).
+// Blokira brisanje glavnog i muallima koji još ima grupe ili učenike.
+router.delete("/mekteb/muallimi/:id", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      return;
+    }
+    const targetId = parseInt(req.params.id, 10);
+    if (targetId === req.user!.userId) {
+      res.status(400).json({ error: "Ne možete obrisati vlastiti (glavni) nalog" });
+      return;
+    }
+    const [target] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, targetId));
+    if (!target || target.mektebId !== ctx.mektebId) {
+      res.status(404).json({ error: "Muallim nije pronađen u vašem mektebu" });
+      return;
+    }
+    if (target.isGlavni) {
+      res.status(400).json({ error: "Glavni muallim se ne može obrisati" });
+      return;
+    }
+    const grupe = await db.select({ id: grupeTable.id }).from(grupeTable).where(eq(grupeTable.muallimId, targetId));
+    const ucenici = await db.select({ id: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.muallimId, targetId), eq(ucenikProfiliTable.isArchived, false)));
+    if (grupe.length > 0 || ucenici.length > 0) {
+      res.status(409).json({ error: "Muallim još ima grupe ili učenike. Premjestite ih prije brisanja naloga." });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      await tx.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, targetId));
+      await tx.delete(usersTable).where(eq(usersTable.id, targetId));
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Mekteb delete muallim error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/mekteb/statistika — zbirna statistika cijelog mekteba kroz
+// SVE muallime (glavni only): ukupno učenika, broj muallima/grupa, prosječno
+// prisustvo, napredak po nivoima, screentime, te usporedba po grupama.
+router.get("/mekteb/statistika", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+      return;
+    }
+    const mektebId = ctx.mektebId;
+
+    const muallimProfili = await db.select().from(muallimProfiliTable)
+      .where(eq(muallimProfiliTable.mektebId, mektebId));
+    const muallimIds = muallimProfili.map(p => p.userId);
+    const muallimUsers = muallimIds.length > 0
+      ? await db.select({ id: usersTable.id, displayName: usersTable.displayName })
+          .from(usersTable).where(inArray(usersTable.id, muallimIds))
+      : [];
+    const muallimNameMap = new Map(muallimUsers.map(u => [u.id, u.displayName]));
+
+    const grupe = muallimIds.length > 0
+      ? await db.select().from(grupeTable).where(inArray(grupeTable.muallimId, muallimIds))
+      : [];
+
+    const perGrupa = await Promise.all(grupe.map(async (g) => {
+      const stats = await getGrupaFullStats(g.id);
+      return {
+        id: g.id,
+        naziv: g.naziv,
+        muallimNaziv: muallimNameMap.get(g.muallimId) ?? "Nepoznat",
+        skolskaGodina: g.skolskaGodina,
+        ukupnoUcenika: stats.ucenici.length,
+        ukupnoCasova: stats.ukupnoCasova,
+        prisustvoPct: stats.grupaPrisustvoPct,
+        prosjekOcjena: stats.grupaProsjekOcjena,
+        ukupnoKvizova: stats.ukupnoKvizova,
+        ukupnoBodova: stats.ukupnoBodovaGrupa,
+      };
+    }));
+
+    // Učenici cijelog mekteba (preko mektebId).
+    const ucenikProfili = await db.select().from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.mektebId, mektebId), eq(ucenikProfiliTable.isArchived, false)));
+    const ucenikIds = ucenikProfili.map(p => p.userId);
+
+    // Prosječno prisustvo (ponderirano po broju učenika grupe).
+    const validPris = perGrupa.filter(g => g.prisustvoPct !== null);
+    const ponderUcenika = validPris.reduce((a, g) => a + g.ukupnoUcenika, 0);
+    const prosjekPrisustva = ponderUcenika > 0
+      ? Math.round(validPris.reduce((a, g) => a + (g.prisustvoPct || 0) * g.ukupnoUcenika, 0) / ponderUcenika)
+      : null;
+
+    // Napredak po nivoima (ilmihal) — završene lekcije grupisane po nivou.
+    const napredakPoNivoima: { nivo: number; zavrseno: number }[] = [];
+    let ukupnoLekcijaZavrseno = 0;
+    if (ucenikIds.length > 0) {
+      const napredak = await db.select({ contentId: korisnikNapredakTable.contentId })
+        .from(korisnikNapredakTable)
+        .where(and(
+          inArray(korisnikNapredakTable.userId, ucenikIds),
+          eq(korisnikNapredakTable.zavrsen, true),
+          eq(korisnikNapredakTable.contentType, "ilmihal"),
+        ));
+      ukupnoLekcijaZavrseno = napredak.length;
+      const lekcije = await db.select({ id: ilmihalLekcijeTable.id, nivo: ilmihalLekcijeTable.nivo })
+        .from(ilmihalLekcijeTable);
+      const nivoMap = new Map(lekcije.map(l => [l.id, l.nivo]));
+      const counts = new Map<number, number>();
+      for (const n of napredak) {
+        const nivo = nivoMap.get(n.contentId);
+        if (nivo == null) continue;
+        counts.set(nivo, (counts.get(nivo) || 0) + 1);
+      }
+      for (const nivo of [...counts.keys()].sort((a, b) => a - b)) {
+        napredakPoNivoima.push({ nivo, zavrseno: counts.get(nivo) || 0 });
+      }
+    }
+
+    // Screentime (ukupno aktivno vrijeme učenika mekteba).
+    let ukupnoScreentimeSec = 0;
+    if (ucenikIds.length > 0) {
+      const st = await db.select({ sec: usersTable.totalScreentimeSec })
+        .from(usersTable).where(inArray(usersTable.id, ucenikIds));
+      ukupnoScreentimeSec = st.reduce((a, r) => a + (r.sec || 0), 0);
+    }
+
+    res.json({
+      global: {
+        ukupnoUcenika: ucenikProfili.length,
+        brojMuallima: muallimProfili.length,
+        brojGrupa: grupe.length,
+        prosjekPrisustva,
+        ukupnoLekcijaZavrseno,
+        napredakPoNivoima,
+        ukupnoScreentimeSec,
+      },
+      perGrupa,
+    });
+  } catch (err) {
+    console.error("Mekteb statistika error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

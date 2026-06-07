@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart
+  Heart, School, Copy, KeyRound
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -240,11 +240,62 @@ const TIP_COLORS: Record<string, { bg: string; border: string; text: string; lab
 
 const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 
+interface MektebInfo {
+  hasMekteb: boolean;
+  isGlavni: boolean;
+  naziv: string | null;
+  grad: string | null;
+  dozvoljenoMuallima: number;
+  brojMuallima: number;
+  slobodnoMjesta: number;
+}
+
+interface MektebMuallim {
+  userId: number;
+  username: string | null;
+  displayName: string;
+  isActive: boolean;
+  isGlavni: boolean;
+  brojGrupa: number;
+  brojUcenika: number;
+}
+
+interface MektebStatsAll {
+  global: {
+    ukupnoUcenika: number;
+    brojMuallima: number;
+    brojGrupa: number;
+    prosjekPrisustva: number | null;
+    ukupnoLekcijaZavrseno: number;
+    napredakPoNivoima: { nivo: number; zavrseno: number }[];
+    ukupnoScreentimeSec: number;
+  };
+  perGrupa: {
+    id: number;
+    naziv: string;
+    muallimNaziv: string;
+    skolskaGodina: string;
+    ukupnoUcenika: number;
+    ukupnoCasova: number;
+    prisustvoPct: number | null;
+    prosjekOcjena: number | null;
+    ukupnoKvizova: number;
+    ukupnoBodova: number;
+  }[];
+}
+
+function formatScreentime(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}
+
 export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "h5p-vodic" | "profil";
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "h5p-vodic" | "profil";
   const [activeTab, setActiveTab] = useState<TabId>("pregled");
 
   // Otvara odgovarajući tab kad URL sadrži ?tab=… (npr. iz Panel dropdown
@@ -254,7 +305,7 @@ export default function MuallimPanel() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab");
-    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","zadace","izvjestaji","roditelji","h5p","h5p-vodic","profil"].includes(t)) {
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","h5p","h5p-vodic","profil"].includes(t)) {
       setActiveTab(t as TabId);
     }
     // Pre-selektuj grupu kad link iz Grupa stranice prosijedi ?grupaId=…
@@ -282,6 +333,15 @@ export default function MuallimPanel() {
   const [ucenici, setUcenici] = useState<Ucenik[]>([]);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Mekteb (škola) — glavni muallim kontekst i administracija
+  const [mektebMeta, setMektebMeta] = useState<{ isGlavni: boolean; mektebNaziv: string | null }>({ isGlavni: false, mektebNaziv: null });
+  const [mektebInfo, setMektebInfo] = useState<MektebInfo | null>(null);
+  const [mektebMuallimi, setMektebMuallimi] = useState<MektebMuallim[] | null>(null);
+  const [novMuallimIme, setNovMuallimIme] = useState("");
+  const [kreiranMuallim, setKreiranMuallim] = useState<{ displayName: string; username: string; generatedPassword: string } | null>(null);
+  const [muallimSaving, setMuallimSaving] = useState(false);
+  const [mektebStatsAll, setMektebStatsAll] = useState<MektebStatsAll | null>(null);
 
   const [selectedGrupaId, setSelectedGrupaId] = useState<number | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
@@ -739,20 +799,90 @@ export default function MuallimPanel() {
     );
   }
 
+  // Mekteb kontekst (isGlavni + naziv mekteba) — učitava se jednom; određuje
+  // da li glavni muallim vidi tabove "Muallimi" i "Mekteb" statistiku.
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<{ isGlavni: boolean; mektebNaziv: string | null }>("GET", "/muallim/info", undefined, token)
+      .then(d => setMektebMeta({ isGlavni: !!d.isGlavni, mektebNaziv: d.mektebNaziv ?? null }))
+      .catch(() => {});
+  }, [token]);
+
+  // Sigurnosni guard: tabovi "Muallimi" i "Mekteb" su isključivo za glavnog
+  // muallima. Ako obični muallim direktnim URL-om (?tab=muallimi|mekteb) dođe do
+  // njih, vrati ga na "Pregled". Backend dodatno štiti osjetljive rute (403).
+  useEffect(() => {
+    if (!mektebMeta.isGlavni && (activeTab === "muallimi" || activeTab === "mekteb")) {
+      setActiveTab("pregled");
+    }
+  }, [mektebMeta.isGlavni, activeTab]);
+
+  // Učitaj muallime + info kad glavni muallim otvori "Muallimi" tab.
+  useEffect(() => {
+    if (!token || activeTab !== "muallimi") return;
+    apiRequest<MektebInfo>("GET", "/muallim/mekteb/info", undefined, token).then(setMektebInfo).catch(() => {});
+    apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token).then(setMektebMuallimi).catch(() => setMektebMuallimi([]));
+  }, [token, activeTab]);
+
+  // Učitaj zbirnu statistiku mekteba kad glavni muallim otvori "Mekteb" tab.
+  useEffect(() => {
+    if (!token || activeTab !== "mekteb" || mektebStatsAll) return;
+    apiRequest<MektebStatsAll>("GET", "/muallim/mekteb/statistika", undefined, token).then(setMektebStatsAll).catch(() => {});
+  }, [token, activeTab, mektebStatsAll]);
+
+  const handleKreirajMuallima = async () => {
+    if (!token || !novMuallimIme.trim()) return;
+    setMuallimSaving(true);
+    try {
+      const res = await apiRequest<{ userId: number; displayName: string; username: string; generatedPassword: string }>(
+        "POST", "/muallim/mekteb/muallimi", { displayName: novMuallimIme.trim() }, token);
+      setKreiranMuallim(res);
+      setNovMuallimIme("");
+      const [info, lista] = await Promise.all([
+        apiRequest<MektebInfo>("GET", "/muallim/mekteb/info", undefined, token),
+        apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token),
+      ]);
+      setMektebInfo(info); setMektebMuallimi(lista);
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće kreirati muallima", variant: "destructive" });
+    } finally { setMuallimSaving(false); }
+  };
+
+  const handleObrisiMuallima = async (userId: number, ime: string) => {
+    if (!token) return;
+    if (!window.confirm(`Obrisati muallima "${ime}"? Ova radnja je trajna.`)) return;
+    try {
+      await apiRequest("DELETE", `/muallim/mekteb/muallimi/${userId}`, undefined, token);
+      const [info, lista] = await Promise.all([
+        apiRequest<MektebInfo>("GET", "/muallim/mekteb/info", undefined, token),
+        apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token),
+      ]);
+      setMektebInfo(info); setMektebMuallimi(lista);
+      toast({ title: "Obrisano", description: `Muallim "${ime}" je obrisan.` });
+    } catch (e: any) {
+      toast({ title: "Greška", description: e?.message || "Nije moguće obrisati muallima", variant: "destructive" });
+    }
+  };
+
   // Glavni tabovi panela = pogled na cijeli mekteb. Tabovi vezani za jednu grupu
   // (Prisustvo, Plan lekcija, Zadaća, H5P statistika) preselili su se u Grupa
   // stranicu (kartice unutar grupe). Te blokove i dalje renderujemo niže — link
   // iz Grupe ih otvara preko ?tab=…&grupaId=… s pre-selektovanom grupom.
+  // Tabovi "Muallimi" i "Mekteb" se prikazuju SAMO glavnom muallimu.
   const TABS = [
     { id: "pregled", label: "Pregled", icon: BarChart3 },
     { id: "grupe", label: `Grupe (${grupe.length})`, icon: GraduationCap },
     { id: "statistika", label: "Statistika", icon: TrendingUp },
+    ...(mektebMeta.isGlavni ? [
+      { id: "muallimi", label: "Muallimi", icon: Users },
+      { id: "mekteb", label: "Mekteb", icon: School },
+    ] : []),
     { id: "izvjestaji", label: "Izvještaji", icon: FileText },
     { id: "kalendar", label: "Kalendar", icon: Calendar },
     { id: "roditelji", label: "Roditelji", icon: Heart },
     { id: "h5p-vodic", label: "H5P uputstvo", icon: BookOpen },
     { id: "profil", label: "Profil", icon: Settings },
-  ] as const;
+  ];
 
   return (
     <Layout>
@@ -761,7 +891,14 @@ export default function MuallimPanel() {
           <div className="w-10 h-10 bg-gradient-to-br from-secondary to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-xl font-extrabold text-foreground flex-1">Muallim panel</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-extrabold text-foreground">Muallim panel</h1>
+            {mektebMeta.mektebNaziv && (
+              <p className="text-xs text-muted-foreground font-medium truncate">
+                {mektebMeta.mektebNaziv}{mektebMeta.isGlavni ? " — glavni muallim" : ""}
+              </p>
+            )}
+          </div>
           <MyScreentimeBadge />
         </div>
 
@@ -1638,6 +1775,175 @@ export default function MuallimPanel() {
                     )}
                   </div>
                 ) : null}
+              </motion.div>
+            )}
+
+            {/* MUALLIMI (samo glavni muallim) */}
+            {activeTab === "muallimi" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div className="bg-white rounded-2xl border border-border/50 p-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <School className="w-5 h-5 text-secondary" />
+                    <h2 className="font-extrabold text-foreground">Muallimi mekteba</h2>
+                  </div>
+                  {mektebInfo && (
+                    <p className="text-sm text-muted-foreground">
+                      {mektebInfo.naziv} · {mektebInfo.brojMuallima}/{mektebInfo.dozvoljenoMuallima} naloga iskorišteno
+                      {mektebInfo.slobodnoMjesta > 0 ? ` · ${mektebInfo.slobodnoMjesta} slobodno` : " · popunjeno"}
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-2xl border border-border/50 p-5 space-y-3">
+                  <div className="flex items-center gap-2"><UserPlus className="w-4 h-4 text-primary" /><h3 className="font-bold text-sm text-foreground">Dodaj muallima</h3></div>
+                  <p className="text-xs text-muted-foreground">Sistem će generisati korisničko ime i šifru koje proslijedite kolegi. Šifra se prikazuje samo jednom.</p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      value={novMuallimIme}
+                      onChange={e => setNovMuallimIme(e.target.value)}
+                      placeholder="Ime i prezime muallima"
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 text-sm"
+                      data-testid="input-nov-muallim"
+                    />
+                    <button
+                      onClick={handleKreirajMuallima}
+                      disabled={muallimSaving || !novMuallimIme.trim() || (mektebInfo ? mektebInfo.slobodnoMjesta <= 0 : false)}
+                      className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                      data-testid="button-kreiraj-muallim"
+                    >
+                      {muallimSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Kreiraj
+                    </button>
+                  </div>
+                  {mektebInfo && mektebInfo.slobodnoMjesta <= 0 && (
+                    <p className="text-xs text-amber-600 font-medium">Dostigli ste maksimalan broj muallima za vaš paket.</p>
+                  )}
+                  {kreiranMuallim && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm"><KeyRound className="w-4 h-4" /> Nalog kreiran — zapišite podatke</div>
+                      <div className="text-sm"><span className="text-muted-foreground">Ime:</span> <b>{kreiranMuallim.displayName}</b></div>
+                      <div className="text-sm"><span className="text-muted-foreground">Korisničko ime:</span> <b>{kreiranMuallim.username}</b></div>
+                      <div className="text-sm"><span className="text-muted-foreground">Šifra:</span> <b>{kreiranMuallim.generatedPassword}</b></div>
+                      <button
+                        onClick={() => { navigator.clipboard?.writeText(`Muallim: ${kreiranMuallim.displayName}\nKorisničko ime: ${kreiranMuallim.username}\nŠifra: ${kreiranMuallim.generatedPassword}`); toast({ title: "Kopirano", description: "Podaci za prijavu su kopirani." }); }}
+                        className="inline-flex items-center gap-2 text-xs font-bold text-emerald-700 hover:underline"
+                        data-testid="button-kopiraj-kredencijale"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Kopiraj podatke
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {mektebMuallimi === null ? (
+                    <Skeleton className="h-20 rounded-2xl" />
+                  ) : mektebMuallimi.length === 0 ? (
+                    <div className="text-center py-10 text-muted-foreground text-sm">Još nema muallima.</div>
+                  ) : (
+                    mektebMuallimi.map(m => (
+                      <div key={m.userId} className="bg-white rounded-2xl border border-border/50 p-4 flex items-center gap-3" data-testid={`muallim-red-${m.userId}`}>
+                        <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-secondary" /></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                            {m.displayName}
+                            {m.isGlavni && <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-extrabold">GLAVNI</span>}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{m.username} · {m.brojGrupa} grupa · {m.brojUcenika} učenika</div>
+                        </div>
+                        {!m.isGlavni && (
+                          <button onClick={() => handleObrisiMuallima(m.userId, m.displayName)} className="p-2 rounded-lg text-rose-500 hover:bg-rose-50" title="Obriši muallima" data-testid={`button-obrisi-muallim-${m.userId}`}>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* MEKTEB STATISTIKA (samo glavni muallim) */}
+            {activeTab === "mekteb" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                {!mektebStatsAll ? (
+                  <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        { label: "Ukupno učenika", value: mektebStatsAll.global.ukupnoUcenika, icon: Users, color: "text-primary", bg: "bg-primary/5" },
+                        { label: "Muallima", value: mektebStatsAll.global.brojMuallima, icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
+                        { label: "Grupa", value: mektebStatsAll.global.brojGrupa, icon: BookMarked, color: "text-violet-600", bg: "bg-violet-50" },
+                        { label: "Prosj. prisustvo", value: mektebStatsAll.global.prosjekPrisustva !== null ? `${mektebStatsAll.global.prosjekPrisustva}%` : "—", icon: CalendarCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
+                      ].map(s => (
+                        <div key={s.label} className={`${s.bg} border border-border/50 rounded-2xl p-5`}>
+                          <s.icon className={`w-6 h-6 ${s.color} mb-3`} />
+                          <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
+                          <div className="text-sm text-muted-foreground font-medium mt-1">{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white rounded-2xl border border-border/50 p-5">
+                        <div className="flex items-center gap-2 mb-3"><Award className="w-4 h-4 text-amber-500" /><h3 className="font-bold text-sm text-foreground">Napredak po nivoima (Ilmihal)</h3></div>
+                        {mektebStatsAll.global.napredakPoNivoima.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Još nema završenih lekcija.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {mektebStatsAll.global.napredakPoNivoima.map(n => (
+                              <div key={n.nivo} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Nivo {n.nivo}</span>
+                                <span className="font-bold text-foreground">{n.zavrseno} završenih</span>
+                              </div>
+                            ))}
+                            <div className="flex items-center justify-between text-sm pt-2 border-t border-border/50">
+                              <span className="text-muted-foreground">Ukupno</span>
+                              <span className="font-extrabold text-foreground">{mektebStatsAll.global.ukupnoLekcijaZavrseno}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-white rounded-2xl border border-border/50 p-5">
+                        <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-violet-600" /><h3 className="font-bold text-sm text-foreground">Aktivnost učenika</h3></div>
+                        <div className="text-2xl font-extrabold text-violet-600">{formatScreentime(mektebStatsAll.global.ukupnoScreentimeSec)}</div>
+                        <div className="text-sm text-muted-foreground mt-1">ukupno aktivno vrijeme</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-border/50 p-5">
+                      <div className="flex items-center gap-2 mb-4"><TrendingUp className="w-4 h-4 text-primary" /><h3 className="font-bold text-sm text-foreground">Usporedba po grupama</h3></div>
+                      {mektebStatsAll.perGrupa.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Još nema grupa.</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-left text-xs text-muted-foreground border-b border-border/50">
+                                <th className="py-2 pr-3 font-bold">Grupa</th>
+                                <th className="py-2 pr-3 font-bold">Muallim</th>
+                                <th className="py-2 pr-3 font-bold text-right">Učenika</th>
+                                <th className="py-2 pr-3 font-bold text-right">Prisustvo</th>
+                                <th className="py-2 pr-3 font-bold text-right">Prosj. ocjena</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {mektebStatsAll.perGrupa.map(g => (
+                                <tr key={g.id} className="border-b border-border/30 last:border-0">
+                                  <td className="py-2 pr-3 font-bold text-foreground">{g.naziv}</td>
+                                  <td className="py-2 pr-3 text-muted-foreground">{g.muallimNaziv}</td>
+                                  <td className="py-2 pr-3 text-right">{g.ukupnoUcenika}</td>
+                                  <td className="py-2 pr-3 text-right">{g.prisustvoPct !== null ? `${g.prisustvoPct}%` : "—"}</td>
+                                  <td className="py-2 pr-3 text-right">{g.prosjekOcjena !== null ? g.prosjekOcjena.toFixed(1) : "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
 
