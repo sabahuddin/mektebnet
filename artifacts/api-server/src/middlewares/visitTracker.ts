@@ -23,9 +23,15 @@ async function resolveGeo(ip: string): Promise<{ country: string; city: string }
   return { country: "Unknown", city: "Unknown" };
 }
 
+const SKIP_EXACT = new Set([
+  "/healthz", "/health", "/healthcheck", "/ping", "/status",
+  "/metrics", "/ready", "/readyz", "/livez", "/up", "/n",
+]);
+
 export function trackVisit(req: Request, _res: Response, next: NextFunction) {
   const path = req.path;
-  if (path.startsWith("/api/") || path.includes(".")) {
+  const normalized = path !== "/" && path.endsWith("/") ? path.slice(0, -1) : path;
+  if (path.startsWith("/api/") || path.includes(".") || SKIP_EXACT.has(normalized)) {
     next();
     return;
   }
