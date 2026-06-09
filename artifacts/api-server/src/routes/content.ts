@@ -31,6 +31,46 @@ import { getLang, overlayRows, overlayOne } from "../lib/content-translatable.js
 
 const router = Router();
 
+const SVI_JEZICI = ["bs", "sq", "de", "en", "tr", "ar"];
+
+// GET /api/content/dozvoljeni-jezici — koje jezike prijavljeni korisnik smije
+// koristiti. Muallim i njegovi učenici prate muallim_profili.dozvoljeni_jezici;
+// admin i roditelj imaju sve. Bosanski je UVIJEK uključen.
+router.get("/dozvoljeni-jezici", requireAuth, async (req, res) => {
+  try {
+    const user = (req as unknown as { user?: { userId?: number; role?: string } }).user;
+    const role = user?.role;
+    const uid = user?.userId;
+    if (!uid) { res.status(401).json({ error: "Niste prijavljeni" }); return; }
+    if (role === "admin" || role === "roditelj") {
+      res.json({ jezici: SVI_JEZICI });
+      return;
+    }
+    let raw: unknown = null;
+    if (role === "muallim") {
+      const r = (await db.execute(
+        sql`SELECT dozvoljeni_jezici FROM muallim_profili WHERE user_id = ${uid}`,
+      )) as unknown as { rows: { dozvoljeni_jezici: unknown }[] };
+      raw = r.rows[0]?.dozvoljeni_jezici ?? null;
+    } else if (role === "ucenik") {
+      const r = (await db.execute(
+        sql`SELECT mp.dozvoljeni_jezici FROM ucenik_profili up
+            JOIN muallim_profili mp ON mp.user_id = up.muallim_id
+            WHERE up.user_id = ${uid}`,
+      )) as unknown as { rows: { dozvoljeni_jezici: unknown }[] };
+      raw = r.rows[0]?.dozvoljeni_jezici ?? null;
+    }
+    let lista = Array.isArray(raw)
+      ? (raw as unknown[]).filter((l): l is string => typeof l === "string" && SVI_JEZICI.includes(l))
+      : SVI_JEZICI;
+    if (!lista.includes("bs")) lista = ["bs", ...lista];
+    lista = SVI_JEZICI.filter((l) => lista.includes(l));
+    res.json({ jezici: lista });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
 // ── ILMIHAL ────────────────────────────────────────────────────────────────────
 
 // GET /api/content/ilmihal?nivo=1

@@ -15,7 +15,10 @@ import { getApiBase } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
+import { LANG_LABELS, type Lang } from "@/lib/i18n";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+
+const SVI_JEZICI: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
 
 interface AnalyticsData {
   period?: string;
@@ -1154,6 +1157,7 @@ interface MuallimProfil {
   licenceCount: number;
   licencesUsed: number;
   mektebId?: number;
+  dozvoljeniJezici?: string[] | null;
 }
 
 function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }: {
@@ -1164,7 +1168,18 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
   const [displayName, setDisplayName] = useState(korisnik.displayName);
   const [email, setEmail] = useState(korisnik.email || "");
   const [licenceCount, setLicenceCount] = useState(muallimProfil?.licenceCount?.toString() || "30");
+  const [jezici, setJezici] = useState<Lang[]>(() => {
+    const init = Array.isArray(muallimProfil?.dozvoljeniJezici)
+      ? (muallimProfil!.dozvoljeniJezici as string[]).filter((l): l is Lang => SVI_JEZICI.includes(l as Lang))
+      : SVI_JEZICI;
+    return init.includes("bs") ? init : ["bs", ...init];
+  });
   const [isLoading, setIsLoading] = useState(false);
+
+  const toggleJezik = (l: Lang) => {
+    if (l === "bs") return; // bosanski je uvijek uključen
+    setJezici(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1178,6 +1193,9 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
       if (korisnik.role === "muallim" && muallimProfil) {
         await apiRequest("PUT", `/admin/muallim/${korisnik.id}/licence`, {
           licenceCount: parseInt(licenceCount) || 30,
+        }, token);
+        await apiRequest("PUT", `/admin/muallim/${korisnik.id}/jezici`, {
+          jezici: SVI_JEZICI.filter(l => l === "bs" || jezici.includes(l)),
         }, token);
       }
 
@@ -1233,6 +1251,34 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
               </div>
               <div className="text-xs text-teal-600">
                 {t("Preostalo: ")}<span className="font-bold">{(parseInt(licenceCount) || 0) - (muallimProfil.licencesUsed || 0)}</span>{t(" licenci")}
+              </div>
+            </div>
+          )}
+          {korisnik.role === "muallim" && muallimProfil && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+              <h4 className="font-bold text-sm text-indigo-800">{t("Dostupni jezici")}</h4>
+              <p className="text-xs text-indigo-600">{t("Muallim i njegovi učenici mogu prebaciti aplikaciju samo na uključene jezike. Bosanski je uvijek uključen.")}</p>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {SVI_JEZICI.map(l => {
+                  const checked = l === "bs" || jezici.includes(l);
+                  return (
+                    <label
+                      key={l}
+                      className={`flex items-center gap-2 text-sm font-medium rounded-lg px-2 py-1.5 border transition-colors ${
+                        l === "bs" ? "opacity-70 cursor-default bg-white border-indigo-200" : "cursor-pointer bg-white border-indigo-200 hover:bg-indigo-100/50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={l === "bs"}
+                        onChange={() => toggleJezik(l)}
+                        className="w-4 h-4 accent-indigo-600"
+                      />
+                      <span className="text-indigo-900">{LANG_LABELS[l]}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           )}

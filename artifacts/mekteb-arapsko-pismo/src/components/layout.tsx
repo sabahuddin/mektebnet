@@ -1,7 +1,10 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
 import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,8 +39,56 @@ const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
 const LANG_ORDER: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
 
 function LanguageSwitcher() {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
+  const { user, token } = useAuth();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
+
+  // Prijavljeni korisnici vide samo jezike koje je admin dozvolio njihovom
+  // muallimu (učenici prate muallima; admin/roditelj imaju sve). Gosti vide sve
+  // dugmiće, ali samo bosanski radi — ostali traže prijavu.
+  const { data: dozvoljeni } = useQuery<Lang[]>({
+    queryKey: ["dozvoljeni-jezici", user?.id ?? "guest"],
+    queryFn: async () => {
+      const res = await apiRequest<{ jezici: Lang[] }>(
+        "GET", "/content/dozvoljeni-jezici", undefined, token ?? undefined,
+      );
+      return res.jezici;
+    },
+    enabled: !!user && !!token,
+    staleTime: 60_000,
+  });
+
+  // Prijavljen korisnik: dok se lista ne učita (ili padne upit) ne otkrivamo
+  // nedozvoljene jezike — pokaži samo bosanski + trenutno aktivni. Gost vidi sve.
+  const allowedLangs: Lang[] = user
+    ? (dozvoljeni ?? Array.from(new Set<Lang>(["bs", lang])))
+    : LANG_ORDER;
+
+  // Ako prijavljenom korisniku trenutni jezik više nije dozvoljen (npr. admin ga
+  // je isključio), vrati ga na bosanski.
+  useEffect(() => {
+    if (user && dozvoljeni && !dozvoljeni.includes(lang)) {
+      setLang("bs");
+    }
+  }, [user, dozvoljeni, lang, setLang]);
+
+  // Gost vidi sve jezike (radi otkrivanja), prijavljeni samo dozvoljene.
+  const visibleLangs: Lang[] = user
+    ? LANG_ORDER.filter(l => allowedLangs.includes(l))
+    : LANG_ORDER;
+
+  const handlePick = (l: Lang) => {
+    setOpen(false);
+    if (!user && l !== "bs") {
+      toast({
+        title: t("Jezik dostupan prijavljenim korisnicima"),
+        description: t("Prijavite se da biste koristili ovaj jezik."),
+      });
+      return;
+    }
+    setLang(l);
+  };
 
   return (
     <div className="relative">
@@ -59,18 +110,22 @@ function LanguageSwitcher() {
               transition={{ duration: 0.15 }}
               className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-border/50 py-1 min-w-[100px]"
             >
-              {LANG_ORDER.map(l => (
-                <button
-                  key={l}
-                  onClick={() => { setLang(l); setOpen(false); }}
-                  className={`w-full px-4 py-2 text-left text-sm font-bold transition-colors flex items-center gap-2 ${
-                    lang === l ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
-                  }`}
-                >
-                  {LANG_LABELS[l]}
-                  {lang === l && <span className="ml-auto text-primary">●</span>}
-                </button>
-              ))}
+              {visibleLangs.map(l => {
+                const locked = !user && l !== "bs";
+                return (
+                  <button
+                    key={l}
+                    onClick={() => handlePick(l)}
+                    className={`w-full px-4 py-2 text-left text-sm font-bold transition-colors flex items-center gap-2 ${
+                      lang === l ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
+                    } ${locked ? "opacity-60" : ""}`}
+                  >
+                    {LANG_LABELS[l]}
+                    {lang === l && <span className="ml-auto text-primary">●</span>}
+                    {locked && <KeyRound className="w-3 h-3 ml-auto text-muted-foreground" />}
+                  </button>
+                );
+              })}
             </motion.div>
           </>
         )}

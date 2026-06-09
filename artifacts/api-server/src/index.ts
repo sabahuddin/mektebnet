@@ -586,6 +586,10 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE muallim_profili ADD COLUMN IF NOT EXISTS is_glavni boolean DEFAULT false NOT NULL;`);
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS glavni_muallim_id integer;`);
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS dozvoljeno_muallima integer DEFAULT 1 NOT NULL;`);
+    // Dozvoljeni jezici po muallimu (učenici prate svog muallima). Default su svi
+    // jezici uključeni — admin po potrebi ISKLJUČUJE pojedine. Bosanski je uvijek
+    // osnovni i ostaje dostupan bez obzira na sadržaj niza.
+    await db.execute(sql`ALTER TABLE muallim_profili ADD COLUMN IF NOT EXISTS dozvoljeni_jezici jsonb NOT NULL DEFAULT '["bs","sq","de","en","tr","ar"]'::jsonb;`);
 
     // Mekteb-nivo PDF dokumenti (pravila, kućni red...) — glavni muallim uploaduje,
     // učenici i roditelji čitaju.
@@ -641,7 +645,7 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS ui_prijevodi_uniq ON ui_prijevodi (jezik, kljuc);`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + mekteb_dokumenti) ready");
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

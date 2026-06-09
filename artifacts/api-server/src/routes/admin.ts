@@ -1189,7 +1189,14 @@ router.post("/muallim", async (req, res) => {
 router.get("/muallim-profili", async (req, res) => {
   try {
     const profili = await db.select().from(muallimProfiliTable);
-    res.json(profili);
+    // dozvoljeni_jezici je residual kolona (raw SQL), pa je dohvaćamo zasebno i
+    // spajamo da očuvamo postojeća camelCase polja iz drizzle select-a.
+    const jr = (await db.execute(
+      sql`SELECT user_id, dozvoljeni_jezici FROM muallim_profili`,
+    )) as unknown as { rows: { user_id: number; dozvoljeni_jezici: unknown }[] };
+    const jmap = new Map<number, unknown>();
+    for (const row of jr.rows) jmap.set(Number(row.user_id), row.dozvoljeni_jezici);
+    res.json(profili.map((p) => ({ ...p, dozvoljeniJezici: jmap.get(p.userId) ?? null })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -1260,6 +1267,26 @@ router.put("/muallim/:id/licence", async (req, res) => {
       .where(eq(muallimProfiliTable.userId, parseInt(req.params.id)))
       .returning();
     res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/muallim/:id/jezici - postavi dozvoljene jezike za muallima
+// (njegovi učenici automatski prate). Bosanski je uvijek uključen.
+router.put("/muallim/:id/jezici", async (req, res) => {
+  try {
+    const SVI = ["bs", "sq", "de", "en", "tr", "ar"];
+    const userId = parseInt(req.params.id);
+    const raw = (req.body as { jezici?: unknown }).jezici;
+    if (!Array.isArray(raw)) { res.status(400).json({ error: "jezici mora biti niz" }); return; }
+    let lista = raw.filter((l): l is string => typeof l === "string" && SVI.includes(l));
+    if (!lista.includes("bs")) lista = ["bs", ...lista];
+    lista = SVI.filter((l) => lista.includes(l));
+    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+    if (!profil) { res.status(404).json({ error: "Muallim profil nije pronađen" }); return; }
+    await db.execute(sql`UPDATE muallim_profili SET dozvoljeni_jezici = ${JSON.stringify(lista)}::jsonb WHERE user_id = ${userId}`);
+    res.json({ ok: true, jezici: lista });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
