@@ -1209,4 +1209,21 @@ router.get("/rjecnik", async (req, res) => {
   }
 });
 
+// Javni override sloj za UI/interfejs prijevode. Frontend ga učita pri startu i
+// primijeni u t() PRIJE bundlanih locales/*.json. Vraća { jezik: { kljuc: prijevod } }.
+router.get("/ui-prijevodi", async (_req, res) => {
+  try {
+    const result = (await db.execute(
+      sql`SELECT jezik, kljuc, prijevod FROM ui_prijevodi`,
+    )) as unknown as { rows: { jezik: string; kljuc: string; prijevod: string }[] };
+    const out: Record<string, Record<string, string>> = {};
+    for (const r of result.rows) {
+      (out[r.jezik] ??= {})[r.kljuc] = r.prijevod;
+    }
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 export default router;

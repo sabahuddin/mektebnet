@@ -64,6 +64,7 @@ import AdminKvizEditorPage from "./pages/admin-kviz-editor";
 import AdminAiImportPage from "./pages/admin-ai-import";
 import AdminCitaonicaPage from "./pages/admin-citaonica";
 import AdminEtapePage from "./pages/admin-etape";
+import AdminPrijevodiPage from "./pages/admin-prijevodi";
 import KrunisanjeNivoPage from "./pages/krunisanje";
 import KrunisanjeLekcijaPage from "./pages/krunisanje-lekcija";
 
@@ -182,6 +183,7 @@ function Router() {
       <Route path="/admin/ai-import" component={AdminAiImportPage} />
       <Route path="/admin/citaonica" component={AdminCitaonicaPage} />
       <Route path="/admin/etape" component={AdminEtapePage} />
+      <Route path="/admin/prijevodi" component={AdminPrijevodiPage} />
       <Route path="/admin" component={AdminPage} />
 
       {/* Muallim panel */}

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { translations, COUNTRY_TO_LANG, type Lang, type TranslationTree, getNestedValue } from "@/lib/i18n";
+import { getApiBase } from "@/lib/api";
 import sqFlat from "@/locales/sq.json";
 import deFlat from "@/locales/de.json";
 import enFlat from "@/locales/en.json";
@@ -13,7 +14,12 @@ interface LanguageContextType {
   t: (key: string, params?: Record<string, string>) => string;
   tr: TranslationTree;
   isRTL: boolean;
+  /** Ponovo učitaj UI override-e iz baze (npr. nakon admin izmjene prijevoda). */
+  reloadUiOverrides: () => Promise<void>;
 }
+
+/** Runtime override mapa: { jezik: { kljuc(bosanski izvor): prijevod } }. */
+type UiOverrides = Partial<Record<Lang, Record<string, string>>>;
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
@@ -76,11 +82,24 @@ function detectInitialLang(): Lang {
  */
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(detectInitialLang);
+  const [overrides, setOverrides] = useState<UiOverrides>({});
   const queryClient = useQueryClient();
+
+  const reloadUiOverrides = useCallback(async () => {
+    try {
+      const res = await fetch(`${getApiBase()}/content/ui-prijevodi`);
+      if (!res.ok) return;
+      const data = (await res.json()) as UiOverrides;
+      setOverrides(data && typeof data === "object" ? data : {});
+    } catch {
+      // mreža/offline — zadrži bundlane prijevode
+    }
+  }, []);
 
   useEffect(() => {
     clearGoogTransCookie();
-  }, []);
+    void reloadUiOverrides();
+  }, [reloadUiOverrides]);
 
   const setLang = useCallback((newLang: Lang) => {
     if (!SUPPORTED.includes(newLang) || newLang === lang) return;
@@ -109,17 +128,24 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (lang === "bs") {
         value = bsValue;
       } else {
-        const dict = FLAT[lang];
-        const flatHit = dict?.[key] ?? dict?.[bsValue];
-        if (flatHit) {
-          value = flatHit;
+        // 0) Runtime override iz baze (admin uređivanje) — ima prednost nad svim.
+        const ov = overrides[lang];
+        const ovHit = ov?.[key] ?? ov?.[bsValue];
+        if (ovHit) {
+          value = ovHit;
         } else {
-          // Postojeća ručna nested struktura (de/en/tr/ar).
-          const nested = getNestedValue(
-            (translations as Record<string, unknown>)[lang] ?? {},
-            key,
-          );
-          value = nested !== key ? nested : bsValue;
+          const dict = FLAT[lang];
+          const flatHit = dict?.[key] ?? dict?.[bsValue];
+          if (flatHit) {
+            value = flatHit;
+          } else {
+            // Postojeća ručna nested struktura (de/en/tr/ar).
+            const nested = getNestedValue(
+              (translations as Record<string, unknown>)[lang] ?? {},
+              key,
+            );
+            value = nested !== key ? nested : bsValue;
+          }
         }
       }
 
@@ -130,7 +156,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       }
       return value;
     },
-    [lang],
+    [lang, overrides],
   );
 
   useEffect(() => {
@@ -140,7 +166,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [lang]);
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, tr, isRTL: lang === "ar" }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, tr, isRTL: lang === "ar", reloadUiOverrides }}>
       {children}
     </LanguageContext.Provider>
   );

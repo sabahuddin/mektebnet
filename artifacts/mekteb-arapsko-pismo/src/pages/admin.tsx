@@ -8,7 +8,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2, Languages
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
@@ -2561,6 +2561,9 @@ export default function AdminPage() {
               </button>
               <button onClick={() => setLocation("/admin/etape")} data-testid="button-admin-etape" className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-semibold hover:bg-emerald-100 transition text-sm">
                 <Award className="w-4 h-4" /> Etape i krunisanja
+              </button>
+              <button onClick={() => setLocation("/admin/prijevodi")} data-testid="button-admin-prijevodi" className="flex items-center gap-2 px-4 py-2.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-xl font-semibold hover:bg-sky-100 transition text-sm">
+                <Languages className="w-4 h-4" /> Uređivanje prijevoda
               </button>
             </div>
             <SistemAlati token={token!} />

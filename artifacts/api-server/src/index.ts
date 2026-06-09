@@ -626,6 +626,21 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS content_prijevodi_uniq ON content_prijevodi (tabela, red_id, polje, jezik);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS content_prijevodi_lookup_idx ON content_prijevodi (tabela, jezik, red_id);`);
 
+    // ui_prijevodi — runtime override za UI/interfejs prijevode (locales/*.json su
+    // bundlani u build pa se ne mogu mijenjati bez rebuilda). Admin ekran upisuje
+    // override po (jezik, kljuc=bosanski izvorni tekst) → frontend ga učita preko
+    // javnog endpointa i t() ga primijeni PRVO (prije bundlanog locale rječnika).
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS ui_prijevodi (
+        id serial PRIMARY KEY NOT NULL,
+        jezik varchar(5) NOT NULL,
+        kljuc text NOT NULL,
+        prijevod text NOT NULL,
+        updated_at timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS ui_prijevodi_uniq ON ui_prijevodi (jezik, kljuc);`);
+
     logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + mekteb_dokumenti) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");

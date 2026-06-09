@@ -49,6 +49,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
+import { CT_TABLES } from "../lib/content-translatable.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -3892,6 +3893,158 @@ router.post("/sync-kvizovi-jsonb-u-banku", async (req, res) => {
     res.json({ ok: true, dryRun, result });
   } catch (err: any) {
     console.error("[admin/sync-kvizovi-jsonb-u-banku] error", err);
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+// ========================================================================
+// PRIJEVODI — admin uređivanje UI (interfejs) i sadržaja bez diranja koda.
+// Sve rute su admin-only (guard na vrhu fajla dozvoljava muallima samo za
+// /prilozi i /upload). UI override-i idu u ui_prijevodi (po jezik+kljuc), a
+// sadržaj se uređuje direktno u content_prijevodi.
+// ========================================================================
+const PRIJEVOD_JEZICI = new Set(["sq", "de", "en", "tr", "ar"]);
+
+// --- UI/interfejs override-i ---
+router.get("/prijevodi/ui", async (_req, res) => {
+  try {
+    const result = (await db.execute(
+      sql`SELECT jezik, kljuc, prijevod FROM ui_prijevodi ORDER BY jezik, kljuc`,
+    )) as unknown as { rows: { jezik: string; kljuc: string; prijevod: string }[] };
+    res.json({ rows: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+router.post("/prijevodi/ui", async (req, res) => {
+  try {
+    const jezik = String(req.body?.jezik || "").toLowerCase().trim();
+    const kljuc = String(req.body?.kljuc ?? "");
+    const prijevod = String(req.body?.prijevod ?? "");
+    if (!PRIJEVOD_JEZICI.has(jezik)) return res.status(400).json({ error: "Nepoznat jezik" });
+    if (!kljuc) return res.status(400).json({ error: "Ključ je obavezan" });
+    if (!prijevod.trim()) return res.status(400).json({ error: "Prijevod ne smije biti prazan" });
+    await db.execute(sql`
+      INSERT INTO ui_prijevodi (jezik, kljuc, prijevod, updated_at)
+      VALUES (${jezik}, ${kljuc}, ${prijevod}, NOW())
+      ON CONFLICT (jezik, kljuc) DO UPDATE SET prijevod = EXCLUDED.prijevod, updated_at = NOW()
+    `);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+// Ukloni override → UI se vraća na bundlani locale prijevod.
+router.delete("/prijevodi/ui", async (req, res) => {
+  try {
+    const jezik = String(req.body?.jezik || "").toLowerCase().trim();
+    const kljuc = String(req.body?.kljuc ?? "");
+    if (!jezik || !kljuc) return res.status(400).json({ error: "Jezik i ključ su obavezni" });
+    await db.execute(sql`DELETE FROM ui_prijevodi WHERE jezik = ${jezik} AND kljuc = ${kljuc}`);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+// --- Sadržaj (content_prijevodi) ---
+// Pretraga po prevedenom tekstu; vraća snippet + bosanski izvor (radi konteksta).
+router.get("/prijevodi/content", async (req, res) => {
+  try {
+    const lang = String(req.query["lang"] || "").toLowerCase().trim();
+    const q = String(req.query["q"] || "").trim();
+    const limit = Math.min(Number(req.query["limit"]) || 100, 300);
+    if (!PRIJEVOD_JEZICI.has(lang)) return res.status(400).json({ error: "Nepoznat jezik" });
+    if (q.length < 2) return res.json({ rows: [] });
+    const like = `%${q}%`;
+    const result = (await db.execute(sql`
+      SELECT id, tabela, red_id, polje, LEFT(prijevod, 240) AS snippet, LENGTH(prijevod) AS len
+      FROM content_prijevodi
+      WHERE jezik = ${lang} AND prijevod ILIKE ${like}
+      ORDER BY tabela, red_id
+      LIMIT ${limit}
+    `)) as unknown as { rows: { id: number; tabela: string; red_id: number; polje: string; snippet: string; len: number }[] };
+    const rows = result.rows;
+
+    // Dohvati bosanski izvor po grupama tabela (kolone whitelistane preko CT_TABLES).
+    const byTabela = new Map<string, Set<number>>();
+    for (const r of rows) {
+      if (!CT_TABLES[r.tabela]) continue;
+      let s = byTabela.get(r.tabela);
+      if (!s) { s = new Set(); byTabela.set(r.tabela, s); }
+      s.add(r.red_id);
+    }
+    const izvorMap = new Map<string, Map<number, Record<string, string>>>();
+    for (const [tabela, idSet] of byTabela) {
+      const cfg = CT_TABLES[tabela];
+      if (!cfg) continue;
+      const cols = cfg.fields.map((f) => f.col);
+      const colSel = sql.join(cols.map((c) => sql.raw(`"${c}"`)), sql`, `);
+      const idList = sql.join([...idSet].map((i) => sql`${i}`), sql`, `);
+      const sres = (await db.execute(
+        sql`SELECT id, ${colSel} FROM ${sql.raw(`"${tabela}"`)} WHERE id IN (${idList})`,
+      )) as unknown as { rows: Record<string, unknown>[] };
+      const m = new Map<number, Record<string, string>>();
+      for (const sr of sres.rows) {
+        const rec: Record<string, string> = {};
+        for (const c of cols) rec[c] = sr[c] == null ? "" : String(sr[c]);
+        m.set(Number(sr["id"]), rec);
+      }
+      izvorMap.set(tabela, m);
+    }
+    const enriched = rows.map((r) => ({
+      id: r.id,
+      tabela: r.tabela,
+      redId: r.red_id,
+      polje: r.polje,
+      snippet: r.snippet,
+      len: Number(r.len),
+      izvor: (izvorMap.get(r.tabela)?.get(r.red_id)?.[r.polje] ?? "").slice(0, 240),
+    }));
+    res.json({ rows: enriched });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+// Pun red (prijevod + izvor) za uređivanje.
+router.get("/prijevodi/content/:id", async (req, res) => {
+  try {
+    const id = Number(req.params["id"]);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "Neispravan ID" });
+    const result = (await db.execute(
+      sql`SELECT id, tabela, red_id, polje, jezik, prijevod FROM content_prijevodi WHERE id = ${id}`,
+    )) as unknown as { rows: { id: number; tabela: string; red_id: number; polje: string; jezik: string; prijevod: string }[] };
+    const row = result.rows[0];
+    if (!row) return res.status(404).json({ error: "Nije pronađeno" });
+    let izvor = "";
+    const cfg = CT_TABLES[row.tabela];
+    if (cfg && cfg.fields.some((f) => f.col === row.polje)) {
+      const sres = (await db.execute(
+        sql`SELECT ${sql.raw(`"${row.polje}"`)} AS v FROM ${sql.raw(`"${row.tabela}"`)} WHERE id = ${row.red_id}`,
+      )) as unknown as { rows: { v: unknown }[] };
+      izvor = sres.rows[0]?.v == null ? "" : String(sres.rows[0].v);
+    }
+    res.json({ ...row, redId: row.red_id, izvor });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+router.put("/prijevodi/content/:id", async (req, res) => {
+  try {
+    const id = Number(req.params["id"]);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "Neispravan ID" });
+    const prijevod = String(req.body?.prijevod ?? "");
+    if (!prijevod.trim()) return res.status(400).json({ error: "Prijevod ne smije biti prazan" });
+    const upd = (await db.execute(
+      sql`UPDATE content_prijevodi SET prijevod = ${prijevod}, updated_at = NOW() WHERE id = ${id} RETURNING id`,
+    )) as unknown as { rows: { id: number }[] };
+    if (upd.rows.length === 0) return res.status(404).json({ error: "Nije pronađeno" });
+    res.json({ ok: true });
+  } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
   }
 });
