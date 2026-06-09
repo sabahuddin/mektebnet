@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { Trophy, ArrowLeft, Brain, Zap, Medal, Users, School, Globe, RefreshCw, MapPin, Flag, Hexagon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +44,7 @@ const GAME_TABS: { id: GameFilter; label: string; icon: typeof Brain }[] = [
 
 export default function Ljestvica() {
   const { user, token } = useAuth();
+  const { t } = useLanguage();
   const [scope, setScope] = useState<Scope>("global");
   const [gameFilter, setGameFilter] = useState<GameFilter>("all");
   const [data, setData] = useState<LBResp | null>(null);
@@ -58,7 +60,7 @@ export default function Ljestvica() {
       const res = await apiRequest<LBResp>("GET", `/games/leaderboard?scope=${scope}&game=${gameFilter}`, undefined, token);
       setData(res);
     } catch (e) {
-      setErrorMsg((e as Error).message || "Greška");
+      setErrorMsg((e as Error).message || t("Greška"));
     } finally {
       if (silent) setRefreshing(false); else setLoading(false);
     }
@@ -106,8 +108,8 @@ export default function Ljestvica() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed">
-          <p className="font-bold text-foreground mb-2">Tabela je dostupna prijavljenim učenicima</p>
-          <Link href="/login" className="text-primary font-bold underline">Prijavi se</Link>
+          <p className="font-bold text-foreground mb-2">{t("Tabela je dostupna prijavljenim učenicima")}</p>
+          <Link href="/login" className="text-primary font-bold underline">{t("Prijavi se")}</Link>
         </Card>
       </Layout>
     );
@@ -116,8 +118,8 @@ export default function Ljestvica() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-ljestvica">
-          <p className="font-bold text-foreground mb-2">Tabela je dostupna samo učeničkim nalozima</p>
-          <Link href="/igrice" className="text-primary font-bold underline">Nazad</Link>
+          <p className="font-bold text-foreground mb-2">{t("Tabela je dostupna samo učeničkim nalozima")}</p>
+          <Link href="/igrice" className="text-primary font-bold underline">{t("Nazad")}</Link>
         </Card>
       </Layout>
     );
@@ -133,11 +135,11 @@ export default function Ljestvica() {
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <Link href="/igrice">
           <Button variant="ghost" size="sm" className="rounded-xl">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Natrag
+            <ArrowLeft className="w-4 h-4 mr-1" /> {t("Natrag")}
           </Button>
         </Link>
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
-          <Trophy className="w-7 h-7 text-amber-500" /> Tabela
+          <Trophy className="w-7 h-7 text-amber-500" /> {t("Tabela")}
         </h1>
         <Button
           variant="ghost"
@@ -146,17 +148,17 @@ export default function Ljestvica() {
           onClick={() => void fetchLB(true)}
           disabled={loading || refreshing}
           data-testid="btn-refresh-leaderboard"
-          aria-label="Osvježi ljestvicu"
-          title="Osvježi"
+          aria-label={t("Osvježi ljestvicu")}
+          title={t("Osvježi")}
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-          <span className="ml-1.5 hidden sm:inline">Osvježi</span>
+          <span className="ml-1.5 hidden sm:inline">{t("Osvježi")}</span>
         </Button>
       </div>
-      <p className="text-[11px] text-muted-foreground mb-3 sm:hidden">Povuci nadolje za osvježavanje</p>
+      <p className="text-[11px] text-muted-foreground mb-3 sm:hidden">{t("Povuci nadolje za osvježavanje")}</p>
 
       {/* Scope tabovi */}
-      <div className="flex gap-2 mb-3 flex-wrap" role="tablist" aria-label="Opseg ljestvice">
+      <div className="flex gap-2 mb-3 flex-wrap" role="tablist" aria-label={t("Opseg ljestvice")}>
         {SCOPE_TABS.map(tab => {
           const active = scope === tab.id;
           return (
@@ -168,14 +170,14 @@ export default function Ljestvica() {
                 active ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-muted/70"
               }`}
             >
-              <tab.icon className="w-4 h-4" /> {tab.label}
+              <tab.icon className="w-4 h-4" /> {t(tab.label)}
             </button>
           );
         })}
       </div>
 
       {/* Game filter */}
-      <div className="flex gap-2 mb-6 flex-wrap" role="tablist" aria-label="Filter igre">
+      <div className="flex gap-2 mb-6 flex-wrap" role="tablist" aria-label={t("Filter igre")}>
         {GAME_TABS.map(tab => {
           const active = gameFilter === tab.id;
           return (
@@ -187,7 +189,7 @@ export default function Ljestvica() {
                 active ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-white border border-border text-muted-foreground hover:bg-muted"
               }`}
             >
-              <tab.icon className="w-3.5 h-3.5" /> {tab.label}
+              <tab.icon className="w-3.5 h-3.5" /> {t(tab.label)}
             </button>
           );
         })}
@@ -201,15 +203,15 @@ export default function Ljestvica() {
 
       {!loading && errorMsg && (
         <Card className="p-6 bg-red-50 border-red-200">
-          <p className="font-bold text-red-700">Greška: {errorMsg}</p>
+          <p className="font-bold text-red-700">{t("Greška: {msg}", { msg: errorMsg })}</p>
         </Card>
       )}
 
       {!loading && !errorMsg && data && data.entries.length === 0 && (
         <Card className="p-8 text-center bg-muted/30 border-dashed">
           <Trophy className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="font-bold text-foreground mb-1">Još nema rezultata</p>
-          <p className="text-sm text-muted-foreground">{data.note || "Pokreni igru i budi prvi na listi!"}</p>
+          <p className="font-bold text-foreground mb-1">{t("Još nema rezultata")}</p>
+          <p className="text-sm text-muted-foreground">{data.note || t("Pokreni igru i budi prvi na listi!")}</p>
         </Card>
       )}
 
@@ -238,7 +240,7 @@ export default function Ljestvica() {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-foreground truncate">
                       {e.displayName}
-                      {isMe && <span className="ml-2 text-xs font-bold text-primary">(ja)</span>}
+                      {isMe && <span className="ml-2 text-xs font-bold text-primary">{t("(ja)")}</span>}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {e.mektebName ? (
@@ -249,7 +251,7 @@ export default function Ljestvica() {
                           <span className="mx-1.5">·</span>
                         </>
                       ) : null}
-                      {e.totalGames} {e.totalGames === 1 ? "igra" : "igara"}
+                      {e.totalGames} {e.totalGames === 1 ? t("igra") : t("igara")}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -257,7 +259,7 @@ export default function Ljestvica() {
                       <Medal className="w-4 h-4 text-amber-500" />
                       <span className="font-black text-lg text-foreground tabular-nums">{e.bestScore}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">najbolji</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("najbolji")}</p>
                   </div>
                 </div>
               );

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
+import { useLanguage } from "@/context/language";
 
 export interface LekcijaOption {
   id: number;
@@ -28,6 +29,7 @@ function normalize(s: string): string {
 }
 
 export function LekcijaPicker({ lekcije, value, onChange, placeholder }: Props) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -76,26 +78,26 @@ export function LekcijaPicker({ lekcije, value, onChange, placeholder }: Props) 
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); onChange(e.target.value); }}
           onFocus={() => setOpen(true)}
-          placeholder={placeholder ?? "Pretraži lekciju…"}
+          placeholder={placeholder ?? t("Pretraži lekciju…")}
           className="w-full border border-border rounded-xl pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
         />
         {(query || value) && (
           <button type="button" onClick={clear}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted text-muted-foreground"
-            aria-label="Obriši">
+            aria-label={t("Obriši")}>
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
       {selected && !open && (
         <div className="text-[11px] text-muted-foreground mt-1 px-1">
-          #{selected.broj} • Nivo {selected.nivo}
+          #{selected.broj} • {t("Nivo {nivo}", { nivo: String(selected.nivo) })}
         </div>
       )}
       {open && (
         <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white border border-border rounded-xl shadow-lg">
           {matches.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground">Nema rezultata</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground">{t("Nema rezultata")}</div>
           ) : matches.map(l => (
             <button
               key={l.id}
@@ -107,7 +109,7 @@ export function LekcijaPicker({ lekcije, value, onChange, placeholder }: Props) 
                 {l.broj}
               </span>
               <span className="flex-1 truncate">{l.naslov}</span>
-              <span className="text-[10px] text-muted-foreground">Nivo {l.nivo}</span>
+              <span className="text-[10px] text-muted-foreground">{t("Nivo {nivo}", { nivo: String(l.nivo) })}</span>
             </button>
           ))}
         </div>

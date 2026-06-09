@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X, Filter, Award, Plus } from "lucide-react";
 
@@ -25,6 +26,7 @@ const NIVO_INFO: Record<number, { naslov: string; podnaslov: string; bg: string;
 
 export default function IlmihalSvePage() {
   const { token, user } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const isAdmin = user?.role === "admin";
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
@@ -81,7 +83,7 @@ export default function IlmihalSvePage() {
     const sorted = Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "bs"))
       .map(([value, count]) => ({ value, label: value, count }));
-    if (bez > 0) sorted.push({ value: BEZ_PREDMETA, label: "Bez predmeta", count: bez });
+    if (bez > 0) sorted.push({ value: BEZ_PREDMETA, label: t("Bez predmeta"), count: bez });
     return sorted;
   }, [lekcije]);
 
@@ -162,21 +164,21 @@ export default function IlmihalSvePage() {
             data-testid="link-back-ilmihal"
           >
             <ArrowLeft className="w-5 h-5" />
-            Nazad na Lekcije
+            {t("Nazad na Lekcije")}
           </Link>
           {token && total > 0 && (
             <div className="text-sm font-bold text-amber-900 bg-white/80 rounded-full px-3 py-1 shadow-sm">
-              {done} / {total} završeno
+              {done} / {total} {t("završeno")}
             </div>
           )}
         </div>
 
         <div className="text-center mb-6">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-amber-900 mb-2">
-            Spisak svih lekcija
+            {t("Spisak svih lekcija")}
           </h1>
           <p className="text-amber-800/80 text-sm sm:text-base">
-            Pregledaj sve lekcije po nivoima i otvori bilo koju
+            {t("Pregledaj sve lekcije po nivoima i otvori bilo koju")}
           </p>
         </div>
 
@@ -191,17 +193,17 @@ export default function IlmihalSvePage() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Pretraži lekcije po naslovu…"
+                placeholder={t("Pretraži lekcije po naslovu…")}
                 className="w-full pl-9 pr-9 py-2.5 rounded-full bg-white/90 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm sm:text-base text-amber-900 placeholder:text-amber-700/50 shadow-sm"
                 data-testid="input-pretraga-lekcija"
-                aria-label="Pretraga lekcija"
+                aria-label={t("Pretraga lekcija")}
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-amber-100 text-amber-700"
-                  aria-label="Obriši pretragu"
+                  aria-label={t("Obriši pretragu")}
                   data-testid="button-obrisi-pretragu"
                 >
                   <X className="w-4 h-4" />
@@ -218,9 +220,9 @@ export default function IlmihalSvePage() {
                 onChange={(e) => setPredmet(e.target.value)}
                 className="w-full pl-9 pr-8 py-2.5 rounded-full bg-white/90 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm sm:text-base text-amber-900 shadow-sm appearance-none cursor-pointer"
                 data-testid="select-predmet"
-                aria-label="Filter po predmetu"
+                aria-label={t("Filter po predmetu")}
               >
-                <option value="">Svi predmeti</option>
+                <option value="">{t("Svi predmeti")}</option>
                 {predmetiOptions.map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label} ({p.count})
@@ -236,17 +238,17 @@ export default function IlmihalSvePage() {
           {isSearching && (
             <div className="text-center text-xs text-amber-800/70 mt-2">
               {matchCount === 0
-                ? "Nema lekcija koje odgovaraju pretrazi"
-                : `Pronađeno ${matchCount} ${matchCount === 1 ? "lekcija" : matchCount < 5 ? "lekcije" : "lekcija"}`}
+                ? t("Nema lekcija koje odgovaraju pretrazi")
+                : t("Pronađeno {n} {rijec}", { n: String(matchCount), rijec: matchCount === 1 ? t("lekcija") : matchCount < 5 ? t("lekcije") : t("lekcija") })}
             </div>
           )}
         </div>
 
         {loading ? (
-          <div className="text-center text-amber-800/70 py-10">Učitavanje…</div>
+          <div className="text-center text-amber-800/70 py-10">{t("Učitavanje…")}</div>
         ) : total === 0 ? (
           <div className="text-center text-amber-800/70 py-10">
-            Trenutno nema dostupnih lekcija.
+            {t("Trenutno nema dostupnih lekcija.")}
           </div>
         ) : (
           <div className="space-y-4">
@@ -341,19 +343,19 @@ export default function IlmihalSvePage() {
                                 </div>
                                 {isLocked && (
                                   <div className="text-[11px] text-amber-800/60 mt-0.5">
-                                    Zaključano — završi prethodnu lekciju
+                                    {t("Zaključano — završi prethodnu lekciju")}
                                   </div>
                                 )}
                               </div>
                               {isDone ? (
                                 <CheckCircle2
                                   className="w-6 h-6 text-emerald-600 flex-shrink-0"
-                                  aria-label="Završeno"
+                                  aria-label={t("Završeno")}
                                 />
                               ) : isLocked ? (
                                 <Lock
                                   className="w-5 h-5 text-amber-700/50 flex-shrink-0"
-                                  aria-label="Zaključano"
+                                  aria-label={t("Zaključano")}
                                 />
                               ) : (
                                 <BookOpen
@@ -381,7 +383,7 @@ export default function IlmihalSvePage() {
                                     className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl opacity-70 cursor-not-allowed select-none"
                                     aria-disabled="true"
                                     data-testid={`locked-lekcija-${l.slug}`}
-                                    title="Zaključano — završi prethodnu lekciju"
+                                    title={t("Zaključano — završi prethodnu lekciju")}
                                   >
                                     {rowInner}
                                   </div>
@@ -402,7 +404,7 @@ export default function IlmihalSvePage() {
                                 >
                                   <div
                                     className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 ring-2 ring-amber-500 shadow-md"
-                                    aria-label="Medaljon — sekcija ponavljanja"
+                                    aria-label={t("Medaljon — sekcija ponavljanja")}
                                   >
                                     <Award className="w-5 h-5 text-amber-900" />
                                   </div>
@@ -420,7 +422,7 @@ export default function IlmihalSvePage() {
                         className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 border-dashed border-amber-400 text-amber-800 font-bold text-sm hover:bg-white/60 active:bg-white/80 transition-colors"
                         data-testid={`button-add-dodatak-${nivo}`}
                       >
-                        <Plus className="w-4 h-4" /> Dodaj DODATAK lekciju
+                        <Plus className="w-4 h-4" /> {t("Dodaj DODATAK lekciju")}
                       </button>
                     )}
                   </div>

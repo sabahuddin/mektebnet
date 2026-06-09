@@ -31,9 +31,22 @@ dijasporu (engleski browser) na strani jezik bez njihove odluke.
 
 ## OpenAI pipeline
 `scripts/translate-i18n.ts` (tsx). Koristi Replit AI Integrations proxy preko
-`AI_INTEGRATIONS_OPENAI_BASE_URL`/`_API_KEY` (postavi `setupReplitAIIntegrations`),
-plain `fetch` na `${BASE_URL}/chat/completions`, model gpt-5-mini, response_format
-json_object. Idempotentno (prevodi samo nedostajuće), piše nakon svake grupe.
-Bash ima 120s limit pa duži prijevod ide u više prolaza (`timeout 115 ... ` re-run).
-Trošak prijevoda interfejsa je reda veličine centi (gpt-5-mini, kratki UI stringovi) —
-tokeni nikad nisu faktor odluke; usko grlo je ljudski pregled.
+`AI_INTEGRATIONS_OPENAI_BASE_URL`/`_API_KEY`, plain `fetch` na
+`${BASE_URL}/chat/completions`, response_format json_object. Idempotentno (prevodi
+samo nedostajuće), inkrementalni (debounced) zapis na disk → resumable.
+
+**Brzina (VAŽNO):** default model je `gpt-5-nano` s `reasoning_effort:"minimal"`
+(gpt-5-mini je bio ~115s po chunku od 60 = nepraktično). Skripta paralelizuje preko
+pool-a radnika (`--concurrency`, default 10) sa SVIM jezicima u jednom redu poslova.
+Retry s eksponencijalnim backoffom na 429/5xx. CLI: `--langs sq,de,en,tr,ar
+--chunk N --concurrency N [--dry]`. Pri puno paralelnih zahtjeva 429 se javlja —
+drži konkurentnost ~5-6 za stabilno. Bash 120s limit pa duži posao ide u više
+`timeout 115 ...` prolaza (resumable, samo re-run).
+
+**Matching gotcha:** model zna SPOJITI fragmente koji u JSON nizu izgledaju kao jedna
+rečenica isprekidana `","` (npr. tekst razbijen oko inline `<code>`), pa vrati jedan
+kombinovani ključ. Merge je zato tolerantan: pokušaj egzaktni → pa normalizovani
+(trim + collapse razmaka, uz očuvanje vodećih/pratećih razmaka). Tvrdokorne fragmente
+popuni `--chunk 1` prolazom (jedan string po zahtjevu, nema spajanja).
+
+Trošak je reda veličine centi (kratki UI stringovi); usko grlo je ljudski pregled, ne tokeni.

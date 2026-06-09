@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 
 interface Grupa {
   id: number;
@@ -39,6 +40,7 @@ export default function MuallimRasporedPage() {
   const [, setLocation] = useLocation();
   const { token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [grupaNaziv, setGrupaNaziv] = useState<string>("");
   const [nivo, setNivo] = useState<number>(1);
@@ -58,9 +60,9 @@ export default function MuallimRasporedPage() {
     apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token)
       .then(gs => {
         const g = gs.find(x => x.id === grupaId);
-        setGrupaNaziv(g?.naziv || `Grupa ${grupaId}`);
+        setGrupaNaziv(g?.naziv || t("Grupa {grupaId}", { grupaId: String(grupaId) }));
       })
-      .catch(() => setGrupaNaziv(`Grupa ${grupaId}`));
+      .catch(() => setGrupaNaziv(t("Grupa {grupaId}", { grupaId: String(grupaId) })));
   }, [token, grupaId]);
 
   const loadRaspored = useCallback(
@@ -74,7 +76,7 @@ export default function MuallimRasporedPage() {
           setDirty(false);
         })
         .catch((err: any) => {
-          toast({ title: "Greška", description: err.message || "Ne mogu učitati raspored", variant: "destructive" });
+          toast({ title: t("Greška"), description: err.message || t("Ne mogu učitati raspored"), variant: "destructive" });
           setLekcije([]);
         })
         .finally(() => setLoading(false));
@@ -131,9 +133,9 @@ export default function MuallimRasporedPage() {
       }, token);
       setImaRaspored(true);
       setDirty(false);
-      toast({ title: "Spremljeno", description: `Raspored za nivo ${nivo} je sačuvan.` });
+      toast({ title: t("Spremljeno"), description: t("Raspored za nivo {nivo} je sačuvan.", { nivo: String(nivo) }) });
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message || "Spremanje nije uspjelo", variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message || t("Spremanje nije uspjelo"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -144,10 +146,10 @@ export default function MuallimRasporedPage() {
     setResetting(true);
     try {
       await apiRequest("DELETE", `/muallim/grupa/${grupaId}/raspored?nivo=${nivo}`, undefined, token);
-      toast({ title: "Vraćeno na zadano", description: `Nivo ${nivo} koristi globalni redoslijed.` });
+      toast({ title: t("Vraćeno na zadano"), description: t("Nivo {nivo} koristi globalni redoslijed.", { nivo: String(nivo) }) });
       loadRaspored(nivo);
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message || "Reset nije uspio", variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message || t("Reset nije uspio"), variant: "destructive" });
     } finally {
       setResetting(false);
     }
@@ -161,11 +163,11 @@ export default function MuallimRasporedPage() {
             onClick={() => setLocation(`/muallim/grupa/${grupaId}`)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-violet-200 text-violet-700 hover:bg-violet-100 font-bold text-sm transition-colors shrink-0"
           >
-            <ArrowLeft className="w-4 h-4" /> Nazad
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <ListOrdered className="w-4 h-4 text-violet-700 shrink-0" />
-            <span className="font-extrabold text-foreground truncate">Raspored lekcija · {grupaNaziv}</span>
+            <span className="font-extrabold text-foreground truncate">{t("Raspored lekcija")} · {grupaNaziv}</span>
           </div>
         </div>
       </div>
@@ -174,11 +176,8 @@ export default function MuallimRasporedPage() {
         <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-2xl p-4 mb-5">
           <Info className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
           <p className="text-sm text-violet-900/90 leading-relaxed">
-            Posloži lekcije onim redoslijedom kojim ih obrađuješ sa ovom grupom. Učenici
-            ove grupe će lekcije otključavati po tvom redoslijedu. Ako ne sačuvaš vlastiti
-            raspored, koristi se zadani (globalni) redoslijed. Mijenjanje rasporeda ne briše
-            napredak učenika. <strong>Savjet:</strong> za veliki skok klikni na broj lekcije,
-            upiši poziciju i pritisni Enter; za sitne pomake koristi strelice ili prevuci.
+            {t("Posloži lekcije onim redoslijedom kojim ih obrađuješ sa ovom grupom. Učenici ove grupe će lekcije otključavati po tvom redoslijedu. Ako ne sačuvaš vlastiti raspored, koristi se zadani (globalni) redoslijed. Mijenjanje rasporeda ne briše napredak učenika.")}{" "}
+            <strong>{t("Savjet:")}</strong> {t("za veliki skok klikni na broj lekcije, upiši poziciju i pritisni Enter; za sitne pomake koristi strelice ili prevuci.")}
           </p>
         </div>
 
@@ -188,7 +187,7 @@ export default function MuallimRasporedPage() {
             <button
               key={n}
               onClick={() => {
-                if (dirty && !window.confirm("Imaš nesačuvane izmjene. Promijeniti nivo bez spremanja?")) return;
+                if (dirty && !window.confirm(t("Imaš nesačuvane izmjene. Promijeniti nivo bez spremanja?"))) return;
                 setNivo(n);
               }}
               className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors border-2 ${
@@ -197,12 +196,12 @@ export default function MuallimRasporedPage() {
                   : "bg-white border-violet-200 text-violet-700 hover:bg-violet-50"
               }`}
             >
-              Nivo {n}
+              {t("Nivo {n}", { n: String(n) })}
             </button>
           ))}
           <div className="ml-auto flex items-center">
             <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${imaRaspored ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-              {imaRaspored ? "Vlastiti raspored" : "Zadani redoslijed"}
+              {imaRaspored ? t("Vlastiti raspored") : t("Zadani redoslijed")}
             </span>
           </div>
         </div>
@@ -215,7 +214,7 @@ export default function MuallimRasporedPage() {
           </div>
         ) : lekcije.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground font-medium">
-            Nema lekcija za nivo {nivo}.
+            {t("Nema lekcija za nivo {nivo}.", { nivo: String(nivo) })}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -256,7 +255,7 @@ export default function MuallimRasporedPage() {
                   <button
                     type="button"
                     onClick={() => startEditPos(i)}
-                    title="Klikni da premjestiš na tačnu poziciju"
+                    title={t("Klikni da premjestiš na tačnu poziciju")}
                     className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-violet-100 text-violet-700 font-black text-sm hover:bg-violet-200 hover:ring-2 hover:ring-violet-300 transition-colors cursor-pointer"
                   >
                     {i + 1}
@@ -268,7 +267,7 @@ export default function MuallimRasporedPage() {
                     onClick={() => move(i, -1)}
                     disabled={i === 0}
                     className="p-1.5 rounded-lg hover:bg-violet-50 text-violet-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                    aria-label="Pomjeri gore"
+                    aria-label={t("Pomjeri gore")}
                   >
                     <ChevronUp className="w-4 h-4" />
                   </button>
@@ -276,7 +275,7 @@ export default function MuallimRasporedPage() {
                     onClick={() => move(i, 1)}
                     disabled={i === lekcije.length - 1}
                     className="p-1.5 rounded-lg hover:bg-violet-50 text-violet-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                    aria-label="Pomjeri dolje"
+                    aria-label={t("Pomjeri dolje")}
                   >
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -294,7 +293,7 @@ export default function MuallimRasporedPage() {
               className="rounded-xl font-bold flex items-center gap-2 flex-1 min-w-[140px]"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {dirty ? "Sačuvaj raspored" : "Sačuvano"}
+              {dirty ? t("Sačuvaj raspored") : t("Sačuvano")}
             </Button>
             <Button
               variant="outline"
@@ -303,7 +302,7 @@ export default function MuallimRasporedPage() {
               className="rounded-xl font-bold flex items-center gap-2"
             >
               {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-              Vrati na zadano
+              {t("Vrati na zadano")}
             </Button>
           </div>
         )}

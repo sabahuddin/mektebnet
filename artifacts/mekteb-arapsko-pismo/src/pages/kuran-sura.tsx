@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
 import { Layout } from "@/components/layout";
+import { useLanguage } from "@/context/language";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AyahFlow, type FlowAyah } from "@/components/quran/ayah-flow";
 import { AudioBar } from "@/components/quran/audio-bar";
@@ -18,6 +19,7 @@ import {
 } from "@/lib/quran";
 
 export default function KuranSuraPage() {
+  const { t } = useLanguage();
   const { n } = useParams<{ n: string }>();
   const surahNum = Math.max(1, Math.min(114, parseInt(n || "1", 10) || 1));
 
@@ -52,7 +54,7 @@ export default function KuranSuraPage() {
       })
       .catch((e) => {
         if (reqIdRef.current !== reqId) return;
-        setError(e?.message || "Greška pri učitavanju.");
+        setError(e?.message || t("Greška pri učitavanju."));
       })
       .finally(() => {
         if (reqIdRef.current !== reqId) return;
@@ -76,13 +78,13 @@ export default function KuranSuraPage() {
             className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Sve sure
+            {t("Sve sure")}
           </Link>
           <Link
             href="/kuran/stranica/1"
             className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
           >
-            Po stranici (Mushaf)
+            {t("Po stranici (Mushaf)")}
           </Link>
         </div>
 
@@ -92,7 +94,7 @@ export default function KuranSuraPage() {
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground p-6 text-center mb-6">
             <div className="relative z-10">
               <div className="text-xs font-bold uppercase tracking-wider text-white/70">
-                Sura {meta.number} · {revelationLabel(meta.revelationType)} · {meta.numberOfAyahs} ajeta
+                {t("Sura {broj} · {tip} · {n} ajeta", { broj: String(meta.number), tip: revelationLabel(meta.revelationType), n: String(meta.numberOfAyahs) })}
               </div>
               <div
                 className="text-4xl sm:text-5xl my-2"
@@ -148,7 +150,7 @@ export default function KuranSuraPage() {
                 href={`/kuran/${surahNum + 1}`}
                 className="flex-1 text-center py-2.5 rounded-xl bg-white border border-card-border font-bold text-sm hover:border-primary/40 transition-colors"
               >
-                ← Sljedeća sura
+                {t("← Sljedeća sura")}
               </Link>
             ) : (
               <span className="flex-1" />
@@ -158,7 +160,7 @@ export default function KuranSuraPage() {
                 href={`/kuran/${surahNum - 1}`}
                 className="flex-1 text-center py-2.5 rounded-xl bg-white border border-card-border font-bold text-sm hover:border-primary/40 transition-colors"
               >
-                Prethodna sura →
+                {t("Prethodna sura →")}
               </Link>
             ) : (
               <span className="flex-1" />
@@ -178,7 +180,7 @@ export default function KuranSuraPage() {
           onToggleRepeat={() => audio.setRepeatOne((r) => !r)}
           title={`${surahNum}. ${bosanski}`}
           subtitle={
-            activeAyahNum != null ? `Ajet ${activeAyahNum} / ${meta.numberOfAyahs}` : "Odaberi učača i klikni ajet"
+            activeAyahNum != null ? t("Ajet {n} / {ukupno}", { n: String(activeAyahNum), ukupno: String(meta.numberOfAyahs) }) : t("Odaberi učača i klikni ajet")
           }
           reciterId={reciterId}
           onReciterChange={setReciterId}

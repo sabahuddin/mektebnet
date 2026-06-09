@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, Volume2 } from "lucide-react";
 import { LESSONS } from "@/data/lessons";
 
@@ -74,21 +75,22 @@ const BADGE_COLORS = [
 ];
 
 export default function KartaHarfova() {
+  const { t } = useLanguage();
   return (
     <Layout>
       <div className="mb-6">
         <Link href="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
           <ArrowLeft className="w-5 h-5" />
-          Nazad na lekcije
+          {t("Nazad na lekcije")}
         </Link>
       </div>
 
       {/* Hero */}
       <div className="bg-gradient-to-br from-teal-700 to-teal-900 rounded-3xl p-8 mb-8 text-white text-center shadow-xl">
         <div className="text-5xl mb-3">🗺️</div>
-        <h1 className="text-4xl font-black mb-2">Karta harfova</h1>
+        <h1 className="text-4xl font-black mb-2">{t("Karta harfova")}</h1>
         <p className="text-teal-100 text-lg flex items-center justify-center gap-2">
-          Svi harfovi koje smo učili — klikni za izgovor
+          {t("Svi harfovi koje smo učili — klikni za izgovor")}
           <Volume2 className="w-5 h-5 text-teal-300" />
         </p>
       </div>
@@ -105,7 +107,7 @@ export default function KartaHarfova() {
               <div>
                 <h2 className="text-xl font-black text-foreground leading-tight">{lesson.title}</h2>
                 <Link href={`/lesson/${lesson.id}`} className="text-sm font-semibold text-primary hover:underline">
-                  → Idi na lekciju
+                  {t("→ Idi na lekciju")}
                 </Link>
               </div>
             </div>
@@ -164,7 +166,7 @@ export default function KartaHarfova() {
 
       <div className="mt-12 text-center">
         <p className="text-base text-muted-foreground font-medium">
-          {LESSONS.length} lekcija · klikni svaki harf da čuješ izgovor 🔊
+          {t("{n} lekcija · klikni svaki harf da čuješ izgovor 🔊", { n: String(LESSONS.length) })}
         </p>
       </div>
     </Layout>

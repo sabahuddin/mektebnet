@@ -4,8 +4,10 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, CheckCircle2, AlertCircle, KeyRound, Eye, EyeOff } from "lucide-react";
+import { useLanguage } from "@/context/language";
 
 export default function ResetSifraPage() {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const token = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
@@ -23,15 +25,15 @@ export default function ResetSifraPage() {
     e.preventDefault();
     setError("");
     if (!token) {
-      setError("Link nije valjan.");
+      setError(t("Link nije valjan."));
       return;
     }
     if (pw1.length < 6) {
-      setError("Šifra mora imati najmanje 6 karaktera.");
+      setError(t("Šifra mora imati najmanje 6 karaktera."));
       return;
     }
     if (pw1 !== pw2) {
-      setError("Šifre se ne podudaraju.");
+      setError(t("Šifre se ne podudaraju."));
       return;
     }
     setIsLoading(true);
@@ -42,10 +44,10 @@ export default function ResetSifraPage() {
         body: JSON.stringify({ token, newPassword: pw1 }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Greška pri promjeni šifre.");
+      if (!res.ok) throw new Error(data.error || t("Greška pri promjeni šifre."));
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Greška servera.");
+      setError(err instanceof Error ? err.message : t("Greška servera."));
     } finally {
       setIsLoading(false);
     }
@@ -62,26 +64,26 @@ export default function ResetSifraPage() {
       >
         <div className="text-center mb-8">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-4" />
-          <p className="text-muted-foreground mt-1 font-medium">Nova šifra</p>
+          <p className="text-muted-foreground mt-1 font-medium">{t("Nova šifra")}</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-8">
           <h2 className="text-xl font-bold mb-2 text-foreground flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-primary" />
-            Postavi novu šifru
+            {t("Postavi novu šifru")}
           </h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Odaberite novu šifru za vaš Mekteb.net račun.
+            {t("Odaberite novu šifru za vaš Mekteb.net račun.")}
           </p>
 
           {done ? (
             <div className="flex flex-col items-center text-center gap-4 py-4">
               <CheckCircle2 className="w-14 h-14 text-emerald-600" />
               <div>
-                <p className="font-bold text-foreground mb-1">Šifra je promijenjena!</p>
-                <p className="text-sm text-muted-foreground">Sada se možete prijaviti s novom šifrom.</p>
+                <p className="font-bold text-foreground mb-1">{t("Šifra je promijenjena!")}</p>
+                <p className="text-sm text-muted-foreground">{t("Sada se možete prijaviti s novom šifrom.")}</p>
               </div>
-              <Button onClick={() => setLocation("/login")} className="rounded-xl">Idi na prijavu</Button>
+              <Button onClick={() => setLocation("/login")} className="rounded-xl">{t("Idi na prijavu")}</Button>
             </div>
           ) : (
             <>
@@ -97,12 +99,12 @@ export default function ResetSifraPage() {
               )}
               {!token && (
                 <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 mb-4 text-sm">
-                  Link nije valjan ili nedostaje token. Zatražite novi link na stranici "Zaboravljena šifra".
+                  {t(`Link nije valjan ili nedostaje token. Zatražite novi link na stranici "Zaboravljena šifra".`)}
                 </div>
               )}
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
-                  <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Nova šifra</label>
+                  <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Nova šifra")}</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -125,7 +127,7 @@ export default function ResetSifraPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Ponovi šifru</label>
+                  <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Ponovi šifru")}</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -140,7 +142,7 @@ export default function ResetSifraPage() {
                   </div>
                 </div>
                 <Button type="submit" size="lg" className="w-full h-12 rounded-xl text-base font-bold mt-2" disabled={isLoading || !token}>
-                  {isLoading ? "Mijenjanje..." : "Postavi novu šifru"}
+                  {isLoading ? t("Mijenjanje...") : t("Postavi novu šifru")}
                 </Button>
               </form>
             </>

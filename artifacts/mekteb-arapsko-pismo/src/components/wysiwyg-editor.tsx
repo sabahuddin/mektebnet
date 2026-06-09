@@ -25,6 +25,7 @@ import {
   Puzzle
 } from "lucide-react";
 import { parsePripremaContent, renderPripremaContent, type PripremaStruct } from "@/lib/priprema-design";
+import { useLanguage } from "@/context/language";
 
 const CustomImage = Image.extend({
   addAttributes() {
@@ -385,6 +386,7 @@ function replaceHeroImage(beforeHtml: string, newSrc: string): string {
 }
 
 export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
@@ -481,7 +483,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         beforeAccordions: replaceHeroImage(prev.beforeAccordions, url),
       }));
       onChange("");
-      toast({ title: "Hero slika postavljena ✓" });
+      toast({ title: t("Hero slika postavljena ✓") });
     } else if (editor) {
       editor.chain().focus().setImage({ src: url }).run();
     }
@@ -503,15 +505,15 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       });
       if (!resp.ok) {
         const err = await resp.json();
-        throw new Error(err.error || "Upload nije uspio");
+        throw new Error(err.error || t("Upload nije uspio"));
       }
       const data = await resp.json();
       if (data.html) {
         editor.chain().focus().insertContent(data.html).run();
-        toast({ title: `${data.filename} umetnut ✓`, description: `Format: ${data.format.toUpperCase()}` });
+        toast({ title: t("{filename} umetnut ✓", { filename: data.filename }), description: t("Format: {format}", { format: data.format.toUpperCase() }) });
       }
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     }
     setDocUploading(false);
   }, [editor, token, toast]);
@@ -700,7 +702,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       });
       const data = await resp.json();
       if (!resp.ok) {
-        toast({ title: "Greška pri uploadu", description: data.error || "Nepoznata greška", variant: "destructive" });
+        toast({ title: t("Greška pri uploadu"), description: data.error || t("Nepoznata greška"), variant: "destructive" });
         return;
       }
       if (data.url) {
@@ -710,10 +712,10 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           beforeAccordions: replaceHeroImage(prev.beforeAccordions, data.url),
         }));
         onChange("");
-        toast({ title: "Hero slika ažurirana ✓" });
+        toast({ title: t("Hero slika ažurirana ✓") });
       }
     } catch {
-      toast({ title: "Upload nije uspio", variant: "destructive" });
+      toast({ title: t("Upload nije uspio"), variant: "destructive" });
     } finally {
       setHeroUploading(false);
     }
@@ -764,14 +766,14 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       });
       const data = await resp.json();
       if (!resp.ok) {
-        toast({ title: "Greška pri uploadu", description: data.error || "Nepoznata greška", variant: "destructive" });
+        toast({ title: t("Greška pri uploadu"), description: data.error || t("Nepoznata greška"), variant: "destructive" });
         return;
       }
       if (data.url) {
         editor.chain().focus().setImage({ src: data.url }).run();
       }
     } catch {
-      toast({ title: "Upload nije uspio", description: "Provjerite konekciju", variant: "destructive" });
+      toast({ title: t("Upload nije uspio"), description: t("Provjerite konekciju"), variant: "destructive" });
     }
   }, [editor, token, toast]);
 
@@ -794,7 +796,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
       });
       const data = await resp.json();
       if (!resp.ok) {
-        toast({ title: "Greška pri uploadu audio fajla", description: data.error || "Nepoznata greška", variant: "destructive" });
+        toast({ title: t("Greška pri uploadu audio fajla"), description: data.error || t("Nepoznata greška"), variant: "destructive" });
         return;
       }
       if (data.url) {
@@ -802,10 +804,10 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           type: "audioBlock",
           attrs: { src: data.url, title: data.filename || null },
         }).run();
-        toast({ title: "Audio dodat ✓", description: data.filename || "Player umetnut u lekciju" });
+        toast({ title: t("Audio dodat ✓"), description: data.filename || t("Player umetnut u lekciju") });
       }
     } catch {
-      toast({ title: "Upload nije uspio", description: "Provjerite konekciju", variant: "destructive" });
+      toast({ title: t("Upload nije uspio"), description: t("Provjerite konekciju"), variant: "destructive" });
     } finally {
       setAudioUploading(false);
     }
@@ -856,17 +858,17 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             <div className="relative group/hero flex items-center gap-3 w-full">
               <img src={heroImage} alt="Hero" className="h-14 w-24 object-cover rounded-lg border-2 border-teal-400" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-gray-600 truncate">Hero slika: <span className="text-teal-600">{heroImage}</span></p>
+                <p className="text-xs font-bold text-gray-600 truncate">{t("Hero slika:")} <span className="text-teal-600">{heroImage}</span></p>
               </div>
               <button type="button" onClick={() => openGallery("hero")}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors shrink-0">
                 <FolderOpen className="w-3.5 h-3.5" />
-                Galerija
+                {t("Galerija")}
               </button>
               <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-colors shrink-0">
                 {heroUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                {heroUploading ? "Uploadujem..." : "Upload"}
+                {heroUploading ? t("Uploadujem...") : t("Upload")}
               </button>
             </div>
           ) : (
@@ -874,12 +876,12 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
               <button type="button" onClick={() => openGallery("hero")}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors flex-1 justify-center">
                 <FolderOpen className="w-4 h-4" />
-                Iz galerije
+                {t("Iz galerije")}
               </button>
               <button type="button" onClick={() => heroFileRef.current?.click()} disabled={heroUploading}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-teal-50 hover:border-teal-300 text-gray-500 hover:text-teal-700 transition-colors flex-1 justify-center">
                 {heroUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
-                {heroUploading ? "Uploadujem..." : "Upload novu"}
+                {heroUploading ? t("Uploadujem...") : t("Upload novu")}
               </button>
             </div>
           )}
@@ -891,7 +893,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           <div className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-4xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
               <h3 className="text-base font-bold text-gray-800">
-                {galleryMode === "hero" ? "Odaberi hero sliku" : "Umetni sliku iz galerije"}
+                {galleryMode === "hero" ? t("Odaberi hero sliku") : t("Umetni sliku iz galerije")}
               </h3>
               <button type="button" onClick={() => setShowGallery(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5" />
@@ -903,7 +905,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
                   <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
                 </div>
               ) : galleryImages.length === 0 ? (
-                <p className="text-center text-gray-400 py-12">Nema uploadovanih slika</p>
+                <p className="text-center text-gray-400 py-12">{t("Nema uploadovanih slika")}</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                   {galleryImages.map(img => (
@@ -923,7 +925,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
                           setCopiedUrl(img.url);
                           setTimeout(() => setCopiedUrl(null), 2000);
                         }}
-                        title="Kopiraj URL"
+                        title={t("Kopiraj URL")}
                         className="absolute top-1 right-1 p-1 rounded-md bg-white/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-teal-50"
                       >
                         {copiedUrl === img.url ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
@@ -970,10 +972,10 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
                   </button>
                   {isActive && (
                     <div className="flex items-center gap-1 ml-1">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0} title="Pomjeri lijevo" className="p-1 rounded hover:bg-teal-100 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronUp className="w-4 h-4 -rotate-90" /></button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === parsed.sections.length - 1} title="Pomjeri desno" className="p-1 rounded hover:bg-teal-100 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronDown className="w-4 h-4 -rotate-90" /></button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setRenamingIdx(idx); setRenameValue(sec.title); }} title="Preimenuj" className="p-1 rounded hover:bg-teal-100"><Pencil className="w-4 h-4" /></button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm("Obrisati ovu sekciju?")) removeSection(idx); }} title="Obriši" className="p-1 rounded hover:bg-red-100 text-red-500" disabled={parsed.sections.length <= 1}><Trash2 className="w-4 h-4" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0} title={t("Pomjeri lijevo")} className="p-1 rounded hover:bg-teal-100 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronUp className="w-4 h-4 -rotate-90" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === parsed.sections.length - 1} title={t("Pomjeri desno")} className="p-1 rounded hover:bg-teal-100 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronDown className="w-4 h-4 -rotate-90" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setRenamingIdx(idx); setRenameValue(sec.title); }} title={t("Preimenuj")} className="p-1 rounded hover:bg-teal-100"><Pencil className="w-4 h-4" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm(t("Obrisati ovu sekciju?"))) removeSection(idx); }} title={t("Obriši")} className="p-1 rounded hover:bg-red-100 text-red-500" disabled={parsed.sections.length <= 1}><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
@@ -982,11 +984,11 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             <button
               type="button"
               onClick={() => addSection(parsed.sections.length - 1)}
-              title="Dodaj novu sekciju"
+              title={t("Dodaj novu sekciju")}
               className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Nova</span>
+              <span>{t("Nova")}</span>
             </button>
           </div>
         </div>
@@ -995,16 +997,16 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         <div className="px-3 py-2 border-b border-gray-200 bg-amber-50/70">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-amber-800">
-              Ova lekcija nema akordion sekcija.
+              {t("Ova lekcija nema akordion sekcija.")}
             </span>
             <button
               type="button"
               onClick={convertToAccordions}
-              title="Pretvori trenutni sadržaj u prvu akordion sekciju"
+              title={t("Pretvori trenutni sadržaj u prvu akordion sekciju")}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Dodaj akordion sekciju</span>
+              <span>{t("Dodaj akordion sekciju")}</span>
             </button>
           </div>
         </div>
@@ -1020,10 +1022,10 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         <MenuButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} title="Underline">
           <UnderlineIcon className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} title="Precrtano">
+        <MenuButton onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} title={t("Precrtano")}>
           <Strikethrough className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().toggleHighlight({ color: "#fef08a" }).run()} active={editor.isActive("highlight")} title="Markiraj">
+        <MenuButton onClick={() => editor.chain().focus().toggleHighlight({ color: "#fef08a" }).run()} active={editor.isActive("highlight")} title={t("Markiraj")}>
           <Highlighter className="w-4 h-4" />
         </MenuButton>
         <ToolSeparator />
@@ -1033,47 +1035,47 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         <MenuButton onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={editor.isActive("heading", { level: 4 })} title="H4">
           <Heading4 className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().setParagraph().run()} active={editor.isActive("paragraph")} title="Paragraf">
+        <MenuButton onClick={() => editor.chain().focus().setParagraph().run()} active={editor.isActive("paragraph")} title={t("Paragraf")}>
           <Pilcrow className="w-4 h-4" />
         </MenuButton>
         <ToolSeparator />
-        <MenuButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Lista">
+        <MenuButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title={t("Lista")}>
           <List className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Numerisana">
+        <MenuButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title={t("Numerisana")}>
           <ListOrdered className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} title="Citat">
+        <MenuButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} title={t("Citat")}>
           <Quote className="w-4 h-4" />
         </MenuButton>
         <ToolSeparator />
-        <MenuButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title="Lijevo">
+        <MenuButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title={t("Lijevo")}>
           <AlignLeft className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title="Centar">
+        <MenuButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title={t("Centar")}>
           <AlignCenter className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title="Desno">
+        <MenuButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title={t("Desno")}>
           <AlignRight className="w-4 h-4" />
         </MenuButton>
         <ToolSeparator />
-        <MenuButton onClick={() => fileInputRef.current?.click()} title="Upload sliku">
+        <MenuButton onClick={() => fileInputRef.current?.click()} title={t("Upload sliku")}>
           <ImageIcon className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => openGallery("insert")} title="Umetni iz galerije">
+        <MenuButton onClick={() => openGallery("insert")} title={t("Umetni iz galerije")}>
           <FolderOpen className="w-4 h-4 text-amber-600" />
         </MenuButton>
-        <MenuButton onClick={() => insertCustomBlock("arabic-card")} title="Zeleni box — označi tekst pa klikni">
+        <MenuButton onClick={() => insertCustomBlock("arabic-card")} title={t("Zeleni box — označi tekst pa klikni")}>
           <BookOpen className="w-4 h-4 text-emerald-600" />
         </MenuButton>
-        <MenuButton onClick={() => insertCustomBlock("info-box")} title="Žuti box — označi tekst pa klikni">
+        <MenuButton onClick={() => insertCustomBlock("info-box")} title={t("Žuti box — označi tekst pa klikni")}>
           <AlertTriangle className="w-4 h-4 text-amber-500" />
         </MenuButton>
-        <MenuButton onClick={() => insertCustomBlock("info-card")} title="Crveni isprekidani box (ZAPAMTI)">
+        <MenuButton onClick={() => insertCustomBlock("info-card")} title={t("Crveni isprekidani box (ZAPAMTI)")}>
           <AlertTriangle className="w-4 h-4 text-red-500" />
         </MenuButton>
         <div className="relative">
-          <MenuButton onClick={() => setShowTablePicker(!showTablePicker)} title="Umetni tabelu">
+          <MenuButton onClick={() => setShowTablePicker(!showTablePicker)} title={t("Umetni tabelu")}>
             <TableIcon className="w-4 h-4" />
           </MenuButton>
           {showTablePicker && (
@@ -1099,48 +1101,48 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           )}
         </div>
         <ToolSeparator />
-        <MenuButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Umetni horizontalnu liniju">
+        <MenuButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title={t("Umetni horizontalnu liniju")}>
           <Minus className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => docInputRef.current?.click()} disabled={docUploading} title="Umetni PDF / DOCX">
+        <MenuButton onClick={() => docInputRef.current?.click()} disabled={docUploading} title={t("Umetni PDF / DOCX")}>
           {docUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 text-blue-600" />}
         </MenuButton>
-        <MenuButton onClick={() => audioInputRef.current?.click()} disabled={audioUploading} title="Umetni audio (MP3, M4A...)">
+        <MenuButton onClick={() => audioInputRef.current?.click()} disabled={audioUploading} title={t("Umetni audio (MP3, M4A...)")}>
           {audioUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4 text-purple-600" />}
         </MenuButton>
         <MenuButton
           onClick={() => {
-            const url = window.prompt("Zalijepi YouTube link (npr. https://www.youtube.com/watch?v=... ili https://youtu.be/...)");
+            const url = window.prompt(t("Zalijepi YouTube link (npr. https://www.youtube.com/watch?v=... ili https://youtu.be/...)"));
             if (!url) return;
             const ok = editor.chain().focus().setYoutubeVideo({ src: url, width: 640, height: 360 }).run();
             if (!ok) {
-              toast({ title: "Neispravan YouTube link", description: "Provjeri da li je link sa youtube.com ili youtu.be.", variant: "destructive" });
+              toast({ title: t("Neispravan YouTube link"), description: t("Provjeri da li je link sa youtube.com ili youtu.be."), variant: "destructive" });
             }
           }}
-          title="Umetni YouTube video"
+          title={t("Umetni YouTube video")}
         >
           <YoutubeIcon className="w-4 h-4 text-red-600" />
         </MenuButton>
         <MenuButton
           onClick={() => {
-            const input = window.prompt("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org:");
+            const input = window.prompt(t("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org:"));
             if (!input) return;
             const src = extractEmbedSrc(input);
             if (!src || !isWhitelistedEmbedHost(src)) {
-              toast({ title: "Neispravan ili nedozvoljen embed", description: "Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org.", variant: "destructive" });
+              toast({ title: t("Neispravan ili nedozvoljen embed"), description: t("Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org."), variant: "destructive" });
               return;
             }
             editor.chain().focus().insertContent({ type: "embedExercise", attrs: { src } }).run();
           }}
-          title="Umetni interaktivnu vježbu (embed)"
+          title={t("Umetni interaktivnu vježbu (embed)")}
         >
           <Puzzle className="w-4 h-4 text-purple-600" />
         </MenuButton>
         <ToolSeparator />
-        <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Poništi">
+        <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title={t("Poništi")}>
           <Undo2 className="w-4 h-4" />
         </MenuButton>
-        <MenuButton onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Ponovi">
+        <MenuButton onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title={t("Ponovi")}>
           <Redo2 className="w-4 h-4" />
         </MenuButton>
       </div>
@@ -1292,10 +1294,11 @@ function PripremaForm({ struct, onChange }: {
   struct: PripremaStruct | undefined;
   onChange: (field: keyof PripremaStruct, value: string) => void;
 }) {
+  const { t } = useLanguage();
   if (!struct) {
     return (
       <div className="p-6 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl m-4">
-        Priprema nije mogla biti učitana. Pokušaj spremiti lekciju kako bi se inicijalizirala prazna forma.
+        {t("Priprema nije mogla biti učitana. Pokušaj spremiti lekciju kako bi se inicijalizirala prazna forma.")}
       </div>
     );
   }
@@ -1304,57 +1307,57 @@ function PripremaForm({ struct, onChange }: {
       <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-sm flex items-start gap-2">
         <span className="text-base">✏️</span>
         <div>
-          <div className="font-extrabold mb-0.5">Uredi pripremu za nastavu</div>
-          <div>Izmijeni tekst u poljima dolje. Dizajn (gradient kartica, obojeni ciljevi) automatski se primjenjuje pri spremanju — ne moraš ništa dizajnirati ručno.</div>
+          <div className="font-extrabold mb-0.5">{t("Uredi pripremu za nastavu")}</div>
+          <div>{t("Izmijeni tekst u poljima dolje. Dizajn (gradient kartica, obojeni ciljevi) automatski se primjenjuje pri spremanju — ne moraš ništa dizajnirati ručno.")}</div>
         </div>
       </div>
 
       <div className="rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 p-4 space-y-3">
-        <div className="text-white font-extrabold text-base flex items-center gap-2">📋 Osnovni podaci</div>
+        <div className="text-white font-extrabold text-base flex items-center gap-2">📋 {t("Osnovni podaci")}</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FormField label="Predmet" value={struct.predmet} onChange={(v) => onChange("predmet", v)} />
-          <FormField label="Tip sata" value={struct.tipSata} onChange={(v) => onChange("tipSata", v)} />
+          <FormField label={t("Predmet")} value={struct.predmet} onChange={(v) => onChange("predmet", v)} />
+          <FormField label={t("Tip sata")} value={struct.tipSata} onChange={(v) => onChange("tipSata", v)} />
         </div>
-        <FormField label="Nastavna jedinica" value={struct.nastavnaJedinica} onChange={(v) => onChange("nastavnaJedinica", v)} />
+        <FormField label={t("Nastavna jedinica")} value={struct.nastavnaJedinica} onChange={(v) => onChange("nastavnaJedinica", v)} />
       </div>
 
       <div className="space-y-3">
-        <div className="font-extrabold text-teal-700 flex items-center gap-2">🎯 Ciljevi nastavnog sata</div>
+        <div className="font-extrabold text-teal-700 flex items-center gap-2">🎯 {t("Ciljevi nastavnog sata")}</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="rounded-xl bg-red-50 border-t-4 border-red-500 p-3">
-            <FormField label="❤️ Odgojni cilj" value={struct.odgojni} onChange={(v) => onChange("odgojni", v)} multiline rows={4} />
+            <FormField label={t("❤️ Odgojni cilj")} value={struct.odgojni} onChange={(v) => onChange("odgojni", v)} multiline rows={4} />
           </div>
           <div className="rounded-xl bg-blue-50 border-t-4 border-blue-500 p-3">
-            <FormField label="📚 Obrazovni cilj" value={struct.obrazovni} onChange={(v) => onChange("obrazovni", v)} multiline rows={4} />
+            <FormField label={t("📚 Obrazovni cilj")} value={struct.obrazovni} onChange={(v) => onChange("obrazovni", v)} multiline rows={4} />
           </div>
           <div className="rounded-xl bg-green-50 border-t-4 border-green-500 p-3">
-            <FormField label="💪 Funkcionalni cilj" value={struct.funkcionalni} onChange={(v) => onChange("funkcionalni", v)} multiline rows={4} />
+            <FormField label={t("💪 Funkcionalni cilj")} value={struct.funkcionalni} onChange={(v) => onChange("funkcionalni", v)} multiline rows={4} />
           </div>
         </div>
       </div>
 
       <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
-        <div className="font-extrabold text-slate-700 flex items-center gap-2">🗂️ Organizacija nastave</div>
-        <FormField label="Oblici rada" value={struct.obliciRada} onChange={(v) => onChange("obliciRada", v)} />
-        <FormField label="Sredstva" value={struct.sredstva} onChange={(v) => onChange("sredstva", v)} />
-        <FormField label="Metode" value={struct.metode} onChange={(v) => onChange("metode", v)} />
+        <div className="font-extrabold text-slate-700 flex items-center gap-2">🗂️ {t("Organizacija nastave")}</div>
+        <FormField label={t("Oblici rada")} value={struct.obliciRada} onChange={(v) => onChange("obliciRada", v)} />
+        <FormField label={t("Sredstva")} value={struct.sredstva} onChange={(v) => onChange("sredstva", v)} />
+        <FormField label={t("Metode")} value={struct.metode} onChange={(v) => onChange("metode", v)} />
       </div>
 
       <div className="space-y-3">
-        <div className="font-extrabold text-teal-700 flex items-center gap-2">📖 Struktura sata</div>
+        <div className="font-extrabold text-teal-700 flex items-center gap-2">📖 {t("Struktura sata")}</div>
         <div className="rounded-xl bg-blue-50 border-l-4 border-blue-500 p-3">
           <FormField
-            label="🔵 Uvodni dio"
+            label={t("🔵 Uvodni dio")}
             value={struct.uvodniDio}
             onChange={(v) => onChange("uvodniDio", v)}
             multiline
             rows={5}
-            hint="HTML je dozvoljen: <p>, <strong>, <em>, <br> — bit će očuvan u finalnom dizajnu."
+            hint={t("HTML je dozvoljen: <p>, <strong>, <em>, <br> — bit će očuvan u finalnom dizajnu.")}
           />
         </div>
         <div className="rounded-xl bg-green-50 border-l-4 border-green-500 p-3">
           <FormField
-            label="🟢 Glavni dio"
+            label={t("🟢 Glavni dio")}
             value={struct.glavniDio}
             onChange={(v) => onChange("glavniDio", v)}
             multiline
@@ -1363,7 +1366,7 @@ function PripremaForm({ struct, onChange }: {
         </div>
         <div className="rounded-xl bg-yellow-50 border-l-4 border-yellow-500 p-3">
           <FormField
-            label="🟡 Završni dio"
+            label={t("🟡 Završni dio")}
             value={struct.zavrsniDio}
             onChange={(v) => onChange("zavrsniDio", v)}
             multiline
@@ -1376,6 +1379,7 @@ function PripremaForm({ struct, onChange }: {
 }
 
 function ImageToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
+  const { t } = useLanguage();
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [attrs, setAttrs] = useState<{ align: string | null; size: string | null }>({ align: null, size: null });
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -1442,25 +1446,25 @@ function ImageToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
         transform: "translateX(-50%)",
       }}
     >
-      <span className="text-[10px] text-gray-400 font-bold mr-1">Pozicija:</span>
-      <button type="button" className={btnClass(attrs.align === "left")} onClick={() => setImageAttr("data-align", "left")} title="Lijevo (tekst desno)">
+      <span className="text-[10px] text-gray-400 font-bold mr-1">{t("Pozicija:")}</span>
+      <button type="button" className={btnClass(attrs.align === "left")} onClick={() => setImageAttr("data-align", "left")} title={t("Lijevo (tekst desno)")}>
         <AlignLeft className="w-3.5 h-3.5" />
       </button>
-      <button type="button" className={btnClass(attrs.align === "center" || !attrs.align)} onClick={() => setImageAttr("data-align", "center")} title="Centar">
+      <button type="button" className={btnClass(attrs.align === "center" || !attrs.align)} onClick={() => setImageAttr("data-align", "center")} title={t("Centar")}>
         <AlignCenter className="w-3.5 h-3.5" />
       </button>
-      <button type="button" className={btnClass(attrs.align === "right")} onClick={() => setImageAttr("data-align", "right")} title="Desno (tekst lijevo)">
+      <button type="button" className={btnClass(attrs.align === "right")} onClick={() => setImageAttr("data-align", "right")} title={t("Desno (tekst lijevo)")}>
         <AlignRight className="w-3.5 h-3.5" />
       </button>
       <div className="w-px h-5 bg-gray-200 mx-1" />
-      <span className="text-[10px] text-gray-400 font-bold mr-1">Veličina:</span>
-      <button type="button" className={btnClass(!attrs.size)} onClick={() => setImageAttr("data-size", null)} title="Puna širina">
+      <span className="text-[10px] text-gray-400 font-bold mr-1">{t("Veličina:")}</span>
+      <button type="button" className={btnClass(!attrs.size)} onClick={() => setImageAttr("data-size", null)} title={t("Puna širina")}>
         <Maximize className="w-3.5 h-3.5" />
       </button>
-      <button type="button" className={btnClass(attrs.size === "medium")} onClick={() => setImageAttr("data-size", "medium")} title="Srednja (50%)">
+      <button type="button" className={btnClass(attrs.size === "medium")} onClick={() => setImageAttr("data-size", "medium")} title={t("Srednja (50%)")}>
         <RectangleHorizontal className="w-3.5 h-3.5" />
       </button>
-      <button type="button" className={btnClass(attrs.size === "small")} onClick={() => setImageAttr("data-size", "small")} title="Mala (33%)">
+      <button type="button" className={btnClass(attrs.size === "small")} onClick={() => setImageAttr("data-size", "small")} title={t("Mala (33%)")}>
         <Square className="w-3.5 h-3.5" />
       </button>
     </div>

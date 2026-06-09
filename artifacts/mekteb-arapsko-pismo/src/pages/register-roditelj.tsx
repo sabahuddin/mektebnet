@@ -156,7 +156,7 @@ export default function RegisterRoditeljPage() {
     setError("");
     if (!validateCaptcha()) return;
     if (!ucenikForm.godine || parseInt(ucenikForm.godine) < 1) {
-      setError("Unesite koliko godina imate.");
+      setError(t("Unesite koliko godina imate."));
       return;
     }
     setIsLoading(true);
@@ -225,51 +225,51 @@ export default function RegisterRoditeljPage() {
               <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
                 <CheckCircle2 className="w-10 h-10 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-extrabold text-foreground mb-2">Račun je otvoren!</h2>
+              <h2 className="text-2xl font-extrabold text-foreground mb-2">{t("Račun je otvoren!")}</h2>
               <p className="text-muted-foreground text-sm mb-6">
-                Dobrodošli, <strong className="text-foreground">{credentials.displayName}</strong>. Sačuvajte podatke za prijavu.
+                {t("Dobrodošli,")} <strong className="text-foreground">{credentials.displayName}</strong>. {t("Sačuvajte podatke za prijavu.")}
               </p>
             </div>
 
             <div className="bg-muted/40 border border-border/60 rounded-2xl p-5 mb-5">
               <div className="flex items-center gap-2 mb-3">
                 <KeyRound className="w-4 h-4 text-primary" />
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vaši podaci za prijavu</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("Vaši podaci za prijavu")}</span>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Korisničko ime:</span>
+                  <span className="text-muted-foreground">{t("Korisničko ime:")}</span>
                   <code className="font-bold text-foreground bg-white px-2 py-1 rounded border border-border/40 select-all">{credentials.username}</code>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Lozinka:</span>
+                  <span className="text-muted-foreground">{t("Lozinka:")}</span>
                   <code className="font-bold text-foreground bg-white px-2 py-1 rounded border border-border/40 select-all">{credentials.password}</code>
                 </div>
               </div>
               <Button type="button" variant="outline" size="sm"
                 onClick={() => navigator.clipboard?.writeText(copyText)}
                 className="w-full mt-4 rounded-xl flex items-center justify-center gap-2">
-                <Copy className="w-3.5 h-3.5" /> Kopiraj podatke
+                <Copy className="w-3.5 h-3.5" /> {t("Kopiraj podatke")}
               </Button>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
               <Calendar className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
               <div className="text-sm">
-                <div className="font-bold text-amber-900">7 dana besplatnog probnog perioda</div>
+                <div className="font-bold text-amber-900">{t("7 dana besplatnog probnog perioda")}</div>
                 <div className="text-amber-800 mt-0.5">
-                  Probni period traje do <strong>{trialDateStr}</strong>. Da biste nastavili koristiti platformu i poslije, obavite uplatu pretplate.
+                  {t("Probni period traje do")} <strong>{trialDateStr}</strong>. {t("Da biste nastavili koristiti platformu i poslije, obavite uplatu pretplate.")}
                 </div>
               </div>
             </div>
 
             <a href={BMAC_MEMBERSHIP_LINK} target="_blank" rel="noopener noreferrer"
               className="block w-full text-center bg-primary/5 border border-primary/20 hover:bg-primary/10 transition rounded-xl px-4 py-3 mb-3 text-sm font-bold text-primary flex items-center justify-center gap-2">
-              <ExternalLink className="w-4 h-4" /> Plati pretplatu
+              <ExternalLink className="w-4 h-4" /> {t("Plati pretplatu")}
             </a>
 
             <Button onClick={() => setLocation("/login")} size="lg" className="w-full rounded-xl">
-              Prijavite se sada
+              {t("Prijavite se sada")}
             </Button>
           </div>
         </motion.div>
@@ -322,25 +322,25 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="ucenik" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Pojedinačna pretplata</strong> — pristup svim sadržajima za jednu osobu. <strong>7 dana besplatnog probnog perioda</strong>, pa pretplata.
+                      <strong>{t("Pojedinačna pretplata")}</strong> — {t("pristup svim sadržajima za jednu osobu.")} <strong>{t("7 dana besplatnog probnog perioda")}</strong>, {t("pa pretplata.")}
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
-                      Pretplata: {isBiH === null ? "..." : ucenikPrice} / godišnje
+                      {t("Pretplata:")} {isBiH === null ? "..." : ucenikPrice} / {t("godišnje")}
                     </p>
                   </div>
 
                   <form onSubmit={handleUcenikSubmit} className="flex flex-col gap-4">
                     <div>
-                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Ime i prezime</label>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Ime i prezime")}</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="text" required value={ucenikForm.displayName}
                           onChange={e => setUcenikForm(p => ({ ...p, displayName: e.target.value }))}
-                          placeholder="Vaše ime i prezime" className="pl-10 h-12 rounded-xl border-border/70" />
+                          placeholder={t("Vaše ime i prezime")} className="pl-10 h-12 rounded-xl border-border/70" />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Email</label>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Email")}</label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="email" required value={ucenikForm.email}
@@ -349,15 +349,15 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Koliko godina imate?</label>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Koliko godina imate?")}</label>
                       <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="number" min={1} max={120} required value={ucenikForm.godine}
                           onChange={e => setUcenikForm(p => ({ ...p, godine: e.target.value.replace(/[^0-9]/g, "") }))}
-                          placeholder="npr. 12" className="pl-10 h-12 rounded-xl border-border/70" />
+                          placeholder={t("npr. 12")} className="pl-10 h-12 rounded-xl border-border/70" />
                       </div>
                       <p className="text-xs text-muted-foreground mt-1.5">
-                        Bit ćete raspoređeni u odgovarajuću Online Mekteb grupu prema dobi.
+                        {t("Bit ćete raspoređeni u odgovarajuću Online Mekteb grupu prema dobi.")}
                       </p>
                     </div>
 
@@ -366,10 +366,10 @@ export default function RegisterRoditeljPage() {
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
                       <UserPlus className="w-4 h-4" />
-                      {isLoading ? "Obrada..." : "Otvori račun (7 dana besplatno)"}
+                      {isLoading ? t("Obrada...") : t("Otvori račun (7 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.
+                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.")}
                     </p>
                   </form>
                 </motion.div>
@@ -379,25 +379,25 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="roditelj" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Porodična pretplata</strong> — pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon prijave. <strong>7 dana besplatnog probnog perioda</strong>.
+                      <strong>{t("Porodična pretplata")}</strong> — {t("pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon prijave.")} <strong>{t("7 dana besplatnog probnog perioda")}</strong>.
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
-                      Pretplata: {isBiH === null ? "..." : roditeljPrice} / godišnje
+                      {t("Pretplata:")} {isBiH === null ? "..." : roditeljPrice} / {t("godišnje")}
                     </p>
                   </div>
 
                   <form onSubmit={handleRoditeljSubmit} className="flex flex-col gap-4">
                     <div>
-                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Ime i prezime</label>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Ime i prezime")}</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="text" required value={roditeljForm.displayName}
                           onChange={e => setRoditeljForm(p => ({ ...p, displayName: e.target.value }))}
-                          placeholder="Vaše ime i prezime" className="pl-10 h-12 rounded-xl border-border/70" />
+                          placeholder={t("Vaše ime i prezime")} className="pl-10 h-12 rounded-xl border-border/70" />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Email</label>
+                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Email")}</label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="email" required value={roditeljForm.email}
@@ -411,10 +411,10 @@ export default function RegisterRoditeljPage() {
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2">
                       <UserPlus className="w-4 h-4" />
-                      {isLoading ? "Obrada..." : "Otvori račun (7 dana besplatno)"}
+                      {isLoading ? t("Obrada...") : t("Otvori račun (7 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.
+                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.")}
                     </p>
                   </form>
                 </motion.div>
@@ -424,13 +424,13 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="mekteb" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>Registracija mekteba</strong> — odmah dobijate muallimski račun. <strong>7 dana besplatnog probnog perioda</strong>, učenike dodajete nakon prijave.
+                      <strong>{t("Registracija mekteba")}</strong> — {t("odmah dobijate muallimski račun.")} <strong>{t("7 dana besplatnog probnog perioda")}</strong>, {t("učenike dodajete nakon prijave.")}
                     </p>
                   </div>
 
                   <form onSubmit={handleMektebSubmit} className="flex flex-col gap-4">
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">Email muallima</label>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Email muallima")}</label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="email" required value={mektebForm.email}
@@ -439,16 +439,16 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">Ime i prezime muallima</label>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Ime i prezime muallima")}</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="text" required value={mektebForm.displayName}
                           onChange={e => setMektebForm(p => ({ ...p, displayName: e.target.value }))}
-                          placeholder="npr. Hasan Hodžić" className="pl-10 h-11 rounded-xl border-border/70" />
+                          placeholder={t("npr. Hasan Hodžić")} className="pl-10 h-11 rounded-xl border-border/70" />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">Korisničko ime muallima</label>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Korisničko ime muallima")}</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="text" required value={mektebForm.korisnickoIme}
@@ -457,13 +457,13 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">Država</label>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Država")}</label>
                       <div className="relative">
                         <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <select required value={mektebForm.drzava}
                           onChange={e => setMektebForm(p => ({ ...p, drzava: e.target.value }))}
                           className="w-full pl-10 h-11 rounded-xl border border-border/70 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 appearance-none">
-                          <option value="">Odaberite državu</option>
+                          <option value="">{t("Odaberite državu")}</option>
                           {DRZAVE.map(d => (
                             <option key={d} value={d}>{d}</option>
                           ))}
@@ -471,26 +471,26 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">Grad</label>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Grad")}</label>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="text" required value={mektebForm.grad}
                           onChange={e => setMektebForm(p => ({ ...p, grad: e.target.value }))}
-                          placeholder="npr. Tuzla" className="pl-10 h-11 rounded-xl border-border/70" />
+                          placeholder={t("npr. Tuzla")} className="pl-10 h-11 rounded-xl border-border/70" />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">Naziv mekteba</label>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Naziv mekteba")}</label>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="text" required value={mektebForm.nazivMekteba}
                           onChange={e => setMektebForm(p => ({ ...p, nazivMekteba: e.target.value }))}
-                          placeholder="npr. Mekteb džamije Sultan Ahmeta" className="pl-10 h-11 rounded-xl border-border/70" />
+                          placeholder={t("npr. Mekteb džamije Sultan Ahmeta")} className="pl-10 h-11 rounded-xl border-border/70" />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-2 block">Odaberite paket</label>
+                      <label className="text-sm font-bold text-foreground mb-2 block">{t("Odaberite paket")}</label>
                       <div className="flex flex-col gap-2">
                         {MEKTEB_PAKETI.map(p => (
                           <button key={p.id} type="button" onClick={() => setMektebForm(prev => ({ ...prev, paket: p.id }))}
@@ -505,7 +505,7 @@ export default function RegisterRoditeljPage() {
                             </div>
                             <span className="text-xs font-bold text-primary shrink-0 ml-2 text-right">
                               {isBiH === null ? "..." : (isBiH ? p.cijenaBih : p.cijenaEur)}
-                              <div className="text-[10px] font-normal text-muted-foreground">/ godišnje</div>
+                              <div className="text-[10px] font-normal text-muted-foreground">/ {t("godišnje")}</div>
                             </span>
                           </button>
                         ))}
@@ -513,7 +513,7 @@ export default function RegisterRoditeljPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">Koliko muallimskih računa je potrebno?</label>
+                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Koliko muallimskih računa je potrebno?")}</label>
                       <select value={mektebForm.koliko_muallima}
                         onChange={e => setMektebForm(p => ({ ...p, koliko_muallima: parseInt(e.target.value) }))}
                         className="w-full h-11 rounded-xl border border-border/70 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
@@ -528,10 +528,10 @@ export default function RegisterRoditeljPage() {
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
                       <UserPlus className="w-4 h-4" />
-                      {isLoading ? "Obrada..." : "Otvori muallimski račun (7 dana besplatno)"}
+                      {isLoading ? t("Obrada...") : t("Otvori muallimski račun (7 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.
+                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.")}
                     </p>
                   </form>
                 </motion.div>

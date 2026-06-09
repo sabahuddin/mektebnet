@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 import { isOnline, formatScreentime } from "@/lib/utils";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
 
@@ -85,6 +86,7 @@ export default function GrupaPage() {
   const [, setLocation] = useLocation();
   const { token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const printRef = useRef<HTMLDivElement>(null);
   const [printLoading, setPrintLoading] = useState(false);
 
@@ -180,19 +182,19 @@ export default function GrupaPage() {
     setBulkLoading(true);
     try {
       const entries = parseBulkEntries(bulkNames);
-      if (entries.length === 0) { toast({ title: "Unesite barem jedno ime" }); return; }
+      if (entries.length === 0) { toast({ title: t("Unesite barem jedno ime") }); return; }
       const results = await apiRequest<CreatedUcenik[]>("POST", "/muallim/ucenici/bulk", {
         entries, grupaId
       }, token);
       setCreatedStudents(results);
       const sRoditelja = results.filter(r => r.roditelj).length;
       toast({
-        title: `${results.length} učenika dodano!`,
-        description: sRoditelja > 0 ? `${sRoditelja} sa nalogom za roditelja` : undefined,
+        title: t("{n} učenika dodano!", { n: String(results.length) }),
+        description: sRoditelja > 0 ? t("{n} sa nalogom za roditelja", { n: String(sRoditelja) }) : undefined,
       });
       refreshStudents();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Neuspješno dodavanje", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Neuspješno dodavanje"), variant: "destructive" });
     } finally {
       setBulkLoading(false);
     }
@@ -205,12 +207,12 @@ export default function GrupaPage() {
       await apiRequest("PUT", `/muallim/ucenici/${moveStudent.id}/grupa`, {
         grupaId: moveTargetGrupaId ? parseInt(moveTargetGrupaId) : null,
       }, token);
-      toast({ title: "Učenik prebačen!" });
+      toast({ title: t("Učenik prebačen!") });
       setShowMoveModal(false);
       setMoveStudent(null);
       refreshStudents();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće prebaciti učenika", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće prebaciti učenika"), variant: "destructive" });
     } finally {
       setMoveLoading(false);
     }
@@ -220,11 +222,11 @@ export default function GrupaPage() {
     if (!token) return;
     try {
       await apiRequest("PUT", `/muallim/ucenici/${ucenikId}/grupa`, { grupaId }, token);
-      toast({ title: "Učenik dodan u grupu!" });
+      toast({ title: t("Učenik dodan u grupu!") });
       refreshStudents();
       setShowAddExisting(false);
     } catch {
-      toast({ title: "Greška", variant: "destructive" });
+      toast({ title: t("Greška"), variant: "destructive" });
     }
   }
 
@@ -248,10 +250,10 @@ export default function GrupaPage() {
         napomena: newOcjena.napomena,
         datum: newOcjena.datum,
       }, token);
-      toast({ title: "Ocjena dodana!", description: `${ocjenaTarget.displayName} — ${newOcjena.ocjena}` });
+      toast({ title: t("Ocjena dodana!"), description: `${ocjenaTarget.displayName} — ${newOcjena.ocjena}` });
       setOcjenaTarget(null);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće dodati ocjenu", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće dodati ocjenu"), variant: "destructive" });
     } finally {
       setSavingOcjena(false);
     }
@@ -265,7 +267,7 @@ export default function GrupaPage() {
 
   async function saveZadaca() {
     if (!token || !newZadaca.naslov.trim()) {
-      toast({ title: "Naslov je obavezan", variant: "destructive" });
+      toast({ title: t("Naslov je obavezan"), variant: "destructive" });
       return;
     }
     setSavingZadaca(true);
@@ -279,13 +281,13 @@ export default function GrupaPage() {
         ucenikIds: zadacaTarget ? [zadacaTarget.id] : [],
       }, token);
       toast({
-        title: "Zadaća dodana!",
-        description: zadacaTarget ? `Pojedinačna za ${zadacaTarget.displayName}` : `Za cijelu grupu (${studentiGrupe.length} učenika)`,
+        title: t("Zadaća dodana!"),
+        description: zadacaTarget ? t("Pojedinačna za {ime}", { ime: zadacaTarget.displayName }) : t("Za cijelu grupu ({n} učenika)", { n: String(studentiGrupe.length) }),
       });
       setShowZadacaModal(false);
       setZadacaTarget(null);
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće dodati zadaću", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće dodati zadaću"), variant: "destructive" });
     } finally {
       setSavingZadaca(false);
     }
@@ -301,7 +303,7 @@ export default function GrupaPage() {
       const list = await apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${u.id}/roditelji`, undefined, token);
       setParentResetList(list);
     } catch {
-      toast({ title: "Greška", description: "Ne mogu učitati roditelje", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Ne mogu učitati roditelje"), variant: "destructive" });
     } finally {
       setParentResetLoading(false);
     }
@@ -315,9 +317,9 @@ export default function GrupaPage() {
         "POST", `/muallim/roditelj/${roditeljId}/reset-password`, {}, token,
       );
       setParentResetResult({ id: roditeljId, password: res.newPassword, displayName: res.displayName });
-      toast({ title: "Šifra roditelja resetovana!" });
+      toast({ title: t("Šifra roditelja resetovana!") });
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Reset neuspješan", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Reset neuspješan"), variant: "destructive" });
     } finally {
       setParentResetWorking(null);
     }
@@ -328,11 +330,11 @@ export default function GrupaPage() {
     setDeleteLoading(true);
     try {
       await apiRequest("DELETE", `/muallim/ucenik/${deleteTarget.id}/hard`, undefined, token);
-      toast({ title: "Učenik obrisan", description: `${deleteTarget.displayName} i svi podaci su trajno uklonjeni.` });
+      toast({ title: t("Učenik obrisan"), description: t("{ime} i svi podaci su trajno uklonjeni.", { ime: deleteTarget.displayName }) });
       setDeleteTarget(null);
       refreshStudents();
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Brisanje neuspješno", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Brisanje neuspješno"), variant: "destructive" });
     } finally {
       setDeleteLoading(false);
     }
@@ -341,7 +343,7 @@ export default function GrupaPage() {
   function openPrintWindow(cards: CreatedUcenik[]) {
     const esc = (s: string) => s.replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]!));
     const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Kartice učenika</title>
+<html><head><meta charset="utf-8"><title>${t("Kartice učenika")}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -368,13 +370,13 @@ export default function GrupaPage() {
   <div class="card">
     <div class="logo">MEKTEB</div>
     <div class="name">${esc(c.displayName)}</div>
-    <div class="field"><span class="label">Korisničko ime:</span><span class="value">${esc(c.username)}</span></div>
-    <div class="field"><span class="label">Lozinka:</span><span class="value">${esc(c.generatedPassword)}</span></div>
+    <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(c.username)}</span></div>
+    <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(c.generatedPassword)}</span></div>
     ${(c.roditelji && c.roditelji.length > 0) ? c.roditelji.map((r, idx) => `
     <div class="parent-block">
-      <div class="section-title">Roditelj${c.roditelji!.length > 1 ? ` ${idx + 1}` : ""}${r.displayName ? ` — ${esc(r.displayName)}` : ""}</div>
-      <div class="field"><span class="label">Korisničko ime:</span><span class="value">${esc(r.username)}</span></div>
-      <div class="field"><span class="label">Lozinka:</span><span class="value">${esc(r.password)}</span></div>
+      <div class="section-title">${t("Roditelj")}${c.roditelji!.length > 1 ? ` ${idx + 1}` : ""}${r.displayName ? ` — ${esc(r.displayName)}` : ""}</div>
+      <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(r.username)}</span></div>
+      <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(r.password)}</span></div>
     </div>`).join("") : ""}
     <div class="grupa-info">${esc(grupa?.naziv || "")} · mekteb.net</div>
   </div>`).join("")}
@@ -399,10 +401,10 @@ export default function GrupaPage() {
     apiRequest<CreatedUcenik[]>("POST", "/muallim/print-kartice", { ucenikIds }, token!)
       .then(cards => {
         openPrintWindow(cards);
-        toast({ title: "Lozinke resetirane", description: "Nove lozinke su na karticama. Stare lozinke više ne važe." });
+        toast({ title: t("Lozinke resetirane"), description: t("Nove lozinke su na karticama. Stare lozinke više ne važe.") });
       })
       .catch(() => {
-        toast({ title: "Greška", description: "Nije moguće generisati kartice", variant: "destructive" });
+        toast({ title: t("Greška"), description: t("Nije moguće generisati kartice"), variant: "destructive" });
       })
       .finally(() => setPrintLoading(false));
   }
@@ -426,8 +428,8 @@ export default function GrupaPage() {
     return (
       <Layout>
         <div className="text-center py-20">
-          <p className="text-muted-foreground font-medium">Grupa nije pronađena</p>
-          <Button className="mt-4" onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }}>Nazad</Button>
+          <p className="text-muted-foreground font-medium">{t("Grupa nije pronađena")}</p>
+          <Button className="mt-4" onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );
@@ -445,19 +447,19 @@ export default function GrupaPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold text-sm transition-colors shrink-0"
             data-testid="btn-nazad-na-panel"
           >
-            <ArrowLeft className="w-4 h-4" /> Nazad
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <GraduationCap className="w-4 h-4 text-emerald-700 shrink-0" />
             <span className="font-extrabold text-foreground truncate">{grupa.naziv}</span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">· {studentiGrupe.length} učenika</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">· {t("{n} učenika", { n: String(studentiGrupe.length) })}</span>
           </div>
           <button
             onClick={() => setLocation(`/muallim/grupa/${grupa.id}/uredi`)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold text-sm transition-colors shrink-0"
             data-testid="btn-uredi-grupu"
           >
-            <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">Uredi</span>
+            <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">{t("Uredi")}</span>
           </button>
         </div>
       </div>
@@ -476,13 +478,13 @@ export default function GrupaPage() {
             </p>
             {(grupa.datumPocetka || grupa.datumKraja) && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Mektebska godina: {fmtDatum(grupa.datumPocetka) || "—"} – {fmtDatum(grupa.datumKraja) || "—"}
+                {t("Mektebska godina: {od} – {do}", { od: fmtDatum(grupa.datumPocetka) || "—", do: fmtDatum(grupa.datumKraja) || "—" })}
               </p>
             )}
           </div>
           <div className="text-right">
             <div className="text-3xl font-black text-secondary">{studentiGrupe.length}</div>
-            <div className="text-xs text-muted-foreground font-medium">učenika</div>
+            <div className="text-xs text-muted-foreground font-medium">{t("učenika")}</div>
           </div>
         </div>
 
@@ -491,15 +493,15 @@ export default function GrupaPage() {
         {grupa && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
             {[
-              { label: "Prisustvo", icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}`, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" },
-              { label: "Plan lekcija", icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}`, color: "bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100" },
-              { label: "Raspored lekcija", icon: ListOrdered, href: `/muallim/raspored/${grupa.id}`, color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" },
-              { label: "Kalendar", icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}`, color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" },
-              { label: "Statistika", icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}`, color: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" },
-              { label: "Zadaća", icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100", badge: zadacaBadge },
-              { label: "Izvještaji", icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}`, color: "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100" },
-              { label: "Roditelji", icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}`, color: "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100" },
-              { label: "H5P statistika", icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}`, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" },
+              { label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}`, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" },
+              { label: t("Plan lekcija"), icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}`, color: "bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100" },
+              { label: t("Raspored lekcija"), icon: ListOrdered, href: `/muallim/raspored/${grupa.id}`, color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" },
+              { label: t("Kalendar"), icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}`, color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" },
+              { label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}`, color: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" },
+              { label: t("Zadaća"), icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100", badge: zadacaBadge },
+              { label: t("Izvještaji"), icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}`, color: "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100" },
+              { label: t("Roditelji"), icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}`, color: "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100" },
+              { label: t("H5P statistika"), icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}`, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" },
             ].map(card => (
               <Link
                 key={card.label}
@@ -521,15 +523,15 @@ export default function GrupaPage() {
         <div className="flex flex-wrap gap-2 mb-6">
           <Button onClick={() => { setShowBulkAdd(true); setCreatedStudents([]); setBulkNames(""); }}
             className="rounded-xl font-bold flex items-center gap-2">
-            <UserPlus className="w-4 h-4" /> Dodaj učenike
+            <UserPlus className="w-4 h-4" /> {t("Dodaj učenike")}
           </Button>
           <Button variant="outline" onClick={() => setShowAddExisting(true)}
             className="rounded-xl font-bold flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Dodaj postojećeg
+            <Plus className="w-4 h-4" /> {t("Dodaj postojećeg")}
           </Button>
           {(studentiGrupe.length > 0 || createdStudents.length > 0) && (
             <Button variant="outline" onClick={printCards} disabled={printLoading} className="rounded-xl font-bold flex items-center gap-2">
-              {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} Printaj kartice
+              {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} {t("Printaj kartice")}
             </Button>
           )}
         </div>
@@ -539,7 +541,7 @@ export default function GrupaPage() {
             className="bg-white border border-border/50 rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-primary" /> Dodaj više učenika odjednom
+                <UserPlus className="w-5 h-5 text-primary" /> {t("Dodaj više učenika odjednom")}
               </h3>
               <button onClick={() => setShowBulkAdd(false)} className="p-1 hover:bg-muted rounded-lg">
                 <X className="w-4 h-4" />
@@ -549,13 +551,13 @@ export default function GrupaPage() {
             {createdStudents.length > 0 ? (
               <div>
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
-                  <p className="font-bold text-emerald-800 mb-3">{createdStudents.length} učenika uspješno kreirano!</p>
+                  <p className="font-bold text-emerald-800 mb-3">{t("{n} učenika uspješno kreirano!", { n: String(createdStudents.length) })}</p>
                   <div className="space-y-2 max-h-80 overflow-y-auto">
                     {createdStudents.map(s => (
                       <div key={s.id} className="space-y-1">
                         <div className="bg-white rounded-lg p-3 flex items-center justify-between text-sm border border-emerald-100">
                           <div>
-                            <span className="font-bold text-foreground">Učenik: {s.displayName}</span>
+                            <span className="font-bold text-foreground">{t("Učenik: {ime}", { ime: s.displayName })}</span>
                             <span className="text-muted-foreground ml-2 font-mono text-xs">{s.username}</span>
                           </div>
                           <span className="font-mono font-bold text-primary">{s.generatedPassword}</span>
@@ -563,7 +565,7 @@ export default function GrupaPage() {
                         {s.roditelj && (
                           <div className="bg-blue-50 rounded-lg p-3 flex items-center justify-between text-sm border border-blue-200 ml-4">
                             <div>
-                              <span className="font-bold text-blue-900">Roditelj: {s.roditelj.displayName}</span>
+                              <span className="font-bold text-blue-900">{t("Roditelj: {ime}", { ime: s.roditelj.displayName })}</span>
                               <span className="text-blue-700/70 ml-2 font-mono text-xs">{s.roditelj.username}</span>
                             </div>
                             <span className="font-mono font-bold text-blue-700">{s.roditelj.generatedPassword}</span>
@@ -575,24 +577,24 @@ export default function GrupaPage() {
                 </div>
                 <div className="flex gap-3">
                   <Button onClick={printCards} className="flex-1 rounded-xl font-bold flex items-center justify-center gap-2">
-                    <Printer className="w-4 h-4" /> Printaj kartice s lozinkama
+                    <Printer className="w-4 h-4" /> {t("Printaj kartice s lozinkama")}
                   </Button>
                   <Button variant="outline" onClick={() => { setCreatedStudents([]); setBulkNames(""); }}
-                    className="rounded-xl">Dodaj još</Button>
+                    className="rounded-xl">{t("Dodaj još")}</Button>
                 </div>
               </div>
             ) : (
               <div>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Unesite imena učenika, svako u novi red. Ako želite kreirati i nalog za roditelja,
-                  upišite ga iza znaka <code className="bg-muted px-1.5 py-0.5 rounded text-xs">|</code>:
+                  {t("Unesite imena učenika, svako u novi red. Ako želite kreirati i nalog za roditelja, upišite ga iza znaka")}{" "}
+                  <code className="bg-muted px-1.5 py-0.5 rounded text-xs">|</code>:
                 </p>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 text-xs text-blue-900">
-                  <div className="font-bold mb-1">Primjer:</div>
+                  <div className="font-bold mb-1">{t("Primjer:")}</div>
                   <code className="block whitespace-pre-wrap font-mono leading-relaxed">
                     Amina Hasić | Senad Hasić{"\n"}Ahmed Begović{"\n"}Merjem Hadžić | Edina Hadžić
                   </code>
-                  <p className="mt-2 text-blue-800">Roditelj ne ulazi u kvotu licenci.</p>
+                  <p className="mt-2 text-blue-800">{t("Roditelj ne ulazi u kvotu licenci.")}</p>
                 </div>
                 <textarea value={bulkNames} onChange={e => setBulkNames(e.target.value)}
                   rows={8} placeholder={"Amina Hasić | Senad Hasić\nAhmed Begović\nMerjem Hadžić | Edina Hadžić"}
@@ -602,14 +604,14 @@ export default function GrupaPage() {
                   const sRoditelja = entries.filter(e => e.roditelj).length;
                   return (
                     <p className="text-xs text-muted-foreground mt-1 mb-4">
-                      {entries.length} učenika{sRoditelja > 0 ? ` · ${sRoditelja} sa roditeljem` : ""}
+                      {t("{n} učenika", { n: String(entries.length) })}{sRoditelja > 0 ? t(" · {r} sa roditeljem", { r: String(sRoditelja) }) : ""}
                     </p>
                   );
                 })()}
                 <Button onClick={handleBulkAdd} disabled={bulkLoading || !bulkNames.trim()}
                   className="w-full rounded-xl font-bold py-3">
                   {bulkLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                  {bulkLoading ? "Kreiranje..." : `Kreiraj ${parseBulkEntries(bulkNames).length} učenika`}
+                  {bulkLoading ? t("Kreiranje...") : t("Kreiraj {n} učenika", { n: String(parseBulkEntries(bulkNames).length) })}
                 </Button>
               </div>
             )}
@@ -620,13 +622,13 @@ export default function GrupaPage() {
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             className="bg-white border border-border/50 rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-extrabold text-foreground">Dodaj postojećeg učenika u grupu</h3>
+              <h3 className="font-extrabold text-foreground">{t("Dodaj postojećeg učenika u grupu")}</h3>
               <button onClick={() => setShowAddExisting(false)} className="p-1 hover:bg-muted rounded-lg">
                 <X className="w-4 h-4" />
               </button>
             </div>
             {bezGrupe.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nema dostupnih učenika za dodavanje</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t("Nema dostupnih učenika za dodavanje")}</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {bezGrupe.map(u => (
@@ -637,7 +639,7 @@ export default function GrupaPage() {
                     </div>
                     <Button size="sm" onClick={() => handleAddExisting(u.id)}
                       className="rounded-lg text-xs font-bold">
-                      <Plus className="w-3 h-3 mr-1" /> Dodaj
+                      <Plus className="w-3 h-3 mr-1" /> {t("Dodaj")}
                     </Button>
                   </div>
                 ))}
@@ -649,14 +651,14 @@ export default function GrupaPage() {
         <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border/30">
             <h3 className="font-extrabold text-foreground flex items-center gap-2">
-              <Users className="w-5 h-5 text-secondary" /> Učenici u grupi ({studentiGrupe.length})
+              <Users className="w-5 h-5 text-secondary" /> {t("Učenici u grupi ({n})", { n: String(studentiGrupe.length) })}
             </h3>
           </div>
           {studentiGrupe.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">Nema učenika u ovoj grupi</p>
-              <p className="text-sm mt-1">Dodaj učenike koristeći dugme iznad</p>
+              <p className="font-medium">{t("Nema učenika u ovoj grupi")}</p>
+              <p className="text-sm mt-1">{t("Dodaj učenike koristeći dugme iznad")}</p>
             </div>
           ) : (
             <div className="divide-y divide-border/30">
@@ -673,7 +675,7 @@ export default function GrupaPage() {
                         {isOnline(u.lastSeenAt) && (
                           <span
                             className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white"
-                            title="Online"
+                            title={t("Online")}
                             data-testid={`online-dot-${u.id}`}
                           />
                         )}
@@ -682,63 +684,63 @@ export default function GrupaPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-bold text-foreground truncate">{u.displayName}</p>
                           {isOnline(u.lastSeenAt) && (
-                            <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">online</span>
+                            <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{t("online")}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                           <span className="font-mono">{u.username}</span>
                           {(u.totalScreentimeSec ?? 0) > 0 && (
-                            <span className="text-[10px] font-bold text-muted-foreground/80" title="Ukupno vrijeme na platformi">
+                            <span className="text-[10px] font-bold text-muted-foreground/80" title={t("Ukupno vrijeme na platformi")}>
                               ⏱ {formatScreentime(u.totalScreentimeSec)}
                             </span>
                           )}
                           {status?.zadnjaLekcija ? (
                             <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 rounded-full px-2 py-0.5 font-bold">
                               <BookOpen className="w-3 h-3" />
-                              Nivo {status.zadnjaLekcija.nivo} · {status.zadnjaLekcija.naslov}
+                              {t("Nivo {nivo} · {naslov}", { nivo: String(status.zadnjaLekcija.nivo), naslov: status.zadnjaLekcija.naslov })}
                             </span>
                           ) : (
                             <span className="flex items-center gap-1 text-muted-foreground/70">
-                              <BookOpen className="w-3 h-3" /> Nema završenih lekcija
+                              <BookOpen className="w-3 h-3" /> {t("Nema završenih lekcija")}
                             </span>
                           )}
                           {status && status.zavrsenoLekcija > 0 && (
-                            <span className="text-[10px] font-extrabold text-secondary">{status.zavrsenoLekcija} završeno</span>
+                            <span className="text-[10px] font-extrabold text-secondary">{t("{n} završeno", { n: String(status.zavrsenoLekcija) })}</span>
                           )}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-wrap justify-end">
                       <button onClick={() => openOcjena(u)}
-                        className="p-2 hover:bg-amber-50 rounded-lg text-amber-600 transition-colors" title="Daj ocjenu"
+                        className="p-2 hover:bg-amber-50 rounded-lg text-amber-600 transition-colors" title={t("Daj ocjenu")}
                         data-testid={`btn-ocjena-${u.id}`}
                       >
                         <Star className="w-4 h-4" />
                       </button>
                       <button onClick={() => openZadacaForOne(u)}
-                        className="p-2 hover:bg-violet-50 rounded-lg text-violet-600 transition-colors" title="Zadaća samo za ovog učenika"
+                        className="p-2 hover:bg-violet-50 rounded-lg text-violet-600 transition-colors" title={t("Zadaća samo za ovog učenika")}
                         data-testid={`btn-zadaca-ucenik-${u.id}`}
                       >
                         <ClipboardList className="w-4 h-4" />
                       </button>
                       <button onClick={() => openParentReset(u)}
-                        className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors" title="Resetuj šifru roditelja"
+                        className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors" title={t("Resetuj šifru roditelja")}
                         data-testid={`btn-roditelj-reset-${u.id}`}
                       >
                         <KeyRound className="w-4 h-4" />
                       </button>
                       <button onClick={() => { setMoveStudent(u); setMoveTargetGrupaId(""); setShowMoveModal(true); }}
-                        className="p-2 hover:bg-cyan-50 rounded-lg text-cyan-500 transition-colors" title="Prebaci u drugu grupu">
+                        className="p-2 hover:bg-cyan-50 rounded-lg text-cyan-500 transition-colors" title={t("Prebaci u drugu grupu")}>
                         <ArrowRightLeft className="w-4 h-4" />
                       </button>
                       <button onClick={() => setDeleteTarget(u)}
-                        className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Obriši učenika trajno"
+                        className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title={t("Obriši učenika trajno")}
                         data-testid={`btn-delete-${u.id}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                       <Link href={`/muallim/ucenik/${u.id}`}>
-                        <button className="p-2 hover:bg-muted rounded-lg text-primary transition-colors" title="Detalji">
+                        <button className="p-2 hover:bg-muted rounded-lg text-primary transition-colors" title={t("Detalji")}>
                           <ChevronRight className="w-4 h-4" />
                         </button>
                       </Link>
@@ -754,23 +756,23 @@ export default function GrupaPage() {
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-              <h3 className="font-extrabold text-foreground mb-1">Prebaci učenika</h3>
+              <h3 className="font-extrabold text-foreground mb-1">{t("Prebaci učenika")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {moveStudent.displayName} → odaberi novu grupu
+                {t("{ime} → odaberi novu grupu", { ime: moveStudent.displayName })}
               </p>
               <select value={moveTargetGrupaId} onChange={e => setMoveTargetGrupaId(e.target.value)}
                 className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20 mb-4">
-                <option value="">Bez grupe</option>
+                <option value="">{t("Bez grupe")}</option>
                 {sveGrupe.filter(g => g.id !== grupaId).map(g => (
                   <option key={g.id} value={g.id}>{g.naziv}</option>
                 ))}
               </select>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setShowMoveModal(false)} className="flex-1 rounded-xl">
-                  Otkaži
+                  {t("Otkaži")}
                 </Button>
                 <Button onClick={handleMove} disabled={moveLoading} className="flex-1 rounded-xl font-bold">
-                  {moveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Prebaci"}
+                  {moveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Prebaci")}
                 </Button>
               </div>
             </motion.div>
@@ -782,24 +784,24 @@ export default function GrupaPage() {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="font-extrabold text-foreground mb-1 flex items-center gap-2">
-                <Star className="w-5 h-5 text-amber-500" /> Ocjena za {ocjenaTarget.displayName}
+                <Star className="w-5 h-5 text-amber-500" /> {t("Ocjena za {ime}", { ime: ocjenaTarget.displayName })}
               </h3>
-              <p className="text-sm text-muted-foreground mb-4">Unesi ocjenu i pripadajuću kategoriju.</p>
+              <p className="text-sm text-muted-foreground mb-4">{t("Unesi ocjenu i pripadajuću kategoriju.")}</p>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">Kategorija</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Kategorija")}</label>
                     <select value={newOcjena.kategorija}
                       onChange={e => setNewOcjena(o => ({ ...o, kategorija: e.target.value }))}
                       className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                      <option value="usmeno">Usmeno</option>
-                      <option value="ucenje">Učenje</option>
-                      <option value="prakticno">Praktično</option>
-                      <option value="ponasanje">Ponašanje</option>
+                      <option value="usmeno">{t("Usmeno")}</option>
+                      <option value="ucenje">{t("Učenje")}</option>
+                      <option value="prakticno">{t("Praktično")}</option>
+                      <option value="ponasanje">{t("Ponašanje")}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">Ocjena (1–5)</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–5)")}</label>
                     <select value={newOcjena.ocjena}
                       onChange={e => setNewOcjena(o => ({ ...o, ocjena: parseInt(e.target.value) }))}
                       className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-bold">
@@ -808,22 +810,22 @@ export default function GrupaPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">Lekcija</label>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                   <LekcijaPicker
                     lekcije={ilmihalLekcije}
                     value={newOcjena.lekcijaNaziv}
                     onChange={v => setNewOcjena(o => ({ ...o, lekcijaNaziv: v }))}
-                    placeholder="Pretraži lekciju ili upiši broj…"
+                    placeholder={t("Pretraži lekciju ili upiši broj…")}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">Datum</label>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Datum")}</label>
                   <input type="date" value={newOcjena.datum}
                     onChange={e => setNewOcjena(o => ({ ...o, datum: e.target.value }))}
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">Napomena (opciono)</label>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Napomena (opciono)")}</label>
                   <textarea value={newOcjena.napomena} rows={2}
                     onChange={e => setNewOcjena(o => ({ ...o, napomena: e.target.value }))}
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
@@ -831,10 +833,10 @@ export default function GrupaPage() {
               </div>
               <div className="flex gap-3 mt-4">
                 <Button variant="outline" onClick={() => setOcjenaTarget(null)} disabled={savingOcjena} className="flex-1 rounded-xl">
-                  Otkaži
+                  {t("Otkaži")}
                 </Button>
                 <Button onClick={saveOcjena} disabled={savingOcjena} className="flex-1 rounded-xl font-bold">
-                  {savingOcjena ? <Loader2 className="w-4 h-4 animate-spin" /> : "Spremi"}
+                  {savingOcjena ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Spremi")}
                 </Button>
               </div>
             </motion.div>
@@ -847,56 +849,56 @@ export default function GrupaPage() {
               className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="font-extrabold text-foreground mb-1 flex items-center gap-2">
                 <ClipboardList className="w-5 h-5 text-violet-600" />
-                {zadacaTarget ? `Zadaća za ${zadacaTarget.displayName}` : `Zadaća za cijelu grupu`}
+                {zadacaTarget ? t("Zadaća za {ime}", { ime: zadacaTarget.displayName }) : t("Zadaća za cijelu grupu")}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {zadacaTarget
-                  ? "Vidljivo samo ovom učeniku."
-                  : `Vidljivo svim učenicima u grupi (${studentiGrupe.length}).`}
+                  ? t("Vidljivo samo ovom učeniku.")
+                  : t("Vidljivo svim učenicima u grupi ({n}).", { n: String(studentiGrupe.length) })}
               </p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">Naslov *</label>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Naslov *")}</label>
                   <input type="text" value={newZadaca.naslov}
                     onChange={e => setNewZadaca(z => ({ ...z, naslov: e.target.value }))}
-                    placeholder="Npr. Nauči Fatihu napamet"
+                    placeholder={t("Npr. Nauči Fatihu napamet")}
                     className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
                     data-testid="input-zadaca-naslov"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">Opis</label>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Opis")}</label>
                   <textarea value={newZadaca.opis} rows={3}
                     onChange={e => setNewZadaca(z => ({ ...z, opis: e.target.value }))}
-                    placeholder="Detalji zadaće (opciono)"
+                    placeholder={t("Detalji zadaće (opciono)")}
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">Rok do</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Rok do")}</label>
                     <input type="date" value={newZadaca.rokDo}
                       onChange={e => setNewZadaca(z => ({ ...z, rokDo: e.target.value }))}
                       className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">Lekcija</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                     <LekcijaPicker
                       lekcije={ilmihalLekcije}
                       value={newZadaca.lekcijaNaslov}
                       onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v }))}
-                      placeholder="Pretraži lekciju ili upiši broj…"
+                      placeholder={t("Pretraži lekciju ili upiši broj…")}
                     />
                   </div>
                 </div>
               </div>
               <div className="flex gap-3 mt-4">
                 <Button variant="outline" onClick={() => setShowZadacaModal(false)} disabled={savingZadaca} className="flex-1 rounded-xl">
-                  Otkaži
+                  {t("Otkaži")}
                 </Button>
                 <Button onClick={saveZadaca} disabled={savingZadaca || !newZadaca.naslov.trim()} className="flex-1 rounded-xl font-bold"
                   data-testid="btn-save-zadaca"
                 >
-                  {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : "Dodaj zadaću"}
+                  {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Dodaj zadaću")}
                 </Button>
               </div>
             </motion.div>
@@ -909,19 +911,19 @@ export default function GrupaPage() {
               className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-blue-600" /> Šifra roditelja
+                  <KeyRound className="w-5 h-5 text-blue-600" /> {t("Šifra roditelja")}
                 </h3>
                 <button onClick={() => setParentResetTarget(null)} className="p-1 hover:bg-muted rounded-lg">
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">Resetuj šifru roditelju učenika {parentResetTarget.displayName}.</p>
+              <p className="text-sm text-muted-foreground mb-4">{t("Resetuj šifru roditelju učenika {ime}.", { ime: parentResetTarget.displayName })}</p>
 
               {parentResetLoading ? (
                 <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
               ) : parentResetList.length === 0 ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-                  Ovaj učenik nema povezanog roditelja. Roditelja možeš dodati iz profila učenika (klikni strelicu desno).
+                  {t("Ovaj učenik nema povezanog roditelja. Roditelja možeš dodati iz profila učenika (klikni strelicu desno).")}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -936,15 +938,15 @@ export default function GrupaPage() {
                           disabled={parentResetWorking === r.id}
                           className="rounded-lg text-xs font-bold flex items-center gap-1.5">
                           {parentResetWorking === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
-                          Resetuj šifru
+                          {t("Resetuj šifru")}
                         </Button>
                       </div>
                       {parentResetResult?.id === r.id && (
                         <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] font-bold text-emerald-700">Nova šifra:</span>
+                          <span className="text-[11px] font-bold text-emerald-700">{t("Nova šifra:")}</span>
                           <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{parentResetResult.password}</code>
                           <Button size="sm" variant="outline"
-                            onClick={async () => { try { await navigator.clipboard.writeText(parentResetResult.password); toast({ title: "Kopirano!" }); } catch {} }}
+                            onClick={async () => { try { await navigator.clipboard.writeText(parentResetResult.password); toast({ title: t("Kopirano!") }); } catch {} }}
                             className="rounded-lg text-[11px] h-6 px-2">
                             <Copy className="w-3 h-3" />
                           </Button>
@@ -966,23 +968,23 @@ export default function GrupaPage() {
                 <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
                 </div>
-                <h3 className="font-extrabold text-foreground">Obriši učenika trajno?</h3>
+                <h3 className="font-extrabold text-foreground">{t("Obriši učenika trajno?")}</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                <strong className="text-foreground">{deleteTarget.displayName}</strong> i svi njegovi podaci (ocjene, prisustvo, napredak, zadaće, povezivanja s roditeljima) bit će <strong className="text-red-600">trajno obrisani</strong>. Ova akcija se ne može poništiti.
+                <strong className="text-foreground">{deleteTarget.displayName}</strong>{" "}{t("i svi njegovi podaci (ocjene, prisustvo, napredak, zadaće, povezivanja s roditeljima) bit će")}{" "}<strong className="text-red-600">{t("trajno obrisani")}</strong>{t(". Ova akcija se ne može poništiti.")}
               </p>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 mb-4">
-                Ako želiš samo da ga ukloniš iz grupe (zadržavajući podatke), iskoristi dugme "Prebaci u drugu grupu" i odaberi "Bez grupe".
+                {t(`Ako želiš samo da ga ukloniš iz grupe (zadržavajući podatke), iskoristi dugme "Prebaci u drugu grupu" i odaberi "Bez grupe".`)}
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleteLoading} className="flex-1 rounded-xl">
-                  Otkaži
+                  {t("Otkaži")}
                 </Button>
                 <Button onClick={handleHardDelete} disabled={deleteLoading}
                   className="flex-1 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white"
                   data-testid="btn-confirm-delete"
                 >
-                  {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Obriši trajno"}
+                  {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Obriši trajno")}
                 </Button>
               </div>
             </motion.div>

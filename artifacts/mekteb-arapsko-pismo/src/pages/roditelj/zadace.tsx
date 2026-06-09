@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, ClipboardList, Clock, BookOpen, Users, User as UserIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -24,6 +25,7 @@ interface ZadacaRoditelj {
 
 export default function RoditeljZadacePage() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [zadace, setZadace] = useState<ZadacaRoditelj[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,7 +67,7 @@ export default function RoditeljZadacePage() {
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors"
           data-testid="link-nazad"
         >
-          <ArrowLeft className="w-4 h-4" /> Nazad na panel
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
 
         <div className="flex items-center gap-4 mb-6">
@@ -73,14 +75,14 @@ export default function RoditeljZadacePage() {
             <ClipboardList className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Zadaće</h1>
-            <p className="text-sm text-muted-foreground">Aktivne zadaće za vašu djecu</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("Zadaće")}</h1>
+            <p className="text-sm text-muted-foreground">{t("Aktivne zadaće za vašu djecu")}</p>
           </div>
         </div>
 
         {svaDjeca.length > 1 && (
           <div className="mb-5 flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-muted-foreground">Filter:</span>
+            <span className="text-sm font-bold text-muted-foreground">{t("Filter:")}</span>
             <button
               onClick={() => setFilterDijete("")}
               className={`text-sm font-bold rounded-full px-4 py-1.5 border transition-all ${
@@ -88,7 +90,7 @@ export default function RoditeljZadacePage() {
               }`}
               data-testid="filter-all"
             >
-              Sva djeca
+              {t("Sva djeca")}
             </button>
             {svaDjeca.map(d => (
               <button
@@ -112,18 +114,18 @@ export default function RoditeljZadacePage() {
         ) : zadace.length === 0 ? (
           <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
             <ClipboardList className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="font-bold text-foreground mb-1">Nema aktivnih zadaća</p>
-            <p className="text-sm text-muted-foreground">Trenutno nema zadaća za vašu djecu.</p>
+            <p className="font-bold text-foreground mb-1">{t("Nema aktivnih zadaća")}</p>
+            <p className="text-sm text-muted-foreground">{t("Trenutno nema zadaća za vašu djecu.")}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
-            <p className="font-bold text-foreground mb-1">Nema zadaća za odabrano dijete</p>
+            <p className="font-bold text-foreground mb-1">{t("Nema zadaća za odabrano dijete")}</p>
           </div>
         ) : (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             {aktivne.length > 0 && (
               <section>
-                <h2 className="text-sm font-extrabold text-muted-foreground uppercase tracking-wider mb-3">Aktivne ({aktivne.length})</h2>
+                <h2 className="text-sm font-extrabold text-muted-foreground uppercase tracking-wider mb-3">{t("Aktivne ({n})", { n: String(aktivne.length) })}</h2>
                 <div className="space-y-3">
                   {aktivne.map((z, i) => <ZadacaCard key={z.id} z={z} index={i} expired={false} />)}
                 </div>
@@ -131,7 +133,7 @@ export default function RoditeljZadacePage() {
             )}
             {istekle.length > 0 && (
               <section>
-                <h2 className="text-sm font-extrabold text-muted-foreground uppercase tracking-wider mb-3">Istekle ({istekle.length})</h2>
+                <h2 className="text-sm font-extrabold text-muted-foreground uppercase tracking-wider mb-3">{t("Istekle ({n})", { n: String(istekle.length) })}</h2>
                 <div className="space-y-3">
                   {istekle.map((z, i) => <ZadacaCard key={z.id} z={z} index={i} expired={true} />)}
                 </div>
@@ -145,6 +147,7 @@ export default function RoditeljZadacePage() {
 }
 
 function ZadacaCard({ z, index, expired }: { z: ZadacaRoditelj; index: number; expired: boolean }) {
+  const { t } = useLanguage();
   const isIndividualna = z.djecaImena.length === 1;
   return (
     <motion.div
@@ -158,7 +161,7 @@ function ZadacaCard({ z, index, expired }: { z: ZadacaRoditelj; index: number; e
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h3 className="font-extrabold text-foreground text-base">{z.naslov}</h3>
-            {expired && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Isteklo</span>}
+            {expired && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{t("Isteklo")}</span>}
           </div>
           <div className="flex items-center gap-2 flex-wrap mb-2">
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${isIndividualna ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
@@ -173,7 +176,7 @@ function ZadacaCard({ z, index, expired }: { z: ZadacaRoditelj; index: number; e
           <div className="flex items-center gap-4 flex-wrap">
             {z.rokDo && (
               <span className={`text-xs flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-muted-foreground"}`}>
-                <Clock className="w-3 h-3" /> Rok: {new Date(z.rokDo).toLocaleDateString("bs-BA")}
+                <Clock className="w-3 h-3" /> {t("Rok:")} {new Date(z.rokDo).toLocaleDateString("bs-BA")}
               </span>
             )}
             {z.lekcijaNaslov && (
@@ -182,7 +185,7 @@ function ZadacaCard({ z, index, expired }: { z: ZadacaRoditelj; index: number; e
               </span>
             )}
             <span className="text-xs text-muted-foreground">
-              Kreirano: {new Date(z.createdAt).toLocaleDateString("bs-BA")}
+              {t("Kreirano:")} {new Date(z.createdAt).toLocaleDateString("bs-BA")}
             </span>
           </div>
         </div>

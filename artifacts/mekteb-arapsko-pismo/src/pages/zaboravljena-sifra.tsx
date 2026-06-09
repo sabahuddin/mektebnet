@@ -4,8 +4,10 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, ArrowLeft, CheckCircle2, AlertCircle, KeyRound } from "lucide-react";
+import { useLanguage } from "@/context/language";
 
 export default function ZaboravljenaSifraPage() {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +18,7 @@ export default function ZaboravljenaSifraPage() {
     e.preventDefault();
     setError("");
     if (!email.trim()) {
-      setError("Unesite email adresu.");
+      setError(t("Unesite email adresu."));
       return;
     }
     setIsLoading(true);
@@ -28,11 +30,11 @@ export default function ZaboravljenaSifraPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Greška pri slanju zahtjeva.");
+        throw new Error(data.error || t("Greška pri slanju zahtjeva."));
       }
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Greška servera.");
+      setError(err instanceof Error ? err.message : t("Greška servera."));
     } finally {
       setIsLoading(false);
     }
@@ -49,29 +51,29 @@ export default function ZaboravljenaSifraPage() {
       >
         <div className="text-center mb-8">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-4" />
-          <p className="text-muted-foreground mt-1 font-medium">Zaboravljena šifra</p>
+          <p className="text-muted-foreground mt-1 font-medium">{t("Zaboravljena šifra")}</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl border border-border/50 p-8">
           <h2 className="text-xl font-bold mb-2 text-foreground flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-primary" />
-            Postavi novu šifru
+            {t("Postavi novu šifru")}
           </h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Unesite email adresu sa kojom ste se registrovali — poslat ćemo vam link za postavljanje nove šifre.
+            {t("Unesite email adresu sa kojom ste se registrovali — poslat ćemo vam link za postavljanje nove šifre.")}
           </p>
 
           {done ? (
             <div className="flex flex-col items-center text-center gap-4 py-4">
               <CheckCircle2 className="w-14 h-14 text-emerald-600" />
               <div>
-                <p className="font-bold text-foreground mb-1">Provjerite svoj email!</p>
+                <p className="font-bold text-foreground mb-1">{t("Provjerite svoj email!")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Ako račun s tom adresom postoji, poslali smo link za postavljanje nove šifre. Link važi 1 sat.
+                  {t("Ako račun s tom adresom postoji, poslali smo link za postavljanje nove šifre. Link važi 1 sat.")}
                 </p>
               </div>
               <Button onClick={() => setLocation("/login")} variant="outline" className="rounded-xl">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Nazad na prijavu
+                <ArrowLeft className="w-4 h-4 mr-2" /> {t("Nazad na prijavu")}
               </Button>
             </div>
           ) : (
@@ -88,7 +90,7 @@ export default function ZaboravljenaSifraPage() {
               )}
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
-                  <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Email</label>
+                  <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 block">{t("Email")}</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -103,13 +105,13 @@ export default function ZaboravljenaSifraPage() {
                   </div>
                 </div>
                 <Button type="submit" size="lg" className="w-full h-12 rounded-xl text-base font-bold mt-2" disabled={isLoading}>
-                  {isLoading ? "Slanje..." : "Pošalji link za reset"}
+                  {isLoading ? t("Slanje...") : t("Pošalji link za reset")}
                 </Button>
               </form>
 
               <div className="mt-6 pt-6 border-t border-border/50 text-center">
                 <button onClick={() => setLocation("/login")} className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
-                  <ArrowLeft className="w-3.5 h-3.5" /> Nazad na prijavu
+                  <ArrowLeft className="w-3.5 h-3.5" /> {t("Nazad na prijavu")}
                 </button>
               </div>
             </>

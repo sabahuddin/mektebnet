@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -87,6 +88,7 @@ function slugify(s: string): string {
 
 export default function AdminCitaonicaPage() {
   const { user, token } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -124,7 +126,7 @@ export default function AdminCitaonicaPage() {
       setList(knj);
       setKategorije(kats);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće učitati podatke", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće učitati podatke"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -158,35 +160,35 @@ export default function AdminCitaonicaPage() {
       });
       setAutoSlug(false);
     } catch {
-      toast({ title: "Greška", description: "Ne mogu otvoriti priču", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Ne mogu otvoriti priču"), variant: "destructive" });
     }
   };
 
   const handleSave = async () => {
     if (!editing || !token) return;
     if (!editing.naslov.trim()) {
-      toast({ title: "Greška", description: "Naslov je obavezan", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Naslov je obavezan"), variant: "destructive" });
       return;
     }
     if (!editing.slug.trim()) {
-      toast({ title: "Greška", description: "Slug je obavezan", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Slug je obavezan"), variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
       if (editing.id) {
         await apiRequest("PUT", `/admin/knjige/${editing.id}`, editing, token);
-        toast({ title: "Sačuvano", description: `Priča "${editing.naslov}" je ažurirana` });
+        toast({ title: t("Sačuvano"), description: t('Priča "{naslov}" je ažurirana', { naslov: editing.naslov }) });
       } else {
         await apiRequest("POST", "/admin/knjige", editing, token);
-        toast({ title: "Dodano", description: `Priča "${editing.naslov}" je kreirana` });
+        toast({ title: t("Dodano"), description: t('Priča "{naslov}" je kreirana', { naslov: editing.naslov }) });
       }
       setEditing(null);
       void loadList();
     } catch (err: any) {
       toast({
-        title: "Greška",
-        description: err?.message || "Nije moguće sačuvati",
+        title: t("Greška"),
+        description: err?.message || t("Nije moguće sačuvati"),
         variant: "destructive",
       });
     } finally {
@@ -196,13 +198,13 @@ export default function AdminCitaonicaPage() {
 
   const handleDelete = async (k: Knjiga) => {
     if (!token) return;
-    if (!confirm(`Obrisati priču "${k.naslov}"? Ova radnja se ne može poništiti.`)) return;
+    if (!confirm(t('Obrisati priču "{naslov}"? Ova radnja se ne može poništiti.', { naslov: k.naslov }))) return;
     try {
       await apiRequest("DELETE", `/admin/knjige/${k.id}`, undefined, token);
-      toast({ title: "Obrisano", description: `Priča "${k.naslov}" je uklonjena` });
+      toast({ title: t("Obrisano"), description: t('Priča "{naslov}" je uklonjena', { naslov: k.naslov }) });
       setList((prev) => prev.filter((x) => x.id !== k.id));
     } catch {
-      toast({ title: "Greška", description: "Nije moguće obrisati", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće obrisati"), variant: "destructive" });
     }
   };
 
@@ -219,15 +221,15 @@ export default function AdminCitaonicaPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Upload neuspješan");
+        throw new Error(err.error || t("Upload neuspješan"));
       }
       const data = await res.json();
       setEditing((prev) => (prev ? { ...prev, coverImage: data.url } : prev));
-      toast({ title: "Učitano", description: "Cover slika je dodana" });
+      toast({ title: t("Učitano"), description: t("Cover slika je dodana") });
     } catch (err: any) {
       toast({
-        title: "Greška",
-        description: err?.message || "Upload nije uspio",
+        title: t("Greška"),
+        description: err?.message || t("Upload nije uspio"),
         variant: "destructive",
       });
     } finally {
@@ -264,11 +266,11 @@ export default function AdminCitaonicaPage() {
   const handleSaveKat = async () => {
     if (!editingKat || !token) return;
     if (!editingKat.naziv.trim()) {
-      toast({ title: "Greška", description: "Naziv kategorije je obavezan", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Naziv kategorije je obavezan"), variant: "destructive" });
       return;
     }
     if (!editingKat.slug.trim()) {
-      toast({ title: "Greška", description: "Slug je obavezan", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Slug je obavezan"), variant: "destructive" });
       return;
     }
     setSavingKat(true);
@@ -282,15 +284,15 @@ export default function AdminCitaonicaPage() {
       };
       if (editingKat.id) {
         await apiRequest("PUT", `/admin/kategorije-knjiga/${editingKat.id}`, payload, token);
-        toast({ title: "Sačuvano", description: `Kategorija "${editingKat.naziv}" je ažurirana` });
+        toast({ title: t("Sačuvano"), description: t('Kategorija "{naziv}" je ažurirana', { naziv: editingKat.naziv }) });
       } else {
         await apiRequest("POST", "/admin/kategorije-knjiga", payload, token);
-        toast({ title: "Dodano", description: `Kategorija "${editingKat.naziv}" je kreirana` });
+        toast({ title: t("Dodano"), description: t('Kategorija "{naziv}" je kreirana', { naziv: editingKat.naziv }) });
       }
       setEditingKat(null);
       void loadAll();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Nije moguće sačuvati", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Nije moguće sačuvati"), variant: "destructive" });
     } finally {
       setSavingKat(false);
     }
@@ -299,15 +301,15 @@ export default function AdminCitaonicaPage() {
   const handleDeleteKat = async (k: Kategorija) => {
     if (!token) return;
     const warn = k.brojPrica > 0
-      ? `Kategorija "${k.naziv}" ima ${k.brojPrica} ${k.brojPrica === 1 ? "priču" : "priča"}. Brisanjem će one ostati ali bez kategorije (prikazane pod "Bez kategorije" na čitaonici). Nastaviti?`
-      : `Obrisati kategoriju "${k.naziv}"?`;
+      ? t('Kategorija "{naziv}" ima {broj} {rijec}. Brisanjem će one ostati ali bez kategorije (prikazane pod "Bez kategorije" na čitaonici). Nastaviti?', { naziv: k.naziv, broj: String(k.brojPrica), rijec: k.brojPrica === 1 ? t("priču") : t("priča") })
+      : t('Obrisati kategoriju "{naziv}"?', { naziv: k.naziv });
     if (!confirm(warn)) return;
     try {
       await apiRequest("DELETE", `/admin/kategorije-knjiga/${k.id}`, undefined, token);
-      toast({ title: "Obrisano", description: `Kategorija "${k.naziv}" je uklonjena` });
+      toast({ title: t("Obrisano"), description: t('Kategorija "{naziv}" je uklonjena', { naziv: k.naziv }) });
       void loadAll();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće obrisati", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće obrisati"), variant: "destructive" });
     }
   };
 
@@ -342,7 +344,7 @@ export default function AdminCitaonicaPage() {
           className="flex items-center gap-2 text-teal-600 hover:text-teal-800 mb-6 font-semibold"
           data-testid="link-nazad"
         >
-          <ArrowLeft className="w-4 h-4" /> Nazad na admin
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad na admin")}
         </button>
 
         <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
@@ -351,9 +353,9 @@ export default function AdminCitaonicaPage() {
               <BookOpen className="w-6 h-6 text-amber-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-foreground">Čitaonica — priče</h1>
+              <h1 className="text-2xl font-extrabold text-foreground">{t("Čitaonica — priče")}</h1>
               <p className="text-muted-foreground text-base">
-                {list.length} {list.length === 1 ? "priča" : "priča"} ukupno
+                {list.length} {list.length === 1 ? t("priča") : t("priča")} {t("ukupno")}
               </p>
             </div>
           </div>
@@ -362,7 +364,7 @@ export default function AdminCitaonicaPage() {
             data-testid="button-nova-prica"
             className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shrink-0"
           >
-            <Plus className="w-4 h-4" /> Nova priča
+            <Plus className="w-4 h-4" /> {t("Nova priča")}
           </button>
         </div>
 
@@ -384,8 +386,8 @@ export default function AdminCitaonicaPage() {
             {list.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground bg-white rounded-2xl border border-border/50">
                 <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                <p className="text-lg font-semibold">Nema priča u Čitaonici</p>
-                <p className="text-base mt-1">Klikni "Nova priča" da dodaš prvu</p>
+                <p className="text-lg font-semibold">{t("Nema priča u Čitaonici")}</p>
+                <p className="text-base mt-1">{t('Klikni "Nova priča" da dodaš prvu')}</p>
               </div>
             ) : (
               <>
@@ -402,7 +404,7 @@ export default function AdminCitaonicaPage() {
                 )}
                 {grouped.orphans.length > 0 && (
                   <Section
-                    naslov="Bez kategorije (kategorija obrisana)"
+                    naslov={t("Bez kategorije (kategorija obrisana)")}
                     items={grouped.orphans}
                     onEdit={startEdit}
                     onDelete={handleDelete}
@@ -467,6 +469,7 @@ function KategorijeManager({
   onEdit: (k: Kategorija) => void;
   onDelete: (k: Kategorija) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden">
       <button
@@ -481,13 +484,13 @@ function KategorijeManager({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-foreground">Kategorije</span>
+            <span className="font-bold text-foreground">{t("Kategorije")}</span>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
               {kategorije.length}
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Grupe priča za čitaonicu (npr. Priče o vjerovjesnicima, Hadis za djecu, Ahlak).
+            {t("Grupe priča za čitaonicu (npr. Priče o vjerovjesnicima, Hadis za djecu, Ahlak).")}
           </p>
         </div>
         <ChevronDown
@@ -503,13 +506,13 @@ function KategorijeManager({
               data-testid="button-nova-kategorija"
               className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-xl text-sm font-semibold hover:bg-amber-700 transition"
             >
-              <Plus className="w-4 h-4" /> Nova kategorija
+              <Plus className="w-4 h-4" /> {t("Nova kategorija")}
             </button>
           </div>
 
           {kategorije.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-4">
-              Nema kategorija. Klikni "Nova kategorija" da dodaš prvu.
+              {t('Nema kategorija. Klikni "Nova kategorija" da dodaš prvu.')}
             </p>
           ) : (
             <div className="bg-white rounded-xl border border-amber-200 overflow-hidden">
@@ -525,11 +528,11 @@ function KategorijeManager({
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-foreground truncate">{k.naziv}</span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
-                        {k.brojPrica} {k.brojPrica === 1 ? "priča" : "priča"}
+                        {k.brojPrica} {k.brojPrica === 1 ? t("priča") : t("priča")}
                       </span>
                       {k.defaultOpen && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                          OTVORENA
+                          {t("OTVORENA")}
                         </span>
                       )}
                     </div>
@@ -546,7 +549,7 @@ function KategorijeManager({
                       onClick={() => onEdit(k)}
                       data-testid={`button-edit-kategorija-${k.id}`}
                       className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-700 transition"
-                      title="Uredi"
+                      title={t("Uredi")}
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -554,7 +557,7 @@ function KategorijeManager({
                       onClick={() => onDelete(k)}
                       data-testid={`button-delete-kategorija-${k.id}`}
                       className="p-2 rounded-lg hover:bg-red-100 text-red-600 transition"
-                      title="Obriši"
+                      title={t("Obriši")}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -588,6 +591,7 @@ function EditKatModal({
   onSave: () => void;
   onNazivChange: (v: string) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto"
@@ -600,7 +604,7 @@ function EditKatModal({
       >
         <div className="flex items-center justify-between p-5 border-b border-border/50">
           <h3 className="text-lg font-extrabold text-foreground">
-            {form.id ? "Uredi kategoriju" : "Nova kategorija"}
+            {form.id ? t("Uredi kategoriju") : t("Nova kategorija")}
           </h3>
           <button
             onClick={onClose}
@@ -614,11 +618,11 @@ function EditKatModal({
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">Naziv *</label>
+            <label className="block text-sm font-semibold text-foreground mb-1">{t("Naziv *")}</label>
             <input
               value={form.naziv}
               onChange={(e) => onNazivChange(e.target.value)}
-              placeholder="npr. Priče o vjerovjesnicima"
+              placeholder={t("npr. Priče o vjerovjesnicima")}
               data-testid="input-kat-naziv"
               className="w-full px-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
@@ -626,7 +630,7 @@ function EditKatModal({
 
           <div>
             <label className="flex items-center justify-between text-sm font-semibold text-foreground mb-1">
-              <span>Slug *</span>
+              <span>{t("Slug *")}</span>
               <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground cursor-pointer">
                 <input
                   type="checkbox"
@@ -634,7 +638,7 @@ function EditKatModal({
                   onChange={(e) => setAutoSlug(e.target.checked)}
                   data-testid="checkbox-kat-auto-slug"
                 />
-                automatski iz naziva
+                {t("automatski iz naziva")}
               </label>
             </label>
             <input
@@ -643,24 +647,23 @@ function EditKatModal({
                 setAutoSlug(false);
                 setForm((prev) => ({ ...prev, slug: e.target.value }));
               }}
-              placeholder="npr. prica"
+              placeholder={t("npr. prica")}
               data-testid="input-kat-slug"
               className="w-full px-4 py-2.5 border border-border rounded-xl text-base font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Tehnički ključ — koristi se interno za grupisanje priča. Ako mijenjaš slug postojeće
-              kategorije, sve njene priče se automatski prebacuju na novi slug.
+              {t("Tehnički ključ — koristi se interno za grupisanje priča. Ako mijenjaš slug postojeće kategorije, sve njene priče se automatski prebacuju na novi slug.")}
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">
-              Kratki opis (opcionalno)
+              {t("Kratki opis (opcionalno)")}
             </label>
             <input
               value={form.opis}
               onChange={(e) => setForm((prev) => ({ ...prev, opis: e.target.value }))}
-              placeholder="npr. Životne priče poslanika u hronološkom redu."
+              placeholder={t("npr. Životne priče poslanika u hronološkom redu.")}
               data-testid="input-kat-opis"
               className="w-full px-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
@@ -668,7 +671,7 @@ function EditKatModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1">Redoslijed</label>
+              <label className="block text-sm font-semibold text-foreground mb-1">{t("Redoslijed")}</label>
               <input
                 type="number"
                 value={form.redoslijed}
@@ -678,11 +681,11 @@ function EditKatModal({
                 data-testid="input-kat-redoslijed"
                 className="w-full px-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
-              <p className="text-xs text-muted-foreground mt-1">manji broj = ranije</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("manji broj = ranije")}</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1">
-                Početno stanje
+                {t("Početno stanje")}
               </label>
               <button
                 type="button"
@@ -695,12 +698,12 @@ function EditKatModal({
                 }`}
               >
                 {form.defaultOpen ? (
-                  <><Eye className="w-4 h-4" /> Otvorena</>
+                  <><Eye className="w-4 h-4" /> {t("Otvorena")}</>
                 ) : (
-                  <><EyeOff className="w-4 h-4" /> Zatvorena</>
+                  <><EyeOff className="w-4 h-4" /> {t("Zatvorena")}</>
                 )}
               </button>
-              <p className="text-xs text-muted-foreground mt-1">akordion na čitaonici</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("akordion na čitaonici")}</p>
             </div>
           </div>
         </div>
@@ -712,7 +715,7 @@ function EditKatModal({
             data-testid="button-kat-otkazi"
             className="px-5 py-2.5 rounded-xl font-semibold text-foreground hover:bg-gray-100 transition disabled:opacity-50"
           >
-            Otkaži
+            {t("Otkaži")}
           </button>
           <button
             onClick={onSave}
@@ -721,7 +724,7 @@ function EditKatModal({
             className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {form.id ? "Sačuvaj izmjene" : "Kreiraj kategoriju"}
+            {form.id ? t("Sačuvaj izmjene") : t("Kreiraj kategoriju")}
           </button>
         </div>
       </div>
@@ -740,6 +743,7 @@ function Section({
   onEdit: (k: Knjiga) => void;
   onDelete: (k: Knjiga) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div>
       <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">
@@ -766,7 +770,7 @@ function Section({
                 <span className="font-bold text-foreground truncate">{k.naslov}</span>
                 {!k.isPublished && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
-                    NEOBJAVLJENO
+                    {t("NEOBJAVLJENO")}
                   </span>
                 )}
               </div>
@@ -780,7 +784,7 @@ function Section({
                 onClick={() => onEdit(k)}
                 data-testid={`button-edit-${k.id}`}
                 className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-700 transition"
-                title="Uredi"
+                title={t("Uredi")}
               >
                 <Pencil className="w-4 h-4" />
               </button>
@@ -788,7 +792,7 @@ function Section({
                 onClick={() => onDelete(k)}
                 data-testid={`button-delete-${k.id}`}
                 className="p-2 rounded-lg hover:bg-red-100 text-red-600 transition"
-                title="Obriši"
+                title={t("Obriši")}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -829,6 +833,7 @@ function EditModal({
   onNaslovChange: (v: string) => void;
   onCoverUpload: (file: File) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto"
@@ -841,7 +846,7 @@ function EditModal({
       >
         <div className="flex items-center justify-between p-5 border-b border-border/50 shrink-0">
           <h3 className="text-lg font-extrabold text-foreground">
-            {form.id ? "Uredi priču" : "Nova priča"}
+            {form.id ? t("Uredi priču") : t("Nova priča")}
           </h3>
           <button
             onClick={onClose}
@@ -855,11 +860,11 @@ function EditModal({
 
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">Naslov *</label>
+            <label className="block text-sm font-semibold text-foreground mb-1">{t("Naslov *")}</label>
             <input
               value={form.naslov}
               onChange={(e) => onNaslovChange(e.target.value)}
-              placeholder="npr. Priča o Adem a.s."
+              placeholder={t("npr. Priča o Adem a.s.")}
               data-testid="input-naslov"
               className="w-full px-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
@@ -867,7 +872,7 @@ function EditModal({
 
           <div>
             <label className="flex items-center justify-between text-sm font-semibold text-foreground mb-1">
-              <span>Slug (URL identifikator) *</span>
+              <span>{t("Slug (URL identifikator) *")}</span>
               <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground cursor-pointer">
                 <input
                   type="checkbox"
@@ -875,7 +880,7 @@ function EditModal({
                   onChange={(e) => setAutoSlug(e.target.checked)}
                   data-testid="checkbox-auto-slug"
                 />
-                automatski iz naslova
+                {t("automatski iz naslova")}
               </label>
             </label>
             <input
@@ -884,18 +889,18 @@ function EditModal({
                 setAutoSlug(false);
                 setForm((prev) => ({ ...prev, slug: e.target.value }));
               }}
-              placeholder="npr. adem"
+              placeholder={t("npr. adem")}
               data-testid="input-slug"
               className="w-full px-4 py-2.5 border border-border rounded-xl text-base font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              URL će biti: <code>/citaonica/{form.slug || "..."}</code>
+              {t("URL će biti:")} <code>/citaonica/{form.slug || "..."}</code>
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1">Kategorija</label>
+              <label className="block text-sm font-semibold text-foreground mb-1">{t("Kategorija")}</label>
               <select
                 value={form.kategorija}
                 onChange={(e) =>
@@ -905,7 +910,7 @@ function EditModal({
                 className="w-full px-4 py-2.5 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {kategorije.length === 0 && (
-                  <option value="">— nema kategorija —</option>
+                  <option value="">{t("— nema kategorija —")}</option>
                 )}
                 {kategorije.map((k) => (
                   <option key={k.id} value={k.slug}>
@@ -916,14 +921,14 @@ function EditModal({
                     da admin može vidjeti šta je trenutno postavljeno. */}
                 {form.kategorija && !kategorije.some((k) => k.slug === form.kategorija) && (
                   <option value={form.kategorija}>
-                    {form.kategorija} (kategorija ne postoji)
+                    {t("{kategorija} (kategorija ne postoji)", { kategorija: form.kategorija })}
                   </option>
                 )}
               </select>
             </div>
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1">
-                Redoslijed
+                {t("Redoslijed")}
               </label>
               <input
                 type="number"
@@ -937,10 +942,10 @@ function EditModal({
                 data-testid="input-redoslijed"
                 className="w-full px-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
-              <p className="text-xs text-muted-foreground mt-1">manji broj = ranije</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("manji broj = ranije")}</p>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1">Status</label>
+              <label className="block text-sm font-semibold text-foreground mb-1">{t("Status")}</label>
               <button
                 type="button"
                 onClick={() =>
@@ -955,11 +960,11 @@ function EditModal({
               >
                 {form.isPublished ? (
                   <>
-                    <Eye className="w-4 h-4" /> Objavljeno
+                    <Eye className="w-4 h-4" /> {t("Objavljeno")}
                   </>
                 ) : (
                   <>
-                    <EyeOff className="w-4 h-4" /> Skriveno
+                    <EyeOff className="w-4 h-4" /> {t("Skriveno")}
                   </>
                 )}
               </button>
@@ -968,14 +973,14 @@ function EditModal({
 
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">
-              Naslovna slika (cover)
+              {t("Naslovna slika (cover)")}
             </label>
             <div className="flex items-center gap-3">
               <div className="w-24 h-24 rounded-xl bg-amber-50 border border-amber-200 overflow-hidden flex items-center justify-center shrink-0">
                 {form.coverImage ? (
                   <img
                     src={form.coverImage}
-                    alt="cover"
+                    alt={t("cover")}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -996,7 +1001,7 @@ function EditModal({
                     ) : (
                       <Upload className="w-4 h-4" />
                     )}
-                    {form.coverImage ? "Zamijeni" : "Učitaj sliku"}
+                    {form.coverImage ? t("Zamijeni") : t("Učitaj sliku")}
                   </button>
                   {form.coverImage && (
                     <button
@@ -1007,7 +1012,7 @@ function EditModal({
                       data-testid="button-remove-cover"
                       className="flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-semibold transition"
                     >
-                      <X className="w-4 h-4" /> Ukloni
+                      <X className="w-4 h-4" /> {t("Ukloni")}
                     </button>
                   )}
                 </div>
@@ -1020,7 +1025,7 @@ function EditModal({
                       coverImage: e.target.value || null,
                     }))
                   }
-                  placeholder="ili unesi URL/putanju npr. /citaonica/adem.png"
+                  placeholder={t("ili unesi URL/putanju npr. /citaonica/adem.png")}
                   data-testid="input-cover-url"
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
@@ -1040,16 +1045,15 @@ function EditModal({
 
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">
-              Sadržaj priče
+              {t("Sadržaj priče")}
             </label>
             <p className="text-xs text-muted-foreground mb-2">
-              Koristi alatnu traku iznad za formatiranje, ubacivanje slika, audio
-              snimaka i naslova. Slike se uploaduju klikom na ikonu slike.
+              {t("Koristi alatnu traku iznad za formatiranje, ubacivanje slika, audio snimaka i naslova. Slike se uploaduju klikom na ikonu slike.")}
             </p>
             <Suspense
               fallback={
                 <div className="border border-border rounded-xl p-10 text-center text-muted-foreground">
-                  <Loader2 className="w-5 h-5 animate-spin inline mr-2" /> Učitavam editor...
+                  <Loader2 className="w-5 h-5 animate-spin inline mr-2" /> {t("Učitavam editor...")}
                 </div>
               }
             >
@@ -1071,7 +1075,7 @@ function EditModal({
             data-testid="button-otkazi"
             className="px-5 py-2.5 rounded-xl font-semibold text-foreground hover:bg-gray-100 transition disabled:opacity-50"
           >
-            Otkaži
+            {t("Otkaži")}
           </button>
           <button
             onClick={onSave}
@@ -1084,7 +1088,7 @@ function EditModal({
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {form.id ? "Sačuvaj izmjene" : "Kreiraj priču"}
+            {form.id ? t("Sačuvaj izmjene") : t("Kreiraj priču")}
           </button>
         </div>
       </div>

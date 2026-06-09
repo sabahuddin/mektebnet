@@ -6,8 +6,10 @@ import { useAuth } from "@/context/auth";
 import { Gamepad2, Clock, Star, Trophy, Sparkles, Brain, Zap, Info, MapPin, Flag, Hexagon, Flower2, Bird } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { useLanguage } from "@/context/language";
 
 export default function IgricePage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const { data: credits, loading, error } = useGameCredits();
 
@@ -16,8 +18,8 @@ export default function IgricePage() {
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed">
           <Gamepad2 className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="font-bold text-foreground mb-1">Igrice su dostupne samo prijavljenim učenicima</p>
-          <Link href="/login" className="text-primary font-bold underline">Prijavi se</Link>
+          <p className="font-bold text-foreground mb-1">{t("Igrice su dostupne samo prijavljenim učenicima")}</p>
+          <Link href="/login" className="text-primary font-bold underline">{t("Prijavi se")}</Link>
         </Card>
       </Layout>
     );
@@ -27,8 +29,8 @@ export default function IgricePage() {
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-igrice">
           <Gamepad2 className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="font-bold text-foreground mb-1">Igrice su dostupne samo učeničkim nalozima</p>
-          <p className="text-sm text-muted-foreground">Tvoj nalog je <strong>{user.role}</strong>. Prijavi se kao učenik za pristup igricama.</p>
+          <p className="font-bold text-foreground mb-1">{t("Igrice su dostupne samo učeničkim nalozima")}</p>
+          <p className="text-sm text-muted-foreground">{t("Tvoj nalog je")} <strong>{user.role}</strong>. {t("Prijavi se kao učenik za pristup igricama.")}</p>
         </Card>
       </Layout>
     );
@@ -49,8 +51,8 @@ export default function IgricePage() {
           <Gamepad2 className="w-8 h-8" />
         </div>
         <div>
-          <h1 className="text-3xl font-black text-foreground">Igrice</h1>
-          <p className="text-muted-foreground font-medium">Zarađuj kapi meda 🍯 kroz lekcije i kvizove — zatim se zabavi i sakupljaj Aferime ⭐!</p>
+          <h1 className="text-3xl font-black text-foreground">{t("Igrice")}</h1>
+          <p className="text-muted-foreground font-medium">{t("Zarađuj kapi meda 🍯 kroz lekcije i kvizove — zatim se zabavi i sakupljaj Aferime ⭐!")}</p>
         </div>
       </div>
 
@@ -62,12 +64,12 @@ export default function IgricePage() {
               <Clock className="w-7 h-7" />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-800/70">Vrijeme za igre danas (i ukupno)</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-800/70">{t("Vrijeme za igre danas (i ukupno)")}</p>
               <p className="text-3xl font-black text-amber-700" data-testid="text-credit-remaining">
-                {loading ? "…" : formatSeconds(remaining)} <span className="text-base font-bold text-amber-600">preostalo</span>
+                {loading ? "…" : formatSeconds(remaining)} <span className="text-base font-bold text-amber-600">{t("preostalo")}</span>
               </p>
               <p className="text-xs text-amber-700/70 font-medium mt-1">
-                Otključano: {formatSeconds(allowed)} · Iskorišteno: <span data-testid="text-credit-spent">{formatSeconds(spent)}</span>
+                {t("Otključano:")} {formatSeconds(allowed)} {t("· Iskorišteno:")} <span data-testid="text-credit-spent">{formatSeconds(spent)}</span>
               </p>
             </div>
           </div>
@@ -75,13 +77,13 @@ export default function IgricePage() {
             <span className="text-2xl leading-none" aria-hidden>🍯</span>
             <div>
               <p className="text-xs font-bold text-orange-800/70 uppercase flex items-center gap-1">
-                Kapi meda
+                {t("Kapi meda")}
                 <TooltipProvider delayDuration={150}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        aria-label="Kako kapi meda otključavaju vrijeme"
+                        aria-label={t("Kako kapi meda otključavaju vrijeme")}
                         className="text-orange-600 hover:text-orange-700 cursor-help"
                         data-testid="tooltip-hasanat-rule"
                       >
@@ -89,9 +91,8 @@ export default function IgricePage() {
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
-                      Svakih <strong>{credits?.hasanatPerBlock || 100} kapi meda</strong> otključava{" "}
-                      <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre.
-                      Kapi meda se NE troše — ostaju ti zauvijek, samo otključavaju vrijeme.
+                      {t("Svakih")} <strong>{t("{n} kapi meda", { n: String(credits?.hasanatPerBlock || 100) })}</strong> {t("otključava")}{" "}
+                      <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> {t("vremena za igre. Kapi meda se NE troše — ostaju ti zauvijek, samo otključavaju vrijeme.")}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -103,14 +104,14 @@ export default function IgricePage() {
           <div className="flex items-center gap-3 bg-white/70 rounded-xl px-4 py-3 border border-amber-200">
             <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
             <div>
-              <p className="text-xs font-bold text-amber-800/70 uppercase">Aferimi</p>
+              <p className="text-xs font-bold text-amber-800/70 uppercase">{t("Aferimi")}</p>
               <p className="text-xl font-black text-yellow-600" data-testid="text-total-med">{totalMed}</p>
-              <p className="text-[10px] text-amber-700/70">zarađeni igranjem ⭐</p>
+              <p className="text-[10px] text-amber-700/70">{t("zarađeni igranjem ⭐")}</p>
             </div>
           </div>
         </div>
         {error && (
-          <p className="mt-3 text-sm text-red-600 font-medium">Greška pri učitavanju ({error}).</p>
+          <p className="mt-3 text-sm text-red-600 font-medium">{t("Greška pri učitavanju ({error}).", { error: String(error) })}</p>
         )}
       </Card>
 
@@ -119,15 +120,14 @@ export default function IgricePage() {
           <div className="flex items-start gap-3">
             <Sparkles className="w-6 h-6 text-primary shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-foreground mb-1">Nema više vremena za igre</p>
+              <p className="font-bold text-foreground mb-1">{t("Nema više vremena za igre")}</p>
               <p className="text-sm text-muted-foreground">
-                Svakih <strong>{credits?.hasanatPerBlock || 100} kapi meda 🍯</strong> otključava{" "}
-                <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> vremena za igre. Završi
-                lekciju ili pokušaj kviz da zaradiš još.
+                {t("Svakih")} <strong>{t("{n} kapi meda 🍯", { n: String(credits?.hasanatPerBlock || 100) })}</strong> {t("otključava")}{" "}
+                <strong>{formatSeconds(credits?.secondsPerBlock || 600)}</strong> {t("vremena za igre. Završi lekciju ili pokušaj kviz da zaradiš još.")}
               </p>
               <div className="flex gap-2 mt-3 flex-wrap">
-                <Link href="/ilmihal" className="text-sm font-bold bg-primary text-primary-foreground px-4 py-2 rounded-xl hover:opacity-90">Ilmihal lekcije</Link>
-                <Link href="/kvizovi" className="text-sm font-bold bg-secondary text-secondary-foreground px-4 py-2 rounded-xl hover:opacity-90">Kvizovi</Link>
+                <Link href="/ilmihal" className="text-sm font-bold bg-primary text-primary-foreground px-4 py-2 rounded-xl hover:opacity-90">{t("Ilmihal lekcije")}</Link>
+                <Link href="/kvizovi" className="text-sm font-bold bg-secondary text-secondary-foreground px-4 py-2 rounded-xl hover:opacity-90">{t("Kvizovi")}</Link>
               </div>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function IgricePage() {
 
       <h2 className="text-xl font-extrabold text-foreground mb-4 flex items-center gap-2">
         <Gamepad2 className="w-5 h-5 text-primary" />
-        Odaberi igru
+        {t("Odaberi igru")}
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
@@ -147,11 +147,11 @@ export default function IgricePage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <Brain className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-bold text-purple-700 px-3 py-1 rounded-full border border-purple-200 bg-white/60">Pamćenje</span>
+                <span className="text-xs font-bold text-purple-700 px-3 py-1 rounded-full border border-purple-200 bg-white/60">{t("Pamćenje")}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-purple-700 mb-2">Pamti par</h3>
+              <h3 className="text-xl font-extrabold text-purple-700 mb-2">{t("Pamti par")}</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                Spoji parove arapskih harfova u što manje pokušaja. Klasična "Memory" igra.
+                {t(`Spoji parove arapskih harfova u što manje pokušaja. Klasična "Memory" igra.`)}
               </p>
             </div>
           </Link>
@@ -164,11 +164,11 @@ export default function IgricePage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-bold text-orange-700 px-3 py-1 rounded-full border border-orange-200 bg-white/60">60 sekundi</span>
+                <span className="text-xs font-bold text-orange-700 px-3 py-1 rounded-full border border-orange-200 bg-white/60">{t("60 sekundi")}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-orange-700 mb-2">Brzi kviz</h3>
+              <h3 className="text-xl font-extrabold text-orange-700 mb-2">{t("Brzi kviz")}</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                Što više tačnih odgovora u 60 sekundi. Pitanja iz svih ilmihal lekcija.
+                {t("Što više tačnih odgovora u 60 sekundi. Pitanja iz svih ilmihal lekcija.")}
               </p>
             </div>
           </Link>
@@ -181,11 +181,11 @@ export default function IgricePage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <MapPin className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-bold text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 bg-white/60">Geografija</span>
+                <span className="text-xs font-bold text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 bg-white/60">{t("Geografija")}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-emerald-700 mb-2">Glavni gradovi</h3>
+              <h3 className="text-xl font-extrabold text-emerald-700 mb-2">{t("Glavni gradovi")}</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                Pojavi se grad — pogodi državu kojoj pripada. Naglasak na muslimanske zemlje.
+                {t("Pojavi se grad — pogodi državu kojoj pripada. Naglasak na muslimanske zemlje.")}
               </p>
             </div>
           </Link>
@@ -198,11 +198,11 @@ export default function IgricePage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <Flag className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-bold text-sky-700 px-3 py-1 rounded-full border border-sky-200 bg-white/60">Zastave</span>
+                <span className="text-xs font-bold text-sky-700 px-3 py-1 rounded-full border border-sky-200 bg-white/60">{t("Zastave")}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-sky-700 mb-2">Zastave svijeta</h3>
+              <h3 className="text-xl font-extrabold text-sky-700 mb-2">{t("Zastave svijeta")}</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                Pojavi se zastava — pogodi državu. Učimo zemlje umme i svijeta.
+                {t("Pojavi se zastava — pogodi državu. Učimo zemlje umme i svijeta.")}
               </p>
             </div>
           </Link>
@@ -215,11 +215,11 @@ export default function IgricePage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <Hexagon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-bold text-amber-700 px-3 py-1 rounded-full border border-amber-200 bg-white/60">Saće 🐝</span>
+                <span className="text-xs font-bold text-amber-700 px-3 py-1 rounded-full border border-amber-200 bg-white/60">{t("Saće 🐝")}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-amber-700 mb-2">Mektebsko saće</h3>
+              <h3 className="text-xl font-extrabold text-amber-700 mb-2">{t("Mektebsko saće")}</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                Slaži šestougaone ćelije saća kao u Tetrisu. Popuni cijeli red i nestaje. Igraj dok ne izgubiš!
+                {t("Slaži šestougaone ćelije saća kao u Tetrisu. Popuni cijeli red i nestaje. Igraj dok ne izgubiš!")}
               </p>
             </div>
           </Link>
@@ -232,11 +232,11 @@ export default function IgricePage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <Flower2 className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-bold text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 bg-white/60">Ilmihal 🌼</span>
+                <span className="text-xs font-bold text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 bg-white/60">{t("Ilmihal 🌼")}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-emerald-700 mb-2">Medena staza</h3>
+              <h3 className="text-xl font-extrabold text-emerald-700 mb-2">{t("Medena staza")}</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                Pčelica ide od cvijeta do cvijeta. Tačno odgovori na ilmihalska pitanja i skupi sav med!
+                {t("Pčelica ide od cvijeta do cvijeta. Tačno odgovori na ilmihalska pitanja i skupi sav med!")}
               </p>
             </div>
           </Link>
@@ -249,11 +249,11 @@ export default function IgricePage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <Bird className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-bold text-yellow-700 px-3 py-1 rounded-full border border-yellow-200 bg-white/60">Refleksi 🐝</span>
+                <span className="text-xs font-bold text-yellow-700 px-3 py-1 rounded-full border border-yellow-200 bg-white/60">{t("Refleksi 🐝")}</span>
               </div>
-              <h3 className="text-xl font-extrabold text-yellow-700 mb-2">Pčelin let</h3>
+              <h3 className="text-xl font-extrabold text-yellow-700 mb-2">{t("Pčelin let")}</h3>
               <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                90 sekundi leta — pčelica skuplja medene heksagone i izbjegava oblake. Klik / Space leti gore.
+                {t("90 sekundi leta — pčelica skuplja medene heksagone i izbjegava oblake. Klik / Space leti gore.")}
               </p>
             </div>
           </Link>
@@ -267,8 +267,8 @@ export default function IgricePage() {
               <Trophy className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="font-extrabold text-lg text-foreground">Tabela</p>
-              <p className="text-sm text-muted-foreground">Pogledaj najbolje rezultate u svojoj grupi, mektebu i globalno.</p>
+              <p className="font-extrabold text-lg text-foreground">{t("Tabela")}</p>
+              <p className="text-sm text-muted-foreground">{t("Pogledaj najbolje rezultate u svojoj grupi, mektebu i globalno.")}</p>
             </div>
           </div>
         </div>

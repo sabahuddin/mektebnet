@@ -3,6 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { Layout } from "@/components/layout";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpen, CheckSquare, Square, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,7 @@ function fmtDate(s: string) {
 
 export default function MuallimIzvjestajPage() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [matchUcenik, paramsUcenik] = useRoute<{ id: string }>("/muallim/izvjestaj/ucenik/:id");
   const [matchGrupa, paramsGrupa] = useRoute<{ id: string }>("/muallim/izvjestaj/grupa/:id");
@@ -85,7 +87,7 @@ export default function MuallimIzvjestajPage() {
     if (matchUcenik && paramsUcenik?.id) url = `/muallim/izvjestaj/ucenik/${paramsUcenik.id}`;
     else if (matchGrupa && paramsGrupa?.id) url = `/muallim/izvjestaj/grupa/${paramsGrupa.id}`;
     else if (matchSvi) url = `/muallim/izvjestaj/svi`;
-    else { setError("Nepoznat tip izvještaja"); setIsLoading(false); return; }
+    else { setError(t("Nepoznat tip izvještaja")); setIsLoading(false); return; }
 
     setIsLoading(true);
     apiRequest<IzvjestajData>("GET", url, undefined, token)
@@ -100,7 +102,7 @@ export default function MuallimIzvjestajPage() {
           setPickerOpen(true);
         }
       })
-      .catch((e: any) => setError(e?.message || "Greška pri učitavanju"))
+      .catch((e: any) => setError(e?.message || t("Greška pri učitavanju")))
       .finally(() => setIsLoading(false));
   }, [token, matchUcenik, paramsUcenik?.id, matchGrupa, paramsGrupa?.id, matchSvi]);
 
@@ -138,8 +140,8 @@ export default function MuallimIzvjestajPage() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await fetch(`${getApiBase()}/muallim/grupa/${excelGrupaId}/izvjestaj-excel`, { headers });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Greška pri izvozu" }));
-        throw new Error(err.error || "Greška pri izvozu");
+        const err = await res.json().catch(() => ({ error: t("Greška pri izvozu") }));
+        throw new Error(err.error || t("Greška pri izvozu"));
       }
       const disp = res.headers.get("Content-Disposition") || "";
       const mStar = disp.match(/filename\*=UTF-8''([^;]+)/i);
@@ -157,7 +159,7 @@ export default function MuallimIzvjestajPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e: any) {
-      setError(e?.message || "Greška pri izvozu u Excel");
+      setError(e?.message || t("Greška pri izvozu u Excel"));
     } finally {
       setExportingExcel(false);
     }
@@ -216,7 +218,7 @@ export default function MuallimIzvjestajPage() {
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium text-sm transition-colors"
             data-testid="link-nazad"
           >
-            <ArrowLeft className="w-4 h-4" /> Nazad
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
           <div className="flex items-center gap-2">
             {excelGrupaId != null && (
@@ -228,7 +230,7 @@ export default function MuallimIzvjestajPage() {
                 data-testid="btn-export-excel"
               >
                 {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
-                Izvezi Excel
+                {t("Izvezi Excel")}
               </Button>
             )}
             <Button
@@ -236,7 +238,7 @@ export default function MuallimIzvjestajPage() {
               className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
               data-testid="btn-print"
             >
-              <Printer className="w-4 h-4" /> Štampaj / Sačuvaj kao PDF
+              <Printer className="w-4 h-4" /> {t("Štampaj / Sačuvaj kao PDF")}
             </Button>
           </div>
         </div>
@@ -247,7 +249,7 @@ export default function MuallimIzvjestajPage() {
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 text-red-800 rounded-2xl p-6 text-center">
-            <p className="font-bold mb-1">Greška</p>
+            <p className="font-bold mb-1">{t("Greška")}</p>
             <p className="text-sm">{error}</p>
           </div>
         ) : !data ? null : (
@@ -258,10 +260,10 @@ export default function MuallimIzvjestajPage() {
                 <img src="/logo-mekteb.png" alt="Mekteb" className="h-14 w-auto" />
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl sm:text-2xl font-extrabold text-foreground leading-tight" data-testid="header-platforma">
-                    MEKTEB — Islamska edukativna platforma
+                    {t("MEKTEB — Islamska edukativna platforma")}
                   </h1>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                    Izvještaj generisan {today}
+                    {t("Izvještaj generisan {datum}", { datum: today })}
                   </p>
                 </div>
               </div>
@@ -279,8 +281,8 @@ export default function MuallimIzvjestajPage() {
                   <p className="text-sm text-muted-foreground" data-testid="header-podnaslov">{data.podnaslov}</p>
                 )}
                 <p className="text-xs text-muted-foreground pt-1">
-                  Muallim: <span className="font-bold text-foreground">{data.muallimDisplayName}</span>
-                  {data.skolskaGodina && <> · Mektebska godina: <span className="font-bold text-foreground">{data.skolskaGodina}</span></>}
+                  {t("Muallim:")} <span className="font-bold text-foreground">{data.muallimDisplayName}</span>
+                  {data.skolskaGodina && <> · {t("Mektebska godina:")} <span className="font-bold text-foreground">{data.skolskaGodina}</span></>}
                 </p>
               </div>
             </div>
@@ -293,7 +295,7 @@ export default function MuallimIzvjestajPage() {
                     className="flex items-center gap-2 font-extrabold text-foreground text-base hover:text-primary transition"
                     data-testid="btn-toggle-picker">
                     <Users className="w-5 h-5 text-primary" />
-                    Odaberi učenike za izvještaj
+                    {t("Odaberi učenike za izvještaj")}
                     <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                       {selectedIds.size} / {data.ucenici.length}
                     </span>
@@ -303,13 +305,13 @@ export default function MuallimIzvjestajPage() {
                       <Button size="sm" variant="outline" className="rounded-lg text-xs"
                         onClick={() => selectAllVisible(data.ucenici.map(u => u.ucenik.id))}
                         data-testid="btn-select-all">
-                        <CheckSquare className="w-3.5 h-3.5 mr-1" /> Označi sve
+                        <CheckSquare className="w-3.5 h-3.5 mr-1" /> {t("Označi sve")}
                       </Button>
                       <Button size="sm" variant="outline" className="rounded-lg text-xs"
                         onClick={clearSelection}
                         disabled={selectedIds.size === 0}
                         data-testid="btn-clear-selection">
-                        <Square className="w-3.5 h-3.5 mr-1" /> Poništi
+                        <Square className="w-3.5 h-3.5 mr-1" /> {t("Poništi")}
                       </Button>
                     </div>
                   )}
@@ -321,7 +323,7 @@ export default function MuallimIzvjestajPage() {
                       <div className="relative mb-3">
                         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)}
-                          placeholder="Pretraži učenike..."
+                          placeholder={t("Pretraži učenike...")}
                           className="pl-9 h-10 rounded-xl"
                           data-testid="input-picker-search" />
                       </div>
@@ -358,7 +360,7 @@ export default function MuallimIzvjestajPage() {
             {data.tip !== "ucenik" && filteredUcenici.length > 0 && (
               <div className="bg-white border border-border/50 rounded-2xl p-5 sm:p-6 mb-6 shadow-sm print-card">
                 <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" /> Sumarni pregled
+                  <Users className="w-5 h-5 text-primary" /> {t("Sumarni pregled")}
                 </h3>
                 <SumarniPregled ucenici={filteredUcenici} />
               </div>
@@ -369,8 +371,8 @@ export default function MuallimIzvjestajPage() {
               <div className="bg-white border border-border/50 rounded-2xl p-8 text-center print-card">
                 <p className="text-muted-foreground">
                   {data.ucenici.length === 0
-                    ? "Nema učenika za izvještaj."
-                    : "Odaberi barem jednog učenika za pregled i štampu."}
+                    ? t("Nema učenika za izvještaj.")
+                    : t("Odaberi barem jednog učenika za pregled i štampu.")}
                 </p>
               </div>
             ) : (
@@ -386,6 +388,7 @@ export default function MuallimIzvjestajPage() {
 }
 
 function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
+  const { t } = useLanguage();
   const stats = ucenici.map(u => ({ u, ...statsForUcenik(u) }));
   const ukupnoCasova = Math.max(...stats.map(s => s.u.prisustvo.length), 0);
   const prosjekPrisustva = (() => {
@@ -405,24 +408,24 @@ function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
         <div className="bg-primary/5 print-bg-primary border border-border/50 rounded-xl p-4">
           <Users className="w-4 h-4 text-primary mb-1" />
           <div className="text-2xl font-extrabold text-primary">{ucenici.length}</div>
-          <div className="text-xs text-muted-foreground font-medium">Učenika</div>
+          <div className="text-xs text-muted-foreground font-medium">{t("Učenika")}</div>
         </div>
         <div className="bg-emerald-50 print-bg-emerald border border-border/50 rounded-xl p-4">
           <CalendarCheck className="w-4 h-4 text-emerald-600 mb-1" />
           <div className="text-2xl font-extrabold text-emerald-600">{ukupnoCasova}</div>
-          <div className="text-xs text-muted-foreground font-medium">Časova</div>
+          <div className="text-xs text-muted-foreground font-medium">{t("Časova")}</div>
         </div>
         <div className={`border border-border/50 rounded-xl p-4 ${prosjekPrisustva !== null && prosjekPrisustva >= 80 ? "bg-emerald-50 print-bg-emerald" : prosjekPrisustva !== null && prosjekPrisustva >= 50 ? "bg-amber-50 print-bg-amber" : "bg-red-50 print-bg-red"}`}>
           <CalendarCheck className="w-4 h-4 mb-1 text-foreground/60" />
           <div className={`text-2xl font-extrabold ${prosjekPrisustva !== null && prosjekPrisustva >= 80 ? "text-emerald-600" : prosjekPrisustva !== null && prosjekPrisustva >= 50 ? "text-amber-600" : "text-red-600"}`}>
             {prosjekPrisustva !== null ? `${prosjekPrisustva}%` : "—"}
           </div>
-          <div className="text-xs text-muted-foreground font-medium">Prosj. prisustvo</div>
+          <div className="text-xs text-muted-foreground font-medium">{t("Prosj. prisustvo")}</div>
         </div>
         <div className="bg-violet-50 print-bg-violet border border-border/50 rounded-xl p-4">
           <Star className="w-4 h-4 text-violet-600 mb-1" />
           <div className="text-2xl font-extrabold text-violet-600">{prosjekOcjena || "—"}</div>
-          <div className="text-xs text-muted-foreground font-medium">Prosj. ocjena</div>
+          <div className="text-xs text-muted-foreground font-medium">{t("Prosj. ocjena")}</div>
         </div>
       </div>
 
@@ -430,12 +433,12 @@ function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-2 border-border/50">
-              <th className="text-left py-2 px-2 font-bold text-foreground">Učenik</th>
-              <th className="text-left py-2 px-2 font-bold text-foreground">Grupa</th>
-              <th className="text-right py-2 px-2 font-bold text-foreground">Prisustvo</th>
-              <th className="text-right py-2 px-2 font-bold text-foreground">Prosj. ocjena</th>
-              <th className="text-right py-2 px-2 font-bold text-foreground">Bodovi (kvizovi)</th>
-              <th className="text-right py-2 px-2 font-bold text-foreground">Lekcije završeno</th>
+              <th className="text-left py-2 px-2 font-bold text-foreground">{t("Učenik")}</th>
+              <th className="text-left py-2 px-2 font-bold text-foreground">{t("Grupa")}</th>
+              <th className="text-right py-2 px-2 font-bold text-foreground">{t("Prisustvo")}</th>
+              <th className="text-right py-2 px-2 font-bold text-foreground">{t("Prosj. ocjena")}</th>
+              <th className="text-right py-2 px-2 font-bold text-foreground">{t("Bodovi (kvizovi)")}</th>
+              <th className="text-right py-2 px-2 font-bold text-foreground">{t("Lekcije završeno")}</th>
             </tr>
           </thead>
           <tbody>
@@ -466,6 +469,7 @@ function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
 }
 
 function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; firstOnPage: boolean }) {
+  const { t } = useLanguage();
   const s = statsForUcenik(ucenik);
 
   return (
@@ -477,58 +481,58 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-extrabold text-foreground">{ucenik.ucenik.displayName}</h3>
           <p className="text-xs text-muted-foreground">
-            {ucenik.grupaNaziv && <>Grupa: <span className="font-bold text-foreground">{ucenik.grupaNaziv}</span> · </>}
-            Korisničko: <span className="font-mono">{ucenik.ucenik.username}</span>
+            {ucenik.grupaNaziv && <>{t("Grupa:")} <span className="font-bold text-foreground">{ucenik.grupaNaziv}</span> · </>}
+            {t("Korisničko:")} <span className="font-mono">{ucenik.ucenik.username}</span>
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <div className={`border border-border/50 rounded-xl p-3 ${s.prisustvoPct !== null && s.prisustvoPct >= 80 ? "bg-emerald-50 print-bg-emerald" : s.prisustvoPct !== null && s.prisustvoPct >= 50 ? "bg-amber-50 print-bg-amber" : "bg-red-50 print-bg-red"}`}>
-          <div className="text-xs text-muted-foreground font-medium mb-0.5">Prisustvo</div>
+          <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Prisustvo")}</div>
           <div className={`text-xl font-extrabold ${s.prisustvoPct !== null && s.prisustvoPct >= 80 ? "text-emerald-600" : s.prisustvoPct !== null && s.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
             {s.prisustvoPct !== null ? `${s.prisustvoPct}%` : "—"}
           </div>
-          <div className="text-xs text-muted-foreground">{s.prisutnih}/{ucenik.prisustvo.length} časova</div>
+          <div className="text-xs text-muted-foreground">{s.prisutnih}/{ucenik.prisustvo.length} {t("časova")}</div>
         </div>
         <div className="bg-violet-50 print-bg-violet border border-border/50 rounded-xl p-3">
-          <div className="text-xs text-muted-foreground font-medium mb-0.5">Prosj. ocjena</div>
+          <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Prosj. ocjena")}</div>
           <div className="text-xl font-extrabold text-violet-600">{s.prosjecnaOcjena !== null ? s.prosjecnaOcjena.toFixed(2) : "—"}</div>
-          <div className="text-xs text-muted-foreground">{ucenik.ocjene.length} ocjena</div>
+          <div className="text-xs text-muted-foreground">{ucenik.ocjene.length} {t("ocjena")}</div>
         </div>
         <div className="bg-blue-50 print-bg-blue border border-border/50 rounded-xl p-3">
-          <div className="text-xs text-muted-foreground font-medium mb-0.5">Kvizovi</div>
+          <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Kvizovi")}</div>
           <div className="text-xl font-extrabold text-blue-600">{s.kvizProsjek !== null ? `${s.kvizProsjek}%` : "—"}</div>
-          <div className="text-xs text-muted-foreground">{s.ukupnoBodova} bodova</div>
+          <div className="text-xs text-muted-foreground">{s.ukupnoBodova} {t("bodova")}</div>
         </div>
         <div className="bg-emerald-50 print-bg-emerald border border-border/50 rounded-xl p-3">
-          <div className="text-xs text-muted-foreground font-medium mb-0.5">Lekcije</div>
+          <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Lekcije")}</div>
           <div className="text-xl font-extrabold text-emerald-600">{ucenik.zavrseneLekcijeBroj}</div>
-          <div className="text-xs text-muted-foreground">završeno</div>
+          <div className="text-xs text-muted-foreground">{t("završeno")}</div>
         </div>
       </div>
 
       {/* Prisustvo razbroj */}
       <div className="mb-5">
         <h4 className="font-bold text-sm text-foreground mb-2 flex items-center gap-1.5">
-          <CalendarCheck className="w-4 h-4 text-primary" /> Prisustvo
+          <CalendarCheck className="w-4 h-4 text-primary" /> {t("Prisustvo")}
         </h4>
         <div className="flex gap-2 flex-wrap text-xs mb-3">
-          <span className="bg-emerald-100 print-bg-emerald text-emerald-700 rounded px-2 py-1 font-bold">Prisutan: {s.prisutnih}</span>
-          <span className="bg-red-100 print-bg-red text-red-700 rounded px-2 py-1 font-bold">Odsutan: {s.odsutnih}</span>
-          <span className="bg-amber-100 print-bg-amber text-amber-700 rounded px-2 py-1 font-bold">Zakasnio: {s.zakasnio}</span>
-          <span className="bg-blue-100 print-bg-blue text-blue-700 rounded px-2 py-1 font-bold">Opravdan: {s.opravdano}</span>
+          <span className="bg-emerald-100 print-bg-emerald text-emerald-700 rounded px-2 py-1 font-bold">{t("Prisutan: {n}", { n: String(s.prisutnih) })}</span>
+          <span className="bg-red-100 print-bg-red text-red-700 rounded px-2 py-1 font-bold">{t("Odsutan: {n}", { n: String(s.odsutnih) })}</span>
+          <span className="bg-amber-100 print-bg-amber text-amber-700 rounded px-2 py-1 font-bold">{t("Zakasnio: {n}", { n: String(s.zakasnio) })}</span>
+          <span className="bg-blue-100 print-bg-blue text-blue-700 rounded px-2 py-1 font-bold">{t("Opravdan: {n}", { n: String(s.opravdano) })}</span>
         </div>
         {ucenik.prisustvo.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">Nema unosa prisustva.</p>
+          <p className="text-xs text-muted-foreground italic">{t("Nema unosa prisustva.")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border/40">
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Datum</th>
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Status</th>
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Napomena</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Datum")}</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Status")}</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Napomena")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -542,7 +546,7 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
               </tbody>
             </table>
             {ucenik.prisustvo.length > 30 && (
-              <p className="text-xs text-muted-foreground italic mt-1">Prikazano posljednjih 30 unosa od {ucenik.prisustvo.length}.</p>
+              <p className="text-xs text-muted-foreground italic mt-1">{t("Prikazano posljednjih 30 unosa od {n}.", { n: String(ucenik.prisustvo.length) })}</p>
             )}
           </div>
         )}
@@ -551,19 +555,19 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
       {/* Ocjene */}
       <div className="mb-5">
         <h4 className="font-bold text-sm text-foreground mb-2 flex items-center gap-1.5">
-          <Star className="w-4 h-4 text-violet-600" /> Ocjene
+          <Star className="w-4 h-4 text-violet-600" /> {t("Ocjene")}
         </h4>
         {ucenik.ocjene.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">Nema ocjena.</p>
+          <p className="text-xs text-muted-foreground italic">{t("Nema ocjena.")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border/40">
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Datum</th>
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Kategorija</th>
-                  <th className="text-center py-1.5 px-2 font-bold text-foreground">Ocjena</th>
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Lekcija / napomena</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Datum")}</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Kategorija")}</th>
+                  <th className="text-center py-1.5 px-2 font-bold text-foreground">{t("Ocjena")}</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Lekcija / napomena")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -588,20 +592,20 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
       {/* Kvizovi */}
       <div>
         <h4 className="font-bold text-sm text-foreground mb-2 flex items-center gap-1.5">
-          <Award className="w-4 h-4 text-blue-600" /> Rezultati kvizova
+          <Award className="w-4 h-4 text-blue-600" /> {t("Rezultati kvizova")}
         </h4>
         {ucenik.kvizRezultati.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">Nema riješenih kvizova.</p>
+          <p className="text-xs text-muted-foreground italic">{t("Nema riješenih kvizova.")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border/40">
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Datum</th>
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">Kviz</th>
-                  <th className="text-right py-1.5 px-2 font-bold text-foreground">Tačno</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Datum")}</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Kviz")}</th>
+                  <th className="text-right py-1.5 px-2 font-bold text-foreground">{t("Tačno")}</th>
                   <th className="text-right py-1.5 px-2 font-bold text-foreground">%</th>
-                  <th className="text-right py-1.5 px-2 font-bold text-foreground">Bodovi</th>
+                  <th className="text-right py-1.5 px-2 font-bold text-foreground">{t("Bodovi")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -617,7 +621,7 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
               </tbody>
             </table>
             {ucenik.kvizRezultati.length > 30 && (
-              <p className="text-xs text-muted-foreground italic mt-1">Prikazano posljednjih 30 od {ucenik.kvizRezultati.length}.</p>
+              <p className="text-xs text-muted-foreground italic mt-1">{t("Prikazano posljednjih 30 od {n}.", { n: String(ucenik.kvizRezultati.length) })}</p>
             )}
           </div>
         )}

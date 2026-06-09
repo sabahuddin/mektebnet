@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Download, Share, Plus, X, Smartphone } from "lucide-react";
+import { useLanguage } from "@/context/language";
 
 const DISMISS_KEY = "mekteb-install-dismissed-at";
 const DISMISS_DAYS = 7;
@@ -69,6 +70,7 @@ function markDismissed(): void {
  *   nedavno dismissan, ili nismo na mobilnom uređaju.
  */
 export function InstallPrompt() {
+  const { t } = useLanguage();
   const [deferred, setDeferred] = useState<BIPEvent | null>(null);
   const [showIosHelp, setShowIosHelp] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -157,13 +159,13 @@ export function InstallPrompt() {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <h3 className="font-extrabold text-foreground leading-tight">
-                Instaliraj Mekteb na svoj telefon
+                {t("Instaliraj Mekteb na svoj telefon")}
               </h3>
               <button
                 type="button"
                 onClick={handleDismiss}
                 className="p-1 -mr-1 -mt-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0"
-                aria-label="Sakrij"
+                aria-label={t("Sakrij")}
                 data-testid="btn-install-dismiss"
               >
                 <X className="w-4 h-4" />
@@ -173,21 +175,21 @@ export function InstallPrompt() {
             {showIosHelp && !deferred ? (
               <>
                 <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                  Otvori app jednim dodirom — radi i bez interneta.
+                  {t("Otvori app jednim dodirom — radi i bez interneta.")}
                 </p>
                 {iosExpanded ? (
                   <ol className="mt-3 text-xs text-foreground/90 space-y-2 leading-snug">
                     <li className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center shrink-0">1</span>
-                      <span>Dodirni dugme <Share className="inline w-3.5 h-3.5 mx-0.5 align-text-bottom" /> <strong>Podijeli</strong> u dnu Safarija.</span>
+                      <span>{t("Dodirni dugme")} <Share className="inline w-3.5 h-3.5 mx-0.5 align-text-bottom" /> <strong>{t("Podijeli")}</strong> {t("u dnu Safarija.")}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center shrink-0">2</span>
-                      <span>Odaberi <Plus className="inline w-3.5 h-3.5 mx-0.5 align-text-bottom" /> <strong>Dodaj na početni ekran</strong>.</span>
+                      <span>{t("Odaberi")} <Plus className="inline w-3.5 h-3.5 mx-0.5 align-text-bottom" /> <strong>{t("Dodaj na početni ekran")}</strong>.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center shrink-0">3</span>
-                      <span>Potvrdi sa <strong>Dodaj</strong>.</span>
+                      <span>{t("Potvrdi sa")} <strong>{t("Dodaj")}</strong>.</span>
                     </li>
                   </ol>
                 ) : null}
@@ -198,21 +200,21 @@ export function InstallPrompt() {
                     className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl py-2.5 transition-colors"
                     data-testid="btn-install-ios-help"
                   >
-                    {iosExpanded ? "Sakrij upute" : "Pokaži kako"}
+                    {iosExpanded ? t("Sakrij upute") : t("Pokaži kako")}
                   </button>
                   <button
                     type="button"
                     onClick={handleDismiss}
                     className="px-4 text-sm font-semibold text-muted-foreground hover:text-foreground"
                   >
-                    Ne sad
+                    {t("Ne sad")}
                   </button>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                  Brži pristup, radi i bez interneta, otvara se kao prava aplikacija.
+                  {t("Brži pristup, radi i bez interneta, otvara se kao prava aplikacija.")}
                 </p>
                 <div className="flex gap-2 mt-3">
                   <button
@@ -223,7 +225,7 @@ export function InstallPrompt() {
                     data-testid="btn-install-accept"
                   >
                     <Download className="w-4 h-4" />
-                    Instaliraj
+                    {t("Instaliraj")}
                   </button>
                   <button
                     type="button"
@@ -231,7 +233,7 @@ export function InstallPrompt() {
                     className="px-4 text-sm font-semibold text-muted-foreground hover:text-foreground"
                     data-testid="btn-install-later"
                   >
-                    Ne sad
+                    {t("Ne sad")}
                   </button>
                 </div>
               </>

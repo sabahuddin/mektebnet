@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Crown, BookOpen, Lock, Trophy, CheckCircle2 } from "lucide-react";
+import { useLanguage } from "@/context/language";
 
 interface Krunisanje {
   id: number;
@@ -49,6 +50,7 @@ export default function KrunisanjeNivoPage() {
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const nivo = Number(params?.nivo ?? "1");
 
   const [krunisanje, setKrunisanje] = useState<Krunisanje | null>(null);
@@ -102,7 +104,7 @@ export default function KrunisanjeNivoPage() {
       setKvizActive(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška", description: msg, variant: "destructive" });
+      toast({ title: t("Greška"), description: msg, variant: "destructive" });
     }
   }
 
@@ -125,14 +127,14 @@ export default function KrunisanjeNivoPage() {
       setRezultat(res);
       if (res.polozeno) {
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
-        toast({ title: "Bravo!", description: `Krunisanje nivoa ${nivo} položeno! ${res.procenat}%` });
+        toast({ title: t("Bravo!"), description: t("Krunisanje nivoa {nivo} položeno! {procenat}%", { nivo: String(nivo), procenat: String(res.procenat) }) });
         await load();
       } else {
-        toast({ title: "Nije položeno", description: `${res.procenat}% — potrebno ${krunisanje.pragProlazaPercent}%`, variant: "destructive" });
+        toast({ title: t("Nije položeno"), description: t("{procenat}% — potrebno {prag}%", { procenat: String(res.procenat), prag: String(krunisanje.pragProlazaPercent) }), variant: "destructive" });
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška pri predaji", description: msg, variant: "destructive" });
+      toast({ title: t("Greška pri predaji"), description: msg, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -145,7 +147,7 @@ export default function KrunisanjeNivoPage() {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto p-6 text-center">
-          <p className="text-muted-foreground">Krunisanje za ovaj nivo nije pronađeno.</p>
+          <p className="text-muted-foreground">{t("Krunisanje za ovaj nivo nije pronađeno.")}</p>
         </div>
       </Layout>
     );
@@ -160,7 +162,7 @@ export default function KrunisanjeNivoPage() {
           <button onClick={() => setLocation(`/nivo${nivo}-mapa`)} className="p-2 rounded-lg hover:bg-amber-50 text-amber-700">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-extrabold text-amber-900">Krunisanje nivoa {nivo}</h1>
+          <h1 className="text-lg font-extrabold text-amber-900">{t("Krunisanje nivoa {nivo}", { nivo: String(nivo) })}</h1>
         </div>
 
         {/* Hero */}
@@ -173,11 +175,11 @@ export default function KrunisanjeNivoPage() {
             <Crown className="w-14 h-14 text-white drop-shadow-lg" strokeWidth={2.5} />
           </div>
           <h2 className="mt-4 text-2xl font-extrabold text-amber-900">
-            {krunisanje.naslov || `Krunisanje nivoa ${nivo}`}
+            {krunisanje.naslov || t("Krunisanje nivoa {nivo}", { nivo: String(nivo) })}
           </h2>
           {polozeno && (
             <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-500 text-white px-4 py-2 font-bold text-sm shadow">
-              <Trophy className="w-4 h-4" /> Položeno {polozeno.procenat}% ({polozeno.brojTacnih}/{polozeno.brojPitanja})
+              <Trophy className="w-4 h-4" /> {t("Položeno")} {polozeno.procenat}% ({polozeno.brojTacnih}/{polozeno.brojPitanja})
             </div>
           )}
         </motion.div>
@@ -194,7 +196,7 @@ export default function KrunisanjeNivoPage() {
         {lekcije.length > 0 && (
           <section className="mt-6">
             <h3 className="font-extrabold text-amber-900 mb-3 flex items-center gap-2">
-              <BookOpen className="w-5 h-5" /> Dodatne lekcije pred krunisanje
+              <BookOpen className="w-5 h-5" /> {t("Dodatne lekcije pred krunisanje")}
             </h3>
             <div className="space-y-2">
               {lekcije.map((l) => (
@@ -214,15 +216,15 @@ export default function KrunisanjeNivoPage() {
         {/* Završni ispit */}
         <section className="mt-6">
           <h3 className="font-extrabold text-amber-900 mb-3 flex items-center gap-2">
-            <Crown className="w-5 h-5" /> Završni ispit krunisanja
+            <Crown className="w-5 h-5" /> {t("Završni ispit krunisanja")}
           </h3>
           {!krunisanje.imaKviz ? (
             <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
-              Završni ispit još nije konfigurisan. Obavijesti muallima/admina.
+              {t("Završni ispit još nije konfigurisan. Obavijesti muallima/admina.")}
             </div>
           ) : !user || user.role !== "ucenik" ? (
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-sm text-gray-700">
-              Prijavi se kao učenik da bi pristupio ispitu ({krunisanje.brojPitanja} pitanja, prag {krunisanje.pragProlazaPercent}%).
+              {t("Prijavi se kao učenik da bi pristupio ispitu ({broj} pitanja, prag {prag}%).", { broj: String(krunisanje.brojPitanja), prag: String(krunisanje.pragProlazaPercent) })}
             </div>
           ) : !kvizActive ? (
             <button
@@ -230,7 +232,7 @@ export default function KrunisanjeNivoPage() {
               className="w-full px-6 py-4 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white font-extrabold text-lg shadow-lg hover:scale-[1.02] transition"
               data-testid="button-start-krunisanje"
             >
-              {polozeno ? "Ponovi ispit" : "Započni ispit"} — {krunisanje.brojPitanja} pitanja
+              {polozeno ? t("Ponovi ispit") : t("Započni ispit")} — {t("{broj} pitanja", { broj: String(krunisanje.brojPitanja) })}
             </button>
           ) : (
             <div className="space-y-4">
@@ -264,9 +266,9 @@ export default function KrunisanjeNivoPage() {
               {rezultat && (
                 <div className={`rounded-xl p-4 font-bold text-center ${rezultat.polozeno ? "bg-green-100 text-green-900 border-2 border-green-400" : "bg-red-50 text-red-900 border-2 border-red-300"}`}>
                   {rezultat.polozeno ? (
-                    <><CheckCircle2 className="w-5 h-5 inline mr-2" /> Položeno! {rezultat.procenat}% ({rezultat.brojTacnih}/{rezultat.brojPitanja})</>
+                    <><CheckCircle2 className="w-5 h-5 inline mr-2" /> {t("Položeno!")} {rezultat.procenat}% ({rezultat.brojTacnih}/{rezultat.brojPitanja})</>
                   ) : (
-                    <><Lock className="w-5 h-5 inline mr-2" /> Nije položeno: {rezultat.procenat}%. Potrebno {krunisanje.pragProlazaPercent}%.</>
+                    <><Lock className="w-5 h-5 inline mr-2" /> {t("Nije položeno:")} {rezultat.procenat}%. {t("Potrebno {prag}%.", { prag: String(krunisanje.pragProlazaPercent) })}</>
                   )}
                 </div>
               )}

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, X, Clock, BookOpen, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -131,6 +132,7 @@ export default function UcenikPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [ucenik, setUcenik] = useState<Ucenik | null>(null);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
@@ -222,9 +224,9 @@ export default function UcenikPage() {
       );
       setNewPassword(res.newPassword);
       setCopiedPass(false);
-      toast({ title: "Šifra je promijenjena!", description: "Nova šifra je prikazana ispod." });
+      toast({ title: t("Šifra je promijenjena!"), description: t("Nova šifra je prikazana ispod.") });
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće resetovati šifru", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće resetovati šifru"), variant: "destructive" });
     } finally {
       setResettingPass(false);
     }
@@ -241,7 +243,7 @@ export default function UcenikPage() {
 
   async function addRoditelj() {
     if (!token || !id || !novoRoditeljIme.trim()) {
-      toast({ title: "Unesite ime roditelja", variant: "destructive" });
+      toast({ title: t("Unesite ime roditelja"), variant: "destructive" });
       return;
     }
     setSavingRoditelj(true);
@@ -261,9 +263,9 @@ export default function UcenikPage() {
         approvedAt: new Date().toISOString(),
       }]);
       setNovoRoditeljIme("");
-      toast({ title: "Roditelj kreiran!", description: "Proslijedi kredencijale roditelju." });
+      toast({ title: t("Roditelj kreiran!"), description: t("Proslijedi kredencijale roditelju.") });
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće kreirati roditelja", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće kreirati roditelja"), variant: "destructive" });
     } finally {
       setSavingRoditelj(false);
     }
@@ -271,7 +273,7 @@ export default function UcenikPage() {
 
   async function linkPostojecegRoditelja() {
     if (!token || !id || !postojeciUsername.trim()) {
-      toast({ title: "Unesite korisničko ime postojećeg roditelja", variant: "destructive" });
+      toast({ title: t("Unesite korisničko ime postojećeg roditelja"), variant: "destructive" });
       return;
     }
     setLinkujemPostojeceg(true);
@@ -293,9 +295,9 @@ export default function UcenikPage() {
         }];
       });
       setPostojeciUsername("");
-      toast({ title: "Roditelj povezan!", description: `${linked.displayName} sada može pratiti ovog učenika.` });
+      toast({ title: t("Roditelj povezan!"), description: t("{ime} sada može pratiti ovog učenika.", { ime: linked.displayName }) });
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće povezati roditelja", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće povezati roditelja"), variant: "destructive" });
     } finally {
       setLinkujemPostojeceg(false);
     }
@@ -309,9 +311,9 @@ export default function UcenikPage() {
         "POST", `/muallim/roditelj/${roditeljId}/reset-password`, {}, token,
       );
       setResetRoditeljPass({ id: roditeljId, password: res.newPassword, displayName: res.displayName });
-      toast({ title: "Šifra roditelja resetovana!", description: "Nova šifra prikazana ispod." });
+      toast({ title: t("Šifra roditelja resetovana!"), description: t("Nova šifra prikazana ispod.") });
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće resetovati šifru roditelja", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće resetovati šifru roditelja"), variant: "destructive" });
     } finally {
       setResetRoditeljId(null);
     }
@@ -320,7 +322,7 @@ export default function UcenikPage() {
   async function copyRoditeljKredencijale() {
     if (!kreiraniRoditelj) return;
     try {
-      const txt = `Roditelj: ${kreiraniRoditelj.displayName}\nKorisničko ime: ${kreiraniRoditelj.username}\nLozinka: ${kreiraniRoditelj.generatedPassword}`;
+      const txt = t("Roditelj: {ime}\nKorisničko ime: {korisnik}\nLozinka: {lozinka}", { ime: kreiraniRoditelj.displayName, korisnik: kreiraniRoditelj.username, lozinka: kreiraniRoditelj.generatedPassword });
       await navigator.clipboard.writeText(txt);
       setCopiedRoditelj(true);
       setTimeout(() => setCopiedRoditelj(false), 2000);
@@ -375,13 +377,13 @@ export default function UcenikPage() {
     <Layout>
       <div className="max-w-3xl mx-auto">
         <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Nazad na panel
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
 
         {isLoading ? (
           <div className="flex flex-col gap-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
         ) : !ucenik ? (
-          <div className="text-center py-20 text-muted-foreground">Učenik nije pronađen</div>
+          <div className="text-center py-20 text-muted-foreground">{t("Učenik nije pronađen")}</div>
         ) : (
           <>
             <div className="flex items-center gap-4 mb-4 flex-wrap">
@@ -392,7 +394,7 @@ export default function UcenikPage() {
                 {isOnline(ucenik.lastSeenAt) && (
                   <span
                     className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full ring-2 ring-white"
-                    title="Online"
+                    title={t("Online")}
                     data-testid="online-dot-profile"
                   />
                 )}
@@ -401,7 +403,7 @@ export default function UcenikPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-extrabold text-foreground">{ucenik.displayName}</h1>
                   {isOnline(ucenik.lastSeenAt) && (
-                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">online</span>
+                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">{t("online")}</span>
                   )}
                 </div>
                 <p className="text-muted-foreground text-sm font-mono">{ucenik.username}</p>
@@ -413,7 +415,7 @@ export default function UcenikPage() {
                   className="rounded-xl font-bold text-sm flex items-center gap-1.5"
                   data-testid="btn-toggle-reset-password"
                 >
-                  <KeyRound className="w-4 h-4" /> Šifra
+                  <KeyRound className="w-4 h-4" /> {t("Šifra")}
                 </Button>
                 <Button
                   onClick={() => { setShowRoditeljForm(s => !s); setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
@@ -421,7 +423,7 @@ export default function UcenikPage() {
                   className="rounded-xl font-bold text-sm flex items-center gap-1.5"
                   data-testid="btn-toggle-roditelji"
                 >
-                  <Users className="w-4 h-4" /> Roditelji
+                  <Users className="w-4 h-4" /> {t("Roditelji")}
                   {roditelji.length > 0 && (
                     <span className="ml-0.5 inline-flex items-center justify-center bg-primary/10 text-primary rounded-full text-[10px] font-extrabold w-4 h-4">
                       {roditelji.length}
@@ -434,7 +436,7 @@ export default function UcenikPage() {
                   className="rounded-xl font-bold text-sm flex items-center gap-1.5"
                   data-testid="btn-izvjestaj-ucenik"
                 >
-                  <FileText className="w-4 h-4" /> Izvještaj
+                  <FileText className="w-4 h-4" /> {t("Izvještaj")}
                 </Button>
               </div>
             </div>
@@ -447,10 +449,10 @@ export default function UcenikPage() {
                 data-testid="form-reset-password"
               >
                 <h3 className="font-extrabold text-foreground mb-2 flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-primary" /> Promijeni šifru za {ucenik.displayName}
+                  <KeyRound className="w-5 h-5 text-primary" /> {t("Promijeni šifru za {ime}", { ime: ucenik.displayName })}
                 </h3>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Generiši automatsku šifru u formatu <strong>Mekteb####</strong> ili unesi vlastitu (najmanje 4 karaktera) i klikni "Postavi".
+                  {t("Generiši automatsku šifru u formatu")} <strong>Mekteb####</strong> {t("ili unesi vlastitu (najmanje 4 karaktera) i klikni \"Postavi\".")}
                 </p>
                 <div className="flex flex-col gap-3">
                   <Button
@@ -460,16 +462,16 @@ export default function UcenikPage() {
                     data-testid="btn-generate-mekteb-sifra"
                   >
                     {resettingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                    Generiši Mekteb####
+                    {t("Generiši Mekteb####")}
                   </Button>
                   <div className="flex gap-2 items-end flex-wrap">
                     <div className="flex-1 min-w-[200px]">
-                      <label className="text-xs font-bold text-muted-foreground block mb-1">Ili unesi vlastitu šifru</label>
+                      <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ili unesi vlastitu šifru")}</label>
                       <input
                         type="text"
                         value={customPassword}
                         onChange={e => setCustomPassword(e.target.value)}
-                        placeholder="Npr. Mekteb2026"
+                        placeholder={t("Npr. Mekteb2026")}
                         className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
                         data-testid="input-nova-sifra"
                       />
@@ -482,13 +484,13 @@ export default function UcenikPage() {
                       data-testid="btn-confirm-reset-password"
                     >
                       {resettingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                      Postavi
+                      {t("Postavi")}
                     </Button>
                   </div>
                 </div>
                 {newPassword && (
                   <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4" data-testid="display-nova-sifra">
-                    <p className="text-xs text-emerald-700 font-bold mb-1">Nova šifra je postavljena. Predajte je učeniku:</p>
+                    <p className="text-xs text-emerald-700 font-bold mb-1">{t("Nova šifra je postavljena. Predajte je učeniku:")}</p>
                     <div className="flex gap-2 items-center flex-wrap">
                       <code className="bg-white border border-emerald-300 rounded-lg px-3 py-2 text-base font-mono font-bold text-emerald-800 flex-1">{newPassword}</code>
                       <Button
@@ -498,7 +500,7 @@ export default function UcenikPage() {
                         data-testid="btn-copy-sifra"
                       >
                         {copiedPass ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                        {copiedPass ? "Kopirano" : "Kopiraj"}
+                        {copiedPass ? t("Kopirano") : t("Kopiraj")}
                       </Button>
                     </div>
                   </div>
@@ -515,7 +517,7 @@ export default function UcenikPage() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                    <Users className="w-5 h-5 text-primary" /> Roditelji za {ucenik.displayName}
+                    <Users className="w-5 h-5 text-primary" /> {t("Roditelji za {ime}", { ime: ucenik.displayName })}
                   </h3>
                   <button
                     onClick={() => { setShowRoditeljForm(false); setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
@@ -528,7 +530,7 @@ export default function UcenikPage() {
                 {/* Postojeći roditelji */}
                 {roditelji.length > 0 ? (
                   <div className="mb-4">
-                    <p className="text-xs font-bold text-muted-foreground mb-2">Povezani roditelji ({roditelji.length}):</p>
+                    <p className="text-xs font-bold text-muted-foreground mb-2">{t("Povezani roditelji ({n}):", { n: String(roditelji.length) })}</p>
                     <div className="space-y-1.5">
                       {roditelji.map(r => (
                         <div key={r.id} className="bg-muted/30 rounded-lg px-3 py-2 text-sm">
@@ -543,7 +545,7 @@ export default function UcenikPage() {
                               r.status === "pending" ? "bg-amber-100 text-amber-700" :
                               "bg-gray-100 text-gray-700"
                             }`}>
-                              {r.status === "approved" ? "Odobren" : r.status === "pending" ? "Na čekanju" : r.status}
+                              {r.status === "approved" ? t("Odobren") : r.status === "pending" ? t("Na čekanju") : r.status}
                             </span>
                             <Button
                               size="sm"
@@ -554,16 +556,16 @@ export default function UcenikPage() {
                               data-testid={`btn-reset-roditelj-${r.id}`}
                             >
                               {resetRoditeljId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
-                              Reset šifre
+                              {t("Reset šifre")}
                             </Button>
                           </div>
                           {resetRoditeljPass?.id === r.id && (
                             <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
-                              <span className="text-[11px] font-bold text-emerald-700">Nova šifra:</span>
+                              <span className="text-[11px] font-bold text-emerald-700">{t("Nova šifra:")}</span>
                               <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{resetRoditeljPass.password}</code>
                               <Button
                                 size="sm" variant="outline"
-                                onClick={async () => { try { await navigator.clipboard.writeText(resetRoditeljPass.password); toast({ title: "Kopirano!" }); } catch {} }}
+                                onClick={async () => { try { await navigator.clipboard.writeText(resetRoditeljPass.password); toast({ title: t("Kopirano!") }); } catch {} }}
                                 className="rounded-lg text-[11px] h-6 px-2"
                               >
                                 <Copy className="w-3 h-3" />
@@ -575,14 +577,14 @@ export default function UcenikPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground mb-4">Učenik još nema povezanog roditelja.</p>
+                  <p className="text-sm text-muted-foreground mb-4">{t("Učenik još nema povezanog roditelja.")}</p>
                 )}
 
                 {/* Poveži postojećeg roditelja (npr. roditelj već ima drugo dijete u mektebu) */}
                 {!kreiraniRoditelj && (
                   <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
                     <p className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5" /> Poveži postojećeg roditelja:
+                      <Users className="w-3.5 h-3.5" /> {t("Poveži postojećeg roditelja:")}
                     </p>
                     <div className="flex gap-2 flex-wrap">
                       <input
@@ -590,7 +592,7 @@ export default function UcenikPage() {
                         value={postojeciUsername}
                         onChange={e => setPostojeciUsername(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && postojeciUsername.trim() && !linkujemPostojeceg) linkPostojecegRoditelja(); }}
-                        placeholder="Korisničko ime roditelja"
+                        placeholder={t("Korisničko ime roditelja")}
                         className="flex-1 min-w-[200px] border border-blue-200 rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         data-testid="input-roditelj-postojeci-username"
                       />
@@ -601,11 +603,11 @@ export default function UcenikPage() {
                         data-testid="btn-poveži-postojećeg-roditelja"
                       >
                         {linkujemPostojeceg ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        Poveži
+                        {t("Poveži")}
                       </Button>
                     </div>
                     <p className="text-xs text-blue-700 mt-2">
-                      Ako roditelj već ima račun u mektebu (npr. drugo dijete) — unesi njegovo korisničko ime i odmah povezuje sa ovim učenikom. Ne kreira novi nalog.
+                      {t("Ako roditelj već ima račun u mektebu (npr. drugo dijete) — unesi njegovo korisničko ime i odmah povezuje sa ovim učenikom. Ne kreira novi nalog.")}
                     </p>
                   </div>
                 )}
@@ -613,14 +615,14 @@ export default function UcenikPage() {
                 {/* Forma za novog */}
                 {!kreiraniRoditelj ? (
                   <div>
-                    <p className="text-xs font-bold text-muted-foreground mb-2">Ili dodaj novi nalog za roditelja:</p>
+                    <p className="text-xs font-bold text-muted-foreground mb-2">{t("Ili dodaj novi nalog za roditelja:")}</p>
                     <div className="flex gap-2 flex-wrap">
                       <input
                         type="text"
                         value={novoRoditeljIme}
                         onChange={e => setNovoRoditeljIme(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && novoRoditeljIme.trim() && !savingRoditelj) addRoditelj(); }}
-                        placeholder="Ime i prezime roditelja"
+                        placeholder={t("Ime i prezime roditelja")}
                         className="flex-1 min-w-[200px] border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
                         data-testid="input-roditelj-ime"
                       />
@@ -631,30 +633,30 @@ export default function UcenikPage() {
                         data-testid="btn-dodaj-roditelja"
                       >
                         {savingRoditelj ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        Dodaj
+                        {t("Dodaj")}
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Kreiraće se nalog s automatskom šifrom <strong>Mekteb####</strong>. Roditelj se odmah povezuje s učenikom i NE ulazi u kvotu licenci.
+                      {t("Kreiraće se nalog s automatskom šifrom")} <strong>Mekteb####</strong>. {t("Roditelj se odmah povezuje s učenikom i NE ulazi u kvotu licenci.")}
                     </p>
                   </div>
                 ) : (
                   <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
                     <h4 className="font-extrabold text-blue-900 mb-2 flex items-center gap-1.5">
-                      <Check className="w-4 h-4" /> Roditelj kreiran!
+                      <Check className="w-4 h-4" /> {t("Roditelj kreiran!")}
                     </h4>
-                    <p className="text-blue-800 text-xs mb-3">Proslijedi ove podatke roditelju:</p>
+                    <p className="text-blue-800 text-xs mb-3">{t("Proslijedi ove podatke roditelju:")}</p>
                     <div className="bg-white rounded-lg p-3 space-y-1.5 text-sm mb-3">
                       <div className="flex justify-between gap-2">
-                        <span className="text-muted-foreground">Ime:</span>
+                        <span className="text-muted-foreground">{t("Ime:")}</span>
                         <span className="font-bold text-foreground">{kreiraniRoditelj.displayName}</span>
                       </div>
                       <div className="flex justify-between gap-2">
-                        <span className="text-muted-foreground">Korisničko ime:</span>
+                        <span className="text-muted-foreground">{t("Korisničko ime:")}</span>
                         <span className="font-mono font-bold text-foreground">{kreiraniRoditelj.username}</span>
                       </div>
                       <div className="flex justify-between gap-2">
-                        <span className="text-muted-foreground">Lozinka:</span>
+                        <span className="text-muted-foreground">{t("Lozinka:")}</span>
                         <span className="font-mono font-bold text-foreground">{kreiraniRoditelj.generatedPassword}</span>
                       </div>
                     </div>
@@ -666,13 +668,13 @@ export default function UcenikPage() {
                         data-testid="btn-copy-roditelj"
                       >
                         {copiedRoditelj ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                        {copiedRoditelj ? "Kopirano!" : "Kopiraj kredencijale"}
+                        {copiedRoditelj ? t("Kopirano!") : t("Kopiraj kredencijale")}
                       </Button>
                       <Button
                         onClick={() => { setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
                         className="rounded-xl flex items-center gap-1.5"
                       >
-                        <PlusCircle className="w-4 h-4" /> Dodaj još jednog
+                        <PlusCircle className="w-4 h-4" /> {t("Dodaj još jednog")}
                       </Button>
                     </div>
                   </div>
@@ -686,7 +688,7 @@ export default function UcenikPage() {
                 <div className={`text-2xl font-extrabold ${prisustvoPct !== null && prisustvoPct >= 80 ? "text-emerald-600" : prisustvoPct !== null && prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
                   {prisustvoPct !== null ? `${prisustvoPct}%` : "—"}
                 </div>
-                <div className="text-sm text-muted-foreground font-medium">Prisustvo</div>
+                <div className="text-sm text-muted-foreground font-medium">{t("Prisustvo")}</div>
                 {prisustvo.length > 0 && (
                   <div className="flex gap-2 mt-2 text-xs font-medium flex-wrap">
                     <span className="text-emerald-600">{prisutnih}P</span>
@@ -699,41 +701,41 @@ export default function UcenikPage() {
               <div className="bg-white border border-border/50 rounded-2xl p-4">
                 <Star className="w-5 h-5 text-amber-500 mb-2" />
                 <div className="text-2xl font-extrabold text-amber-600">{prosjecnaOcjena || "—"}</div>
-                <div className="text-sm text-muted-foreground font-medium">Prosj. ocjena</div>
-                {ocjene.length > 0 && <div className="text-xs text-muted-foreground mt-1">{ocjene.length} ocjena</div>}
+                <div className="text-sm text-muted-foreground font-medium">{t("Prosj. ocjena")}</div>
+                {ocjene.length > 0 && <div className="text-xs text-muted-foreground mt-1">{t("{n} ocjena", { n: String(ocjene.length) })}</div>}
               </div>
               <div className="bg-white border border-border/50 rounded-2xl p-4">
                 <ClipboardList className="w-5 h-5 text-blue-600 mb-2" />
                 <div className="text-2xl font-extrabold text-blue-600">{kvizRezultati.length || "—"}</div>
-                <div className="text-sm text-muted-foreground font-medium">Kvizova</div>
-                {kvizProsjek !== null && <div className="text-xs text-muted-foreground mt-1">Prosjek: {kvizProsjek}%</div>}
+                <div className="text-sm text-muted-foreground font-medium">{t("Kvizova")}</div>
+                {kvizProsjek !== null && <div className="text-xs text-muted-foreground mt-1">{t("Prosjek: {n}%", { n: String(kvizProsjek) })}</div>}
               </div>
               <div className="bg-white border border-border/50 rounded-2xl p-4">
                 <Award className="w-5 h-5 text-amber-600 mb-2" />
                 <div className="text-2xl font-extrabold text-amber-600">{ukupnoBodova || "—"}</div>
-                <div className="text-sm text-muted-foreground font-medium">Bodova</div>
+                <div className="text-sm text-muted-foreground font-medium">{t("Bodova")}</div>
               </div>
               <div className="bg-white border border-border/50 rounded-2xl p-4" data-testid="card-screentime">
                 <Clock className="w-5 h-5 text-teal-600 mb-2" />
                 <div className="text-2xl font-extrabold text-teal-600">{formatScreentime(ucenik.totalScreentimeSec)}</div>
-                <div className="text-sm text-muted-foreground font-medium">Vrijeme na platformi</div>
+                <div className="text-sm text-muted-foreground font-medium">{t("Vrijeme na platformi")}</div>
                 {ucenik.lastSeenAt && (
                   <div className="text-xs text-muted-foreground mt-1">
                     {isOnline(ucenik.lastSeenAt)
-                      ? <span className="font-bold text-emerald-600">Trenutno online</span>
-                      : <>Zadnji put: {new Date(ucenik.lastSeenAt).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
+                      ? <span className="font-bold text-emerald-600">{t("Trenutno online")}</span>
+                      : <>{t("Zadnji put:")} {new Date(ucenik.lastSeenAt).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
                   </div>
                 )}
               </div>
               <div className="bg-white border border-border/50 rounded-2xl p-4 col-span-2">
                 <CalendarCheck className="w-5 h-5 text-primary mb-2" />
-                <div className="text-lg font-extrabold text-foreground">{prisustvo.length} časova evidentirano</div>
+                <div className="text-lg font-extrabold text-foreground">{t("{n} časova evidentirano", { n: String(prisustvo.length) })}</div>
                 {prisustvo.length > 0 && (
                   <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mt-2 flex">
-                    {prisutnih > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(prisutnih / prisustvo.length) * 100}%` }} title={`Prisutan: ${prisutnih}`} />}
-                    {zakasnio > 0 && <div className="bg-amber-400 h-full" style={{ width: `${(zakasnio / prisustvo.length) * 100}%` }} title={`Zakasnio: ${zakasnio}`} />}
-                    {opravdano > 0 && <div className="bg-blue-400 h-full" style={{ width: `${(opravdano / prisustvo.length) * 100}%` }} title={`Opravdan: ${opravdano}`} />}
-                    {odsutnih > 0 && <div className="bg-red-500 h-full" style={{ width: `${(odsutnih / prisustvo.length) * 100}%` }} title={`Odsutan: ${odsutnih}`} />}
+                    {prisutnih > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(prisutnih / prisustvo.length) * 100}%` }} title={t("Prisutan: {n}", { n: String(prisutnih) })} />}
+                    {zakasnio > 0 && <div className="bg-amber-400 h-full" style={{ width: `${(zakasnio / prisustvo.length) * 100}%` }} title={t("Zakasnio: {n}", { n: String(zakasnio) })} />}
+                    {opravdano > 0 && <div className="bg-blue-400 h-full" style={{ width: `${(opravdano / prisustvo.length) * 100}%` }} title={t("Opravdan: {n}", { n: String(opravdano) })} />}
+                    {odsutnih > 0 && <div className="bg-red-500 h-full" style={{ width: `${(odsutnih / prisustvo.length) * 100}%` }} title={t("Odsutan: {n}", { n: String(odsutnih) })} />}
                   </div>
                 )}
               </div>
@@ -749,21 +751,21 @@ export default function UcenikPage() {
                 <>
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                   <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                    <ClipboardList className="w-4 h-4 text-primary" /> Zadaće
+                    <ClipboardList className="w-4 h-4 text-primary" /> {t("Zadaće")}
                   </h2>
                 </div>
                 <div className="flex gap-2 mb-4">
                   <button onClick={() => setZadSubTab("utoku")}
                     className={`flex-1 sm:flex-none rounded-xl px-4 py-2 text-sm font-extrabold border transition-all ${zadSubTab === "utoku" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
-                    U toku ({utoku.length})
+                    {t("U toku ({n})", { n: String(utoku.length) })}
                   </button>
                   <button onClick={() => setZadSubTab("zavrseno")}
                     className={`flex-1 sm:flex-none rounded-xl px-4 py-2 text-sm font-extrabold border transition-all ${zadSubTab === "zavrseno" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
-                    Završeno ({zavrsene.length})
+                    {t("Završeno ({n})", { n: String(zavrsene.length) })}
                   </button>
                 </div>
                 {lista.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">{zadSubTab === "zavrseno" ? "Nema završenih zadaća." : "Učenik trenutno nema zadaća u toku."}</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{zadSubTab === "zavrseno" ? t("Nema završenih zadaća.") : t("Učenik trenutno nema zadaća u toku.")}</p>
                 ) : (
                 <div className="space-y-3">
                   {[...lista].sort((a, b) => {
@@ -791,12 +793,12 @@ export default function UcenikPage() {
                       : daysLeft !== null ? "bg-emerald-100 text-emerald-700 border-emerald-300"
                       : "bg-muted text-muted-foreground border-border";
                     const rokDisplay = efektivni ? efektivni.slice(0, 10).split("-").reverse().join(".") : "";
-                    const rokLabel = isDone ? "Završeno"
-                      : !efektivni ? "Bez roka"
-                      : isOverdue ? `Rok prošao (${rokDisplay})`
-                      : daysLeft === 0 ? "Rok je danas!"
-                      : daysLeft === 1 ? "Rok je sutra"
-                      : `Još ${daysLeft} dana (${rokDisplay})`;
+                    const rokLabel = isDone ? t("Završeno")
+                      : !efektivni ? t("Bez roka")
+                      : isOverdue ? t("Rok prošao ({rok})", { rok: rokDisplay })
+                      : daysLeft === 0 ? t("Rok je danas!")
+                      : daysLeft === 1 ? t("Rok je sutra")
+                      : t("Još {n} dana ({rok})", { n: String(daysLeft), rok: rokDisplay });
 
                     return (
                       <div key={z.id} data-testid={`zadaca-ucenik-${z.id}`}
@@ -825,13 +827,13 @@ export default function UcenikPage() {
                         {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
                           <div className="flex flex-wrap items-center gap-2 mt-3 pl-12">
                             {(z.ocjena ?? null) !== null && (
-                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Ocjena: {z.ocjena}</span>
+                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">{t("Ocjena: {n}", { n: String(z.ocjena) })}</span>
                             )}
                             {(z.kapiMeda ?? 0) > 0 && (
-                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">+{z.kapiMeda} kapi meda</span>
+                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">{t("+{n} kapi meda", { n: String(z.kapiMeda) })}</span>
                             )}
                             {(z.prolongCount ?? 0) > 0 && (
-                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700">Prolongirano ×{z.prolongCount}</span>
+                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700">{t("Prolongirano ×{n}", { n: String(z.prolongCount) })}</span>
                             )}
                           </div>
                         )}
@@ -853,10 +855,10 @@ export default function UcenikPage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" /> H5P vježbe
+                  <Sparkles className="w-4 h-4 text-primary" /> {t("H5P vježbe")}
                   {h5pPokusaji.length > 0 && (
                     <span className="text-xs font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full" data-testid="badge-h5p-broj-pokusaja">
-                      {filteredH5pPokusaji.length}{h5pFilterPrilogId ? `/${h5pPokusaji.length}` : ""} pokušaja
+                      {filteredH5pPokusaji.length}{h5pFilterPrilogId ? `/${h5pPokusaji.length}` : ""} {t("pokušaja")}
                     </span>
                   )}
                 </h2>
@@ -875,7 +877,7 @@ export default function UcenikPage() {
               </div>
 
               {h5pPokusaji.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">Učenik još nije radio nijednu H5P vježbu</p>
+                <p className="text-sm text-muted-foreground text-center py-6">{t("Učenik još nije radio nijednu H5P vježbu")}</p>
               ) : (
                 <>
                   {(h5pPrilozi.length > 1 || h5pFilterPrilogId !== null) && (
@@ -893,7 +895,7 @@ export default function UcenikPage() {
                         className={`text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${h5pFilterPrilogId === null ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
                         data-testid="btn-h5p-filter-sve"
                       >
-                        Sve
+                        {t("Sve")}
                       </button>
                       {h5pPrilozi.map(p => (
                         <button
@@ -918,7 +920,7 @@ export default function UcenikPage() {
 
                   <div className="space-y-2 max-h-96 overflow-y-auto" data-testid="list-h5p-pokusaji">
                     {filteredH5pPokusaji.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nema pokušaja za odabranu vježbu</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("Nema pokušaja za odabranu vježbu")}</p>
                     ) : filteredH5pPokusaji.map(p => {
                       const info = h5pPriloziMap.get(p.priloziId);
                       return (
@@ -926,12 +928,12 @@ export default function UcenikPage() {
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <div className="min-w-0 flex-1">
                               <div className="font-bold text-sm text-foreground truncate" title={info?.originalName}>
-                                {info ? info.originalName.replace(/\.h5p$/i, "") : `Vježba #${p.priloziId}`}
+                                {info ? info.originalName.replace(/\.h5p$/i, "") : t("Vježba #{n}", { n: String(p.priloziId) })}
                               </div>
                               {info?.lekcijaNaslov && (
                                 <div className="text-xs text-muted-foreground truncate">
-                                  Lekcija: {info.lekcijaNaslov}
-                                  {info.lekcijaNivo != null && <span className="ml-1.5 inline-block bg-primary/10 text-primary px-1.5 rounded text-[10px] font-bold align-middle">Nivo {info.lekcijaNivo}</span>}
+                                  {t("Lekcija:")} {info.lekcijaNaslov}
+                                  {info.lekcijaNivo != null && <span className="ml-1.5 inline-block bg-primary/10 text-primary px-1.5 rounded text-[10px] font-bold align-middle">{t("Nivo {n}", { n: String(info.lekcijaNivo) })}</span>}
                                 </div>
                               )}
                             </div>
@@ -940,7 +942,7 @@ export default function UcenikPage() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Pokušaj #{p.attemptNo} · {p.score}/{p.maxScore}</span>
+                            <span>{t("Pokušaj #{n} · {score}/{max}", { n: String(p.attemptNo), score: String(p.score), max: String(p.maxScore) })}</span>
                             <div className="flex items-center gap-2">
                               {p.hasanatGained > 0 && (
                                 <span className="flex items-center gap-0.5 text-amber-600 font-bold">
@@ -966,10 +968,10 @@ export default function UcenikPage() {
               {/* Kviz rezultati */}
               <div className="bg-white border border-border/50 rounded-2xl p-5">
                 <h2 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                  <ClipboardList className="w-4 h-4 text-primary" /> Rezultati kvizova
+                  <ClipboardList className="w-4 h-4 text-primary" /> {t("Rezultati kvizova")}
                 </h2>
                 {kvizRezultati.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Učenik još nije radio kvizove</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t("Učenik još nije radio kvizove")}</p>
                 ) : (
                   <div className="space-y-2.5 max-h-80 overflow-y-auto">
                     {kvizRezultati.map(r => (
@@ -981,7 +983,7 @@ export default function UcenikPage() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{r.tacniOdgovori}/{r.ukupnoPitanja} tačnih</span>
+                          <span>{t("{tacni}/{ukupno} tačnih", { tacni: String(r.tacniOdgovori), ukupno: String(r.ukupnoPitanja) })}</span>
                           <div className="flex items-center gap-2">
                             {r.bodovi > 0 && (
                               <span className="flex items-center gap-0.5 text-amber-600 font-bold">
@@ -1005,21 +1007,21 @@ export default function UcenikPage() {
               <div className="bg-white border border-border/50 rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                    <Star className="w-4 h-4 text-amber-500" /> Ocjene
+                    <Star className="w-4 h-4 text-amber-500" /> {t("Ocjene")}
                   </h2>
                 </div>
 
                 {ocjene.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Nema unesenih ocjena</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t("Nema unesenih ocjena")}</p>
                 ) : (
                   <div className="max-h-80 overflow-y-auto -mx-1">
                     <table className="w-full text-sm border-collapse">
                       <thead>
                         <tr className="text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                          <th className="py-2 px-2 font-bold">Predmet</th>
-                          <th className="py-2 px-2 font-bold">Naziv</th>
-                          <th className="py-2 px-2 font-bold whitespace-nowrap">Datum</th>
-                          <th className="py-2 px-2 font-bold text-center">Ocjena</th>
+                          <th className="py-2 px-2 font-bold">{t("Predmet")}</th>
+                          <th className="py-2 px-2 font-bold">{t("Naziv")}</th>
+                          <th className="py-2 px-2 font-bold whitespace-nowrap">{t("Datum")}</th>
+                          <th className="py-2 px-2 font-bold text-center">{t("Ocjena")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1030,7 +1032,7 @@ export default function UcenikPage() {
                               <td className="py-2 px-2">
                                 <span className="font-bold text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
                                 {izZadace && (
-                                  <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary align-middle">Zadaća</span>
+                                  <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary align-middle">{t("Zadaća")}</span>
                                 )}
                               </td>
                               <td className="py-2 px-2 text-foreground">
@@ -1055,15 +1057,15 @@ export default function UcenikPage() {
               {/* Prisustvo — mjesečno + detalji */}
               <div className="bg-white border border-border/50 rounded-2xl p-5 md:col-span-2">
                 <h2 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                  <CalendarCheck className="w-4 h-4 text-primary" /> Prisustvo — pregled
+                  <CalendarCheck className="w-4 h-4 text-primary" /> {t("Prisustvo — pregled")}
                 </h2>
                 {prisustvo.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Nema evidencije prisustva</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t("Nema evidencije prisustva")}</p>
                 ) : (
                   <div className="space-y-4">
                     {mjesecniPrisustvo.length > 0 && (
                       <div className="space-y-2">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Po mjesecima</h3>
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t("Po mjesecima")}</h3>
                         {mjesecniPrisustvo.map(m => {
                           const parts = m.mjesec.split("-");
                           const naziv = `${MJESEC_NAZIVI[parts[1]] || parts[1]} ${parts[0]}`;
@@ -1096,7 +1098,7 @@ export default function UcenikPage() {
                       const dani = [...new Set(prisustvo.map(p => parseInt(p.datum.slice(8, 10), 10)))].sort((a, b) => a - b);
                       return (
                         <div>
-                          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Kalendar prisustva</h3>
+                          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">{t("Kalendar prisustva")}</h3>
                           <div className="overflow-x-auto">
                             <table className="border-separate" style={{ borderSpacing: "4px" }}>
                               <thead>

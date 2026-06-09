@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import {
   Step1Illustration,
   Step2Illustration,
@@ -259,6 +260,7 @@ function TemplateCard({
   template: H5pTemplate;
   status: Availability;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-white border border-purple-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
       <div>
@@ -272,7 +274,7 @@ function TemplateCard({
       </div>
       <p className="text-sm text-slate-600 leading-relaxed">{template.opis}</p>
       <div className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 italic">
-        Primjer: {template.primjer}
+        {t("Primjer:")} {template.primjer}
       </div>
       <div className="mt-auto pt-2">
         {status === "available" ? (
@@ -282,15 +284,15 @@ function TemplateCard({
             className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition-colors"
           >
             <Download className="w-4 h-4" />
-            Preuzmi šablon
+            {t("Preuzmi šablon")}
           </a>
         ) : status === "loading" ? (
           <div className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-slate-50 text-slate-400 font-bold text-sm">
-            Provjeravam…
+            {t("Provjeravam…")}
           </div>
         ) : (
           <div className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-slate-100 text-slate-500 font-bold text-sm cursor-not-allowed">
-            Šablon dolazi uskoro
+            {t("Šablon dolazi uskoro")}
           </div>
         )}
       </div>
@@ -300,6 +302,7 @@ function TemplateCard({
 
 export default function H5pUputstvoPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [statuses, setStatuses] = useState<Record<string, Availability>>(() =>
     Object.fromEntries(H5P_TEMPLATES.map((t) => [t.fileName, "loading" as Availability])),
@@ -340,10 +343,10 @@ export default function H5pUputstvoPage() {
       <Layout>
         <div className="text-center py-20">
           <p className="text-muted-foreground font-medium">
-            Pristup dozvoljen samo muallimima i adminima
+            {t("Pristup dozvoljen samo muallimima i adminima")}
           </p>
           <Button className="mt-4" onClick={() => setLocation("/")}>
-            Nazad
+            {t("Nazad")}
           </Button>
         </div>
       </Layout>
@@ -358,7 +361,7 @@ export default function H5pUputstvoPage() {
           className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700"
         >
           <ArrowLeft className="w-4 h-4" />
-          Nazad na muallim panel
+          {t("Nazad na muallim panel")}
         </button>
 
         {/* Hero */}
@@ -368,15 +371,14 @@ export default function H5pUputstvoPage() {
               <Sparkles className="w-6 h-6" />
             </div>
             <span className="text-xs font-extrabold uppercase tracking-widest opacity-90">
-              Vodič za muallime
+              {t("Vodič za muallime")}
             </span>
           </div>
           <h1 className="text-2xl md:text-4xl font-extrabold leading-tight mb-3">
-            Kako napraviti svoju prvu H5P vježbu
+            {t("Kako napraviti svoju prvu H5P vježbu")}
           </h1>
           <p className="text-base md:text-lg opacity-95 max-w-2xl leading-relaxed">
-            U 4 koraka: preuzmi besplatnu Lumi aplikaciju, klikni i napravi vježbu, sačuvaj
-            kao .h5p fajl, uploaduj u Mekteb. Učenici je odmah mogu igrati u browseru.
+            {t("U 4 koraka: preuzmi besplatnu Lumi aplikaciju, klikni i napravi vježbu, sačuvaj kao .h5p fajl, uploaduj u Mekteb. Učenici je odmah mogu igrati u browseru.")}
           </p>
         </div>
 
@@ -384,25 +386,24 @@ export default function H5pUputstvoPage() {
         <section className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-extrabold text-slate-900 mb-3">
             <Lightbulb className="w-5 h-5 text-amber-500" />
-            Šta je H5P?
+            {t("Šta je H5P?")}
           </h2>
           <div className="text-slate-700 leading-relaxed space-y-3 text-sm md:text-[0.95rem]">
             <p>
-              <strong>H5P</strong> je open-source standard za interaktivne edukativne
-              vježbe — kvizovi, drag-and-drop, memory igrice, image hotspots i još
-              30+ tipova. Sve radi u browseru, bez instalacije za učenika.
+              <strong>H5P</strong>{" "}
+              {t("je open-source standard za interaktivne edukativne vježbe — kvizovi, drag-and-drop, memory igrice, image hotspots i još 30+ tipova. Sve radi u browseru, bez instalacije za učenika.")}
             </p>
             <p>
-              Mekteb prima gotov <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">.h5p</code> fajl
-              i automatski ga prikazuje učenicima u lekciji. Ti samo kreiraš sadržaj
-              i uploaduješ — sve ostalo radi platforma (bilježi rezultate u napredak učenika).
+              {t("Mekteb prima gotov")}{" "}
+              <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">.h5p</code>{" "}
+              {t("fajl i automatski ga prikazuje učenicima u lekciji. Ti samo kreiraš sadržaj i uploaduješ — sve ostalo radi platforma (bilježi rezultate u napredak učenika).")}
             </p>
           </div>
 
           {/* 3 primjera kako H5P izgleda u praksi */}
           <div className="mt-5">
             <h3 className="text-sm font-bold text-slate-800 mb-2">
-              Tri najčešća tipa H5P vježbi:
+              {t("Tri najčešća tipa H5P vježbi:")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <DragWordsExample />
@@ -410,18 +411,18 @@ export default function H5pUputstvoPage() {
               <ImageHotspotsExample />
             </div>
             <p className="text-xs text-slate-500 mt-2 italic">
-              Sve tri vježbe učenik radi direktno u browseru — bez instalacije,
-              bez plugina. Mekteb pamti rezultat u napredak učenika.
+              {t("Sve tri vježbe učenik radi direktno u browseru — bez instalacije, bez plugina. Mekteb pamti rezultat u napredak učenika.")}
             </p>
           </div>
         </section>
 
         {/* Korak 1 */}
-        <StepCard broj={1} naslov="Preuzmi Lumi Education (besplatno)">
+        <StepCard broj={1} naslov={t("Preuzmi Lumi Education (besplatno)")}>
           <p>
-            <strong>Lumi</strong> je besplatna desktop aplikacija za pravljenje H5P
-            vježbi. <strong>Ne traži račun, radi offline</strong>, i jednom napravljen
-            sadržaj možeš ponovo otvarati i mijenjati.
+            <strong>Lumi</strong>{" "}
+            {t("je besplatna desktop aplikacija za pravljenje H5P vježbi.")}{" "}
+            <strong>{t("Ne traži račun, radi offline")}</strong>
+            {t(", i jednom napravljen sadržaj možeš ponovo otvarati i mijenjati.")}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
             {LUMI_DOWNLOADS.map(({ Icon, label, href, note }) => (
@@ -441,7 +442,7 @@ export default function H5pUputstvoPage() {
             ))}
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            Klikom na bilo koje dugme otvara se zvanična{" "}
+            {t("Klikom na bilo koje dugme otvara se zvanična")}{" "}
             <a
               href="https://lumi.education/"
               target="_blank"
@@ -450,61 +451,56 @@ export default function H5pUputstvoPage() {
             >
               lumi.education <ExternalLink className="w-3 h-3" />
             </a>{" "}
-            stranica — preuzmi installer za svoj operativni sistem
-            (Lumi-Setup-*.exe za Windows, Lumi-*.dmg za macOS, Lumi-*.AppImage
-            za Linux).
+            {t("stranica — preuzmi installer za svoj operativni sistem (Lumi-Setup-*.exe za Windows, Lumi-*.dmg za macOS, Lumi-*.AppImage za Linux).")}
           </p>
           <StepIllustration step={1} />
         </StepCard>
 
         {/* Korak 2 */}
-        <StepCard broj={2} naslov="Kreiraj novu vježbu u Lumi-ju">
+        <StepCard broj={2} naslov={t("Kreiraj novu vježbu u Lumi-ju")}>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>Otvori Lumi i klikni dugme <strong>"H5P Editor"</strong> (ili "Create new H5P").</li>
-            <li>Iz biblioteke izaberi tip vježbe — npr. <em>Multiple Choice</em>, <em>Drag the Words</em>, <em>Memory Game</em>.</li>
-            <li>Lumi će prvi put preuzeti potrebne biblioteke (potrebna je internet veza prvi put — ~50MB).</li>
+            <li>{t("Otvori Lumi i klikni dugme")} <strong>"H5P Editor"</strong> {t("(ili \"Create new H5P\").")}</li>
+            <li>{t("Iz biblioteke izaberi tip vježbe — npr.")} <em>Multiple Choice</em>, <em>Drag the Words</em>, <em>Memory Game</em>.</li>
+            <li>{t("Lumi će prvi put preuzeti potrebne biblioteke (potrebna je internet veza prvi put — ~50MB).")}</li>
           </ol>
           <p className="text-xs text-slate-500 mt-2">
-            Savjet: ako ne znaš koji tip izabrati, pogledaj tabelu <em>Preporučeni tipovi</em> niže.
+            {t("Savjet: ako ne znaš koji tip izabrati, pogledaj tabelu")} <em>{t("Preporučeni tipovi")}</em> {t("niže.")}
           </p>
           <StepIllustration step={2} />
         </StepCard>
 
         {/* Korak 3 */}
-        <StepCard broj={3} naslov="Popuni sadržaj">
+        <StepCard broj={3} naslov={t("Popuni sadržaj")}>
           <p>
-            Lumi otvara formu sa svim poljima koje ti treba taj tip vježbe. Za
-            primjer <em>Multiple Choice</em>:
+            {t("Lumi otvara formu sa svim poljima koje ti treba taj tip vježbe. Za primjer")} <em>Multiple Choice</em>:
           </p>
           <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Question</strong> — pitanje (npr. "Koliko ima šartova islama?")</li>
-            <li><strong>Available options</strong> — ponuđeni odgovori, jedan po jedan</li>
-            <li><strong>Correct?</strong> — čekiraj tačan odgovor</li>
-            <li><strong>Tip / Feedback</strong> — opcionalna pomoć i objašnjenje (lijepa praksa)</li>
+            <li><strong>Question</strong> {t("— pitanje (npr. \"Koliko ima šartova islama?\")")}</li>
+            <li><strong>Available options</strong> {t("— ponuđeni odgovori, jedan po jedan")}</li>
+            <li><strong>Correct?</strong> {t("— čekiraj tačan odgovor")}</li>
+            <li><strong>Tip / Feedback</strong> {t("— opcionalna pomoć i objašnjenje (lijepa praksa)")}</li>
           </ul>
           <p>
-            Pišeš na bosanskom — samo ostavi UI label-e Lumi-ja na engleskom (učenik
-            ih neće vidjeti, vidjet će samo tvoj sadržaj).
+            {t("Pišeš na bosanskom — samo ostavi UI label-e Lumi-ja na engleskom (učenik ih neće vidjeti, vidjet će samo tvoj sadržaj).")}
           </p>
           <StepIllustration step={3} />
         </StepCard>
 
         {/* Korak 4 */}
-        <StepCard broj={4} naslov="Sačuvaj kao .h5p i uploaduj u Mekteb">
+        <StepCard broj={4} naslov={t("Sačuvaj kao .h5p i uploaduj u Mekteb")}>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>U Lumi-ju klikni <strong>File → Save as .h5p</strong> (ili dugme "Save").</li>
-            <li>Daj fajlu ime po lekciji — npr. <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">sartovi-imana.h5p</code>.</li>
+            <li>{t("U Lumi-ju klikni")} <strong>File → Save as .h5p</strong> {t("(ili dugme \"Save\").")}</li>
+            <li>{t("Daj fajlu ime po lekciji — npr.")} <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">sartovi-imana.h5p</code>.</li>
             <li>
-              Vrati se u Mekteb, otvori odgovarajuću ilmihal lekciju, otvori sekciju{" "}
-              <strong>"Materijali za nastavu"</strong> i klikni{" "}
-              <strong>"Dodaj H5P vježbu"</strong>.
+              {t("Vrati se u Mekteb, otvori odgovarajuću ilmihal lekciju, otvori sekciju")}{" "}
+              <strong>{t("\"Materijali za nastavu\"")}</strong> {t("i klikni")}{" "}
+              <strong>{t("\"Dodaj H5P vježbu\"")}</strong>.
             </li>
-            <li>Izaberi sačuvani .h5p fajl i pričekaj nekoliko sekundi.</li>
-            <li>Vježba je odmah dostupna učenicima u toj lekciji.</li>
+            <li>{t("Izaberi sačuvani .h5p fajl i pričekaj nekoliko sekundi.")}</li>
+            <li>{t("Vježba je odmah dostupna učenicima u toj lekciji.")}</li>
           </ol>
           <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-            <strong>Maksimalna veličina:</strong> 50MB po vježbi. Ako koristiš slike,
-            kompresuj ih (npr. <a href="https://squoosh.app" target="_blank" rel="noopener noreferrer" className="underline">squoosh.app</a>) prije nego ih ubaciš u Lumi.
+            <strong>{t("Maksimalna veličina:")}</strong> {t("50MB po vježbi. Ako koristiš slike, kompresuj ih (npr.")} <a href="https://squoosh.app" target="_blank" rel="noopener noreferrer" className="underline">squoosh.app</a>) {t("prije nego ih ubaciš u Lumi.")}
           </div>
           <StepIllustration step={4} />
         </StepCard>
@@ -516,11 +512,10 @@ export default function H5pUputstvoPage() {
         >
           <h2 className="flex items-center gap-2 text-xl font-extrabold text-emerald-900 mb-2">
             <ShieldCheck className="w-5 h-5 text-emerald-600" />
-            Preporučeni tipovi vježbi
+            {t("Preporučeni tipovi vježbi")}
           </h2>
           <p className="text-sm text-emerald-800/80 mb-4 leading-relaxed">
-            Ovi tipovi pouzdano rade u našem player-u — ako koristiš njih, učenici
-            će uvijek moći otvoriti vježbu u browseru.
+            {t("Ovi tipovi pouzdano rade u našem player-u — ako koristiš njih, učenici će uvijek moći otvoriti vježbu u browseru.")}
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {H5P_PREPORUCENI.map(({ tip, opis }) => (
@@ -546,12 +541,10 @@ export default function H5pUputstvoPage() {
         >
           <h2 className="flex items-center gap-2 text-xl font-extrabold text-rose-900 mb-2">
             <AlertTriangle className="w-5 h-5 text-rose-600" />
-            Izbjegavaj — ne rade u našem player-u
+            {t("Izbjegavaj — ne rade u našem player-u")}
           </h2>
           <p className="text-sm text-rose-800/80 mb-4 leading-relaxed">
-            Ovi tipovi se mogu napraviti u Lumi-ju, ali se <strong>ne prikazuju</strong> u
-            našem player-u. Ako ih uploaduješ, učenik će vidjeti praznu stranicu
-            ili grešku. Bolje izaberi nešto iz spiska iznad.
+            {t("Ovi tipovi se mogu napraviti u Lumi-ju, ali se")} <strong>{t("ne prikazuju")}</strong> {t("u našem player-u. Ako ih uploaduješ, učenik će vidjeti praznu stranicu ili grešku. Bolje izaberi nešto iz spiska iznad.")}
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {H5P_IZBJEGAVAJ.map(({ tip, opis }) => (
@@ -574,7 +567,7 @@ export default function H5pUputstvoPage() {
         <section className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-extrabold text-slate-900 mb-4">
             <FileText className="w-5 h-5 text-teal-600" />
-            Preporučeni tipovi za mektebske teme
+            {t("Preporučeni tipovi za mektebske teme")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {H5P_TIPOVI.map(({ Icon, color, bg, tip, primjena }) => (
@@ -600,11 +593,10 @@ export default function H5pUputstvoPage() {
         <section className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-5 md:p-6 shadow-sm">
           <h2 className="flex items-center gap-2 text-xl font-extrabold text-purple-900 mb-2">
             <Download className="w-5 h-5 text-purple-600" />
-            Preuzmi gotov šablon
+            {t("Preuzmi gotov šablon")}
           </h2>
           <p className="text-sm text-purple-800/80 mb-4 leading-relaxed">
-            Otvori šablon u Lumi-ju, zamijeni primjere svojim sadržajem (harfovi,
-            pitanja, slike), i ponovo eksportuj kao .h5p. Drastično ubrzava prvu vježbu.
+            {t("Otvori šablon u Lumi-ju, zamijeni primjere svojim sadržajem (harfovi, pitanja, slike), i ponovo eksportuj kao .h5p. Drastično ubrzava prvu vježbu.")}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {H5P_TEMPLATES.map((t) => (
@@ -617,9 +609,7 @@ export default function H5pUputstvoPage() {
           </div>
           {noneAvailable && (
             <p className="text-xs text-purple-700/70 mt-4 italic">
-              Šabloni se trenutno pripremaju i bit će dodani uskoro. U međuvremenu,
-              možeš slijediti uputstvo iznad i kreirati vježbu od nule — uzima
-              5-10 minuta po vježbi.
+              {t("Šabloni se trenutno pripremaju i bit će dodani uskoro. U međuvremenu, možeš slijediti uputstvo iznad i kreirati vježbu od nule — uzima 5-10 minuta po vježbi.")}
             </p>
           )}
         </section>
@@ -627,18 +617,18 @@ export default function H5pUputstvoPage() {
         {/* CTA */}
         <div className="bg-white border-2 border-teal-200 rounded-2xl p-5 md:p-6 text-center">
           <h3 className="font-extrabold text-lg text-slate-900 mb-2">
-            Spreman/na za upload?
+            {t("Spreman/na za upload?")}
           </h3>
           <p className="text-sm text-slate-600 mb-4">
-            Otvori bilo koju ilmihal lekciju i u sekciji{" "}
-            <strong>"Materijali za nastavu"</strong> klikni{" "}
-            <strong>"Dodaj H5P vježbu"</strong>.
+            {t("Otvori bilo koju ilmihal lekciju i u sekciji")}{" "}
+            <strong>{t("\"Materijali za nastavu\"")}</strong> {t("klikni")}{" "}
+            <strong>{t("\"Dodaj H5P vježbu\"")}</strong>.
           </p>
           <Link
             href="/ilmihal"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm transition-colors"
           >
-            Otvori ilmihal lekcije
+            {t("Otvori ilmihal lekcije")}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

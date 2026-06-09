@@ -5,6 +5,7 @@ import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { invalidateRjecnikCache } from "@/lib/rjecnik";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, Plus, Search, Pencil, Trash2, BookOpen, Loader2, X, Save, Download } from "lucide-react";
 
 interface RjecnikEntry {
@@ -17,6 +18,7 @@ export default function AdminRjecnikPage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [entries, setEntries] = useState<RjecnikEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function AdminRjecnikPage() {
       const data = await apiRequest<RjecnikEntry[]>("GET", "/admin/rjecnik", undefined, token);
       setEntries(data);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće učitati rječnik", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće učitati rječnik"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -56,17 +58,17 @@ export default function AdminRjecnikPage() {
 
   const handleSave = async () => {
     if (!form.rijec.trim() || !form.definicija.trim()) {
-      toast({ title: "Greška", description: "Riječ i definicija su obavezne", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Riječ i definicija su obavezne"), variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
       if (editId) {
         await apiRequest("PUT", `/admin/rjecnik/${editId}`, form, token!);
-        toast({ title: "Ažurirano", description: `Riječ "${form.rijec}" je ažurirana` });
+        toast({ title: t("Ažurirano"), description: t(`Riječ "{rijec}" je ažurirana`, { rijec: form.rijec }) });
       } else {
         await apiRequest("POST", "/admin/rjecnik", form, token!);
-        toast({ title: "Dodano", description: `Riječ "${form.rijec}" je dodana u rječnik` });
+        toast({ title: t("Dodano"), description: t(`Riječ "{rijec}" je dodana u rječnik`, { rijec: form.rijec }) });
       }
       invalidateRjecnikCache();
       setShowAdd(false);
@@ -74,34 +76,34 @@ export default function AdminRjecnikPage() {
       setForm({ rijec: "", definicija: "" });
       loadEntries();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Nije moguće sačuvati", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Nije moguće sačuvati"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (entry: RjecnikEntry) => {
-    if (!confirm(`Obrisati riječ "${entry.rijec}"?`)) return;
+    if (!confirm(t(`Obrisati riječ "{rijec}"?`, { rijec: entry.rijec }))) return;
     try {
       await apiRequest("DELETE", `/admin/rjecnik/${entry.id}`, undefined, token!);
       invalidateRjecnikCache();
-      toast({ title: "Obrisano", description: `Riječ "${entry.rijec}" je obrisana` });
+      toast({ title: t("Obrisano"), description: t(`Riječ "{rijec}" je obrisana`, { rijec: entry.rijec }) });
       setEntries(prev => prev.filter(e => e.id !== entry.id));
     } catch {
-      toast({ title: "Greška", description: "Nije moguće obrisati", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće obrisati"), variant: "destructive" });
     }
   };
 
   const handleSeed = async () => {
-    if (entries.length > 0 && !confirm("Rječnik već ima podatke. Seed će dodati samo nove riječi koje ne postoje. Nastaviti?")) return;
+    if (entries.length > 0 && !confirm(t("Rječnik već ima podatke. Seed će dodati samo nove riječi koje ne postoje. Nastaviti?"))) return;
     setSeeding(true);
     try {
       const result = await apiRequest<{ message: string; count: number }>("POST", "/admin/rjecnik/seed", {}, token!);
-      toast({ title: "Uspješno", description: result.message });
+      toast({ title: t("Uspješno"), description: result.message });
       invalidateRjecnikCache();
       loadEntries();
     } catch {
-      toast({ title: "Greška", description: "Seed nije uspio", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Seed nije uspio"), variant: "destructive" });
     } finally {
       setSeeding(false);
     }
@@ -119,7 +121,7 @@ export default function AdminRjecnikPage() {
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
         <button onClick={() => setLocation("/admin")} className="flex items-center gap-2 text-teal-600 hover:text-teal-800 mb-6 font-semibold">
-          <ArrowLeft className="w-4 h-4" /> Nazad na admin
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad na admin")}
         </button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -127,8 +129,8 @@ export default function AdminRjecnikPage() {
             <BookOpen className="w-6 h-6 text-teal-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Rječnik pojmova</h1>
-            <p className="text-muted-foreground text-base">{entries.length} {entries.length === 1 ? "riječ" : entries.length < 5 ? "riječi" : "riječi"} u rječniku</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("Rječnik pojmova")}</h1>
+            <p className="text-muted-foreground text-base">{entries.length} {entries.length === 1 ? t("riječ") : entries.length < 5 ? t("riječi") : t("riječi")} {t("u rječniku")}</p>
           </div>
         </div>
 
@@ -138,7 +140,7 @@ export default function AdminRjecnikPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Pretraži rječnik..."
+              placeholder={t("Pretraži rječnik...")}
               className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-teal-400"
             />
           </div>
@@ -146,7 +148,7 @@ export default function AdminRjecnikPage() {
             onClick={() => { setShowAdd(true); setEditId(null); setForm({ rijec: "", definicija: "" }); }}
             className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition shrink-0"
           >
-            <Plus className="w-4 h-4" /> Nova riječ
+            <Plus className="w-4 h-4" /> {t("Nova riječ")}
           </button>
           {entries.length === 0 && (
             <button
@@ -155,7 +157,7 @@ export default function AdminRjecnikPage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition shrink-0 disabled:opacity-50"
             >
               {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Učitaj početne podatke
+              {t("Učitaj početne podatke")}
             </button>
           )}
         </div>
@@ -163,27 +165,27 @@ export default function AdminRjecnikPage() {
         {showAdd && (
           <div className="bg-white border-2 border-teal-200 rounded-2xl p-5 mb-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-foreground">{editId ? "Uredi riječ" : "Nova riječ"}</h3>
+              <h3 className="font-bold text-lg text-foreground">{editId ? t("Uredi riječ") : t("Nova riječ")}</h3>
               <button onClick={() => { setShowAdd(false); setEditId(null); }} className="text-muted-foreground hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-base font-semibold text-foreground mb-1">Riječ / termin</label>
+                <label className="block text-base font-semibold text-foreground mb-1">{t("Riječ / termin")}</label>
                 <input
                   value={form.rijec}
                   onChange={e => setForm(prev => ({ ...prev, rijec: e.target.value }))}
-                  placeholder="npr. hadž"
+                  placeholder={t("npr. hadž")}
                   className="w-full px-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>
               <div>
-                <label className="block text-base font-semibold text-foreground mb-1">Definicija</label>
+                <label className="block text-base font-semibold text-foreground mb-1">{t("Definicija")}</label>
                 <textarea
                   value={form.definicija}
                   onChange={e => setForm(prev => ({ ...prev, definicija: e.target.value }))}
-                  placeholder="Objasni značenje riječi..."
+                  placeholder={t("Objasni značenje riječi...")}
                   rows={3}
                   className="w-full px-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-teal-400 resize-y"
                 />
@@ -194,7 +196,7 @@ export default function AdminRjecnikPage() {
                 className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition disabled:opacity-50"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {editId ? "Sačuvaj izmjene" : "Dodaj u rječnik"}
+                {editId ? t("Sačuvaj izmjene") : t("Dodaj u rječnik")}
               </button>
             </div>
           </div>
@@ -208,10 +210,10 @@ export default function AdminRjecnikPage() {
           <div className="text-center py-16 text-muted-foreground">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-40" />
             <p className="text-lg font-semibold">
-              {search ? "Nema rezultata pretrage" : "Rječnik je prazan"}
+              {search ? t("Nema rezultata pretrage") : t("Rječnik je prazan")}
             </p>
             <p className="text-base mt-1">
-              {search ? "Pokušaj s drugim pojmom" : "Klikni 'Učitaj početne podatke' za dodavanje početnog rječnika"}
+              {search ? t("Pokušaj s drugim pojmom") : t(`Klikni 'Učitaj početne podatke' za dodavanje početnog rječnika`)}
             </p>
           </div>
         ) : (
@@ -226,14 +228,14 @@ export default function AdminRjecnikPage() {
                   <button
                     onClick={() => startEdit(entry)}
                     className="p-2 rounded-lg hover:bg-teal-50 text-muted-foreground hover:text-teal-600 transition"
-                    title="Uredi"
+                    title={t("Uredi")}
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(entry)}
                     className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 transition"
-                    title="Obriši"
+                    title={t("Obriši")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

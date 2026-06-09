@@ -7,6 +7,7 @@ import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -192,6 +193,7 @@ export default function MuallimH5pStatistikaPage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [grupaId, setGrupaId] = useState<number | null>(null);
@@ -221,7 +223,7 @@ export default function MuallimH5pStatistikaPage() {
       token,
     )
       .then(setDetail)
-      .catch(() => toast({ title: "Greška pri učitavanju detalja", variant: "destructive" }))
+      .catch(() => toast({ title: t("Greška pri učitavanju detalja"), variant: "destructive" }))
       .finally(() => setDetailLoading(false));
   }
 
@@ -232,7 +234,7 @@ export default function MuallimH5pStatistikaPage() {
         setGrupe(g);
         if (g.length > 0) setGrupaId(g[0].id);
       })
-      .catch(() => toast({ title: "Greška pri učitavanju grupa", variant: "destructive" }))
+      .catch(() => toast({ title: t("Greška pri učitavanju grupa"), variant: "destructive" }))
       .finally(() => setLoadingGrupe(false));
   }, [token]);
 
@@ -242,7 +244,7 @@ export default function MuallimH5pStatistikaPage() {
     setData(null);
     apiRequest<StatsResponse>("GET", `/muallim/h5p-stats?grupaId=${grupaId}`, undefined, token)
       .then(setData)
-      .catch(() => toast({ title: "Greška pri učitavanju statistike", variant: "destructive" }))
+      .catch(() => toast({ title: t("Greška pri učitavanju statistike"), variant: "destructive" }))
       .finally(() => setLoadingStats(false));
   }, [token, grupaId]);
 
@@ -257,7 +259,7 @@ export default function MuallimH5pStatistikaPage() {
       token,
     )
       .then(setTrends)
-      .catch(() => toast({ title: "Greška pri učitavanju trendova", variant: "destructive" }))
+      .catch(() => toast({ title: t("Greška pri učitavanju trendova"), variant: "destructive" }))
       .finally(() => setLoadingTrends(false));
   }, [token, grupaId, weeks]);
 
@@ -288,8 +290,8 @@ export default function MuallimH5pStatistikaPage() {
     return (
       <Layout>
         <div className="text-center py-20">
-          <p className="text-muted-foreground font-medium">Pristup dozvoljen samo muallimima</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>Nazad</Button>
+          <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo muallimima")}</p>
+          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );
@@ -301,7 +303,7 @@ export default function MuallimH5pStatistikaPage() {
         <div className="flex items-center gap-3 mb-6">
           <Link href="/muallim">
             <button className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Nazad
+              <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
             </button>
           </Link>
         </div>
@@ -311,9 +313,9 @@ export default function MuallimH5pStatistikaPage() {
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-extrabold text-foreground">H5P statistika</h1>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("H5P statistika")}</h1>
             <p className="text-muted-foreground text-sm">
-              Koje interaktivne vježbe učenici najviše rade i kako im ide.
+              {t("Koje interaktivne vježbe učenici najviše rade i kako im ide.")}
             </p>
           </div>
         </div>
@@ -324,11 +326,11 @@ export default function MuallimH5pStatistikaPage() {
             <Skeleton className="h-10 rounded-xl" />
           ) : grupe.length === 0 ? (
             <p className="text-muted-foreground text-sm font-medium py-2">
-              Još nemate nijednu grupu. Napravite grupu u muallim panelu.
+              {t("Još nemate nijednu grupu. Napravite grupu u muallim panelu.")}
             </p>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-bold text-muted-foreground mr-1">Grupa:</span>
+              <span className="text-sm font-bold text-muted-foreground mr-1">{t("Grupa:")}</span>
               {grupe.map(g => (
                 <button
                   key={g.id}
@@ -356,28 +358,28 @@ export default function MuallimH5pStatistikaPage() {
                 <div className="text-2xl font-extrabold text-purple-900" data-testid="stat-broj-vjezbi">
                   {loadingStats ? "—" : ukupnoVjezbi}
                 </div>
-                <div className="text-xs font-bold text-purple-700/80">Vježbi sa pokušajima</div>
+                <div className="text-xs font-bold text-purple-700/80">{t("Vježbi sa pokušajima")}</div>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
                 <BarChart3 className="w-5 h-5 text-blue-600 mb-2" />
                 <div className="text-2xl font-extrabold text-blue-900" data-testid="stat-broj-pokusaja">
                   {loadingStats ? "—" : ukupnoPokusaja}
                 </div>
-                <div className="text-xs font-bold text-blue-700/80">Ukupno pokušaja</div>
+                <div className="text-xs font-bold text-blue-700/80">{t("Ukupno pokušaja")}</div>
               </div>
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
                 <Users className="w-5 h-5 text-emerald-600 mb-2" />
                 <div className="text-2xl font-extrabold text-emerald-900" data-testid="stat-ucenika">
                   {loadingStats ? "—" : data?.ukupnoUcenika ?? 0}
                 </div>
-                <div className="text-xs font-bold text-emerald-700/80">Učenika u grupi</div>
+                <div className="text-xs font-bold text-emerald-700/80">{t("Učenika u grupi")}</div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
                 <BookOpen className="w-5 h-5 text-amber-600 mb-2" />
                 <div className="text-2xl font-extrabold text-amber-900" data-testid="stat-prosjek">
                   {loadingStats || prosjekTacnosti === null ? "—" : `${prosjekTacnosti}%`}
                 </div>
-                <div className="text-xs font-bold text-amber-700/80">Prosječna tačnost</div>
+                <div className="text-xs font-bold text-amber-700/80">{t("Prosječna tačnost")}</div>
               </div>
             </div>
 
@@ -389,14 +391,14 @@ export default function MuallimH5pStatistikaPage() {
                     <TrendingUp className="w-4 h-4 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-extrabold text-foreground">Trend kroz vrijeme</h3>
+                    <h3 className="font-extrabold text-foreground">{t("Trend kroz vrijeme")}</h3>
                     <p className="text-xs text-muted-foreground font-medium">
-                      Pokušaji po sedmici i prosječna tačnost.
+                      {t("Pokušaji po sedmici i prosječna tačnost.")}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold text-muted-foreground">Period:</span>
+                  <span className="text-xs font-bold text-muted-foreground">{t("Period:")}</span>
                   {WEEK_OPTIONS.map(w => (
                     <button
                       key={w}
@@ -408,7 +410,7 @@ export default function MuallimH5pStatistikaPage() {
                           : "bg-white text-muted-foreground border-border/60 hover:bg-muted"
                       }`}
                     >
-                      {w} sedmica
+                      {t("{w} sedmica", { w: String(w) })}
                     </button>
                   ))}
                 </div>
@@ -421,7 +423,7 @@ export default function MuallimH5pStatistikaPage() {
                   className="text-center py-8 text-sm text-muted-foreground font-medium"
                   data-testid="text-trendovi-prazno"
                 >
-                  Nema H5P pokušaja u zadnjih {weeks} sedmica.
+                  {t("Nema H5P pokušaja u zadnjih {weeks} sedmica.", { weeks: String(weeks) })}
                 </div>
               ) : (
                 <div className="h-56 sm:h-64" data-testid="chart-trendovi">
@@ -465,7 +467,7 @@ export default function MuallimH5pStatistikaPage() {
                         }}
                         labelFormatter={(label, items) => {
                           const ws = (items?.[0]?.payload as { weekStart?: string } | undefined)?.weekStart;
-                          return ws ? `Sedmica od ${formatWeekLabel(ws)}` : label;
+                          return ws ? t("Sedmica od {datum}", { datum: formatWeekLabel(ws) }) : label;
                         }}
                       />
                       <Legend
@@ -500,7 +502,7 @@ export default function MuallimH5pStatistikaPage() {
             {/* Sort */}
             {!loadingStats && data && data.vjezbe.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className="text-sm font-bold text-muted-foreground mr-1">Sortiraj:</span>
+                <span className="text-sm font-bold text-muted-foreground mr-1">{t("Sortiraj:")}</span>
                 {(Object.keys(SORT_LABELS) as SortKey[]).map(k => (
                   <button
                     key={k}
@@ -528,14 +530,13 @@ export default function MuallimH5pStatistikaPage() {
             ) : !data || data.vjezbe.length === 0 ? (
               <div className="bg-white border border-border/50 rounded-2xl p-10 text-center">
                 <Sparkles className="w-10 h-10 text-purple-300 mx-auto mb-3" />
-                <h3 className="font-extrabold text-foreground mb-1">Još nema H5P pokušaja</h3>
+                <h3 className="font-extrabold text-foreground mb-1">{t("Još nema H5P pokušaja")}</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Kad učenici iz ove grupe počnu rješavati H5P interaktivne vježbe,
-                  ovdje ćete vidjeti koje su najpopularnije, prosječnu tačnost i kome treba pomoć.
+                  {t("Kad učenici iz ove grupe počnu rješavati H5P interaktivne vježbe, ovdje ćete vidjeti koje su najpopularnije, prosječnu tačnost i kome treba pomoć.")}
                 </p>
                 <Link href="/muallim/h5p-uputstvo">
                   <Button variant="outline" className="mt-4 rounded-xl">
-                    <Sparkles className="w-4 h-4 mr-1" /> Kako napraviti H5P vježbu
+                    <Sparkles className="w-4 h-4 mr-1" /> {t("Kako napraviti H5P vježbu")}
                   </Button>
                 </Link>
               </div>
@@ -564,11 +565,11 @@ export default function MuallimH5pStatistikaPage() {
                         <div className="flex items-center gap-2 mb-1 text-xs font-bold text-muted-foreground uppercase tracking-wide">
                           {v.lekcijaNivo !== null && (
                             <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-md">
-                              Nivo {v.lekcijaNivo}
+                              {t("Nivo {nivo}", { nivo: String(v.lekcijaNivo) })}
                             </span>
                           )}
                           <span className="truncate">
-                            {v.lekcijaNaslov || `Lekcija #${v.lekcijaId}`}
+                            {v.lekcijaNaslov || t("Lekcija #{id}", { id: String(v.lekcijaId) })}
                           </span>
                         </div>
                         <h3 className="text-base md:text-lg font-extrabold text-foreground break-words group-hover:text-primary transition-colors">
@@ -577,7 +578,7 @@ export default function MuallimH5pStatistikaPage() {
                       </div>
                       <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
                         <div className="text-center">
-                          <div className="text-xs font-bold text-muted-foreground">Učenika</div>
+                          <div className="text-xs font-bold text-muted-foreground">{t("Učenika")}</div>
                           <div className="text-lg font-extrabold text-foreground">
                             {v.brojUcenika}
                             {data && (
@@ -588,7 +589,7 @@ export default function MuallimH5pStatistikaPage() {
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xs font-bold text-muted-foreground">Pokušaja</div>
+                          <div className="text-xs font-bold text-muted-foreground">{t("Pokušaja")}</div>
                           <div className="text-lg font-extrabold text-foreground">
                             {v.ukupnoPokusaja}
                           </div>
@@ -608,7 +609,7 @@ export default function MuallimH5pStatistikaPage() {
                         <div className="flex items-center gap-2 text-sm min-w-0">
                           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                           <span className="text-muted-foreground font-medium truncate">
-                            Najslabiji rezultat:
+                            {t("Najslabiji rezultat:")}
                           </span>
                           <Link href={`/muallim/ucenik/${v.najslabijiUcenik.id}?h5pPrilogId=${v.priloziId}`}>
                             <button
@@ -622,7 +623,7 @@ export default function MuallimH5pStatistikaPage() {
                             {v.najslabijiUcenik.prosjekProcenat}%
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            ({v.najslabijiUcenik.brojPokusaja} pokušaj{v.najslabijiUcenik.brojPokusaja === 1 ? "" : "a"})
+                            ({v.najslabijiUcenik.brojPokusaja} {v.najslabijiUcenik.brojPokusaja === 1 ? t("pokušaj") : t("pokušaja")})
                           </span>
                         </div>
                         <button
@@ -631,7 +632,7 @@ export default function MuallimH5pStatistikaPage() {
                           onClick={(e) => { e.stopPropagation(); openDetail(v); }}
                           className="text-xs font-bold text-primary hover:underline flex items-center gap-1 flex-shrink-0"
                         >
-                          Svi učenici <ChevronRight className="w-3 h-3" />
+                          {t("Svi učenici")} <ChevronRight className="w-3 h-3" />
                         </button>
                       </div>
                     )}
@@ -644,7 +645,7 @@ export default function MuallimH5pStatistikaPage() {
 
         {loadingStats && (
           <div className="flex items-center justify-center text-muted-foreground text-sm gap-2 mt-3">
-            <Loader2 className="w-4 h-4 animate-spin" /> Učitavam statistiku…
+            <Loader2 className="w-4 h-4 animate-spin" /> {t("Učitavam statistiku…")}
           </div>
         )}
       </div>
@@ -677,6 +678,7 @@ interface DetailDialogProps {
 function DetailDialog({
   open, onOpenChange, loading, detail, summary, sortKey, setSortKey, ukupnoUcenika,
 }: DetailDialogProps) {
+  const { t } = useLanguage();
   const ucenici = useMemo(() => (detail ? sortUcenike(detail.ucenici, sortKey) : []), [detail, sortKey]);
   const sBezPokusaja = ucenici.filter(u => u.brojPokusaja === 0).length;
   const sSaPokusajima = ucenici.length - sBezPokusaja;
@@ -689,18 +691,18 @@ function DetailDialog({
       >
         <DialogHeader>
           <DialogTitle className="text-base md:text-lg font-extrabold pr-6 break-words">
-            {detail?.prilog.originalName || summary?.priloziName || "H5P vježba"}
+            {detail?.prilog.originalName || summary?.priloziName || t("H5P vježba")}
           </DialogTitle>
           <DialogDescription className="text-xs font-medium text-muted-foreground flex items-center gap-2 flex-wrap">
             {(detail?.prilog.lekcijaNivo ?? summary?.lekcijaNivo) !== null &&
               (detail?.prilog.lekcijaNivo ?? summary?.lekcijaNivo) !== undefined && (
               <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-md font-bold">
-                Nivo {detail?.prilog.lekcijaNivo ?? summary?.lekcijaNivo}
+                {t("Nivo {nivo}", { nivo: String(detail?.prilog.lekcijaNivo ?? summary?.lekcijaNivo) })}
               </span>
             )}
             <span>
               {detail?.prilog.lekcijaNaslov || summary?.lekcijaNaslov ||
-                `Lekcija #${detail?.prilog.lekcijaId ?? summary?.lekcijaId ?? "?"}`}
+                t("Lekcija #{id}", { id: String(detail?.prilog.lekcijaId ?? summary?.lekcijaId ?? "?") })}
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -713,7 +715,7 @@ function DetailDialog({
           </div>
         ) : !detail ? (
           <div className="text-center text-sm text-muted-foreground py-8">
-            Nema podataka za prikaz.
+            {t("Nema podataka za prikaz.")}
           </div>
         ) : (
           <div>
@@ -724,7 +726,7 @@ function DetailDialog({
                   {sSaPokusajima}
                 </div>
                 <div className="text-[11px] font-bold text-emerald-700/80 leading-tight">
-                  Probali vježbu
+                  {t("Probali vježbu")}
                 </div>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-2 text-center">
@@ -732,7 +734,7 @@ function DetailDialog({
                   {sBezPokusaja}
                 </div>
                 <div className="text-[11px] font-bold text-amber-700/80 leading-tight">
-                  Bez pokušaja
+                  {t("Bez pokušaja")}
                 </div>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-2 text-center">
@@ -743,7 +745,7 @@ function DetailDialog({
                   )}
                 </div>
                 <div className="text-[11px] font-bold text-blue-700/80 leading-tight">
-                  Ukupno učenika
+                  {t("Ukupno učenika")}
                 </div>
               </div>
             </div>
@@ -751,7 +753,7 @@ function DetailDialog({
             {/* Sort */}
             {detail.ucenici.length > 1 && (
               <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                <span className="text-xs font-bold text-muted-foreground mr-1">Sortiraj:</span>
+                <span className="text-xs font-bold text-muted-foreground mr-1">{t("Sortiraj:")}</span>
                 {(Object.keys(DETAIL_SORT_LABELS) as DetailSortKey[]).map(k => (
                   <button
                     key={k}
@@ -773,7 +775,7 @@ function DetailDialog({
             {ucenici.length === 0 ? (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 <Users className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-                Nema aktivnih učenika u grupi.
+                {t("Nema aktivnih učenika u grupi.")}
               </div>
             ) : (
               <div className="space-y-1.5" data-testid="detalji-list-ucenika">
@@ -800,21 +802,21 @@ function DetailDialog({
                           </div>
                           {noAttempts ? (
                             <div className="text-[11px] font-bold text-amber-700">
-                              Nije još uradio/la vježbu
+                              {t("Nije još uradio/la vježbu")}
                             </div>
                           ) : (
                             <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
                               <span className="flex items-center gap-0.5">
                                 <Trophy className="w-3 h-3 text-emerald-600" />
-                                Najbolje <b className="text-foreground">{u.najboljiProcenat}%</b>
+                                {t("Najbolje")} <b className="text-foreground">{u.najboljiProcenat}%</b>
                               </span>
                               <span className="text-muted-foreground/50">•</span>
                               <span>
-                                Prosjek <b className="text-foreground">{u.prosjekProcenat}%</b>
+                                {t("Prosjek")} <b className="text-foreground">{u.prosjekProcenat}%</b>
                               </span>
                               <span className="text-muted-foreground/50">•</span>
                               <span>
-                                {u.brojPokusaja} pokušaj{u.brojPokusaja === 1 ? "" : "a"}
+                                {u.brojPokusaja} {u.brojPokusaja === 1 ? t("pokušaj") : t("pokušaja")}
                               </span>
                               {u.zadnjiPokusajAt && (
                                 <>

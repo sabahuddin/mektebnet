@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { useLanguage } from "@/context/language";
 
 // h5p-standalone runtime se servira iz public/h5p-standalone/ (kopira ga
 // scripts/copy-h5p-standalone.mjs prije dev/build). Reference idu preko
@@ -226,6 +227,7 @@ function H5PPlayerImpl({
   isManager,
   className,
 }: H5PPlayerProps) {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [errorInfo, setErrorInfo] = useState<H5PErrorInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -334,7 +336,7 @@ function H5PPlayerImpl({
       {loading && !errorInfo && (
         <div className="flex items-center gap-2 text-blue-500 text-sm py-4">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Učitavam vježbu...
+          {t("Učitavam vježbu...")}
         </div>
       )}
       {errorInfo && (
@@ -346,11 +348,11 @@ function H5PPlayerImpl({
         >
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex flex-col gap-1.5">
-            <p className="font-semibold">Vježba se ne može pokrenuti</p>
+            <p className="font-semibold">{t("Vježba se ne može pokrenuti")}</p>
             <p>{errorInfo.message}</p>
             {managerHint && (
               <p className="mt-1 pt-2 border-t border-amber-200/70 text-amber-800">
-                <span className="font-semibold">Savjet za muallima:</span>{" "}
+                <span className="font-semibold">{t("Savjet za muallima:")}</span>{" "}
                 {managerHint}
               </p>
             )}

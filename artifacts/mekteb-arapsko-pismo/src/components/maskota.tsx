@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/context/language";
 
 const BASE = `${import.meta.env.BASE_URL}images/maskota`;
 
@@ -280,6 +281,7 @@ const TRAJECTORIES: FlightTrajectory[] = [
 type SelamPhase = "flying-in" | "hovering" | "cloud" | "flying-out" | "done";
 
 export function SelamWelcome({ userName }: { userName?: string | null }) {
+  const { t } = useLanguage();
   const [phase, setPhase] = useState<SelamPhase>("done");
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
   const [vh, setVh] = useState(typeof window !== "undefined" ? window.innerHeight : 720);
@@ -319,8 +321,8 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
 
   const name = userName || "";
   const greeting = name
-    ? `Esselamu alejkum, ${name}!`
-    : "Esselamu alejkum!";
+    ? t("Esselamu alejkum, {name}!", { name })
+    : t("Esselamu alejkum!");
 
   const beeSize = Math.min(180, vw * 0.22);
   const centerX = vw / 2 - beeSize / 2;
@@ -392,7 +394,7 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
           >
             <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-white border-r-2 border-b-2 border-primary/20 rotate-45 rounded-br-sm" />
             <p className="text-xl sm:text-2xl font-extrabold text-primary leading-snug">{greeting}</p>
-            <p className="text-base sm:text-lg text-muted-foreground font-bold mt-2">Idemo s Bismillom!</p>
+            <p className="text-base sm:text-lg text-muted-foreground font-bold mt-2">{t("Idemo s Bismillom!")}</p>
           </motion.div>
         )}
       </AnimatePresence>

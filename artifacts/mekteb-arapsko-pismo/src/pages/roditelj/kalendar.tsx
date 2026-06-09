@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,6 +28,7 @@ const MJESEC_NAZIVI = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Jul
 
 export default function RoditeljKalendarPage() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [entries, setEntries] = useState<KalendarEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function RoditeljKalendarPage() {
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors"
           data-testid="link-nazad"
         >
-          <ArrowLeft className="w-4 h-4" /> Nazad na panel
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
 
         <div className="flex items-center gap-4 mb-6">
@@ -113,8 +115,8 @@ export default function RoditeljKalendarPage() {
             <Calendar className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Kalendar mekteba</h1>
-            <p className="text-sm text-muted-foreground">Datumi nastave, ferija i važnih dana za grupe vaše djece</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("Kalendar mekteba")}</h1>
+            <p className="text-sm text-muted-foreground">{t("Datumi nastave, ferija i važnih dana za grupe vaše djece")}</p>
           </div>
         </div>
 
@@ -125,8 +127,8 @@ export default function RoditeljKalendarPage() {
         ) : entries.length === 0 ? (
           <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
             <Calendar className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="font-bold text-foreground mb-1">Nema unesenih datuma</p>
-            <p className="text-sm text-muted-foreground">Muallim još nije unio kalendar za grupe vaše djece.</p>
+            <p className="font-bold text-foreground mb-1">{t("Nema unesenih datuma")}</p>
+            <p className="text-sm text-muted-foreground">{t("Muallim još nije unio kalendar za grupe vaše djece.")}</p>
           </div>
         ) : (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -137,7 +139,7 @@ export default function RoditeljKalendarPage() {
                   onClick={() => navigateMonth(-1)}
                   className="p-2 rounded-lg hover:bg-muted transition-colors"
                   data-testid="btn-prev-month"
-                  aria-label="Prethodni mjesec"
+                  aria-label={t("Prethodni mjesec")}
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
@@ -148,7 +150,7 @@ export default function RoditeljKalendarPage() {
                   onClick={() => navigateMonth(1)}
                   className="p-2 rounded-lg hover:bg-muted transition-colors"
                   data-testid="btn-next-month"
-                  aria-label="Sljedeći mjesec"
+                  aria-label={t("Sljedeći mjesec")}
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -224,7 +226,7 @@ export default function RoditeljKalendarPage() {
             {upcoming.length > 0 && (
               <div className="bg-white border border-border/50 rounded-2xl p-4 sm:p-6 shadow-sm">
                 <h3 className="font-extrabold text-lg text-foreground mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" /> Nadolazeći datumi
+                  <Calendar className="w-5 h-5 text-primary" /> {t("Nadolazeći datumi")}
                 </h3>
                 <div className="space-y-2">
                   {upcoming.map(entry => {

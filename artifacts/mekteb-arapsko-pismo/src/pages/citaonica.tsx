@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { Library, ChevronRight, BookOpen, Lock, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +42,7 @@ const ORPHAN_KATEGORIJA: Kategorija = {
 };
 
 export default function CitaonicaPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
   const [knjige, setKnjige] = useState<Knjiga[]>([]);
@@ -51,8 +53,8 @@ export default function CitaonicaPage() {
 
   const showLockedToast = () => {
     toast({
-      title: "🔒 Samo za registrirane korisnike",
-      description: "Prijavite se ili registrujte da biste pristupili svim knjigama u čitaonici.",
+      title: t("🔒 Samo za registrirane korisnike"),
+      description: t("Prijavite se ili registrujte da biste pristupili svim knjigama u čitaonici."),
     });
   };
 
@@ -105,9 +107,9 @@ export default function CitaonicaPage() {
             <Library className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Čitaonica</h1>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("Čitaonica")}</h1>
             <p className="text-muted-foreground text-sm">
-              Kazivanja o poslanicima i islamske teme — {knjige.length} {knjige.length === 1 ? "knjiga" : "knjiga"}
+              {t("Kazivanja o poslanicima i islamske teme — {n} {rijec}", { n: String(knjige.length), rijec: knjige.length === 1 ? t("knjiga") : t("knjiga") })}
             </p>
           </div>
         </div>
@@ -121,7 +123,7 @@ export default function CitaonicaPage() {
         ) : grupe.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <Library className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">Nema knjiga u čitaonici</p>
+            <p className="font-medium">{t("Nema knjiga u čitaonici")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -161,6 +163,7 @@ function KategorijaAccordion({
   isLocked: (k: Knjiga) => boolean;
   showLockedToast: () => void;
 }) {
+  const { t } = useLanguage();
   const headerId = `kat-header-${kategorija.slug}`;
   const panelId = `kat-panel-${kategorija.slug}`;
 
@@ -259,11 +262,11 @@ function KategorijaAccordion({
                       >
                         {locked ? (
                           <>
-                            Zaključano <Lock className="w-3 h-3" />
+                            {t("Zaključano")} <Lock className="w-3 h-3" />
                           </>
                         ) : (
                           <>
-                            Čitaj{" "}
+                            {t("Čitaj")}{" "}
                             <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                           </>
                         )}
@@ -282,7 +285,7 @@ function KategorijaAccordion({
                       <button
                         type="button"
                         onClick={showLockedToast}
-                        aria-label={`${k.naslov} — zaključano, samo za registrirane korisnike`}
+                        aria-label={t("{naslov} — zaključano, samo za registrirane korisnike", { naslov: k.naslov })}
                         aria-disabled="true"
                         className="w-full text-left"
                       >

@@ -156,7 +156,7 @@ export default function Home() {
                 <source srcSet={`${import.meta.env.BASE_URL}images/maskota/pcela-tablet.png`} type="image/png" />
                 <img
                   src={`${import.meta.env.BASE_URL}images/maskota/pcela-tablet.png`}
-                  alt="Pčela mašući drži tablet"
+                  alt={t("Pčela mašući drži tablet")}
                   className="object-contain select-none pointer-events-none drop-shadow-lg"
                   style={{ width: 160, height: 160 }}
                   draggable={false}

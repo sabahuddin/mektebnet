@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { PORUKE_READ_EVENT } from "@/hooks/use-unread-poruke";
+import { useLanguage } from "@/context/language";
 
 interface Korisnik {
   id: number;
@@ -53,6 +54,7 @@ export default function PorukePage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [razgovori, setRazgovori] = useState<Razgovor[]>([]);
   const [kontakti, setKontakti] = useState<Korisnik[]>([]);
@@ -113,7 +115,7 @@ export default function PorukePage() {
       ));
       window.dispatchEvent(new CustomEvent(PORUKE_READ_EVENT));
     } catch {
-      toast({ title: "Greška", description: "Nije moguće učitati razgovor", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće učitati razgovor"), variant: "destructive" });
     } finally {
       setIsLoadingRazgovor(false);
     }
@@ -133,7 +135,7 @@ export default function PorukePage() {
       setTekst("");
       loadRazgovori();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće poslati poruku", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće poslati poruku"), variant: "destructive" });
     } finally {
       setIsSending(false);
     }
@@ -149,14 +151,14 @@ export default function PorukePage() {
         naslov: bulkNaslov || "Obavijest",
         sadrzaj: bulkTekst.trim(),
       }, token);
-      toast({ title: "Poruke poslane!", description: `Poslano ${selectedIds.length} poruka` });
+      toast({ title: t("Poruke poslane!"), description: t("Poslano {n} poruka", { n: String(selectedIds.length) }) });
       setSelectedIds([]);
       setBulkTekst("");
       setBulkNaslov("");
       setShowBulk(false);
       loadRazgovori();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće poslati poruke", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće poslati poruke"), variant: "destructive" });
     } finally {
       setIsSending(false);
     }
@@ -195,15 +197,15 @@ export default function PorukePage() {
   }
   const roleOrder = ["admin", "muallim", "roditelj", "ucenik"];
   const sekcijeNazivi: Record<string, string> = {
-    admin: "Admini", muallim: "Muallimi", roditelj: "Roditelji", ucenik: "Učenici",
+    admin: t("Admini"), muallim: t("Muallimi"), roditelj: t("Roditelji"), ucenik: t("Učenici"),
   };
 
   if (!user || !["muallim", "roditelj", "admin", "ucenik"].includes(user.role)) {
     return (
       <Layout>
         <div className="text-center py-20">
-          <p className="text-muted-foreground font-medium">Nemaš pristup porukama</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>Nazad</Button>
+          <p className="text-muted-foreground font-medium">{t("Nemaš pristup porukama")}</p>
+          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );
@@ -220,11 +222,11 @@ export default function PorukePage() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-foreground">
-              Poruke {ukupnoNeprocitano > 0 && (
+              {t("Poruke")} {ukupnoNeprocitano > 0 && (
                 <span className="ml-2 text-sm bg-primary text-primary-foreground rounded-full px-2 py-0.5">{ukupnoNeprocitano}</span>
               )}
             </h1>
-            <p className="text-muted-foreground text-sm">Komunikacija s roditeljima / muallimom</p>
+            <p className="text-muted-foreground text-sm">{t("Komunikacija s roditeljima / muallimom")}</p>
           </div>
         </div>
 
@@ -234,12 +236,12 @@ export default function PorukePage() {
             <div className="p-3 border-b border-border/50 flex flex-col gap-1.5">
               <Button size="sm" onClick={() => { setShowNovi(true); setShowBulk(false); setAktivan(null); }}
                 className="w-full rounded-xl flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Nova poruka
+                <MessageSquare className="w-4 h-4" /> {t("Nova poruka")}
               </Button>
               {canBulkSend && (
                 <Button size="sm" variant="outline" onClick={() => { setShowBulk(true); setShowNovi(false); setAktivan(null); setSelectedIds([]); setFilterGrupa("all"); }}
                   className="w-full rounded-xl flex items-center gap-2">
-                  <Users className="w-4 h-4" /> Pošalji više
+                  <Users className="w-4 h-4" /> {t("Pošalji više")}
                 </Button>
               )}
             </div>
@@ -250,7 +252,7 @@ export default function PorukePage() {
               ) : razgovori.length === 0 ? (
                 <div className="text-center p-8">
                   <InboxIcon className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-30" />
-                  <p className="text-xs text-muted-foreground">Nema poruka</p>
+                  <p className="text-xs text-muted-foreground">{t("Nema poruka")}</p>
                 </div>
               ) : (
                 razgovori.map(r => (
@@ -280,38 +282,38 @@ export default function PorukePage() {
               {showBulk ? (
                 <motion.div key="bulk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="flex-1 p-6 overflow-y-auto">
-                  <h3 className="font-extrabold text-foreground mb-2">Pošalji poruku više korisnika</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Odaberite primatelje i napišite poruku</p>
+                  <h3 className="font-extrabold text-foreground mb-2">{t("Pošalji poruku više korisnika")}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{t("Odaberite primatelje i napišite poruku")}</p>
 
                   <div className="flex flex-wrap gap-2 mb-3">
                     <select value={filterGrupa} onChange={e => { setFilterGrupa(e.target.value); setSelectedIds([]); }}
                       className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
-                      <option value="all">Svi kontakti</option>
-                      {user?.role === "admin" && <option value="muallim">Svi muallimi</option>}
+                      <option value="all">{t("Svi kontakti")}</option>
+                      {user?.role === "admin" && <option value="muallim">{t("Svi muallimi")}</option>}
                       {user?.role === "muallim" && (
                         <>
-                          <option value="admin">Admini</option>
-                          <option value="ucenik">Svi učenici</option>
-                          <option value="roditelj-svi">Svi roditelji</option>
+                          <option value="admin">{t("Admini")}</option>
+                          <option value="ucenik">{t("Svi učenici")}</option>
+                          <option value="roditelj-svi">{t("Svi roditelji")}</option>
                           {grupeNazivi.length > 0 && <option disabled>──────</option>}
-                          {grupeNazivi.map(g => <option key={g} value={g}>Grupa: {g} (učenici + roditelji)</option>)}
+                          {grupeNazivi.map(g => <option key={g} value={g}>{t("Grupa: {g} (učenici + roditelji)", { g })}</option>)}
                         </>
                       )}
                     </select>
                     <Button size="sm" variant="outline" className="rounded-xl text-xs"
                       onClick={() => selectAll(filteredKontakti.map(k => k.id))}>
-                      {filteredKontakti.every(k => selectedIds.includes(k.id)) ? "Poništi sve" : "Odaberi sve"}
+                      {filteredKontakti.every(k => selectedIds.includes(k.id)) ? t("Poništi sve") : t("Odaberi sve")}
                     </Button>
                     {selectedIds.length > 0 && (
                       <span className="text-xs font-bold text-primary bg-primary/10 rounded-full px-2.5 py-1">
-                        {selectedIds.length} odabrano
+                        {t("{n} odabrano", { n: String(selectedIds.length) })}
                       </span>
                     )}
                   </div>
 
                   <div className="max-h-64 overflow-y-auto border border-border/50 rounded-xl mb-4">
                     {filteredKontakti.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-4 text-center">Nema kontakata u ovom filteru</p>
+                      <p className="text-sm text-muted-foreground p-4 text-center">{t("Nema kontakata u ovom filteru")}</p>
                     ) : roleOrder.filter(r => grupiranoPoRoli[r]?.length).map(r => {
                       const sekcija = grupiranoPoRoli[r];
                       const sviOdabraniUSekciji = sekcija.every(k => selectedIds.includes(k.id));
@@ -325,7 +327,7 @@ export default function PorukePage() {
                                 ? setSelectedIds(prev => prev.filter(id => !sekcija.find(k => k.id === id)))
                                 : selectAll(sekcija.map(k => k.id))}
                               className="text-[11px] text-primary font-bold hover:underline">
-                              {sviOdabraniUSekciji ? "Poništi" : "Odaberi sve"}
+                              {sviOdabraniUSekciji ? t("Poništi") : t("Odaberi sve")}
                             </button>
                           </div>
                           {sekcija.map(k => {
@@ -352,26 +354,26 @@ export default function PorukePage() {
                   </div>
 
                   <form onSubmit={sendBulk} className="flex flex-col gap-3">
-                    <input type="text" placeholder="Naslov (opciono)" value={bulkNaslov}
+                    <input type="text" placeholder={t("Naslov (opciono)")} value={bulkNaslov}
                       onChange={e => setBulkNaslov(e.target.value)}
                       className="border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                    <textarea rows={4} required placeholder="Tekst poruke..."
+                    <textarea rows={4} required placeholder={t("Tekst poruke...")}
                       value={bulkTekst} onChange={e => setBulkTekst(e.target.value)}
                       className="border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
                     <Button type="submit" disabled={isSending || selectedIds.length === 0 || !bulkTekst.trim()}
                       className="rounded-xl flex items-center gap-2 self-end">
                       {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      Pošalji ({selectedIds.length})
+                      {t("Pošalji ({n})", { n: String(selectedIds.length) })}
                     </Button>
                   </form>
                 </motion.div>
               ) : showNovi ? (
                 <motion.div key="novi" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="flex-1 p-6 overflow-y-auto">
-                  <h3 className="font-extrabold text-foreground mb-4">Nova poruka</h3>
+                  <h3 className="font-extrabold text-foreground mb-4">{t("Nova poruka")}</h3>
                   <div className="flex flex-col gap-2">
                     {kontakti.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nema dostupnih kontakata</p>
+                      <p className="text-sm text-muted-foreground">{t("Nema dostupnih kontakata")}</p>
                     ) : (
                       kontakti.map(k => (
                         <button key={k.id} onClick={() => openRazgovor(k)}
@@ -416,7 +418,7 @@ export default function PorukePage() {
                       ))
                     ) : poruke.length === 0 ? (
                       <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-                        Nema poruka — pošalji prvu!
+                        {t("Nema poruka — pošalji prvu!")}
                       </div>
                     ) : (
                       poruke.map(p => {
@@ -440,7 +442,7 @@ export default function PorukePage() {
                   <form onSubmit={sendPoruka} className="p-3 border-t border-border/50 flex gap-2">
                     <input
                       type="text"
-                      placeholder="Napiši poruku..."
+                      placeholder={t("Napiši poruku...")}
                       value={tekst}
                       onChange={e => setTekst(e.target.value)}
                       className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -455,7 +457,7 @@ export default function PorukePage() {
                 <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="flex-1 flex items-center justify-center flex-col gap-3 text-muted-foreground">
                   <MessageSquare className="w-12 h-12 opacity-20" />
-                  <p className="text-sm font-medium">Odaberi razgovor ili napiši novu poruku</p>
+                  <p className="text-sm font-medium">{t("Odaberi razgovor ili napiši novu poruku")}</p>
                 </motion.div>
               )}
             </AnimatePresence>

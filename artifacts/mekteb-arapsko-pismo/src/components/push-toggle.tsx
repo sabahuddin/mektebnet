@@ -5,6 +5,7 @@ import {
   requestPushPermission,
   disablePush,
 } from "@/lib/push";
+import { useLanguage } from "@/context/language";
 
 const APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) || "";
 
@@ -26,6 +27,7 @@ function isAllowedOrigin(): boolean {
 type PermState = "default" | "granted" | "denied" | "unsupported";
 
 export function PushToggle() {
+  const { t } = useLanguage();
   const supported = isPushSupportedClient();
   const allowedOrigin = isAllowedOrigin();
   const configured = !!APP_ID;
@@ -61,13 +63,13 @@ export function PushToggle() {
   }, [supported]);
 
   const disabledReason: string | null = !supported
-    ? "Tvoj preglednik ne podržava push obavijesti."
+    ? t("Tvoj preglednik ne podržava push obavijesti.")
     : !configured
-      ? "Push obavijesti trenutno nisu konfigurisane."
+      ? t("Push obavijesti trenutno nisu konfigurisane.")
       : !allowedOrigin
-        ? "Push obavijesti su dostupne samo na mekteb.net."
+        ? t("Push obavijesti su dostupne samo na mekteb.net.")
         : perm === "denied"
-          ? "Obavijesti su blokirane u postavkama preglednika. Otvori ikonu ključa/lokota u adresnoj traci i dozvoli obavijesti za mekteb.net."
+          ? t("Obavijesti su blokirane u postavkama preglednika. Otvori ikonu ključa/lokota u adresnoj traci i dozvoli obavijesti za mekteb.net.")
           : null;
 
   const canToggle = disabledReason === null && !busy;
@@ -110,13 +112,13 @@ export function PushToggle() {
             htmlFor="push-toggle"
             className={`font-extrabold text-foreground ${canToggle ? "cursor-pointer" : "cursor-not-allowed opacity-70"}`}
           >
-            Push obavijesti
+            {t("Push obavijesti")}
           </label>
           <button
             id="push-toggle"
             role="switch"
             aria-checked={isOn}
-            aria-label="Push obavijesti"
+            aria-label={t("Push obavijesti")}
             data-testid="toggle-push-notifications"
             onClick={handleToggle}
             disabled={!canToggle}
@@ -132,8 +134,7 @@ export function PushToggle() {
           </button>
         </div>
         <p className="text-xs text-muted-foreground mt-1.5">
-          Primaj obavijesti o novim porukama, novim zadaćama i podsjetnicima — i
-          kad mekteb nije otvoren u pregledniku.
+          {t("Primaj obavijesti o novim porukama, novim zadaćama i podsjetnicima — i kad mekteb nije otvoren u pregledniku.")}
         </p>
         {disabledReason && (
           <p

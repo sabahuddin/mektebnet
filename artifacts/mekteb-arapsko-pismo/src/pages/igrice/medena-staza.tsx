@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useGameCredits, formatSeconds } from "@/hooks/use-game-credits";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { ArrowLeft, RefreshCw, Trophy, Sparkles, Flower2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,6 +49,7 @@ type GameState = "idle" | "loading" | "playing" | "ended" | "no-credit" | "error
 
 export default function MedenaStaza() {
   const { user, token } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { data: credits, loading: creditsLoading, refetch: refetchCredits } = useGameCredits();
 
@@ -116,10 +118,10 @@ export default function MedenaStaza() {
       } catch { setBestEver(accepted); }
     } catch (e) {
       const err = e as { message?: string };
-      setErrorMsg(err.message || "Greška pri završetku");
+      setErrorMsg(err.message || t("Greška pri završetku"));
       setState("error");
     }
-  }, [refetchCredits]);
+  }, [refetchCredits, t]);
 
   // Triger se kada finished/failed pređu na true (kraj igre)
   useEffect(() => {
@@ -148,7 +150,7 @@ export default function MedenaStaza() {
         "GET", "/games/medena/pitanja", undefined, token
       );
       if (!Array.isArray(pitanjaRes.pitanja) || pitanjaRes.pitanja.length === 0) {
-        setErrorMsg("Banka pitanja je prazna. Obavijesti učitelja da napuni pitanja.");
+        setErrorMsg(t("Banka pitanja je prazna. Obavijesti učitelja da napuni pitanja."));
         setState("error");
         return;
       }
@@ -173,10 +175,10 @@ export default function MedenaStaza() {
     } catch (e) {
       const err = e as { status?: number; message?: string };
       if (err.status === 403) setState("no-credit");
-      else if (err.status === 409) { setErrorMsg("Već imaš igru u toku — osvježi stranicu."); setState("error"); }
-      else { setErrorMsg(err.message || "Greška pri pokretanju"); setState("error"); }
+      else if (err.status === 409) { setErrorMsg(t("Već imaš igru u toku — osvježi stranicu.")); setState("error"); }
+      else { setErrorMsg(err.message || t("Greška pri pokretanju")); setState("error"); }
     }
-  }, [token]);
+  }, [token, t]);
 
   const answerQuestion = (optionIndex: number) => {
     if (state !== "playing") return;
@@ -191,7 +193,7 @@ export default function MedenaStaza() {
       setHoney((prev) => prev + HONEY_PER_CORRECT);
       setFeedback({
         type: "correct",
-        text: `Tačno. ${currentQuestion.objasnjenje}`,
+        text: t("Tačno. {obj}", { obj: currentQuestion.objasnjenje }),
       });
 
       timeoutRef.current = window.setTimeout(() => {
@@ -216,8 +218,8 @@ export default function MedenaStaza() {
       type: "wrong",
       text:
         nextLives <= 0
-          ? `Netačno. Tačan odgovor je: ${currentQuestion.opcije[currentQuestion.correctIndex]}.`
-          : "Netačno. Pokušaj još jednom.",
+          ? t("Netačno. Tačan odgovor je: {odgovor}.", { odgovor: currentQuestion.opcije[currentQuestion.correctIndex] })
+          : t("Netačno. Pokušaj još jednom."),
     });
 
     timeoutRef.current = window.setTimeout(() => {
@@ -249,8 +251,8 @@ export default function MedenaStaza() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed">
-          <p className="font-bold text-foreground mb-2">Igrice su za prijavljene učenike</p>
-          <Link href="/login" className="text-primary font-bold underline">Prijavi se</Link>
+          <p className="font-bold text-foreground mb-2">{t("Igrice su za prijavljene učenike")}</p>
+          <Link href="/login" className="text-primary font-bold underline">{t("Prijavi se")}</Link>
         </Card>
       </Layout>
     );
@@ -259,8 +261,8 @@ export default function MedenaStaza() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-medena-staza">
-          <p className="font-bold text-foreground mb-2">Igrice su dostupne samo učeničkim nalozima</p>
-          <Link href="/igrice" className="text-primary font-bold underline">Nazad</Link>
+          <p className="font-bold text-foreground mb-2">{t("Igrice su dostupne samo učeničkim nalozima")}</p>
+          <Link href="/igrice" className="text-primary font-bold underline">{t("Nazad")}</Link>
         </Card>
       </Layout>
     );
@@ -271,16 +273,16 @@ export default function MedenaStaza() {
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <Link href="/igrice">
           <Button variant="ghost" size="sm" className="rounded-xl">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Natrag
+            <ArrowLeft className="w-4 h-4 mr-1" /> {t("Natrag")}
           </Button>
         </Link>
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
-          <Flower2 className="w-7 h-7 text-emerald-600" /> Medena staza
+          <Flower2 className="w-7 h-7 text-emerald-600" /> {t("Medena staza")}
         </h1>
       </div>
 
       {state === "loading" && (
-        <Card className="p-8 text-center"><p className="text-muted-foreground">Pokrećem igru…</p></Card>
+        <Card className="p-8 text-center"><p className="text-muted-foreground">{t("Pokrećem igru…")}</p></Card>
       )}
 
       {state === "idle" && (
@@ -288,13 +290,13 @@ export default function MedenaStaza() {
           <div className="flex items-start gap-3 mb-4">
             <Sparkles className="w-6 h-6 text-emerald-600 shrink-0" />
             <div>
-              <p className="font-bold text-foreground mb-1">Pčelica ide od cvijeta do cvijeta</p>
+              <p className="font-bold text-foreground mb-1">{t("Pčelica ide od cvijeta do cvijeta")}</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Svaki cvijet krije po jedno ilmihal pitanje. Tačan odgovor = <strong>10 meda</strong>.
-                Imaš <strong>3 života</strong>. Dođi do kraja staze i osvoji svih 80 meda!
+                {t("Svaki cvijet krije po jedno ilmihal pitanje. Tačan odgovor = ")}<strong>{t("10 meda")}</strong>.
+                {t(" Imaš ")}<strong>{t("3 života")}</strong>. {t("Dođi do kraja staze i osvoji svih 80 meda!")}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                Preostalo vremena: <strong>{creditsLoading ? "…" : formatSeconds(credits?.secondsRemaining ?? 0)}</strong>
+                {t("Preostalo vremena: ")}<strong>{creditsLoading ? "…" : formatSeconds(credits?.secondsRemaining ?? 0)}</strong>
               </p>
             </div>
           </div>
@@ -304,30 +306,30 @@ export default function MedenaStaza() {
             data-testid="button-start-medena"
             className="rounded-2xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            {creditsLoading ? "Učitavam…" : "Pokreni igru"}
+            {creditsLoading ? t("Učitavam…") : t("Pokreni igru")}
           </Button>
           {!creditsLoading && (credits?.secondsRemaining ?? 0) <= 0 && (
-            <p className="text-sm text-red-600 mt-3 font-medium">Nemaš dovoljno vremena. Završi neku lekciju za nove kapi meda 🍯.</p>
+            <p className="text-sm text-red-600 mt-3 font-medium">{t("Nemaš dovoljno vremena. Završi neku lekciju za nove kapi meda 🍯.")}</p>
           )}
         </Card>
       )}
 
       {state === "no-credit" && (
         <Card className="p-6 bg-amber-50 border-amber-200">
-          <p className="font-bold text-foreground mb-2">Nemaš više vremena za igre.</p>
-          <p className="text-sm text-muted-foreground mb-3">Završi lekciju ili kviz da zaradiš nove kapi meda 🍯.</p>
+          <p className="font-bold text-foreground mb-2">{t("Nemaš više vremena za igre.")}</p>
+          <p className="text-sm text-muted-foreground mb-3">{t("Završi lekciju ili kviz da zaradiš nove kapi meda 🍯.")}</p>
           <div className="flex gap-2 flex-wrap">
-            <Link href="/ilmihal"><Button size="sm" className="rounded-xl">Ilmihal</Button></Link>
-            <Link href="/kvizovi"><Button size="sm" variant="outline" className="rounded-xl">Kvizovi</Button></Link>
+            <Link href="/ilmihal"><Button size="sm" className="rounded-xl">{t("Ilmihal")}</Button></Link>
+            <Link href="/kvizovi"><Button size="sm" variant="outline" className="rounded-xl">{t("Kvizovi")}</Button></Link>
           </div>
         </Card>
       )}
 
       {state === "error" && (
         <Card className="p-6 bg-red-50 border-red-200">
-          <p className="font-bold text-red-700 mb-2">Greška</p>
+          <p className="font-bold text-red-700 mb-2">{t("Greška")}</p>
           <p className="text-sm text-muted-foreground mb-3">{errorMsg}</p>
-          <Button size="sm" onClick={() => setState("idle")} className="rounded-xl">Nazad</Button>
+          <Button size="sm" onClick={() => setState("idle")} className="rounded-xl">{t("Nazad")}</Button>
         </Card>
       )}
 
@@ -336,12 +338,12 @@ export default function MedenaStaza() {
           {/* HUD */}
           <section className="grid gap-3 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-emerald-100 sm:grid-cols-4">
             <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs font-semibold uppercase text-emerald-700">Med</p>
+              <p className="text-xs font-semibold uppercase text-emerald-700">{t("Med")}</p>
               <p className="text-2xl font-bold text-emerald-950 tabular-nums" data-testid="text-honey">{honey}</p>
             </div>
 
             <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs font-semibold uppercase text-emerald-700">Životi</p>
+              <p className="text-xs font-semibold uppercase text-emerald-700">{t("Životi")}</p>
               <p className="text-2xl font-bold text-emerald-950" data-testid="text-lives">
                 {"♥".repeat(lives)}
                 <span className="text-slate-300">{"♥".repeat(MAX_LIVES - lives)}</span>
@@ -349,14 +351,14 @@ export default function MedenaStaza() {
             </div>
 
             <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs font-semibold uppercase text-emerald-700">Staza</p>
+              <p className="text-xs font-semibold uppercase text-emerald-700">{t("Staza")}</p>
               <p className="text-2xl font-bold text-emerald-950 tabular-nums">
                 {Math.min(step + 1, questions.length)} / {questions.length}
               </p>
             </div>
 
             <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs font-semibold uppercase text-emerald-700">Napredak</p>
+              <p className="text-xs font-semibold uppercase text-emerald-700">{t("Napredak")}</p>
               <p className="text-2xl font-bold text-emerald-950 tabular-nums">{progressPercent}%</p>
             </div>
           </section>
@@ -389,7 +391,7 @@ export default function MedenaStaza() {
                     ].join(" ")}
                   >
                     <div className="text-2xl">{isDone ? "🍯" : isCurrent ? "🐝" : meta.ikona}</div>
-                    <p className="mt-1 text-[10px] font-bold leading-tight line-clamp-2">{meta.naziv}</p>
+                    <p className="mt-1 text-[10px] font-bold leading-tight line-clamp-2">{t(meta.naziv)}</p>
                   </div>
                 );
               })}
@@ -400,7 +402,7 @@ export default function MedenaStaza() {
             <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-emerald-100">
               <div className="mb-4">
                 <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">
-                  {metaFor(currentQuestion.kategorija).ikona} Cvijet {step + 1}: {metaFor(currentQuestion.kategorija).naziv}
+                  {metaFor(currentQuestion.kategorija).ikona} {t("Cvijet {broj}: {naziv}", { broj: String(step + 1), naziv: t(metaFor(currentQuestion.kategorija).naziv) })}
                 </p>
                 <h2 className="mt-2 text-xl font-bold text-emerald-950 sm:text-2xl" data-testid="text-question">
                   {currentQuestion.pitanje}
@@ -460,7 +462,7 @@ export default function MedenaStaza() {
 
           {(finished || failed) && (
             <section className="rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-emerald-100">
-              <p className="text-muted-foreground">Šaljem rezultat…</p>
+              <p className="text-muted-foreground">{t("Šaljem rezultat…")}</p>
             </section>
           )}
         </div>
@@ -473,33 +475,33 @@ export default function MedenaStaza() {
               <div className="text-5xl mb-3">{finished ? "🍯" : "🐝"}</div>
               <Trophy className="w-12 h-12 text-amber-500 mx-auto mb-3" />
               <p className="text-2xl font-black text-foreground mb-1">
-                {finished ? "Aferim! Stigao si do kraja staze." : "Pčelica se umorila."}
+                {finished ? t("Aferim! Stigao si do kraja staze.") : t("Pčelica se umorila.")}
               </p>
               <p className="text-lg text-muted-foreground mb-2">
-                Skupljeno meda: <span className="font-black text-3xl text-emerald-600" data-testid="text-final-score">{finalScore}</span>
+                {t("Skupljeno meda: ")}<span className="font-black text-3xl text-emerald-600" data-testid="text-final-score">{finalScore}</span>
               </p>
               <div className="text-sm text-muted-foreground mb-4 space-y-0.5">
                 {bestEver !== null && (
                   <p>
-                    Najbolji ikad: <span className="font-bold text-foreground" data-testid="text-best-ever">{bestEver}</span>
+                    {t("Najbolji ikad: ")}<span className="font-bold text-foreground" data-testid="text-best-ever">{bestEver}</span>
                     {previousBest !== null && finalScore > previousBest && (
-                      <span className="ml-2 text-emerald-600 font-bold">novi rekord!</span>
+                      <span className="ml-2 text-emerald-600 font-bold">{t("novi rekord!")}</span>
                     )}
                   </p>
                 )}
                 {previousBest !== null && previousBest > 0 && (
-                  <p>Tvoj prethodni najbolji: <span className="font-bold text-foreground">{previousBest}</span></p>
+                  <p>{t("Tvoj prethodni najbolji: ")}<span className="font-bold text-foreground">{previousBest}</span></p>
                 )}
               </div>
               <div className="flex gap-2 justify-center flex-wrap">
                 <Button onClick={() => { setState("idle"); refetchCredits(); }} className="rounded-2xl">
-                  <RefreshCw className="w-4 h-4 mr-1" /> Igraj opet
+                  <RefreshCw className="w-4 h-4 mr-1" /> {t("Igraj opet")}
                 </Button>
                 <Button variant="outline" onClick={() => setLocation("/igrice/ljestvica")} className="rounded-2xl">
-                  Tabela
+                  {t("Tabela")}
                 </Button>
                 <Link href="/igrice">
-                  <Button variant="ghost" className="rounded-2xl">Natrag na Igrice</Button>
+                  <Button variant="ghost" className="rounded-2xl">{t("Natrag na Igrice")}</Button>
                 </Link>
               </div>
             </Card>

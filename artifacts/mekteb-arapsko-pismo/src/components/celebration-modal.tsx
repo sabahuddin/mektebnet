@@ -4,6 +4,7 @@ import { Trophy } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Maskota } from "@/components/maskota";
 import { playRewardSound } from "@/lib/sound-prefs";
+import { useLanguage } from "@/context/language";
 
 export interface CelebrationData {
   isRepeat: boolean;
@@ -45,6 +46,7 @@ function useCountUp(target: number, durationMs: number, start: number, active: b
 }
 
 export function CelebrationModal({ data, onClose }: { data: CelebrationData; onClose: () => void }) {
+  const { t } = useLanguage();
   const animatedHasanat = useCountUp(
     data.totalHasanat,
     1400,
@@ -107,7 +109,7 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
       onClick={onClose}
       role="dialog"
       aria-live="polite"
-      aria-label="Završeno"
+      aria-label={t("Završeno")}
       data-testid="celebration-modal"
     >
       <motion.div
@@ -143,22 +145,22 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
         {data.isRepeat ? (
           <>
             <h3 className="mt-4 text-xl font-extrabold text-foreground">
-              Već si završio/la — bravo što ponavljaš!
+              {t("Već si završio/la — bravo što ponavljaš!")}
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Ponavljanje je majka znanja. Nastavi tako! 💪
+              {t("Ponavljanje je majka znanja. Nastavi tako! 💪")}
             </p>
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/70 border border-amber-200 px-4 py-1.5">
               <Trophy className="w-4 h-4 text-amber-500" />
               <span className="text-sm font-bold text-foreground">
-                Ukupno {data.totalHasanat} {data.totalHasanat === 1 ? "kap meda" : "kapi meda"} 🍯
+                {t("Ukupno")} {data.totalHasanat} {data.totalHasanat === 1 ? t("kap meda") : t("kapi meda")} 🍯
               </span>
             </div>
           </>
         ) : (
           <>
             <h3 className="mt-4 text-xl font-extrabold text-foreground">
-              Bravo! Završeno
+              {t("Bravo! Završeno")}
             </h3>
             <motion.div
               className="mt-3 flex items-baseline justify-center gap-2"
@@ -172,7 +174,7 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
               <span className="text-3xl font-extrabold text-foreground tabular-nums">
                 {animatedHasanat}
               </span>
-              <span className="text-sm font-bold text-muted-foreground">{animatedHasanat === 1 ? "kap meda" : "kapi meda"} 🍯</span>
+              <span className="text-sm font-bold text-muted-foreground">{animatedHasanat === 1 ? t("kap meda") : t("kapi meda")} 🍯</span>
             </motion.div>
 
             <motion.div
@@ -183,7 +185,7 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
             >
               <span className="text-lg" aria-hidden="true">🔥</span>
               <span className="text-sm font-bold text-foreground">
-                {data.streakDays} {data.streakDays === 1 ? "dan" : "dana"} zaredom
+                {data.streakDays} {data.streakDays === 1 ? t("dan") : t("dana")} {t("zaredom")}
               </span>
               {data.streakIncreased && (
                 <motion.span
@@ -192,7 +194,7 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.8 }}
                 >
-                  +1 dan!
+                  {t("+1 dan!")}
                 </motion.span>
               )}
             </motion.div>
@@ -203,7 +205,7 @@ export function CelebrationModal({ data, onClose }: { data: CelebrationData; onC
           onClick={onClose}
           className="mt-5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
         >
-          Klikni bilo gdje za dalje
+          {t("Klikni bilo gdje za dalje")}
         </button>
       </motion.div>
     </motion.div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +50,7 @@ export default function RoditeljiTab({
 }) {
   const { token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [obavjestenja, setObavjestenja] = useState<Obavjestenje[]>([]);
   const [roditelji, setRoditelji] = useState<RoditeljEntry[]>([]);
@@ -122,9 +124,9 @@ export default function RoditeljiTab({
       fd.append("image", file);
       const res = await apiRequest<{ url: string }>("POST", "/admin/upload", fd, token, true);
       setSlikaUrl(res.url);
-      toast({ title: "Slika uploadovana" });
+      toast({ title: t("Slika uploadovana") });
     } catch {
-      toast({ title: "Greška pri uploadu slike", variant: "destructive" });
+      toast({ title: t("Greška pri uploadu slike"), variant: "destructive" });
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -144,29 +146,29 @@ export default function RoditeljiTab({
       if (editingId) {
         const updated = await apiRequest<Obavjestenje>("PUT", `/muallim/obavjestenja/${editingId}`, body, token);
         setObavjestenja(prev => prev.map(o => o.id === editingId ? { ...o, ...updated, grupaNaziv: grupaId ? grupe.find(g => g.id === grupaId)?.naziv || null : null } : o));
-        toast({ title: "Obavještenje ažurirano" });
+        toast({ title: t("Obavještenje ažurirano") });
       } else {
         const created = await apiRequest<Obavjestenje>("POST", "/muallim/obavjestenja", body, token);
         const withGrupa = { ...created, grupaNaziv: grupaId ? grupe.find(g => g.id === Number(grupaId))?.naziv || null : null };
         setObavjestenja(prev => [withGrupa, ...prev]);
-        toast({ title: "Obavještenje objavljeno" });
+        toast({ title: t("Obavještenje objavljeno") });
       }
       resetForm();
     } catch {
-      toast({ title: "Greška", variant: "destructive" });
+      toast({ title: t("Greška"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: number) {
-    if (!token || !confirm("Obrisati ovo obavještenje?")) return;
+    if (!token || !confirm(t("Obrisati ovo obavještenje?"))) return;
     try {
       await apiRequest("DELETE", `/muallim/obavjestenja/${id}`, undefined, token);
       setObavjestenja(prev => prev.filter(o => o.id !== id));
-      toast({ title: "Obrisano" });
+      toast({ title: t("Obrisano") });
     } catch {
-      toast({ title: "Greška", variant: "destructive" });
+      toast({ title: t("Greška"), variant: "destructive" });
     }
   }
 
@@ -188,8 +190,8 @@ export default function RoditeljiTab({
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-sm text-rose-800 font-medium flex items-center gap-2">
           <Heart className="w-4 h-4 shrink-0" />
           <span>
-            Prikazani su samo roditelji i obavještenja za grupu <strong>{filterGrupaNaziv}</strong>.
-            Nove objave će biti automatski usmjerene na ovu grupu.
+            {t("Prikazani su samo roditelji i obavještenja za grupu")} <strong>{filterGrupaNaziv}</strong>.{" "}
+            {t("Nove objave će biti automatski usmjerene na ovu grupu.")}
           </span>
         </div>
       )}
@@ -198,13 +200,13 @@ export default function RoditeljiTab({
           onClick={() => setView("obavjestenja")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${view === "obavjestenja" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}
         >
-          <Megaphone className="w-4 h-4" /> Obavještenja ({filteredObavjestenja.length})
+          <Megaphone className="w-4 h-4" /> {t("Obavještenja ({n})", { n: String(filteredObavjestenja.length) })}
         </button>
         <button
           onClick={() => setView("roditelji")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${view === "roditelji" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}
         >
-          <Users className="w-4 h-4" /> Roditelji ({filteredRoditelji.length})
+          <Users className="w-4 h-4" /> {t("Roditelji ({n})", { n: String(filteredRoditelji.length) })}
         </button>
       </div>
 
@@ -212,7 +214,7 @@ export default function RoditeljiTab({
         <div className="space-y-4">
           {!showForm && (
             <Button onClick={() => { resetForm(); setShowForm(true); }} className="rounded-xl">
-              <Plus className="w-4 h-4 mr-1" /> Novo obavještenje
+              <Plus className="w-4 h-4 mr-1" /> {t("Novo obavještenje")}
             </Button>
           )}
 
@@ -227,7 +229,7 @@ export default function RoditeljiTab({
                 <div className="flex items-center justify-between">
                   <h3 className="font-extrabold text-foreground flex items-center gap-2">
                     <Megaphone className="w-5 h-5 text-primary" />
-                    {editingId ? "Uredi obavještenje" : "Novo obavještenje"}
+                    {editingId ? t("Uredi obavještenje") : t("Novo obavještenje")}
                   </h3>
                   <button onClick={resetForm} className="text-muted-foreground hover:text-foreground">
                     <X className="w-5 h-5" />
@@ -235,36 +237,36 @@ export default function RoditeljiTab({
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-muted-foreground block mb-1">Naslov</label>
+                  <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Naslov")}</label>
                   <input
                     type="text"
                     value={naslov}
                     onChange={e => setNaslov(e.target.value)}
-                    placeholder="Npr: Raspored za ramazan"
+                    placeholder={t("Npr: Raspored za ramazan")}
                     className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-muted-foreground block mb-1">Sadržaj</label>
+                  <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Sadržaj")}</label>
                   <textarea
                     value={sadrzaj}
                     onChange={e => setSadrzaj(e.target.value)}
-                    placeholder="Tekst obavještenja..."
+                    placeholder={t("Tekst obavještenja...")}
                     rows={5}
                     className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-muted-foreground block mb-1">Za koga?</label>
+                  <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Za koga?")}</label>
                   <div className="relative">
                     <select
                       value={grupaId}
                       onChange={e => setGrupaId(e.target.value ? Number(e.target.value) : "")}
                       className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none bg-white pr-10"
                     >
-                      <option value="">Svi roditelji</option>
+                      <option value="">{t("Svi roditelji")}</option>
                       {grupe.map(g => (
                         <option key={g.id} value={g.id}>{g.naziv}</option>
                       ))}
@@ -274,12 +276,12 @@ export default function RoditeljiTab({
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-muted-foreground block mb-1">Ilustracija (opciono)</label>
+                  <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Ilustracija (opciono)")}</label>
                   {slikaUrl ? (
                     <div className="relative inline-block">
                       <img
                         src={slikaUrl.startsWith("/") ? `${getApiBase().replace("/api", "")}${slikaUrl}` : slikaUrl}
-                        alt="Priložena slika"
+                        alt={t("Priložena slika")}
                         className="max-h-40 rounded-xl border border-border/50"
                       />
                       <button
@@ -305,7 +307,7 @@ export default function RoditeljiTab({
                         className="rounded-xl"
                       >
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Image className="w-4 h-4 mr-1" />}
-                        Dodaj sliku
+                        {t("Dodaj sliku")}
                       </Button>
                     </div>
                   )}
@@ -314,9 +316,9 @@ export default function RoditeljiTab({
                 <div className="flex gap-2 pt-2">
                   <Button onClick={handleSave} disabled={saving || !naslov.trim() || !sadrzaj.trim()} className="rounded-xl">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : editingId ? <Save className="w-4 h-4 mr-1" /> : <Send className="w-4 h-4 mr-1" />}
-                    {editingId ? "Sačuvaj izmjene" : "Objavi"}
+                    {editingId ? t("Sačuvaj izmjene") : t("Objavi")}
                   </Button>
-                  <Button variant="outline" onClick={resetForm} className="rounded-xl">Otkaži</Button>
+                  <Button variant="outline" onClick={resetForm} className="rounded-xl">{t("Otkaži")}</Button>
                 </div>
               </motion.div>
             )}
@@ -325,8 +327,8 @@ export default function RoditeljiTab({
           {filteredObavjestenja.length === 0 && !showForm ? (
             <div className="text-center py-12 text-muted-foreground">
               <Megaphone className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">Nema obavještenja</p>
-              <p className="text-sm mt-1">Kreirajte prvo obavještenje za roditelje</p>
+              <p className="font-medium">{t("Nema obavještenja")}</p>
+              <p className="text-sm mt-1">{t("Kreirajte prvo obavještenje za roditelje")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -342,7 +344,7 @@ export default function RoditeljiTab({
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h4 className="font-extrabold text-foreground text-base">{o.naslov}</h4>
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${o.grupaId ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
-                          {o.grupaNaziv || "Svi roditelji"}
+                          {o.grupaNaziv || t("Svi roditelji")}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">{formatDate(o.createdAt)}</p>
@@ -350,7 +352,7 @@ export default function RoditeljiTab({
                       {o.slikaUrl && (
                         <img
                           src={o.slikaUrl.startsWith("/") ? `${getApiBase().replace("/api", "")}${o.slikaUrl}` : o.slikaUrl}
-                          alt="Ilustracija"
+                          alt={t("Ilustracija")}
                           className="mt-3 max-h-48 rounded-xl border border-border/30"
                         />
                       )}
@@ -376,8 +378,8 @@ export default function RoditeljiTab({
           {filteredRoditelji.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">Nema registrovanih roditelja{filterGrupaNaziv ? ` u grupi "${filterGrupaNaziv}"` : ""}</p>
-              <p className="text-sm mt-1">Roditelji se prikazuju nakon što povežu svoj nalog sa djetetom</p>
+              <p className="font-medium">{t("Nema registrovanih roditelja")}{filterGrupaNaziv ? t(` u grupi "{ime}"`, { ime: filterGrupaNaziv }) : ""}</p>
+              <p className="text-sm mt-1">{t("Roditelji se prikazuju nakon što povežu svoj nalog sa djetetom")}</p>
             </div>
           ) : (
             filteredRoditelji.map(r => (

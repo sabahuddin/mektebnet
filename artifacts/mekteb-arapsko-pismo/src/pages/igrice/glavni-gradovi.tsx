@@ -9,6 +9,7 @@ import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
 import { ArrowLeft, RefreshCw, Trophy, MapPin, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/context/language";
 
 // Pitanja iz /games/start (BEZ `answer` — server čuva tačan odgovor i validira
 // pri /games/end). `id` je session-scoped stabilni ključ.
@@ -20,6 +21,7 @@ type GameState = "idle" | "loading" | "playing" | "ended" | "no-credit" | "error
 const GAME_ID = "gradovi";
 
 export default function GlavniGradovi() {
+  const { t } = useLanguage();
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { data: credits, loading: creditsLoading, refetch: refetchCredits } = useGameCredits();
@@ -49,7 +51,7 @@ export default function GlavniGradovi() {
   const applyStartedSession = (res: { sessionId: number; startedAt: string; allowedDurationSec: number; questions?: QQ[] }): boolean => {
     const qs = Array.isArray(res.questions) ? res.questions : [];
     if (qs.length < 5) {
-      setErrorMsg("Nema dovoljno pitanja u banci.");
+      setErrorMsg(t("Nema dovoljno pitanja u banci."));
       setState("error");
       return false;
     }
@@ -98,12 +100,12 @@ export default function GlavniGradovi() {
           const retry = await tryStart();
           applyStartedSession(retry);
         } catch {
-          setErrorMsg("Već imaš igru u toku — osvježi stranicu.");
+          setErrorMsg(t("Već imaš igru u toku — osvježi stranicu."));
           setState("error");
         }
       }
-      else if (err.status === 503) { setErrorMsg("Nema dovoljno pitanja u banci."); setState("error"); }
-      else { setErrorMsg(err.message || "Greška pri pokretanju"); setState("error"); }
+      else if (err.status === 503) { setErrorMsg(t("Nema dovoljno pitanja u banci.")); setState("error"); }
+      else { setErrorMsg(err.message || t("Greška pri pokretanju")); setState("error"); }
     }
   }, [token, tryStart]);
 
@@ -127,7 +129,7 @@ export default function GlavniGradovi() {
       } catch { setBestEver(accepted); }
     } catch (e) {
       const err = e as { message?: string };
-      setErrorMsg(err.message || "Greška pri završetku");
+      setErrorMsg(err.message || t("Greška pri završetku"));
       setState("error");
     }
   }, [sessionId, token, refetchCredits]);
@@ -179,8 +181,8 @@ export default function GlavniGradovi() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed">
-          <p className="font-bold text-foreground mb-2">Igrice su za prijavljene učenike</p>
-          <Link href="/login" className="text-primary font-bold underline">Prijavi se</Link>
+          <p className="font-bold text-foreground mb-2">{t("Igrice su za prijavljene učenike")}</p>
+          <Link href="/login" className="text-primary font-bold underline">{t("Prijavi se")}</Link>
         </Card>
       </Layout>
     );
@@ -189,8 +191,8 @@ export default function GlavniGradovi() {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-glavni-gradovi">
-          <p className="font-bold text-foreground mb-2">Igrice su dostupne samo učeničkim nalozima</p>
-          <Link href="/igrice" className="text-primary font-bold underline">Nazad</Link>
+          <p className="font-bold text-foreground mb-2">{t("Igrice su dostupne samo učeničkim nalozima")}</p>
+          <Link href="/igrice" className="text-primary font-bold underline">{t("Nazad")}</Link>
         </Card>
       </Layout>
     );
@@ -203,11 +205,11 @@ export default function GlavniGradovi() {
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <Link href="/igrice">
           <Button variant="ghost" size="sm" className="rounded-xl">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Natrag
+            <ArrowLeft className="w-4 h-4 mr-1" /> {t("Natrag")}
           </Button>
         </Link>
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
-          <MapPin className="w-7 h-7 text-emerald-600" /> Glavni gradovi
+          <MapPin className="w-7 h-7 text-emerald-600" /> {t("Glavni gradovi")}
         </h1>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           {state === "playing" && startedAt && (
@@ -221,12 +223,12 @@ export default function GlavniGradovi() {
           <div className="flex items-start gap-3 mb-4">
             <Sparkles className="w-6 h-6 text-emerald-600 shrink-0" />
             <div>
-              <p className="font-bold text-foreground mb-1">60 sekundi — koliko gradova prepoznaješ?</p>
-              <p className="text-sm text-muted-foreground">Pojavi se naziv grada — odaberi državu kojoj pripada. Pitanja iz cijelog svijeta, sa naglaskom na muslimanske zemlje. Score = broj tačnih odgovora.</p>
+              <p className="font-bold text-foreground mb-1">{t("60 sekundi — koliko gradova prepoznaješ?")}</p>
+              <p className="text-sm text-muted-foreground">{t("Pojavi se naziv grada — odaberi državu kojoj pripada. Pitanja iz cijelog svijeta, sa naglaskom na muslimanske zemlje. Score = broj tačnih odgovora.")}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                Preostalo vremena: <strong>{creditsLoading ? "…" : formatSeconds(credits?.secondsRemaining ?? 0)}</strong>
+                {t("Preostalo vremena:")} <strong>{creditsLoading ? "…" : formatSeconds(credits?.secondsRemaining ?? 0)}</strong>
                 {!creditsLoading && (credits?.secondsRemaining ?? 0) > 0 && (credits?.secondsRemaining ?? 0) < 60 && (
-                  <span className="ml-2 text-amber-600">— igra će trajati samo {credits!.secondsRemaining} s.</span>
+                  <span className="ml-2 text-amber-600">{t("— igra će trajati samo {n} s.", { n: String(credits!.secondsRemaining) })}</span>
                 )}
               </p>
             </div>
@@ -237,45 +239,45 @@ export default function GlavniGradovi() {
             data-testid="button-start-glavni-gradovi"
             className="rounded-2xl font-bold bg-emerald-600 hover:bg-emerald-700"
           >
-            {creditsLoading ? "Učitavam…" : "Pokreni igru"}
+            {creditsLoading ? t("Učitavam…") : t("Pokreni igru")}
           </Button>
           {!creditsLoading && (credits?.secondsRemaining ?? 0) <= 0 && (
-            <p className="text-sm text-red-600 mt-3 font-medium">Nemaš vremena za igre. Završi neku lekciju za nove kapi meda 🍯.</p>
+            <p className="text-sm text-red-600 mt-3 font-medium">{t("Nemaš vremena za igre. Završi neku lekciju za nove kapi meda 🍯.")}</p>
           )}
         </Card>
       )}
 
       {state === "loading" && (
-        <Card className="p-8 text-center"><p className="text-muted-foreground">Učitavam pitanja…</p></Card>
+        <Card className="p-8 text-center"><p className="text-muted-foreground">{t("Učitavam pitanja…")}</p></Card>
       )}
 
       {state === "no-credit" && (
         <Card className="p-6 bg-amber-50 border-amber-200">
-          <p className="font-bold text-foreground mb-2">Nemaš više vremena za igre.</p>
-          <p className="text-sm text-muted-foreground mb-3">Završi lekciju ili kviz da zaradiš nove kapi meda 🍯.</p>
+          <p className="font-bold text-foreground mb-2">{t("Nemaš više vremena za igre.")}</p>
+          <p className="text-sm text-muted-foreground mb-3">{t("Završi lekciju ili kviz da zaradiš nove kapi meda 🍯.")}</p>
           <div className="flex gap-2 flex-wrap">
-            <Link href="/ilmihal"><Button size="sm" className="rounded-xl">Ilmihal</Button></Link>
-            <Link href="/kvizovi"><Button size="sm" variant="outline" className="rounded-xl">Kvizovi</Button></Link>
+            <Link href="/ilmihal"><Button size="sm" className="rounded-xl">{t("Ilmihal")}</Button></Link>
+            <Link href="/kvizovi"><Button size="sm" variant="outline" className="rounded-xl">{t("Kvizovi")}</Button></Link>
           </div>
         </Card>
       )}
 
       {state === "error" && (
         <Card className="p-6 bg-red-50 border-red-200">
-          <p className="font-bold text-red-700 mb-2">Greška</p>
+          <p className="font-bold text-red-700 mb-2">{t("Greška")}</p>
           <p className="text-sm text-muted-foreground mb-3">{errorMsg}</p>
-          <Button size="sm" onClick={() => setState("idle")} className="rounded-xl">Nazad</Button>
+          <Button size="sm" onClick={() => setState("idle")} className="rounded-xl">{t("Nazad")}</Button>
         </Card>
       )}
 
       {state === "playing" && currentQ && (
         <>
           <div className="flex items-center justify-between gap-4 mb-4 text-sm font-bold">
-            <span className="text-emerald-600">Odgovoreno: <span className="text-foreground" data-testid="text-answered-count">{answers.length}</span></span>
-            <span className="text-muted-foreground">Pitanje #{qIndex + 1}</span>
+            <span className="text-emerald-600">{t("Odgovoreno:")} <span className="text-foreground" data-testid="text-answered-count">{answers.length}</span></span>
+            <span className="text-muted-foreground">{t("Pitanje #{n}", { n: String(qIndex + 1) })}</span>
           </div>
           <Card className="p-6 mb-4 relative overflow-hidden">
-            <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-2">Glavni grad</p>
+            <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-2">{t("Glavni grad")}</p>
             <p className="text-3xl md:text-4xl font-black text-foreground mb-6" data-testid="text-question">{currentQ.question}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {currentQ.options.map((opt, i) => (
@@ -299,35 +301,35 @@ export default function GlavniGradovi() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <Card className="p-8 mt-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300 text-center">
               <Trophy className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-              <p className="text-2xl font-black text-foreground mb-1">Vrijeme isteklo!</p>
+              <p className="text-2xl font-black text-foreground mb-1">{t("Vrijeme isteklo!")}</p>
               <p className="text-lg text-muted-foreground mb-2">
-                Rezultat: <span className="font-black text-3xl text-emerald-600" data-testid="text-final-score">{finalScore}</span>
+                {t("Rezultat:")} <span className="font-black text-3xl text-emerald-600" data-testid="text-final-score">{finalScore}</span>
               </p>
               <div className="text-sm text-muted-foreground mb-2 space-y-0.5">
                 {bestEver !== null && (
                   <p>
-                    Najbolji ikad: <span className="font-bold text-foreground" data-testid="text-best-ever">{bestEver}</span>
+                    {t("Najbolji ikad:")} <span className="font-bold text-foreground" data-testid="text-best-ever">{bestEver}</span>
                     {previousBest !== null && finalScore !== null && finalScore > previousBest && (
-                      <span className="ml-2 text-emerald-600 font-bold">novi rekord!</span>
+                      <span className="ml-2 text-emerald-600 font-bold">{t("novi rekord!")}</span>
                     )}
                   </p>
                 )}
                 {previousBest !== null && previousBest > 0 && (
-                  <p>Tvoj prethodni najbolji: <span className="font-bold text-foreground">{previousBest}</span></p>
+                  <p>{t("Tvoj prethodni najbolji:")} <span className="font-bold text-foreground">{previousBest}</span></p>
                 )}
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Tačno: <strong className="text-emerald-600" data-testid="text-correct-count">{finalScore}</strong> · Netačno: <strong className="text-red-500" data-testid="text-wrong-count">{Math.max(0, answers.length - finalScore)}</strong>
+                {t("Tačno:")} <strong className="text-emerald-600" data-testid="text-correct-count">{finalScore}</strong> {t("· Netačno:")} <strong className="text-red-500" data-testid="text-wrong-count">{Math.max(0, answers.length - finalScore)}</strong>
               </p>
               <div className="flex gap-2 justify-center flex-wrap">
                 <Button onClick={() => { setState("idle"); refetchCredits(); }} className="rounded-2xl">
-                  <RefreshCw className="w-4 h-4 mr-1" /> Igraj opet
+                  <RefreshCw className="w-4 h-4 mr-1" /> {t("Igraj opet")}
                 </Button>
                 <Button variant="outline" onClick={() => setLocation("/igrice/ljestvica")} className="rounded-2xl">
-                  Tabela
+                  {t("Tabela")}
                 </Button>
                 <Link href="/igrice">
-                  <Button variant="ghost" className="rounded-2xl">Natrag na Igrice</Button>
+                  <Button variant="ghost" className="rounded-2xl">{t("Natrag na Igrice")}</Button>
                 </Link>
               </div>
             </Card>

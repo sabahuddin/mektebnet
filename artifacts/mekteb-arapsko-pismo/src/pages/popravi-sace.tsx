@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Wrench, CheckCircle2, XCircle, Sparkles, BookOpen, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/context/language";
 
 interface Greska {
   id: number;
@@ -42,6 +43,7 @@ function shuffleWithMap<T>(arr: T[]): { items: T[]; map: number[] } {
 export default function PopraviSacePage() {
   const { user, token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [items, setItems] = useState<Greska[] | null>(null);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [shuffled, setShuffled] = useState<{ items: string[]; map: number[] } | null>(null);
@@ -87,8 +89,8 @@ export default function PopraviSacePage() {
           return next;
         });
         toast({
-          title: `+${resp.nagradaAferim ?? 5} kapi meda 🍯`,
-          description: "Saće je popravljeno!",
+          title: t("+{n} kapi meda 🍯", { n: String(resp.nagradaAferim ?? 5) }),
+          description: t("Saće je popravljeno!"),
         });
         // Sačekaj malo da feedback bude vidljiv, pa pređi na sljedeću grešku.
         setTimeout(() => {
@@ -110,7 +112,7 @@ export default function PopraviSacePage() {
         setTimeout(() => setFeedback(null), 1200);
       }
     } catch {
-      toast({ title: "Greška pri slanju odgovora", variant: "destructive" });
+      toast({ title: t("Greška pri slanju odgovora"), variant: "destructive" });
     } finally {
       setBusy(false);
     }
@@ -120,8 +122,8 @@ export default function PopraviSacePage() {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto text-center py-20">
-          <p className="text-muted-foreground">Prijavi se da koristiš Popravi saće.</p>
-          <Link href="/login" className="text-primary font-bold underline">Prijava</Link>
+          <p className="text-muted-foreground">{t("Prijavi se da koristiš Popravi saće.")}</p>
+          <Link href="/login" className="text-primary font-bold underline">{t("Prijava")}</Link>
         </div>
       </Layout>
     );
@@ -145,16 +147,16 @@ export default function PopraviSacePage() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <Link href="/ucenik" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary text-sm font-medium mb-3">
-            <ArrowLeft className="w-4 h-4" /> Nazad na profil
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad na profil")}
           </Link>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-md">
               <Wrench className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-foreground">Popravi saće</h1>
+              <h1 className="text-2xl font-extrabold text-foreground">{t("Popravi saće")}</h1>
               <p className="text-sm text-muted-foreground">
-                Riješi pitanja na kojima si ranije pogriješio/la i zaradi po <strong>5 kapi meda 🍯</strong>.
+                {t("Riješi pitanja na kojima si ranije pogriješio/la i zaradi po")} <strong>{t("5 kapi meda 🍯")}</strong>.
               </p>
             </div>
           </div>
@@ -169,13 +171,13 @@ export default function PopraviSacePage() {
             <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-xl font-extrabold text-emerald-900 mb-2">Saće je čisto!</h2>
+            <h2 className="text-xl font-extrabold text-emerald-900 mb-2">{t("Saće je čisto!")}</h2>
             <p className="text-sm text-emerald-800 mb-6">
-              Nemaš nepopravljenih grešaka. Riješi neki kviz pa vidi ima li novih rupa za popraviti.
+              {t("Nemaš nepopravljenih grešaka. Riješi neki kviz pa vidi ima li novih rupa za popraviti.")}
             </p>
             <Link href="/kvizovi">
               <Button className="rounded-2xl">
-                <BookOpen className="w-4 h-4 mr-2" /> Idi na kvizove
+                <BookOpen className="w-4 h-4 mr-2" /> {t("Idi na kvizove")}
               </Button>
             </Link>
           </motion.div>
@@ -193,7 +195,7 @@ export default function PopraviSacePage() {
                 {active.sourceNaslov || `${active.sourceType} #${active.sourceId}`}
               </span>
               <span className="text-muted-foreground">
-                Pokušaj #{active.attempts} · {openCount} {openCount === 1 ? "rupa" : "rupa"} preostalo
+                {t("Pokušaj #{n}", { n: String(active.attempts) })} · {openCount} {openCount === 1 ? t("rupa") : t("rupa")} {t("preostalo")}
               </span>
             </div>
 
@@ -238,7 +240,7 @@ export default function PopraviSacePage() {
                   exit={{ opacity: 0 }}
                   className="flex items-center gap-2 bg-emerald-50 text-emerald-800 rounded-2xl p-3 border border-emerald-200"
                 >
-                  <Sparkles className="w-5 h-5" /> <strong>Bravo! +5 kapi meda 🍯.</strong> Saće je popravljeno.
+                  <Sparkles className="w-5 h-5" /> <strong>{t("Bravo! +5 kapi meda 🍯.")}</strong> {t("Saće je popravljeno.")}
                 </motion.div>
               )}
               {feedback === "wrong" && (
@@ -248,7 +250,7 @@ export default function PopraviSacePage() {
                   exit={{ opacity: 0 }}
                   className="flex items-center gap-2 bg-red-50 text-red-800 rounded-2xl p-3 border border-red-200"
                 >
-                  <XCircle className="w-5 h-5" /> Nije tačno — pokušaj ponovo.
+                  <XCircle className="w-5 h-5" /> {t("Nije tačno — pokušaj ponovo.")}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -266,7 +268,7 @@ export default function PopraviSacePage() {
             }}
             className="rounded-2xl"
           >
-            Počni popravljati
+            {t("Počni popravljati")}
           </Button>
         )}
       </div>

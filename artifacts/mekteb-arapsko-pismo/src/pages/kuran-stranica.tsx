@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
+import { useLanguage } from "@/context/language";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AyahFlow, type FlowAyah } from "@/components/quran/ayah-flow";
 import { AudioBar } from "@/components/quran/audio-bar";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/quran";
 
 export default function KuranStranicaPage() {
+  const { t } = useLanguage();
   const { p } = useParams<{ p: string }>();
   const pageNum = Math.max(1, Math.min(QURAN_PAGES, parseInt(p || "1", 10) || 1));
   const [, navigate] = useLocation();
@@ -55,7 +57,7 @@ export default function KuranStranicaPage() {
       })
       .catch((e) => {
         if (reqIdRef.current !== reqId) return;
-        setError(e?.message || "Greška pri učitavanju.");
+        setError(e?.message || t("Greška pri učitavanju."));
       })
       .finally(() => {
         if (reqIdRef.current !== reqId) return;
@@ -65,8 +67,8 @@ export default function KuranStranicaPage() {
   }, [pageNum]);
 
   const goToPage = (target: number) => {
-    const t = Math.max(1, Math.min(QURAN_PAGES, target || 1));
-    navigate(`/kuran/stranica/${t}`);
+    const clamped = Math.max(1, Math.min(QURAN_PAGES, target || 1));
+    navigate(`/kuran/stranica/${clamped}`);
   };
 
   const active = audio.activeKey
@@ -82,14 +84,14 @@ export default function KuranStranicaPage() {
             className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Sve sure
+            {t("Sve sure")}
           </Link>
         </div>
 
         {/* Odabir stranice */}
         <div className="rounded-3xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground p-5 mb-6">
           <div className="text-xs font-bold uppercase tracking-wider text-white/70 text-center mb-3">
-            Mushaf · stranica {pageNum} / {QURAN_PAGES}
+            {t("Mushaf · stranica {br} / {ukupno}", { br: String(pageNum), ukupno: String(QURAN_PAGES) })}
           </div>
           {/* RTL redoslijed (kao Mushaf): Sljedeća lijevo, Prethodna desno */}
           <div className="flex items-center justify-center gap-2">
@@ -99,7 +101,7 @@ export default function KuranStranicaPage() {
               className="px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-sm disabled:opacity-40 transition-colors"
               data-testid="btn-sljedeca-stranica"
             >
-              ← Sljedeća
+              {t("← Sljedeća")}
             </button>
             <form
               onSubmit={(e) => {
@@ -114,14 +116,14 @@ export default function KuranStranicaPage() {
                 inputMode="numeric"
                 className="w-16 h-10 rounded-xl bg-white text-foreground text-center font-extrabold focus:outline-none focus:ring-2 focus:ring-gold"
                 data-testid="input-stranica"
-                aria-label="Broj stranice"
+                aria-label={t("Broj stranice")}
               />
               <button
                 type="submit"
                 className="px-3 h-10 rounded-xl bg-gold text-gold-foreground font-bold text-sm"
                 data-testid="btn-idi-stranica"
               >
-                Idi
+                {t("Idi")}
               </button>
             </form>
             <button
@@ -130,7 +132,7 @@ export default function KuranStranicaPage() {
               className="px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-sm disabled:opacity-40 transition-colors"
               data-testid="btn-prethodna-stranica"
             >
-              Prethodna →
+              {t("Prethodna →")}
             </button>
           </div>
         </div>
@@ -167,11 +169,11 @@ export default function KuranStranicaPage() {
           canStop={audio.activeKey != null}
           repeatOne={audio.repeatOne}
           onToggleRepeat={() => audio.setRepeatOne((r) => !r)}
-          title={`Stranica ${pageNum}`}
+          title={t("Stranica {br}", { br: String(pageNum) })}
           subtitle={
             active != null
-              ? `${surahBosnianName(active.surah)} · ajet ${active.ayah}`
-              : "Odaberi učača i klikni ajet"
+              ? t("{sura} · ajet {br}", { sura: surahBosnianName(active.surah), br: String(active.ayah) })
+              : t("Odaberi učača i klikni ajet")
           }
           reciterId={reciterId}
           onReciterChange={setReciterId}

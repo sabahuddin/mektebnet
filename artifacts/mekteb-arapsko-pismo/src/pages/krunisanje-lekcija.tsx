@@ -3,6 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookOpen } from "lucide-react";
 
@@ -20,6 +21,7 @@ export default function KrunisanjeLekcijaPage() {
   const [, params] = useRoute<{ slug: string }>("/krunisanje/lekcija/:slug");
   const [, setLocation] = useLocation();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [lekcija, setLekcija] = useState<Lekcija | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +37,7 @@ export default function KrunisanjeLekcijaPage() {
     return <Layout><div className="max-w-2xl mx-auto p-4"><Skeleton className="h-64 rounded-xl" /></div></Layout>;
   }
   if (!lekcija) {
-    return <Layout><div className="max-w-2xl mx-auto p-6 text-center text-muted-foreground">Lekcija nije pronađena.</div></Layout>;
+    return <Layout><div className="max-w-2xl mx-auto p-6 text-center text-muted-foreground">{t("Lekcija nije pronađena.")}</div></Layout>;
   }
 
   return (
@@ -49,14 +51,14 @@ export default function KrunisanjeLekcijaPage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-lg font-extrabold text-amber-900 flex items-center gap-2">
-            <BookOpen className="w-5 h-5" /> Krunska lekcija
+            <BookOpen className="w-5 h-5" /> {t("Krunska lekcija")}
           </h1>
         </div>
         <div className="rounded-3xl bg-white border-2 border-amber-100 p-6 shadow">
           <h2 className="text-2xl font-extrabold text-amber-900 mb-4">{lekcija.naslov}</h2>
           <div
             className="prose prose-sm max-w-none prose-headings:text-amber-900"
-            dangerouslySetInnerHTML={{ __html: lekcija.contentHtml || "<p class='text-muted-foreground italic'>Sadržaj nije unesen.</p>" }}
+            dangerouslySetInnerHTML={{ __html: lekcija.contentHtml || `<p class='text-muted-foreground italic'>${t("Sadržaj nije unesen.")}</p>` }}
           />
         </div>
       </div>

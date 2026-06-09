@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getLessonById, LESSONS, type Exercise, type ExerciseItem } from "@/data/lessons";
 import { SLOGOVI_AUDIO } from "@/data/slogovi-mapping";
+import { useLanguage } from "@/context/language";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -94,6 +95,7 @@ function ReadingGridModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
+  const { t } = useLanguage();
   const [played, setPlayed] = useState<Set<number>>(new Set());
   const [shuffled] = useState<ExerciseItem[]>(() =>
     [...exercise.items].sort(() => Math.random() - 0.5)
@@ -123,7 +125,7 @@ function ReadingGridModal({
         </button>
         <div className="flex-1 min-w-0">
           <h2 className="text-white font-black text-xl leading-tight">{exercise.title}</h2>
-          <p className="text-white/60 text-base">Pročitaj svaki slog naglas — klikni za izgovor</p>
+          <p className="text-white/60 text-base">{t("Pročitaj svaki slog naglas — klikni za izgovor")}</p>
         </div>
         <div className="text-white font-extrabold text-lg shrink-0 bg-white/15 px-3 py-1 rounded-full">
           {played.size}/{shuffled.length}
@@ -143,10 +145,10 @@ function ReadingGridModal({
       <div className="flex-1 overflow-y-auto p-4">
         <p className="text-center text-white/40 text-base mb-4">
           {played.size === 0
-            ? "👆 Klikni na slog da čuješ izgovor"
+            ? t("👆 Klikni na slog da čuješ izgovor")
             : played.size === shuffled.length
-            ? "✅ Sve pročitano! Možeš završiti vježbu."
-            : `Nastavi čitati — ostalo ${shuffled.length - played.size} slogova`}
+            ? t("✅ Sve pročitano! Možeš završiti vježbu.")
+            : t("Nastavi čitati — ostalo {n} slogova", { n: String(shuffled.length - played.size) })}
         </p>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-w-3xl mx-auto">
           {shuffled.map((item, i) => {
@@ -185,8 +187,8 @@ function ReadingGridModal({
           className="w-full game-button text-lg py-6"
         >
           {played.size === shuffled.length
-            ? "Odlično! Završi vježbu ✓"
-            : `Završi vježbu (${played.size}/${shuffled.length} pročitano)`}
+            ? t("Odlično! Završi vježbu ✓")
+            : t("Završi vježbu ({n}/{total} pročitano)", { n: String(played.size), total: String(shuffled.length) })}
         </Button>
       </div>
     </div>
@@ -202,6 +204,7 @@ function PronadiModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
+  const { t } = useLanguage();
   const target     = exercise.items[0]?.show ?? "ب";
   const targetName = exercise.items[0]?.answer ?? "?";
   const pool       = exercise.pool ?? ["ا"];
@@ -247,9 +250,9 @@ function PronadiModal({
           <X className="w-6 h-6" />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-white font-black text-xl leading-tight">Pronađi {targetName}!</h2>
+          <h2 className="text-white font-black text-xl leading-tight">{t("Pronađi {ime}!", { ime: targetName })}</h2>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-white/60 text-base">Traži:</span>
+            <span className="text-white/60 text-base">{t("Traži:")}</span>
             <span className="text-white font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.6rem", lineHeight: 1 }}>{target}</span>
           </div>
         </div>
@@ -268,12 +271,12 @@ function PronadiModal({
         {allFound && (
           <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             className="text-center mb-4 bg-green-500/20 border border-green-400/30 rounded-2xl py-3 px-4">
-            <p className="text-green-300 text-xl font-black">🎉 Bravo! Sve si pronašao!</p>
+            <p className="text-green-300 text-xl font-black">{t("🎉 Bravo! Sve si pronašao!")}</p>
           </motion.div>
         )}
         {!allFound && (
           <p className="text-center text-white/40 text-base mb-4">
-            👆 Klikni svaki <span style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.2em" }}>{target}</span> koji pronađeš
+            {t("👆 Klikni svaki")} <span style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "1.2em" }}>{target}</span> {t("koji pronađeš")}
           </p>
         )}
         <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 max-w-md mx-auto" dir="rtl">
@@ -307,7 +310,7 @@ function PronadiModal({
           onClick={() => { if (!notified) { setNotified(true); onComplete(); } onClose(); }}
           className="w-full game-button text-lg py-6"
         >
-          {allFound ? "Odlično! Završi ✓" : `Završi (${foundCount}/${targetCount} pronađeno)`}
+          {allFound ? t("Odlično! Završi ✓") : t("Završi ({n}/{total} pronađeno)", { n: String(foundCount), total: String(targetCount) })}
         </Button>
       </div>
     </div>
@@ -323,6 +326,7 @@ function QuizModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
+  const { t } = useLanguage();
   const isTypeInput   = exercise.type === "napiši";
   const isListening   = exercise.type === "slušaj";
   const isReadingSlog = exercise.type === "čitaj-slog";
@@ -390,15 +394,15 @@ function QuizModal({
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
           <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-3xl font-black mb-1">Odlično!</h2>
-          <p className="text-xl text-muted-foreground mb-2">{score} / {total} tačnih</p>
+          <h2 className="text-3xl font-black mb-1">{t("Odlično!")}</h2>
+          <p className="text-xl text-muted-foreground mb-2">{score} / {total} {t("tačnih")}</p>
           <p className="text-4xl font-black text-primary mb-8">{pct}%</p>
           <div className="flex gap-3">
             <Button onClick={restart} variant="outline" className="flex-1 text-base py-5">
-              <RotateCcw className="w-4 h-4 mr-2" /> Ponovi
+              <RotateCcw className="w-4 h-4 mr-2" /> {t("Ponovi")}
             </Button>
             <Button onClick={onClose} className="flex-1 text-base py-5 game-button">
-              Gotovo ✓
+              {t("Gotovo ✓")}
             </Button>
           </div>
         </motion.div>
@@ -444,12 +448,12 @@ function QuizModal({
             className="w-44 h-44 bg-white/20 hover:bg-white/30 rounded-3xl flex flex-col items-center justify-center gap-3 text-white shadow-xl transition-colors"
           >
             <Volume2 className="w-16 h-16" />
-            <span className="text-2xl font-bold opacity-60">Pritisni za glas</span>
+            <span className="text-2xl font-bold opacity-60">{t("Pritisni za glas")}</span>
           </motion.button>
         ) : isReadingSlog ? (
           <div className="flex flex-col items-center gap-4">
             <p className="text-white/60 text-lg font-semibold tracking-wide uppercase">
-              👆 Pročitaj naglas, pa odaberi
+              {t("👆 Pročitaj naglas, pa odaberi")}
             </p>
             <motion.div
               key={qIdx}
@@ -496,17 +500,17 @@ function QuizModal({
           {status === "correct" && (
             <motion.div key="ok" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}
               className="flex items-center gap-2 text-green-300 text-3xl font-black">
-              <Check className="w-8 h-8" /> Tačno!
+              <Check className="w-8 h-8" /> {t("Tačno!")}
             </motion.div>
           )}
           {status === "wrong" && (
             <motion.div key="no" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}
               className="text-center">
               <p className="text-red-300 text-3xl font-black flex items-center gap-2 justify-center">
-                <X className="w-8 h-8" /> Netačno
+                <X className="w-8 h-8" /> {t("Netačno")}
               </p>
               <p className="text-white/80 text-xl mt-1">
-                Tačno:{" "}
+                {t("Tačno:")}{" "}
                 <strong
                   style={{
                     fontFamily: isArabicChar(item.answer) ? "Noto Naskh Arabic, serif" : undefined,
@@ -534,7 +538,7 @@ function QuizModal({
               onKeyDown={e => { if (e.key === "Enter" && text.trim()) answer(text); }}
               disabled={status !== "asking"}
               maxLength={6}
-              placeholder="Napiši glas…"
+              placeholder={t("Napiši glas…")}
               className="flex-1 text-2xl font-bold text-center rounded-2xl border-2 border-white/30 bg-white/20 text-white placeholder:text-white/50 px-4 py-4 outline-none focus:border-white"
             />
             <button
@@ -586,6 +590,7 @@ function QuizModal({
 }
 
 export default function LessonDetail() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const lessonId = parseInt(id ?? "2", 10);
@@ -604,8 +609,8 @@ export default function LessonDetail() {
     return (
       <Layout>
         <div className="text-center py-20">
-          <h1 className="text-3xl font-black mb-4">Lekcija nije pronađena</h1>
-          <Link href="/arapsko-pismo" className="text-primary font-bold underline">← Nazad na lekcije</Link>
+          <h1 className="text-3xl font-black mb-4">{t("Lekcija nije pronađena")}</h1>
+          <Link href="/arapsko-pismo" className="text-primary font-bold underline">{t("← Nazad na lekcije")}</Link>
         </div>
       </Layout>
     );
@@ -645,12 +650,12 @@ export default function LessonDetail() {
           <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
             <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-3xl font-black mb-2">Lekcija završena!</h2>
+            <h2 className="text-3xl font-black mb-2">{t("Lekcija završena!")}</h2>
             <p className="text-xl text-muted-foreground mb-2">
-              Odradio si sve {data.exercises.length} vježbe u lekciji <strong>{data.title}</strong>!
+              {t("Odradio si sve {n} vježbe u lekciji", { n: String(data.exercises.length) })} <strong>{data.title}</strong>!
             </p>
             <p className="text-base text-muted-foreground mb-6">
-              Preuzmi radni list i vježbaj čitanje i bez ekrana!
+              {t("Preuzmi radni list i vježbaj čitanje i bez ekrana!")}
             </p>
             <Button
               onClick={() => {
@@ -660,16 +665,16 @@ export default function LessonDetail() {
               variant="outline"
               className="w-full text-base py-5 mb-3 border-teal-300 text-teal-700 hover:bg-teal-50"
             >
-              <Download className="w-5 h-5 mr-2" /> Preuzmi radni list (PDF)
+              <Download className="w-5 h-5 mr-2" /> {t("Preuzmi radni list (PDF)")}
             </Button>
             {hasNextLesson && (
               <Button onClick={finishLesson} className="w-full game-button text-lg py-6 mb-3">
-                Sljedeća lekcija →
+                {t("Sljedeća lekcija →")}
               </Button>
             )}
             <Button onClick={() => { setShowFinishModal(false); navigate("/arapsko-pismo"); }}
               variant="outline" className="w-full text-base py-5">
-              Nazad na lekcije
+              {t("Nazad na lekcije")}
             </Button>
           </motion.div>
         </div>
@@ -712,17 +717,17 @@ export default function LessonDetail() {
                 🕌 Mekteb — Arapsko pismo
               </div>
               <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#134e4a", fontFamily: "Nunito, sans-serif", marginTop: "4px" }}>
-                Lekcija {data.orderNum}: {data.title}
+                {t("Lekcija")} {data.orderNum}: {data.title}
               </div>
               <div style={{ fontSize: "0.95rem", color: "#6b7280", fontFamily: "Nunito, sans-serif", marginTop: "4px" }}>
-                Radni list za čitanje — Muallim: ______________________   Datum: ___________
+                {t("Radni list za čitanje — Muallim: ______________________   Datum: ___________")}
               </div>
             </div>
 
             {/* Letters with forms */}
             <div style={{ marginBottom: "20px" }}>
               <div style={{ fontSize: "1rem", fontWeight: 700, fontFamily: "Nunito, sans-serif", color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Harfovi — oblici slova
+                {t("Harfovi — oblici slova")}
               </div>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 {data.letterData.map((ld, i) => (
@@ -758,7 +763,7 @@ export default function LessonDetail() {
 
             {/* Footer */}
             <div style={{ marginTop: "24px", borderTop: "2px solid #e5e7eb", paddingTop: "10px", textAlign: "center", fontFamily: "Nunito, sans-serif", fontSize: "0.8rem", color: "#9ca3af" }}>
-              mekteb.net • Arapsko pismo • {data.title}
+              mekteb.net • {t("Arapsko pismo")} • {data.title}
             </div>
           </div>
         </div>
@@ -768,7 +773,7 @@ export default function LessonDetail() {
       <div className="mb-6">
         <Link href="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
           <ArrowLeft className="w-5 h-5" />
-          Nazad na lekcije
+          {t("Nazad na lekcije")}
         </Link>
       </div>
 
@@ -778,7 +783,7 @@ export default function LessonDetail() {
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
           <div>
             <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wider">
-              Lekcija {data.orderNum}
+              {t("Lekcija")} {data.orderNum}
             </span>
             <h1 className="text-4xl md:text-6xl font-black text-foreground mt-2">{data.title}</h1>
           </div>
@@ -820,7 +825,7 @@ export default function LessonDetail() {
               );
             }
 
-            const label = isDzana ? "Džana" : isOtac ? "Babo" : isMajka ? "Mama" : isMuallim ? "Muallim" : "Amir";
+            const label = isDzana ? t("Džana") : isOtac ? t("Babo") : isMajka ? t("Mama") : isMuallim ? t("Muallim") : t("Amir");
             const labelColor = isDzana ? "text-orange-700" : isOtac ? "text-emerald-700" : isMajka ? "text-rose-700" : isMuallim ? "text-amber-800" : "text-primary";
             const bubbleClass = isDzana
               ? "bg-white text-foreground rounded-2xl rounded-bl-sm border border-orange-100"
@@ -832,14 +837,14 @@ export default function LessonDetail() {
                     ? "bg-amber-50 text-amber-900 rounded-2xl rounded-bl-sm border border-amber-200"
                     : "bg-primary text-white rounded-2xl rounded-br-sm";
             const avatar = isDzana
-              ? <img src={dzanaImg} alt="Džana" className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
+              ? <img src={dzanaImg} alt={t("Džana")} className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />
               : isOtac
                 ? <div className="w-9 h-9 rounded-full bg-emerald-100 border-2 border-emerald-300 shadow-md flex items-center justify-center text-xl shrink-0">👨</div>
                 : isMajka
                   ? <div className="w-9 h-9 rounded-full bg-rose-100 border-2 border-rose-300 shadow-md flex items-center justify-center text-xl shrink-0">🧕</div>
                   : isMuallim
                     ? <div className="w-9 h-9 rounded-full bg-amber-100 border-2 border-amber-400 shadow-md flex items-center justify-center text-xl shrink-0">🧑‍🏫</div>
-                    : <img src={amirImg} alt="Amir" className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
+                    : <img src={amirImg} alt={t("Amir")} className="w-9 h-9 rounded-full border-2 border-white shadow-md object-cover shrink-0" />;
 
             return (
               <div key={i} className="break-inside-avoid mb-3">
@@ -878,7 +883,7 @@ export default function LessonDetail() {
           <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-5">
             <h2 className="text-xl font-extrabold text-teal-800 flex items-center gap-2 mb-4">
               <Volume2 className="w-5 h-5" />
-              Podsjetnik — sva slova
+              {t("Podsjetnik — sva slova")}
             </h2>
             <div className="flex flex-wrap gap-3">
               {data.letterData.map((letter, i) => (
@@ -897,14 +902,14 @@ export default function LessonDetail() {
               ))}
             </div>
             <p className="text-base text-teal-700 mt-4 font-medium">
-              Klikni na svako slovo da čuješ izgovor — pa prijeđi na vježbe!
+              {t("Klikni na svako slovo da čuješ izgovor — pa prijeđi na vježbe!")}
             </p>
           </div>
         ) : (
         <>
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-5">
           <Info className="w-6 h-6 text-primary" />
-          {data.hareketi ? "Upoznajmo slovo i harekete" : "Upoznajmo harfove"}
+          {data.hareketi ? t("Upoznajmo slovo i harekete") : t("Upoznajmo harfove")}
         </h2>
 
         {data.letterData.map((letter, i) => (
@@ -920,11 +925,11 @@ export default function LessonDetail() {
                     <Volume2 className="w-5 h-5" />
                   </button>
                 </div>
-                <p className="text-xl text-muted-foreground font-medium">Izgovor: /{letter.transliteration}/</p>
+                <p className="text-xl text-muted-foreground font-medium">{t("Izgovor:")} /{letter.transliteration}/</p>
                 <p className="text-base text-muted-foreground mt-1 italic">{letter.visualAssociation}</p>
                 {letter.nonConnecting && (
                   <span className="inline-block mt-3 bg-red-100 text-red-700 text-sm font-bold px-3 py-1 rounded-lg uppercase">
-                    Ne spaja se ulijevo
+                    {t("Ne spaja se ulijevo")}
                   </span>
                 )}
               </div>
@@ -933,13 +938,13 @@ export default function LessonDetail() {
               </div>
             </div>
             <div className="bg-muted rounded-xl p-5">
-              <p className="text-base font-bold text-muted-foreground mb-4 text-center uppercase tracking-wider">Oblici slova</p>
+              <p className="text-base font-bold text-muted-foreground mb-4 text-center uppercase tracking-wider">{t("Oblici slova")}</p>
               <div className="grid grid-cols-4 gap-3 text-center" dir="rtl">
                 {[
-                  { form: letter.forms.isolated, label: "Samostalan" },
-                  { form: letter.forms.initial,  label: "Početak" },
-                  { form: letter.forms.medial,   label: "Sredina" },
-                  { form: letter.forms.final,    label: "Kraj" },
+                  { form: letter.forms.isolated, label: t("Samostalan") },
+                  { form: letter.forms.initial,  label: t("Početak") },
+                  { form: letter.forms.medial,   label: t("Sredina") },
+                  { form: letter.forms.final,    label: t("Kraj") },
                 ].map(({ form, label }) => (
                   <div key={label} className="bg-white rounded-xl p-3">
                     <div className="text-5xl font-bold text-foreground mb-2" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
@@ -953,7 +958,7 @@ export default function LessonDetail() {
             {!data.hareketi && !data.isRevision && (
               <div className="mt-5">
                 <p className="text-base font-bold text-muted-foreground mb-3 text-center uppercase tracking-wider">
-                  🔊 Klikni i pročitaj naglas
+                  {t("🔊 Klikni i pročitaj naglas")}
                 </p>
                 <div className="grid grid-cols-3 gap-3" dir="rtl">
                   {[
@@ -994,7 +999,7 @@ export default function LessonDetail() {
           <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-5 mb-2">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-2xl">🧑‍🏫</span>
-              <h3 className="text-lg font-extrabold text-amber-900">Šta je sukun?</h3>
+              <h3 className="text-lg font-extrabold text-amber-900">{t("Šta je sukun?")}</h3>
             </div>
             <p className="text-base font-medium text-amber-900 leading-relaxed mb-4">
               {data.sukunExplainer.sentence}
@@ -1016,7 +1021,7 @@ export default function LessonDetail() {
         {/* Hareketi kartice (samo ako ih ima) */}
         {data.hareketi && data.hareketi.length > 0 && (
           <>
-            <h3 className="text-xl font-bold text-foreground mb-4">{data.hareketiTitle ?? "Hareketi — znakovi za samoglasnike"}</h3>
+            <h3 className="text-xl font-bold text-foreground mb-4">{data.hareketiTitle ?? t("Hareketi — znakovi za samoglasnike")}</h3>
             <div className="grid sm:grid-cols-3 gap-4">
               {data.hareketi.map((h, i) => {
                 const c = COLOUR_MAP[h.colour] ?? COLOUR_MAP.teal;
@@ -1063,7 +1068,7 @@ export default function LessonDetail() {
                             <Volume2 className="w-4 h-4" />
                           </button>
                           <span className={`text-sm font-extrabold px-3 py-1 rounded-full ${c.badge}`}>
-                            glas: {h.sound}
+                            {t("glas:")} {h.sound}
                           </span>
                         </div>
                       </div>
@@ -1082,7 +1087,7 @@ export default function LessonDetail() {
       <div className="mb-12">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-6">
           <Gamepad2 className="w-6 h-6 text-accent" />
-          Vježbe
+          {t("Vježbe")}
         </h2>
         <div className="grid sm:grid-cols-2 gap-6">
           {data.exercises.map((ex, ei) => {
@@ -1097,7 +1102,7 @@ export default function LessonDetail() {
                 </div>
                 {isDone ? (
                   <span className="flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded-full font-bold text-sm shrink-0">
-                    <Check className="w-4 h-4" /> Završeno
+                    <Check className="w-4 h-4" /> {t("Završeno")}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-yellow-600 font-bold text-base shrink-0">
@@ -1111,7 +1116,7 @@ export default function LessonDetail() {
                 <>
                   <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 mb-4 flex items-center gap-5 flex-1">
                     <div className="text-center">
-                      <p className="text-xs font-bold text-indigo-500 uppercase mb-1 tracking-wider">Pronađi</p>
+                      <p className="text-xs font-bold text-indigo-500 uppercase mb-1 tracking-wider">{t("Pronađi")}</p>
                       <span
                         className="text-6xl font-bold text-indigo-800 block leading-none"
                         style={{ fontFamily: "Noto Naskh Arabic, serif" }}
@@ -1129,7 +1134,7 @@ export default function LessonDetail() {
                     </div>
                   </div>
                   <p className="text-center text-base text-muted-foreground mb-4 font-medium">
-                    🔍 Pronađi {ex.targetCount ?? 6} harfova sakrivenih u gridu od 30
+                    {t("🔍 Pronađi {n} harfova sakrivenih u gridu od 30", { n: String(ex.targetCount ?? 6) })}
                   </p>
                   <Button
                     className="w-full game-button text-base py-5"
@@ -1137,7 +1142,7 @@ export default function LessonDetail() {
                     onClick={() => setActivePronadi(ei)}
                   >
                     <Search className="w-5 h-5 mr-2" />
-                    {isDone ? "Igraj ponovo" : "Pronađi harfove"}
+                    {isDone ? t("Igraj ponovo") : t("Pronađi harfove")}
                   </Button>
                 </>
               ) : ex.type === "čitaj-slog" ? (
@@ -1165,14 +1170,14 @@ export default function LessonDetail() {
                     );
                   })()}
                   <div className="text-center text-base text-muted-foreground mb-4 font-medium">
-                    📖 {ex.items.length} slogova — klikni da čuješ izgovor
+                    {t("📖 {n} slogova — klikni da čuješ izgovor", { n: String(ex.items.length) })}
                   </div>
                   <Button
                     className="w-full game-button text-base py-5"
                     size="sm"
                     onClick={() => setActiveReading(ei)}
                   >
-                    <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? "Čitaj ponovo" : "Čitaj slogove"}
+                    <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? t("Čitaj ponovo") : t("Čitaj slogove")}
                   </Button>
                 </>
               ) : (
@@ -1211,14 +1216,14 @@ export default function LessonDetail() {
                     })}
                   </div>
                   <div className="text-center text-sm text-muted-foreground mb-4 font-medium">
-                    + još {ex.items.length - 6} pitanja u igri
+                    {t("+ još {n} pitanja u igri", { n: String(ex.items.length - 6) })}
                   </div>
                   <Button
                     className="w-full game-button text-base py-5"
                     size="sm"
                     onClick={() => setActiveQuiz(ei)}
                   >
-                    <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? "Ponovi vježbu" : "Počni vježbu"}
+                    <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? t("Ponovi vježbu") : t("Počni vježbu")}
                   </Button>
                 </>
               )}
@@ -1243,20 +1248,20 @@ export default function LessonDetail() {
 
           <h3 className={`font-extrabold text-xl mb-2 ${allDone ? "text-green-800" : "text-foreground/70"}`}>
             {allDone
-              ? "Sve vježbe završene! 🎉"
-              : `${completedExercises.size} / ${data.exercises.length} vježbi urađeno`}
+              ? t("Sve vježbe završene! 🎉")
+              : t("{done} / {total} vježbi urađeno", { done: String(completedExercises.size), total: String(data.exercises.length) })}
           </h3>
           <p className={`mb-4 text-base ${allDone ? "text-green-700/80" : "text-muted-foreground"}`}>
             {allDone
-              ? (hasNextLesson ? "Odlično! Spreman za sljedeću lekciju." : "Čestitamo — završio si sve dostupne lekcije!")
-              : "Uradi vježbe da utvrdiš gradivo, ili prijeđi na sljedeću lekciju."}
+              ? (hasNextLesson ? t("Odlično! Spreman za sljedeću lekciju.") : t("Čestitamo — završio si sve dostupne lekcije!"))
+              : t("Uradi vježbe da utvrdiš gradivo, ili prijeđi na sljedeću lekciju.")}
           </p>
           <Button
             size="lg"
             onClick={() => setShowFinishModal(true)}
             className={`w-full text-lg py-6 ${allDone ? "bg-green-600 hover:bg-green-700 text-white game-button" : "game-button"}`}
           >
-            {hasNextLesson ? "Završi i idi na sljedeću lekciju →" : "Završi lekciju ✓"}
+            {hasNextLesson ? t("Završi i idi na sljedeću lekciju →") : t("Završi lekciju ✓")}
           </Button>
         </div>
       </div>

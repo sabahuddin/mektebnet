@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 
 interface KvizRezultat {
   id: number;
@@ -42,6 +43,7 @@ interface ProfilData {
 
 export default function Progress() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [showAllKvizovi, setShowAllKvizovi] = useState(false);
   const [napredak, setNapredak] = useState<NapredakData | null>(null);
@@ -95,8 +97,8 @@ export default function Progress() {
           <UserIcon />
         </div>
         <div>
-          <h1 className="text-3xl font-black text-foreground">Tvoj Profil</h1>
-          <p className="text-muted-foreground font-medium">Prati svoj napredak i skupljaj nagrade!</p>
+          <h1 className="text-3xl font-black text-foreground">{t("Tvoj Profil")}</h1>
+          <p className="text-muted-foreground font-medium">{t("Prati svoj napredak i skupljaj nagrade!")}</p>
         </div>
       </div>
 
@@ -108,7 +110,7 @@ export default function Progress() {
               <Star className="w-8 h-8 fill-current" />
             </div>
             <div>
-              <p className="text-sm font-bold uppercase tracking-wider text-yellow-800/70">Ukupno kapi meda 🍯</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-yellow-800/70">{t("Ukupno kapi meda 🍯")}</p>
               <p className="text-4xl font-black text-yellow-600">{napredak?.totalHasanat || 0}</p>
             </div>
           </Card>
@@ -120,8 +122,8 @@ export default function Progress() {
               <Flame className="w-8 h-8 fill-current" />
             </div>
             <div>
-              <p className="text-sm font-bold uppercase tracking-wider text-orange-800/70">Vatreni Niz</p>
-              <p className="text-4xl font-black text-orange-600">{napredak?.streakDays || 0} <span className="text-xl">dana</span></p>
+              <p className="text-sm font-bold uppercase tracking-wider text-orange-800/70">{t("Vatreni Niz")}</p>
+              <p className="text-4xl font-black text-orange-600">{napredak?.streakDays || 0} <span className="text-xl">{t("dana")}</span></p>
             </div>
           </Card>
         </motion.div>
@@ -132,7 +134,7 @@ export default function Progress() {
               <BookOpen className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-sm font-bold uppercase tracking-wider text-teal-800/70">Završeno Lekcija</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-teal-800/70">{t("Završeno Lekcija")}</p>
               <p className="text-4xl font-black text-teal-600">{napredak?.completedCount || 0}</p>
             </div>
           </Card>
@@ -144,9 +146,9 @@ export default function Progress() {
         <motion.div initial={{y:20, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:0.4}} className="mb-12">
           <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-primary" />
-            Tvoji Kvizovi
+            {t("Tvoji Kvizovi")}
             <span className="ml-auto text-base font-medium text-muted-foreground">
-              Prosjek: <span className={`font-bold ${avgProcenat >= 80 ? "text-emerald-600" : avgProcenat >= 50 ? "text-amber-600" : "text-red-500"}`}>{avgProcenat}%</span>
+              {t("Prosjek:")} <span className={`font-bold ${avgProcenat >= 80 ? "text-emerald-600" : avgProcenat >= 50 ? "text-amber-600" : "text-red-500"}`}>{avgProcenat}%</span>
             </span>
           </h2>
           <Card className="overflow-hidden">
@@ -160,8 +162,8 @@ export default function Progress() {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-foreground truncate">{r.kvizNaslov}</p>
                     <p className="text-sm text-muted-foreground">
-                      {r.tacniOdgovori}/{r.ukupnoPitanja} tačnih
-                      {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} kapi meda 🍯</span>}
+                      {r.tacniOdgovori}/{r.ukupnoPitanja} {t("tačnih")}
+                      {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">{t("+{bodovi} kapi meda 🍯", { bodovi: String(r.bodovi) })}</span>}
                     </p>
                   </div>
                   <div className="text-sm text-muted-foreground shrink-0">
@@ -173,7 +175,7 @@ export default function Progress() {
             {kvizRezultati.length > 5 && (
               <button onClick={() => setShowAllKvizovi(!showAllKvizovi)}
                 className="w-full py-3 text-sm font-bold text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1">
-                {showAllKvizovi ? (<>Prikaži manje <ChevronUp className="w-4 h-4" /></>) : (<>Prikaži sve ({kvizRezultati.length}) <ChevronDown className="w-4 h-4" /></>)}
+                {showAllKvizovi ? (<>{t("Prikaži manje")} <ChevronUp className="w-4 h-4" /></>) : (<>{t("Prikaži sve ({n})", { n: String(kvizRezultati.length) })} <ChevronDown className="w-4 h-4" /></>)}
               </button>
             )}
           </Card>
@@ -183,7 +185,7 @@ export default function Progress() {
       {/* Badges Section */}
       <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
         <Award className="w-6 h-6 text-primary" />
-        Kolekcija Bedževa
+        {t("Kolekcija Bedževa")}
         {profilStatus === "ready" && bedzevi.length > 0 && (
           <span className="ml-auto text-base font-medium text-muted-foreground">
             <span className="font-bold text-primary">{bedzevi.filter(b => b.earned).length}</span>
@@ -195,9 +197,9 @@ export default function Progress() {
       {profilStatus === "error" || bedzevi.length === 0 ? (
         <Card className="p-8 text-center bg-muted/30 border-dashed">
           <Award className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="font-bold text-foreground mb-1">Nije moguće učitati bedževe</p>
+          <p className="font-bold text-foreground mb-1">{t("Nije moguće učitati bedževe")}</p>
           <p className="text-sm text-muted-foreground">
-            Pokušaj ponovo kasnije ili osvježi stranicu.
+            {t("Pokušaj ponovo kasnije ili osvježi stranicu.")}
           </p>
         </Card>
       ) : (() => {
@@ -225,11 +227,11 @@ export default function Progress() {
                 <p className="text-xs text-muted-foreground mt-auto">{badge.opis}</p>
                 {!isEarned && (
                   <div className="w-full mt-2 space-y-1.5">
-                    <p className="text-[10px] text-muted-foreground/80 italic">Uslov: {badge.uslov}</p>
+                    <p className="text-[10px] text-muted-foreground/80 italic">{t("Uslov:")} {badge.uslov}</p>
                     {badge.progress && badge.progress.target > 0 && (
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-[10px] font-bold">
-                          <span className="text-muted-foreground">Napredak</span>
+                          <span className="text-muted-foreground">{t("Napredak")}</span>
                           <span className="text-foreground/80 tabular-nums">
                             {badge.progress.current} / {badge.progress.target}
                           </span>
@@ -255,7 +257,7 @@ export default function Progress() {
             {earnedBedzevi.length > 0 && (
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-primary mb-3">
-                  Osvojeni ({earnedBedzevi.length})
+                  {t("Osvojeni ({n})", { n: String(earnedBedzevi.length) })}
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {earnedBedzevi.map((badge, i) => renderBadge(badge, i))}
@@ -265,7 +267,7 @@ export default function Progress() {
             {lockedBedzevi.length > 0 && (
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                  Još za osvojiti ({lockedBedzevi.length})
+                  {t("Još za osvojiti ({n})", { n: String(lockedBedzevi.length) })}
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {lockedBedzevi.map((badge, i) => renderBadge(badge, i))}

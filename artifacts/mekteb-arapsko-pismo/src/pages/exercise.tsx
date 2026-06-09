@@ -8,12 +8,14 @@ import { X, Star, Timer, AlertCircle, CheckCircle2, Volume2, Gamepad2 } from "lu
 import { Button } from "@/components/ui/button";
 import { Maskota } from "@/components/maskota";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
+import { useLanguage } from "@/context/language";
 
 // Utilities for generating game data
 const ALL_LETTERS = ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش"];
 const DOT_COUNTS: Record<string, number> = { "ا":0, "ب":1, "ت":2, "ث":3, "ج":1, "ح":0, "خ":1 };
 
 export default function Exercise() {
+  const { t } = useLanguage();
   const { id, type } = useParams();
   const [, setLocation] = useLocation();
   const lessonId = parseInt(id || "1", 10);
@@ -35,7 +37,7 @@ export default function Exercise() {
   const gameStateRef = useRef<'intro' | 'playing' | 'completed'>('intro');
 
   // Dynamic config based on type
-  const config = lesson?.exercises.find(e => e.type === type) || { rounds: 5, hasanatReward: 10, title: "Vježba", timeLimit: 60 };
+  const config = lesson?.exercises.find(e => e.type === type) || { rounds: 5, hasanatReward: 10, title: t("Vježba"), timeLimit: 60 };
   const totalRounds = config.rounds;
 
   // Snapshot of values needed by the unmount/unload save handler. Refs let us
@@ -220,7 +222,7 @@ export default function Exercise() {
 
     return (
       <div className="flex flex-col items-center">
-        <h2 className="text-2xl font-bold mb-6 text-center">Pronađi slovo: <span className="font-arabic text-4xl text-primary mx-2">{target}</span></h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">{t("Pronađi slovo:")} <span className="font-arabic text-4xl text-primary mx-2">{target}</span></h2>
         <div className="grid grid-cols-3 md:grid-cols-4 gap-4 w-full max-w-2xl">
           {grid.map((letter, i) => (
             <button
@@ -242,7 +244,7 @@ export default function Exercise() {
 
     return (
       <div className="flex flex-col items-center">
-        <h2 className="text-2xl font-bold mb-8 text-center">Koliko tačaka ima ovo slovo?</h2>
+        <h2 className="text-2xl font-bold mb-8 text-center">{t("Koliko tačaka ima ovo slovo?")}</h2>
         <div className="text-9xl font-arabic text-primary mb-12 drop-shadow-md">{target}</div>
         <div className="flex gap-4">
           {[0, 1, 2, 3].map(num => (
@@ -266,7 +268,7 @@ export default function Exercise() {
 
     return (
       <div className="flex flex-col items-center">
-        <h2 className="text-2xl font-bold mb-8 text-center">Da li je ovo slovo <span className="text-primary font-black uppercase">{targetLetter === "ت" ? "TA" : targetLetter}</span>?</h2>
+        <h2 className="text-2xl font-bold mb-8 text-center">{t("Da li je ovo slovo")} <span className="text-primary font-black uppercase">{targetLetter === "ت" ? "TA" : targetLetter}</span>?</h2>
         <div className="text-9xl font-arabic text-foreground mb-12 drop-shadow-md">{displayLetter}</div>
         <div className="flex gap-6 w-full max-w-md">
           <button onClick={() => handleAnswer(isActuallyCorrect)} className="flex-1 py-6 bg-green-500 rounded-2xl shadow-lg border-b-4 border-green-700 text-white text-3xl font-black hover:bg-green-400 active:translate-y-1 active:border-b-0 transition-all">DA</button>
@@ -282,7 +284,7 @@ export default function Exercise() {
 
     return (
       <div className="flex flex-col items-center">
-        <h2 className="text-2xl font-bold mb-8 text-center">Poslušaj i odaberi tačno slovo</h2>
+        <h2 className="text-2xl font-bold mb-8 text-center">{t("Poslušaj i odaberi tačno slovo")}</h2>
         
         <button className="w-32 h-32 bg-primary rounded-full shadow-lg border-b-8 border-primary-foreground/30 flex items-center justify-center text-white hover:brightness-110 active:translate-y-2 active:border-b-0 transition-all mb-12 animate-pulse">
           <Volume2 className="w-16 h-16" />
@@ -340,7 +342,7 @@ export default function Exercise() {
         {gameState === 'playing' && (
           <div className="flex items-center gap-6 bg-white/80 backdrop-blur px-6 py-3 rounded-full shadow-sm font-bold border border-white">
             <div className="flex items-center gap-2 text-primary">
-              <span className="text-muted-foreground uppercase text-xs tracking-wider">Runda</span>
+              <span className="text-muted-foreground uppercase text-xs tracking-wider">{t("Runda")}</span>
               <span className="text-xl">{round + 1}/{totalRounds}</span>
             </div>
             {config.timeLimit && (
@@ -371,9 +373,9 @@ export default function Exercise() {
                 <Gamepad2 className="w-10 h-10" />
               </div>
               <h1 className="text-3xl font-black mb-4 text-foreground">{config.title}</h1>
-              <p className="text-lg text-muted-foreground font-medium mb-8">Pripremi se! Igra traje {config.timeLimit} sekundi. Pokušaj osvojiti maksimalan broj poena.</p>
+              <p className="text-lg text-muted-foreground font-medium mb-8">{t("Pripremi se! Igra traje {sekundi} sekundi. Pokušaj osvojiti maksimalan broj poena.", { sekundi: String(config.timeLimit) })}</p>
               <Button size="lg" className="w-full text-xl py-8 rounded-2xl game-button shadow-lg shadow-primary/30" onClick={() => setGameState('playing')}>
-                ZAPOČNI IGRU
+                {t("ZAPOČNI IGRU")}
               </Button>
             </motion.div>
           )}
@@ -419,11 +421,11 @@ export default function Exercise() {
                   </motion.div>
                 );
               })()}
-              <h1 className="text-3xl font-black mb-2 text-foreground">Kraj igre!</h1>
-              <p className="text-xl font-bold text-muted-foreground mb-8">Tvoj rezultat: <span className="text-primary text-3xl mx-2">{score}/{totalRounds}</span></p>
+              <h1 className="text-3xl font-black mb-2 text-foreground">{t("Kraj igre!")}</h1>
+              <p className="text-xl font-bold text-muted-foreground mb-8">{t("Tvoj rezultat:")} <span className="text-primary text-3xl mx-2">{score}/{totalRounds}</span></p>
               
               <div className="bg-yellow-50 rounded-2xl p-6 mb-8 border border-yellow-200 flex flex-col items-center">
-                <span className="text-sm font-bold uppercase tracking-wider text-yellow-800 mb-2">Osvojio si</span>
+                <span className="text-sm font-bold uppercase tracking-wider text-yellow-800 mb-2">{t("Osvojio si")}</span>
                 <div className="flex items-center justify-center gap-3 text-4xl font-black text-yellow-600">
                   <Star className="w-8 h-8 fill-current" />
                   +{Math.round((score / totalRounds) * config.hasanatReward)}
@@ -436,7 +438,7 @@ export default function Exercise() {
                 disabled={isSaving}
                 onClick={() => setLocation(`/lesson/${lessonId}`)}
               >
-                {isSaving ? "Spremanje..." : "Nazad na lekciju"}
+                {isSaving ? t("Spremanje...") : t("Nazad na lekciju")}
               </Button>
             </motion.div>
           )}

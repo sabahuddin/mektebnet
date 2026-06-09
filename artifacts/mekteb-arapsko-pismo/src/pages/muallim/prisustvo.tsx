@@ -8,6 +8,7 @@ import { ArrowLeft, CalendarCheck, Check, X, Clock, AlertCircle, Save, Loader2 }
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 
 type Status = "prisutan" | "odsutan" | "zakasnio" | "opravdan";
 
@@ -45,6 +46,7 @@ export default function PrisustvoPage() {
   const [, setLocation] = useLocation();
   const { token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [grupa, setGrupa] = useState<Grupa | null>(null);
   const [ucenici, setUcenici] = useState<Ucenik[]>([]);
   const [datum, setDatum] = useState(todayStr());
@@ -95,9 +97,9 @@ export default function PrisustvoPage() {
         napomena: napomene[u.id] || null,
       }));
       await apiRequest("POST", "/muallim/prisustvo", { grupaId: parseInt(grupaId), datum, prisustvo: prisustvoData }, token);
-      toast({ title: "Prisustvo sačuvano!", description: `Evidentirano za ${datum}` });
+      toast({ title: t("Prisustvo sačuvano!"), description: t("Evidentirano za {datum}", { datum }) });
     } catch {
-      toast({ title: "Greška", description: "Nije moguće sačuvati prisustvo", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće sačuvati prisustvo"), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -110,7 +112,7 @@ export default function PrisustvoPage() {
     <Layout>
       <div className="max-w-3xl mx-auto">
         <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Nazad na panel
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
 
         <div className="flex items-center gap-4 mb-6">
@@ -119,7 +121,7 @@ export default function PrisustvoPage() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-foreground">
-              {grupa ? `Prisustvo — ${grupa.naziv}` : "Prisustvo"}
+              {grupa ? t("Prisustvo — {naziv}", { naziv: grupa.naziv }) : t("Prisustvo")}
             </h1>
             <p className="text-muted-foreground text-sm">{grupa?.skolskaGodina}</p>
           </div>
@@ -127,7 +129,7 @@ export default function PrisustvoPage() {
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">Datum</label>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">{t("Datum")}</label>
             <input
               type="date"
               value={datum}
@@ -137,8 +139,8 @@ export default function PrisustvoPage() {
           </div>
           {ucenici.length > 0 && (
             <div className="flex gap-4 text-sm font-bold">
-              <span className="text-emerald-600">✓ {prisutnih} prisutnih</span>
-              <span className="text-red-600">✗ {odsutnih} odsutnih</span>
+              <span className="text-emerald-600">✓ {t("{n} prisutnih", { n: String(prisutnih) })}</span>
+              <span className="text-red-600">✗ {t("{n} odsutnih", { n: String(odsutnih) })}</span>
             </div>
           )}
         </div>
@@ -147,8 +149,8 @@ export default function PrisustvoPage() {
           <div className="flex flex-col gap-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
         ) : ucenici.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-border/50 text-muted-foreground">
-            <p className="font-bold text-foreground mb-1">Nema učenika u ovoj grupi</p>
-            <p className="text-sm">Dodaj učenike i rasporedi ih u grupu</p>
+            <p className="font-bold text-foreground mb-1">{t("Nema učenika u ovoj grupi")}</p>
+            <p className="text-sm">{t("Dodaj učenike i rasporedi ih u grupu")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -182,7 +184,7 @@ export default function PrisustvoPage() {
                     <div className="mt-3">
                       <input
                         type="text"
-                        placeholder="Napomena (opcionalno)"
+                        placeholder={t("Napomena (opcionalno)")}
                         value={napomene[u.id] || ""}
                         onChange={e => setNapomene(prev => ({ ...prev, [u.id]: e.target.value }))}
                         className="w-full border border-border rounded-xl px-3 py-2 text-sm text-foreground bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -196,7 +198,7 @@ export default function PrisustvoPage() {
             <div className="flex justify-end mt-4">
               <Button onClick={handleSave} disabled={isSaving} className="rounded-xl font-bold px-8 flex items-center gap-2">
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Sačuvaj prisustvo
+                {t("Sačuvaj prisustvo")}
               </Button>
             </div>
           </div>

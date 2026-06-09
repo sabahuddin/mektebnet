@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import {
   ArrowLeft, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Library
 } from "lucide-react";
@@ -105,6 +106,7 @@ function extractPages(html: string): string[] {
 }
 
 export default function CitaonicaKnjigaPage() {
+  const { t } = useLanguage();
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
@@ -173,8 +175,8 @@ export default function CitaonicaKnjigaPage() {
       <Layout>
         <div className="text-center py-20">
           <Library className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-          <p className="text-muted-foreground font-medium">Knjiga nije pronađena</p>
-          <Button className="mt-4" onClick={() => setLocation("/citaonica")}>Na Čitaonicu</Button>
+          <p className="text-muted-foreground font-medium">{t("Knjiga nije pronađena")}</p>
+          <Button className="mt-4" onClick={() => setLocation("/citaonica")}>{t("Na Čitaonicu")}</Button>
         </div>
       </Layout>
     );
@@ -191,7 +193,7 @@ export default function CitaonicaKnjigaPage() {
           onClick={() => setLocation("/citaonica")}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-base transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10 mb-6"
         >
-          <ArrowLeft className="w-4 h-4" /> Čitaonica
+          <ArrowLeft className="w-4 h-4" /> {t("Čitaonica")}
         </button>
 
         {/* Naslov + progress */}
@@ -205,7 +207,7 @@ export default function CitaonicaKnjigaPage() {
               ? "text-violet-700 bg-violet-50 border-violet-200"
               : "text-teal-700 bg-teal-50 border-teal-200"
           }`}>
-            {isPrica ? "Priča o poslaniku" : "Knjiga"}
+            {isPrica ? t("Priča o poslaniku") : t("Knjiga")}
           </span>
 
           <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight px-4 mb-3">
@@ -216,7 +218,7 @@ export default function CitaonicaKnjigaPage() {
           {totalPages > 1 && (
             <div className="flex flex-col items-center gap-2">
               <p className="text-base text-muted-foreground font-semibold">
-                Stranica {page + 1} od {totalPages} &mdash; <span className={isPrica ? "text-violet-600" : "text-teal-600"}>{progressPct}% pročitano</span>
+                {t("Stranica {trenutna} od {ukupno}", { trenutna: String(page + 1), ukupno: String(totalPages) })} &mdash; <span className={isPrica ? "text-violet-600" : "text-teal-600"}>{t("{pct}% pročitano", { pct: String(progressPct) })}</span>
               </p>
               <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
                 <motion.div
@@ -271,7 +273,7 @@ export default function CitaonicaKnjigaPage() {
                     : "border-teal-300 text-teal-700 hover:bg-teal-50 bg-white"
               }`}
             >
-              <ChevronLeft className="w-5 h-5" /> Prethodna
+              <ChevronLeft className="w-5 h-5" /> {t("Prethodna")}
             </button>
 
             <span className="text-base font-bold text-muted-foreground min-w-[80px] text-center">
@@ -289,7 +291,7 @@ export default function CitaonicaKnjigaPage() {
                     : "border-teal-300 text-teal-700 hover:bg-teal-50 bg-white"
               }`}
             >
-              Sljedeća <ChevronRight className="w-5 h-5" />
+              {t("Sljedeća")} <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         )}
@@ -298,7 +300,7 @@ export default function CitaonicaKnjigaPage() {
         <div className="flex flex-wrap items-center gap-3 justify-center mb-8">
           {knjiga.kvizSlug && (
             <Button variant="outline" onClick={() => setLocation(`/kvizovi/${knjiga.kvizSlug}`)} className="rounded-2xl font-bold text-base px-6 py-5">
-              📝 Riješi kviz
+              {t("📝 Riješi kviz")}
             </Button>
           )}
           {user && (
@@ -308,8 +310,8 @@ export default function CitaonicaKnjigaPage() {
               className={`rounded-2xl px-7 font-bold text-base py-5 ${completed ? "bg-emerald-500 hover:bg-emerald-500" : ""}`}
             >
               {completed
-                ? <><CheckCircle2 className="w-4 h-4 mr-2" /> Pročitano!</>
-                : <><BookOpen className="w-4 h-4 mr-2" /> Označi kao pročitano</>}
+                ? <><CheckCircle2 className="w-4 h-4 mr-2" /> {t("Pročitano!")}</>
+                : <><BookOpen className="w-4 h-4 mr-2" /> {t("Označi kao pročitano")}</>}
             </Button>
           )}
         </div>
@@ -324,7 +326,7 @@ export default function CitaonicaKnjigaPage() {
                   className="group w-full flex flex-col gap-1 p-4 bg-white rounded-2xl border border-border/50 hover:border-violet-300 hover:shadow-sm transition-all text-left"
                 >
                   <span className="flex items-center gap-1 text-sm text-muted-foreground font-bold uppercase tracking-wide">
-                    <ChevronLeft className="w-3.5 h-3.5" /> Prethodna
+                    <ChevronLeft className="w-3.5 h-3.5" /> {t("Prethodna")}
                   </span>
                   <span className="text-base font-bold text-foreground leading-snug group-hover:text-violet-700 transition-colors line-clamp-2">
                     {prevKnjiga.naslov}
@@ -339,7 +341,7 @@ export default function CitaonicaKnjigaPage() {
                   className="group w-full flex flex-col gap-1 p-4 bg-white rounded-2xl border border-border/50 hover:border-violet-300 hover:shadow-sm transition-all text-right"
                 >
                   <span className="flex items-center gap-1 justify-end text-sm text-muted-foreground font-bold uppercase tracking-wide">
-                    Sljedeća <ChevronRight className="w-3.5 h-3.5" />
+                    {t("Sljedeća")} <ChevronRight className="w-3.5 h-3.5" />
                   </span>
                   <span className="text-base font-bold text-foreground leading-snug group-hover:text-violet-700 transition-colors line-clamp-2">
                     {nextKnjiga.naslov}

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { useLanguage } from "@/context/language";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Search, ChevronLeft } from "lucide-react";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/lib/quran";
 
 export default function KuranPage() {
+  const { t } = useLanguage();
   const [sure, setSure] = useState<SurahMeta[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function KuranPage() {
   useEffect(() => {
     fetchSurahList()
       .then(setSure)
-      .catch((e) => setError(e?.message || "Greška pri učitavanju."))
+      .catch((e) => setError(e?.message || t("Greška pri učitavanju.")))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -49,7 +51,7 @@ export default function KuranPage() {
                 <BookOpen className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black leading-tight">Kur'an Časni</h1>
+                <h1 className="text-2xl sm:text-3xl font-black leading-tight">{t("Kur'an Časni")}</h1>
               </div>
             </div>
           </div>
@@ -69,7 +71,7 @@ export default function KuranPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Traži suru (npr. El-Bekara, Ja-Sin, 36...)"
+              placeholder={t("Traži suru (npr. El-Bekara, Ja-Sin, 36...)")}
               className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border bg-white text-foreground font-semibold placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
               data-testid="input-trazi-suru"
             />
@@ -80,7 +82,7 @@ export default function KuranPage() {
             data-testid="link-mushaf-stranice"
           >
             <BookOpen className="w-4 h-4 text-primary" />
-            Po stranici (Mushaf)
+            {t("Po stranici (Mushaf)")}
           </Link>
         </div>
 
@@ -131,7 +133,7 @@ export default function KuranPage() {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-semibold mt-0.5">
                       <span>{revelationLabel(s.revelationType)}</span>
                       <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
-                      <span>{s.numberOfAyahs} ajeta</span>
+                      <span>{t("{n} ajeta", { n: String(s.numberOfAyahs) })}</span>
                     </div>
                   </div>
                 </Link>
@@ -146,7 +148,7 @@ export default function KuranPage() {
             className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Početna
+            {t("Početna")}
           </Link>
         </div>
       </div>

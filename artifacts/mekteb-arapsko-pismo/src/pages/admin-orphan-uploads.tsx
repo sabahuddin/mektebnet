@@ -5,6 +5,7 @@ import { useAuth } from "@/context/auth";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, Search, Loader2, Check, ImageIcon, Trash2 } from "lucide-react";
 
 interface OrphanFile {
@@ -54,6 +55,7 @@ export default function AdminOrphanUploadsPage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const apiBase = getApiBase();
 
   const [data, setData] = useState<OrphanResponse | null>(null);
@@ -80,7 +82,7 @@ export default function AdminOrphanUploadsPage() {
       const d = await apiRequest<OrphanResponse>("GET", "/admin/orphan-uploads", undefined, token);
       setData(d);
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće učitati slike", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće učitati slike"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -102,12 +104,12 @@ export default function AdminOrphanUploadsPage() {
   const handleInsert = async (file: OrphanFile) => {
     const lekcijaId = selections[file.name];
     if (!lekcijaId) {
-      toast({ title: "Izaberi lekciju", description: "Prvo izaberi lekciju iz dropdown-a", variant: "destructive" });
+      toast({ title: t("Izaberi lekciju"), description: t("Prvo izaberi lekciju iz dropdown-a"), variant: "destructive" });
       return;
     }
     if (!token) return;
     if (busyLekcijaIds.has(lekcijaId)) {
-      toast({ title: "Sačekaj", description: "Drugi upload za istu lekciju je u toku.", variant: "destructive" });
+      toast({ title: t("Sačekaj"), description: t("Drugi upload za istu lekciju je u toku."), variant: "destructive" });
       return;
     }
     try {
@@ -120,13 +122,13 @@ export default function AdminOrphanUploadsPage() {
         token,
       );
       if (r.alreadyPresent) {
-        toast({ title: "Već postoji", description: `Slika je već u lekciji "${r.lekcija.slug}"` });
+        toast({ title: t("Već postoji"), description: t(`Slika je već u lekciji "{slug}"`, { slug: r.lekcija.slug }) });
       } else {
-        toast({ title: "Dodano", description: `Slika ubačena u "${r.lekcija.naslov || r.lekcija.slug}"` });
+        toast({ title: t("Dodano"), description: t(`Slika ubačena u "{naslov}"`, { naslov: r.lekcija.naslov || r.lekcija.slug }) });
       }
       setDoneFor(prev => new Set(prev).add(file.name));
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće ubaciti sliku", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće ubaciti sliku"), variant: "destructive" });
     } finally {
       setInsertingFor(null);
       setBusyLekcijaIds(prev => {
@@ -144,21 +146,21 @@ export default function AdminOrphanUploadsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center gap-3 mb-6">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/admin")}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Nazad
+            <ArrowLeft className="w-4 h-4 mr-2" /> {t("Nazad")}
           </Button>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
-            Slike koje nisu povezane sa lekcijama
+            {t("Slike koje nisu povezane sa lekcijama")}
           </h1>
         </div>
 
         <p className="text-sm text-muted-foreground mb-6 max-w-3xl">
-          Ovdje su sve slike koje su uploadovane u <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">/uploads/</code> ali se trenutno ne koriste ni u jednoj lekciji.
-          Izaberi lekciju iz dropdown-a i klikni <strong>Ubaci u lekciju</strong> — slika će biti dodana na vrh sadržaja.
+          {t("Ovdje su sve slike koje su uploadovane u")} <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">/uploads/</code> {t("ali se trenutno ne koriste ni u jednoj lekciji.")}
+          {" "}{t("Izaberi lekciju iz dropdown-a i klikni")} <strong>{t("Ubaci u lekciju")}</strong> {t("— slika će biti dodana na vrh sadržaja.")}
         </p>
 
         {loading && (
           <div className="flex items-center gap-2 text-muted-foreground py-12 justify-center">
-            <Loader2 className="w-5 h-5 animate-spin" /> Učitavanje…
+            <Loader2 className="w-5 h-5 animate-spin" /> {t("Učitavanje…")}
           </div>
         )}
 
@@ -166,19 +168,19 @@ export default function AdminOrphanUploadsPage() {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               <div className="bg-white border border-border/50 rounded-xl p-4">
-                <div className="text-xs text-muted-foreground">Ukupno na disku</div>
+                <div className="text-xs text-muted-foreground">{t("Ukupno na disku")}</div>
                 <div className="text-2xl font-bold">{data.stats.diskCount}</div>
               </div>
               <div className="bg-white border border-border/50 rounded-xl p-4">
-                <div className="text-xs text-muted-foreground">U upotrebi</div>
+                <div className="text-xs text-muted-foreground">{t("U upotrebi")}</div>
                 <div className="text-2xl font-bold text-green-700">{data.stats.usedCount}</div>
               </div>
               <div className="bg-white border border-border/50 rounded-xl p-4">
-                <div className="text-xs text-muted-foreground">Bez veze (orphan)</div>
+                <div className="text-xs text-muted-foreground">{t("Bez veze (orphan)")}</div>
                 <div className="text-2xl font-bold text-amber-700">{data.stats.orphanCount}</div>
               </div>
               <div className="bg-white border border-border/50 rounded-xl p-4">
-                <div className="text-xs text-muted-foreground">Nedostaju na disku</div>
+                <div className="text-xs text-muted-foreground">{t("Nedostaju na disku")}</div>
                 <div className="text-2xl font-bold text-red-700">{data.stats.missingCount}</div>
               </div>
             </div>
@@ -190,20 +192,20 @@ export default function AdminOrphanUploadsPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Pretraži po imenu fajla…"
+                  placeholder={t("Pretraži po imenu fajla…")}
                   className="w-full pl-10 pr-3 py-2 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground whitespace-nowrap">Gdje ubaciti:</span>
+                <span className="text-muted-foreground whitespace-nowrap">{t("Gdje ubaciti:")}</span>
                 <select
                   value={mode}
                   onChange={(e) => setMode(e.target.value as "section-top" | "section-bottom" | "hero")}
                   className="px-3 py-1.5 rounded-lg border border-border/50 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
-                  <option value="section-top">U prvu sekciju (vrh)</option>
-                  <option value="section-bottom">U posljednju sekciju (dno)</option>
-                  <option value="hero">Hero slika (zamijeni)</option>
+                  <option value="section-top">{t("U prvu sekciju (vrh)")}</option>
+                  <option value="section-bottom">{t("U posljednju sekciju (dno)")}</option>
+                  <option value="hero">{t("Hero slika (zamijeni)")}</option>
                 </select>
               </div>
             </div>
@@ -211,7 +213,7 @@ export default function AdminOrphanUploadsPage() {
             {filteredOrphans.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground bg-white border border-border/50 rounded-2xl">
                 <ImageIcon className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                {search ? "Nema rezultata za pretragu." : "Sve slike su povezane sa lekcijama."}
+                {search ? t("Nema rezultata za pretragu.") : t("Sve slike su povezane sa lekcijama.")}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -254,7 +256,7 @@ export default function AdminOrphanUploadsPage() {
                           disabled={isDone}
                           className="text-sm border border-border/50 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50"
                         >
-                          <option value="">— izaberi lekciju —</option>
+                          <option value="">{t("— izaberi lekciju —")}</option>
                           {filteredLekcije.map(l => (
                             <option key={l.id} value={l.id}>
                               [{NIVO_LABEL[l.nivo] || `N${l.nivo}`}] {l.naslov}
@@ -268,13 +270,13 @@ export default function AdminOrphanUploadsPage() {
                           className="bg-teal-600 hover:bg-teal-700 text-white"
                         >
                           {isInserting ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Ubacujem…</>
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Ubacujem…")}</>
                           ) : isDone ? (
-                            <><Check className="w-4 h-4 mr-2" /> Ubačeno</>
+                            <><Check className="w-4 h-4 mr-2" /> {t("Ubačeno")}</>
                           ) : isLekcijaBusy ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Lekcija zauzeta…</>
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Lekcija zauzeta…")}</>
                           ) : (
-                            "Ubaci u lekciju"
+                            t("Ubaci u lekciju")
                           )}
                         </Button>
                       </div>

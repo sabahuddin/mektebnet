@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { RjecnikContent } from "@/components/rjecnik-content";
 import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
@@ -131,6 +132,7 @@ function LekcijeStrip({ lekcije, currentSlug, completedIds, onNavigate }: {
   completedIds: Set<number>;
   onNavigate: (slug: string) => void;
 }) {
+  const { t } = useLanguage();
   const stripRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
   const currentIdx = lekcije.findIndex(l => l.slug === currentSlug);
@@ -168,7 +170,7 @@ function LekcijeStrip({ lekcije, currentSlug, completedIds, onNavigate }: {
                 key={l.id}
                 ref={isActive ? activeRef : undefined}
                 onClick={() => onNavigate(l.slug)}
-                title={`${l.naslov}${isDone ? " ✓" : isNext ? " (sljedeća)" : ""}`}
+                title={`${l.naslov}${isDone ? " ✓" : isNext ? ` (${t("sljedeća")})` : ""}`}
                 className={`relative shrink-0 flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-xs font-bold transition-all min-w-[2.5rem]
                   ${isActive
                     ? "bg-teal-500 text-white shadow-md shadow-teal-200 scale-105"
@@ -219,6 +221,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   onSaved: (html: string) => void;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [html, setHtml] = useState(lekcija.contentHtml);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -246,19 +249,19 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
         saveHtml = (window as any).__wysiwygGetFullHtml();
       }
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: saveHtml }, token);
-      toast({ title: "Sačuvano! ✓", description: "Sadržaj lekcije uspješno ažuriran" });
+      toast({ title: t("Sačuvano! ✓"), description: t("Sadržaj lekcije uspješno ažuriran") });
       setIsDirty(false);
       onSaved(saveHtml);
       onClose();
     } catch {
-      toast({ title: "Greška pri čuvanju", description: "Pokušaj ponovo", variant: "destructive" });
+      toast({ title: t("Greška pri čuvanju"), description: t("Pokušaj ponovo"), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleClose = () => {
-    if (isDirty && !window.confirm("Ima nesačuvanih promjena. Zatvori bez čuvanja?")) return;
+    if (isDirty && !window.confirm(t("Ima nesačuvanih promjena. Zatvori bez čuvanja?"))) return;
     onClose();
   };
 
@@ -266,9 +269,9 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <div className="flex md:hidden flex-col items-center justify-center h-full gap-4 p-8 text-center">
         <FilePen className="w-12 h-12 text-amber-500" />
-        <h3 className="font-extrabold text-lg text-foreground">Editor dostupan samo na desktopu</h3>
-        <p className="text-muted-foreground text-sm">Otvori stranicu na računaru da bi mogao/la uređivati sadržaj lekcije.</p>
-        <Button variant="outline" onClick={onClose} className="rounded-xl">Zatvori</Button>
+        <h3 className="font-extrabold text-lg text-foreground">{t("Editor dostupan samo na desktopu")}</h3>
+        <p className="text-muted-foreground text-sm">{t("Otvori stranicu na računaru da bi mogao/la uređivati sadržaj lekcije.")}</p>
+        <Button variant="outline" onClick={onClose} className="rounded-xl">{t("Zatvori")}</Button>
       </div>
 
       <div className="hidden md:flex flex-col h-full">
@@ -276,9 +279,9 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
           <div className="flex items-center gap-3 min-w-0">
             <FilePen className="w-5 h-5 text-amber-600 shrink-0" />
             <div className="min-w-0">
-              <h3 className="font-extrabold text-sm text-foreground truncate">Uredi sadržaj: {lekcija.naslov}</h3>
+              <h3 className="font-extrabold text-sm text-foreground truncate">{t("Uredi sadržaj:")} {lekcija.naslov}</h3>
               <p className="text-xs text-muted-foreground">
-                {mode === "visual" ? "Vizuelni editor — klikni na tekst i uredi kao u Wordu" : "HTML kod — za napredne izmjene"}
+                {mode === "visual" ? t("Vizuelni editor — klikni na tekst i uredi kao u Wordu") : t("HTML kod — za napredne izmjene")}
               </p>
             </div>
           </div>
@@ -288,15 +291,15 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 mode === "html" ? "bg-zinc-800 text-green-400" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
-              title="Prebaci između vizuelnog i HTML editora"
+              title={t("Prebaci između vizuelnog i HTML editora")}
             >
               <Code className="w-3.5 h-3.5" />
-              {mode === "html" ? "HTML" : "Kod"}
+              {mode === "html" ? "HTML" : t("Kod")}
             </button>
             <button
               onClick={handleClose}
               className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              title="Zatvori"
+              title={t("Zatvori")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -331,7 +334,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
               <div className="w-1/2 flex flex-col overflow-hidden">
                 <div className="px-4 py-2 bg-muted/60 text-xs font-bold text-muted-foreground border-b border-border shrink-0 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-teal-500 inline-block animate-pulse" />
-                  Vizuelni pregled
+                  {t("Vizuelni pregled")}
                 </div>
                 <div className="flex-1 overflow-y-auto p-5 bg-white">
                   <style>{`
@@ -366,7 +369,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
         <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-border bg-white shrink-0">
           {isDirty && (
             <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-              Nesačuvano
+              {t("Nesačuvano")}
             </span>
           )}
           <Button
@@ -375,7 +378,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
             className="rounded-xl px-6 font-bold flex items-center gap-2"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isSaving ? "Čuvam..." : "Sačuvaj"}
+            {isSaving ? t("Čuvam...") : t("Sačuvaj")}
           </Button>
         </div>
       </div>
@@ -549,6 +552,7 @@ const SECTION_CONFIG = {
 // Inline Mini-Quiz (nivo3, no score)
 // ──────────────────────────────────────────────────
 function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
+  const { t } = useLanguage();
   const [pitanja, setPitanja] = useState<QuizQuestion[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -576,15 +580,15 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
 
   if (pitanja.length === 0) return (
     <p className="text-sm text-teal-700 font-medium text-center py-4">
-      Kviz za ovu lekciju uskoro...
+      {t("Kviz za ovu lekciju uskoro...")}
     </p>
   );
 
   if (done) return (
     <div className="text-center py-6">
       <Trophy className="w-10 h-10 mx-auto mb-3 text-amber-500" />
-      <p className="text-lg font-extrabold text-foreground">{score}/{pitanja.length} tačnih!</p>
-      <p className="text-sm text-muted-foreground mt-1">Ovo je provjera za sebe — ne broji u bodove</p>
+      <p className="text-lg font-extrabold text-foreground">{score}/{pitanja.length} {t("tačnih!")}</p>
+      <p className="text-sm text-muted-foreground mt-1">{t("Ovo je provjera za sebe — ne broji u bodove")}</p>
       <Button size="sm" variant="outline" onClick={() => {
         setCurrent(0); setScore(0); setDone(false); setSelected(null);
         // Re-shuffle pitanja i opcije da redoslijed nije isti kao u prošlom pokušaju.
@@ -593,7 +597,7 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
           .map(p => ({ ...p, options: [...p.options].sort(() => Math.random() - 0.5) }))
         );
       }}
-        className="mt-4 rounded-xl">Ponovi</Button>
+        className="mt-4 rounded-xl">{t("Ponovi")}</Button>
     </div>
   );
 
@@ -603,7 +607,7 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
 
   return (
     <div>
-      <p className="text-xs text-muted-foreground font-bold mb-3">Pitanje {current + 1}/{pitanja.length}</p>
+      <p className="text-xs text-muted-foreground font-bold mb-3">{t("Pitanje")} {current + 1}/{pitanja.length}</p>
       <p className="font-bold text-foreground mb-4 leading-relaxed">{q.question}</p>
       <div className="flex flex-col gap-2">
         {q.options.map((opt) => (
@@ -628,7 +632,7 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
             if (current + 1 >= pitanja.length) setDone(true);
             else { setCurrent(c => c + 1); setSelected(null); }
           }} className="rounded-xl">
-            {current + 1 >= pitanja.length ? "Završi" : "Sljedeće →"}
+            {current + 1 >= pitanja.length ? t("Završi") : t("Sljedeće →")}
           </Button>
         </div>
       )}
@@ -641,6 +645,7 @@ function MiniKviz({ slug, nivo }: { slug: string; nivo: number }) {
 // Sakriva se ako nema vezanih kvizova (graceful degradation).
 // ──────────────────────────────────────────────────
 function VezaniKvizovi({ lekcijaId }: { lekcijaId: number }) {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [kvizovi, setKvizovi] = useState<Array<{
     id: number;
@@ -667,7 +672,7 @@ function VezaniKvizovi({ lekcijaId }: { lekcijaId: number }) {
     <div className="mb-6 rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-emerald-50 p-5 shadow-sm" data-testid="vezani-kvizovi">
       <div className="flex items-center gap-2 mb-3">
         <HelpCircle className="w-5 h-5 text-teal-700" />
-        <h3 className="text-base font-extrabold text-teal-900">Kvizovi za ovu lekciju</h3>
+        <h3 className="text-base font-extrabold text-teal-900">{t("Kvizovi za ovu lekciju")}</h3>
       </div>
       <div className="flex flex-col gap-2">
         {kvizovi.map(k => (
@@ -687,7 +692,7 @@ function VezaniKvizovi({ lekcijaId }: { lekcijaId: number }) {
             <div className="flex items-center gap-2 shrink-0">
               {typeof k.pitanjaCount === "number" && k.pitanjaCount > 0 && (
                 <span className="text-xs font-bold text-teal-800 bg-teal-100 rounded-full px-2 py-0.5">
-                  {k.pitanjaCount} {k.pitanjaCount === 1 ? "pitanje" : "pitanja"}
+                  {k.pitanjaCount} {k.pitanjaCount === 1 ? t("pitanje") : t("pitanja")}
                 </span>
               )}
               <ChevronRight className="w-4 h-4 text-teal-600" />
@@ -718,6 +723,7 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
    *  na vidljiv kviz. */
   defaultOpen?: boolean;
 }) {
+  const { t } = useLanguage();
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
@@ -782,7 +788,7 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
               <HelpCircle className="w-4 h-4 shrink-0" />
             </span>
             <span className="font-extrabold text-sm tracking-wide uppercase text-teal-800">
-              Provjeri znanje
+              {t("Provjeri znanje")}
             </span>
             {/* Indicator da je učenik već uspješno riješio kviz — gate je
                 zadovoljen i može mirno označiti lekciju kao završenu. */}
@@ -791,12 +797,12 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
                 className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200"
                 data-testid="badge-kviz-polozen"
               >
-                <CheckCircle2 className="w-3 h-3" strokeWidth={3} /> Položen
+                <CheckCircle2 className="w-3 h-3" strokeWidth={3} /> {t("Položen")}
               </span>
             )}
             {canEdit && (
               <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-200/80 text-teal-900">
-                {safePitanja.length} {safePitanja.length === 1 ? "pitanje" : "pitanja"}
+                {safePitanja.length} {safePitanja.length === 1 ? t("pitanje") : t("pitanja")}
               </span>
             )}
           </div>
@@ -809,11 +815,11 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
             type="button"
             onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
             className="px-3 sm:px-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-900 hover:bg-teal-500/20 border-l border-teal-300/60 transition-colors"
-            title="Uredi pitanja"
+            title={t("Uredi pitanja")}
             data-testid="button-uredi-pitanja"
           >
             <Pencil className="w-4 h-4" />
-            <span className="hidden sm:inline">Uredi</span>
+            <span className="hidden sm:inline">{t("Uredi")}</span>
           </button>
         )}
       </div>
@@ -843,26 +849,26 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
             <div className="px-5 pb-5 pt-4">
               {safePitanja.length === 0 ? (
                 <div className="text-center text-sm text-muted-foreground py-4" data-testid="text-kviz-prazan">
-                  Nema pitanja. Klikni "Uredi" pa "Dodaj pitanje" da kreiraš.
+                  {t("Nema pitanja. Klikni \"Uredi\" pa \"Dodaj pitanje\" da kreiraš.")}
                 </div>
               ) : done ? (
                 <div className="text-center py-4" data-testid="kviz-done-summary">
                   <Trophy className={`w-10 h-10 mx-auto mb-3 ${isPerfect ? "text-emerald-500" : "text-amber-500"}`} />
-                  <p className="text-lg font-extrabold text-foreground">{score}/{safePitanja.length} tačnih!</p>
+                  <p className="text-lg font-extrabold text-foreground">{score}/{safePitanja.length} {t("tačnih!")}</p>
                   {isPerfect ? (
                     <p className="text-sm font-bold text-emerald-700 mt-1">
-                      ✓ Sva pitanja tačna — sad možeš označiti lekciju kao završenu.
+                      {t("✓ Sva pitanja tačna — sad možeš označiti lekciju kao završenu.")}
                     </p>
                   ) : (
                     <p className="text-sm text-amber-700 mt-1">
-                      Pokušaj ponovo — sva pitanja moraju biti tačna da otključaš "Označi kao završeno".
+                      {t("Pokušaj ponovo — sva pitanja moraju biti tačna da otključaš \"Označi kao završeno\".")}
                     </p>
                   )}
-                  <Button size="sm" variant="outline" onClick={reset} className="mt-4 rounded-xl" data-testid="button-ponovi-kviz">Ponovi kviz</Button>
+                  <Button size="sm" variant="outline" onClick={reset} className="mt-4 rounded-xl" data-testid="button-ponovi-kviz">{t("Ponovi kviz")}</Button>
                 </div>
               ) : (
                 <div>
-                  <p className="text-xs text-muted-foreground font-bold mb-3">Pitanje {safeIdx + 1}/{safePitanja.length}</p>
+                  <p className="text-xs text-muted-foreground font-bold mb-3">{t("Pitanje")} {safeIdx + 1}/{safePitanja.length}</p>
                   <p className="font-bold text-foreground mb-4 leading-relaxed">{q.question}</p>
                   <div className="flex flex-col gap-2">
                     {q.options.map((opt) => (
@@ -890,7 +896,7 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
                         if (safeIdx + 1 >= safePitanja.length) setDone(true);
                         else { setCurrent(safeIdx + 1); setSelected(null); }
                       }} className="rounded-xl">
-                        {safeIdx + 1 >= safePitanja.length ? "Završi ✓" : "Sljedeće →"}
+                        {safeIdx + 1 >= safePitanja.length ? t("Završi ✓") : t("Sljedeće →")}
                       </Button>
                     </div>
                   )}
@@ -915,6 +921,7 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
   onSaved: (pitanja: LekcijaKvizPitanje[]) => void;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const initial = useRef<LekcijaKvizPitanje[]>(
     (initialPitanja && initialPitanja.length > 0)
       ? initialPitanja.map(p => ({
@@ -933,7 +940,7 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
   }, [pitanja]);
 
   const requestClose = useCallback(() => {
-    if (isDirty() && !confirm("Imate nesačuvane izmjene. Zatvoriti i izgubiti ih?")) return;
+    if (isDirty() && !confirm(t("Imate nesačuvane izmjene. Zatvoriti i izgubiti ih?"))) return;
     onClose();
   }, [isDirty, onClose]);
 
@@ -968,7 +975,7 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
   const setAnswer = (pIdx: number, value: string) => updateP(pIdx, { answer: value });
 
   const removeP = (idx: number) => {
-    if (!confirm("Obrisati ovo pitanje?")) return;
+    if (!confirm(t("Obrisati ovo pitanje?"))) return;
     setPitanja(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -977,15 +984,15 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
   };
 
   const validate = (): string | null => {
-    if (pitanja.length === 0) return "Mora postojati barem jedno pitanje (ili otkažite za potpuno uklanjanje).";
+    if (pitanja.length === 0) return t("Mora postojati barem jedno pitanje (ili otkažite za potpuno uklanjanje).");
     for (let i = 0; i < pitanja.length; i++) {
       const p = pitanja[i];
-      if (!p.question.trim()) return `Pitanje ${i + 1}: tekst pitanja ne smije biti prazan.`;
+      if (!p.question.trim()) return t("Pitanje {n}: tekst pitanja ne smije biti prazan.", { n: String(i + 1) });
       const opts = p.options.map(o => o.trim()).filter(Boolean);
-      if (opts.length < 2) return `Pitanje ${i + 1}: mora imati barem 2 opcije.`;
+      if (opts.length < 2) return t("Pitanje {n}: mora imati barem 2 opcije.", { n: String(i + 1) });
       const set = new Set(opts);
-      if (set.size !== opts.length) return `Pitanje ${i + 1}: opcije moraju biti različite.`;
-      if (!p.answer || !opts.includes(p.answer.trim())) return `Pitanje ${i + 1}: označite tačan odgovor.`;
+      if (set.size !== opts.length) return t("Pitanje {n}: opcije moraju biti različite.", { n: String(i + 1) });
+      if (!p.answer || !opts.includes(p.answer.trim())) return t("Pitanje {n}: označite tačan odgovor.", { n: String(i + 1) });
     }
     return null;
   };
@@ -993,7 +1000,7 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
   const save = async () => {
     if (saving) return; // idempotency: spriječi duple PUT-ove
     const err = validate();
-    if (err) { toast({ title: "Provjeri unos", description: err, variant: "destructive" }); return; }
+    if (err) { toast({ title: t("Provjeri unos"), description: err, variant: "destructive" }); return; }
     setSaving(true);
     try {
       const cleaned = pitanja.map(p => ({
@@ -1002,10 +1009,10 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
         answer: p.answer.trim(),
       }));
       await apiRequest("PUT", `/admin/ilmihal/${lekcijaId}`, { kvizPitanja: cleaned }, token);
-      toast({ title: "Spremljeno", description: `Pitanja su ažurirana (${cleaned.length}).` });
+      toast({ title: t("Spremljeno"), description: t("Pitanja su ažurirana ({n}).", { n: String(cleaned.length) }) });
       onSaved(cleaned);
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Pokušajte ponovo", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Pokušajte ponovo"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -1027,13 +1034,13 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 sticky top-0 bg-white rounded-t-2xl">
           <h3 id="kviz-edit-title" className="font-extrabold text-foreground flex items-center gap-2">
-            <Pencil className="w-5 h-5 text-teal-600" /> Uredi pitanja "Provjeri znanje"
+            <Pencil className="w-5 h-5 text-teal-600" /> {t("Uredi pitanja \"Provjeri znanje\"")}
           </h3>
           <button
             type="button"
             onClick={requestClose}
             className="p-2 rounded-lg hover:bg-muted/60 text-muted-foreground"
-            aria-label="Zatvori"
+            aria-label={t("Zatvori")}
             data-testid="button-zatvori-modal"
           >
             <X className="w-5 h-5" />
@@ -1043,14 +1050,14 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           {pitanja.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-8">
-              Nema pitanja. Kliknite "Dodaj pitanje" ispod.
+              {t("Nema pitanja. Kliknite \"Dodaj pitanje\" ispod.")}
             </div>
           )}
           {pitanja.map((p, idx) => (
             <div key={idx} className="border border-border/60 rounded-xl p-4 bg-muted/10" data-testid={`card-pitanje-${idx}`}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
-                  Pitanje {idx + 1}
+                  {t("Pitanje")} {idx + 1}
                 </span>
                 <button
                   type="button"
@@ -1058,22 +1065,22 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
                   className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1"
                   data-testid={`button-obrisi-pitanje-${idx}`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> Obriši
+                  <Trash2 className="w-3.5 h-3.5" /> {t("Obriši")}
                 </button>
               </div>
 
-              <label className="block text-xs font-bold text-muted-foreground mb-1">Tekst pitanja</label>
+              <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Tekst pitanja")}</label>
               <textarea
                 value={p.question}
                 onChange={e => updateP(idx, { question: e.target.value })}
                 rows={2}
                 className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/40 mb-3 resize-y"
-                placeholder="npr. Šta znači riječ 'Allah'?"
+                placeholder={t("npr. Šta znači riječ 'Allah'?")}
                 data-testid={`input-pitanje-${idx}`}
               />
 
               <label className="block text-xs font-bold text-muted-foreground mb-1">
-                Opcije <span className="font-normal">(označite tačan odgovor)</span>
+                {t("Opcije")} <span className="font-normal">{t("(označite tačan odgovor)")}</span>
               </label>
               <div className="space-y-2">
                 {p.options.map((opt, oIdx) => {
@@ -1088,7 +1095,7 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
                         disabled={!trimmed}
                         onChange={() => setAnswer(idx, trimmed)}
                         className="w-4 h-4 accent-emerald-600 shrink-0"
-                        aria-label={`Označi opciju ${oIdx + 1} kao tačan odgovor`}
+                        aria-label={t("Označi opciju {n} kao tačan odgovor", { n: String(oIdx + 1) })}
                         data-testid={`radio-tacan-${idx}-${oIdx}`}
                       />
                       <input
@@ -1096,12 +1103,12 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
                         value={opt}
                         onChange={e => updateOption(idx, oIdx, e.target.value)}
                         className="flex-1 bg-transparent border-0 px-2 py-1 text-sm focus:outline-none"
-                        placeholder={`Opcija ${oIdx + 1}`}
+                        placeholder={t("Opcija {n}", { n: String(oIdx + 1) })}
                         data-testid={`input-opcija-${idx}-${oIdx}`}
                       />
                       {isAnswer && (
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded shrink-0">
-                          Tačan
+                          {t("Tačan")}
                         </span>
                       )}
                     </div>
@@ -1116,7 +1123,7 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
                   className="mt-2 text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1"
                   data-testid={`button-dodaj-opciju-${idx}`}
                 >
-                  <Plus className="w-3.5 h-3.5" /> Dodaj opciju
+                  <Plus className="w-3.5 h-3.5" /> {t("Dodaj opciju")}
                 </button>
               )}
             </div>
@@ -1128,17 +1135,17 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
             className="w-full border-2 border-dashed border-teal-300 rounded-xl py-3 text-sm font-bold text-teal-700 hover:bg-teal-50 hover:border-teal-400 transition-colors flex items-center justify-center gap-2"
             data-testid="button-dodaj-pitanje"
           >
-            <Plus className="w-4 h-4" /> Dodaj pitanje
+            <Plus className="w-4 h-4" /> {t("Dodaj pitanje")}
           </button>
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border/60 bg-muted/20 rounded-b-2xl sticky bottom-0">
           <Button variant="outline" onClick={requestClose} disabled={saving} className="rounded-xl" data-testid="button-otkazi-modal">
-            Otkaži
+            {t("Otkaži")}
           </Button>
           <Button onClick={save} disabled={saving} className="rounded-xl flex items-center gap-2" data-testid="button-sacuvaj-pitanja">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Sačuvaj
+            {t("Sačuvaj")}
           </Button>
         </div>
       </div>
@@ -1232,6 +1239,7 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
   showAlways?: boolean;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -1241,7 +1249,7 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
       const formData = new FormData();
       formData.append("image", file);
       const uploadRes = await apiRequest<{ url: string }>("POST", "/admin/upload", formData, token, true);
-      if (!uploadRes?.url) throw new Error("Upload nije uspio");
+      if (!uploadRes?.url) throw new Error(t("Upload nije uspio"));
 
       const parser = new DOMParser();
       const doc = parser.parseFromString(lekcija.contentHtml, "text/html");
@@ -1272,10 +1280,10 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
 
       const newHtml = (doc.querySelector(".lesson-container") || doc.body).innerHTML;
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: newHtml }, token);
-      toast({ title: "Slika ažurirana! ✓" });
+      toast({ title: t("Slika ažurirana! ✓") });
       onUpdated(newHtml);
     } catch (e: any) {
-      toast({ title: "Greška", description: e.message || "Upload nije uspio", variant: "destructive" });
+      toast({ title: t("Greška"), description: e.message || t("Upload nije uspio"), variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -1305,7 +1313,7 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
           ) : (
             <ImagePlus className="w-8 h-8" />
           )}
-          <span className="text-sm font-bold">{uploading ? "Uploadujem..." : "Dodaj hero sliku"}</span>
+          <span className="text-sm font-bold">{uploading ? t("Uploadujem...") : t("Dodaj hero sliku")}</span>
         </button>
       ) : (
         <button
@@ -1318,7 +1326,7 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
           ) : (
             <Camera className="w-3.5 h-3.5" />
           )}
-          {uploading ? "Uploadujem..." : "Zamijeni sliku"}
+          {uploading ? t("Uploadujem...") : t("Zamijeni sliku")}
         </button>
       )}
     </>
@@ -1404,6 +1412,7 @@ function PriloziSection({
   // za radnje koje su STROGO admin-only (brisanje, edit), koristi `canDelete`.
   const isAdmin = canManage;
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   // `lekcija.prilozi` može stići naknadno (npr. token postane dostupan tek
@@ -1484,9 +1493,9 @@ function PriloziSection({
       fd.append("file", file);
       const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}`, fd, token, true);
       setAttachments(prev => [{ ...result, url: `/uploads/${(result as any).storedName || ""}` }, ...prev]);
-      toast({ title: "Uspješno", description: `"${file.name}" uploadovan.` });
+      toast({ title: t("Uspješno"), description: t('"{name}" uploadovan.', { name: file.name }) });
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -1504,9 +1513,9 @@ function PriloziSection({
       // Prefiks `/api/uploads/...` je univerzalan (vidi backend napomenu u content.ts).
       const url = `/api/uploads/${(result as any).storedName || ""}`;
       setAttachments(prev => [{ ...result, url }, ...prev]);
-      toast({ title: "H5P uploadovan", description: `"${file.name}" je dodan.` });
+      toast({ title: t("H5P uploadovan"), description: t('"{name}" je dodan.', { name: file.name }) });
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setUploadingH5p(false);
       if (h5pInputRef.current) h5pInputRef.current.value = "";
@@ -1555,14 +1564,14 @@ function PriloziSection({
         });
       } else {
         const reason = res.attemptNo >= 3
-          ? `Ovo je tvoj ${res.attemptNo}. pokušaj — daljnji pokušaji ne donose kapi meda.`
-          : `Pokušaj ${res.attemptNo}: ${res.procenat}%`;
-        toast({ title: "Vježba završena", description: reason });
+          ? t("Ovo je tvoj {n}. pokušaj — daljnji pokušaji ne donose kapi meda.", { n: String(res.attemptNo) })
+          : t("Pokušaj {n}: {procenat}%", { n: String(res.attemptNo), procenat: String(res.procenat) });
+        toast({ title: t("Vježba završena"), description: reason });
       }
       // Refresh attempts za ovaj prilog (smanji prikazani max za sljedeći put).
       await refreshH5pAttempts(priloziId);
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setH5pSubmitting(prev => ({ ...prev, [priloziId]: false }));
     }
@@ -1576,10 +1585,10 @@ function PriloziSection({
         url: urlValue.trim(), label: urlLabel.trim() || undefined
       }, token);
       setAttachments(prev => [{ ...result, url: (result as any).externalUrl || urlValue.trim() }, ...prev]);
-      toast({ title: "Link dodan", description: result.originalName });
+      toast({ title: t("Link dodan"), description: result.originalName });
       setUrlValue(""); setUrlLabel(""); setShowUrlForm(false);
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setSavingUrl(false);
     }
@@ -1595,10 +1604,10 @@ function PriloziSection({
         hasanatReward: embedReward,
       }, token);
       setAttachments(prev => [{ ...result, url: (result as any).externalUrl || "" }, ...prev]);
-      toast({ title: "Embed vježba dodana", description: result.originalName });
+      toast({ title: t("Embed vježba dodana"), description: result.originalName });
       setEmbedValue(""); setEmbedLabel(""); setEmbedReward(5); setShowEmbedForm(false);
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setSavingEmbed(false);
     }
@@ -1614,7 +1623,7 @@ function PriloziSection({
   const handleSaveEditEmbed = async () => {
     if (!editEmbed || !token) return;
     if (!editEmbedLabel.trim()) {
-      toast({ title: "Greška", description: "Naziv ne može biti prazan", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Naziv ne može biti prazan"), variant: "destructive" });
       return;
     }
     setSavingEditEmbed(true);
@@ -1624,10 +1633,10 @@ function PriloziSection({
         hasanatReward: editEmbedReward,
       }, token);
       setAttachments(prev => prev.map(a => a.id === editEmbed.id ? { ...a, ...result, url: (result as any).externalUrl || a.url } : a));
-      toast({ title: "Sačuvano", description: result.originalName });
+      toast({ title: t("Sačuvano"), description: result.originalName });
       setEditEmbed(null);
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setSavingEditEmbed(false);
     }
@@ -1648,7 +1657,7 @@ function PriloziSection({
       }>("POST", `/content/embed/zavrseno`, { priloziId: a.id }, token);
       setClaimedEmbeds(prev => new Set(prev).add(a.id));
       if (res.alreadyClaimed) {
-        toast({ title: "Već si dobio kapi", description: "Za ovu vježbu si ranije primio kapi meda." });
+        toast({ title: t("Već si dobio kapi"), description: t("Za ovu vježbu si ranije primio kapi meda.") });
       } else if (res.hasanatGained > 0) {
         onH5pCelebration?.({
           isRepeat: false,
@@ -1659,24 +1668,24 @@ function PriloziSection({
           streakIncreased: false,
         });
       } else {
-        toast({ title: "Vježba završena", description: "Za ovu vježbu nisu predviđene kapi meda." });
+        toast({ title: t("Vježba završena"), description: t("Za ovu vježbu nisu predviđene kapi meda.") });
       }
       setOpenEmbed(null);
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setClaimingEmbed(false);
     }
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Obrisati "${name}"?`)) return;
+    if (!confirm(t('Obrisati "{name}"?', { name }))) return;
     try {
       await apiRequest("DELETE", `/admin/prilozi/${id}`, undefined, token);
       setAttachments(prev => prev.filter(a => a.id !== id));
-      toast({ title: "Obrisano", description: `"${name}" je obrisan.` });
+      toast({ title: t("Obrisano"), description: t('"{name}" je obrisan.', { name }) });
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     }
   };
 
@@ -1687,7 +1696,7 @@ function PriloziSection({
       const res = await fetch(attachment.url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error(`Greška pri preuzimanju (${res.status})`);
+      if (!res.ok) throw new Error(t("Greška pri preuzimanju ({status})", { status: String(res.status) }));
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       if (openInTab) {
@@ -1702,7 +1711,7 @@ function PriloziSection({
         URL.revokeObjectURL(blobUrl);
       }
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     }
   };
 
@@ -1714,7 +1723,7 @@ function PriloziSection({
       >
         <Paperclip className="w-5 h-5 text-blue-600 flex-shrink-0" />
         <span className="font-bold text-blue-800 text-base flex-1">
-          Materijali za nastavu
+          {t("Materijali za nastavu")}
           {attachments.length > 0 && (
             <span className="ml-2 text-sm font-normal text-blue-500">({attachments.length})</span>
           )}
@@ -1756,9 +1765,9 @@ function PriloziSection({
                       className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
                     >
                       {uploading ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploadujem...</>
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem...")}</>
                       ) : (
-                        <><Upload className="w-4 h-4 mr-2" /> Dodaj fajl</>
+                        <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>
                       )}
                     </Button>
                     <Button
@@ -1766,7 +1775,7 @@ function PriloziSection({
                       variant="outline"
                       className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
                     >
-                      <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? "Odustani" : "Dodaj link"}
+                      <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}
                     </Button>
                     <Button
                       onClick={() => h5pInputRef.current?.click()}
@@ -1775,9 +1784,9 @@ function PriloziSection({
                       className="rounded-xl border-purple-300 text-purple-700 hover:bg-purple-100 font-bold"
                     >
                       {uploadingH5p ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploadujem H5P...</>
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem H5P...")}</>
                       ) : (
-                        <><Sparkles className="w-4 h-4 mr-2" /> Dodaj H5P vježbu</>
+                        <><Sparkles className="w-4 h-4 mr-2" /> {t("Dodaj H5P vježbu")}</>
                       )}
                     </Button>
                     <Button
@@ -1785,16 +1794,16 @@ function PriloziSection({
                       variant="outline"
                       className="rounded-xl border-amber-300 text-amber-700 hover:bg-amber-100 font-bold"
                     >
-                      <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? "Odustani" : "Dodaj embed vježbu"}
+                      <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? t("Odustani") : t("Dodaj embed vježbu")}
                     </Button>
                   </div>
-                  <p className="text-sm text-blue-400 mt-1">PDF, DOCX, XLSX, PPTX, TXT (max 20MB), YouTube/web link, .h5p arhiva (max 50MB), ili embed (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)</p>
+                  <p className="text-sm text-blue-400 mt-1">{t("PDF, DOCX, XLSX, PPTX, TXT (max 20MB), YouTube/web link, .h5p arhiva (max 50MB), ili embed (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")}</p>
                   <Link
                     href="/muallim/h5p-uputstvo"
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-800 mt-1.5 underline-offset-2 hover:underline"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    Nemaš još .h5p fajl? Pogledaj kako da napraviš svoju prvu vježbu
+                    {t("Nemaš još .h5p fajl? Pogledaj kako da napraviš svoju prvu vježbu")}
                     <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
                   {showUrlForm && (
@@ -1808,7 +1817,7 @@ function PriloziSection({
                       />
                       <input
                         type="text"
-                        placeholder="Naziv (opciono, npr. 'Video o abdestu')"
+                        placeholder={t("Naziv (opciono, npr. 'Video o abdestu')")}
                         value={urlLabel}
                         onChange={e => setUrlLabel(e.target.value)}
                         className="px-3 py-2 rounded-lg border border-blue-200 text-sm focus:outline-none focus:border-blue-500"
@@ -1818,14 +1827,14 @@ function PriloziSection({
                         disabled={savingUrl || !urlValue.trim()}
                         className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold self-start"
                       >
-                        {savingUrl ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</> : "Spasi link"}
+                        {savingUrl ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi link")}
                       </Button>
                     </div>
                   )}
                   {showEmbedForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 flex flex-col gap-2">
                       <p className="text-xs text-amber-700 font-semibold">
-                        Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.
+                        {t("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.")}
                       </p>
                       <textarea
                         placeholder='&lt;iframe src="https://learningapps.org/watch?app=..."&gt;&lt;/iframe&gt; ili samo URL'
@@ -1836,34 +1845,34 @@ function PriloziSection({
                       />
                       <input
                         type="text"
-                        placeholder="Naziv vježbe (opciono)"
+                        placeholder={t("Naziv vježbe (opciono)")}
                         value={embedLabel}
                         onChange={e => setEmbedLabel(e.target.value)}
                         className="px-3 py-2 rounded-lg border border-amber-200 text-sm focus:outline-none focus:border-amber-500"
                       />
                       <div className="flex items-center gap-2 flex-wrap">
-                        <label className="text-xs font-bold text-amber-800">Kapi meda za završetak:</label>
+                        <label className="text-xs font-bold text-amber-800">{t("Kapi meda za završetak:")}</label>
                         <select
                           value={embedReward}
                           onChange={e => setEmbedReward(Number(e.target.value) as 0 | 3 | 5 | 10)}
                           className="px-2 py-1.5 rounded-lg border border-amber-300 text-sm font-semibold bg-white focus:outline-none focus:border-amber-500"
                           data-testid="embed-reward-select"
                         >
-                          <option value={0}>Bez nagrade (0 🍯)</option>
-                          <option value={3}>Lahka vježba — 3 🍯</option>
-                          <option value={5}>Srednja vježba — 5 🍯</option>
-                          <option value={10}>Teža vježba — 10 🍯</option>
+                          <option value={0}>{t("Bez nagrade (0 🍯)")}</option>
+                          <option value={3}>{t("Lahka vježba — 3 🍯")}</option>
+                          <option value={5}>{t("Srednja vježba — 5 🍯")}</option>
+                          <option value={10}>{t("Teža vježba — 10 🍯")}</option>
                         </select>
                       </div>
                       <p className="text-xs text-amber-600 italic">
-                        Učenik dobija kapi tek kada klikne <strong>"Završio sam vježbu"</strong> u popupu — i to samo prvi put.
+                        {t("Učenik dobija kapi tek kada klikne")} <strong>{t('"Završio sam vježbu"')}</strong> {t("u popupu — i to samo prvi put.")}
                       </p>
                       <Button
                         onClick={handleAddEmbed}
                         disabled={savingEmbed || !embedValue.trim()}
                         className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold self-start"
                       >
-                        {savingEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</> : "Spasi embed vježbu"}
+                        {savingEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi embed vježbu")}
                       </Button>
                     </div>
                   )}
@@ -1871,7 +1880,7 @@ function PriloziSection({
               )}
 
               {attachments.length === 0 ? (
-                <p className="text-blue-400 text-base italic">Nema uploadovanih materijala za ovu lekciju.</p>
+                <p className="text-blue-400 text-base italic">{t("Nema uploadovanih materijala za ovu lekciju.")}</p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {/* Embed vježbe idu na dno spiska — prikazuju se kao široki
@@ -1892,8 +1901,8 @@ function PriloziSection({
                     if (isEmbed) {
                       const reward = a.hasanatReward ?? 0;
                       const subtitle = reward > 0
-                        ? `Klikni da otvoriš vježbu • do ${reward} kapi meda 🍯`
-                        : "Klikni da otvoriš vježbu • bez kapi meda 🍯";
+                        ? t("Klikni da otvoriš vježbu • do {reward} kapi meda 🍯", { reward: String(reward) })
+                        : t("Klikni da otvoriš vježbu • bez kapi meda 🍯");
                       return (
                         <div key={a.id} className="flex flex-col gap-1">
                           <div className="flex items-stretch gap-2">
@@ -1909,7 +1918,7 @@ function PriloziSection({
                             </div>
                             {isAdmin && a.approved === false && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-800 border border-amber-400 flex-shrink-0">
-                                Čeka odobrenje
+                                {t("Čeka odobrenje")}
                               </span>
                             )}
                             <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0" />
@@ -1918,18 +1927,18 @@ function PriloziSection({
                             <button
                               onClick={() => openEditEmbed(a)}
                               className="px-3 py-2 rounded-xl text-amber-800 bg-amber-100 hover:bg-amber-200 transition-colors border-2 border-amber-300 hover:border-amber-500 flex items-center gap-1.5 font-bold text-xs"
-                              title="Uredi naziv i nagradu"
+                              title={t("Uredi naziv i nagradu")}
                               data-testid={`embed-edit-${a.id}`}
                             >
                               <Pencil className="w-4 h-4" />
-                              <span className="hidden sm:inline">Uredi</span>
+                              <span className="hidden sm:inline">{t("Uredi")}</span>
                             </button>
                           )}
                           {canDelete && (
                             <button
                               onClick={() => handleDelete(a.id, a.originalName)}
                               className="p-2 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors border-2 border-transparent hover:border-red-200"
-                              title="Obriši"
+                              title={t("Obriši")}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1960,16 +1969,16 @@ function PriloziSection({
                               <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
                               {isAdmin && a.approved === false && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 flex-shrink-0">
-                                  Čeka odobrenje
+                                  {t("Čeka odobrenje")}
                                 </span>
                               )}
                             </div>
                             <p className="text-sm text-gray-400 truncate">
                               {isH5p
                                 ? (maxNext > 0
-                                    ? `Interaktivna vježba — Pokušaj ${att?.nextAttemptNo ?? 1} · do ${maxNext} ${maxNext === 1 ? "kap meda" : "kapi meda"} 🍯`
-                                    : `Interaktivna vježba — Pokušaj ${att?.nextAttemptNo ?? 1} · bez kapi meda`)
-                                : isEmbed ? "Embed vježba (bez kapi meda)" : isUrl ? targetUrl : formatFileSize(a.fileSize)}
+                                    ? t("Interaktivna vježba — Pokušaj {n} · do {max} {unit} 🍯", { n: String(att?.nextAttemptNo ?? 1), max: String(maxNext), unit: maxNext === 1 ? t("kap meda") : t("kapi meda") })
+                                    : t("Interaktivna vježba — Pokušaj {n} · bez kapi meda", { n: String(att?.nextAttemptNo ?? 1) }))
+                                : isEmbed ? t("Embed vježba (bez kapi meda)") : isUrl ? targetUrl : formatFileSize(a.fileSize)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1985,10 +1994,10 @@ function PriloziSection({
                                   setOpenH5p(a);
                                 }}
                                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
-                                title="Otvori vježbu"
+                                title={t("Otvori vježbu")}
                                 data-testid={`h5p-open-${a.id}`}
                               >
-                                <Sparkles className="w-4 h-4" /> Otvori vježbu
+                                <Sparkles className="w-4 h-4" /> {t("Otvori vježbu")}
                               </button>
                             ) : isUrl ? (
                               <a
@@ -1997,7 +2006,7 @@ function PriloziSection({
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors"
                               >
-                                <ExternalLink className="w-4 h-4" /> Otvori
+                                <ExternalLink className="w-4 h-4" /> {t("Otvori")}
                               </a>
                             ) : (
                               <>
@@ -2019,7 +2028,7 @@ function PriloziSection({
                               <button
                                 onClick={() => handleDelete(a.id, a.originalName)}
                                 className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                title="Obriši"
+                                title={t("Obriši")}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -2051,8 +2060,8 @@ function PriloziSection({
                     const alreadyClaimed = openEmbed ? claimedEmbeds.has(openEmbed.id) : false;
                     const showClaim = !!openEmbed && reward > 0 && isStudent;
                     const headerBadge = reward > 0
-                      ? `Do ${reward} kapi meda 🍯`
-                      : "Bez kapi meda 🍯";
+                      ? t("Do {reward} kapi meda 🍯", { reward: String(reward) })
+                      : t("Bez kapi meda 🍯");
                     return (
                       <>
                         <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200 flex-shrink-0">
@@ -2082,8 +2091,8 @@ function PriloziSection({
                           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border-t border-amber-200 flex-shrink-0">
                             <p className="text-xs sm:text-sm text-amber-800 font-semibold">
                               {alreadyClaimed
-                                ? "Već si dobio kapi za ovu vježbu."
-                                : "Kad završiš vježbu, klikni dugme da dobiješ kapi meda."}
+                                ? t("Već si dobio kapi za ovu vježbu.")
+                                : t("Kad završiš vježbu, klikni dugme da dobiješ kapi meda.")}
                             </p>
                             <Button
                               onClick={() => handleClaimEmbed(openEmbed)}
@@ -2092,10 +2101,10 @@ function PriloziSection({
                               data-testid="embed-claim"
                             >
                               {claimingEmbed
-                                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</>
+                                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</>
                                 : alreadyClaimed
-                                  ? "✓ Završeno"
-                                  : `Završio sam vježbu • +${reward} 🍯`}
+                                  ? t("✓ Završeno")
+                                  : t("Završio sam vježbu • +{reward} 🍯", { reward: String(reward) })}
                             </Button>
                           </div>
                         )}
@@ -2134,17 +2143,17 @@ function PriloziSection({
                           <p className="text-sm font-semibold text-purple-700">
                             {aMax > 0
                               ? <>
-                                  Pokušaj <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
+                                  {t("Pokušaj")} <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
                                   {" — "}
-                                  <span className="text-purple-900">{Math.round(aMult * 100)}% nagrade</span>
-                                  {" · možeš osvojiti do "}
-                                  <span className="text-purple-900">{aMax} {aMax === 1 ? "kap meda" : "kapi meda"} 🍯</span>
+                                  <span className="text-purple-900">{Math.round(aMult * 100)}{t("% nagrade")}</span>
+                                  {" "}{t("· možeš osvojiti do")}{" "}
+                                  <span className="text-purple-900">{aMax} {aMax === 1 ? t("kap meda") : t("kapi meda")} 🍯</span>
                                 </>
                               : <>
-                                  Pokušaj <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
+                                  {t("Pokušaj")} <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
                                   {" — "}
-                                  <span className="text-purple-900">više pokušaja ne donosi kapi meda</span>
-                                  {" (već "}{Math.max(0, (aAtt?.nextAttemptNo ?? 1) - 1)} pokušaja{")"}
+                                  <span className="text-purple-900">{t("više pokušaja ne donosi kapi meda")}</span>
+                                  {" ("}{t("već")}{" "}{Math.max(0, (aAtt?.nextAttemptNo ?? 1) - 1)} {t("pokušaja")}{")"}
                                 </>
                             }
                           </p>
@@ -2153,7 +2162,7 @@ function PriloziSection({
                           {aUrl && (
                             <Suspense fallback={
                               <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
-                                <Loader2 className="w-4 h-4 animate-spin" /> Učitavam vježbu...
+                                <Loader2 className="w-4 h-4 animate-spin" /> {t("Učitavam vježbu...")}
                               </div>
                             }>
                               <H5PPlayerLazy
@@ -2166,7 +2175,7 @@ function PriloziSection({
                           )}
                         </div>
                         <p className="px-4 py-2 text-xs text-purple-500 bg-purple-50/60 flex-shrink-0">
-                          Maks. 50 kapi meda. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.
+                          {t("Maks. 50 kapi meda. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.")}
                         </p>
                       </>
                     );
@@ -2179,9 +2188,9 @@ function PriloziSection({
                   obriše prilog i doda novi (rijedak slučaj). */}
               <Dialog open={!!editEmbed} onOpenChange={(o) => { if (!o) setEditEmbed(null); }}>
                 <DialogContent className="max-w-md" data-testid="embed-edit-modal">
-                  <DialogTitle className="text-lg font-bold text-amber-900">Uredi embed vježbu</DialogTitle>
+                  <DialogTitle className="text-lg font-bold text-amber-900">{t("Uredi embed vježbu")}</DialogTitle>
                   <div className="flex flex-col gap-3 mt-2">
-                    <label className="text-xs font-bold text-amber-800">Naziv vježbe</label>
+                    <label className="text-xs font-bold text-amber-800">{t("Naziv vježbe")}</label>
                     <input
                       type="text"
                       value={editEmbedLabel}
@@ -2189,20 +2198,20 @@ function PriloziSection({
                       className="px-3 py-2 rounded-lg border border-amber-300 text-sm focus:outline-none focus:border-amber-500"
                       data-testid="embed-edit-label"
                     />
-                    <label className="text-xs font-bold text-amber-800">Kapi meda za završetak</label>
+                    <label className="text-xs font-bold text-amber-800">{t("Kapi meda za završetak")}</label>
                     <select
                       value={editEmbedReward}
                       onChange={e => setEditEmbedReward(Number(e.target.value) as 0 | 3 | 5 | 10)}
                       className="px-3 py-2 rounded-lg border border-amber-300 text-sm font-semibold bg-white focus:outline-none focus:border-amber-500"
                       data-testid="embed-edit-reward"
                     >
-                      <option value={0}>Bez nagrade (0 🍯)</option>
-                      <option value={3}>Lahka vježba — 3 🍯</option>
-                      <option value={5}>Srednja vježba — 5 🍯</option>
-                      <option value={10}>Teža vježba — 10 🍯</option>
+                      <option value={0}>{t("Bez nagrade (0 🍯)")}</option>
+                      <option value={3}>{t("Lahka vježba — 3 🍯")}</option>
+                      <option value={5}>{t("Srednja vježba — 5 🍯")}</option>
+                      <option value={10}>{t("Teža vježba — 10 🍯")}</option>
                     </select>
                     <p className="text-xs text-amber-600 italic">
-                      Učenici koji su već dobili kapi za ovu vježbu ih neće dobiti ponovo, čak i ako povećaš nagradu.
+                      {t("Učenici koji su već dobili kapi za ovu vježbu ih neće dobiti ponovo, čak i ako povećaš nagradu.")}
                     </p>
                     <div className="flex justify-end gap-2 mt-2">
                       <Button
@@ -2210,7 +2219,7 @@ function PriloziSection({
                         onClick={() => setEditEmbed(null)}
                         className="rounded-lg font-bold"
                       >
-                        Odustani
+                        {t("Odustani")}
                       </Button>
                       <Button
                         onClick={handleSaveEditEmbed}
@@ -2218,7 +2227,7 @@ function PriloziSection({
                         className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold"
                         data-testid="embed-edit-save"
                       >
-                        {savingEditEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Spašavam...</> : "Spasi"}
+                        {savingEditEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi")}
                       </Button>
                     </div>
                   </div>
@@ -2240,6 +2249,7 @@ export default function IlmihalLekcijaPage() {
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [lekcija, setLekcija] = useState<Lekcija | null>(null);
   const [parsed, setParsed] = useState<{ heroImage: string | null; sections: AccordionSection[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -2342,10 +2352,10 @@ export default function IlmihalLekcijaPage() {
     try {
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { predmet: novi }, token);
       setLekcija(prev => prev ? { ...prev, predmet: novi || null } : prev);
-      toast({ title: "Predmet ažuriran", description: novi ? `Predmet: ${novi}` : "Predmet uklonjen." });
+      toast({ title: t("Predmet ažuriran"), description: novi ? t("Predmet: {novi}", { novi }) : t("Predmet uklonjen.") });
       setPredmetModalOpen(false);
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Ne mogu spasiti predmet.", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Ne mogu spasiti predmet."), variant: "destructive" });
     } finally {
       setSavingPredmet(false);
     }
@@ -2355,7 +2365,7 @@ export default function IlmihalLekcijaPage() {
     if (!lekcija || !token) return;
     const novi = naslovDraft.trim();
     if (!novi) {
-      toast({ title: "Naziv ne smije biti prazan", variant: "destructive" });
+      toast({ title: t("Naziv ne smije biti prazan"), variant: "destructive" });
       return;
     }
     if (novi === lekcija.naslov) {
@@ -2367,9 +2377,9 @@ export default function IlmihalLekcijaPage() {
       await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { naslov: novi }, token);
       setLekcija(prev => prev ? { ...prev, naslov: novi } : prev);
       setEditingNaslov(false);
-      toast({ title: "Naziv ažuriran", description: `Lekcija sada nosi naziv: ${novi}` });
+      toast({ title: t("Naziv ažuriran"), description: t("Lekcija sada nosi naziv: {novi}", { novi }) });
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Ne mogu spasiti naziv.", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Ne mogu spasiti naziv."), variant: "destructive" });
     } finally {
       setSavingNaslov(false);
     }
@@ -2401,10 +2411,10 @@ export default function IlmihalLekcijaPage() {
           const r = data.redoslijed ?? 0;
           if (r > limit) {
             toast({
-              title: "Zaključano",
+              title: t("Zaključano"),
               description: !user
-                ? "Prijavi se da otključaš više lekcija."
-                : "Završi prethodne lekcije da otključaš ovu.",
+                ? t("Prijavi se da otključaš više lekcija.")
+                : t("Završi prethodne lekcije da otključaš ovu."),
               variant: "destructive",
             });
             setLocation(`/ilmihal?nivo=${data.nivo ?? 1}`);
@@ -2625,7 +2635,7 @@ export default function IlmihalLekcijaPage() {
           setTimeout(() => {
             const first = newBadges[0];
             toast({
-              title: `🎉 Osvojio si bedž!${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
+              title: `${t("🎉 Osvojio si bedž!")}${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
               description: `${first.ikona} ${first.naziv} — ${first.opis}`,
             });
             // Drugi konfeti za bedž — preskoči ako korisnik preferira reduced motion
@@ -2653,8 +2663,8 @@ export default function IlmihalLekcijaPage() {
         const cur = Number(e.data.currentSeconds) || timeSpentRef.current;
         const remaining = Math.max(0, min - cur);
         toast({
-          title: "Treba još malo čitanja",
-          description: `Provedi još ${formatDuration(remaining)} aktivnog čitanja prije nego označiš lekciju kao završenu.`,
+          title: t("Treba još malo čitanja"),
+          description: t("Provedi još {time} aktivnog čitanja prije nego označiš lekciju kao završenu.", { time: formatDuration(remaining) }),
           variant: "destructive",
         });
       } else if (e?.status === 422 && e?.data?.error === "quiz_not_passed") {
@@ -2664,14 +2674,14 @@ export default function IlmihalLekcijaPage() {
         // zaključan i uputi učenika na kviz.
         setQuizPassed(false);
         toast({
-          title: "Najprije riješi kviz",
-          description: 'Tačno odgovori na sva pitanja u "Provjeri znanje" pa onda označi lekciju kao završenu.',
+          title: t("Najprije riješi kviz"),
+          description: t('Tačno odgovori na sva pitanja u "Provjeri znanje" pa onda označi lekciju kao završenu.'),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Greška",
-          description: e?.message || "Ne mogu sačuvati napredak. Pokušaj ponovo.",
+          title: t("Greška"),
+          description: e?.message || t("Ne mogu sačuvati napredak. Pokušaj ponovo."),
           variant: "destructive",
         });
       }
@@ -2744,15 +2754,14 @@ export default function IlmihalLekcijaPage() {
     return (
       <Layout>
         <div className="text-center py-20 max-w-md mx-auto px-4">
-          <p className="text-muted-foreground font-medium">Lekcija nije pronađena</p>
+          <p className="text-muted-foreground font-medium">{t("Lekcija nije pronađena")}</p>
           {medMatch && isAdminUser && token && (
             <div className="mt-6 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300">
               <p className="text-sm text-amber-900 font-bold mb-1">
-                Zlatni medaljon — Nivo {medMatch[1]} · medaljon {medMatch[2]}
+                {t("Zlatni medaljon — Nivo")} {medMatch[1]} · {t("medaljon")} {medMatch[2]}
               </p>
               <p className="text-xs text-amber-800 mb-4">
-                Ova prazna lekcija još ne postoji. Klikni dugme da je kreiraš,
-                pa je popuni akordionima i vježbama.
+                {t("Ova prazna lekcija još ne postoji. Klikni dugme da je kreiraš, pa je popuni akordionima i vježbama.")}
               </p>
               <Button
                 onClick={async () => {
@@ -2770,12 +2779,12 @@ export default function IlmihalLekcijaPage() {
                       },
                       token,
                     );
-                    toast({ title: "Lekcija kreirana", description: "Učitavam…" });
+                    toast({ title: t("Lekcija kreirana"), description: t("Učitavam…") });
                     setTimeout(() => window.location.reload(), 600);
                   } catch (err: any) {
                     toast({
-                      title: "Greška",
-                      description: err?.message || "Nije moguće kreirati lekciju",
+                      title: t("Greška"),
+                      description: err?.message || t("Nije moguće kreirati lekciju"),
                       variant: "destructive",
                     });
                   }
@@ -2783,11 +2792,11 @@ export default function IlmihalLekcijaPage() {
                 data-testid="button-create-medaljon-lekcija"
                 className="bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold"
               >
-                Kreiraj praznu lekciju
+                {t("Kreiraj praznu lekciju")}
               </Button>
             </div>
           )}
-          <Button className="mt-4" variant="outline" onClick={() => setLocation("/ilmihal")}>Nazad</Button>
+          <Button className="mt-4" variant="outline" onClick={() => setLocation("/ilmihal")}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );
@@ -2823,32 +2832,32 @@ export default function IlmihalLekcijaPage() {
               if (!lekcija || !token) return;
               const isLocked = lekcija.locked;
               const url = `/admin/ilmihal/${lekcija.id}/${isLocked ? "unlock" : "lock"}`;
-              if (isLocked && !confirm("Otključati lekciju? Nakon otključavanja je možeš uređivati ili je auto-skripte mogu prepisati.")) return;
+              if (isLocked && !confirm(t("Otključati lekciju? Nakon otključavanja je možeš uređivati ili je auto-skripte mogu prepisati."))) return;
               try {
                 await apiRequest("POST", url, {}, token);
                 setLekcija(prev => prev ? { ...prev, locked: !isLocked } : prev);
-                toast({ title: isLocked ? "Otključano" : "🔒 Zaključano", description: isLocked ? "Lekcija je otključana." : "Sadržaj je zaštićen od izmjena." });
+                toast({ title: isLocked ? t("Otključano") : t("🔒 Zaključano"), description: isLocked ? t("Lekcija je otključana.") : t("Sadržaj je zaštićen od izmjena.") });
               } catch {
-                toast({ title: "Greška", description: "Ne mogu promijeniti status zaključavanja.", variant: "destructive" });
+                toast({ title: t("Greška"), description: t("Ne mogu promijeniti status zaključavanja."), variant: "destructive" });
               }
             }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${lekcija?.locked ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-              title={lekcija?.locked ? (lekcija.lockedNote || "Lekcija je zaključana") : "Zaključaj lekciju (zaštita od auto-skripti)"}>
-              {lekcija?.locked ? <><Lock className="w-3.5 h-3.5" /> Zaključano</> : <><Unlock className="w-3.5 h-3.5" /> Zaključaj</>}
+              title={lekcija?.locked ? (lekcija.lockedNote || t("Lekcija je zaključana")) : t("Zaključaj lekciju (zaštita od auto-skripti)")}>
+              {lekcija?.locked ? <><Lock className="w-3.5 h-3.5" /> {t("Zaključano")}</> : <><Unlock className="w-3.5 h-3.5" /> {t("Zaključaj")}</>}
             </button>
             <button onClick={() => { setNaslovDraft(lekcija?.naslov || ""); setEditingNaslov(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
-              <PenLine className="w-3.5 h-3.5" /> Uredi naziv
+              <PenLine className="w-3.5 h-3.5" /> {t("Uredi naziv")}
             </button>
             <button onClick={otvoriPredmetModal} disabled={savingPredmet}
-              title="Promijeni predmet (kategoriju) lekcije za 'Sve lekcije' filter"
+              title={t("Promijeni predmet (kategoriju) lekcije za 'Sve lekcije' filter")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors disabled:opacity-50">
               {savingPredmet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PenLine className="w-3.5 h-3.5" />}
-              Predmet: {lekcija.predmet || "—"}
+              {t("Predmet:")} {lekcija.predmet || "—"}
             </button>
             <button onClick={() => setShowEditor(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
-              <FilePen className="w-3.5 h-3.5" /> Uredi sadržaj
+              <FilePen className="w-3.5 h-3.5" /> {t("Uredi sadržaj")}
             </button>
           </div>
         )}
@@ -2858,9 +2867,9 @@ export default function IlmihalLekcijaPage() {
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
             onClick={() => !savingPredmet && setPredmetModalOpen(false)}>
             <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
-              <h3 className="font-extrabold text-base text-foreground mb-1">Predmet lekcije</h3>
+              <h3 className="font-extrabold text-base text-foreground mb-1">{t("Predmet lekcije")}</h3>
               <p className="text-xs text-muted-foreground mb-3">
-                Odaberi predmet (kategoriju iz Banke pitanja). Nove predmete dodaješ u Banci pitanja.
+                {t("Odaberi predmet (kategoriju iz Banke pitanja). Nove predmete dodaješ u Banci pitanja.")}
               </p>
               {loadingKategorije ? (
                 <div className="py-6 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
@@ -2871,12 +2880,12 @@ export default function IlmihalLekcijaPage() {
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm mb-4 bg-white"
                   data-testid="select-predmet"
                 >
-                  <option value="">— Bez predmeta —</option>
+                  <option value="">{t("— Bez predmeta —")}</option>
                   {kategorijeOpcije.map((k) => (
                     <option key={k.slug} value={k.naziv}>{k.naziv}</option>
                   ))}
                   {predmetDraft && !kategorijeOpcije.some((k) => k.naziv === predmetDraft) && (
-                    <option value={predmetDraft}>{predmetDraft} (trenutni)</option>
+                    <option value={predmetDraft}>{predmetDraft} {t("(trenutni)")}</option>
                   )}
                 </select>
               )}
@@ -2884,12 +2893,12 @@ export default function IlmihalLekcijaPage() {
                 <button onClick={() => setPredmetModalOpen(false)} disabled={savingPredmet}
                   className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
                   data-testid="button-predmet-odustani">
-                  Odustani
+                  {t("Odustani")}
                 </button>
                 <button onClick={handleSavePredmet} disabled={savingPredmet || loadingKategorije}
                   className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
                   data-testid="button-predmet-sacuvaj">
-                  {savingPredmet ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Sačuvaj
+                  {savingPredmet ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {t("Sačuvaj")}
                 </button>
               </div>
             </div>
@@ -2917,13 +2926,13 @@ export default function IlmihalLekcijaPage() {
                   onClick={handleSaveNaslov}
                   disabled={savingNaslov}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-50">
-                  {savingNaslov ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Spasi
+                  {savingNaslov ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {t("Spasi")}
                 </button>
                 <button
                   onClick={() => setEditingNaslov(false)}
                   disabled={savingNaslov}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50">
-                  <X className="w-3.5 h-3.5" /> Otkaži
+                  <X className="w-3.5 h-3.5" /> {t("Otkaži")}
                 </button>
               </div>
             </div>
@@ -2933,7 +2942,7 @@ export default function IlmihalLekcijaPage() {
           <div className="flex justify-center mt-2">
             <button onClick={goBack}
               className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
-              <ArrowLeft className="w-4 h-4" /> Nazad
+              <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
             </button>
           </div>
           {(user?.role === "admin" || user?.role === "muallim") && (() => {
@@ -2947,7 +2956,7 @@ export default function IlmihalLekcijaPage() {
                   data-testid="link-sljedeca-lekcija"
                 >
                   <ChevronRight className="w-4 h-4" />
-                  <span className="text-muted-foreground font-semibold">Sljedeća:</span>
+                  <span className="text-muted-foreground font-semibold">{t("Sljedeća:")}</span>
                   <span className="truncate max-w-[16rem] sm:max-w-xs">{nextUndone.naslov}</span>
                 </button>
               </div>
@@ -2981,18 +2990,18 @@ export default function IlmihalLekcijaPage() {
                 .info-box{background:#fffde7;border-left:4px solid #f9a825;padding:12px 16px;border-radius:8px;margin:10px 0;}
                 @media print{body{padding:20px;}}
               </style></head><body>
-                <div class="nivo-badge">Nivo ${lekcija.nivo}</div>
+                <div class="nivo-badge">${t("Nivo")} ${lekcija.nivo}</div>
                 <h1>${lekcija.naslov}</h1>
                 ${parsed.heroImage ? '<div class="hero-print"><img src="' + (parsed.heroImage.startsWith("http") ? parsed.heroImage : "https://mekteb.net" + parsed.heroImage) + '" /></div>' : ""}
                 ${sections}
-                <div class="footer">mekteb.net — Islamska edukativna platforma</div>
+                <div class="footer">mekteb.net — ${t("Islamska edukativna platforma")}</div>
               </body></html>`);
               printWindow.document.close();
               setTimeout(() => printWindow.print(), 500);
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
           >
-            <Printer className="w-4 h-4" /> Printaj lekciju
+            <Printer className="w-4 h-4" /> {t("Printaj lekciju")}
           </button>
         </div>
 
@@ -3054,7 +3063,7 @@ export default function IlmihalLekcijaPage() {
         {/* Ocjena lekcije (5 pčelica) — vidi se svima, glasaju prijavljeni */}
         {lekcija?.id && (
           <div className="flex justify-end -mt-3 mb-4 pr-1">
-            <PcelaRating tip="lekcija" id={lekcija.id} size={20} align="right" label="Ocijeni lekciju" />
+            <PcelaRating tip="lekcija" id={lekcija.id} size={20} align="right" label={t("Ocijeni lekciju")} />
           </div>
         )}
 
@@ -3110,7 +3119,7 @@ export default function IlmihalLekcijaPage() {
                       className="w-full ring-2 ring-inset ring-teal-200 bg-teal-50 hover:bg-teal-100 rounded-2xl px-5 py-4 flex items-center justify-center gap-2 text-sm font-bold text-teal-800 transition-colors"
                       data-testid="button-dodaj-kviz"
                     >
-                      <Plus className="w-4 h-4" /> Dodaj kviz "Provjeri znanje"
+                      <Plus className="w-4 h-4" /> {t('Dodaj kviz "Provjeri znanje"')}
                     </button>
                   );
                 }
@@ -3175,7 +3184,7 @@ export default function IlmihalLekcijaPage() {
                 className="w-full ring-2 ring-inset ring-teal-200 bg-teal-50 hover:bg-teal-100 rounded-2xl px-5 py-4 flex items-center justify-center gap-2 text-sm font-bold text-teal-800 transition-colors"
                 data-testid="button-dodaj-kviz-fallback"
               >
-                <Plus className="w-4 h-4" /> Dodaj kviz "Provjeri znanje"
+                <Plus className="w-4 h-4" /> {t('Dodaj kviz "Provjeri znanje"')}
               </button>
             )}
           </div>
@@ -3214,7 +3223,7 @@ export default function IlmihalLekcijaPage() {
                     data-testid="gate-time"
                   >
                     <Clock className="w-3.5 h-3.5" />
-                    Još {formatDuration(remainingSeconds)} čitanja
+                    {t("Još")} {formatDuration(remainingSeconds)} {t("čitanja")}
                   </span>
                 )}
                 {!scrollOk && (
@@ -3223,7 +3232,7 @@ export default function IlmihalLekcijaPage() {
                     data-testid="gate-scroll"
                   >
                     <ChevronDown className="w-3.5 h-3.5" />
-                    Skrolaj do dna ({Math.round(scrollPercent * 100)}%)
+                    {t("Skrolaj do dna")} ({Math.round(scrollPercent * 100)}%)
                   </span>
                 )}
                 {!sectionsOk && (
@@ -3232,7 +3241,7 @@ export default function IlmihalLekcijaPage() {
                     data-testid="gate-sections"
                   >
                     <BookOpen className="w-3.5 h-3.5" />
-                    Otvori još {remainingSections} {remainingSections === 1 ? "sekciju" : "sekcija"}
+                    {t("Otvori još")} {remainingSections} {remainingSections === 1 ? t("sekciju") : t("sekcija")}
                   </span>
                 )}
                 {!quizOk && (
@@ -3241,7 +3250,7 @@ export default function IlmihalLekcijaPage() {
                     data-testid="gate-quiz"
                   >
                     <HelpCircle className="w-3.5 h-3.5" />
-                    Riješi kviz tačno
+                    {t("Riješi kviz tačno")}
                   </span>
                 )}
               </div>
@@ -3279,9 +3288,9 @@ export default function IlmihalLekcijaPage() {
               className={`rounded-2xl px-8 py-3 font-bold text-base ${completed ? "bg-emerald-500 hover:bg-emerald-500" : ""}`}
             >
               {completed ? (
-                <><CheckCircle2 className="w-5 h-5 mr-2" /> Završeno! ⭐</>
+                <><CheckCircle2 className="w-5 h-5 mr-2" /> {t("Završeno! ⭐")}</>
               ) : (
-                <><BookOpen className="w-5 h-5 mr-2" /> Označi kao završeno</>
+                <><BookOpen className="w-5 h-5 mr-2" /> {t("Označi kao završeno")}</>
               )}
             </Button>
           </motion.div>

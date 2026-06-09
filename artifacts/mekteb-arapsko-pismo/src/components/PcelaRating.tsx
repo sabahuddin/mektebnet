@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 
 type Tip = "lekcija" | "prilog" | "kviz";
 
@@ -23,6 +24,7 @@ function Bee({ filled, size, onClick, onMouseEnter, onMouseLeave }: {
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }) {
+  const { t } = useLanguage();
   const Tag = onClick ? "button" : "span";
   return (
     <Tag
@@ -37,7 +39,7 @@ function Bee({ filled, size, onClick, onMouseEnter, onMouseLeave }: {
         src={BEE}
         width={size}
         height={size}
-        alt="pčelica"
+        alt={t("pčelica")}
         draggable={false}
         style={{
           width: size,
@@ -54,6 +56,7 @@ function Bee({ filled, size, onClick, onMouseEnter, onMouseLeave }: {
 export function PcelaRating({ tip, id, size = 20, showCount = true, align = "left", label, className = "" }: PcelaRatingProps) {
   const { user, token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [avg, setAvg] = useState(0);
   const [count, setCount] = useState(0);
   const [myOcjena, setMyOcjena] = useState<number | null>(null);
@@ -81,7 +84,7 @@ export function PcelaRating({ tip, id, size = 20, showCount = true, align = "lef
 
   const sendOcjena = async (val: number) => {
     if (!user || !token) {
-      toast({ title: "Prijavi se", description: "Potrebno je biti prijavljen da bi ocijenio.", variant: "destructive" });
+      toast({ title: t("Prijavi se"), description: t("Potrebno je biti prijavljen da bi ocijenio."), variant: "destructive" });
       return;
     }
     if (saving) return;
@@ -92,14 +95,14 @@ export function PcelaRating({ tip, id, size = 20, showCount = true, align = "lef
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ tip, id, ocjena: val }),
       });
-      if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || "Greška");
+      if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || t("Greška"));
       const data = await r.json();
       setAvg(Number(data.avg ?? 0));
       setCount(Number(data.count ?? 0));
       setMyOcjena(val);
-      toast({ title: "Hvala na ocjeni!", description: `Tvoja ocjena: ${val} 🐝` });
+      toast({ title: t("Hvala na ocjeni!"), description: t("Tvoja ocjena: {val} 🐝", { val: String(val) }) });
     } catch (e: any) {
-      toast({ title: "Greška", description: e.message ?? "Pokušaj ponovo.", variant: "destructive" });
+      toast({ title: t("Greška"), description: e.message ?? t("Pokušaj ponovo."), variant: "destructive" });
     } finally {
       setSaving(false);
     }

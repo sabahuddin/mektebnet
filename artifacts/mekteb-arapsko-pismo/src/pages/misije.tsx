@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +28,7 @@ interface Misija {
 
 export default function MisijePage() {
   const { user, token } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [misije, setMisije] = useState<Misija[] | null>(null);
   const [claiming, setClaiming] = useState<number | null>(null);
@@ -48,16 +50,16 @@ export default function MisijePage() {
         "POST", `/misije/${m.id}/claim`, {}, token,
       );
       if (resp.alreadyClaimed) {
-        toast({ title: "Već preuzeto", description: resp.message ?? "Nagrada je već preuzeta." });
+        toast({ title: t("Već preuzeto"), description: resp.message ?? t("Nagrada je već preuzeta.") });
       } else {
         const parts: string[] = [];
-        if (resp.nagradaAferim > 0) parts.push(`+${resp.nagradaAferim} kapi meda 🍯`);
-        if (resp.nagradaMed > 0) parts.push(`+${resp.nagradaMed} Aferima ⭐`);
-        toast({ title: "Misija završena!", description: parts.join("  ·  ") || resp.message });
+        if (resp.nagradaAferim > 0) parts.push(t("+{n} kapi meda 🍯", { n: String(resp.nagradaAferim) }));
+        if (resp.nagradaMed > 0) parts.push(t("+{n} Aferima ⭐", { n: String(resp.nagradaMed) }));
+        toast({ title: t("Misija završena!"), description: parts.join("  ·  ") || resp.message });
       }
       load();
     } catch {
-      toast({ title: "Greška pri preuzimanju", variant: "destructive" });
+      toast({ title: t("Greška pri preuzimanju"), variant: "destructive" });
     } finally {
       setClaiming(null);
     }
@@ -67,8 +69,8 @@ export default function MisijePage() {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto text-center py-20">
-          <p className="text-muted-foreground">Prijavi se da vidiš svoje misije.</p>
-          <Link href="/login" className="text-primary font-bold underline">Prijava</Link>
+          <p className="text-muted-foreground">{t("Prijavi se da vidiš svoje misije.")}</p>
+          <Link href="/login" className="text-primary font-bold underline">{t("Prijava")}</Link>
         </div>
       </Layout>
     );
@@ -95,24 +97,24 @@ export default function MisijePage() {
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <Link href="/ucenik" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary text-sm font-medium mb-3">
-            <ArrowLeft className="w-4 h-4" /> Nazad na profil
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad na profil")}
           </Link>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-2xl flex items-center justify-center shadow-md">
               <Target className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-foreground">Misije</h1>
+              <h1 className="text-2xl font-extrabold text-foreground">{t("Misije")}</h1>
               <p className="text-sm text-muted-foreground">
-                Završi izazove i preuzmi nagrade. Dnevne se resetuju u ponoć, sedmične u nedjelju.
+                {t("Završi izazove i preuzmi nagrade. Dnevne se resetuju u ponoć, sedmične u nedjelju.")}
               </p>
             </div>
           </div>
         </div>
 
-        <Section naslov="Danas" misije={dnevne} claim={claim} claiming={claiming} />
+        <Section naslov={t("Danas")} misije={dnevne} claim={claim} claiming={claiming} />
         <div className="h-6" />
-        <Section naslov="Ova sedmica" misije={sedmicne} claim={claim} claiming={claiming} />
+        <Section naslov={t("Ova sedmica")} misije={sedmicne} claim={claim} claiming={claiming} />
       </div>
     </Layout>
   );
@@ -138,6 +140,7 @@ function Section({ naslov, misije, claim, claiming }: {
 }
 
 function MisijaCard({ m, onClaim, loading }: { m: Misija; onClaim: () => void; loading: boolean }) {
+  const { t } = useLanguage();
   const pct = Math.min(100, Math.round((m.trenutno / Math.max(1, m.cilj)) * 100));
   const claimed = m.claimedAt !== null;
   const ready = m.completed && !claimed;
@@ -190,11 +193,11 @@ function MisijaCard({ m, onClaim, loading }: { m: Misija; onClaim: () => void; l
         </div>
         {ready && (
           <Button size="sm" onClick={onClaim} disabled={loading} className="h-8 rounded-xl">
-            <Trophy className="w-3.5 h-3.5 mr-1" /> {loading ? "..." : "Preuzmi"}
+            <Trophy className="w-3.5 h-3.5 mr-1" /> {loading ? "..." : t("Preuzmi")}
           </Button>
         )}
         {claimed && (
-          <span className="text-xs font-bold text-emerald-700">Preuzeto</span>
+          <span className="text-xs font-bold text-emerald-700">{t("Preuzeto")}</span>
         )}
       </div>
     </motion.div>

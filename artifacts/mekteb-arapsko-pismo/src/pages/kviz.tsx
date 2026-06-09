@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
+import { useLanguage } from "@/context/language";
 
 interface Pitanje {
   type?: "radio" | "checkbox" | "truefalse" | "reorder" | "markWords" | "dragDrop";
@@ -50,6 +51,7 @@ const QUESTION_TYPES = [
 function AdminEditModal({ kviz, token, onClose, onSaved }: {
   kviz: Kviz; token: string; onClose: () => void; onSaved: (updated: Kviz) => void;
 }) {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [naslov, setNaslov] = useState(kviz.naslov);
   const [pitanja, setPitanja] = useState<Pitanje[]>(JSON.parse(JSON.stringify(kviz.pitanja)));
@@ -69,14 +71,14 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resp.ok) {
-        toast({ title: "Greška", description: `Ne mogu učitati galeriju (${resp.status})`, variant: "destructive" });
+        toast({ title: t("Greška"), description: t("Ne mogu učitati galeriju ({status})", { status: String(resp.status) }), variant: "destructive" });
         setGalleryImages([]);
       } else {
         const data = await resp.json();
         setGalleryImages(Array.isArray(data) ? data : data.files || []);
       }
     } catch {
-      toast({ title: "Greška", description: "Ne mogu učitati galeriju", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Ne mogu učitati galeriju"), variant: "destructive" });
     }
     setGalleryLoading(false);
   }, [token, toast]);
@@ -108,13 +110,13 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
       });
       const data = await resp.json();
       if (!resp.ok) {
-        toast({ title: "Greška pri uploadu", description: data.error || "Nepoznata greška", variant: "destructive" });
+        toast({ title: t("Greška pri uploadu"), description: data.error || t("Nepoznata greška"), variant: "destructive" });
       } else if (data.url) {
         selectImage(data.url);
-        toast({ title: "Slika uploadovana ✓" });
+        toast({ title: t("Slika uploadovana ✓") });
       }
     } catch {
-      toast({ title: "Upload nije uspio", variant: "destructive" });
+      toast({ title: t("Upload nije uspio"), variant: "destructive" });
     }
     setUploading(false);
   }, [token, toast, selectImage]);
@@ -175,11 +177,11 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
     setIsLoading(true);
     try {
       await apiRequest("PUT", `/admin/kvizovi/${kviz.id}`, { naslov, pitanja }, token);
-      toast({ title: "Kviz sačuvan!", description: `${naslov} — ${pitanja.length} pitanja` });
+      toast({ title: t("Kviz sačuvan!"), description: t("{naslov} — {n} pitanja", { naslov, n: String(pitanja.length) }) });
       onSaved({ ...kviz, naslov, pitanja });
       onClose();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće sačuvati kviz", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće sačuvati kviz"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -193,14 +195,14 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8">
         <div className="flex items-center justify-between p-5 border-b">
-          <h3 className="font-extrabold text-lg text-foreground">Uredi kviz</h3>
+          <h3 className="font-extrabold text-lg text-foreground">{t("Uredi kviz")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-5 flex flex-col gap-4">
           {/* Naziv */}
           <div>
-            <label className="text-xs font-bold text-muted-foreground mb-1 block">Naziv kviza</label>
+            <label className="text-xs font-bold text-muted-foreground mb-1 block">{t("Naziv kviza")}</label>
             <input value={naslov} onChange={e => setNaslov(e.target.value)}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-bold" />
           </div>
@@ -223,7 +225,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
             <div className="bg-muted/30 rounded-2xl p-4 flex flex-col gap-3">
               {/* Header */}
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-muted-foreground">Pitanje {activePitanje + 1}/{pitanja.length}</span>
+                <span className="text-xs font-bold text-muted-foreground">{t("Pitanje {n}/{ukupno}", { n: String(activePitanje + 1), ukupno: String(pitanja.length) })}</span>
                 <button onClick={() => removePitanje(activePitanje)} className="text-red-500 hover:text-red-700 p-1">
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -231,7 +233,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
 
               {/* Tip pitanja */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Tip pitanja</label>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">{t("Tip pitanja")}</label>
                 <select value={pType} onChange={e => changeType(activePitanje, e.target.value)}
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-medium bg-white">
                   {QUESTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -240,12 +242,12 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
 
               {/* Tekst pitanja */}
               <textarea value={p.question} onChange={e => updatePitanje(activePitanje, "question", e.target.value)}
-                rows={2} placeholder="Tekst pitanja..."
+                rows={2} placeholder={t("Tekst pitanja...")}
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none font-medium" />
 
               {/* Ilustracija */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Ilustracija (opciono)</label>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">{t("Ilustracija (opciono)")}</label>
                 {(() => {
                   const currentImg = p.slika || p.image || "";
                   const previewSrc = currentImg
@@ -272,11 +274,11 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                           <div className="flex gap-2 mt-2">
                             <button type="button" onClick={openGallery}
                               className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                              <FolderOpen className="w-3 h-3" /> Promijeni
+                              <FolderOpen className="w-3 h-3" /> {t("Promijeni")}
                             </button>
                             <button type="button" onClick={() => { updatePitanje(activePitanje, "slika", ""); updatePitanje(activePitanje, "image", undefined); }}
                               className="text-xs font-bold text-red-500 hover:underline flex items-center gap-1">
-                              <X className="w-3 h-3" /> Ukloni
+                              <X className="w-3 h-3" /> {t("Ukloni")}
                             </button>
                           </div>
                         </div>
@@ -287,12 +289,12 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                     <div className="flex gap-2">
                       <button type="button" onClick={openGallery}
                         className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-border text-xs font-bold text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                        <FolderOpen className="w-4 h-4" /> Odaberi iz galerije
+                        <FolderOpen className="w-4 h-4" /> {t("Odaberi iz galerije")}
                       </button>
                       <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors disabled:opacity-60">
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                        Upload
+                        {t("Upload")}
                       </button>
                       <input ref={fileInputRef} type="file" accept="image/*" onChange={onUploadFile} className="hidden" />
                     </div>
@@ -307,11 +309,11 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs font-bold text-muted-foreground">
-                        Opcije — klikni kvadratić za tačan odgovor
+                        {t("Opcije — klikni kvadratić za tačan odgovor")}
                       </label>
                       {correctArr.length > 1 && (
                         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          {correctArr.length} tačna odgovora
+                          {t("{n} tačna odgovora", { n: String(correctArr.length) })}
                         </span>
                       )}
                     </div>
@@ -325,7 +327,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                               {isCorrect && <span className="text-white text-xs font-bold leading-none">✓</span>}
                             </button>
                             <input value={opt} onChange={e => updateOption(activePitanje, oIdx, e.target.value)}
-                              placeholder={`Opcija ${oIdx + 1}`}
+                              placeholder={t("Opcija {n}", { n: String(oIdx + 1) })}
                               className={`flex-1 border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${isCorrect ? "border-emerald-400 bg-emerald-50 font-bold" : "border-border"}`} />
                             {pType !== "truefalse" && (
                               <button onClick={() => updatePitanje(activePitanje, "options", (p.options || []).filter((_, j) => j !== oIdx))}
@@ -340,7 +342,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                     {pType !== "truefalse" && (
                       <button onClick={() => updatePitanje(activePitanje, "options", [...(p.options || []), ""])}
                         className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                        <Plus className="w-3 h-3" /> Dodaj opciju
+                        <Plus className="w-3 h-3" /> {t("Dodaj opciju")}
                       </button>
                     )}
                   </div>
@@ -352,7 +354,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                 <div className="flex flex-col gap-3">
                   <div>
                     <label className="text-xs font-bold text-muted-foreground mb-1 block">
-                      Puni tekst (npr. cijela dova/sura s greškom unutra)
+                      {t("Puni tekst (npr. cijela dova/sura s greškom unutra)")}
                     </label>
                     <textarea value={p.text || ""} onChange={e => updatePitanje(activePitanje, "text", e.target.value)}
                       rows={4} placeholder="Npr: Subhaneke allahumme ve bi hamdike ve tebarekesmuke ve..."
@@ -360,8 +362,8 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                   </div>
                   <div>
                     <label className="text-xs font-bold text-muted-foreground mb-1 block">
-                      SVE klikabilne riječi — odvojene zarezom
-                      <span className="text-muted-foreground font-normal ml-1">(koje riječi korisnik može kliknuti)</span>
+                      {t("SVE klikabilne riječi — odvojene zarezom")}
+                      <span className="text-muted-foreground font-normal ml-1">{t("(koje riječi korisnik može kliknuti)")}</span>
                     </label>
                     <textarea value={(p.words || []).join(", ")}
                       onChange={e => updatePitanje(activePitanje, "words", e.target.value.split(",").map(w => w.trim()).filter(Boolean))}
@@ -370,12 +372,12 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                   </div>
                   <div>
                     <label className="text-xs font-bold text-amber-700 mb-1 block">
-                      POGREŠNE riječi — odvojene zarezom
-                      <span className="text-muted-foreground font-normal ml-1">(koje treba pronaći)</span>
+                      {t("POGREŠNE riječi — odvojene zarezom")}
+                      <span className="text-muted-foreground font-normal ml-1">{t("(koje treba pronaći)")}</span>
                     </label>
                     <input value={(p.incorrect || []).join(", ")}
                       onChange={e => updatePitanje(activePitanje, "incorrect", e.target.value.split(",").map(w => w.trim()).filter(Boolean))}
-                      placeholder="npr: hamdike, džellešanuhu"
+                      placeholder={t("npr: hamdike, džellešanuhu")}
                       className="w-full border border-amber-300 bg-amber-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 font-medium" />
                   </div>
                 </div>
@@ -385,7 +387,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
               {pType === "reorder" && (
                 <div>
                   <label className="text-xs font-bold text-muted-foreground mb-2 block">
-                    Stavke — upiši tekst i postavi tačan redosljed brojem
+                    {t("Stavke — upiši tekst i postavi tačan redosljed brojem")}
                   </label>
                   <div className="flex flex-col gap-2">
                     {(p.items || []).map((item, iIdx) => (
@@ -403,7 +405,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                             items[iIdx] = { ...items[iIdx], text: e.target.value };
                             updatePitanje(activePitanje, "items", items);
                           }}
-                          placeholder={`Stavka ${iIdx + 1}`}
+                          placeholder={t("Stavka {n}", { n: String(iIdx + 1) })}
                           className="flex-1 border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
                         <button onClick={() => updatePitanje(activePitanje, "items", (p.items || []).filter((_, j) => j !== iIdx))}
                           className="text-red-400 hover:text-red-600 p-1"><X className="w-3.5 h-3.5" /></button>
@@ -412,7 +414,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
                   </div>
                   <button onClick={() => updatePitanje(activePitanje, "items", [...(p.items || []), { text: "", order: (p.items?.length || 0) + 1 }])}
                     className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Dodaj stavku
+                    <Plus className="w-3 h-3" /> {t("Dodaj stavku")}
                   </button>
                 </div>
               )}
@@ -421,21 +423,21 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
               {pType === "dragDrop" && (
                 <div className="flex flex-col gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                   <p className="text-xs font-bold text-blue-900">
-                    Ovaj tip pitanja se uređuje u <strong>Admin → Banka pitanja</strong>.
+                    {t("Ovaj tip pitanja se uređuje u")} <strong>{t("Admin → Banka pitanja")}</strong>.
                   </p>
                   <div className="text-xs text-blue-800 space-y-1">
-                    <div><strong>Tekst sa prazninama:</strong> {(p.template || []).map((t, i) => t === "DROP" ? <span key={i} className="inline-block px-2 mx-0.5 bg-white border border-dashed border-blue-400 rounded">___</span> : <span key={i}>{t} </span>)}</div>
-                    <div><strong>Riječi:</strong> {(p.words || []).join(", ")}</div>
-                    <div><strong>Tačan redoslijed:</strong> {(p.correct || []).join(" → ")}</div>
+                    <div><strong>{t("Tekst sa prazninama:")}</strong> {(p.template || []).map((part, i) => part === "DROP" ? <span key={i} className="inline-block px-2 mx-0.5 bg-white border border-dashed border-blue-400 rounded">___</span> : <span key={i}>{part} </span>)}</div>
+                    <div><strong>{t("Riječi:")}</strong> {(p.words || []).join(", ")}</div>
+                    <div><strong>{t("Tačan redoslijed:")}</strong> {(p.correct || []).join(" → ")}</div>
                   </div>
                 </div>
               )}
 
               {/* Objašnjenje */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Objašnjenje (opciono)</label>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">{t("Objašnjenje (opciono)")}</label>
                 <input value={p.explanation || ""} onChange={e => updatePitanje(activePitanje, "explanation", e.target.value)}
-                  placeholder="Kratko objašnjenje tačnog odgovora..."
+                  placeholder={t("Kratko objašnjenje tačnog odgovora...")}
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
             </div>
@@ -443,10 +445,10 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
         </div>
 
         <div className="p-5 border-t flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose} className="rounded-xl">Odustani</Button>
+          <Button variant="outline" onClick={onClose} className="rounded-xl">{t("Odustani")}</Button>
           <Button onClick={handleSave} disabled={isLoading} className="rounded-xl flex items-center gap-2">
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Sačuvaj kviz
+            {t("Sačuvaj kviz")}
           </Button>
         </div>
       </motion.div>
@@ -456,13 +458,13 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
           <div className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-4xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
               <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-primary" /> Odaberi sliku za pitanje
+                <ImageIcon className="w-5 h-5 text-primary" /> {t("Odaberi sliku za pitanje")}
               </h3>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-60">
                   {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                  Upload nove
+                  {t("Upload nove")}
                 </button>
                 <button type="button" onClick={() => setShowGallery(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
                   <X className="w-5 h-5" />
@@ -471,7 +473,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
             </div>
             <div className="px-5 py-2 border-b border-gray-100">
               <input value={gallerySearch} onChange={e => setGallerySearch(e.target.value)}
-                placeholder="Pretraga po nazivu fajla..."
+                placeholder={t("Pretraga po nazivu fajla...")}
                 className="w-full border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div className="flex-1 overflow-y-auto p-4">
@@ -482,7 +484,7 @@ function AdminEditModal({ kviz, token, onClose, onSaved }: {
               ) : (() => {
                 const filtered = galleryImages.filter(img => !gallerySearch || img.name.toLowerCase().includes(gallerySearch.toLowerCase()));
                 if (filtered.length === 0) {
-                  return <p className="text-center text-gray-400 py-12 text-sm">{gallerySearch ? "Nema rezultata za pretragu" : "Nema uploadovanih slika. Klikni 'Upload nove' gore."}</p>;
+                  return <p className="text-center text-gray-400 py-12 text-sm">{gallerySearch ? t("Nema rezultata za pretragu") : t("Nema uploadovanih slika. Klikni 'Upload nove' gore.")}</p>;
                 }
                 return (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
@@ -531,6 +533,7 @@ function shuffleQuestionOptions(p: Pitanje): Pitanje {
 }
 
 export default function KvizPage() {
+  const { t } = useLanguage();
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
@@ -619,7 +622,7 @@ export default function KvizPage() {
   }, [slug]);
 
   if (isLoading) return <Layout><div className="max-w-2xl mx-auto"><Skeleton className="h-96 rounded-3xl" /></div></Layout>;
-  if (!kviz) return <Layout><div className="text-center py-20 text-muted-foreground">Kviz nije pronađen</div></Layout>;
+  if (!kviz) return <Layout><div className="text-center py-20 text-muted-foreground">{t("Kviz nije pronađen")}</div></Layout>;
 
   if (kviz.pitanja.length === 0) {
     return (
@@ -627,10 +630,10 @@ export default function KvizPage() {
         <div className="max-w-2xl mx-auto text-center py-20">
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-xl font-extrabold text-foreground mb-2">{kviz.naslov}</h2>
-          <p className="text-muted-foreground mb-6">Ovaj kviz je u pripremi — pitanja uskoro stižu!</p>
+          <p className="text-muted-foreground mb-6">{t("Ovaj kviz je u pripremi — pitanja uskoro stižu!")}</p>
           <button onClick={() => setLocation("/kvizovi")}
             className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-primary font-bold transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Nazad na kvizove
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad na kvizove")}
           </button>
         </div>
       </Layout>
@@ -863,21 +866,21 @@ export default function KvizPage() {
               streakIncreased: resp?.streakIncreased ?? false,
             });
           } else if (earned > 0) {
-            toast({ title: `+${earned} kapi meda! 🍯`, description: `Odlično si riješio/la kviz "${kviz.naslov}"` });
+            toast({ title: t("+{n} kapi meda! 🍯", { n: String(earned) }), description: t(`Odlično si riješio/la kviz "{naslov}"`, { naslov: kviz.naslov }) });
           }
           const newBadges = resp?.newBadges || [];
           if (newBadges.length > 0) {
             setTimeout(() => {
               const first = newBadges[0];
               toast({
-                title: `🎉 Osvojio si bedž!${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
+                title: `${t("🎉 Osvojio si bedž!")}${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
                 description: `${first.ikona} ${first.naziv} — ${first.opis}`,
               });
             }, 900);
           }
         }).catch((err: any) => {
           if (err?.status === 429 || err?.message?.includes("429")) {
-            toast({ title: "Već si radio/la ovaj kviz danas", description: "Pokušaj ponovo sutra!", variant: "destructive" });
+            toast({ title: t("Već si radio/la ovaj kviz danas"), description: t("Pokušaj ponovo sutra!"), variant: "destructive" });
           }
         });
       }
@@ -899,25 +902,25 @@ export default function KvizPage() {
             <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Trophy className="w-10 h-10 text-yellow-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground mb-2">Kviz završen!</h2>
-            <p className="text-muted-foreground mb-6">Tačnih odgovora: {score} od {pitanja.length} pitanja</p>
+            <h2 className="text-2xl font-extrabold text-foreground mb-2">{t("Kviz završen!")}</h2>
+            <p className="text-muted-foreground mb-6">{t("Tačnih odgovora: {score} od {ukupno} pitanja", { score: String(score), ukupno: String(pitanja.length) })}</p>
             {(() => {
               const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
                 ? kviz.pitanjaPoSesiji
                 : DEFAULT_QUIZ_SIZE;
               return kviz.pitanja.length > sessionSize ? (
-                <p className="text-xs text-muted-foreground mb-2">nasumično odabrano iz {kviz.pitanja.length} pitanja</p>
+                <p className="text-xs text-muted-foreground mb-2">{t("nasumično odabrano iz {n} pitanja", { n: String(kviz.pitanja.length) })}</p>
               ) : null;
             })()}
             <div className="text-5xl font-extrabold text-primary mb-6">{pct}%</div>
             {pct >= 80 && (
               <div className="flex items-center gap-2 justify-center bg-yellow-50 text-yellow-700 rounded-2xl p-4 mb-6 border border-yellow-200">
                 <Star className="w-5 h-5 fill-yellow-500" />
-                <span className="font-bold">Odlično! Zaradio/la si kapi meda 🍯</span>
+                <span className="font-bold">{t("Odlično! Zaradio/la si kapi meda 🍯")}</span>
               </div>
             )}
             <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">Nazad</Button>
+              <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">{t("Nazad")}</Button>
               <Button onClick={() => {
                 const pool = shuffle(kviz.pitanja);
                 const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
@@ -931,16 +934,16 @@ export default function KvizPage() {
                 if (first?.type === "reorder" && first.items) setOrderedItems(shuffle(first.items.map((i: any) => i.text)));
                 if (first?.type === "dragDrop" && first.template && first.words) { setDroppedWords(Array(first.template.filter((t: string) => t === "DROP").length).fill(null)); setWordBank(shuffle([...first.words])); }
               }} className="rounded-2xl">
-                Ponovi
+                {t("Ponovi")}
               </Button>
             </div>
             {wrongAnswers.length > 0 && (
               <div className="mt-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl text-sm text-amber-900 text-left">
-                <p className="font-bold mb-1">🍯 Saće s rupama!</p>
+                <p className="font-bold mb-1">{t("🍯 Saće s rupama!")}</p>
                 <p>
-                  Imaš <strong>{wrongAnswers.length}</strong>{" "}
-                  {wrongAnswers.length === 1 ? "grešku" : "grešaka"} za popraviti.
-                  Idi u <button onClick={() => setLocation("/popravi-sace")} className="underline font-bold">Popravi saće</button> i zaradi po 5 kapi meda za svaku.
+                  {t("Imaš")} <strong>{wrongAnswers.length}</strong>{" "}
+                  {wrongAnswers.length === 1 ? t("grešku") : t("grešaka")} {t("za popraviti. Idi u")}{" "}
+                  <button onClick={() => setLocation("/popravi-sace")} className="underline font-bold">{t("Popravi saće")}</button> {t("i zaradi po 5 kapi meda za svaku.")}
                 </p>
               </div>
             )}
@@ -960,13 +963,13 @@ export default function KvizPage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => setLocation("/kvizovi")} className="flex items-center gap-2 text-muted-foreground hover:text-primary font-medium transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Nazad
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
           {user?.role === "admin" && (
             <button onClick={() => setLocation(`/admin/kviz/${kviz.id}`)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
-              title="Otvori novi editor kviza">
-              <Pencil className="w-3.5 h-3.5" /> Uredi kviz
+              title={t("Otvori novi editor kviza")}>
+              <Pencil className="w-3.5 h-3.5" /> {t("Uredi kviz")}
             </button>
           )}
         </div>
@@ -1077,7 +1080,7 @@ export default function KvizPage() {
             {/* ── CHECKBOX ── */}
             {qType === "checkbox" && (
               <>
-                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Odaberi sve tačne odgovore</p>}
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">{t("Odaberi sve tačne odgovore")}</p>}
                 <div className="flex flex-col gap-3 mb-4">
                   {(pitanje.options || []).map((opt) => {
                     const correctArr = getCorrectArr(pitanje);
@@ -1107,7 +1110,7 @@ export default function KvizPage() {
                 {!answered && (
                   <div className="flex justify-end mb-4">
                     <Button onClick={confirmCheckbox} disabled={selectedMulti.length === 0} className="rounded-2xl px-8 font-bold">
-                      Potvrdi odgovor
+                      {t("Potvrdi odgovor")}
                     </Button>
                   </div>
                 )}
@@ -1117,7 +1120,7 @@ export default function KvizPage() {
             {/* ── REORDER ── */}
             {qType === "reorder" && (
               <>
-                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Prevuci stavke (drži i povuci) ili koristi strelice da ih poredaš u tačan redosljed</p>}
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">{t("Prevuci stavke (drži i povuci) ili koristi strelice da ih poredaš u tačan redosljed")}</p>}
                 <div className="flex flex-col gap-2 mb-4">
                   {orderedItems.map((item, idx) => {
                     const correctOrder = [...(pitanje.items || [])].sort((a, b) => a.order - b.order).map(i => i.text);
@@ -1136,7 +1139,7 @@ export default function KvizPage() {
                             onPointerMove={handleReorderPointerMove}
                             onPointerUp={handleReorderPointerUp}
                             onPointerCancel={handleReorderPointerUp}
-                            aria-label="Prevuci da promijeniš redosljed"
+                            aria-label={t("Prevuci da promijeniš redosljed")}
                             className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-primary p-1 -ml-1 shrink-0"
                           >
                             <GripVertical className="w-5 h-5" />
@@ -1158,7 +1161,7 @@ export default function KvizPage() {
                 </div>
                 {answered && (
                   <div className="bg-muted/40 rounded-2xl p-4 mb-4 text-sm text-muted-foreground">
-                    <p className="font-bold text-foreground mb-2">Tačan redosljed:</p>
+                    <p className="font-bold text-foreground mb-2">{t("Tačan redosljed:")}</p>
                     {[...(pitanje.items || [])].sort((a,b) => a.order - b.order).map((item, i) => (
                       <p key={i}>{i+1}. {item.text}</p>
                     ))}
@@ -1166,7 +1169,7 @@ export default function KvizPage() {
                 )}
                 {!answered && (
                   <div className="flex justify-end mb-4">
-                    <Button onClick={confirmReorder} className="rounded-2xl px-8 font-bold">Potvrdi redosljed</Button>
+                    <Button onClick={confirmReorder} className="rounded-2xl px-8 font-bold">{t("Potvrdi redosljed")}</Button>
                   </div>
                 )}
               </>
@@ -1175,7 +1178,7 @@ export default function KvizPage() {
             {/* ── MARK WORDS ── */}
             {qType === "markWords" && (
               <>
-                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Klikni na pogrešnu/e riječ/i</p>}
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">{t("Klikni na pogrešnu/e riječ/i")}</p>}
                 <div className="flex flex-wrap gap-2 mb-4 p-4 bg-muted/30 rounded-2xl">
                   {(pitanje.words || (pitanje.text || "").split(" ")).map((word, i) => {
                     const isIncorrect = (pitanje.incorrect || []).includes(word);
@@ -1197,7 +1200,7 @@ export default function KvizPage() {
                 </div>
                 {!answered && (
                   <div className="flex justify-end mb-4">
-                    <Button onClick={confirmMarkWords} disabled={markedWords.length === 0} className="rounded-2xl px-8 font-bold">Potvrdi odgovor</Button>
+                    <Button onClick={confirmMarkWords} disabled={markedWords.length === 0} className="rounded-2xl px-8 font-bold">{t("Potvrdi odgovor")}</Button>
                   </div>
                 )}
               </>
@@ -1206,7 +1209,7 @@ export default function KvizPage() {
             {/* ── DRAG DROP (click-based) ── */}
             {qType === "dragDrop" && (
               <>
-                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">Popuni praznine klikom na odgovore ispod</p>}
+                {!answered && <p className="text-xs text-muted-foreground mb-4 font-medium">{t("Popuni praznine klikom na odgovore ispod")}</p>}
                 <div className="flex flex-wrap items-center gap-2 mb-4 p-4 bg-muted/30 rounded-2xl text-base font-medium leading-relaxed">
                   {(() => {
                     let dropIdx = 0;
@@ -1235,7 +1238,7 @@ export default function KvizPage() {
                 </div>
                 {answered && droppedWords.some((w, i) => w !== (pitanje.correct || [])[i]) && (
                   <div className="bg-muted/40 rounded-2xl p-4 mb-4 text-sm text-muted-foreground">
-                    <p className="font-bold text-foreground mb-1">Tačni odgovori: {(pitanje.correct || []).join(", ")}</p>
+                    <p className="font-bold text-foreground mb-1">{t("Tačni odgovori:")} {(pitanje.correct || []).join(", ")}</p>
                   </div>
                 )}
                 {!answered && (
@@ -1254,10 +1257,10 @@ export default function KvizPage() {
                     <div className="flex justify-between items-center mb-4">
                       <button onClick={() => { setDroppedWords(Array(droppedWords.length).fill(null)); setWordBank(shuffle([...(pitanje.words||[])])); }}
                         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
-                        <RotateCcw className="w-3.5 h-3.5" /> Resetuj
+                        <RotateCcw className="w-3.5 h-3.5" /> {t("Resetuj")}
                       </button>
                       <Button onClick={confirmDragDrop} disabled={droppedWords.some(w => w === null)} className="rounded-2xl px-8 font-bold">
-                        Potvrdi odgovor
+                        {t("Potvrdi odgovor")}
                       </Button>
                     </div>
                   </>
@@ -1275,7 +1278,7 @@ export default function KvizPage() {
             {answered && (
               <div className="flex justify-end">
                 <Button onClick={next} className="rounded-2xl px-8 font-bold">
-                  {isLast ? "Završi" : "Sljedeće pitanje"}
+                  {isLast ? t("Završi") : t("Sljedeće pitanje")}
                 </Button>
               </div>
             )}

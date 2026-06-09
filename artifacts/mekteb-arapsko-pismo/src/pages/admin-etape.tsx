@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 import { ArrowLeft, Crown, Medal, Save, Plus, Trash2, Pencil, X, Loader2 } from "lucide-react";
 
 interface Etapa {
@@ -62,6 +63,7 @@ function PitanjaPicker({
   selectedIds: number[];
   onChange: (ids: number[]) => void;
 }) {
+  const { t } = useLanguage();
   const [data, setData] = useState<BankaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterLekcija, setFilterLekcija] = useState<number | "all">("all");
@@ -77,7 +79,7 @@ function PitanjaPicker({
     return () => { cancel = true; };
   }, [url, token]);
 
-  if (loading) return <div className="text-sm text-muted-foreground py-2">Učitavam pitanja iz banke…</div>;
+  if (loading) return <div className="text-sm text-muted-foreground py-2">{t("Učitavam pitanja iz banke…")}</div>;
   if (!data) return null;
 
   const selSet = new Set(selectedIds);
@@ -102,14 +104,14 @@ function PitanjaPicker({
           value={String(filterLekcija)}
           onChange={(e) => setFilterLekcija(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
         >
-          <option value="all">Sve lekcije ({data.lekcije.length})</option>
+          <option value="all">{t("Sve lekcije ({n})", { n: String(data.lekcije.length) })}</option>
           {data.lekcije.map((l) => (
             <option key={l.id} value={l.id}>#{l.redoslijed} {l.naslov}</option>
           ))}
         </select>
         <input
           className="text-xs px-2 py-1 border rounded flex-1 min-w-[120px]"
-          placeholder="Pretraga…"
+          placeholder={t("Pretraga…")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -121,15 +123,15 @@ function PitanjaPicker({
             else onChange(Array.from(new Set([...selectedIds, ...allVisIds])));
           }}
         >
-          {allVisSelected ? "Odznači sve" : "Označi sve"}
+          {allVisSelected ? t("Odznači sve") : t("Označi sve")}
         </button>
         <span className="text-xs text-muted-foreground">
-          {selectedIds.length} odabrano • {visible.length}/{data.pitanja.length} prikazano
+          {t("{n} odabrano", { n: String(selectedIds.length) })} • {t("{a}/{b} prikazano", { a: String(visible.length), b: String(data.pitanja.length) })}
         </span>
       </div>
       {visible.length === 0 ? (
         <div className="text-xs text-muted-foreground py-2">
-          Nema pitanja u banci za ovaj raspon. Dodaj pitanja u Banci pitanja sa lekcijaId iz ovog opsega.
+          {t("Nema pitanja u banci za ovaj raspon. Dodaj pitanja u Banci pitanja sa lekcijaId iz ovog opsega.")}
         </div>
       ) : (
         <ul className="space-y-1">
@@ -170,6 +172,7 @@ export default function AdminEtapePage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [nivo, setNivo] = useState<1 | 2 | 3>(1);
   const [etape, setEtape] = useState<Etapa[]>([]);
@@ -209,7 +212,7 @@ export default function AdminEtapePage() {
       setKrunskeLekcije(k.lekcije);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška", description: msg, variant: "destructive" });
+      toast({ title: t("Greška"), description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -226,12 +229,12 @@ export default function AdminEtapePage() {
         opis: e.opis,
         contentHtml: e.contentHtml,
       }, token);
-      toast({ title: "Sačuvano", description: `Etapa "${e.naziv}"` });
+      toast({ title: t("Sačuvano"), description: t(`Etapa "{naziv}"`, { naziv: e.naziv }) });
       setEditEtapa(null);
       await load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška pri spremanju", description: msg, variant: "destructive" });
+      toast({ title: t("Greška pri spremanju"), description: msg, variant: "destructive" });
     }
   }
 
@@ -247,12 +250,12 @@ export default function AdminEtapePage() {
         pragProlazaPercent: k.pragProlazaPercent,
         isGating: k.isGating,
       }, token);
-      toast({ title: "Sačuvano", description: "Krunisanje" });
+      toast({ title: t("Sačuvano"), description: t("Krunisanje") });
       setEditKrunisanje(null);
       await load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška", description: msg, variant: "destructive" });
+      toast({ title: t("Greška"), description: msg, variant: "destructive" });
     }
   }
 
@@ -262,12 +265,12 @@ export default function AdminEtapePage() {
       await apiRequest("POST", `/admin/krunisanja/${krunisanje.id}/lekcije`, {
         naslov, contentHtml, redoslijed, isPublished,
       }, token);
-      toast({ title: "Kreirana lekcija" });
+      toast({ title: t("Kreirana lekcija") });
       setNovaLekcija(false);
       await load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška", description: msg, variant: "destructive" });
+      toast({ title: t("Greška"), description: msg, variant: "destructive" });
     }
   }
 
@@ -277,25 +280,25 @@ export default function AdminEtapePage() {
       await apiRequest("PUT", `/admin/krunisanja/lekcije/${l.id}`, {
         naslov: l.naslov, contentHtml: l.contentHtml, redoslijed: l.redoslijed, isPublished: l.isPublished,
       }, token);
-      toast({ title: "Sačuvano" });
+      toast({ title: t("Sačuvano") });
       setEditLekcija(null);
       await load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška", description: msg, variant: "destructive" });
+      toast({ title: t("Greška"), description: msg, variant: "destructive" });
     }
   }
 
   async function deleteLekcija(id: number) {
     if (!token) return;
-    if (!confirm("Obrisati ovu krunsku lekciju?")) return;
+    if (!confirm(t("Obrisati ovu krunsku lekciju?"))) return;
     try {
       await apiRequest("DELETE", `/admin/krunisanja/lekcije/${id}`, undefined, token);
-      toast({ title: "Obrisano" });
+      toast({ title: t("Obrisano") });
       await load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Greška", description: msg, variant: "destructive" });
+      toast({ title: t("Greška"), description: msg, variant: "destructive" });
     }
   }
 
@@ -307,7 +310,7 @@ export default function AdminEtapePage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-xl font-extrabold text-emerald-900 flex items-center gap-2">
-            <Crown className="w-6 h-6 text-amber-500" /> Etape i krunisanja
+            <Crown className="w-6 h-6 text-amber-500" /> {t("Etape i krunisanja")}
           </h1>
         </div>
 
@@ -323,14 +326,14 @@ export default function AdminEtapePage() {
               }`}
               data-testid={`button-nivo-${n}`}
             >
-              Nivo {n}
+              {t("Nivo {n}", { n: String(n) })}
             </button>
           ))}
         </div>
 
         {loading && (
           <div className="text-center py-10 text-emerald-700">
-            <Loader2 className="w-6 h-6 animate-spin inline" /> Učitavam...
+            <Loader2 className="w-6 h-6 animate-spin inline" /> {t("Učitavam...")}
           </div>
         )}
 
@@ -339,12 +342,12 @@ export default function AdminEtapePage() {
             {/* ETAPE */}
             <section className="mb-8">
               <h2 className="text-lg font-extrabold text-emerald-900 mb-3 flex items-center gap-2">
-                <Medal className="w-5 h-5" /> Etape (medaljoni) — Nivo {nivo}
+                <Medal className="w-5 h-5" /> {t("Etape (medaljoni) — Nivo {nivo}", { nivo: String(nivo) })}
               </h2>
               <div className="space-y-3">
                 {etape.length === 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
-                    Nema medaljona za ovaj nivo.
+                    {t("Nema medaljona za ovaj nivo.")}
                   </div>
                 )}
                 {etape.map((e) => {
@@ -355,7 +358,7 @@ export default function AdminEtapePage() {
                         <div className="font-bold text-emerald-900 truncate">{e.naziv}</div>
                         <div className="text-xs text-emerald-700/70 truncate">{e.opis}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {ids.length} pitanja • prag {e.pragProlazaPercent}% • gating {e.isGating ? "DA" : "NE"} • pos {e.posAfterRedoslijed}
+                          {t("{n} pitanja", { n: String(ids.length) })} • {t("prag")} {e.pragProlazaPercent}% • {t("gating")} {e.isGating ? t("DA") : t("NE")} • {t("pos")} {e.posAfterRedoslijed}
                         </div>
                       </div>
                       <button
@@ -363,7 +366,7 @@ export default function AdminEtapePage() {
                         className="flex items-center gap-1 px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg font-semibold text-sm hover:bg-emerald-100 whitespace-nowrap"
                         data-testid={`button-edit-etapa-${e.id}`}
                       >
-                        <Pencil className="w-4 h-4" /> Uredi
+                        <Pencil className="w-4 h-4" /> {t("Uredi")}
                       </button>
                     </div>
                   );
@@ -375,16 +378,16 @@ export default function AdminEtapePage() {
             {krunisanje && (
               <section>
                 <h2 className="text-lg font-extrabold text-amber-900 mb-3 flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-amber-500" /> Krunisanje — Nivo {nivo}
+                  <Crown className="w-5 h-5 text-amber-500" /> {t("Krunisanje — Nivo {nivo}", { nivo: String(nivo) })}
                 </h2>
                 <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl p-4 mb-4">
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="min-w-0">
                       <div className="font-extrabold text-amber-900 truncate">
-                        {krunisanje.naslov || <span className="italic text-amber-700/60">[bez naslova]</span>}
+                        {krunisanje.naslov || <span className="italic text-amber-700/60">{t("[bez naslova]")}</span>}
                       </div>
                       <div className="text-xs text-amber-700/70 mt-1">
-                        {(krunisanje.kvizPitanjaIds ?? []).length} pitanja • prag {krunisanje.pragProlazaPercent}% • gating {krunisanje.isGating ? "DA" : "NE"}
+                        {t("{n} pitanja", { n: String((krunisanje.kvizPitanjaIds ?? []).length) })} • {t("prag")} {krunisanje.pragProlazaPercent}% • {t("gating")} {krunisanje.isGating ? t("DA") : t("NE")}
                       </div>
                     </div>
                     <button
@@ -392,25 +395,25 @@ export default function AdminEtapePage() {
                       className="flex items-center gap-1 px-3 py-2 bg-amber-500 text-white rounded-lg font-semibold text-sm hover:bg-amber-600"
                       data-testid="button-edit-krunisanje"
                     >
-                      <Pencil className="w-4 h-4" /> Uredi krunisanje
+                      <Pencil className="w-4 h-4" /> {t("Uredi krunisanje")}
                     </button>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-emerald-900">Krunske lekcije (proizvoljni dodatni sadržaj)</h3>
+                  <h3 className="font-bold text-emerald-900">{t("Krunske lekcije (proizvoljni dodatni sadržaj)")}</h3>
                   <button
                     onClick={() => setNovaLekcija(true)}
                     className="flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white rounded-lg font-semibold text-sm hover:bg-emerald-700"
                     data-testid="button-nova-krunska-lekcija"
                   >
-                    <Plus className="w-4 h-4" /> Nova lekcija
+                    <Plus className="w-4 h-4" /> {t("Nova lekcija")}
                   </button>
                 </div>
                 <div className="space-y-2">
                   {krunskeLekcije.length === 0 && (
                     <div className="text-sm text-muted-foreground italic text-center py-4">
-                      Nema krunskih lekcija. Dodaj prvu da popuniš sadržaj prije završnog ispita.
+                      {t("Nema krunskih lekcija. Dodaj prvu da popuniš sadržaj prije završnog ispita.")}
                     </div>
                   )}
                   {krunskeLekcije.map((l) => (
@@ -418,9 +421,9 @@ export default function AdminEtapePage() {
                       <div className="min-w-0">
                         <div className="font-bold text-amber-900 truncate flex items-center gap-2">
                           {l.naslov}
-                          {!l.isPublished && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full">draft</span>}
+                          {!l.isPublished && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full">{t("draft")}</span>}
                         </div>
-                        <div className="text-xs text-muted-foreground">redoslijed: {l.redoslijed} • /krunisanje/lekcija/{l.slug}</div>
+                        <div className="text-xs text-muted-foreground">{t("redoslijed")}: {l.redoslijed} • /krunisanje/lekcija/{l.slug}</div>
                       </div>
                       <div className="flex gap-1 shrink-0">
                         <button onClick={() => setEditLekcija({ ...l })} className="p-2 hover:bg-amber-50 rounded text-amber-700">
@@ -455,21 +458,22 @@ export default function AdminEtapePage() {
 }
 
 function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: () => void; onSave: (e: Etapa) => void; token: string }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<Etapa>(etapa);
   const [selectedIds, setSelectedIds] = useState<number[]>(etapa.kvizPitanjaIds ?? []);
   const [showRaw, setShowRaw] = useState(false);
   const [idsText, setIdsText] = useState((etapa.kvizPitanjaIds ?? []).join(", "));
 
   return (
-    <ModalShell title={`Etapa: ${etapa.naziv}`} onClose={onClose}>
+    <ModalShell title={t(`Etapa: {naziv}`, { naziv: etapa.naziv })} onClose={onClose}>
       <div className="space-y-3">
-        <Field label="Naziv">
+        <Field label={t("Naziv")}>
           <input className="w-full px-3 py-2 border rounded-lg" value={form.naziv} onChange={(e) => setForm({ ...form, naziv: e.target.value })} />
         </Field>
-        <Field label="Opis">
+        <Field label={t("Opis")}>
           <input className="w-full px-3 py-2 border rounded-lg" value={form.opis} onChange={(e) => setForm({ ...form, opis: e.target.value })} />
         </Field>
-        <Field label={`Pitanja iz banke — odaberi iz lekcija ove etape (${selectedIds.length} odabrano)`}>
+        <Field label={t("Pitanja iz banke — odaberi iz lekcija ove etape ({n} odabrano)", { n: String(selectedIds.length) })}>
           <PitanjaPicker
             url={`/admin/etape/${etapa.id}/banka`}
             token={token}
@@ -478,7 +482,7 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
           />
           <div className="flex items-center gap-2 mt-1">
             <button type="button" className="text-xs text-blue-600 hover:underline" onClick={() => setShowRaw((v) => !v)}>
-              {showRaw ? "Sakrij" : "Prikaži"} ručni unos ID-jeva (napredno)
+              {showRaw ? t("Sakrij") : t("Prikaži")} {t("ručni unos ID-jeva (napredno)")}
             </button>
           </div>
           {showRaw && (
@@ -489,35 +493,35 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
                 setIdsText(e.target.value);
                 setSelectedIds(parseIdsCSV(e.target.value));
               }}
-              placeholder="npr. 12, 45, 78, 102"
+              placeholder={t("npr. 12, 45, 78, 102")}
               data-testid="textarea-pitanja-ids"
             />
           )}
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prag prolaza (%)">
+          <Field label={t("Prag prolaza (%)")}>
             <input type="number" min={0} max={100} className="w-full px-3 py-2 border rounded-lg"
               value={form.pragProlazaPercent}
               onChange={(e) => setForm({ ...form, pragProlazaPercent: parseInt(e.target.value, 10) || 0 })} />
           </Field>
-          <Field label="Gating (zaključava dalje lekcije)">
+          <Field label={t("Gating (zaključava dalje lekcije)")}>
             <label className="flex items-center gap-2 px-3 py-2 border rounded-lg bg-white">
               <input type="checkbox" checked={form.isGating} onChange={(e) => setForm({ ...form, isGating: e.target.checked })} />
-              <span className="text-sm">{form.isGating ? "Aktivno" : "Isključeno"}</span>
+              <span className="text-sm">{form.isGating ? t("Aktivno") : t("Isključeno")}</span>
             </label>
           </Field>
         </div>
-        <Field label="HTML sadržaj prikazan na strani etape (opcionalno)">
+        <Field label={t("HTML sadržaj prikazan na strani etape (opcionalno)")}>
           <textarea className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-32"
             value={form.contentHtml ?? ""} onChange={(e) => setForm({ ...form, contentHtml: e.target.value })} />
         </Field>
       </div>
       <div className="flex gap-2 justify-end mt-4">
-        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">Otkaži</button>
+        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">{t("Otkaži")}</button>
         <button onClick={() => onSave({ ...form, kvizPitanjaIds: selectedIds })}
           className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-sm flex items-center gap-1"
           data-testid="button-save-etapa">
-          <Save className="w-4 h-4" /> Sačuvaj
+          <Save className="w-4 h-4" /> {t("Sačuvaj")}
         </button>
       </div>
     </ModalShell>
@@ -525,22 +529,23 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
 }
 
 function KrunisanjeModal({ krunisanje, onClose, onSave, token }: { krunisanje: Krunisanje; onClose: () => void; onSave: (k: Krunisanje) => void; token: string }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<Krunisanje>(krunisanje);
   const [selectedIds, setSelectedIds] = useState<number[]>(krunisanje.kvizPitanjaIds ?? []);
   const [showRaw, setShowRaw] = useState(false);
   const [idsText, setIdsText] = useState((krunisanje.kvizPitanjaIds ?? []).join(", "));
   return (
-    <ModalShell title={`Krunisanje — Nivo ${krunisanje.nivo}`} onClose={onClose}>
+    <ModalShell title={t(`Krunisanje — Nivo {nivo}`, { nivo: String(krunisanje.nivo) })} onClose={onClose}>
       <div className="space-y-3">
-        <Field label="Naslov">
+        <Field label={t("Naslov")}>
           <input className="w-full px-3 py-2 border rounded-lg" value={form.naslov}
             onChange={(e) => setForm({ ...form, naslov: e.target.value })} />
         </Field>
-        <Field label="Opis (HTML)">
+        <Field label={t("Opis (HTML)")}>
           <textarea className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-28"
             value={form.opisHtml ?? ""} onChange={(e) => setForm({ ...form, opisHtml: e.target.value })} />
         </Field>
-        <Field label={`Pitanja iz banke — odaberi iz svih lekcija nivoa ${krunisanje.nivo} (${selectedIds.length} odabrano)`}>
+        <Field label={t("Pitanja iz banke — odaberi iz svih lekcija nivoa {nivo} ({n} odabrano)", { nivo: String(krunisanje.nivo), n: String(selectedIds.length) })}>
           <PitanjaPicker
             url={`/admin/krunisanja/${krunisanje.id}/banka`}
             token={token}
@@ -549,46 +554,46 @@ function KrunisanjeModal({ krunisanje, onClose, onSave, token }: { krunisanje: K
           />
           <div className="flex items-center gap-2 mt-1">
             <button type="button" className="text-xs text-blue-600 hover:underline" onClick={() => setShowRaw((v) => !v)}>
-              {showRaw ? "Sakrij" : "Prikaži"} ručni unos ID-jeva (napredno)
+              {showRaw ? t("Sakrij") : t("Prikaži")} {t("ručni unos ID-jeva (napredno)")}
             </button>
           </div>
           {showRaw && (
             <textarea className="w-full mt-1 px-3 py-2 border rounded-lg font-mono text-sm h-20"
               value={idsText}
               onChange={(e) => { setIdsText(e.target.value); setSelectedIds(parseIdsCSV(e.target.value)); }}
-              placeholder="npr. 12, 45, 78" />
+              placeholder={t("npr. 12, 45, 78")} />
           )}
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prag prolaza (%)">
+          <Field label={t("Prag prolaza (%)")}>
             <input type="number" min={0} max={100} className="w-full px-3 py-2 border rounded-lg"
               value={form.pragProlazaPercent}
               onChange={(e) => setForm({ ...form, pragProlazaPercent: parseInt(e.target.value, 10) || 0 })} />
           </Field>
-          <Field label="Gating (zaključava sljedeći nivo)">
+          <Field label={t("Gating (zaključava sljedeći nivo)")}>
             <label className="flex items-center gap-2 px-3 py-2 border rounded-lg bg-white">
               <input type="checkbox" checked={form.isGating} onChange={(e) => setForm({ ...form, isGating: e.target.checked })} />
-              <span className="text-sm">{form.isGating ? "Aktivno" : "Isključeno"}</span>
+              <span className="text-sm">{form.isGating ? t("Aktivno") : t("Isključeno")}</span>
             </label>
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Ikona (lucide ime, opcionalno)">
+          <Field label={t("Ikona (lucide ime, opcionalno)")}>
             <input className="w-full px-3 py-2 border rounded-lg" value={form.ikona ?? ""}
               onChange={(e) => setForm({ ...form, ikona: e.target.value })} />
           </Field>
-          <Field label="Boja">
+          <Field label={t("Boja")}>
             <input className="w-full px-3 py-2 border rounded-lg" value={form.boja ?? ""}
               onChange={(e) => setForm({ ...form, boja: e.target.value })} placeholder="amber/emerald/sky..." />
           </Field>
         </div>
       </div>
       <div className="flex gap-2 justify-end mt-4">
-        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">Otkaži</button>
+        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">{t("Otkaži")}</button>
         <button onClick={() => onSave({ ...form, kvizPitanjaIds: selectedIds })}
           className="px-4 py-2 rounded-lg bg-amber-600 text-white font-bold text-sm flex items-center gap-1"
           data-testid="button-save-krunisanje">
-          <Save className="w-4 h-4" /> Sačuvaj
+          <Save className="w-4 h-4" /> {t("Sačuvaj")}
         </button>
       </div>
     </ModalShell>
@@ -603,34 +608,35 @@ function LekcijaModal({
   onCreate: (naslov: string, contentHtml: string, redoslijed: number, isPublished: boolean) => void;
   onUpdate: (l: KrunskaLekcija) => void;
 }) {
+  const { t } = useLanguage();
   const [naslov, setNaslov] = useState(lekcija?.naslov ?? "");
   const [contentHtml, setContentHtml] = useState(lekcija?.contentHtml ?? "");
   const [redoslijed, setRedoslijed] = useState(lekcija?.redoslijed ?? 100);
   const [isPublished, setIsPublished] = useState(lekcija?.isPublished ?? true);
 
   return (
-    <ModalShell title={lekcija ? "Uredi krunsku lekciju" : "Nova krunska lekcija"} onClose={onClose}>
+    <ModalShell title={lekcija ? t("Uredi krunsku lekciju") : t("Nova krunska lekcija")} onClose={onClose}>
       <div className="space-y-3">
-        <Field label="Naslov">
+        <Field label={t("Naslov")}>
           <input className="w-full px-3 py-2 border rounded-lg" value={naslov} onChange={(e) => setNaslov(e.target.value)} />
         </Field>
-        <Field label="Sadržaj (HTML)">
+        <Field label={t("Sadržaj (HTML)")}>
           <textarea className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-40" value={contentHtml} onChange={(e) => setContentHtml(e.target.value)} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Redoslijed">
+          <Field label={t("Redoslijed")}>
             <input type="number" className="w-full px-3 py-2 border rounded-lg" value={redoslijed} onChange={(e) => setRedoslijed(parseInt(e.target.value, 10) || 0)} />
           </Field>
-          <Field label="Status">
+          <Field label={t("Status")}>
             <label className="flex items-center gap-2 px-3 py-2 border rounded-lg bg-white">
               <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} />
-              <span className="text-sm">{isPublished ? "Objavljeno" : "Draft"}</span>
+              <span className="text-sm">{isPublished ? t("Objavljeno") : t("Draft")}</span>
             </label>
           </Field>
         </div>
       </div>
       <div className="flex gap-2 justify-end mt-4">
-        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">Otkaži</button>
+        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">{t("Otkaži")}</button>
         <button
           onClick={() => {
             if (!naslov.trim()) return;
@@ -640,7 +646,7 @@ function LekcijaModal({
           className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-sm flex items-center gap-1"
           data-testid="button-save-lekcija"
         >
-          <Save className="w-4 h-4" /> Sačuvaj
+          <Save className="w-4 h-4" /> {t("Sačuvaj")}
         </button>
       </div>
     </ModalShell>

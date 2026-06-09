@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 
 // Opcija B: tanak `/medaljon/:slug` ekran je povučen. Medaljon je sada PUNA
 // lekcija (`/ilmihal/medaljon-nivo{N}-{ord}`). Ova komponenta samo preusmjerava
@@ -10,6 +11,7 @@ export default function MedaljonDetailPage() {
   const [, params] = useRoute<{ slug: string }>("/medaljon/:slug");
   const [, setLocation] = useLocation();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const slug = params?.slug ?? "";
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function MedaljonDetailPage() {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-amber-50">
-      <div className="text-amber-800 font-bold">Preusmjeravam…</div>
+      <div className="text-amber-800 font-bold">{t("Preusmjeravam…")}</div>
     </div>
   );
 }

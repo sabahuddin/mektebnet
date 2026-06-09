@@ -3,6 +3,7 @@ import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { List, Lock, Crown } from "lucide-react";
 
@@ -26,6 +27,7 @@ interface KrunisanjeStatus {
 export default function IlmihalPage() {
   const [, setLocation] = useLocation();
   const { token, user } = useAuth();
+  const { t } = useLanguage();
   const [completedByNivo, setCompletedByNivo] = useState<Record<number, { done: number; total: number }>>({
     1: { done: 0, total: 0 },
     2: { done: 0, total: 0 },
@@ -78,9 +80,9 @@ export default function IlmihalPage() {
   }, [token, user]);
 
   const nivoi: NivoCard[] = [
-    { broj: 1, naslov: "Mala Košnica",     href: "/nivo1-mapa" },
-    { broj: 2, naslov: "Zlatna Košnica",   href: "/nivo2-mapa" },
-    { broj: 3, naslov: "Košnica Mudrosti", href: "/nivo3-mapa" },
+    { broj: 1, naslov: t("Mala Košnica"),     href: "/nivo1-mapa" },
+    { broj: 2, naslov: t("Zlatna Košnica"),   href: "/nivo2-mapa" },
+    { broj: 3, naslov: t("Košnica Mudrosti"), href: "/nivo3-mapa" },
   ];
 
   return (
@@ -155,10 +157,10 @@ export default function IlmihalPage() {
       <div className="max-w-6xl mx-auto px-2 relative">
         <div className="text-center mb-8 sm:mb-12">
           <h1 className="text-3xl sm:text-5xl font-extrabold text-amber-900 mb-2">
-            Lekcije
+            {t("Lekcije")}
           </h1>
           <p className="text-amber-800/80 text-sm sm:text-base">
-            Izaberi košnicu i kreni u učenje
+            {t("Izaberi košnicu i kreni u učenje")}
           </p>
         </div>
 
@@ -175,7 +177,7 @@ export default function IlmihalPage() {
               const prevKrun = krunisanjaStatus[n.broj - 1];
               if (prevKrun && prevKrun.isGating && prevKrun.imaKviz && !prevKrun.polozeno) {
                 zakljucano = true;
-                zakljucanRazlog = `Položi krunisanje nivoa ${n.broj - 1} da otključaš.`;
+                zakljucanRazlog = t("Položi krunisanje nivoa {nivo} da otključaš.", { nivo: String(n.broj - 1) });
               }
             }
             return (
@@ -191,7 +193,7 @@ export default function IlmihalPage() {
                 disabled={zakljucano}
                 className={`group relative flex flex-col items-center focus:outline-none ${zakljucano ? "opacity-60 cursor-not-allowed" : ""}`}
                 data-testid={`button-nivo-${n.broj}`}
-                aria-label={`${n.naslov} — Nivo ${n.broj}${zakljucano ? " (zaključano)" : ""}`}
+                aria-label={`${n.naslov} — ${t("Nivo")} ${n.broj}${zakljucano ? ` (${t("zaključano")})` : ""}`}
                 title={zakljucano ? zakljucanRazlog : undefined}
               >
                 <div className="relative w-full aspect-square max-w-xs mx-auto">
@@ -219,12 +221,12 @@ export default function IlmihalPage() {
                   </div>
                   {user && stats.total > 0 && (
                     <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 shadow-sm text-xs font-bold text-amber-900">
-                      {stats.done} / {stats.total} lekcija
+                      {stats.done} / {stats.total} {t("lekcija")}
                     </div>
                   )}
                   {krunisanjaStatus[n.broj]?.polozeno && (
                     <div className="mt-1 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-bold shadow">
-                      <Crown className="w-3 h-3" /> Krunisanje
+                      <Crown className="w-3 h-3" /> {t("Krunisanje")}
                     </div>
                   )}
                   {zakljucano && (
@@ -243,7 +245,7 @@ export default function IlmihalPage() {
             data-testid="link-ilmihal-sve"
           >
             <List className="w-5 h-5" />
-            Spisak svih lekcija
+            {t("Spisak svih lekcija")}
           </Link>
         </div>
       </div>

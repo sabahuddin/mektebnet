@@ -22,6 +22,7 @@ import {
 } from "@/lib/sound-prefs";
 import { PushToggle } from "@/components/push-toggle";
 import { kategorijaOcjeneLabel } from "@/lib/utils";
+import { useLanguage } from "@/context/language";
 
 interface StudentProgress {
   studentId: string;
@@ -101,6 +102,7 @@ interface BedzInfo {
 
 function ChangePasswordCard() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -111,16 +113,16 @@ function ChangePasswordCard() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(null);
-    if (newPassword.length < 6) { setMsg({ kind: "err", text: "Nova šifra mora imati najmanje 6 karaktera." }); return; }
-    if (newPassword !== confirmPassword) { setMsg({ kind: "err", text: "Potvrda nove šifre se ne podudara." }); return; }
+    if (newPassword.length < 6) { setMsg({ kind: "err", text: t("Nova šifra mora imati najmanje 6 karaktera.") }); return; }
+    if (newPassword !== confirmPassword) { setMsg({ kind: "err", text: t("Potvrda nove šifre se ne podudara.") }); return; }
     setSaving(true);
     try {
       await apiRequest("POST", "/auth/change-password", { currentPassword, newPassword }, token!);
-      setMsg({ kind: "ok", text: "Šifra je uspješno promijenjena." });
+      setMsg({ kind: "ok", text: t("Šifra je uspješno promijenjena.") });
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       setTimeout(() => { setOpen(false); setMsg(null); }, 1500);
     } catch (err: any) {
-      setMsg({ kind: "err", text: err?.message || "Greška pri promjeni šifre." });
+      setMsg({ kind: "err", text: err?.message || t("Greška pri promjeni šifre.") });
     } finally {
       setSaving(false);
     }
@@ -134,33 +136,33 @@ function ChangePasswordCard() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <p className="font-extrabold text-foreground">Lozinka</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Promijeni svoju šifru za prijavu.</p>
+            <p className="font-extrabold text-foreground">{t("Lozinka")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("Promijeni svoju šifru za prijavu.")}</p>
           </div>
           {!open && (
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} data-testid="open-change-password">
-              Promijeni šifru
+              {t("Promijeni šifru")}
             </Button>
           )}
         </div>
         {open && (
           <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
             <div>
-              <label className="text-xs font-bold text-muted-foreground">Trenutna šifra</label>
+              <label className="text-xs font-bold text-muted-foreground">{t("Trenutna šifra")}</label>
               <input type="password" autoComplete="current-password" required value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-border/60 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                 data-testid="input-current-password" />
             </div>
             <div>
-              <label className="text-xs font-bold text-muted-foreground">Nova šifra (min. 6 karaktera)</label>
+              <label className="text-xs font-bold text-muted-foreground">{t("Nova šifra (min. 6 karaktera)")}</label>
               <input type="password" autoComplete="new-password" required minLength={6} value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-border/60 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                 data-testid="input-new-password" />
             </div>
             <div>
-              <label className="text-xs font-bold text-muted-foreground">Potvrdi novu šifru</label>
+              <label className="text-xs font-bold text-muted-foreground">{t("Potvrdi novu šifru")}</label>
               <input type="password" autoComplete="new-password" required minLength={6} value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-border/60 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -173,10 +175,10 @@ function ChangePasswordCard() {
             )}
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setMsg(null); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }} disabled={saving}>
-                Odustani
+                {t("Odustani")}
               </Button>
               <Button type="submit" size="sm" disabled={saving} data-testid="submit-change-password">
-                {saving ? "Spašavam..." : "Spasi novu šifru"}
+                {saving ? t("Spašavam...") : t("Spasi novu šifru")}
               </Button>
             </div>
           </form>
@@ -197,6 +199,7 @@ function formatScreentimeShort(sec: number | null | undefined): string {
 
 function MyScreentimeCard() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [data, setData] = useState<{ totalScreentimeSec: number; lastSeenAt: string | null } | null>(null);
   useEffect(() => {
     if (!token) return;
@@ -209,7 +212,7 @@ function MyScreentimeCard() {
         <Clock className="w-5 h-5 text-teal-700" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-bold text-teal-700/80 uppercase tracking-wide">Moje vrijeme na platformi</div>
+        <div className="text-[11px] font-bold text-teal-700/80 uppercase tracking-wide">{t("Moje vrijeme na platformi")}</div>
         <div className="text-xl font-extrabold text-teal-800 leading-tight">{formatScreentimeShort(data?.totalScreentimeSec)}</div>
       </div>
     </div>
@@ -308,6 +311,7 @@ const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 export default function UcenikProfilPage() {
   const { user, token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [profil, setProfil] = useState<ProfilData | null>(null);
   const [kalendar, setKalendar] = useState<KalendarEntry[]>([]);
@@ -381,14 +385,14 @@ export default function UcenikProfilPage() {
     return (
       <Layout>
         <div className="text-center py-20">
-          <p className="text-muted-foreground font-medium">Pristup dozvoljen samo učenicima</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>Nazad</Button>
+          <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo učenicima")}</p>
+          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );
   }
 
-  const monthNames = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
+  const monthNames = [t("Januar"), t("Februar"), t("Mart"), t("April"), t("Maj"), t("Juni"), t("Juli"), t("August"), t("Septembar"), t("Oktobar"), t("Novembar"), t("Decembar")];
 
   function getDaysInMonth(year: number, month: number) {
     const firstDay = new Date(year, month, 1);
@@ -410,14 +414,14 @@ export default function UcenikProfilPage() {
   const prosjecnaOcjena = profil && profil.ocjene.length ? (profil.ocjene.reduce((s, o) => s + o.ocjena, 0) / profil.ocjene.length).toFixed(1) : "—";
 
   const TABS = [
-    { id: "moj-put", label: "Moj put", icon: Footprints },
-    { id: "pregled", label: "Pregled", icon: User },
-    { id: "ocjene", label: "Ocjene", icon: Star },
-    { id: "zadace", label: "Zadaće", icon: FileText, badge: zadace.length },
-    { id: "kalendar", label: "Kalendar", icon: Calendar },
-    { id: "kvizovi", label: "Kvizovi", icon: ClipboardList },
-    { id: "dokumenti", label: "Dokumenti", icon: FileText, badge: dokumenti?.length ?? 0 },
-    { id: "postavke", label: "Postavke", icon: Settings },
+    { id: "moj-put", label: t("Moj put"), icon: Footprints },
+    { id: "pregled", label: t("Pregled"), icon: User },
+    { id: "ocjene", label: t("Ocjene"), icon: Star },
+    { id: "zadace", label: t("Zadaće"), icon: FileText, badge: zadace.length },
+    { id: "kalendar", label: t("Kalendar"), icon: Calendar },
+    { id: "kvizovi", label: t("Kvizovi"), icon: ClipboardList },
+    { id: "dokumenti", label: t("Dokumenti"), icon: FileText, badge: dokumenti?.length ?? 0 },
+    { id: "postavke", label: t("Postavke"), icon: Settings },
   ] as const;
 
   const handleToggleSound = () => {
@@ -455,7 +459,7 @@ export default function UcenikProfilPage() {
         {isLoading ? (
           <div className="flex flex-col gap-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
         ) : !profil ? (
-          <div className="text-center py-20 text-muted-foreground">Greška pri učitavanju profila</div>
+          <div className="text-center py-20 text-muted-foreground">{t("Greška pri učitavanju profila")}</div>
         ) : (
           <>
             <div className="flex items-center gap-4 mb-6">
@@ -466,7 +470,7 @@ export default function UcenikProfilPage() {
                 <h1 className="text-2xl font-extrabold text-foreground">{profil.user.displayName}</h1>
                 <p className="text-muted-foreground text-sm">
                   {profil.grupa && <span className="font-medium">{profil.grupa.naziv}</span>}
-                  {profil.muallim && <span> · Muallim: {profil.muallim.displayName}</span>}
+                  {profil.muallim && <span> · {t("Muallim:")} {profil.muallim.displayName}</span>}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -476,7 +480,7 @@ export default function UcenikProfilPage() {
                     value={selectedGodina ?? profil.mektebskaGodina.odabrana ?? ""}
                     onChange={(e) => setSelectedGodina(e.target.value)}
                     className="rounded-xl border border-border/60 bg-white px-3 py-2 text-sm font-bold text-foreground"
-                    title="Mektebska godina"
+                    title={t("Mektebska godina")}
                   >
                     {profil.mektebskaGodina.godine.map((g) => (
                       <option key={g} value={g}>{g}</option>
@@ -484,7 +488,7 @@ export default function UcenikProfilPage() {
                   </select>
                 )}
                 <Button variant="outline" className="rounded-xl" onClick={() => setLocation("/poruke")}>
-                  <MessageSquare className="w-4 h-4 mr-1" /> Poruke
+                  <MessageSquare className="w-4 h-4 mr-1" /> {t("Poruke")}
                 </Button>
               </div>
             </div>
@@ -524,22 +528,22 @@ export default function UcenikProfilPage() {
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <Flame className="w-5 h-5 fill-current" />
-                        <span className="text-sm font-extrabold uppercase tracking-wider opacity-90">Niz dana</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider opacity-90">{t("Niz dana")}</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={streakDays} />
                       </div>
                       <div className="text-sm font-bold opacity-90 mt-1">
-                        {streakDays === 1 ? "dan zaredom" : "dana zaredom"} 🔥
+                        {streakDays === 1 ? t("dan zaredom") : t("dana zaredom")} 🔥
                       </div>
                       <div className="text-xs opacity-80 mt-2">
                         {streakDays === 0
-                          ? "Završi lekciju danas i započni svoj niz!"
+                          ? t("Završi lekciju danas i započni svoj niz!")
                           : streakDays < 3
-                          ? "Odličan početak — nastavi sutra!"
+                          ? t("Odličan početak — nastavi sutra!")
                           : streakDays < 7
-                          ? "Bravo, ne staj sad!"
-                          : "Mašallah, pravi mudžahid znanja!"}
+                          ? t("Bravo, ne staj sad!")
+                          : t("Mašallah, pravi mudžahid znanja!")}
                       </div>
                     </div>
                   </motion.div>
@@ -554,14 +558,14 @@ export default function UcenikProfilPage() {
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg" aria-hidden>🍯</span>
-                        <span className="text-sm font-extrabold uppercase tracking-wider">Kapi meda</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider">{t("Kapi meda")}</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={totalHasanat} />
                       </div>
-                      <div className="text-sm font-bold mt-1 opacity-80">ukupno sakupljeno</div>
+                      <div className="text-sm font-bold mt-1 opacity-80">{t("ukupno sakupljeno")}</div>
                       <div className="text-xs mt-2 opacity-75">
-                        Za svaku završenu lekciju i kviz zaradiš nove kapi meda 🍯
+                        {t("Za svaku završenu lekciju i kviz zaradiš nove kapi meda 🍯")}
                       </div>
                     </div>
                   </motion.div>
@@ -579,14 +583,14 @@ export default function UcenikProfilPage() {
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-5 h-5 fill-current" />
-                        <span className="text-sm font-extrabold uppercase tracking-wider">Aferimi</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider">{t("Aferimi")}</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={totalMed} />
                       </div>
-                      <div className="text-sm font-bold mt-1 opacity-80">igrom zarađeni</div>
+                      <div className="text-sm font-bold mt-1 opacity-80">{t("igrom zarađeni")}</div>
                       <div className="text-xs mt-2 opacity-75">
-                        Aferimi se zarađuju samo igranjem igrica.
+                        {t("Aferimi se zarađuju samo igranjem igrica.")}
                       </div>
                     </div>
                   </motion.div>
@@ -603,15 +607,15 @@ export default function UcenikProfilPage() {
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <BookOpen className="w-5 h-5" />
-                        <span className="text-sm font-extrabold uppercase tracking-wider opacity-90">Lekcije</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wider opacity-90">{t("Lekcije")}</span>
                       </div>
                       <div className="text-5xl font-black leading-none">
                         <AnimatedNumber value={zavrsenoUkupno} />
                         <span className="text-2xl font-bold opacity-80">/{totalLekcija || "—"}</span>
                       </div>
-                      <div className="text-sm font-bold opacity-90 mt-1">završeno</div>
+                      <div className="text-sm font-bold opacity-90 mt-1">{t("završeno")}</div>
                       <div className="text-xs opacity-80 mt-2">
-                        {ukupniProcenat}% pređenog ilmihala
+                        {t("{n}% pređenog ilmihala", { n: String(ukupniProcenat) })}
                       </div>
                     </div>
                   </motion.div>
@@ -626,10 +630,10 @@ export default function UcenikProfilPage() {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                      <Target className="w-5 h-5 text-primary" /> Ukupan napredak kroz ilmihal
+                      <Target className="w-5 h-5 text-primary" /> {t("Ukupan napredak kroz ilmihal")}
                     </h3>
                     <span className="font-black text-primary">
-                      {zavrsenoUkupno}/{totalLekcija || "—"} lekcija
+                      {zavrsenoUkupno}/{totalLekcija || "—"} {t("lekcija")}
                     </span>
                   </div>
                   <div className="relative h-4 bg-muted/40 rounded-full overflow-hidden">
@@ -651,7 +655,7 @@ export default function UcenikProfilPage() {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-2 font-medium">
-                    {ukupniProcenat}% — nastavi tempom i bićeš pravi alim! 📚
+                    {t("{n}% — nastavi tempom i bićeš pravi alim! 📚", { n: String(ukupniProcenat) })}
                   </div>
                 </motion.div>
 
@@ -687,7 +691,7 @@ export default function UcenikProfilPage() {
                           />
                         </div>
                         <div className={`text-xs ${meta.text} font-bold mt-2 opacity-80`}>
-                          {n.pct}% završeno
+                          {t("{n}% završeno", { n: String(n.pct) })}
                         </div>
                       </motion.div>
                     );
@@ -717,13 +721,13 @@ export default function UcenikProfilPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className={`font-extrabold flex items-center gap-2 ${cfg.h}`}>
                           <Medal className={`w-5 h-5 ${cfg.icon}`} />
-                          Medaljoni Nivoa {cfg.nivo} ({earnedCount}/{totalCount})
+                          {t("Medaljoni Nivoa {nivo} ({earned}/{total})", { nivo: String(cfg.nivo), earned: String(earnedCount), total: String(totalCount) })}
                         </h3>
                         <Link
                           href={cfg.link}
                           className={`text-xs font-bold hover:underline ${cfg.h}`}
                         >
-                          Otvori mapu →
+                          {t("Otvori mapu →")}
                         </Link>
                       </div>
                       <div className={`grid gap-2 sm:gap-3 ${cfg.m.medaljoni.length <= 5 ? "grid-cols-5" : "grid-cols-7"}`}>
@@ -761,7 +765,7 @@ export default function UcenikProfilPage() {
                         })}
                       </div>
                       <p className={`text-[11px] mt-3 italic ${cfg.hint}`}>
-                        Završi lekcije da otključaš, klikni medaljon da osvojiš svoj bedž!
+                        {t("Završi lekcije da otključaš, klikni medaljon da osvojiš svoj bedž!")}
                       </p>
                     </motion.div>
                   );
@@ -779,11 +783,11 @@ export default function UcenikProfilPage() {
                   >
                     <h3 className="font-extrabold text-amber-900 flex items-center gap-2 mb-3">
                       <Trophy className="w-5 h-5 text-amber-700" />
-                      Položene etape i krunisanja
+                      {t("Položene etape i krunisanja")}
                     </h3>
                     {(profil.napredak?.polozenaKrunisanja?.length ?? 0) > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs font-extrabold uppercase tracking-wider text-amber-800/80 mb-2">Krunisanja</p>
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-amber-800/80 mb-2">{t("Krunisanja")}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           {profil.napredak!.polozenaKrunisanja!.map((k) => (
                             <Link
@@ -795,10 +799,10 @@ export default function UcenikProfilPage() {
                               <span className="text-2xl" aria-hidden>👑</span>
                               <div className="flex-1 min-w-0">
                                 <div className="font-bold text-amber-900 text-sm truncate">
-                                  {k.naslov || `Krunisanje nivoa ${k.nivo}`}
+                                  {k.naslov || t("Krunisanje nivoa {nivo}", { nivo: String(k.nivo) })}
                                 </div>
                                 <div className="text-[11px] text-amber-700/80">
-                                  Nivo {k.nivo} · {k.procenat}% · {formatEarnedDate(k.polozenoAt) ?? ""}
+                                  {t("Nivo {nivo}", { nivo: String(k.nivo) })} · {k.procenat}% · {formatEarnedDate(k.polozenoAt) ?? ""}
                                 </div>
                               </div>
                             </Link>
@@ -809,7 +813,7 @@ export default function UcenikProfilPage() {
                     {(profil.napredak?.polozeneEtape?.length ?? 0) > 0 && (
                       <div>
                         <p className="text-xs font-extrabold uppercase tracking-wider text-amber-800/80 mb-2">
-                          Etape s položenim ispitom
+                          {t("Etape s položenim ispitom")}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {profil.napredak!.polozeneEtape!.map((e) => (
@@ -823,7 +827,7 @@ export default function UcenikProfilPage() {
                               <div className="flex-1 min-w-0">
                                 <div className="font-bold text-foreground text-sm truncate">{e.naziv}</div>
                                 <div className="text-[11px] text-muted-foreground">
-                                  Nivo {e.nivo} · {e.procenat}% · {formatEarnedDate(e.polozenoAt) ?? ""}
+                                  {t("Nivo {nivo}", { nivo: String(e.nivo) })} · {e.procenat}% · {formatEarnedDate(e.polozenoAt) ?? ""}
                                 </div>
                               </div>
                             </Link>
@@ -847,13 +851,13 @@ export default function UcenikProfilPage() {
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                          <Award className="w-5 h-5 text-amber-500" /> Moji bedževi ({earnedCount}/{totalCount})
+                          <Award className="w-5 h-5 text-amber-500" /> {t("Moji bedževi ({earned}/{total})", { earned: String(earnedCount), total: String(totalCount) })}
                         </h3>
                         <button
                           onClick={() => setActiveTab("pregled")}
                           className="text-xs font-bold text-primary hover:underline"
                         >
-                          Vidi sve →
+                          {t("Vidi sve →")}
                         </button>
                       </div>
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -862,8 +866,8 @@ export default function UcenikProfilPage() {
                             key={b.id}
                             type="button"
                             onClick={() => setSelectedBadge(b)}
-                            aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
-                            title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}
+                            aria-label={b.earned ? `${b.naziv}: ${b.opis}` : t("{naziv} (zaključan, uslov: {uslov})", { naziv: b.naziv, uslov: b.uslov })}
+                            title={`${b.naziv} — ${b.opis}${b.earned ? "" : t(" (uslov: {uslov})", { uslov: b.uslov })}`}
                             className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
                             data-testid={`badge-moj-put-${b.id}`}
                           >
@@ -880,7 +884,7 @@ export default function UcenikProfilPage() {
                         ))}
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-3 italic">
-                        Sivi bedževi su zaključani — nastavi učiti da ih osvojiš!
+                        {t("Sivi bedževi su zaključani — nastavi učiti da ih osvojiš!")}
                       </p>
                     </motion.div>
                   );
@@ -898,12 +902,12 @@ export default function UcenikProfilPage() {
                       <Trophy className="w-7 h-7 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-extrabold text-foreground">Nastavi učenje</div>
+                      <div className="font-extrabold text-foreground">{t("Nastavi učenje")}</div>
                       <div className="text-xs text-muted-foreground mb-2">
-                        Završi sljedeću lekciju i zaradi +30 kapi meda 🍯.
+                        {t("Završi sljedeću lekciju i zaradi +30 kapi meda 🍯.")}
                       </div>
                       <Button size="sm" className="rounded-xl" onClick={() => setLocation("/ilmihal")}>
-                        <BookOpen className="w-4 h-4 mr-1" /> Otvori ilmihal
+                        <BookOpen className="w-4 h-4 mr-1" /> {t("Otvori ilmihal")}
                       </Button>
                     </div>
                   </div>
@@ -914,12 +918,12 @@ export default function UcenikProfilPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-extrabold text-foreground">
-                        {progress?.badges?.length ? `${progress.badges.length} bedž${progress.badges.length === 1 ? "" : "eva"}` : "Još bez bedža"}
+                        {progress?.badges?.length ? `${progress.badges.length} bedž${progress.badges.length === 1 ? "" : "eva"}` : t("Još bez bedža")}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {progress?.lastActivityDate
-                          ? `Posljednja aktivnost: ${progress.lastActivityDate}`
-                          : "Završi prvu lekciju da pokreneš svoj niz."}
+                          ? t("Posljednja aktivnost: {datum}", { datum: progress.lastActivityDate })
+                          : t("Završi prvu lekciju da pokreneš svoj niz.")}
                       </div>
                     </div>
                   </div>
@@ -933,23 +937,23 @@ export default function UcenikProfilPage() {
                   <div className="mb-6 bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50 border border-primary/20 rounded-3xl p-5">
                     <div className="flex items-center gap-2 mb-4">
                       <Trophy className="w-5 h-5 text-primary" />
-                      <h2 className="text-lg font-extrabold text-foreground">Moj put učenja</h2>
+                      <h2 className="text-lg font-extrabold text-foreground">{t("Moj put učenja")}</h2>
                     </div>
                     <div className="grid grid-cols-3 gap-3 mb-5">
                       <div className="bg-white border border-orange-200 rounded-2xl p-4 text-center">
                         <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
                         <div className="text-3xl font-extrabold text-orange-600">{profil.napredak.streakDays}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.streakDays === 1 ? "dan zaredom" : "dana zaredom"}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.streakDays === 1 ? t("dan zaredom") : t("dana zaredom")}</div>
                       </div>
                       <div className="bg-white border border-amber-200 rounded-2xl p-4 text-center">
                         <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
                         <div className="text-3xl font-extrabold text-amber-600">{profil.napredak.totalHasanat}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? "kap meda" : "kapi meda"}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? t("kap meda") : t("kapi meda")}</div>
                       </div>
                       <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-center">
                         <BookOpen className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
                         <div className="text-3xl font-extrabold text-emerald-700">{profil.napredak.completedCount}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.completedCount === 1 ? "lekcija" : "lekcija završeno"}</div>
+                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.completedCount === 1 ? t("lekcija") : t("lekcija završeno")}</div>
                       </div>
                     </div>
                     <div className="space-y-2.5">
@@ -960,7 +964,7 @@ export default function UcenikProfilPage() {
                         return (
                           <div key={nivo}>
                             <div className="flex justify-between text-xs font-bold text-foreground mb-1">
-                              <span>Ilmihal — Nivo {nivo}</span>
+                              <span>{t("Ilmihal — Nivo {nivo}", { nivo: String(nivo) })}</span>
                               <span className="text-primary">{stats.gotov}/{stats.ukupno} ({procenat}%)</span>
                             </div>
                             <div className="h-2.5 bg-white border border-primary/15 rounded-full overflow-hidden">
@@ -978,7 +982,7 @@ export default function UcenikProfilPage() {
                         <div className="mt-5 pt-5 border-t border-primary/15">
                           <div className="flex items-center gap-2 mb-3">
                             <Award className="w-4 h-4 text-primary" />
-                            <h3 className="text-sm font-extrabold text-foreground">Moji bedževi ({earnedCount}/{totalCount})</h3>
+                            <h3 className="text-sm font-extrabold text-foreground">{t("Moji bedževi ({earned}/{total})", { earned: String(earnedCount), total: String(totalCount) })}</h3>
                           </div>
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                             {profil.napredak!.bedzevi!.map(b => (
@@ -986,8 +990,8 @@ export default function UcenikProfilPage() {
                                 key={b.id}
                                 type="button"
                                 onClick={() => setSelectedBadge(b)}
-                                aria-label={b.earned ? `${b.naziv}: ${b.opis}` : `${b.naziv} (zaključan, uslov: ${b.uslov})`}
-                                title={`${b.naziv} — ${b.opis}${b.earned ? "" : ` (uslov: ${b.uslov})`}`}
+                                aria-label={b.earned ? `${b.naziv}: ${b.opis}` : t("{naziv} (zaključan, uslov: {uslov})", { naziv: b.naziv, uslov: b.uslov })}
+                                title={`${b.naziv} — ${b.opis}${b.earned ? "" : t(" (uslov: {uslov})", { uslov: b.uslov })}`}
                                 className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
                                 data-testid={`badge-pregled-${b.id}`}
                               >
@@ -1004,7 +1008,7 @@ export default function UcenikProfilPage() {
                             ))}
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-3 italic">
-                            Sivi bedževi su zaključani — nastavi učiti da ih osvojiš!
+                            {t("Sivi bedževi su zaključani — nastavi učiti da ih osvojiš!")}
                           </p>
                         </div>
                       );
@@ -1014,10 +1018,10 @@ export default function UcenikProfilPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   {[
-                    { label: "Prosječna ocjena", value: prosjecnaOcjena, icon: Star, color: "text-amber-600", bg: "bg-amber-50" },
-                    { label: "Prisustvo", value: profil.prisustvo.length ? `${prisutnih}/${profil.prisustvo.length}` : "—", icon: CalendarCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-                    { label: "Kvizova završeno", value: profil.kvizovi.length, icon: ClipboardList, color: "text-primary", bg: "bg-primary/5" },
-                    { label: "Ukupno ocjena", value: profil.ocjene.length, icon: BookOpen, color: "text-violet-600", bg: "bg-violet-50" },
+                    { label: t("Prosječna ocjena"), value: prosjecnaOcjena, icon: Star, color: "text-amber-600", bg: "bg-amber-50" },
+                    { label: t("Prisustvo"), value: profil.prisustvo.length ? `${prisutnih}/${profil.prisustvo.length}` : "—", icon: CalendarCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    { label: t("Kvizova završeno"), value: profil.kvizovi.length, icon: ClipboardList, color: "text-primary", bg: "bg-primary/5" },
+                    { label: t("Ukupno ocjena"), value: profil.ocjene.length, icon: BookOpen, color: "text-violet-600", bg: "bg-violet-50" },
                   ].map(stat => (
                     <div key={stat.label} className={`${stat.bg} border border-border/50 rounded-2xl p-4`}>
                       <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
@@ -1030,10 +1034,10 @@ export default function UcenikProfilPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-3">
-                      <Star className="w-4 h-4 text-amber-500" /> Posljednje ocjene
+                      <Star className="w-4 h-4 text-amber-500" /> {t("Posljednje ocjene")}
                     </h3>
                     {profil.ocjene.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nema ocjena</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("Nema ocjena")}</p>
                     ) : (
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {profil.ocjene.slice(0, 8).map(o => (
@@ -1054,10 +1058,10 @@ export default function UcenikProfilPage() {
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-3">
-                      <CalendarCheck className="w-4 h-4 text-primary" /> Posljednje prisustvo
+                      <CalendarCheck className="w-4 h-4 text-primary" /> {t("Posljednje prisustvo")}
                     </h3>
                     {profil.prisustvo.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nema evidencije</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("Nema evidencije")}</p>
                     ) : (
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
                         {profil.prisustvo.slice(0, 10).map(p => (
@@ -1077,11 +1081,11 @@ export default function UcenikProfilPage() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div className="bg-white border border-border/50 rounded-2xl p-5">
                   <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                    <Star className="w-5 h-5 text-amber-500" /> Sve ocjene
-                    <span className="ml-auto text-base font-medium text-muted-foreground">Prosjek: <span className="font-bold text-amber-600">{prosjecnaOcjena}</span></span>
+                    <Star className="w-5 h-5 text-amber-500" /> {t("Sve ocjene")}
+                    <span className="ml-auto text-base font-medium text-muted-foreground">{t("Prosjek:")} <span className="font-bold text-amber-600">{prosjecnaOcjena}</span></span>
                   </h3>
                   {profil.ocjene.length === 0 ? (
-                    <p className="text-center py-8 text-muted-foreground">Nema unesenih ocjena</p>
+                    <p className="text-center py-8 text-muted-foreground">{t("Nema unesenih ocjena")}</p>
                   ) : (
                     <div className="space-y-2">
                       {profil.ocjene.map(o => (
@@ -1119,11 +1123,11 @@ export default function UcenikProfilPage() {
                 <div className="flex gap-2 mb-4">
                   <button onClick={() => setZadSubTab("aktivne")}
                     className={`flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-extrabold border transition-all ${zadSubTab === "aktivne" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
-                    Aktivne ({aktivne.length})
+                    {t("Aktivne ({n})", { n: String(aktivne.length) })}
                   </button>
                   <button onClick={() => setZadSubTab("zavrsene")}
                     className={`flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-extrabold border transition-all ${zadSubTab === "zavrsene" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
-                    Završene ({zavrsene.length})
+                    {t("Završene ({n})", { n: String(zavrsene.length) })}
                   </button>
                 </div>
 
@@ -1131,10 +1135,10 @@ export default function UcenikProfilPage() {
                   <div className="bg-white border border-border/50 rounded-2xl p-10 text-center">
                     <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
                     <h3 className="font-extrabold text-foreground mb-1">
-                      {zadSubTab === "zavrsene" ? "Nema završenih zadaća" : "Nema aktivnih zadaća"}
+                      {zadSubTab === "zavrsene" ? t("Nema završenih zadaća") : t("Nema aktivnih zadaća")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {zadSubTab === "zavrsene" ? "Završene i ocijenjene zadaće će se prikazati ovdje." : "Tvoj muallim ti trenutno nije zadao zadaću."}
+                      {zadSubTab === "zavrsene" ? t("Završene i ocijenjene zadaće će se prikazati ovdje.") : t("Tvoj muallim ti trenutno nije zadao zadaću.")}
                     </p>
                   </div>
                 ) : (
@@ -1162,13 +1166,13 @@ export default function UcenikProfilPage() {
                         : daysLeft !== null ? "bg-emerald-100 text-emerald-700 border-emerald-300"
                         : "bg-muted text-muted-foreground border-border";
                       const rokDisplay = efektivni ? efektivni.slice(0, 10).split("-").reverse().join(".") : "";
-                      const rokLabel = isDone ? "Završeno"
-                        : invalidRok ? "Neispravan rok"
-                        : !efektivni ? "Bez roka"
-                        : isOverdue ? `Rok prošao (${rokDisplay})`
-                        : daysLeft === 0 ? "Rok je danas!"
-                        : daysLeft === 1 ? "Rok je sutra"
-                        : `Još ${daysLeft} dana (${rokDisplay})`;
+                      const rokLabel = isDone ? t("Završeno")
+                        : invalidRok ? t("Neispravan rok")
+                        : !efektivni ? t("Bez roka")
+                        : isOverdue ? t("Rok prošao ({datum})", { datum: rokDisplay })
+                        : daysLeft === 0 ? t("Rok je danas!")
+                        : daysLeft === 1 ? t("Rok je sutra")
+                        : t("Još {n} dana ({datum})", { n: String(daysLeft), datum: rokDisplay });
 
                       return (
                         <div key={z.id} data-testid={`zadaca-${z.id}`}
@@ -1204,13 +1208,13 @@ export default function UcenikProfilPage() {
                           {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
                             <div className="flex flex-wrap items-center gap-2 mt-3 pl-12">
                               {(z.ocjena ?? null) !== null && (
-                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Ocjena: {z.ocjena}</span>
+                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">{t("Ocjena: {n}", { n: String(z.ocjena) })}</span>
                               )}
                               {(z.kapiMeda ?? 0) > 0 && (
-                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">+{z.kapiMeda} kapi meda</span>
+                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">{t("+{n} kapi meda", { n: String(z.kapiMeda) })}</span>
                               )}
                               {(z.prolongCount ?? 0) > 0 && (
-                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700">Prolongirano ×{z.prolongCount}</span>
+                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700">{t("Prolongirano ×{n}", { n: String(z.prolongCount) })}</span>
                               )}
                             </div>
                           )}
@@ -1269,11 +1273,11 @@ export default function UcenikProfilPage() {
                       </div>
 
                       <div className="mt-4 flex gap-4 text-xs text-muted-foreground flex-wrap">
-                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> Mekteb</span>
-                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> Ferije</span>
-                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> Važan datum</span>
-                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> Lekcija</span>
-                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Rok zadaće</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {t("Mekteb")}</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> {t("Ferije")}</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> {t("Važan datum")}</span>
+                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> {t("Lekcija")}</span>
+                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> {t("Rok zadaće")}</span>
                       </div>
                     </div>
                   </div>
@@ -1297,7 +1301,7 @@ export default function UcenikProfilPage() {
                               {lekcije.length > 0 && (
                                 <div>
                                   <h5 className="text-sm font-bold text-foreground mb-2 flex items-center gap-1">
-                                    <BookOpen className="w-3.5 h-3.5 text-violet-500" /> Lekcije za ovaj dan
+                                    <BookOpen className="w-3.5 h-3.5 text-violet-500" /> {t("Lekcije za ovaj dan")}
                                   </h5>
                                   <div className="space-y-1.5">
                                     {lekcije.map(l => (
@@ -1318,7 +1322,7 @@ export default function UcenikProfilPage() {
                               {zadaceDana.length > 0 && (
                                 <div>
                                   <h5 className="text-sm font-bold text-foreground mb-2 flex items-center gap-1">
-                                    <FileText className="w-3.5 h-3.5 text-orange-500" /> Rok zadaće
+                                    <FileText className="w-3.5 h-3.5 text-orange-500" /> {t("Rok zadaće")}
                                   </h5>
                                   <div className="space-y-1.5">
                                     {zadaceDana.map(z => (
@@ -1331,7 +1335,7 @@ export default function UcenikProfilPage() {
                                 </div>
                               )}
                               {!entry && lekcije.length === 0 && zadaceDana.length === 0 && (
-                                <p className="text-sm text-muted-foreground text-center py-3">Nema informacija za ovaj dan</p>
+                                <p className="text-sm text-muted-foreground text-center py-3">{t("Nema informacija za ovaj dan")}</p>
                               )}
                             </div>
                           );
@@ -1340,7 +1344,7 @@ export default function UcenikProfilPage() {
                     ) : (
                       <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
                         <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
-                        <p className="text-sm text-muted-foreground">Klikni na dan za detalje</p>
+                        <p className="text-sm text-muted-foreground">{t("Klikni na dan za detalje")}</p>
                       </div>
                     )}
                   </div>
@@ -1352,7 +1356,7 @@ export default function UcenikProfilPage() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div className="bg-white border border-border/50 rounded-2xl p-5 max-w-xl">
                   <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                    <Settings className="w-5 h-5 text-primary" /> Postavke
+                    <Settings className="w-5 h-5 text-primary" /> {t("Postavke")}
                   </h3>
 
                   <div className="flex items-start gap-4 p-4 rounded-2xl border border-border/60 bg-muted/20">
@@ -1362,13 +1366,13 @@ export default function UcenikProfilPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-3">
                         <label htmlFor="sound-toggle" className="font-extrabold text-foreground cursor-pointer">
-                          Zvučni efekti
+                          {t("Zvučni efekti")}
                         </label>
                         <button
                           id="sound-toggle"
                           role="switch"
                           aria-checked={soundEnabled}
-                          aria-label="Zvučni efekti"
+                          aria-label={t("Zvučni efekti")}
                           data-testid="toggle-sound-effects"
                           onClick={handleToggleSound}
                           className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
@@ -1383,9 +1387,9 @@ export default function UcenikProfilPage() {
                         </button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1.5">
-                        Kratki zvuk pohvale kad završiš novu lekciju. {reducedMotion && (
+                        {t("Kratki zvuk pohvale kad završiš novu lekciju.")} {reducedMotion && (
                           <span className="block mt-1 text-amber-700 font-medium">
-                            Sistem je u režimu „smanjene animacije" — zvuk je trenutno isključen.
+                            {t("Sistem je u režimu „smanjene animacije\" — zvuk je trenutno isključen.")}
                           </span>
                         )}
                       </p>
@@ -1407,10 +1411,10 @@ export default function UcenikProfilPage() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div className="bg-white border border-border/50 rounded-2xl p-5">
                   <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                    <ClipboardList className="w-5 h-5 text-primary" /> Historija kvizova
+                    <ClipboardList className="w-5 h-5 text-primary" /> {t("Historija kvizova")}
                   </h3>
                   {profil.kvizovi.length === 0 ? (
-                    <p className="text-center py-8 text-muted-foreground">Još nisi radio/la kvizove</p>
+                    <p className="text-center py-8 text-muted-foreground">{t("Još nisi radio/la kvizove")}</p>
                   ) : (
                     <div className="space-y-2">
                       {profil.kvizovi.map(r => (
@@ -1421,8 +1425,8 @@ export default function UcenikProfilPage() {
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-foreground truncate">{r.kvizNaslov}</p>
                             <p className="text-sm text-muted-foreground">
-                              {r.tacniOdgovori}/{r.ukupnoPitanja} tačnih
-                              {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">+{r.bodovi} kapi meda 🍯</span>}
+                              {t("{tacni}/{ukupno} tačnih", { tacni: String(r.tacniOdgovori), ukupno: String(r.ukupnoPitanja) })}
+                              {r.bodovi > 0 && <span className="ml-2 text-amber-600 font-bold">{t("+{n} kapi meda 🍯", { n: String(r.bodovi) })}</span>}
                             </p>
                           </div>
                           <div className="text-sm text-muted-foreground shrink-0">
@@ -1440,19 +1444,19 @@ export default function UcenikProfilPage() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div className="bg-white border border-border/50 rounded-2xl p-5">
                   <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-1">
-                    <FileText className="w-5 h-5 text-primary" /> Dokumenti mekteba
+                    <FileText className="w-5 h-5 text-primary" /> {t("Dokumenti mekteba")}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">Pravila, kućni red i druga obavještenja tvog mekteba.</p>
+                  <p className="text-sm text-muted-foreground mb-4">{t("Pravila, kućni red i druga obavještenja tvog mekteba.")}</p>
                   {dokumenti === null ? (
                     <div className="flex flex-col gap-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
                   ) : dokumenti.length === 0 ? (
-                    <p className="text-center py-8 text-muted-foreground">Još nema dokumenata.</p>
+                    <p className="text-center py-8 text-muted-foreground">{t("Još nema dokumenata.")}</p>
                   ) : (
                     <div className="space-y-2">
                       {dokumenti.map(d => (
                         <button
                           key={d.id}
-                          onClick={() => openAuthorizedFile(`/ucenik/dokumenti/${d.id}/file`, token).catch((e: any) => toast({ title: "Greška", description: e?.message || "Otvaranje nije uspjelo", variant: "destructive" }))}
+                          onClick={() => openAuthorizedFile(`/ucenik/dokumenti/${d.id}/file`, token).catch((e: any) => toast({ title: t("Greška"), description: e?.message || t("Otvaranje nije uspjelo"), variant: "destructive" }))}
                           className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border/40 hover:bg-muted/30 transition-all"
                         >
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -1501,16 +1505,16 @@ export default function UcenikProfilPage() {
                     className="text-center text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl py-2 px-3"
                     data-testid="badge-detail-earned-at"
                   >
-                    Osvojeno{formatEarnedDate(selectedBadge.earnedAt)
+                    {t("Osvojeno")}{formatEarnedDate(selectedBadge.earnedAt)
                       ? `: ${formatEarnedDate(selectedBadge.earnedAt)}`
-                      : " (datum nedostupan)"}
+                      : t(" (datum nedostupan)")}
                   </div>
                 ) : (
                   <div
                     className="text-center text-sm bg-amber-50 text-amber-800 border border-amber-100 rounded-xl py-2 px-3"
                     data-testid="badge-detail-uslov"
                   >
-                    <span className="font-bold">Zaključan — uslov:</span> {selectedBadge.uslov}
+                    <span className="font-bold">{t("Zaključan — uslov:")}</span> {selectedBadge.uslov}
                   </div>
                 )}
               </>

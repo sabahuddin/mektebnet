@@ -6,6 +6,7 @@ import { useAuth } from "@/context/auth";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 
 const DANI = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja"];
 
@@ -31,6 +32,7 @@ export default function DodajGrupuPage() {
   const isEdit = editId !== null;
   const { token } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [naziv, setNaziv] = useState("");
   const [skolskaGodina, setSkolskaGodina] = useState("Mektebska 2025/26");
   const [datumPocetka, setDatumPocetka] = useState("");
@@ -48,7 +50,7 @@ export default function DodajGrupuPage() {
       .then(grupe => {
         const g = grupe.find(x => x.id === editId);
         if (!g) {
-          toast({ title: "Greška", description: "Grupa nije pronađena", variant: "destructive" });
+          toast({ title: t("Greška"), description: t("Grupa nije pronađena"), variant: "destructive" });
           setLocation("/muallim?tab=grupe");
           return;
         }
@@ -60,7 +62,7 @@ export default function DodajGrupuPage() {
         setDaniNastave(g.daniNastave || []);
         setLoaded(true);
       })
-      .catch(() => toast({ title: "Greška", description: "Nije moguće učitati grupu", variant: "destructive" }))
+      .catch(() => toast({ title: t("Greška"), description: t("Nije moguće učitati grupu"), variant: "destructive" }))
       .finally(() => setIsFetching(false));
   }, [isEdit, editId, token]);
 
@@ -83,15 +85,15 @@ export default function DodajGrupuPage() {
       };
       if (isEdit) {
         await apiRequest("PUT", `/muallim/grupe/${editId}`, payload, token);
-        toast({ title: "Sačuvano!", description: `Grupa "${naziv}" je ažurirana` });
+        toast({ title: t("Sačuvano!"), description: t(`Grupa "{naziv}" je ažurirana`, { naziv }) });
         setLocation(`/muallim/grupa/${editId}`);
       } else {
         await apiRequest("POST", "/muallim/grupe", payload, token);
-        toast({ title: "Grupa kreirana!", description: `"${naziv}" je uspješno dodana` });
+        toast({ title: t("Grupa kreirana!"), description: t(`"{naziv}" je uspješno dodana`, { naziv }) });
         setLocation("/muallim");
       }
     } catch {
-      toast({ title: "Greška", description: isEdit ? "Nije moguće sačuvati izmjene" : "Nije moguće kreirati grupu", variant: "destructive" });
+      toast({ title: t("Greška"), description: isEdit ? t("Nije moguće sačuvati izmjene") : t("Nije moguće kreirati grupu"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +103,7 @@ export default function DodajGrupuPage() {
     <Layout>
       <div className="max-w-lg mx-auto">
         <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Nazad
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
         </button>
 
         <div className="flex items-center gap-4 mb-8">
@@ -109,48 +111,48 @@ export default function DodajGrupuPage() {
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">{isEdit ? "Uredi grupu" : "Nova grupa"}</h1>
-            <p className="text-muted-foreground text-sm">{isEdit ? "Izmjena podataka grupe" : "Kreiranje razreda / grupe učenika"}</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{isEdit ? t("Uredi grupu") : t("Nova grupa")}</h1>
+            <p className="text-muted-foreground text-sm">{isEdit ? t("Izmjena podataka grupe") : t("Kreiranje razreda / grupe učenika")}</p>
           </div>
         </div>
 
         {isFetching ? (
-          <div className="bg-white border border-border/50 rounded-2xl p-8 text-center text-muted-foreground">Učitavanje...</div>
+          <div className="bg-white border border-border/50 rounded-2xl p-8 text-center text-muted-foreground">{t("Učitavanje...")}</div>
         ) : !loaded ? (
           <div className="bg-white border border-border/50 rounded-2xl p-8 text-center space-y-4">
-            <p className="text-muted-foreground">Nije moguće učitati podatke grupe.</p>
-            <Button onClick={() => setLocation("/muallim?tab=grupe")} variant="outline" className="rounded-xl font-bold">Nazad na grupe</Button>
+            <p className="text-muted-foreground">{t("Nije moguće učitati podatke grupe.")}</p>
+            <Button onClick={() => setLocation("/muallim?tab=grupe")} variant="outline" className="rounded-xl font-bold">{t("Nazad na grupe")}</Button>
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-6 space-y-5">
           <div>
             <label className="text-sm font-bold text-foreground mb-1.5 block">
-              Naziv grupe <span className="text-red-500">*</span>
+              {t("Naziv grupe")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               required
               value={naziv}
               onChange={e => setNaziv(e.target.value)}
-              placeholder="npr. 1. razred — Subota"
+              placeholder={t("npr. 1. razred — Subota")}
               className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
             />
           </div>
 
           <div>
-            <label className="text-sm font-bold text-foreground mb-1.5 block">Mektebska godina</label>
+            <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Mektebska godina")}</label>
             <input
               type="text"
               value={skolskaGodina}
               onChange={e => setSkolskaGodina(e.target.value)}
-              placeholder="Mektebska 2025/26"
+              placeholder={t("Mektebska 2025/26")}
               className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-bold text-foreground mb-1.5 block">Početak mektebske godine</label>
+              <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Početak mektebske godine")}</label>
               <input
                 type="date"
                 value={datumPocetka}
@@ -159,7 +161,7 @@ export default function DodajGrupuPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-bold text-foreground mb-1.5 block">Kraj mektebske godine</label>
+              <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Kraj mektebske godine")}</label>
               <input
                 type="date"
                 value={datumKraja}
@@ -171,7 +173,7 @@ export default function DodajGrupuPage() {
           </div>
 
           <div>
-            <label className="text-sm font-bold text-foreground mb-2 block">Dani nastave</label>
+            <label className="text-sm font-bold text-foreground mb-2 block">{t("Dani nastave")}</label>
             <div className="flex flex-wrap gap-2">
               {DANI.map(dan => (
                 <button
@@ -191,19 +193,19 @@ export default function DodajGrupuPage() {
           </div>
 
           <div>
-            <label className="text-sm font-bold text-foreground mb-1.5 block">Vrijeme nastave</label>
+            <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Vrijeme nastave")}</label>
             <input
               type="text"
               value={vrijemeNastave}
               onChange={e => setVrijemeNastave(e.target.value)}
-              placeholder="npr. 10:00 – 12:00"
+              placeholder={t("npr. 10:00 – 12:00")}
               className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
             />
           </div>
 
           <Button type="submit" disabled={isLoading || !naziv.trim()} className="w-full rounded-xl font-bold py-3">
             <GraduationCap className="w-4 h-4 mr-2" />
-            {isLoading ? (isEdit ? "Spremanje..." : "Kreiranje...") : (isEdit ? "Sačuvaj izmjene" : "Kreiraj grupu")}
+            {isLoading ? (isEdit ? t("Spremanje...") : t("Kreiranje...")) : (isEdit ? t("Sačuvaj izmjene") : t("Kreiraj grupu"))}
           </Button>
         </form>
         )}

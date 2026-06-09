@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 import {
   ArrowLeft, Save, Loader2, Plus, Trash2, X, Search, ChevronUp, ChevronDown,
   ArrowRightLeft, BookOpenCheck, ClipboardList, Database, Pencil
@@ -140,6 +141,7 @@ export default function AdminKvizEditorPage() {
   const [, setLocation] = useLocation();
   const [matchEdit, paramsEdit] = useRoute<{ id: string }>("/admin/kviz/:id");
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const isNew = !matchEdit;
   const kvizId = matchEdit ? parseInt(paramsEdit!.id) : 0;
@@ -191,7 +193,7 @@ export default function AdminKvizEditorPage() {
       const pit = await apiRequest<KvizPitanjeRow[]>("GET", `/admin/kvizovi/${kvizId}/pitanja`, undefined, token);
       setPitanja(pit);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće učitati kviz", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće učitati kviz"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -200,7 +202,7 @@ export default function AdminKvizEditorPage() {
   const handleSaveMeta = async () => {
     if (!token) return;
     if (!meta.naslov?.trim() || !meta.slug?.trim()) {
-      toast({ title: "Greška", description: "Naslov i slug su obavezni", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Naslov i slug su obavezni"), variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -219,14 +221,14 @@ export default function AdminKvizEditorPage() {
       };
       if (isNew) {
         const created = await apiRequest<Kviz>("POST", "/admin/kvizovi", body, token);
-        toast({ title: "Kreiran", description: `Kviz "${created.naslov}" je dodan. Sada dodaj pitanja iz banke.` });
+        toast({ title: t("Kreiran"), description: t('Kviz "{naslov}" je dodan. Sada dodaj pitanja iz banke.', { naslov: created.naslov }) });
         setLocation(`/admin/kviz/${created.id}`);
       } else {
         await apiRequest("PUT", `/admin/kvizovi/${kvizId}`, body, token);
-        toast({ title: "Sačuvano", description: "Podaci kviza ažurirani" });
+        toast({ title: t("Sačuvano"), description: t("Podaci kviza ažurirani") });
       }
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Nije moguće sačuvati", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Nije moguće sačuvati"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -234,25 +236,25 @@ export default function AdminKvizEditorPage() {
 
   const handleDeleteKviz = async () => {
     if (!token || isNew) return;
-    if (!confirm(`Obrisati kviz "${meta.naslov}"? Pitanja u banci ostaju, samo veze i kviz nestaju. Postojeći rezultati učenika ostaju.`)) return;
+    if (!confirm(t('Obrisati kviz "{naslov}"? Pitanja u banci ostaju, samo veze i kviz nestaju. Postojeći rezultati učenika ostaju.', { naslov: String(meta.naslov) }))) return;
     try {
       await apiRequest("DELETE", `/admin/kvizovi/${kvizId}`, undefined, token);
-      toast({ title: "Obrisano", description: "Kviz obrisan" });
+      toast({ title: t("Obrisano"), description: t("Kviz obrisan") });
       setLocation("/admin");
     } catch {
-      toast({ title: "Greška", description: "Nije moguće obrisati", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće obrisati"), variant: "destructive" });
     }
   };
 
   const handleRemovePitanje = async (p: KvizPitanjeRow) => {
     if (!token) return;
-    if (!confirm(`Ukloniti pitanje iz kviza? Pitanje ostaje u banci.`)) return;
+    if (!confirm(t("Ukloniti pitanje iz kviza? Pitanje ostaje u banci."))) return;
     try {
       await apiRequest("DELETE", `/admin/kvizovi/${kvizId}/pitanja/${p.id}`, undefined, token);
       setPitanja(prev => prev.filter(x => x.id !== p.id));
-      toast({ title: "Uklonjeno", description: "Pitanje uklonjeno iz kviza" });
+      toast({ title: t("Uklonjeno"), description: t("Pitanje uklonjeno iz kviza") });
     } catch {
-      toast({ title: "Greška", description: "Nije moguće ukloniti", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće ukloniti"), variant: "destructive" });
     }
   };
 
@@ -266,14 +268,14 @@ export default function AdminKvizEditorPage() {
     try {
       await apiRequest("PUT", `/admin/kvizovi/${kvizId}/redoslijed`, { pitanjeIds: next.map(p => p.id) }, token);
     } catch {
-      toast({ title: "Greška", description: "Redoslijed nije sačuvan", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Redoslijed nije sačuvan"), variant: "destructive" });
     }
   };
 
   const handleAddedFromBank = (added: PitanjeBanka[]) => {
     // optimistic — server je već vratio success; reload da dobijemo redoslijed
     void apiRequest<KvizPitanjeRow[]>("GET", `/admin/kvizovi/${kvizId}/pitanja`, undefined, token!).then(setPitanja);
-    toast({ title: "Dodano", description: `${added.length} pitanja dodano u kviz` });
+    toast({ title: t("Dodano"), description: t("{broj} pitanja dodano u kviz", { broj: String(added.length) }) });
   };
 
   const handleMovePitanje = async (target: Kviz) => {
@@ -285,9 +287,9 @@ export default function AdminKvizEditorPage() {
       }, token);
       setPitanja(prev => prev.filter(x => x.id !== moveTarget.id));
       setMoveTarget(null);
-      toast({ title: "Premješteno", description: `Pitanje premješteno u "${target.naslov}"` });
+      toast({ title: t("Premješteno"), description: t('Pitanje premješteno u "{naslov}"', { naslov: target.naslov }) });
     } catch {
-      toast({ title: "Greška", description: "Nije moguće premjestiti", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće premjestiti"), variant: "destructive" });
     }
   };
 
@@ -301,7 +303,7 @@ export default function AdminKvizEditorPage() {
     <Layout>
       <div className="max-w-5xl mx-auto px-4 py-8">
         <button onClick={() => setLocation("/admin")} className="flex items-center gap-2 text-teal-600 hover:text-teal-800 mb-6 font-semibold">
-          <ArrowLeft className="w-4 h-4" /> Nazad na admin
+          <ArrowLeft className="w-4 h-4" /> {t("Nazad na admin")}
         </button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -309,12 +311,12 @@ export default function AdminKvizEditorPage() {
             <ClipboardList className="w-6 h-6 text-orange-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-extrabold text-foreground truncate">{isNew ? "Novi kviz" : meta.naslov || "Kviz"}</h1>
-            <p className="text-muted-foreground text-base">{isNew ? "Sačuvaj osnovne podatke pa dodaj pitanja iz banke." : `${pitanja.length} pitanja`}</p>
+            <h1 className="text-2xl font-extrabold text-foreground truncate">{isNew ? t("Novi kviz") : meta.naslov || t("Kviz")}</h1>
+            <p className="text-muted-foreground text-base">{isNew ? t("Sačuvaj osnovne podatke pa dodaj pitanja iz banke.") : t("{broj} pitanja", { broj: String(pitanja.length) })}</p>
           </div>
           {!isNew && (
             <button onClick={handleDeleteKviz} className="px-3 py-2 rounded-xl text-sm font-bold bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1">
-              <Trash2 className="w-4 h-4" /> Obriši
+              <Trash2 className="w-4 h-4" /> {t("Obriši")}
             </button>
           )}
         </div>
@@ -323,7 +325,7 @@ export default function AdminKvizEditorPage() {
         <div className="bg-white border border-border/60 rounded-2xl p-5 mb-6 space-y-3 shadow-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">Naslov</label>
+              <label className="block text-sm font-semibold mb-1">{t("Naslov")}</label>
               <input
                 value={meta.naslov || ""}
                 onChange={e => setMeta(p => ({ ...p, naslov: e.target.value, slug: isNew && !p.slug ? slugify(e.target.value) : p.slug }))}
@@ -331,7 +333,7 @@ export default function AdminKvizEditorPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">Slug (URL)</label>
+              <label className="block text-sm font-semibold mb-1">{t("Slug (URL)")}</label>
               <input
                 value={meta.slug || ""}
                 onChange={e => setMeta(p => ({ ...p, slug: slugify(e.target.value) }))}
@@ -341,53 +343,53 @@ export default function AdminKvizEditorPage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">Modul</label>
+              <label className="block text-sm font-semibold mb-1">{t("Modul")}</label>
               <select value={meta.modul || "ilmihal"} onChange={e => setMeta(p => ({ ...p, modul: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="ilmihal">Ilmihal</option>
-                <option value="knjige">Knjige</option>
+                <option value="ilmihal">{t("Ilmihal")}</option>
+                <option value="knjige">{t("Knjige")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">Nivo</label>
+              <label className="block text-sm font-semibold mb-1">{t("Nivo")}</label>
               <input type="number" min={1} max={4} value={meta.nivo ?? ""} onChange={e => setMeta(p => ({ ...p, nivo: e.target.value ? parseInt(e.target.value) : null }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">Varijanta</label>
+              <label className="block text-sm font-semibold mb-1">{t("Varijanta")}</label>
               <select value={meta.variant || "normal"} onChange={e => setMeta(p => ({ ...p, variant: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="normal">Normal</option>
-                <option value="napredni">Napredni</option>
-                <option value="zavrsni">Završni</option>
+                <option value="normal">{t("Normal")}</option>
+                <option value="napredni">{t("Napredni")}</option>
+                <option value="zavrsni">{t("Završni")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">Status</label>
+              <label className="block text-sm font-semibold mb-1">{t("Status")}</label>
               <select value={meta.isPublished ? "1" : "0"} onChange={e => setMeta(p => ({ ...p, isPublished: e.target.value === "1" }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="1">Objavljen</option>
-                <option value="0">Skriven</option>
+                <option value="1">{t("Objavljen")}</option>
+                <option value="0">{t("Skriven")}</option>
               </select>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">Kategorija (NPP 2018)</label>
+              <label className="block text-sm font-semibold mb-1">{t("Kategorija (NPP 2018)")}</label>
               <select value={meta.kategorija || ""} onChange={e => {
                 const kat = e.target.value || null;
                 setMeta(p => ({ ...p, kategorija: kat, tagovi: [] }));
               }}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="">— bez —</option>
+                <option value="">{t("— bez —")}</option>
                 {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">Lekcija (opciono)</label>
+              <label className="block text-sm font-semibold mb-1">{t("Lekcija (opciono)")}</label>
               <select value={meta.lekcijaId ?? ""} onChange={e => setMeta(p => ({ ...p, lekcijaId: e.target.value ? Number(e.target.value) : null }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="">— nijedna —</option>
+                <option value="">{t("— nijedna —")}</option>
                 {lekcije.map(l => <option key={l.id} value={l.id}>N{l.nivo} · {l.naslov}</option>)}
               </select>
             </div>
@@ -395,7 +397,7 @@ export default function AdminKvizEditorPage() {
           {/* Tagovi — admin filtriranje (ne vide polaznici) */}
           {meta.kategorija && KATEGORIJA_TAGOVI[meta.kategorija] && (
             <div>
-              <label className="block text-sm font-semibold mb-1">Tagovi (pod-teme za filtriranje)</label>
+              <label className="block text-sm font-semibold mb-1">{t("Tagovi (pod-teme za filtriranje)")}</label>
               <div className="flex flex-wrap gap-2">
                 {KATEGORIJA_TAGOVI[meta.kategorija].map(tag => {
                   const active = (meta.tagovi || []).includes(tag);
@@ -411,11 +413,11 @@ export default function AdminKvizEditorPage() {
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Tagovi služe za admin filtriranje — polaznici ih ne vide.</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("Tagovi služe za admin filtriranje — polaznici ih ne vide.")}</p>
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold mb-1">Opis (opciono)</label>
+            <label className="block text-sm font-semibold mb-1">{t("Opis (opciono)")}</label>
             <textarea value={meta.opis || ""} onChange={e => setMeta(p => ({ ...p, opis: e.target.value }))} rows={2}
               className="w-full px-3 py-2 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-orange-400 resize-y" />
           </div>
@@ -423,7 +425,7 @@ export default function AdminKvizEditorPage() {
             <button onClick={handleSaveMeta} disabled={saving}
               className="flex items-center gap-2 px-5 py-2 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition disabled:opacity-50">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isNew ? "Kreiraj kviz" : "Sačuvaj podatke"}
+              {isNew ? t("Kreiraj kviz") : t("Sačuvaj podatke")}
             </button>
           </div>
         </div>
@@ -432,18 +434,18 @@ export default function AdminKvizEditorPage() {
         {!isNew && (
           <div className="bg-white border border-border/60 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-extrabold text-lg flex items-center gap-2"><Database className="w-5 h-5 text-amber-600" /> Pitanja u kvizu ({pitanja.length})</h2>
+              <h2 className="font-extrabold text-lg flex items-center gap-2"><Database className="w-5 h-5 text-amber-600" /> {t("Pitanja u kvizu ({broj})", { broj: String(pitanja.length) })}</h2>
               <button onClick={() => setShowAddModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition">
-                <Plus className="w-4 h-4" /> Dodaj iz banke
+                <Plus className="w-4 h-4" /> {t("Dodaj iz banke")}
               </button>
             </div>
 
             {pitanja.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Database className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="font-semibold">Kviz nema pitanja</p>
-                <p className="text-sm">Klikni "Dodaj iz banke" da odabereš pitanja</p>
+                <p className="font-semibold">{t("Kviz nema pitanja")}</p>
+                <p className="text-sm">{t('Klikni "Dodaj iz banke" da odabereš pitanja')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -471,14 +473,14 @@ export default function AdminKvizEditorPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-lg hover:bg-amber-50 text-muted-foreground hover:text-amber-700"
-                        title="Uredi u banci pitanja (otvara u novom tabu — izmjena utiče na sve kvizove koji koriste ovo pitanje)"
+                        title={t("Uredi u banci pitanja (otvara u novom tabu — izmjena utiče na sve kvizove koji koriste ovo pitanje)")}
                       >
                         <Pencil className="w-4 h-4" />
                       </a>
-                      <button onClick={() => setMoveTarget(p)} className="p-2 rounded-lg hover:bg-blue-50 text-muted-foreground hover:text-blue-600" title="Premjesti u drugi kviz">
+                      <button onClick={() => setMoveTarget(p)} className="p-2 rounded-lg hover:bg-blue-50 text-muted-foreground hover:text-blue-600" title={t("Premjesti u drugi kviz")}>
                         <ArrowRightLeft className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleRemovePitanje(p)} className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500" title="Ukloni iz kviza">
+                      <button onClick={() => handleRemovePitanje(p)} className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500" title={t("Ukloni iz kviza")}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -525,6 +527,7 @@ function DodajIzBankeModal({
   onAdded: (added: PitanjeBanka[]) => void;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [debSearch, setDebSearch] = useState("");
   const [kategorija, setKategorija] = useState("");
@@ -565,7 +568,7 @@ function DodajIzBankeModal({
       const addedRows = (data?.rows || []).filter(r => picked.has(r.id));
       onAdded(addedRows);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće dodati", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće dodati"), variant: "destructive" });
     } finally { setAdding(false); }
   };
 
@@ -575,18 +578,18 @@ function DodajIzBankeModal({
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-border/50 flex items-center justify-between">
-          <h3 className="font-extrabold text-lg">Dodaj pitanja iz banke</h3>
+          <h3 className="font-extrabold text-lg">{t("Dodaj pitanja iz banke")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 border-b border-border/40 flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Pretraži pitanja..."
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder={t("Pretraži pitanja...")}
               className="w-full pl-10 pr-3 py-2 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
           <select value={kategorija} onChange={e => { setKategorija(e.target.value); setPage(1); }}
             className="px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
-            <option value="">Sve kategorije</option>
+            <option value="">{t("Sve kategorije")}</option>
             {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
@@ -594,7 +597,7 @@ function DodajIzBankeModal({
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-500" /></div>
           ) : !data || data.rows.length === 0 ? (
-            <p className="text-center py-12 text-muted-foreground">Nema rezultata</p>
+            <p className="text-center py-12 text-muted-foreground">{t("Nema rezultata")}</p>
           ) : (
             <div className="space-y-1">
               {data.rows.map(p => {
@@ -611,7 +614,7 @@ function DodajIzBankeModal({
                         <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 mr-1">{VRSTA_LABELS[p.vrsta] || p.vrsta}</span>
                       )}
                       <span className="text-xs text-muted-foreground">#{p.id}</span>
-                      {exists && <span className="text-xs text-muted-foreground italic ml-2">(već u kvizu)</span>}
+                      {exists && <span className="text-xs text-muted-foreground italic ml-2">{t("(već u kvizu)")}</span>}
                       <p className="text-sm font-semibold mt-0.5">{p.pitanje}</p>
                       <PitanjeAnswerPreview p={p} />
                     </div>
@@ -628,11 +631,11 @@ function DodajIzBankeModal({
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-2 py-1 rounded border disabled:opacity-30">›</button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{picked.size} odabrano</span>
+            <span className="text-sm text-muted-foreground">{t("{broj} odabrano", { broj: String(picked.size) })}</span>
             <button onClick={submit} disabled={picked.size === 0 || adding}
               className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:opacity-50">
               {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              Dodaj odabrana
+              {t("Dodaj odabrana")}
             </button>
           </div>
         </div>
@@ -652,6 +655,7 @@ function PremjestiModal({
   onClose: () => void;
   onPick: (k: Kviz) => void;
 }) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -663,14 +667,14 @@ function PremjestiModal({
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-border/50 flex items-center justify-between">
-          <h3 className="font-extrabold text-lg flex items-center gap-2"><ArrowRightLeft className="w-5 h-5" /> Premjesti pitanje</h3>
+          <h3 className="font-extrabold text-lg flex items-center gap-2"><ArrowRightLeft className="w-5 h-5" /> {t("Premjesti pitanje")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <div className="px-5 py-3 bg-muted/30 text-sm border-b border-border/40 line-clamp-2">{pitanje.pitanje}</div>
         <div className="p-3 border-b border-border/40">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pretraži kvizove..."
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("Pretraži kvizove...")}
               className="w-full pl-10 pr-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>

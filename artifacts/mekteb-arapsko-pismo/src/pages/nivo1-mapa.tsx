@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { Check, Sparkles, X } from "lucide-react";
 
@@ -60,6 +61,7 @@ const NIVO_CONFIGS: Record<number, NivoConfig> = {
 
 export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   const cfg = NIVO_CONFIGS[nivo] ?? NIVO_CONFIGS[1];
+  const { t } = useLanguage();
   const { token, user } = useAuth();
   const [, setLocation] = useLocation();
   const [data, setData] = useState<MapaData | null>(null);
@@ -127,8 +129,8 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   const doorEnabled = allDone;
   const doorLabel = krunisanjeMeta && krunisanjeMeta.imaKviz
     ? (krunisanjePolozeno
-        ? `Krunisanje položeno — ${krunisanjeMeta.naslov ?? `Nivo ${nivo}`}`
-        : `Završni izazov — ${krunisanjeMeta.naslov ?? `Krunisanje nivoa ${nivo}`}`)
+        ? t("Krunisanje položeno — {naslov}", { naslov: krunisanjeMeta.naslov ?? t("Nivo {nivo}", { nivo: String(nivo) }) })
+        : t("Završni izazov — {naslov}", { naslov: krunisanjeMeta.naslov ?? t("Krunisanje nivoa {nivo}", { nivo: String(nivo) }) }))
     : cfg.doorLabel;
 
   // Trenutni cell (linearni indeks 0..N-1, gdje je 0 = lekcija 1).
@@ -275,7 +277,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-amber-100 flex items-center justify-center z-50">
-        <div className="text-amber-800 font-bold">Učitavam mapu…</div>
+        <div className="text-amber-800 font-bold">{t("Učitavam mapu…")}</div>
       </div>
     );
   }
@@ -329,8 +331,8 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                 onClick={() => m && unlocked && setLocation(`/ilmihal/medaljon-nivo${nivo}-${required}`)}
                 title={
                   m
-                    ? `${m.naziv} — ${required} lekcija`
-                    : `Otključava se na ${required} lekcija`
+                    ? t("{naziv} — {required} lekcija", { naziv: m.naziv, required: String(required) })
+                    : t("Otključava se na {required} lekcija", { required: String(required) })
                 }
                 testId={`mapa-medaljon-top-${i + 1}`}
               />
@@ -342,7 +344,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
           onClick={() => setLocation("/ilmihal")}
           className="flex-shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white hover:bg-amber-50 shadow flex items-center justify-center text-amber-900 active:scale-95 transition"
           data-testid="button-close-mapa"
-          aria-label="Zatvori mapu"
+          aria-label={t("Zatvori mapu")}
         >
           <X className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={3} />
         </button>
@@ -386,8 +388,8 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                   doorEnabled
                     ? doorLabel
                     : !lessonsAllDone
-                      ? "Završi sve lekcije da otključaš"
-                      : "Položi sve etape da otključaš"
+                      ? t("Završi sve lekcije da otključaš")
+                      : t("Položi sve etape da otključaš")
                 }
               >
                 <div className="relative w-12 h-12 sm:w-16 sm:h-16 transition-transform active:scale-95 hover:scale-105">
@@ -400,7 +402,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                         ? "/images/mapa/vrata-otvorena.png"
                         : "/images/mapa/vrata-zatvorena.png"
                     }
-                    alt={doorEnabled ? `${doorLabel} — otvorena` : `${doorLabel} — zaključana`}
+                    alt={doorEnabled ? t("{doorLabel} — otvorena", { doorLabel }) : t("{doorLabel} — zaključana", { doorLabel })}
                     className={`relative w-full h-full object-contain drop-shadow-md ${
                       doorEnabled ? "animate-pulse" : "opacity-80 grayscale-[40%]"
                     }`}
@@ -408,8 +410,8 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                   {krunisanjePolozeno && (
                     <span
                       className="absolute -top-1 -right-1 text-base sm:text-lg"
-                      aria-label="Krunisanje položeno"
-                      title="Krunisanje položeno"
+                      aria-label={t("Krunisanje položeno")}
+                      title={t("Krunisanje položeno")}
                     >
                       👑
                     </span>
@@ -452,9 +454,9 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                     title={
                       unlocked
                         ? realMed
-                          ? `${realMed.naziv} — Ponavljanje i završni ispit`
-                          : `Medaljon ${required}`
-                        : `Otključava se na ${required} lekcija`
+                          ? t("{naziv} — Ponavljanje i završni ispit", { naziv: realMed.naziv })
+                          : t("Medaljon {required}", { required: String(required) })
+                        : t("Otključava se na {required} lekcija", { required: String(required) })
                     }
                     testId={`mapa-inline-medaljon-btn-${required}`}
                   />
@@ -491,7 +493,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                   className="relative flex items-center justify-center disabled:cursor-not-allowed"
                   style={{ gridRow: displayRow + 1, gridColumn: col + 1 }}
                   data-testid={`mapa-polje-lekcija-${lekcija.id}`}
-                  title={isLocked ? `Zaključano — završi prethodne lekcije` : lekcija.naslov}
+                  title={isLocked ? t("Zaključano — završi prethodne lekcije") : lekcija.naslov}
                 >
                   <div className="relative">
                     {isCurrent && (
@@ -518,7 +520,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                     {isDone && (
                       <span
                         className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500 ring-2 ring-white flex items-center justify-center shadow-md z-10"
-                        aria-label="Završeno"
+                        aria-label={t("Završeno")}
                       >
                         <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" strokeWidth={4} />
                       </span>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { useAuth } from "@/context/auth";
+import { useLanguage } from "@/context/language";
 import { requestPushPermission, hasBeenPrompted, markPrompted, isCapacitorNative } from "@/lib/push";
 
 const DISMISS_KEY = "mekteb-push-dismissed";
@@ -33,6 +34,7 @@ function isPushSupported(): boolean {
  */
 export function PushPrompt() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -88,7 +90,7 @@ export function PushPrompt() {
       <button
         onClick={onDismiss}
         className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1"
-        aria-label="Zatvori"
+        aria-label={t("Zatvori")}
       >
         <X className="w-4 h-4" />
       </button>
@@ -98,11 +100,10 @@ export function PushPrompt() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-gray-900 text-sm">
-            Uključi obavijesti
+            {t("Uključi obavijesti")}
           </div>
           <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-            Primaj obavijesti o novim porukama, zadaćama i podsjetnicima — i kad
-            mekteb nije otvoren u browseru.
+            {t("Primaj obavijesti o novim porukama, zadaćama i podsjetnicima — i kad mekteb nije otvoren u browseru.")}
           </p>
           <div className="flex gap-2 mt-3">
             <button
@@ -110,13 +111,13 @@ export function PushPrompt() {
               disabled={busy}
               className="flex-1 px-3 py-1.5 rounded-full bg-mekteb-teal text-white text-xs font-medium hover:bg-mekteb-teal/90 disabled:opacity-50 transition-colors"
             >
-              {busy ? "Učitavanje..." : "Uključi"}
+              {busy ? t("Učitavanje...") : t("Uključi")}
             </button>
             <button
               onClick={onDismiss}
               className="px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 transition-colors"
             >
-              Ne sad
+              {t("Ne sad")}
             </button>
           </div>
         </div>

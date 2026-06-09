@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/context/language";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 
 interface AnalyticsData {
@@ -170,6 +171,7 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
 
 function SistemAlati({ token }: { token: string }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [showSeedModal, setShowSeedModal] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isSeeding, setIsSeeding] = useState(false);
@@ -180,14 +182,14 @@ function SistemAlati({ token }: { token: string }) {
     setIsSeeding(true);
     try {
       const data = await apiRequest<{ message?: string }>("POST", "/admin/system/seed-demo", { confirm: "DEMO" }, token);
-      const msg = data.message || "Demo podaci dodani.";
+      const msg = data.message || t("Demo podaci dodani.");
       setLastResult(msg);
-      toast({ title: "Gotovo!", description: msg });
+      toast({ title: t("Gotovo!"), description: msg });
       setShowSeedModal(false);
       setConfirmText("");
     } catch (err: any) {
-      const detail = err?.message || "Pokušaj ponovo.";
-      toast({ title: "Greška", description: detail, variant: "destructive" });
+      const detail = err?.message || t("Pokušaj ponovo.");
+      toast({ title: t("Greška"), description: detail, variant: "destructive" });
     } finally {
       setIsSeeding(false);
     }
@@ -198,17 +200,16 @@ function SistemAlati({ token }: { token: string }) {
       <div className="mt-8 bg-white border border-border/50 rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-border/50">
           <h3 className="font-extrabold text-foreground flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-primary" /> Sistem alati
+            <ShieldCheck className="w-5 h-5 text-primary" /> {t("Sistem alati")}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">Administrativne radnje nad bazom podataka</p>
+          <p className="text-sm text-muted-foreground mt-1">{t("Administrativne radnje nad bazom podataka")}</p>
         </div>
         <div className="p-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <div className="flex-1">
-              <div className="font-bold text-foreground">Učitaj demo podatke</div>
+              <div className="font-bold text-foreground">{t("Učitaj demo podatke")}</div>
               <p className="text-sm text-muted-foreground mt-1">
-                Dodaje 3 demo grupe sa muallimom, 18 učenika i 2 roditelja (svi sa prefiksom <code className="text-xs bg-white px-1 rounded">demo.</code>, lozinka <code className="text-xs bg-white px-1 rounded">demo123</code>).
-                Tvoji stvarni korisnici se NE diraju.
+                {t("Dodaje 3 demo grupe sa muallimom, 18 učenika i 2 roditelja (svi sa prefiksom ")}<code className="text-xs bg-white px-1 rounded">demo.</code>{t(", lozinka ")}<code className="text-xs bg-white px-1 rounded">demo123</code>{t("). Tvoji stvarni korisnici se NE diraju.")}
               </p>
               {lastResult && (
                 <p className="text-xs text-emerald-700 mt-2 font-medium">✓ {lastResult}</p>
@@ -219,7 +220,7 @@ function SistemAlati({ token }: { token: string }) {
               data-testid="button-seed-demo"
               className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl whitespace-nowrap"
             >
-              <Plus className="w-4 h-4 mr-2" /> Učitaj demo
+              <Plus className="w-4 h-4 mr-2" /> {t("Učitaj demo")}
             </Button>
           </div>
         </div>
@@ -232,11 +233,11 @@ function SistemAlati({ token }: { token: string }) {
             className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-lg font-extrabold text-foreground mb-2">Potvrdi učitavanje demo podataka</h3>
+            <h3 className="text-lg font-extrabold text-foreground mb-2">{t("Potvrdi učitavanje demo podataka")}</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Skripta će dodati demo grupe, muallima, učenike i roditelje u <strong>ovu bazu</strong>. Postojeći demo nalozi će biti osvježeni.
+              {t("Skripta će dodati demo grupe, muallima, učenike i roditelje u ")}<strong>{t("ovu bazu")}</strong>{t(". Postojeći demo nalozi će biti osvježeni.")}
             </p>
-            <p className="text-sm text-foreground mb-2">Da potvrdiš, upiši <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono">DEMO</code>:</p>
+            <p className="text-sm text-foreground mb-2">{t("Da potvrdiš, upiši ")}<code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono">DEMO</code>:</p>
             <input
               type="text"
               value={confirmText}
@@ -254,7 +255,7 @@ function SistemAlati({ token }: { token: string }) {
                 disabled={isSeeding}
                 className="flex-1 rounded-xl"
               >
-                Otkaži
+                {t("Otkaži")}
               </Button>
               <Button
                 onClick={handleSeed}
@@ -262,12 +263,12 @@ function SistemAlati({ token }: { token: string }) {
                 data-testid="button-confirm-seed"
                 className="flex-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white"
               >
-                {isSeeding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Učitaj"}
+                {isSeeding ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Učitaj")}
               </Button>
             </div>
             {isSeeding && (
               <p className="text-xs text-muted-foreground mt-3 text-center">
-                Ovo može potrajati 10-30 sekundi...
+                {t("Ovo može potrajati 10-30 sekundi...")}
               </p>
             )}
           </motion.div>
@@ -295,6 +296,7 @@ interface PendingPrilog {
 
 function PendingPrilozi({ token }: { token: string }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [pending, setPending] = useState<PendingPrilog[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
@@ -317,10 +319,10 @@ function PendingPrilozi({ token }: { token: string }) {
     setProcessingId(id);
     try {
       await apiRequest("PUT", `/admin/prilozi/${id}/approve`, { approve }, token);
-      toast({ title: approve ? "Odobreno" : "Odbijeno", description: approve ? "Materijal je sada vidljiv učenicima." : "Materijal je obrisan." });
+      toast({ title: approve ? t("Odobreno") : t("Odbijeno"), description: approve ? t("Materijal je sada vidljiv učenicima.") : t("Materijal je obrisan.") });
       setPending(prev => prev.filter(p => p.id !== id));
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setProcessingId(null);
     }
@@ -335,7 +337,7 @@ function PendingPrilozi({ token }: { token: string }) {
   if (pending.length === 0) return (
     <div className="bg-white border border-border/50 rounded-2xl p-5 flex items-center gap-3">
       <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-      <span className="text-sm text-muted-foreground">Nema materijala koji čekaju odobrenje.</span>
+      <span className="text-sm text-muted-foreground">{t("Nema materijala koji čekaju odobrenje.")}</span>
     </div>
   );
 
@@ -343,7 +345,7 @@ function PendingPrilozi({ token }: { token: string }) {
     <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden">
       <div className="p-4 border-b border-amber-100 bg-amber-50 flex items-center gap-2">
         <Bell className="w-5 h-5 text-amber-600" />
-        <h3 className="font-extrabold text-foreground">Materijali čekaju odobrenje</h3>
+        <h3 className="font-extrabold text-foreground">{t("Materijali čekaju odobrenje")}</h3>
         <span className="ml-auto text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">{pending.length}</span>
       </div>
       <div className="divide-y divide-border/40">
@@ -378,11 +380,11 @@ function PendingPrilozi({ token }: { token: string }) {
                     className="text-amber-700 hover:underline font-semibold"
                     data-testid={`link-lekcija-${p.id}`}
                   >
-                    {p.lekcijaNaslov || `Lekcija #${p.lekcijaId}`}
-                    {p.lekcijaNivo ? ` · Nivo ${p.lekcijaNivo}` : ""}
+                    {p.lekcijaNaslov || t("Lekcija #{id}", { id: String(p.lekcijaId) })}
+                    {p.lekcijaNivo ? ` · ${t("Nivo {nivo}", { nivo: String(p.lekcijaNivo) })}` : ""}
                   </a>
                 ) : (
-                  <span className="text-red-600">Lekcija obrisana (#{p.lekcijaId})</span>
+                  <span className="text-red-600">{t("Lekcija obrisana (#{id})", { id: String(p.lekcijaId) })}</span>
                 )}
                 {" · "}
                 {p.uploadedByRole || "muallim"}
@@ -398,9 +400,9 @@ function PendingPrilozi({ token }: { token: string }) {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold transition-colors"
                   data-testid={`button-pregledaj-${p.id}`}
-                  title="Otvori prilog u novom tabu"
+                  title={t("Otvori prilog u novom tabu")}
                 >
-                  <Eye className="w-3.5 h-3.5" /> Pregledaj
+                  <Eye className="w-3.5 h-3.5" /> {t("Pregledaj")}
                 </a>
               )}
               <button
@@ -408,14 +410,14 @@ function PendingPrilozi({ token }: { token: string }) {
                 disabled={processingId === p.id}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors disabled:opacity-50"
               >
-                {processingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Odobri
+                {processingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("Odobri")}
               </button>
               <button
                 onClick={() => handle(p.id, false)}
                 disabled={processingId === p.id}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold transition-colors disabled:opacity-50"
               >
-                <X className="w-3.5 h-3.5" /> Odbij
+                <X className="w-3.5 h-3.5" /> {t("Odbij")}
               </button>
             </div>
           </div>
@@ -453,6 +455,7 @@ type KatStats = { ukupno: number; aktivnih: number };
 
 function IgraPitanjaEditor({ token }: { token: string }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<Record<string, KatStats>>({});
   const [activeKat, setActiveKat] = useState<string>("sarti");
   const [pitanja, setPitanja] = useState<IgraPitanje[]>([]);
@@ -468,7 +471,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
       const data = await apiRequest<{ stats: Record<string, KatStats> }>("GET", "/admin/igra-pitanja/stats", undefined, token);
       setStats(data.stats || {});
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Ne mogu učitati statistiku", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Ne mogu učitati statistiku"), variant: "destructive" });
     }
   };
 
@@ -478,7 +481,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
       const data = await apiRequest<{ pitanja: IgraPitanje[] }>("GET", `/admin/igra-pitanja?kategorija=${kat}`, undefined, token);
       setPitanja(data.pitanja || []);
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Ne mogu učitati pitanja", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Ne mogu učitati pitanja"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -488,14 +491,14 @@ function IgraPitanjaEditor({ token }: { token: string }) {
   useEffect(() => { loadPitanja(activeKat); }, [activeKat]);
 
   const handleDelete = async (p: IgraPitanje) => {
-    if (!confirm(`Obrisati pitanje?\n\n"${p.pitanje}"`)) return;
+    if (!confirm(t("Obrisati pitanje?\n\n\"{pitanje}\"", { pitanje: p.pitanje }))) return;
     try {
       await apiRequest("DELETE", `/admin/igra-pitanja/${p.id}`, undefined, token);
-      toast({ title: "Obrisano", description: "Pitanje uklonjeno" });
+      toast({ title: t("Obrisano"), description: t("Pitanje uklonjeno") });
       loadPitanja(activeKat);
       loadStats();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Brisanje neuspjelo", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Brisanje neuspjelo"), variant: "destructive" });
     }
   };
 
@@ -505,8 +508,8 @@ function IgraPitanjaEditor({ token }: { token: string }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Greška pri izvozu" }));
-        throw new Error(err.error || "Greška pri izvozu");
+        const err = await res.json().catch(() => ({ error: t("Greška pri izvozu") }));
+        throw new Error(err.error || t("Greška pri izvozu"));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -518,9 +521,9 @@ function IgraPitanjaEditor({ token }: { token: string }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast({ title: "Izvezeno", description: "CSV preuzet" });
+      toast({ title: t("Izvezeno"), description: t("CSV preuzet") });
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Izvoz neuspio", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Izvoz neuspio"), variant: "destructive" });
     }
   };
 
@@ -541,7 +544,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
       loadStats();
       loadPitanja(activeKat);
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Uvoz neuspio", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Uvoz neuspio"), variant: "destructive" });
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -549,20 +552,20 @@ function IgraPitanjaEditor({ token }: { token: string }) {
   };
 
   const handleSeedMedena = async () => {
-    if (!confirm("Učitati početni set od 160 pitanja (8 kategorija × 20)? Postojeća pitanja sa istim tekstom će se ažurirati.")) return;
+    if (!confirm(t("Učitati početni set od 160 pitanja (8 kategorija × 20)? Postojeća pitanja sa istim tekstom će se ažurirati."))) return;
     setSeedingMedena(true);
     try {
       const res = await apiRequest<{ inserted?: number; updated?: number; total?: number; message?: string }>(
         "POST", "/admin/system/seed-medena-pitanja", {}, token,
       );
       toast({
-        title: "Gotovo!",
-        description: res.message || `Dodato: ${res.inserted ?? 0}, ažurirano: ${res.updated ?? 0}, ukupno: ${res.total ?? 0}`,
+        title: t("Gotovo!"),
+        description: res.message || t("Dodato: {dodato}, ažurirano: {azurirano}, ukupno: {ukupno}", { dodato: String(res.inserted ?? 0), azurirano: String(res.updated ?? 0), ukupno: String(res.total ?? 0) }),
       });
       loadStats();
       loadPitanja(activeKat);
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Seed neuspješan", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Seed neuspješan"), variant: "destructive" });
     } finally {
       setSeedingMedena(false);
     }
@@ -574,10 +577,10 @@ function IgraPitanjaEditor({ token }: { token: string }) {
         <div className="p-4 border-b border-border/50 flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h3 className="font-extrabold text-foreground flex items-center gap-2">
-              🍯 Medena staza — pitanja
+              🍯 {t("Medena staza — pitanja")}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Banka pitanja za igricu. U svakoj partiji djeca dobiju po jedno nasumično pitanje iz svake kategorije.
+              {t("Banka pitanja za igricu. U svakoj partiji djeca dobiju po jedno nasumično pitanje iz svake kategorije.")}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -587,7 +590,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
               data-testid="button-export-csv"
               className="rounded-xl text-sky-700 border-sky-300 hover:bg-sky-50"
             >
-              <Download className="w-4 h-4 mr-2" /> Izvezi CSV
+              <Download className="w-4 h-4 mr-2" /> {t("Izvezi CSV")}
             </Button>
             <Button
               onClick={() => fileInputRef.current?.click()}
@@ -597,7 +600,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
               className="rounded-xl text-sky-700 border-sky-300 hover:bg-sky-50"
             >
               {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-              Uvezi CSV
+              {t("Uvezi CSV")}
             </Button>
             <input
               ref={fileInputRef}
@@ -618,10 +621,10 @@ function IgraPitanjaEditor({ token }: { token: string }) {
               className="rounded-xl text-amber-700 border-amber-300 hover:bg-amber-50"
             >
               {seedingMedena ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-              Učitaj početni set (160)
+              {t("Učitaj početni set (160)")}
             </Button>
             <Button onClick={() => setEditing("new")} data-testid="button-novo-pitanje" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Plus className="w-4 h-4 mr-2" /> Novo pitanje
+              <Plus className="w-4 h-4 mr-2" /> {t("Novo pitanje")}
             </Button>
           </div>
         </div>
@@ -660,10 +663,10 @@ function IgraPitanjaEditor({ token }: { token: string }) {
 
         <div className="p-4">
           {loading ? (
-            <div className="py-10 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin inline mr-2" /> Učitavam...</div>
+            <div className="py-10 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin inline mr-2" /> {t("Učitavam...")}</div>
           ) : pitanja.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              Nema pitanja u ovoj kategoriji. Klikni <strong>Novo pitanje</strong> ili <strong>Učitaj početni set</strong>.
+              {t("Nema pitanja u ovoj kategoriji. Klikni ")}<strong>{t("Novo pitanje")}</strong>{t(" ili ")}<strong>{t("Učitaj početni set")}</strong>.
             </div>
           ) : (
             <div className="space-y-2">
@@ -672,9 +675,9 @@ function IgraPitanjaEditor({ token }: { token: string }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={["text-[10px] font-bold px-2 py-0.5 rounded-full", p.aktivno ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"].join(" ")}>
-                        {p.aktivno ? "AKTIVNO" : "NEAKTIVNO"}
+                        {p.aktivno ? t("AKTIVNO") : t("NEAKTIVNO")}
                       </span>
-                      <span className="text-[10px] font-medium text-muted-foreground">težina {p.tezina}</span>
+                      <span className="text-[10px] font-medium text-muted-foreground">{t("težina {n}", { n: String(p.tezina) })}</span>
                     </div>
                     <div className="font-bold text-sm text-foreground">{p.pitanje}</div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -690,7 +693,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
                       onClick={() => setEditing(p)}
                       data-testid={`button-edit-${p.id}`}
                       className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-700"
-                      title="Uredi"
+                      title={t("Uredi")}
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -698,7 +701,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
                       onClick={() => handleDelete(p)}
                       data-testid={`button-delete-${p.id}`}
                       className="p-2 rounded-lg hover:bg-red-100 text-red-600"
-                      title="Obriši"
+                      title={t("Obriši")}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -732,7 +735,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
             data-testid="modal-import-rezultat"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-extrabold text-foreground">Rezultat uvoza CSV-a</h3>
+              <h3 className="text-lg font-extrabold text-foreground">{t("Rezultat uvoza CSV-a")}</h3>
               <button onClick={() => setImportResult(null)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>
@@ -740,11 +743,11 @@ function IgraPitanjaEditor({ token }: { token: string }) {
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-center">
                 <div className="text-2xl font-extrabold text-emerald-700" data-testid="text-import-inserted">{importResult.inserted}</div>
-                <div className="text-xs text-emerald-700 font-medium">Dodano</div>
+                <div className="text-xs text-emerald-700 font-medium">{t("Dodano")}</div>
               </div>
               <div className="rounded-xl bg-sky-50 border border-sky-200 p-3 text-center">
                 <div className="text-2xl font-extrabold text-sky-700" data-testid="text-import-updated">{importResult.updated}</div>
-                <div className="text-xs text-sky-700 font-medium">Ažurirano</div>
+                <div className="text-xs text-sky-700 font-medium">{t("Ažurirano")}</div>
               </div>
               <div className={[
                 "rounded-xl border p-3 text-center",
@@ -753,18 +756,18 @@ function IgraPitanjaEditor({ token }: { token: string }) {
                 <div className={["text-2xl font-extrabold", importResult.errorsCount > 0 ? "text-red-700" : "text-gray-500"].join(" ")} data-testid="text-import-errors">
                   {importResult.errorsCount}
                 </div>
-                <div className={["text-xs font-medium", importResult.errorsCount > 0 ? "text-red-700" : "text-gray-500"].join(" ")}>Grešaka</div>
+                <div className={["text-xs font-medium", importResult.errorsCount > 0 ? "text-red-700" : "text-gray-500"].join(" ")}>{t("Grešaka")}</div>
               </div>
             </div>
             {importResult.errors.length > 0 && (
               <div className="border border-red-200 rounded-xl overflow-hidden">
                 <div className="bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-                  Greške (prvih {importResult.errors.length}):
+                  {t("Greške (prvih {n}):", { n: String(importResult.errors.length) })}
                 </div>
                 <div className="max-h-64 overflow-y-auto divide-y divide-red-100">
                   {importResult.errors.map((e, i) => (
                     <div key={i} className="px-3 py-2 text-xs" data-testid={`row-import-error-${i}`}>
-                      <span className="font-bold text-red-700">Red {e.red}:</span>{" "}
+                      <span className="font-bold text-red-700">{t("Red {red}:", { red: String(e.red) })}</span>{" "}
                       <span className="text-foreground">{e.razlog}</span>
                     </div>
                   ))}
@@ -773,7 +776,7 @@ function IgraPitanjaEditor({ token }: { token: string }) {
             )}
             <div className="flex justify-end mt-4">
               <Button onClick={() => setImportResult(null)} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-                U redu
+                {t("U redu")}
               </Button>
             </div>
           </motion.div>
@@ -793,6 +796,7 @@ function PitanjeModal({
   onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     kategorija: pitanje?.kategorija ?? kategorija,
     pitanje: pitanje?.pitanje ?? "",
@@ -809,8 +813,8 @@ function PitanjeModal({
   };
 
   const handleSave = async () => {
-    if (!form.pitanje.trim()) { toast({ title: "Pitanje je obavezno", variant: "destructive" }); return; }
-    if (form.opcije.some((o) => !o.trim())) { toast({ title: "Sve 4 opcije moraju biti popunjene", variant: "destructive" }); return; }
+    if (!form.pitanje.trim()) { toast({ title: t("Pitanje je obavezno"), variant: "destructive" }); return; }
+    if (form.opcije.some((o) => !o.trim())) { toast({ title: t("Sve 4 opcije moraju biti popunjene"), variant: "destructive" }); return; }
     setSaving(true);
     try {
       const body = {
@@ -824,14 +828,14 @@ function PitanjeModal({
       };
       if (pitanje) {
         await apiRequest("PUT", `/admin/igra-pitanja/${pitanje.id}`, body, token);
-        toast({ title: "Sačuvano", description: "Pitanje ažurirano" });
+        toast({ title: t("Sačuvano"), description: t("Pitanje ažurirano") });
       } else {
         await apiRequest("POST", "/admin/igra-pitanja", body, token);
-        toast({ title: "Dodano", description: "Novo pitanje sačuvano" });
+        toast({ title: t("Dodano"), description: t("Novo pitanje sačuvano") });
       }
       onSaved();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Spremanje neuspjelo", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Spremanje neuspjelo"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -846,14 +850,14 @@ function PitanjeModal({
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-extrabold text-foreground">
-            {pitanje ? "Uredi pitanje" : "Novo pitanje"}
+            {pitanje ? t("Uredi pitanje") : t("Novo pitanje")}
           </h3>
           <button onClick={onClose} disabled={saving} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Kategorija</label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Kategorija")}</label>
             <select
               value={form.kategorija}
               onChange={(e) => setForm((f) => ({ ...f, kategorija: e.target.value }))}
@@ -867,19 +871,19 @@ function PitanjeModal({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Pitanje</label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Pitanje")}</label>
             <textarea
               value={form.pitanje}
               onChange={(e) => setForm((f) => ({ ...f, pitanje: e.target.value }))}
               data-testid="input-pitanje"
               rows={2}
-              placeholder="Npr. Koliko ima imanskih šarta?"
+              placeholder={t("Npr. Koliko ima imanskih šarta?")}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Opcije (označi tačnu)</label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Opcije (označi tačnu)")}</label>
             <div className="space-y-2">
               {form.opcije.map((opt, i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -896,7 +900,7 @@ function PitanjeModal({
                     value={opt}
                     onChange={(e) => setOpcija(i, e.target.value)}
                     data-testid={`input-opcija-${i}`}
-                    placeholder={`Opcija ${i + 1}`}
+                    placeholder={t("Opcija {n}", { n: String(i + 1) })}
                     className="flex-1 border border-border rounded-xl px-3 py-2 text-sm"
                   />
                 </div>
@@ -905,33 +909,33 @@ function PitanjeModal({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Objašnjenje (opciono)</label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Objašnjenje (opciono)")}</label>
             <textarea
               value={form.objasnjenje}
               onChange={(e) => setForm((f) => ({ ...f, objasnjenje: e.target.value }))}
               data-testid="input-objasnjenje"
               rows={2}
-              placeholder="Kratko objašnjenje koje se prikaže nakon odgovora"
+              placeholder={t("Kratko objašnjenje koje se prikaže nakon odgovora")}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1">Težina (1–3)</label>
+              <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Težina (1–3)")}</label>
               <select
                 value={form.tezina}
                 onChange={(e) => setForm((f) => ({ ...f, tezina: parseInt(e.target.value) }))}
                 data-testid="select-tezina"
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm"
               >
-                <option value={1}>1 — lako</option>
-                <option value={2}>2 — srednje</option>
-                <option value={3}>3 — teško</option>
+                <option value={1}>{t("1 — lako")}</option>
+                <option value={2}>{t("2 — srednje")}</option>
+                <option value={3}>{t("3 — teško")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1">Status</label>
+              <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Status")}</label>
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, aktivno: !f.aktivno }))}
@@ -939,16 +943,16 @@ function PitanjeModal({
                 className={["w-full px-3 py-2 rounded-xl text-sm font-bold border transition",
                   form.aktivno ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-100 border-gray-300 text-gray-600"].join(" ")}
               >
-                {form.aktivno ? "✓ Aktivno" : "Neaktivno"}
+                {form.aktivno ? t("✓ Aktivno") : t("Neaktivno")}
               </button>
             </div>
           </div>
         </div>
 
         <div className="flex gap-2 mt-5">
-          <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1 rounded-xl">Odustani</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving} className="flex-1 rounded-xl">{t("Odustani")}</Button>
           <Button onClick={handleSave} disabled={saving} data-testid="button-save-pitanje" className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (pitanje ? "Sačuvaj" : "Dodaj")}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (pitanje ? t("Sačuvaj") : t("Dodaj"))}
           </Button>
         </div>
       </motion.div>
@@ -958,6 +962,7 @@ function PitanjeModal({
 
 function DodajMuallimModal({ token, onClose, onCreated }: { token: string; onClose: () => void; onCreated: () => void }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ username: "", password: "", displayName: "", email: "", licenceCount: "30" });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -969,11 +974,11 @@ function DodajMuallimModal({ token, onClose, onCreated }: { token: string; onClo
         ...form,
         licenceCount: parseInt(form.licenceCount) || 30,
       }, token);
-      toast({ title: "Muallim kreiran!", description: `${form.displayName} (${form.username})` });
+      toast({ title: t("Muallim kreiran!"), description: `${form.displayName} (${form.username})` });
       onCreated();
       onClose();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Greška pri kreiranju", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Greška pri kreiranju"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -984,15 +989,15 @@ function DodajMuallimModal({ token, onClose, onCreated }: { token: string; onClo
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-extrabold text-lg text-foreground">Dodaj muallima</h3>
+          <h3 className="font-extrabold text-lg text-foreground">{t("Dodaj muallima")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {[
-            { key: "displayName", label: "Ime i prezime", placeholder: "Npr. Amra Čolić" },
-            { key: "username", label: "Korisničko ime", placeholder: "Npr. amra.colic" },
-            { key: "password", label: "Lozinka", placeholder: "Min. 6 karaktera" },
-            { key: "email", label: "E-mail (opciono)", placeholder: "muallim@mekteb.ba" },
+            { key: "displayName", label: t("Ime i prezime"), placeholder: t("Npr. Amra Čolić") },
+            { key: "username", label: t("Korisničko ime"), placeholder: t("Npr. amra.colic") },
+            { key: "password", label: t("Lozinka"), placeholder: t("Min. 6 karaktera") },
+            { key: "email", label: t("E-mail (opciono)"), placeholder: "muallim@mekteb.ba" },
           ].map(f => (
             <div key={f.key}>
               <label className="block text-xs font-bold text-muted-foreground mb-1">{f.label}</label>
@@ -1007,15 +1012,15 @@ function DodajMuallimModal({ token, onClose, onCreated }: { token: string; onClo
             </div>
           ))}
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Broj licenci (učenika)</label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Broj licenci (učenika)")}</label>
             <input type="number" min="1" max="500" value={form.licenceCount}
               onChange={e => setForm(p => ({ ...p, licenceCount: e.target.value }))}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           <div className="flex gap-2 mt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">Odustani</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">{t("Odustani")}</Button>
             <Button type="submit" disabled={isLoading} className="flex-1 rounded-xl flex items-center gap-2">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Dodaj
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("Dodaj")}
             </Button>
           </div>
         </form>
@@ -1026,6 +1031,7 @@ function DodajMuallimModal({ token, onClose, onCreated }: { token: string; onClo
 
 function DodajAdminaModal({ token, onClose, onCreated }: { token: string; onClose: () => void; onCreated: () => void }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ username: "", password: "", displayName: "", email: "" });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1034,11 +1040,11 @@ function DodajAdminaModal({ token, onClose, onCreated }: { token: string; onClos
     setIsLoading(true);
     try {
       await apiRequest("POST", "/admin/admin", form, token);
-      toast({ title: "Admin kreiran!", description: `${form.displayName} (${form.username})` });
+      toast({ title: t("Admin kreiran!"), description: `${form.displayName} (${form.username})` });
       onCreated();
       onClose();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Greška pri kreiranju", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Greška pri kreiranju"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -1049,15 +1055,15 @@ function DodajAdminaModal({ token, onClose, onCreated }: { token: string; onClos
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-extrabold text-lg text-foreground">Dodaj admina</h3>
+          <h3 className="font-extrabold text-lg text-foreground">{t("Dodaj admina")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {[
-            { key: "displayName", label: "Ime i prezime", placeholder: "Npr. Amra Čolić" },
-            { key: "username", label: "Korisničko ime", placeholder: "Npr. amra.colic" },
-            { key: "password", label: "Lozinka", placeholder: "Min. 6 karaktera" },
-            { key: "email", label: "E-mail (opciono)", placeholder: "admin@mekteb.ba" },
+            { key: "displayName", label: t("Ime i prezime"), placeholder: t("Npr. Amra Čolić") },
+            { key: "username", label: t("Korisničko ime"), placeholder: t("Npr. amra.colic") },
+            { key: "password", label: t("Lozinka"), placeholder: t("Min. 6 karaktera") },
+            { key: "email", label: t("E-mail (opciono)"), placeholder: "admin@mekteb.ba" },
           ].map(f => (
             <div key={f.key}>
               <label className="block text-xs font-bold text-muted-foreground mb-1">{f.label}</label>
@@ -1072,9 +1078,9 @@ function DodajAdminaModal({ token, onClose, onCreated }: { token: string; onClos
             </div>
           ))}
           <div className="flex gap-2 mt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">Odustani</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">{t("Odustani")}</Button>
             <Button type="submit" disabled={isLoading} className="flex-1 rounded-xl flex items-center gap-2">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Dodaj
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("Dodaj")}
             </Button>
           </div>
         </form>
@@ -1085,6 +1091,7 @@ function DodajAdminaModal({ token, onClose, onCreated }: { token: string; onClos
 
 function DodajUcenikaModal({ token, onClose, onCreated }: { token: string; onClose: () => void; onCreated: () => void }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ username: "", password: "", displayName: "", email: "" });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1093,11 +1100,11 @@ function DodajUcenikaModal({ token, onClose, onCreated }: { token: string; onClo
     setIsLoading(true);
     try {
       await apiRequest("POST", "/admin/ucenik", form, token);
-      toast({ title: "Učenik kreiran!", description: `${form.displayName} (${form.username})` });
+      toast({ title: t("Učenik kreiran!"), description: `${form.displayName} (${form.username})` });
       onCreated();
       onClose();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Greška pri kreiranju", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Greška pri kreiranju"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -1108,15 +1115,15 @@ function DodajUcenikaModal({ token, onClose, onCreated }: { token: string; onClo
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-extrabold text-lg text-foreground">Dodaj učenika</h3>
+          <h3 className="font-extrabold text-lg text-foreground">{t("Dodaj učenika")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {[
-            { key: "displayName", label: "Ime i prezime", placeholder: "Npr. Džana Begović" },
-            { key: "username", label: "Korisničko ime", placeholder: "Npr. dzana.begovic" },
-            { key: "password", label: "Lozinka", placeholder: "Min. 6 karaktera" },
-            { key: "email", label: "E-mail (opciono)", placeholder: "ucenik@mekteb.ba" },
+            { key: "displayName", label: t("Ime i prezime"), placeholder: t("Npr. Džana Begović") },
+            { key: "username", label: t("Korisničko ime"), placeholder: t("Npr. dzana.begovic") },
+            { key: "password", label: t("Lozinka"), placeholder: t("Min. 6 karaktera") },
+            { key: "email", label: t("E-mail (opciono)"), placeholder: "ucenik@mekteb.ba" },
           ].map(f => (
             <div key={f.key}>
               <label className="block text-xs font-bold text-muted-foreground mb-1">{f.label}</label>
@@ -1131,9 +1138,9 @@ function DodajUcenikaModal({ token, onClose, onCreated }: { token: string; onClo
             </div>
           ))}
           <div className="flex gap-2 mt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">Odustani</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">{t("Odustani")}</Button>
             <Button type="submit" disabled={isLoading} className="flex-1 rounded-xl flex items-center gap-2">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Dodaj
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("Dodaj")}
             </Button>
           </div>
         </form>
@@ -1153,6 +1160,7 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
   token: string; korisnik: Korisnik; muallimProfil?: MuallimProfil; onClose: () => void; onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [displayName, setDisplayName] = useState(korisnik.displayName);
   const [email, setEmail] = useState(korisnik.email || "");
   const [licenceCount, setLicenceCount] = useState(muallimProfil?.licenceCount?.toString() || "30");
@@ -1173,11 +1181,11 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
         }, token);
       }
 
-      toast({ title: "Korisnik ažuriran!", description: displayName });
+      toast({ title: t("Korisnik ažuriran!"), description: displayName });
       onSaved();
       onClose();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Greška pri ažuriranju", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Greška pri ažuriranju"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -1188,7 +1196,7 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-extrabold text-lg text-foreground">Uredi korisnika</h3>
+          <h3 className="font-extrabold text-lg text-foreground">{t("Uredi korisnika")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
@@ -1199,39 +1207,39 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Ime i prezime</label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Ime i prezime")}</label>
             <input type="text" required value={displayName} onChange={e => setDisplayName(e.target.value)}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">E-mail</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="opciono"
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t("E-mail")}</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t("opciono")}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           {korisnik.role === "muallim" && muallimProfil && (
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-3">
-              <h4 className="font-bold text-sm text-teal-800">Licence za učenike</h4>
+              <h4 className="font-bold text-sm text-teal-800">{t("Licence za učenike")}</h4>
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-bold text-teal-700 mb-1">Ukupno licenci</label>
+                  <label className="block text-xs font-bold text-teal-700 mb-1">{t("Ukupno licenci")}</label>
                   <input type="number" min="1" max="999" value={licenceCount}
                     onChange={e => setLicenceCount(e.target.value)}
                     className="w-full border border-teal-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white" />
                 </div>
                 <div className="text-center pt-5">
                   <div className="text-2xl font-black text-teal-700">{muallimProfil.licencesUsed}</div>
-                  <div className="text-xs text-teal-600 font-medium">iskorišteno</div>
+                  <div className="text-xs text-teal-600 font-medium">{t("iskorišteno")}</div>
                 </div>
               </div>
               <div className="text-xs text-teal-600">
-                Preostalo: <span className="font-bold">{(parseInt(licenceCount) || 0) - (muallimProfil.licencesUsed || 0)}</span> licenci
+                {t("Preostalo: ")}<span className="font-bold">{(parseInt(licenceCount) || 0) - (muallimProfil.licencesUsed || 0)}</span>{t(" licenci")}
               </div>
             </div>
           )}
           <div className="flex gap-2 mt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">Odustani</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">{t("Odustani")}</Button>
             <Button type="submit" disabled={isLoading} className="flex-1 rounded-xl flex items-center gap-2">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Sačuvaj
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("Sačuvaj")}
             </Button>
           </div>
         </form>
@@ -1242,6 +1250,7 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
 
 function ResetPasswordModal({ token, korisnik, onClose }: { token: string; korisnik: Korisnik; onClose: () => void }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [lozinka, setLozinka] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1250,10 +1259,10 @@ function ResetPasswordModal({ token, korisnik, onClose }: { token: string; koris
     setIsLoading(true);
     try {
       await apiRequest("POST", "/admin/reset-password", { userId: korisnik.id, newPassword: lozinka }, token);
-      toast({ title: "Lozinka promijenjena!", description: `Korisnik: ${korisnik.displayName}` });
+      toast({ title: t("Lozinka promijenjena!"), description: t("Korisnik: {ime}", { ime: korisnik.displayName }) });
       onClose();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće promijeniti lozinku", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće promijeniti lozinku"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -1264,18 +1273,18 @@ function ResetPasswordModal({ token, korisnik, onClose }: { token: string; koris
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-extrabold text-foreground">Reset lozinke</h3>
+          <h3 className="font-extrabold text-foreground">{t("Reset lozinke")}</h3>
           <button onClick={onClose} className="text-muted-foreground"><X className="w-5 h-5" /></button>
         </div>
         <p className="text-sm text-muted-foreground mb-4">{korisnik.displayName} ({korisnik.username})</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input type="password" required minLength={6} placeholder="Nova lozinka (min. 6 znakova)"
+          <input type="password" required minLength={6} placeholder={t("Nova lozinka (min. 6 znakova)")}
             value={lozinka} onChange={e => setLozinka(e.target.value)}
             className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">Odustani</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">{t("Odustani")}</Button>
             <Button type="submit" disabled={isLoading} className="flex-1 rounded-xl flex items-center gap-2">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Promijeni
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} {t("Promijeni")}
             </Button>
           </div>
         </form>
@@ -1288,6 +1297,7 @@ function RasporediModal({ token, korisnik, grupeAll, onClose, onSaved }: {
   token: string; korisnik: Korisnik; grupeAll: GrupaAll[]; onClose: () => void; onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [selectedGrupaId, setSelectedGrupaId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1302,18 +1312,18 @@ function RasporediModal({ token, korisnik, grupeAll, onClose, onSaved }: {
         muallimId: selectedGrupa.muallimId,
         grupaId: selectedGrupa.id,
       }, token);
-      toast({ title: "Učenik raspoređen!", description: `${korisnik.displayName} → ${selectedGrupa.naziv} (${selectedGrupa.muallimName})` });
+      toast({ title: t("Učenik raspoređen!"), description: `${korisnik.displayName} → ${selectedGrupa.naziv} (${selectedGrupa.muallimName})` });
       onSaved();
       onClose();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Greška pri raspoređivanju", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Greška pri raspoređivanju"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   const grupeByMuallim = grupeAll.reduce((acc, g) => {
-    const key = g.muallimName || "Nepoznat";
+    const key = g.muallimName || t("Nepoznat");
     if (!acc[key]) acc[key] = [];
     acc[key].push(g);
     return acc;
@@ -1324,7 +1334,7 @@ function RasporediModal({ token, korisnik, grupeAll, onClose, onSaved }: {
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-extrabold text-lg text-foreground">Rasporedi učenika</h3>
+          <h3 className="font-extrabold text-lg text-foreground">{t("Rasporedi učenika")}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
@@ -1332,10 +1342,10 @@ function RasporediModal({ token, korisnik, grupeAll, onClose, onSaved }: {
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-2">Odaberite grupu</label>
+            <label className="block text-xs font-bold text-muted-foreground mb-2">{t("Odaberite grupu")}</label>
             {grupeAll.length === 0 ? (
               <div className="border border-border rounded-xl p-4 text-center text-sm text-muted-foreground">
-                Nema dostupnih grupa. Prvo kreirajte grupu kod muallima.
+                {t("Nema dostupnih grupa. Prvo kreirajte grupu kod muallima.")}
               </div>
             ) : (
               <div className="max-h-64 overflow-y-auto border border-border rounded-xl">
@@ -1358,9 +1368,9 @@ function RasporediModal({ token, korisnik, grupeAll, onClose, onSaved }: {
             )}
           </div>
           <div className="flex gap-2 mt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">Odustani</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl">{t("Odustani")}</Button>
             <Button type="submit" disabled={isLoading || !selectedGrupaId} className="flex-1 rounded-xl flex items-center gap-2">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />} Rasporedi
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />} {t("Rasporedi")}
             </Button>
           </div>
         </form>
@@ -1373,6 +1383,7 @@ export default function AdminPage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "statistika">("muallimi");
   const [statSadrzaja, setStatSadrzaja] = useState<{ lekcije: any[]; prilozi: any[]; kvizovi: any[] }>({ lekcije: [], prilozi: [], kvizovi: [] });
@@ -1386,7 +1397,7 @@ export default function AdminPage() {
       const data = await apiRequest<{ lekcije: any[]; prilozi: any[]; kvizovi: any[] }>("GET", "/admin/statistika-sadrzaja", undefined, token);
       setStatSadrzaja(data);
     } catch (err: any) {
-      toast({ title: "Greška", description: err.message, variant: "destructive" });
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setStatLoading(false);
     }
@@ -1452,7 +1463,7 @@ export default function AdminPage() {
       setKorisnici(kor);
       setMuallimProfili(mp);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće učitati podatke", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće učitati podatke"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -1465,7 +1476,7 @@ export default function AdminPage() {
       const data = await apiRequest<MuallimPregled[]>("GET", "/admin/muallim-pregled", undefined, token);
       setMuallimPregled(data);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće učitati pregled muallima", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće učitati pregled muallima"), variant: "destructive" });
     } finally {
       setMuallimLoading(false);
     }
@@ -1478,7 +1489,7 @@ export default function AdminPage() {
       const data = await apiRequest<AnalyticsData>("GET", `/admin/analytics?period=${analyticsPeriod}`, undefined, token);
       setAnalytics(data);
     } catch {
-      toast({ title: "Greška", description: "Analitika nedostupna", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Analitika nedostupna"), variant: "destructive" });
     } finally {
       setAnalyticsLoading(false);
     }
@@ -1524,10 +1535,10 @@ export default function AdminPage() {
     setMuallimAkcija(userId);
     try {
       await apiRequest("PUT", `/admin/muallim/${userId}/mekteb`, { mektebId }, token);
-      toast({ title: "Sačuvano", description: "Džemat ažuriran" });
+      toast({ title: t("Sačuvano"), description: t("Džemat ažuriran") });
       await loadMuallimPregled();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće promijeniti džemat", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće promijeniti džemat"), variant: "destructive" });
     } finally {
       setMuallimAkcija(null);
     }
@@ -1538,10 +1549,10 @@ export default function AdminPage() {
     setMuallimAkcija(userId);
     try {
       await apiRequest("PUT", `/admin/muallim/${userId}/glavni`, { isGlavni }, token);
-      toast({ title: "Sačuvano", description: isGlavni ? "Postavljen kao glavni muallim" : "Skinut status glavnog" });
+      toast({ title: t("Sačuvano"), description: isGlavni ? t("Postavljen kao glavni muallim") : t("Skinut status glavnog") });
       await loadMuallimPregled();
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće promijeniti status", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće promijeniti status"), variant: "destructive" });
     } finally {
       setMuallimAkcija(null);
     }
@@ -1552,10 +1563,10 @@ export default function AdminPage() {
     setMuallimAkcija(mektebId);
     try {
       await apiRequest("PUT", `/admin/mekteb/${mektebId}/dozvoljeno-muallima`, { dozvoljenoMuallima }, token);
-      toast({ title: "Sačuvano", description: `Dozvoljeno muallima: ${dozvoljenoMuallima}` });
+      toast({ title: t("Sačuvano"), description: t("Dozvoljeno muallima: {n}", { n: String(dozvoljenoMuallima) }) });
       await loadMuallimPregled();
     } catch (e: any) {
-      toast({ title: "Greška", description: e?.message || "Nije moguće promijeniti limit", variant: "destructive" });
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće promijeniti limit"), variant: "destructive" });
     } finally {
       setMuallimAkcija(null);
     }
@@ -1564,16 +1575,16 @@ export default function AdminPage() {
   const kreirajIDodijeliDzemat = async (userId: number) => {
     if (!token) return;
     const naziv = noviDzematNaziv.trim();
-    if (!naziv) { toast({ title: "Greška", description: "Unesite naziv džemata", variant: "destructive" }); return; }
+    if (!naziv) { toast({ title: t("Greška"), description: t("Unesite naziv džemata"), variant: "destructive" }); return; }
     setMuallimAkcija(userId);
     try {
       const novi = await apiRequest<{ id: number }>("POST", "/admin/mektebi", { naziv, grad: noviDzematGrad.trim() || null }, token);
       await apiRequest("PUT", `/admin/muallim/${userId}/mekteb`, { mektebId: novi.id }, token);
-      toast({ title: "Sačuvano", description: `Džemat "${naziv}" kreiran i dodijeljen` });
+      toast({ title: t("Sačuvano"), description: t('Džemat "{naziv}" kreiran i dodijeljen', { naziv }) });
       setNoviDzematZa(null); setNoviDzematNaziv(""); setNoviDzematGrad("");
       await Promise.all([loadMuallimPregled(), loadMektebiOpcije()]);
     } catch {
-      toast({ title: "Greška", description: "Nije moguće kreirati džemat", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće kreirati džemat"), variant: "destructive" });
     } finally {
       setMuallimAkcija(null);
     }
@@ -1594,8 +1605,8 @@ export default function AdminPage() {
     return (
       <Layout>
         <div className="text-center py-20">
-          <p className="text-muted-foreground font-medium">Pristup dozvoljen samo adminima</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>Nazad</Button>
+          <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo adminima")}</p>
+          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );
@@ -1608,12 +1619,12 @@ export default function AdminPage() {
       await apiRequest("DELETE", `/admin/korisnik/${k.id}`, undefined, token);
       setKorisnici(prev => prev.filter(u => u.id !== k.id));
       setDeleteKorisnik(null);
-      toast({ title: `Korisnik "${k.displayName}" je obrisan` });
+      toast({ title: t('Korisnik "{ime}" je obrisan', { ime: k.displayName }) });
       if (k.role === "muallim") loadMuallimPregled();
     } catch (e: any) {
       toast({
-        title: "Greška pri brisanju korisnika",
-        description: e?.message || "Nepoznata greška",
+        title: t("Greška pri brisanju korisnika"),
+        description: e?.message || t("Nepoznata greška"),
         variant: "destructive",
       });
     } finally {
@@ -1628,7 +1639,7 @@ export default function AdminPage() {
       setKorisnici(prev => prev.map(u => u.id === k.id ? { ...u, isActive: !u.isActive } : u));
       if (k.role === "muallim") loadMuallimPregled();
     } catch {
-      toast({ title: "Greška", description: "Nije moguće promijeniti status", variant: "destructive" });
+      toast({ title: t("Greška"), description: t("Nije moguće promijeniti status"), variant: "destructive" });
     } finally {
       setTogglingId(null);
     }
@@ -1664,8 +1675,8 @@ export default function AdminPage() {
             <LayoutDashboard className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Admin panel</h1>
-            <p className="text-muted-foreground text-sm">Pregled platforme i upravljanje korisnicima</p>
+            <h1 className="text-2xl font-extrabold text-foreground">{t("Admin panel")}</h1>
+            <p className="text-muted-foreground text-sm">{t("Pregled platforme i upravljanje korisnicima")}</p>
           </div>
         </div>
 
@@ -1675,17 +1686,17 @@ export default function AdminPage() {
           </div>
         ) : statistike && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <StatCard icon={<Users className="w-6 h-6 text-teal-700" />} label="Ukupno korisnika" value={statistike.ukupnoKorisnika} color="bg-teal-100" />
-            <StatCard icon={<ShieldCheck className="w-6 h-6 text-amber-700" />} label="Muallima" value={statistike.korisnici.muallim || 0} color="bg-amber-100" />
-            <StatCard icon={<Users className="w-6 h-6 text-blue-700" />} label="Učenika" value={statistike.korisnici.ucenik || 0} color="bg-blue-100" />
-            <StatCard icon={<Building2 className="w-6 h-6 text-purple-700" />} label="Roditelja" value={statistike.korisnici.roditelj || 0} color="bg-purple-100" />
+            <StatCard icon={<Users className="w-6 h-6 text-teal-700" />} label={t("Ukupno korisnika")} value={statistike.ukupnoKorisnika} color="bg-teal-100" />
+            <StatCard icon={<ShieldCheck className="w-6 h-6 text-amber-700" />} label={t("Muallima")} value={statistike.korisnici.muallim || 0} color="bg-amber-100" />
+            <StatCard icon={<Users className="w-6 h-6 text-blue-700" />} label={t("Učenika")} value={statistike.korisnici.ucenik || 0} color="bg-blue-100" />
+            <StatCard icon={<Building2 className="w-6 h-6 text-purple-700" />} label={t("Roditelja")} value={statistike.korisnici.roditelj || 0} color="bg-purple-100" />
           </div>
         )}
 
         <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6">
           {[
-            { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
-            { key: "sistemski" as const, label: "Sistemski alati", icon: <ShieldCheck className="w-4 h-4" /> },
+            { key: "korisnici" as const, label: t("Korisnici"), icon: <Users className="w-4 h-4" /> },
+            { key: "sistemski" as const, label: t("Sistemski alati"), icon: <ShieldCheck className="w-4 h-4" /> },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveMainTab(tab.key)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeMainTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -1697,11 +1708,11 @@ export default function AdminPage() {
         {activeMainTab === "korisnici" && (
           <div className="flex gap-1 bg-muted/30 p-1 rounded-xl mb-5 overflow-x-auto">
             {[
-              { key: "muallimi" as const, label: "Muallimi", icon: <UserCog className="w-4 h-4" /> },
-              { key: "korisnici" as const, label: "Korisnici", icon: <Users className="w-4 h-4" /> },
-              { key: "analitika" as const, label: "Analitika", icon: <BarChart3 className="w-4 h-4" /> },
-              { key: "rezultati" as const, label: "Kviz rezultati", icon: <ClipboardList className="w-4 h-4" /> },
-              { key: "statistika" as const, label: "Statistika sadržaja", icon: <BarChart3 className="w-4 h-4" /> },
+              { key: "muallimi" as const, label: t("Muallimi"), icon: <UserCog className="w-4 h-4" /> },
+              { key: "korisnici" as const, label: t("Korisnici"), icon: <Users className="w-4 h-4" /> },
+              { key: "analitika" as const, label: t("Analitika"), icon: <BarChart3 className="w-4 h-4" /> },
+              { key: "rezultati" as const, label: t("Kviz rezultati"), icon: <ClipboardList className="w-4 h-4" /> },
+              { key: "statistika" as const, label: t("Statistika sadržaja"), icon: <BarChart3 className="w-4 h-4" /> },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.key ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -1719,27 +1730,27 @@ export default function AdminPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                    <UserCog className="w-5 h-5 text-primary" /> Pregled muallima
+                    <UserCog className="w-5 h-5 text-primary" /> {t("Pregled muallima")}
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-1">Muallimi, njihovi džemati, grupe i broj učenika</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("Muallimi, njihovi džemati, grupe i broj učenika")}</p>
                 </div>
                 <Button size="sm" onClick={() => { setShowDodajMuallim(true); }} className="rounded-xl flex items-center gap-1.5">
-                  <Plus className="w-4 h-4" /> Dodaj muallima
+                  <Plus className="w-4 h-4" /> {t("Dodaj muallima")}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2 items-center">
                 <input
                   type="text"
-                  placeholder="Pretraži po imenu ili džematu..."
+                  placeholder={t("Pretraži po imenu ili džematu...")}
                   value={muallimSearch}
                   onChange={e => setMuallimSearch(e.target.value)}
                   className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 flex-1 min-w-[200px]"
                 />
-                <span className="text-xs text-muted-foreground">Poredaj:</span>
+                <span className="text-xs text-muted-foreground">{t("Poredaj:")}</span>
                 <select value={muallimSort} onChange={e => setMuallimSort(e.target.value as "prezime" | "datum")}
                   className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
-                  <option value="prezime">Po prezimenu</option>
-                  <option value="datum">Po datumu registracije</option>
+                  <option value="prezime">{t("Po prezimenu")}</option>
+                  <option value="datum">{t("Po datumu registracije")}</option>
                 </select>
               </div>
             </div>
@@ -1761,21 +1772,21 @@ export default function AdminPage() {
                           <div className="font-bold text-foreground flex items-center gap-2">
                             {m.displayName}
                             {m.isGlavni && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">Glavni</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{t("Glavni")}</span>
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
                             <span className="inline-flex items-center gap-1 font-semibold text-foreground/70">
                               <Building2 className="w-3 h-3" />
-                              {m.mektebNaziv ? `${m.mektebNaziv}${m.mektebGrad ? `, ${m.mektebGrad}` : ""}` : "Bez džemata"}
+                              {m.mektebNaziv ? `${m.mektebNaziv}${m.mektebGrad ? `, ${m.mektebGrad}` : ""}` : t("Bez džemata")}
                             </span>
-                            <span>· {m.email || m.username} · {m.brojGrupa} grupa · {m.aktivniUcenici}/{m.brojUcenika} učenika</span>
+                            <span>· {m.email || m.username} · {m.brojGrupa} {t("grupa")} · {m.aktivniUcenici}/{m.brojUcenika} {t("učenika")}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                          {m.isActive ? "Aktivan" : "Neaktivan"}
+                          {m.isActive ? t("Aktivan") : t("Neaktivan")}
                         </span>
                         <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expandedMuallim === m.id ? "rotate-90" : ""}`} />
                       </div>
@@ -1787,7 +1798,7 @@ export default function AdminPage() {
                         <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-3 flex flex-col gap-3">
                           <div className="flex flex-wrap items-center gap-3">
                             <div className="flex flex-col gap-1">
-                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Džemat</label>
+                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t("Džemat")}</label>
                               <div className="flex items-center gap-2">
                                 <select
                                   value={m.mektebId ?? ""}
@@ -1795,7 +1806,7 @@ export default function AdminPage() {
                                   onChange={e => dodijeliMekteb(m.id, e.target.value === "" ? null : parseInt(e.target.value))}
                                   className="border border-border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[200px]"
                                 >
-                                  <option value="">Bez džemata</option>
+                                  <option value="">{t("Bez džemata")}</option>
                                   {mektebiOpcije.map(o => (
                                     <option key={o.id} value={o.id}>{o.naziv}{o.grad ? `, ${o.grad}` : ""}</option>
                                   ))}
@@ -1805,19 +1816,19 @@ export default function AdminPage() {
                                   onClick={() => { setNoviDzematZa(noviDzematZa === m.id ? null : m.id); setNoviDzematNaziv(""); setNoviDzematGrad(""); }}
                                   className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
                                 >
-                                  {noviDzematZa === m.id ? "Otkaži" : "+ Novi džemat"}
+                                  {noviDzematZa === m.id ? t("Otkaži") : t("+ Novi džemat")}
                                 </button>
                               </div>
                               {noviDzematZa === m.id && (
                                 <div className="flex flex-wrap items-center gap-2 mt-1 bg-white border border-border rounded-lg p-2">
                                   <input
-                                    type="text" placeholder="Naziv džemata"
+                                    type="text" placeholder={t("Naziv džemata")}
                                     value={noviDzematNaziv}
                                     onChange={e => setNoviDzematNaziv(e.target.value)}
                                     className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[180px]"
                                   />
                                   <input
-                                    type="text" placeholder="Grad (opcionalno)"
+                                    type="text" placeholder={t("Grad (opcionalno)")}
                                     value={noviDzematGrad}
                                     onChange={e => setNoviDzematGrad(e.target.value)}
                                     className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[140px]"
@@ -1828,25 +1839,25 @@ export default function AdminPage() {
                                     onClick={() => kreirajIDodijeliDzemat(m.id)}
                                     className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
                                   >
-                                    Kreiraj i dodijeli
+                                    {t("Kreiraj i dodijeli")}
                                   </button>
                                 </div>
                               )}
                             </div>
                             <div className="flex flex-col gap-1">
-                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Glavni muallim</label>
+                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t("Glavni muallim")}</label>
                               <button
                                 disabled={muallimAkcija === m.id || !m.mektebId}
                                 onClick={() => postaviGlavni(m.id, !m.isGlavni)}
                                 className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ${m.isGlavni ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-muted text-foreground hover:bg-muted/70"}`}
-                                title={!m.mektebId ? "Muallim prvo mora imati džemat" : undefined}
+                                title={!m.mektebId ? t("Muallim prvo mora imati džemat") : undefined}
                               >
-                                {m.isGlavni ? "Skini status glavnog" : "Postavi za glavnog"}
+                                {m.isGlavni ? t("Skini status glavnog") : t("Postavi za glavnog")}
                               </button>
                             </div>
                             {m.mektebId && (
                               <div className="flex flex-col gap-1">
-                                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Dozvoljeno muallima u džematu</label>
+                                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t("Dozvoljeno muallima u džematu")}</label>
                                 <div className="flex items-center gap-2">
                                   <input
                                     type="number" min={1} max={99}
@@ -1864,14 +1875,14 @@ export default function AdminPage() {
                                     }}
                                     className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
                                   >
-                                    Sačuvaj
+                                    {t("Sačuvaj")}
                                   </button>
                                 </div>
                               </div>
                             )}
                           </div>
                           <p className="text-[11px] text-muted-foreground">
-                            Glavni muallim može sam dodavati kolege u svoj džemat do dozvoljenog broja.
+                            {t("Glavni muallim može sam dodavati kolege u svoj džemat do dozvoljenog broja.")}
                           </p>
                         </div>
                         {m.grupe.length > 0 ? (
@@ -1879,7 +1890,7 @@ export default function AdminPage() {
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="border-b border-border/30 bg-muted/50">
-                                  {["Grupa", "Šk. godina", "Aktivni učenici", "Ukupno učenika", "Status"].map(h => (
+                                  {[t("Grupa"), t("Šk. godina"), t("Aktivni učenici"), t("Ukupno učenika"), t("Status")].map(h => (
                                     <th key={h} className="text-left px-4 py-2 font-bold text-xs text-muted-foreground">{h}</th>
                                   ))}
                                 </tr>
@@ -1893,7 +1904,7 @@ export default function AdminPage() {
                                     <td className="px-4 py-2.5 font-bold text-foreground">{g.brojUcenika}</td>
                                     <td className="px-4 py-2.5">
                                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                                        {g.isActive ? "Aktivna" : "Neaktivna"}
+                                        {g.isActive ? t("Aktivna") : t("Neaktivna")}
                                       </span>
                                     </td>
                                   </tr>
@@ -1902,7 +1913,7 @@ export default function AdminPage() {
                             </table>
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground py-3 text-center">Nema grupa</p>
+                          <p className="text-sm text-muted-foreground py-3 text-center">{t("Nema grupa")}</p>
                         )}
                       </motion.div>
                     )}
@@ -1926,17 +1937,17 @@ export default function AdminPage() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
                   </span>
-                  Trenutno online
+                  {t("Trenutno online")}
                 </h3>
-                <span className="text-xs text-muted-foreground">Aktivni u zadnjih 5 min · osvježava se svakih 30 s</span>
+                <span className="text-xs text-muted-foreground">{t("Aktivni u zadnjih 5 min · osvježava se svakih 30 s")}</span>
               </div>
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="text-4xl font-extrabold text-green-600">{online?.ukupno ?? 0}</span>
                 <span className="text-muted-foreground text-sm">{(() => {
                   const n = online?.ukupno ?? 0;
                   const mod10 = n % 10, mod100 = n % 100;
-                  const rijec = (mod10 === 1 && mod100 !== 11) ? "osoba" : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) ? "osobe" : "osoba";
-                  return `${rijec} online`;
+                  const rijec = (mod10 === 1 && mod100 !== 11) ? t("osoba") : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) ? t("osobe") : t("osoba");
+                  return t("{rijec} online", { rijec });
                 })()}</span>
               </div>
               {online && online.poLokaciji.length > 0 ? (
@@ -1945,19 +1956,19 @@ export default function AdminPage() {
                     <div key={i} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
                       <span className="text-sm font-medium text-foreground truncate">
                         <Globe className="w-4 h-4 inline-block mr-1.5 text-purple-500 align-text-bottom" />
-                        {l.city && l.city !== "Unknown" ? `${l.city}, ` : ""}{l.country || "Nepoznato"}
+                        {l.city && l.city !== "Unknown" ? `${l.city}, ` : ""}{l.country || t("Nepoznato")}
                       </span>
                       <span className="text-sm font-extrabold text-foreground ml-2">{l.broj}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-sm py-2">Trenutno nema aktivnih posjetilaca.</p>
+                <p className="text-muted-foreground text-sm py-2">{t("Trenutno nema aktivnih posjetilaca.")}</p>
               )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-bold text-muted-foreground mr-1">Period:</span>
+              <span className="text-sm font-bold text-muted-foreground mr-1">{t("Period:")}</span>
               {(["danas", "7d", "30d"] as AnalyticsPeriod[]).map(p => (
                 <button
                   key={p}
@@ -1985,10 +1996,10 @@ export default function AdminPage() {
                     return Math.round(((sad - prije) / prije) * 100);
                   };
                   const kartice = [
-                    { naslov: "Posjete", vrijednost: analytics.kpi.posjete, prev: analytics.kpi.posjetePrev, icon: TrendingUp, boja: "text-teal-600" },
-                    { naslov: "Jedinstveni posjetioci", vrijednost: analytics.kpi.jedinstveni, prev: analytics.kpi.jedinstveniPrev, icon: Users, boja: "text-blue-600" },
-                    { naslov: "Nove registracije", vrijednost: analytics.kpi.registracije, prev: analytics.kpi.registracijePrev, icon: UserCog, boja: "text-indigo-600" },
-                    { naslov: "Završeni kvizovi", vrijednost: analytics.kpi.kvizovi, prev: analytics.kpi.kvizoviPrev, icon: Award, boja: "text-amber-600" },
+                    { naslov: t("Posjete"), vrijednost: analytics.kpi.posjete, prev: analytics.kpi.posjetePrev, icon: TrendingUp, boja: "text-teal-600" },
+                    { naslov: t("Jedinstveni posjetioci"), vrijednost: analytics.kpi.jedinstveni, prev: analytics.kpi.jedinstveniPrev, icon: Users, boja: "text-blue-600" },
+                    { naslov: t("Nove registracije"), vrijednost: analytics.kpi.registracije, prev: analytics.kpi.registracijePrev, icon: UserCog, boja: "text-indigo-600" },
+                    { naslov: t("Završeni kvizovi"), vrijednost: analytics.kpi.kvizovi, prev: analytics.kpi.kvizoviPrev, icon: Award, boja: "text-amber-600" },
                   ];
                   return (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2003,7 +2014,7 @@ export default function AdminPage() {
                             </div>
                             <div className="text-2xl font-extrabold text-foreground">{k.vrijednost.toLocaleString("bs")}</div>
                             <div className={`text-xs font-bold mt-1 ${p > 0 ? "text-emerald-600" : p < 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                              {p > 0 ? "▲" : p < 0 ? "▼" : "■"} {Math.abs(p)}% vs prethodni period
+                              {p > 0 ? "▲" : p < 0 ? "▼" : "■"} {Math.abs(p)}{t("% vs prethodni period")}
                             </div>
                           </div>
                         );
@@ -2015,7 +2026,7 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <TrendingUp className="w-5 h-5 text-teal-600" /> Posjete ({PERIOD_LABELS[analyticsPeriod].toLowerCase()})
+                      <TrendingUp className="w-5 h-5 text-teal-600" /> {t("Posjete ({period})", { period: PERIOD_LABELS[analyticsPeriod].toLowerCase() })}
                     </h3>
                     {analytics.aktivnostPosmjenama.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>
@@ -2023,18 +2034,18 @@ export default function AdminPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.length > 5 ? d.slice(5) : d} />
                           <YAxis tick={{ fontSize: 11 }} />
-                          <Tooltip labelFormatter={l => `Datum: ${l}`} />
+                          <Tooltip labelFormatter={l => t("Datum: {l}", { l: String(l) })} />
                           <Line type="monotone" dataKey="broj" stroke="#0d9488" strokeWidth={2} dot={false} />
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o posjetama</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o posjetama")}</p>
                     )}
                   </div>
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <Users className="w-5 h-5 text-blue-600" /> Nove registracije ({PERIOD_LABELS[analyticsPeriod].toLowerCase()})
+                      <Users className="w-5 h-5 text-blue-600" /> {t("Nove registracije ({period})", { period: PERIOD_LABELS[analyticsPeriod].toLowerCase() })}
                     </h3>
                     {analytics.registracijePoMjesecu.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>
@@ -2042,18 +2053,18 @@ export default function AdminPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.length > 5 ? d.slice(5) : d} />
                           <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                          <Tooltip labelFormatter={l => `Datum: ${l}`} />
+                          <Tooltip labelFormatter={l => t("Datum: {l}", { l: String(l) })} />
                           <Bar dataKey="broj" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">Nema registracija</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema registracija")}</p>
                     )}
                   </div>
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <Globe className="w-5 h-5 text-purple-600" /> Posjete po državama (top 10)
+                      <Globe className="w-5 h-5 text-purple-600" /> {t("Posjete po državama (top 10)")}
                     </h3>
                     {analytics.posjetePoDrzavi.length > 0 ? (
                       <ResponsiveContainer width="100%" height={260}>
@@ -2067,18 +2078,18 @@ export default function AdminPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                           <YAxis dataKey="country" type="category" width={80} tick={{ fontSize: 11 }} />
-                          <Tooltip formatter={(value: number) => `${value} posjeta`} />
-                          <Bar dataKey="broj" fill="#8b5cf6" radius={[0, 6, 6, 0]} name="Broj posjeta" />
+                          <Tooltip formatter={(value: number) => t("{value} posjeta", { value: String(value) })} />
+                          <Bar dataKey="broj" fill="#8b5cf6" radius={[0, 6, 6, 0]} name={t("Broj posjeta")} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o posjetama</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o posjetama")}</p>
                     )}
                   </div>
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <FileText className="w-5 h-5 text-rose-600" /> Najposjećenije stranice
+                      <FileText className="w-5 h-5 text-rose-600" /> {t("Najposjećenije stranice")}
                     </h3>
                     {analytics.najposjecenijeStranice && analytics.najposjecenijeStranice.length > 0 ? (
                       <div className="space-y-2">
@@ -2098,13 +2109,13 @@ export default function AdminPage() {
                         })}
                       </div>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o stranicama</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o stranicama")}</p>
                     )}
                   </div>
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <BarChart3 className="w-5 h-5 text-emerald-600" /> Posjete po uređajima
+                      <BarChart3 className="w-5 h-5 text-emerald-600" /> {t("Posjete po uređajima")}
                     </h3>
                     {analytics.uredjaji && analytics.uredjaji.length > 0 ? (
                       <ResponsiveContainer width="100%" height={260}>
@@ -2123,23 +2134,23 @@ export default function AdminPage() {
                               <Cell key={u.tip} fill={["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6"][i % 4]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => `${value} posjeta`} />
+                          <Tooltip formatter={(value: number) => t("{value} posjeta", { value: String(value) })} />
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">Nema podataka o uređajima</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o uređajima")}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
                   <div className="p-4 border-b border-border/50">
-                    <h3 className="font-extrabold text-foreground">Pregled korisnika po ulogama</h3>
+                    <h3 className="font-extrabold text-foreground">{t("Pregled korisnika po ulogama")}</h3>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border/40 bg-muted/30">
-                        {["Uloga", "Aktivni", "Neaktivni", "Ukupno"].map(h => (
+                        {[t("Uloga"), t("Aktivni"), t("Neaktivni"), t("Ukupno")].map(h => (
                           <th key={h} className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground">{h}</th>
                         ))}
                       </tr>
@@ -2163,7 +2174,7 @@ export default function AdminPage() {
               </>
             ) : (
               <div className="bg-white border border-border/50 rounded-2xl p-8 text-center text-muted-foreground">
-                Nije moguće učitati analitiku
+                {t("Nije moguće učitati analitiku")}
               </div>
             )}
           </div>
@@ -2174,9 +2185,9 @@ export default function AdminPage() {
           <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-border/50">
               <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-primary" /> Pregled kvizova
+                <ClipboardList className="w-5 h-5 text-primary" /> {t("Pregled kvizova")}
               </h3>
-              <p className="text-sm text-muted-foreground mt-1">Statistika svih kvizova — koliko puta su rađeni i prosječna tačnost</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("Statistika svih kvizova — koliko puta su rađeni i prosječna tačnost")}</p>
             </div>
             {kvizLoading ? (
               <div className="p-4 flex flex-col gap-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
@@ -2185,7 +2196,7 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border/40 bg-muted/30">
-                      {["Naziv kviza", "Kategorija", "Pokušaji", "Prosj. tačnost", "Najviši %", "Najniži %", ""].map(h => (
+                      {[t("Naziv kviza"), t("Kategorija"), t("Pokušaji"), t("Prosj. tačnost"), t("Najviši %"), t("Najniži %"), ""].map(h => (
                         <th key={h} className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground">{h}</th>
                       ))}
                     </tr>
@@ -2199,7 +2210,7 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="font-extrabold text-foreground">{k.pokusaji}</span>
-                          <span className="text-xs text-muted-foreground ml-1">puta</span>
+                          <span className="text-xs text-muted-foreground ml-1">{t("puta")}</span>
                         </td>
                         <td className="px-4 py-3">
                           {k.pokusaji > 0 ? (
@@ -2216,9 +2227,9 @@ export default function AdminPage() {
                           <button
                             onClick={() => setLocation(`/admin/kviz/${k.id}`)}
                             className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition flex items-center gap-1"
-                            title="Uredi kviz"
+                            title={t("Uredi kviz")}
                           >
-                            <Pencil className="w-3 h-3" /> Uredi
+                            <Pencil className="w-3 h-3" /> {t("Uredi")}
                           </button>
                         </td>
                       </tr>
@@ -2227,7 +2238,7 @@ export default function AdminPage() {
                 </table>
               </div>
             ) : (
-              <div className="p-8 text-center text-muted-foreground text-sm">Nema kvizova</div>
+              <div className="p-8 text-center text-muted-foreground text-sm">{t("Nema kvizova")}</div>
             )}
           </div>
         )}
@@ -2238,13 +2249,13 @@ export default function AdminPage() {
           <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
               <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-primary" /> Statistika sadržaja
+                <BarChart3 className="w-5 h-5 text-primary" /> {t("Statistika sadržaja")}
               </h2>
               <div className="flex gap-1 bg-muted/40 p-1 rounded-xl">
                 {([
-                  { k: "lekcije" as const, l: `Lekcije (${statSadrzaja.lekcije.length})` },
-                  { k: "prilozi" as const, l: `Materijali (${statSadrzaja.prilozi.length})` },
-                  { k: "kvizovi" as const, l: `Kvizovi (${statSadrzaja.kvizovi.length})` },
+                  { k: "lekcije" as const, l: t("Lekcije ({n})", { n: String(statSadrzaja.lekcije.length) }) },
+                  { k: "prilozi" as const, l: t("Materijali ({n})", { n: String(statSadrzaja.prilozi.length) }) },
+                  { k: "kvizovi" as const, l: t("Kvizovi ({n})", { n: String(statSadrzaja.kvizovi.length) }) },
                 ]).map(t => (
                   <button key={t.k} onClick={() => setStatSubTab(t.k)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statSubTab === t.k ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -2277,11 +2288,11 @@ export default function AdminPage() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border/40 bg-muted/30">
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naslov" label="Lekcija" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="nivo" label="Nivo" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="zavrseno" label="Završili" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label="Prosj. ocjena" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label="Br. ocjena" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naslov" label={t("Lekcija")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="nivo" label={t("Nivo")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="zavrseno" label={t("Završili")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label={t("Prosj. ocjena")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label={t("Br. ocjena")} /></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2294,7 +2305,7 @@ export default function AdminPage() {
                               <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.broj_ocjena}</td>
                             </tr>
                           ))}
-                          {sorted.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema podataka</td></tr>}
+                          {sorted.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("Nema podataka")}</td></tr>}
                         </tbody>
                       </table>
                     );
@@ -2304,12 +2315,12 @@ export default function AdminPage() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border/40 bg-muted/30">
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naziv" label="Materijal" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="lekcija_naslov" label="Lekcija" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="kind" label="Tip" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="zavrseno" label="Završili" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label="Prosj. ocjena" /></th>
-                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label="Br. ocjena" /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naziv" label={t("Materijal")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="lekcija_naslov" label={t("Lekcija")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="kind" label={t("Tip")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="zavrseno" label={t("Završili")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label={t("Prosj. ocjena")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label={t("Br. ocjena")} /></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2323,7 +2334,7 @@ export default function AdminPage() {
                               <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.broj_ocjena}</td>
                             </tr>
                           ))}
-                          {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema podataka</td></tr>}
+                          {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("Nema podataka")}</td></tr>}
                         </tbody>
                       </table>
                     );
@@ -2333,12 +2344,12 @@ export default function AdminPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border/40 bg-muted/30">
-                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naslov" label="Kviz" /></th>
-                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="kategorija" label="Kategorija" /></th>
-                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_pokusaja" label="Pokušaja" /></th>
-                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="prosjek_postotak" label="Prosjek %" /></th>
-                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label="Prosj. ocjena" /></th>
-                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label="Br. ocjena" /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naslov" label={t("Kviz")} /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="kategorija" label={t("Kategorija")} /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_pokusaja" label={t("Pokušaja")} /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="prosjek_postotak" label={t("Prosjek %")} /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label={t("Prosj. ocjena")} /></th>
+                          <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label={t("Br. ocjena")} /></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2352,7 +2363,7 @@ export default function AdminPage() {
                             <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.broj_ocjena}</td>
                           </tr>
                         ))}
-                        {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema podataka</td></tr>}
+                        {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("Nema podataka")}</td></tr>}
                       </tbody>
                     </table>
                   );
@@ -2367,32 +2378,32 @@ export default function AdminPage() {
         <>
         <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-            <h2 className="font-extrabold text-foreground">Korisnici</h2>
+            <h2 className="font-extrabold text-foreground">{t("Korisnici")}</h2>
             <div className="flex flex-wrap gap-2 items-center">
               <input
                 type="text"
-                placeholder="Pretraga..."
+                placeholder={t("Pretraga...")}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-40"
               />
               <select value={filterRole} onChange={e => setFilterRole(e.target.value)}
                 className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
-                <option value="all">Svi</option>
+                <option value="all">{t("Svi")}</option>
                 {["admin", "muallim", "roditelj", "ucenik"].map(r => (
                   <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                 ))}
               </select>
               <div className="relative">
                 <Button size="sm" onClick={() => setShowDodajMenu(v => !v)} className="rounded-xl flex items-center gap-1.5">
-                  <Plus className="w-4 h-4" /> Dodaj <ChevronDown className="w-3.5 h-3.5" />
+                  <Plus className="w-4 h-4" /> {t("Dodaj")} <ChevronDown className="w-3.5 h-3.5" />
                 </Button>
                 {showDodajMenu && (
                   <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-xl shadow-lg z-30 w-48 py-1">
                     {[
-                      { label: "Admina", action: () => setShowDodajAdmina(true) },
-                      { label: "Muallima", action: () => setShowDodajMuallim(true) },
-                      { label: "Učenika", action: () => setShowDodajUcnika(true) },
+                      { label: t("Admina"), action: () => setShowDodajAdmina(true) },
+                      { label: t("Muallima"), action: () => setShowDodajMuallim(true) },
+                      { label: t("Učenika"), action: () => setShowDodajUcnika(true) },
                     ].map(item => (
                       <button key={item.label} onClick={() => { item.action(); setShowDodajMenu(false); }}
                         className="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors">
@@ -2413,13 +2424,13 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border/40 bg-muted/30">
                     {([
-                      { label: "Ime", sort: "displayName" as SortField },
-                      { label: "Korisničko ime", sort: null },
-                      { label: "Uloga", sort: null },
-                      { label: "Status", sort: null },
-                      { label: "Registrovan", sort: "createdAt" as SortField },
-                      { label: "Vrijeme na platformi", sort: "totalScreentimeSec" as SortField },
-                      { label: "Akcije", sort: null },
+                      { label: t("Ime"), sort: "displayName" as SortField },
+                      { label: t("Korisničko ime"), sort: null },
+                      { label: t("Uloga"), sort: null },
+                      { label: t("Status"), sort: null },
+                      { label: t("Registrovan"), sort: "createdAt" as SortField },
+                      { label: t("Vrijeme na platformi"), sort: "totalScreentimeSec" as SortField },
+                      { label: t("Akcije"), sort: null },
                     ]).map(h => (
                       <th key={h.label} className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground">
                         {h.sort ? (
@@ -2449,7 +2460,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3">
                         {(() => {
                           if (k.isActive) {
-                            return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Aktivan</span>;
+                            return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{t("Aktivan")}</span>;
                           }
                           const trialMs = k.trialUntil ? new Date(k.trialUntil).getTime() - Date.now() : 0;
                           if (trialMs > 0) {
@@ -2505,7 +2516,7 @@ export default function AdminPage() {
                           {k.role !== "admin" && (
                             <button onClick={() => setDeleteKorisnik(k)}
                               className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
-                              title="Obriši korisnika">
+                              title={t("Obriši korisnika")}>
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
@@ -2592,17 +2603,17 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteKorisnik(null)}>
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-extrabold text-foreground mb-2">Obriši korisnika?</h3>
+            <h3 className="text-lg font-extrabold text-foreground mb-2">{t("Obriši korisnika?")}</h3>
             <p className="text-sm text-muted-foreground mb-1">
-              Jeste li sigurni da želite trajno obrisati korisnika:
+              {t("Jeste li sigurni da želite trajno obrisati korisnika:")}
             </p>
             <p className="font-bold text-foreground mb-4">{deleteKorisnik.displayName} ({deleteKorisnik.username})</p>
-            <p className="text-xs text-red-600 mb-4">Ova akcija je nepovratna. Svi podaci korisnika će biti obrisani.</p>
+            <p className="text-xs text-red-600 mb-4">{t("Ova akcija je nepovratna. Svi podaci korisnika će biti obrisani.")}</p>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setDeleteKorisnik(null)} className="flex-1 rounded-xl">Otkaži</Button>
+              <Button variant="outline" onClick={() => setDeleteKorisnik(null)} className="flex-1 rounded-xl">{t("Otkaži")}</Button>
               <Button onClick={() => handleDeleteKorisnik(deleteKorisnik)} disabled={deletingId === deleteKorisnik.id}
                 className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white">
-                {deletingId === deleteKorisnik.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Obriši"}
+                {deletingId === deleteKorisnik.id ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Obriši")}
               </Button>
             </div>
           </motion.div>
