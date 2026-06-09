@@ -460,10 +460,13 @@ router.get("/kvizovi/:slug", async (req, res) => {
       .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
       .where(eq(kvizPitanjaTable.kvizId, kviz.id));
 
-    await overlayRows(linked, "pitanja_banka", lang);
-
     const norm = (s: string) => s.trim().replace(/\s+/g, " ");
+    // KRITIČNO: mapa se gradi po ORIGINALNOM (bosanskom) tekstu pitanja PRIJE
+    // overlay-a, jer JSONB pitanja matchamo po bosanskom tekstu. Vrijednosti su
+    // reference na iste objekte iz `linked`, pa ih overlay (ispod) svejedno
+    // prevede — lookup po bosanskom ključu vrati prevedeni banka red.
     const bankaMap = new Map(linked.map((p) => [norm(p.pitanje), p]));
+    await overlayRows(linked, "pitanja_banka", lang);
 
     // Rekonstruiše originalni JSONB shape za kviz UI iz banka reda. Frontend
     // (kviz.tsx) hendla 4 tipa: single/checkbox = options+answer (|||), truefalse =
