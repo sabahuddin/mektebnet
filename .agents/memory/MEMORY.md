@@ -14,3 +14,4 @@
 - [Zadaća kapi meda vs total_med](zadaca-kapi-meda.md) — muallim-dodijeljene "kapi meda" idu na total_hasanat (znanje), NE total_med (igrice/Aferimi).
 - [Plain-content lekcije i akordion editor](dodatak-plain-content-editor.md) — WysiwygEditor krije sve akordion kontrole kad sadržaj nema `.lesson-accordion`; DODATAK/medaljon lekcije su plain `<p>`.
 - [NPP normalizacija predmeta](npp-predmet-normalizacija.md) — `predmet` dropdown sveden na 6 NPP oblasti; necore→"Ostali sadržaji", medaljoni bez predmeta; primjena preko idempotentne startup-migracije.
+- [content_prijevodi overlay pokrivenost](content-overlay-coverage.md) — overlay mora pokriti i list i detail rute za svaki modul; lako je prevesti listu a zaboraviti detalj (content_html ostaje bs).

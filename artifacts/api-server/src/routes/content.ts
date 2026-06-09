@@ -615,6 +615,7 @@ router.get("/knjige/:slug", async (req, res) => {
       .from(kvizoviTable)
       .where(and(eq(kvizoviTable.modul, "knjige"), eq(kvizoviTable.slug, expectedKvizSlug)))
       .limit(1);
+    await overlayOne(knjiga, "knjige", getLang(req));
     res.json({ ...knjiga, kvizSlug: kviz?.slug ?? null });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

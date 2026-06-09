@@ -86,15 +86,23 @@ async function callOpenAI(body: Record<string, unknown>): Promise<any> {
   if (MODEL.startsWith("gpt-5")) body.reasoning_effort = "minimal";
   let res: Response | null = null;
   for (let attempt = 0; attempt < 6; attempt++) {
+    const ac = new AbortController();
+    const to = setTimeout(() => ac.abort(), 150000);
     try {
       res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
         body: JSON.stringify(body),
+        signal: ac.signal,
       });
     } catch (e) {
+      // Na timeout/abort NE retry-aj (inače 6×150s zamrzne chunk); fail-fast,
+      // resume (po hashu) pokupi posao u sljedećem pokretu.
+      if ((e as Error).name === "AbortError") throw e;
       if (attempt < 5) { await new Promise((r) => setTimeout(r, Math.min(2000 * 2 ** attempt, 30000) + Math.random() * 1000)); continue; }
       throw e;
+    } finally {
+      clearTimeout(to);
     }
     if (res.status === 429 || res.status >= 500) {
       await new Promise((r) => setTimeout(r, Math.min(2000 * 2 ** attempt, 30000) + Math.random() * 1000));
