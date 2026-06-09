@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { translations, COUNTRY_TO_LANG, type Lang, type TranslationTree, getNestedValue } from "@/lib/i18n";
 import sqFlat from "@/locales/sq.json";
 import deFlat from "@/locales/de.json";
@@ -75,20 +76,25 @@ function detectInitialLang(): Lang {
  */
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(detectInitialLang);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     clearGoogTransCookie();
   }, []);
 
   const setLang = useCallback((newLang: Lang) => {
-    if (!SUPPORTED.includes(newLang)) return;
+    if (!SUPPORTED.includes(newLang) || newLang === lang) return;
     setLangState(newLang);
     try {
       localStorage.setItem(STORAGE_KEY, newLang);
     } catch {
       // ignoriši
     }
-  }, []);
+    // Sadržaj (ilmihal/knjige/rječnik/kvizovi/misije/medaljoni/igre) dohvaća se
+    // sa X-Lang headerom. Pri promjeni jezika invalidiraj keš da se prevedeni
+    // sadržaj ponovo dohvati (UI tekstovi se mijenjaju reaktivno preko t()).
+    queryClient.invalidateQueries();
+  }, [lang, queryClient]);
 
   const tr: TranslationTree =
     ((translations as Record<string, unknown>)[lang] as TranslationTree | undefined) ??

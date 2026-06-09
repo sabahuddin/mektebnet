@@ -17,6 +17,7 @@ import {
   applyEffectiveOrder,
   resolveEffectiveRedoslijed,
 } from "../lib/raspored.js";
+import { getLang, overlayRows } from "../lib/content-translatable.js";
 
 const router = Router();
 
@@ -80,6 +81,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
       imaKviz: Array.isArray(m.kvizPitanjaIds) && m.kvizPitanjaIds.length > 0,
       isGating: m.isGating ?? true,
     }));
+    await overlayRows(medaljoniAug, "medaljoni", getLang(req));
     const krunisanjeMeta = krunisanjeRow
       ? {
           id: krunisanjeRow.id,

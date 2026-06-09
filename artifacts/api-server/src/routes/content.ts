@@ -27,6 +27,7 @@ import {
   resolveEffectiveRedoslijed,
   applyEffectiveOrder,
 } from "../lib/raspored.js";
+import { getLang, overlayRows, overlayOne } from "../lib/content-translatable.js";
 
 const router = Router();
 
@@ -96,12 +97,14 @@ router.get("/ilmihal", async (req, res) => {
             const posMap = await getRasporedPositionsForStudent(userId, nv);
             poredano.push(...applyEffectiveOrder(arr, posMap));
           }
+          await overlayRows(poredano, "ilmihal_lekcije", getLang(req));
           res.json(poredano);
           return;
         }
       } catch {}
     }
 
+    await overlayRows(lekcije, "ilmihal_lekcije", getLang(req));
     res.json(lekcije);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -356,6 +359,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
       } catch {}
     }
 
+    await overlayOne(result, "ilmihal_lekcije", getLang(req));
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -409,6 +413,7 @@ router.get("/kvizovi", async (req, res) => {
         ? k.pitanjaCount
         : (Array.isArray(k.pitanja) ? k.pitanja.length : 0),
     }));
+    await overlayRows(filtered, "kvizovi", getLang(req));
     res.json(filtered);
   } catch (err) {
     req.log.error({ err }, "GET /content/kvizovi failed");
@@ -427,6 +432,8 @@ router.get("/kvizovi/:slug", async (req, res) => {
   try {
     const [kviz] = await db.select().from(kvizoviTable).where(eq(kvizoviTable.slug, req.params.slug));
     if (!kviz) { res.status(404).json({ error: "Kviz nije pronađen" }); return; }
+    const lang = getLang(req);
+    await overlayOne(kviz, "kvizovi", lang);
 
     // STRATEGIJA: JSONB je primarni izvor istine za REDOSLIJED i za interaktivna
     // pitanja (markWords, dragDrop, reorder, true_false, ...). Banka pitanja sadrži
@@ -438,6 +445,7 @@ router.get("/kvizovi/:slug", async (req, res) => {
 
     const linked = await db
       .select({
+        id: pitanjaBankaTable.id,
         pitanje: pitanjaBankaTable.pitanje,
         opcije: pitanjaBankaTable.opcije,
         correctIndex: pitanjaBankaTable.correctIndex,
@@ -451,6 +459,8 @@ router.get("/kvizovi/:slug", async (req, res) => {
       .from(kvizPitanjaTable)
       .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
       .where(eq(kvizPitanjaTable.kvizId, kviz.id));
+
+    await overlayRows(linked, "pitanja_banka", lang);
 
     const norm = (s: string) => s.trim().replace(/\s+/g, " ");
     const bankaMap = new Map(linked.map((p) => [norm(p.pitanje), p]));
@@ -585,6 +595,7 @@ router.get("/knjige", async (req, res) => {
       .orderBy(asc(knjige.redoslijed), asc(knjige.id));
 
     const filtered = kategorija ? result.filter(k => k.kategorija === kategorija) : result;
+    await overlayRows(filtered, "knjige", getLang(req));
     res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -1178,12 +1189,14 @@ router.get("/kviz-rezultati", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/rjecnik", async (_req, res) => {
+router.get("/rjecnik", async (req, res) => {
   try {
     const rows = await db.select({
+      id: rjecnikTable.id,
       rijec: rjecnikTable.rijec,
       definicija: rjecnikTable.definicija,
     }).from(rjecnikTable).orderBy(asc(rjecnikTable.rijec));
+    await overlayRows(rows, "rjecnik", getLang(req));
     const dict: Record<string, string> = {};
     for (const r of rows) dict[r.rijec] = r.definicija;
     res.json(dict);

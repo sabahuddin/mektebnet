@@ -4,6 +4,7 @@ import { igraPitanjaTable, medenaVidjenaPitanjaTable, MEDENA_KATEGORIJE, type Me
 import { and, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { pickGradoviQuestions, pickZastaveQuestions, type KvizPitanjeFlag } from "../data/zemlje.js";
+import { getLang, overlayRows } from "../lib/content-translatable.js";
 
 const router: IRouter = Router();
 
@@ -1068,6 +1069,7 @@ router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (req: Re
       }
     }
 
+    await overlayRows(rezultat, "igra_pitanja", getLang(req));
     res.json({ pitanja: rezultat });
   } catch (err) {
     console.error("[games/medena/pitanja] greška:", err);

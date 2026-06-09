@@ -605,6 +605,27 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS mekteb_dokumenti_mekteb_idx ON mekteb_dokumenti (mekteb_id);`);
 
+    // Faza 2 — višejezični SADRŽAJ (ne UI). Additivna tabela: bosanski original
+    // se NIKAD ne mijenja, prijevodi žive ovdje. `izvor_hash` = SHA-256 bosanskog
+    // izvora u trenutku prijevoda → kad se original izmijeni, hash se ne poklapa
+    // i prevodna obrada zna da taj red treba ponovo prevesti (inkrementalno).
+    // Overlay na serve-time: GET rute preklope `prijevod` po `X-Lang` headeru sa
+    // fallbackom na bosanski. Vidi routes/translations + lib/content-translatable.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS content_prijevodi (
+        id serial PRIMARY KEY NOT NULL,
+        tabela varchar(60) NOT NULL,
+        red_id integer NOT NULL,
+        polje varchar(60) NOT NULL,
+        jezik varchar(5) NOT NULL,
+        prijevod text NOT NULL,
+        izvor_hash varchar(64) NOT NULL,
+        updated_at timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS content_prijevodi_uniq ON content_prijevodi (tabela, red_id, polje, jezik);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS content_prijevodi_lookup_idx ON content_prijevodi (tabela, jezik, red_id);`);
+
     logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + mekteb_dokumenti) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");

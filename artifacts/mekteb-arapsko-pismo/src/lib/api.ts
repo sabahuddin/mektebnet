@@ -10,6 +10,17 @@ export async function apiRequest<T = unknown>(
   const headers: Record<string, string> = {};
   if (!isFormData) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Faza 2 — prijevod sadržaja: pošalji aktivni jezik (osim bosanskog, koji je
+  // master/default). Backend overlay-uje prevedena polja iz content_prijevodi
+  // sa fallbackom na bosanski.
+  if (typeof localStorage !== "undefined") {
+    try {
+      const lang = localStorage.getItem("mekteb-lang");
+      if (lang && lang !== "bs") headers["X-Lang"] = lang;
+    } catch {
+      // blokiran storage (privatni mode) — preskoči
+    }
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,

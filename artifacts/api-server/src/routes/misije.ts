@@ -4,6 +4,7 @@ import { misijaDefinicijaTable, misijaProgressTable } from "@workspace/db";
 import { sql, and, eq, isNotNull } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
+import { getLang, overlayRows } from "../lib/content-translatable.js";
 
 const router: IRouter = Router();
 
@@ -188,6 +189,7 @@ router.get("/aktivne", requireAuth, requireRole("ucenik"), async (req: Request, 
       return aDone - bDone;
     });
 
+    await overlayRows(result, "misija_definicija", getLang(req));
     res.json({ misije: result });
   } catch (err) {
     req.log.error({ err }, "misije/aktivne failed");
