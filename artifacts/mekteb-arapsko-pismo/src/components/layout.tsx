@@ -33,7 +33,7 @@ type NavLink = {
 
 const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
 
-const LANG_ORDER: Lang[] = ["bs", "de", "en", "tr", "ar"];
+const LANG_ORDER: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
 
 function LanguageSwitcher() {
   const { lang, setLang } = useLanguage();
@@ -211,10 +211,9 @@ export function Layout({ children }: LayoutProps) {
 
           <div className="flex items-center gap-2">
 
-            {/* LanguageSwitcher PRIVREMENO SKRIVEN — app je locked na bosanski.
-                Vidi src/context/language.tsx za više konteksta. Komponenta je
-                ostavljena u fajlu (nije obrisana) da se lako vrati kad budemo
-                radili pravi multi-language. */}
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
 
             <div className="hidden sm:flex items-center gap-1 bg-muted/60 rounded-xl px-1 py-1">
               <button
@@ -272,6 +271,9 @@ export function Layout({ children }: LayoutProps) {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
               className="lg:hidden border-t border-border/50 bg-white">
               <nav className="flex flex-col p-4 gap-1">
+                <div className="flex items-center gap-2 px-4 py-2 mb-1">
+                  <LanguageSwitcher />
+                </div>
                 <div className="flex items-center gap-2 px-4 py-2 mb-1">
                   <span className="text-xs font-bold text-muted-foreground mr-1">{t("nav.velicinaFonta")}</span>
                   <button onClick={() => setFontLevel(l => Math.max(0, l - 1))} disabled={fontLevel === 0}

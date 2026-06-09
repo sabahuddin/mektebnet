@@ -1,7 +1,8 @@
-export type Lang = "bs" | "de" | "en" | "tr" | "ar";
+export type Lang = "bs" | "sq" | "de" | "en" | "tr" | "ar";
 
 export const LANG_LABELS: Record<Lang, string> = {
   bs: "BS",
+  sq: "SQ",
   de: "DE",
   en: "EN",
   tr: "TR",
@@ -10,6 +11,7 @@ export const LANG_LABELS: Record<Lang, string> = {
 
 export const LANG_NAMES: Record<Lang, string> = {
   bs: "Bosanski",
+  sq: "Shqip",
   de: "Deutsch",
   en: "English",
   tr: "Türkçe",
@@ -18,6 +20,7 @@ export const LANG_NAMES: Record<Lang, string> = {
 
 export const COUNTRY_TO_LANG: Record<string, Lang> = {
   BA: "bs", HR: "bs", RS: "bs", ME: "bs", MK: "bs", SI: "bs",
+  AL: "sq", XK: "sq",
   DE: "de", AT: "de", CH: "de", LI: "de", LU: "de",
   TR: "tr", AZ: "tr",
   SA: "ar", AE: "ar", QA: "ar", KW: "ar", BH: "ar", OM: "ar", JO: "ar", LB: "ar", IQ: "ar", EG: "ar", LY: "ar", TN: "ar", DZ: "ar", MA: "ar", SD: "ar", YE: "ar", SY: "ar", PS: "ar",

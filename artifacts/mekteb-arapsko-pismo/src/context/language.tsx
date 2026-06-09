@@ -1,5 +1,10 @@
-import { createContext, useContext, useEffect, ReactNode, useCallback } from "react";
-import { translations, type Lang, type TranslationTree, getNestedValue } from "@/lib/i18n";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { translations, COUNTRY_TO_LANG, type Lang, type TranslationTree, getNestedValue } from "@/lib/i18n";
+import sqFlat from "@/locales/sq.json";
+import deFlat from "@/locales/de.json";
+import enFlat from "@/locales/en.json";
+import trFlat from "@/locales/tr.json";
+import arFlat from "@/locales/ar.json";
 
 interface LanguageContextType {
   lang: Lang;
@@ -11,16 +16,27 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
+const STORAGE_KEY = "mekteb-lang";
+const SUPPORTED: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
+
 /**
- * Brisanje googtrans cookie-a — robusno preko svih varijanti koje Google
- * može da je postavio (host-only, sa hostname-om, sa .hostname-om).
- *
- * VAŽNO za migraciju: postojeći produkcijski korisnici mogu imati keširan
- * `googtrans=/bs/en` (ili sl.) cookie iz prethodne verzije app-a. Bez
- * aktivnog brisanja, čak i nakon što izbacimo Google Translate widget,
- * stari Service Worker / browser cache može i dalje učitavati script
- * koji čita cookie i pravi konfuziju. Briše se idempotentno na svaki
- * mount LanguageProvider-a.
+ * Flat izvor-tekst rječnici (generisani OpenAI pipelineom). Ključ je ili
+ * dotted ključ (npr. "nav.pocetna") ili sam bosanski izvorni tekst
+ * (npr. "Dodaj učenika"). Vrijednost je prijevod na taj jezik. Bosanski je
+ * IZVOR pa nema svoj flat rječnik — uvijek se čita iz `translations.bs`.
+ */
+const FLAT: Partial<Record<Lang, Record<string, string>>> = {
+  sq: sqFlat as Record<string, string>,
+  de: deFlat as Record<string, string>,
+  en: enFlat as Record<string, string>,
+  tr: trFlat as Record<string, string>,
+  ar: arFlat as Record<string, string>,
+};
+
+/**
+ * Brisanje starog googtrans cookie-a iz prethodne (Google Translate) verzije,
+ * idempotentno na mount. Bez ovoga stari Service Worker / cache može učitati
+ * skriptu koja čita cookie i pravi konfuziju u prikazu.
  */
 function clearGoogTransCookie(): void {
   if (typeof document === "undefined") return;
@@ -33,68 +49,92 @@ function clearGoogTransCookie(): void {
   }
 }
 
+function detectInitialLang(): Lang {
+  if (typeof window === "undefined") return "bs";
+  // Default je BOSANSKI (primarna platforma). Drugi jezik se aktivira SAMO
+  // ručnim izborom u prekidaču, koji se pamti u localStorage. Namjerno NE
+  // koristimo navigator.language da ne prebacimo bosansku dijasporu (engleski
+  // browser) na strani jezik bez njihove odluke.
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && SUPPORTED.includes(saved as Lang)) return saved as Lang;
+  } catch {
+    // privatni mode / blokiran storage
+  }
+  return "bs";
+}
+
 /**
- * Multi-language podrška je PRIVREMENO ISKLJUČENA — app je locked na
- * bosanski jezik. Razlog: Google Translate prevodi sadržaj baze su davali
- * neuredan rezultat (poseban tekst arapskog pisma, miješanje stilova,
- * itd.), pa smo radije ostavili samo bosanski dok ne uradimo pravi
- * server-side multi-jezik (faza nakon mobile launch-a).
- *
- * Šta i dalje radi:
- *   - `useLanguage()` hook
- *   - `t("key")` funkcija — uvijek čita iz `translations.bs`
- *   - `tr` direktan pristup tree-u
- *
- * Šta NE radi:
- *   - `setLang(...)` — no-op (zadržan u API-ju za backward compat sa
- *     postojećim pozivima u kodu, da ne moramo brisati 100+ poziva)
- *   - `lang` — uvijek vraća "bs"
- *   - `isRTL` — uvijek false
- *
- * Kad bude vrijeme za vraćanje multi-language podrške, vrati prethodnu
- * verziju iz git history-ja (commit prije ove izmjene).
+ * Prevodni sloj:
+ *   - `lang` je trenutni jezik (persistira u localStorage).
+ *   - `t(key)` traži prijevod ovim redom:
+ *       1) bosanski izvor (dotted ključ iz `translations.bs` ILI sam tekst),
+ *       2) flat rječnik za jezik (dotted ključ ili izvorni tekst),
+ *       3) postojeća nested struktura `translations[lang]` (de/en/tr/ar),
+ *       4) fallback na bosanski izvor.
  */
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const lang: Lang = "bs";
+  const [lang, setLangState] = useState<Lang>(detectInitialLang);
 
-  // Migracioni cleanup: očisti googtrans cookie i ostali state vezan za
-  // staru multi-jezik logiku, jednom po mount-u. Idempotentno.
   useEffect(() => {
     clearGoogTransCookie();
+  }, []);
+
+  const setLang = useCallback((newLang: Lang) => {
+    if (!SUPPORTED.includes(newLang)) return;
+    setLangState(newLang);
     try {
-      // Nije strogo potrebno, ali oslobađa storage i osigurava da kod
-      // ne stane na stari sačuvani jezik ako se ikad vrati.
-      localStorage.removeItem("mekteb-lang");
-      sessionStorage.removeItem("mekteb-translate-reload-for");
+      localStorage.setItem(STORAGE_KEY, newLang);
     } catch {
-      // Privatni mode / blokiran storage — ignoriši.
+      // ignoriši
     }
   }, []);
 
-  const setLang = useCallback((_newLang: Lang) => {
-    // No-op: jezik je locked na "bs". API zadržan radi backward kompatibilnosti
-    // sa postojećim komponentama koje pozivaju setLang (npr. budući picker).
-  }, []);
+  const tr: TranslationTree =
+    ((translations as Record<string, unknown>)[lang] as TranslationTree | undefined) ??
+    translations.bs;
 
-  const tr: TranslationTree = translations.bs;
+  const t = useCallback(
+    (key: string, params?: Record<string, string>) => {
+      // 1) Bosanski izvor: dotted ključ ako postoji, inače sam tekst.
+      const bsValue = getNestedValue(translations.bs, key);
 
-  const t = useCallback((key: string, params?: Record<string, string>) => {
-    let value = getNestedValue(tr, key);
-    if (params) {
-      Object.entries(params).forEach(([k, v]) => {
-        value = value.replace(`{${k}}`, v);
-      });
-    }
-    return value;
-  }, [tr]);
+      let value: string;
+      if (lang === "bs") {
+        value = bsValue;
+      } else {
+        const dict = FLAT[lang];
+        const flatHit = dict?.[key] ?? dict?.[bsValue];
+        if (flatHit) {
+          value = flatHit;
+        } else {
+          // Postojeća ručna nested struktura (de/en/tr/ar).
+          const nested = getNestedValue(
+            (translations as Record<string, unknown>)[lang] ?? {},
+            key,
+          );
+          value = nested !== key ? nested : bsValue;
+        }
+      }
+
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+          value = value.split(`{${k}}`).join(v);
+        });
+      }
+      return value;
+    },
+    [lang],
+  );
 
   useEffect(() => {
-    document.documentElement.dir = "ltr";
-    document.documentElement.lang = "bs";
-  }, []);
+    const isRTL = lang === "ar";
+    document.documentElement.dir = isRTL ? "rtl" : "ltr";
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, tr, isRTL: false }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, tr, isRTL: lang === "ar" }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -105,3 +145,5 @@ export function useLanguage() {
   if (!ctx) throw new Error("useLanguage must be used within LanguageProvider");
   return ctx;
 }
+
+export { COUNTRY_TO_LANG };
