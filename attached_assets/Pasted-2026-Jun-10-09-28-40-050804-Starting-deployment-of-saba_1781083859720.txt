@@ -1,0 +1,185 @@
+2026-Jun-10 09:28:40.050804
+Starting deployment of sabahuddin/mektebnet:main to localhost.
+2026-Jun-10 09:28:40.847452
+Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.12
+2026-Jun-10 09:28:46.486022
+----------------------------------------
+2026-Jun-10 09:28:46.499121
+Importing sabahuddin/mektebnet:main (commit sha 78037808901e4b17683d491a406b7685ef8b8f81) to /artifacts/wkggkg8wco0sgccc8s0wksss.
+2026-Jun-10 09:29:08.000101
+Image not found (i8w884sgkkgogkwsokcwc0c4:78037808901e4b17683d491a406b7685ef8b8f81). Building new image.
+2026-Jun-10 09:29:12.894932
+----------------------------------------
+2026-Jun-10 09:29:12.904815
+Building docker image started.
+2026-Jun-10 09:29:12.914846
+To check the current progress, click on Show Debug Logs.
+2026-Jun-10 09:29:52.023345
+Building docker image completed.
+2026-Jun-10 09:29:53.433187
+----------------------------------------
+2026-Jun-10 09:29:53.450343
+Rolling update started.
+2026-Jun-10 09:29:54.965608
+New container started.
+2026-Jun-10 09:29:54.976540
+Custom healthcheck found in Dockerfile.
+2026-Jun-10 09:29:54.987417
+Waiting for healthcheck to pass on the new container.
+2026-Jun-10 09:29:54.998823
+Waiting for the start period (15 seconds) before starting healthcheck.
+2026-Jun-10 09:30:10.895700
+Attempt 1 of 5 | Healthcheck status: "healthy"
+2026-Jun-10 09:30:10.906526
+Healthcheck logs: 
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+Mekteb — Islamska edukativna platforma
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+window.dataLayer = window.dataLayer || [];
+2026-Jun-10 09:30:10.906526
+function gtag(){dataLayer.push(arguments);}
+2026-Jun-10 09:30:10.906526
+gtag('js', new Date());
+2026-Jun-10 09:30:10.906526
+gtag('config', 'G-P10X0MRPDG');
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+Multi-language podrška je PRIVREMENO ISKLJUČENA (samo bosanski).
+2026-Jun-10 09:30:10.906526
+Google Translate widget više se ne učitava. Ostavljamo defenzivni
+2026-Jun-10 09:30:10.906526
+CSS i runtime cookie cleanup ispod jer postojeći produkcijski
+2026-Jun-10 09:30:10.906526
+korisnici mogu imati keširan `googtrans` cookie sa npr. `/bs/en`,
+2026-Jun-10 09:30:10.906526
+što bi bez čišćenja prikazivalo prevedeni sadržaj sve dok ne
+2026-Jun-10 09:30:10.906526
+isteknu cookie/cache. Cleanup pokreće context/language.tsx
+2026-Jun-10 09:30:10.906526
+odmah na mount.
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+Kad budemo vraćali jezike, vrati Google Translate  i
+2026-Jun-10 09:30:10.906526
+`googleTranslateElementInit` ispod (vidi git history).
+2026-Jun-10 09:30:10.906526
+-->
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+/* Defenzivno: ako Google Translate ipak učita (stari SW cache, browser
+2026-Jun-10 09:30:10.906526
+extension, itd.), traka i tooltip ostaju skriveni dok korisnik ne
+2026-Jun-10 09:30:10.906526
+dobije novi build. */
+2026-Jun-10 09:30:10.906526
+iframe.goog-te-banner-frame,
+2026-Jun-10 09:30:10.906526
+iframe.skiptranslate,
+2026-Jun-10 09:30:10.906526
+.goog-te-banner-frame.skiptranslate,
+2026-Jun-10 09:30:10.906526
+.goog-te-banner-frame {
+2026-Jun-10 09:30:10.906526
+display: none !important;
+2026-Jun-10 09:30:10.906526
+visibility: hidden !important;
+2026-Jun-10 09:30:10.906526
+height: 0 !important;
+2026-Jun-10 09:30:10.906526
+border: 0 !important;
+2026-Jun-10 09:30:10.906526
+position: absolute !important;
+2026-Jun-10 09:30:10.906526
+top: -9999px !important;
+2026-Jun-10 09:30:10.906526
+left: -9999px !important;
+2026-Jun-10 09:30:10.906526
+z-index: -1 !important;
+2026-Jun-10 09:30:10.906526
+}
+2026-Jun-10 09:30:10.906526
+.goog-tooltip,
+2026-Jun-10 09:30:10.906526
+.goog-tooltip:hover,
+2026-Jun-10 09:30:10.906526
+.goog-text-highlight {
+2026-Jun-10 09:30:10.906526
+display: none !important;
+2026-Jun-10 09:30:10.906526
+background: transparent !important;
+2026-Jun-10 09:30:10.906526
+box-shadow: none !important;
+2026-Jun-10 09:30:10.906526
+}
+2026-Jun-10 09:30:10.906526
+body {
+2026-Jun-10 09:30:10.906526
+top: 0 !important;
+2026-Jun-10 09:30:10.906526
+margin-top: 0 !important;
+2026-Jun-10 09:30:10.906526
+}
+2026-Jun-10 09:30:10.906526
+#google_translate_element {
+2026-Jun-10 09:30:10.906526
+display: none !important;
+2026-Jun-10 09:30:10.906526
+}
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+2026-Jun-10 09:30:10.906526
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+2026-Jun-10 09:30:10.906526
+(function(){
+2026-Jun-10 09:30:10.906526
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+2026-Jun-10 09:30:10.906526
+s1.asy... | Return code: 0
+2026-Jun-10 09:30:10.920900
+New container is healthy.
+2026-Jun-10 09:30:10.930394
+Removing old containers.
+2026-Jun-10 09:30:42.469979
+Rolling update completed.
+2026-Jun-10 09:30:43.650851
+Gracefully shutting down build container: wkggkg8wco0sgccc8s0wksss
