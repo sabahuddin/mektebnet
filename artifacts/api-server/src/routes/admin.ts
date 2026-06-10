@@ -2702,9 +2702,13 @@ router.get("/analytics", async (req, res) => {
     }).from(posjeteTable)
       .where(and(
         gte(posjeteTable.createdAt, windowStart),
-        sql`${posjeteTable.path} <> '/healthz'`,
-        sql`${posjeteTable.path} not like '/wp-json/%'`,
-        sql`${posjeteTable.path} not like '/api/%'`,
+        sql`split_part(${posjeteTable.path}, '/', 2) = any(array[
+          '', 'vodic', 'login', 'registracija', 'zaboravljena-sifra', 'reset-sifra',
+          'arapsko-pismo', 'lesson', 'karta-harfova', 'napredak',
+          'ilmihal', 'nivo1-mapa', 'nivo2-mapa', 'nivo3-mapa', 'nivo2', 'medaljon', 'krunisanje',
+          'kvizovi', 'citaonica', 'kuran', 'roditelj', 'ucenik', 'igrice',
+          'popravi-sace', 'misije', 'poruke', 'admin', 'muallim'
+        ])`,
       ))
       .groupBy(posjeteTable.path)
       .orderBy(sql`count(*) desc`)
