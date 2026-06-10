@@ -12,6 +12,7 @@ import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
 import { installAudioMute, isAudioMuted, setAudioMuted, subscribeAudioMuted } from "@/lib/audio-mute";
 import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
+import { TrialBanner } from "@/components/trial-banner";
 
 /** Inicijali iz displayName-a, max 2 slova (npr. "Tarik Avdić" → "TA"). */
 function getInitials(name?: string | null): string {
@@ -394,6 +395,8 @@ export function Layout({ children }: LayoutProps) {
           )}
         </AnimatePresence>
       </header>
+
+      <TrialBanner />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8">
         {children}

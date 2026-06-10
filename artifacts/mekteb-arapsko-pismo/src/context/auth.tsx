@@ -8,6 +8,10 @@ export interface AuthUser {
   displayName: string;
   role: "admin" | "muallim" | "ucenik" | "roditelj";
   email?: string;
+  /** Da li je admin odobrio pretplatu. Kada je true, baner probnog perioda nestaje. */
+  isActive?: boolean;
+  /** ISO datum do kojeg traje 7-dnevni probni period (null nakon aktivacije). */
+  trialUntil?: string | null;
 }
 
 interface AuthContextType {
@@ -39,6 +43,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(parsedUser);
         // Restore push alias za već-prijavljenog korisnika (npr. nakon refresh-a)
         loginPushUser(parsedUser.id).catch(() => {});
+        // Osvježi status sa servera (isActive/trialUntil/uloga) — npr. admin je
+        // u međuvremenu odobrio pretplatu, pa baner probnog perioda treba
+        // nestati bez ponovne prijave. Mrežnu/auth grešku tiho ignorišemo.
+        apiRequest<AuthUser>("GET", "/auth/me", undefined, storedToken)
+          .then((fresh) => {
+            const merged = { ...parsedUser, ...fresh };
+            setUser(merged);
+            localStorage.setItem(USER_KEY, JSON.stringify(merged));
+          })
+          .catch((err) => {
+            // Token istekao/nevažeći ili probni period istekao (401/403) →
+            // očisti lokalni auth state da UI ne tvrdi da smo prijavljeni dok
+            // API odbija. Mrežne/privremene greške tiho ignorišemo.
+            const status = (err as { status?: number })?.status;
+            if (status === 401 || status === 403) {
+              localStorage.removeItem(TOKEN_KEY);
+              localStorage.removeItem(USER_KEY);
+              setToken(null);
+              setUser(null);
+            }
+          });
       } catch {}
     }
     setIsLoading(false);

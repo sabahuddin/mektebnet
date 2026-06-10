@@ -112,6 +112,8 @@ router.post("/login", async (req, res) => {
         displayName: user.displayName,
         role: user.role,
         email: user.email,
+        isActive: user.isActive,
+        trialUntil: user.trialUntil ? user.trialUntil.toISOString() : null,
       },
     });
   } catch (err) {
@@ -343,6 +345,8 @@ router.get("/me", requireAuth, async (req, res) => {
       displayName: user.displayName,
       role: user.role,
       email: user.email,
+      isActive: user.isActive,
+      trialUntil: user.trialUntil ? user.trialUntil.toISOString() : null,
     });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
