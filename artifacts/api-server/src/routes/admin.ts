@@ -2677,7 +2677,7 @@ router.get("/analytics", async (req, res) => {
       country: posjeteTable.country,
       broj: sql<number>`count(*)::int`,
     }).from(posjeteTable)
-      .where(and(gte(posjeteTable.createdAt, windowStart), isNotNull(posjeteTable.country)))
+      .where(and(gte(posjeteTable.createdAt, windowStart), isNotNull(posjeteTable.country), sql`${posjeteTable.country} <> 'Local'`))
       .groupBy(posjeteTable.country)
       .orderBy(sql`count(*) desc`)
       .limit(20),
@@ -2700,7 +2700,12 @@ router.get("/analytics", async (req, res) => {
       path: posjeteTable.path,
       broj: sql<number>`count(*)::int`,
     }).from(posjeteTable)
-      .where(gte(posjeteTable.createdAt, windowStart))
+      .where(and(
+        gte(posjeteTable.createdAt, windowStart),
+        sql`${posjeteTable.path} <> '/healthz'`,
+        sql`${posjeteTable.path} not like '/wp-json/%'`,
+        sql`${posjeteTable.path} not like '/api/%'`,
+      ))
       .groupBy(posjeteTable.path)
       .orderBy(sql`count(*) desc`)
       .limit(8),
@@ -2809,7 +2814,7 @@ router.get("/online", async (_req, res) => {
       city: posjeteTable.city,
       broj: sql<number>`count(distinct ${posjeteTable.ip})::int`,
     }).from(posjeteTable)
-      .where(gte(posjeteTable.createdAt, petMinutaPrije))
+      .where(and(gte(posjeteTable.createdAt, petMinutaPrije), sql`${posjeteTable.country} is distinct from 'Local'`))
       .groupBy(posjeteTable.country, posjeteTable.city)
       .orderBy(sql`count(distinct ${posjeteTable.ip}) desc`)
       .limit(50);

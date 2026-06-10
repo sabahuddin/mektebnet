@@ -2025,7 +2025,7 @@ export default function AdminPage() {
                       : "bg-white text-foreground border-border/60 hover:bg-muted/50"
                   }`}
                 >
-                  {PERIOD_LABELS[p]}
+                  {t(PERIOD_LABELS[p])}
                 </button>
               ))}
             </div>
@@ -2072,7 +2072,7 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <TrendingUp className="w-5 h-5 text-teal-600" /> {t("Posjete ({period})", { period: PERIOD_LABELS[analyticsPeriod].toLowerCase() })}
+                      <TrendingUp className="w-5 h-5 text-teal-600" /> {t("Posjete ({period})", { period: t(PERIOD_LABELS[analyticsPeriod]).toLowerCase() })}
                     </h3>
                     {analytics.aktivnostPosmjenama.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>
@@ -2091,7 +2091,7 @@ export default function AdminPage() {
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <Users className="w-5 h-5 text-blue-600" /> {t("Nove registracije ({period})", { period: PERIOD_LABELS[analyticsPeriod].toLowerCase() })}
+                      <Users className="w-5 h-5 text-blue-600" /> {t("Nove registracije ({period})", { period: t(PERIOD_LABELS[analyticsPeriod]).toLowerCase() })}
                     </h3>
                     {analytics.registracijePoMjesecu.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>

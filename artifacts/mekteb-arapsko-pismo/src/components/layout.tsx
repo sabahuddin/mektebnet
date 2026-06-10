@@ -170,7 +170,7 @@ export function Layout({ children }: LayoutProps) {
   const mainNavLinks: NavLink[] = [
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
-    { href: "/kuran", label: "Kur'an", icon: BookA },
+    { href: "/kuran", label: t("Kur'an"), icon: BookA },
     { href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle },
     { href: "/citaonica", label: t("nav.citaonica"), icon: Library },
     { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
