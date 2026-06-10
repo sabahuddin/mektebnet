@@ -514,14 +514,14 @@ router.post("/register-ucenik", async (req, res) => {
       return user;
     });
 
-    await sendRegistrationNotification("Učenik (samostalni)", {
+    sendRegistrationNotification("Učenik (samostalni)", {
       "Ime": newUser.displayName,
       "Email": email,
       "Korisničko ime": newUser.username,
       "Godine": godineNum,
       "Grupa": onlineGrupa.naziv,
       "Probni period do": trialUntil.toISOString().slice(0, 10),
-    });
+    }).catch((e) => console.error("[Email] registracija učenik:", e));
 
     res.status(201).json({
       success: true,
@@ -587,13 +587,13 @@ router.post("/register-roditelj-v2", async (req, res) => {
       return user;
     });
 
-    await sendRegistrationNotification("Roditelj", {
+    sendRegistrationNotification("Roditelj", {
       "Ime": parentUser.displayName,
       "Email": email,
       "Korisničko ime": parentUser.username,
       "Broj djece (max)": count,
       "Probni period do": trialUntil.toISOString().slice(0, 10),
-    });
+    }).catch((e) => console.error("[Email] registracija roditelj:", e));
 
     res.status(201).json({
       success: true,
@@ -688,7 +688,8 @@ router.post("/register-mekteb", async (req, res) => {
     Object.entries(data).forEach(([k, v]) => console.log(`${k}: ${v}`));
     console.log("====================================");
 
-    await sendRegistrationNotification("Mekteb", data);
+    sendRegistrationNotification("Mekteb", data)
+      .catch((e) => console.error("[Email] registracija mekteb:", e));
 
     res.status(201).json({
       success: true,
