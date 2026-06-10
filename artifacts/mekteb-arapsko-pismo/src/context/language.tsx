@@ -2,11 +2,6 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { useQueryClient } from "@tanstack/react-query";
 import { translations, COUNTRY_TO_LANG, type Lang, type TranslationTree, getNestedValue } from "@/lib/i18n";
 import { getApiBase } from "@/lib/api";
-import sqFlat from "@/locales/sq.json";
-import deFlat from "@/locales/de.json";
-import enFlat from "@/locales/en.json";
-import trFlat from "@/locales/tr.json";
-import arFlat from "@/locales/ar.json";
 
 interface LanguageContextType {
   lang: Lang;
@@ -27,18 +22,27 @@ const STORAGE_KEY = "mekteb-lang";
 const SUPPORTED: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
 
 /**
- * Flat izvor-tekst rječnici (generisani OpenAI pipelineom). Ključ je ili
- * dotted ključ (npr. "nav.pocetna") ili sam bosanski izvorni tekst
- * (npr. "Dodaj učenika"). Vrijednost je prijevod na taj jezik. Bosanski je
- * IZVOR pa nema svoj flat rječnik — uvijek se čita iz `translations.bs`.
+ * Lazy cache za flat rječnike — učitava se SAMO kad korisnik odabere taj jezik.
+ * Bosanski je izvor, nema flat rječnik. Ostali jezici se code-splituju u
+ * posebne Vite chunkove (~150-190 KB svaki) i skidaju samo na zahtjev.
  */
-const FLAT: Partial<Record<Lang, Record<string, string>>> = {
-  sq: sqFlat as Record<string, string>,
-  de: deFlat as Record<string, string>,
-  en: enFlat as Record<string, string>,
-  tr: trFlat as Record<string, string>,
-  ar: arFlat as Record<string, string>,
-};
+const flatCache: Partial<Record<Lang, Record<string, string>>> = {};
+
+async function loadFlatDict(lang: Lang): Promise<Record<string, string>> {
+  if (flatCache[lang]) return flatCache[lang]!;
+  const mods: Record<string, () => Promise<{ default: Record<string, string> }>> = {
+    sq: () => import("@/locales/sq.json"),
+    de: () => import("@/locales/de.json"),
+    en: () => import("@/locales/en.json"),
+    tr: () => import("@/locales/tr.json"),
+    ar: () => import("@/locales/ar.json"),
+  };
+  const loader = mods[lang];
+  if (!loader) return {};
+  const m = await loader();
+  flatCache[lang] = m.default;
+  return m.default;
+}
 
 /**
  * Brisanje starog googtrans cookie-a iz prethodne (Google Translate) verzije,
@@ -83,14 +87,37 @@ function detectInitialLang(): Lang {
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(detectInitialLang);
   const [overrides, setOverrides] = useState<UiOverrides>({});
+  // Flat rječnik za aktivni jezik — lazy učitan iz posebnog Vite chunka.
+  // Za bosanski je uvijek {} (BS je izvor, nema prijevoda).
+  const [flatDict, setFlatDict] = useState<Record<string, string>>(
+    () => flatCache[detectInitialLang()] ?? {}
+  );
   const queryClient = useQueryClient();
+
+  // Učitaj flat rječnik kad se jezik promijeni (ili na startu za ne-BS lang).
+  useEffect(() => {
+    if (lang === "bs") { setFlatDict({}); return; }
+    let cancelled = false;
+    loadFlatDict(lang).then(dict => {
+      if (!cancelled) setFlatDict(dict);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [lang]);
 
   const reloadUiOverrides = useCallback(async () => {
     try {
       const res = await fetch(`${getApiBase()}/content/ui-prijevodi`);
       if (!res.ok) return;
       const data = (await res.json()) as UiOverrides;
-      setOverrides(data && typeof data === "object" ? data : {});
+      setOverrides(prev => {
+        if (!data || typeof data !== "object") return prev;
+        // Preskači re-render ako su overrides prazni (nema admin izmjena).
+        const hasAny = Object.values(data).some(d => d && Object.keys(d).length > 0);
+        if (!hasAny) return prev;
+        // Preskači re-render ako se sadržaj nije promijenio.
+        if (JSON.stringify(data) === JSON.stringify(prev)) return prev;
+        return data;
+      });
     } catch {
       // mreža/offline — zadrži bundlane prijevode
     }
@@ -134,12 +161,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         if (ovHit) {
           value = ovHit;
         } else {
-          const dict = FLAT[lang];
-          const flatHit = dict?.[key] ?? dict?.[bsValue];
+          // 1) Lazy-učitani flat rječnik za ovaj jezik.
+          const flatHit = flatDict[key] ?? flatDict[bsValue];
           if (flatHit) {
             value = flatHit;
           } else {
-            // Postojeća ručna nested struktura (de/en/tr/ar).
+            // 2) Postojeća ručna nested struktura (de/en/tr/ar) kao zadnji fallback.
             const nested = getNestedValue(
               (translations as Record<string, unknown>)[lang] ?? {},
               key,
@@ -156,7 +183,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       }
       return value;
     },
-    [lang, overrides],
+    [lang, overrides, flatDict],
   );
 
   useEffect(() => {
