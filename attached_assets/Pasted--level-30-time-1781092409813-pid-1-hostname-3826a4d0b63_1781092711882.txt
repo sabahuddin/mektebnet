@@ -1,0 +1,74 @@
+{"level":30,"time":1781092409813,"pid":1,"hostname":"3826a4d0b63f","req":{"id":207,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":16,"msg":"request completed"}
+{"level":30,"time":1781092410112,"pid":1,"hostname":"3826a4d0b63f","req":{"id":209,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092411332,"pid":1,"hostname":"3826a4d0b63f","req":{"id":211,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":6,"msg":"request completed"}
+{"level":30,"time":1781092411336,"pid":1,"hostname":"3826a4d0b63f","req":{"id":210,"method":"GET","url":"/api/admin/korisnici"},"res":{"statusCode":200},"responseTime":12,"msg":"request completed"}
+{"level":30,"time":1781092411342,"pid":1,"hostname":"3826a4d0b63f","req":{"id":213,"method":"GET","url":"/api/admin/muallim-profili"},"res":{"statusCode":200},"responseTime":5,"msg":"request completed"}
+{"level":30,"time":1781092411346,"pid":1,"hostname":"3826a4d0b63f","req":{"id":216,"method":"GET","url":"/api/admin/mektebi"},"res":{"statusCode":200},"responseTime":3,"msg":"request completed"}
+{"level":30,"time":1781092411346,"pid":1,"hostname":"3826a4d0b63f","req":{"id":214,"method":"GET","url":"/api/admin/grupe-all"},"res":{"statusCode":304},"responseTime":7,"msg":"request completed"}
+{"level":30,"time":1781092411361,"pid":1,"hostname":"3826a4d0b63f","req":{"id":212,"method":"GET","url":"/api/admin/statistike"},"res":{"statusCode":200},"responseTime":34,"msg":"request completed"}
+{"level":30,"time":1781092411377,"pid":1,"hostname":"3826a4d0b63f","req":{"id":215,"method":"GET","url":"/api/admin/muallim-pregled"},"res":{"statusCode":200},"responseTime":37,"msg":"request completed"}
+{"level":30,"time":1781092420182,"pid":1,"hostname":"3826a4d0b63f","req":{"id":217,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092420685,"pid":1,"hostname":"3826a4d0b63f","req":{"id":218,"method":"POST","url":"/api/auth/login"},"res":{"statusCode":401},"responseTime":101,"msg":"request completed"}
+{"level":30,"time":1781092430252,"pid":1,"hostname":"3826a4d0b63f","req":{"id":219,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1781092440310,"pid":1,"hostname":"3826a4d0b63f","req":{"id":220,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092441358,"pid":1,"hostname":"3826a4d0b63f","req":{"id":221,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":20,"msg":"request completed"}
+{"level":30,"time":1781092450388,"pid":1,"hostname":"3826a4d0b63f","req":{"id":222,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092450778,"pid":1,"hostname":"3826a4d0b63f","req":{"id":223,"method":"POST","url":"/api/auth/login"},"res":{"statusCode":401},"responseTime":109,"msg":"request completed"}
+{"level":30,"time":1781092453614,"pid":1,"hostname":"3826a4d0b63f","req":{"id":224,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":3,"msg":"request completed"}
+{"level":30,"time":1781092460465,"pid":1,"hostname":"3826a4d0b63f","req":{"id":225,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092469842,"pid":1,"hostname":"3826a4d0b63f","req":{"id":226,"method":"POST","url":"/api/aktivnost/heartbeat"},"res":{"statusCode":200},"responseTime":45,"msg":"request completed"}
+{"level":30,"time":1781092470544,"pid":1,"hostname":"3826a4d0b63f","req":{"id":227,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092471330,"pid":1,"hostname":"3826a4d0b63f","req":{"id":228,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":5,"msg":"request completed"}
+{"level":30,"time":1781092474341,"pid":1,"hostname":"3826a4d0b63f","req":{"id":229,"method":"POST","url":"/xmlrpc.php"},"res":{"statusCode":404},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092480625,"pid":1,"hostname":"3826a4d0b63f","req":{"id":230,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092490705,"pid":1,"hostname":"3826a4d0b63f","req":{"id":231,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092499492,"pid":1,"hostname":"3826a4d0b63f","req":{"id":232,"method":"GET","url":"/vaktija/announcements.json"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092500777,"pid":1,"hostname":"3826a4d0b63f","req":{"id":233,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1781092501423,"pid":1,"hostname":"3826a4d0b63f","req":{"id":234,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":22,"msg":"request completed"}
+{"level":30,"time":1781092507449,"pid":1,"hostname":"3826a4d0b63f","req":{"id":235,"method":"POST","url":"/api/auth/login"},"res":{"statusCode":401},"responseTime":106,"msg":"request completed"}
+{"level":30,"time":1781092510126,"pid":1,"hostname":"3826a4d0b63f","req":{"id":236,"method":"GET","url":"/vaktija/announcements2.json"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092510860,"pid":1,"hostname":"3826a4d0b63f","req":{"id":237,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092513590,"pid":1,"hostname":"3826a4d0b63f","req":{"id":238,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092517856,"pid":1,"hostname":"3826a4d0b63f","req":{"id":239,"method":"POST","url":"/api/auth/forgot-password"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092520905,"pid":1,"hostname":"3826a4d0b63f","req":{"id":240,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":0,"msg":"request completed"}
+{"level":30,"time":1781092529807,"pid":1,"hostname":"3826a4d0b63f","req":{"id":241,"method":"POST","url":"/api/aktivnost/heartbeat"},"res":{"statusCode":200},"responseTime":18,"msg":"request completed"}
+{"level":30,"time":1781092530968,"pid":1,"hostname":"3826a4d0b63f","req":{"id":242,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092531328,"pid":1,"hostname":"3826a4d0b63f","req":{"id":243,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":4,"msg":"request completed"}
+{"level":30,"time":1781092541016,"pid":1,"hostname":"3826a4d0b63f","req":{"id":244,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":4,"msg":"request completed"}
+{"level":30,"time":1781092547240,"pid":1,"hostname":"3826a4d0b63f","req":{"id":245,"method":"GET","url":"/.well-known/assetlinks.json"},"res":{"statusCode":200},"responseTime":4,"msg":"request completed"}
+{"level":30,"time":1781092547248,"pid":1,"hostname":"3826a4d0b63f","req":{"id":246,"method":"GET","url":"/.well-known/assetlinks.json"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092551087,"pid":1,"hostname":"3826a4d0b63f","req":{"id":247,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092561147,"pid":1,"hostname":"3826a4d0b63f","req":{"id":248,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092561342,"pid":1,"hostname":"3826a4d0b63f","req":{"id":249,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":17,"msg":"request completed"}
+{"level":30,"time":1781092571219,"pid":1,"hostname":"3826a4d0b63f","req":{"id":250,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092573609,"pid":1,"hostname":"3826a4d0b63f","req":{"id":251,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":19,"msg":"request completed"}
+{"level":30,"time":1781092581296,"pid":1,"hostname":"3826a4d0b63f","req":{"id":252,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092589825,"pid":1,"hostname":"3826a4d0b63f","req":{"id":253,"method":"POST","url":"/api/aktivnost/heartbeat"},"res":{"statusCode":200},"responseTime":18,"msg":"request completed"}
+{"level":30,"time":1781092591325,"pid":1,"hostname":"3826a4d0b63f","req":{"id":254,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":3,"msg":"request completed"}
+{"level":30,"time":1781092591374,"pid":1,"hostname":"3826a4d0b63f","req":{"id":255,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092601464,"pid":1,"hostname":"3826a4d0b63f","req":{"id":256,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092611546,"pid":1,"hostname":"3826a4d0b63f","req":{"id":257,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092621379,"pid":1,"hostname":"3826a4d0b63f","req":{"id":258,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":10,"msg":"request completed"}
+{"level":30,"time":1781092621619,"pid":1,"hostname":"3826a4d0b63f","req":{"id":259,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092631687,"pid":1,"hostname":"3826a4d0b63f","req":{"id":260,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092633611,"pid":1,"hostname":"3826a4d0b63f","req":{"id":261,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":19,"msg":"request completed"}
+{"level":30,"time":1781092641769,"pid":1,"hostname":"3826a4d0b63f","req":{"id":262,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092649822,"pid":1,"hostname":"3826a4d0b63f","req":{"id":263,"method":"POST","url":"/api/aktivnost/heartbeat"},"res":{"statusCode":200},"responseTime":19,"msg":"request completed"}
+{"level":30,"time":1781092651330,"pid":1,"hostname":"3826a4d0b63f","req":{"id":264,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":4,"msg":"request completed"}
+{"level":30,"time":1781092651849,"pid":1,"hostname":"3826a4d0b63f","req":{"id":265,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092661928,"pid":1,"hostname":"3826a4d0b63f","req":{"id":266,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092672013,"pid":1,"hostname":"3826a4d0b63f","req":{"id":267,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092681388,"pid":1,"hostname":"3826a4d0b63f","req":{"id":268,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":22,"msg":"request completed"}
+{"level":30,"time":1781092682077,"pid":1,"hostname":"3826a4d0b63f","req":{"id":269,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+{"level":30,"time":1781092692156,"pid":1,"hostname":"3826a4d0b63f","req":{"id":270,"method":"GET","url":"/healthz"},"res":{"statusCode":200},"responseTime":1,"msg":"request completed"}
+{"level":30,"time":1781092693613,"pid":1,"hostname":"3826a4d0b63f","req":{"id":271,"method":"GET","url":"/api/poruke/unread-count"},"res":{"statusCode":304},"responseTime":17,"msg":"request completed"}
+[Email] Failed to send to info@mekteb.net: Error: Connection timeout
+at SMTPConnection._formatError (/app/node_modules/.pnpm/nodemailer@8.0.4/node_modules/nodemailer/lib/smtp-connection/index.js:865:19)
+at SMTPConnection._onError (/app/node_modules/.pnpm/nodemailer@8.0.4/node_modules/nodemailer/lib/smtp-connection/index.js:846:20)
+at SMTPConnection._onConnectionError (/app/node_modules/.pnpm/nodemailer@8.0.4/node_modules/nodemailer/lib/smtp-connection/index.js:383:18)
+at Timeout. (/app/node_modules/.pnpm/nodemailer@8.0.4/node_modules/nodemailer/lib/smtp-connection/index.js:363:18)
+at listOnTimeout (node:internal/timers:605:17)
+at process.processTimers (node:internal/timers:541:7) {
+code: 'ETIMEDOUT',
+command: 'CONN'
+}
