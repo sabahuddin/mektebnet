@@ -388,6 +388,10 @@ export default function MuallimPanel() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [oldPass, setOldPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [passChanging, setPassChanging] = useState(false);
   const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
@@ -805,6 +809,29 @@ export default function MuallimPanel() {
       window.location.reload();
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
     finally { setSavingProfile(false); }
+  }
+
+  async function handleChangePassword() {
+    if (!token) return;
+    if (!oldPass.trim() || !newPass.trim() || !confirmPass.trim()) {
+      toast({ title: t("Greška"), description: t("Popunite sva polja"), variant: "destructive" }); return;
+    }
+    if (newPass !== confirmPass) {
+      toast({ title: t("Greška"), description: t("Šifre se ne podudaraju"), variant: "destructive" }); return;
+    }
+    if (newPass.length < 6) {
+      toast({ title: t("Greška"), description: t("Nova šifra mora imati najmanje 6 znakova"), variant: "destructive" }); return;
+    }
+    setPassChanging(true);
+    try {
+      await apiRequest("PUT", "/muallim/profil/password", { currentPassword: oldPass, newPassword: newPass }, token);
+      toast({ title: t("Šifra promijenjena"), description: t("Nova šifra je uspješno sačuvana.") });
+      setOldPass(""); setNewPass(""); setConfirmPass("");
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Promjena šifre nije uspjela"), variant: "destructive" });
+    } finally {
+      setPassChanging(false);
+    }
   }
 
   async function exportExcel(grupaId: number) {
@@ -3006,6 +3033,53 @@ export default function MuallimPanel() {
                     <Button onClick={saveProfile} disabled={savingProfile || !editDisplayName.trim()} className="rounded-xl" data-testid="btn-sacuvaj-profil">
                       {savingProfile ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
                       {t("Sačuvaj promjene")}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-border/50 rounded-2xl p-5">
+                  <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
+                    <KeyRound className="w-5 h-5 text-primary" /> {t("Promjena šifre")}
+                  </h3>
+                  <div className="space-y-3 max-w-md">
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Trenutna šifra")}</label>
+                      <input
+                        type="password"
+                        value={oldPass}
+                        onChange={e => setOldPass(e.target.value)}
+                        className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        autoComplete="current-password"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Nova šifra")}</label>
+                      <input
+                        type="password"
+                        value={newPass}
+                        onChange={e => setNewPass(e.target.value)}
+                        className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        autoComplete="new-password"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">{t("Minimalno 6 znakova")}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Ponovi novu šifru")}</label>
+                      <input
+                        type="password"
+                        value={confirmPass}
+                        onChange={e => setConfirmPass(e.target.value)}
+                        className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleChangePassword}
+                      disabled={passChanging || !oldPass || !newPass || !confirmPass}
+                      className="rounded-xl"
+                    >
+                      {passChanging ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <KeyRound className="w-4 h-4 mr-1" />}
+                      {t("Promijeni šifru")}
                     </Button>
                   </div>
                 </div>

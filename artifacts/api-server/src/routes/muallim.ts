@@ -1978,6 +1978,30 @@ router.put("/profil", async (req, res) => {
   }
 });
 
+// PUT /api/muallim/profil/password — promjena šifre (svaki muallim za sebe).
+router.put("/profil/password", async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: "Popunite sva polja" }); return;
+    }
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: "Nova šifra mora imati najmanje 6 znakova" }); return;
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (!user) { res.status(404).json({ error: "Korisnik nije pronađen" }); return; }
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) { res.status(400).json({ error: "Trenutna šifra nije ispravna" }); return; }
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, userId));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // ── STATISTIKA GRUPE ─────────────────────────────────────────────────────────
 
 async function getGrupaFullStats(grupaId: number) {
