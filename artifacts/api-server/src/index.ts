@@ -712,22 +712,31 @@ async function runDataBootstrap() {
     logger.error({ err: e }, "Čitaonica cleanup failed (non-fatal)");
   }
 
-  // NASLOVI KNJIGA — UJEDNAČAVANJE "a.s." (idempotentno): neki naslovi imaju
-  // arapski "عليه السلام", a neki skraćenicu "a.s.". User traži svuda "a.s.".
-  // Zamijeni arapski alejhiselam (عليه/عليهم/عليها + السلام) sa "a.s." i počisti
-  // eventualne duple razmake. Ponovno pokretanje ne mijenja ništa (više nema arapskog).
+  // NASLOVI KNJIGA — UJEDNAČAVANJE "a.s." (idempotentno): vjerovjesnici su
+  // "Ime, a.s." ali Muhammed koristi arapski simbol ﷺ ("Muhammed ﷺ – ...").
+  // User traži da SVE bude "a.s.". Jedinstvena regex hvata sve počasne oblike:
+  //   - ﷺ (U+FDFA salawat ligatura),
+  //   - pisani salawat "صلى الله عليه وسلم",
+  //   - pisani salam "عليه/عليهم/عليها/عليهما السلام",
+  // i (uz eventualni vodeći zarez/razmak) zamjenjuje ih s ", a.s." → "Muhammed, a.s.".
+  // Postojeći "Ime, a.s." nemaju arapski pa ostaju netaknuti (idempotentno).
   try {
     await db.execute(sql`
       UPDATE knjige
-      SET naslov = regexp_replace(naslov, 'عليه(م|ا)?\\s*السلام', 'a.s.', 'g')
-      WHERE naslov LIKE '%السلام%';
+      SET naslov = regexp_replace(
+        naslov,
+        '[,\\s]*(ﷺ|صلى\\s+الله\\s+عليه\\s+وسلم|عليه(م|ا|ها|هما)?\\s+السلام)',
+        ', a.s.',
+        'g'
+      )
+      WHERE naslov ~ 'ﷺ|السلام|وسلم';
     `);
     await db.execute(sql`
       UPDATE knjige
       SET naslov = btrim(regexp_replace(naslov, '\\s{2,}', ' ', 'g'))
       WHERE naslov LIKE '%  %';
     `);
-    logger.info("Naslovi knjiga: arapski 'alejhiselam' ujednačen na 'a.s.' (idempotentno)");
+    logger.info("Naslovi knjiga: arapski počasni oblici (ﷺ/salawat/salam) ujednačeni na 'a.s.' (idempotentno)");
   } catch (e) {
     logger.error({ err: e }, "Naslovi knjiga a.s. normalizacija failed (non-fatal)");
   }
