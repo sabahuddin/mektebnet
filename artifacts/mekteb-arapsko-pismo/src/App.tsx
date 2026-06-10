@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/auth";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
-import { LanguageProvider } from "@/context/language";
+import { LanguageProvider, useLanguage } from "@/context/language";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { PushPrompt } from "@/components/push-prompt";
 import { InstallPrompt } from "@/components/install-prompt";
@@ -210,6 +210,26 @@ function HeartbeatMount() {
   return null;
 }
 
+/**
+ * Sadržaj iz baze (lekcije, kvizovi, knjige, rječnik, igre...) dohvaća se preko
+ * `apiRequest` u `useEffect`-ima koji ovise o ID-u resursa, a NE o jeziku — pa
+ * promjena jezika ne bi ponovo dohvatila već učitan sadržaj (UI tekstovi se
+ * mijenjaju reaktivno preko `t()`, ali DB sadržaj bi ostao na starom jeziku).
+ * To je pravilo nastanka "miješanja" (npr. njemački meni + albanska lekcija).
+ *
+ * Rješenje: kompletno stablo stranica se REMOUNTUJE kad se jezik promijeni
+ * (`key={lang}`), pa svi `useEffect` fetcheri ponovo opale s novim `X-Lang`
+ * headerom. Tako je sadržaj uvijek u jednom, trenutno odabranom jeziku.
+ */
+function AppRoutes() {
+  const { lang } = useLanguage();
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <Router key={lang} />
+    </WouterRouter>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -217,9 +237,7 @@ function App() {
         <AuthProvider>
           <TooltipProvider>
             <HeartbeatMount />
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
+            <AppRoutes />
             <OfflineIndicator />
             <PushPrompt />
             <InstallPrompt />
