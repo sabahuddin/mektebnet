@@ -65,7 +65,7 @@ export function AudioBar({
         >
           {RECITERS.map((r) => (
             <option key={r.id} value={r.id}>
-              {r.label}
+              {t(r.label)}
             </option>
           ))}
         </select>

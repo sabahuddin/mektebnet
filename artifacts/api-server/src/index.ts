@@ -712,6 +712,26 @@ async function runDataBootstrap() {
     logger.error({ err: e }, "Čitaonica cleanup failed (non-fatal)");
   }
 
+  // NASLOVI KNJIGA — UJEDNAČAVANJE "a.s." (idempotentno): neki naslovi imaju
+  // arapski "عليه السلام", a neki skraćenicu "a.s.". User traži svuda "a.s.".
+  // Zamijeni arapski alejhiselam (عليه/عليهم/عليها + السلام) sa "a.s." i počisti
+  // eventualne duple razmake. Ponovno pokretanje ne mijenja ništa (više nema arapskog).
+  try {
+    await db.execute(sql`
+      UPDATE knjige
+      SET naslov = regexp_replace(naslov, 'عليه(م|ا)?\\s*السلام', 'a.s.', 'g')
+      WHERE naslov LIKE '%السلام%';
+    `);
+    await db.execute(sql`
+      UPDATE knjige
+      SET naslov = btrim(regexp_replace(naslov, '\\s{2,}', ' ', 'g'))
+      WHERE naslov LIKE '%  %';
+    `);
+    logger.info("Naslovi knjiga: arapski 'alejhiselam' ujednačen na 'a.s.' (idempotentno)");
+  } catch (e) {
+    logger.error({ err: e }, "Naslovi knjiga a.s. normalizacija failed (non-fatal)");
+  }
+
   // KATEGORIJE ČITAONICE BOOTSTRAP (idempotentno):
   //   1. CREATE TABLE IF NOT EXISTS — admin-definisane grupe priča.
   //      `knjige.kategorija` referencira `kategorije_knjige.slug` (nema FK constrainta;
