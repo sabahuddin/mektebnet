@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload
+  Heart, School, Copy, KeyRound, Upload, Pencil
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -360,6 +360,10 @@ export default function MuallimPanel() {
   const [novMuallimIme, setNovMuallimIme] = useState("");
   const [kreiranMuallim, setKreiranMuallim] = useState<{ displayName: string; username: string; generatedPassword: string } | null>(null);
   const [muallimSaving, setMuallimSaving] = useState(false);
+  const [editingMuallimId, setEditingMuallimId] = useState<number | null>(null);
+  const [editMuallimName, setEditMuallimName] = useState("");
+  const [editMuallimSaving, setEditMuallimSaving] = useState(false);
+  const [editMuallimNewPass, setEditMuallimNewPass] = useState<string | null>(null);
   const [mektebStatsAll, setMektebStatsAll] = useState<MektebStatsAll | null>(null);
   const [mektebDokumenti, setMektebDokumenti] = useState<MektebDokument[] | null>(null);
   const [dokNaziv, setDokNaziv] = useState("");
@@ -956,6 +960,28 @@ export default function MuallimPanel() {
       toast({ title: t("Obrisano"), description: t('Muallim "{ime}" je obrisan.', { ime }) });
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće obrisati muallima"), variant: "destructive" });
+    }
+  };
+
+  const handleEditMuallima = async (userId: number, opts: { displayName?: string; resetPassword?: boolean }) => {
+    if (!token) return;
+    setEditMuallimSaving(true);
+    try {
+      const result = await apiRequest<{ success: boolean; displayName: string; newPassword?: string }>(
+        "PUT", `/muallim/mekteb/muallimi/${userId}`, opts, token
+      );
+      const lista = await apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token);
+      setMektebMuallimi(lista);
+      if (result.newPassword) {
+        setEditMuallimNewPass(result.newPassword);
+      } else {
+        toast({ title: t("Sačuvano"), description: t("Podaci muallima su ažurirani.") });
+        setEditingMuallimId(null);
+      }
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Izmjena nije uspjela"), variant: "destructive" });
+    } finally {
+      setEditMuallimSaving(false);
     }
   };
 
@@ -1962,19 +1988,68 @@ export default function MuallimPanel() {
                     <div className="text-center py-10 text-muted-foreground text-sm">{t("Još nema muallima.")}</div>
                   ) : (
                     mektebMuallimi.map(m => (
-                      <div key={m.userId} className="bg-white rounded-2xl border border-border/50 p-4 flex items-center gap-3" data-testid={`muallim-red-${m.userId}`}>
-                        <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-secondary" /></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-sm text-foreground flex items-center gap-2">
-                            {m.displayName}
-                            {m.isGlavni && <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-extrabold">{t("GLAVNI")}</span>}
+                      <div key={m.userId} className="bg-white rounded-2xl border border-border/50 overflow-hidden" data-testid={`muallim-red-${m.userId}`}>
+                        {editingMuallimId === m.userId ? (
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <GraduationCap className="w-4 h-4 text-secondary" />
+                              <span className="text-xs text-muted-foreground font-medium">{m.username}</span>
+                            </div>
+                            {editMuallimNewPass ? (
+                              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+                                <div className="text-xs text-emerald-700 font-bold">{t("Nova šifra — zapišite")}</div>
+                                <div className="font-mono font-bold text-foreground text-base">{editMuallimNewPass}</div>
+                                <button
+                                  onClick={() => { navigator.clipboard?.writeText(editMuallimNewPass!); toast({ title: t("Kopirano") }); }}
+                                  className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline"
+                                >
+                                  <Copy className="w-3 h-3" /> {t("Kopiraj")}
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <input
+                                  value={editMuallimName}
+                                  onChange={e => setEditMuallimName(e.target.value)}
+                                  className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                  placeholder={t("Ime i prezime")}
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                  <Button size="sm" onClick={() => handleEditMuallima(m.userId, { displayName: editMuallimName })} disabled={editMuallimSaving || !editMuallimName.trim()} className="rounded-xl text-xs h-8">
+                                    {editMuallimSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                                    {t("Sačuvaj ime")}
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => handleEditMuallima(m.userId, { resetPassword: true })} disabled={editMuallimSaving} className="rounded-xl text-xs h-8 border-amber-300 text-amber-700 hover:bg-amber-50">
+                                    <KeyRound className="w-3.5 h-3.5 mr-1" /> {t("Resetuj šifru")}
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                            <button onClick={() => { setEditingMuallimId(null); setEditMuallimNewPass(null); }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                              <X className="w-3 h-3" /> {t("Zatvori")}
+                            </button>
                           </div>
-                          <div className="text-xs text-muted-foreground">{m.username} · {t("{grupa} grupa · {ucenika} učenika", { grupa: String(m.brojGrupa), ucenika: String(m.brojUcenika) })}</div>
-                        </div>
-                        {!m.isGlavni && (
-                          <button onClick={() => handleObrisiMuallima(m.userId, m.displayName)} className="p-2 rounded-lg text-rose-500 hover:bg-rose-50" title={t("Obriši muallima")} data-testid={`button-obrisi-muallim-${m.userId}`}>
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        ) : (
+                          <div className="p-4 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-secondary" /></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                                {m.displayName}
+                                {m.isGlavni && <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-extrabold">{t("GLAVNI")}</span>}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{m.username} · {t("{grupa} grupa · {ucenika} učenika", { grupa: String(m.brojGrupa), ucenika: String(m.brojUcenika) })}</div>
+                            </div>
+                            {!m.isGlavni && (
+                              <>
+                                <button onClick={() => { setEditingMuallimId(m.userId); setEditMuallimName(m.displayName); setEditMuallimNewPass(null); }} className="p-2 rounded-lg text-primary hover:bg-primary/10" title={t("Uredi muallima")} data-testid={`button-uredi-muallim-${m.userId}`}>
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleObrisiMuallima(m.userId, m.displayName)} className="p-2 rounded-lg text-rose-500 hover:bg-rose-50" title={t("Obriši muallima")} data-testid={`button-obrisi-muallim-${m.userId}`}>
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     ))

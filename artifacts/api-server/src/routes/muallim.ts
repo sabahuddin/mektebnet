@@ -371,6 +371,43 @@ router.delete("/mekteb/muallimi/:id", async (req, res) => {
   }
 });
 
+// PUT /api/muallim/mekteb/muallimi/:id — uredi muallima (glavni only).
+// Body: { displayName?: string, resetPassword?: boolean }
+// Resetovana šifra se vraća JEDNOM u odgovoru — nije pohranjena u čistom tekstu.
+router.put("/mekteb/muallimi/:id", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !ctx.isGlavni) {
+      res.status(403).json({ error: "Samo glavni muallim ima pristup" }); return;
+    }
+    const targetId = parseInt(req.params.id, 10);
+    const [target] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, targetId));
+    if (!target || target.mektebId !== ctx.mektebId) {
+      res.status(404).json({ error: "Muallim nije pronađen u vašem mektebu" }); return;
+    }
+    if (target.isGlavni) {
+      res.status(400).json({ error: "Profil glavnog muallima ne može editovati drugi korisnik" }); return;
+    }
+    const { displayName, resetPassword } = req.body as { displayName?: string; resetPassword?: boolean };
+    const updates: { displayName?: string; passwordHash?: string } = {};
+    if (displayName && displayName.trim().length >= 2) updates.displayName = displayName.trim();
+    let newPassword: string | null = null;
+    if (resetPassword) {
+      const suffix = randomSuffix();
+      newPassword = generateMektebPassword(suffix);
+      updates.passwordHash = await bcrypt.hash(newPassword, 10);
+    }
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: "Nema izmjena za sačuvati" }); return;
+    }
+    const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, targetId)).returning();
+    res.json({ success: true, displayName: updated.displayName, ...(newPassword ? { newPassword } : {}) });
+  } catch (err) {
+    console.error("Mekteb edit muallim error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // GET /api/muallim/mekteb/statistika — zbirna statistika cijelog mekteba kroz
 // SVE muallime (glavni only): ukupno učenika, broj muallima/grupa, prosječno
 // prisustvo, napredak po nivoima, screentime, te usporedba po grupama.
