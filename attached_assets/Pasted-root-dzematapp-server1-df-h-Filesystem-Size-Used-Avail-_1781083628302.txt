@@ -1,0 +1,169 @@
+root@dzematapp-server1:~# df -h
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           775M  2.4M  773M   1% /run
+efivarfs        256K   27K  225K  11% /sys/firmware/efi/efivars
+/dev/sda1       150G   27G  118G  19% /
+tmpfs           3.8G     0  3.8G   0% /dev/shm
+tmpfs           5.0M     0  5.0M   0% /run/lock
+/dev/sda15      253M  146K  252M   1% /boot/efi
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/4aeff7a55bc81b068c613420f440f49ad029143146038b215f334ca5bb38cdf6/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/949ffe243a9243ff57ba8c264fd6b7849edeccda4642d02c952746a34293fda8/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/7ed329fc28f748451cff8bcca8a4e68386ea9311fe54d6e8357644bcc49b17c1/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/5a7a593a81ffab99e1900818999432831d97fd92b901d0b43451a016a06f4c52/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/5baec7f422c6ad54c73e93de374cdc8ba4ecb06523d54d0b0cbb133aaed3a616/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/8910d8a271d0d70c06f19ca12d2afc6162c62d07ca2ce76dee184359d2dd83f1/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/1a7720099d8ddefca64aa7fefa34cabb2259c57e032c958e402bcbfa1876fa5e/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/42d667382428540201d92db15c98683ad45bdb8036768a71dd2f5418387d7126/merged
+tmpfs           775M   12K  775M   1% /run/user/0
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/4fed0e42fb89631d6d406e0266b9473e29554d03fa04fd21bf96746f3d02550d/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/2fc3f265f2a7f31b294ea06e81c68118f21b7c8d74adc870edddf6912bef20b5/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/8d20f2068441a447e18910d87fc282f14056c459bdf803e6fa922cb03c47ba8a/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/1b5f9b2800b672dbb7fe24248e4fd87b57d482b051dbee2e7a4721ecd2dde59b/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/bb04ad45827c7354ab69ae3446761398c5a56ec03e25e80ca89f9e727f862c4d/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/936361aabdc8f0fed961f98fd0cfbc80ed30ef1191992eb13485b943194ab3a7/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/938183f45b93bf4d45db05e5d2c8b8075fb729fb891caa8c4d06160c76027efb/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/03fe1fac0a89463da440bdf90b1f9ad3193d182c20a7c22f6384d4c9586e106a/merged
+overlay         150G   27G  118G  19% /var/lib/docker/overlay2/6e4fb1d40ba5762faa50c495817f056809be653138e66c90e4d52f338ee6278a/merged
+root@dzematapp-server1:~# docker image prune -af
+Deleted Images:
+untagged: nkow4s8o4s88wk48c8kocg48:05c1e3b9012b6280af916c5a1476716204aa8872
+deleted: sha256:083ed339301fe2023815a4200446d28c3aadb5f0a51dce235f285acea14056aa
+deleted: sha256:b8628bb666f2a75bea8abd264fafc57d0297c246b89c136d690af03940f59e4d
+deleted: sha256:c775b9acdb76decfeab34b28c580eca9b8ae2ca9ccf9ca02ad5054446b2a8696
+deleted: sha256:f4a9496efc120007a7586ded50f0b87c10f06c96254258f96ffbcebbea8b0af6
+deleted: sha256:5347007b20b68f8603a7609b4e1d8542eb9732f1a99b43c9ff9177a3ba4371c6
+deleted: sha256:0c2e9bd178122319d29910503f6636fbfb2b7faf9299ce574e7901f2c2c081a6
+untagged: i8w884sgkkgogkwsokcwc0c4:780629ed294f5f8c36e5fee9d6939ccd91807e88
+deleted: sha256:6dab128c5632d283b04269d32a9a721d0961f649d5ac07d44db34415ba9c871a
+untagged: i8w884sgkkgogkwsokcwc0c4:4a3e762ec4bc9c5d56c156caaad39bd5166f5212
+deleted: sha256:bdd9113f4c0335e092024403a695c4c9d8bafb42b016dfd5576c40a4de66733f
+deleted: sha256:71845fd94d72cd4d45669389b5188e6491bd397cb288df20c8eaa349bddd15bb
+deleted: sha256:6957c12369ac9c8288d2e28b27bfc4c63c9391a6a071b370e1c398b09dc86ba1
+deleted: sha256:306ea8cfeea16bcfacdc938ad0bd7aae958ab524c5b07ad4ec40e313aebdb4d4
+deleted: sha256:2d40974a97b758cecc5cc2582a6e318a89d4eba89494318b5a98476321319994
+untagged: i8w884sgkkgogkwsokcwc0c4:8f69939237680db85dece3215a3a4a3454fb6f87
+deleted: sha256:5b6ddd2bd2dd408346d73a813b26b6c9989d3372e2a5a7f6add5d48f3c92efa2
+untagged: i8w884sgkkgogkwsokcwc0c4:d5eb625fd015ecbf044e6d19bbea4654474f5fbc
+deleted: sha256:f5620353aa2d975d803e393428ae58af38b357d1a0785fd17704014acebf30a3
+untagged: ow8kskssg0cgoowggcsowk8c:4c1ac1439ef4af66edee882cb52fcac9bbf7e093
+deleted: sha256:e0cd318b23c3f701f6a7daa7edab6616b5a204f6585a2340e41dfedca45773b5
+deleted: sha256:84a836be8f0afb2f67250b4edecceefa19f98618b447f560cded62df06b609ab
+deleted: sha256:3dff335743fdd165bcdbf25b74e0092703083f8e0cd987fe849ea74b46fd8ec1
+deleted: sha256:02af9e65cc488b31ff3034b8140af12f1f0055935a18f3d7533c6473a0949c2c
+deleted: sha256:c1e107ae910199ca88fd0d36c2abc2c553b922c8c023dc5645663e5a7e4bd86a
+deleted: sha256:53278ca1b85570bd778c8bdee9472b773f1b7e55795b66e10961c3eb5c744ec8
+deleted: sha256:b7a0c765309129894916a050eb20738cb3956165901a6895a9e83224252ff959
+deleted: sha256:014e810202db5cacb75e38aa13ec30ca1c9c8462ddf441cf9db1c6d301cd2089
+deleted: sha256:1edc53b12ea5726436aa258b3fb2856e5e0fe6031173bbcac4e82e91c73be759
+deleted: sha256:bfb5899ddb2d5fc983ecc3f53a9b8c44a0ca8d2fd382357a4111ac166088c849
+deleted: sha256:b626b38835fe52f3e5074bc655a715bb162429b4769b8ffb233910e125edea01
+deleted: sha256:b70c5da616682df93d5c8afe340a8ec265108e16b0467529937ff8378c9ef80b
+deleted: sha256:52004187f52adaecd944c606a2220177d784e0d61d5bccb57ee463ec377d8be3
+deleted: sha256:f1e5f2dbd8e35a09003bb8fbdc22fb530b42ea9257c145935578bdc556e93ab8
+deleted: sha256:47cc1ef118b4f2b5653445abe4831f5a8c621f02c52a39e0afcdaf389ee72897
+untagged: rw8co8swkosc0wo008ckc0w8:65b5bbccc2ada38213c3949eda3a50c1c94dbadb
+deleted: sha256:744b37a27a284ba7d95e499370a03e3c1378c20f7d037a6796a8abebe7040885
+deleted: sha256:39bdef3540619e0abe4a545b0ba469497edd39d74bab0c844b602a1686cd2016
+deleted: sha256:73de9c23112a78b5923d5ce4048a1a0aee84250fd00e63de917bd363eeb64fda
+deleted: sha256:3a3fee6c8bc46383512ff7664d732e4a8d74690cf028cf80583692cb9cc00b94
+deleted: sha256:d267d408f790e86d1d491cc5413ba2aa41c0988c98c390fd533ebe7c69397c70
+deleted: sha256:755b5df900552d2b15b8316613cc7f46e62487228b55384ae0a8b227b749de1b
+deleted: sha256:1dae088be59c5d0945f96a9b9f943e51fa01a0d21970c9bf132aca25ece4fc43
+deleted: sha256:365a9166932ec89cfaf42558eeb7da52116c7a2117ec29fef9ed4f4e07dc5014
+deleted: sha256:4f499198a2715ea93ab696b27feccbd45d1afdf464acaef3656ec78539645ce2
+untagged: ghcr.io/coollabsio/coolify-helper:1.0.12
+untagged: ghcr.io/coollabsio/coolify-helper@sha256:aa6d39275d4a5ca505504cc45786f83b9c135b11c4da6643b9d84f5cacec1e08
+deleted: sha256:8d4fd652c6497d5224179f2978131b596dccde36ebbb3b04145e181d58397f07
+deleted: sha256:d8d593780f83ef4aa7105e48aa9a63253247d87be956b659220a04cc3d496e20
+deleted: sha256:6115771fa63761fa0bbedaa07cb76545b1e0208adb13c7bc0893d74e1c350900
+deleted: sha256:a0d21c618b5d1cb2c7e0d9eb40822b93860293665f9095eb1a40a17660084c72
+deleted: sha256:eea8c6ce369c7a033d4a527a4f308f2ae4e84b8832193aa5125667e5b3d8d1b5
+deleted: sha256:378da509a9c399b9d4a2d68da6613f850f80477ebdd806bd28ca11073568466c
+deleted: sha256:90ae1f4f01112d722b08bd223bdffd394e7fb20f6f8a6c8d2bcc1b1324c45090
+deleted: sha256:f2fbfdf5c554d86ae3957759cd36e91fbcf88277433f3dc0492911abe2ff347a
+untagged: i8w884sgkkgogkwsokcwc0c4:4823ccc61c14481debf8f838da44e475ac623da3
+deleted: sha256:85373eac220a18d5af537256d63ee0ff63e781df8880954ef11da726010058d2
+deleted: sha256:368bab014af598b2aa053080b25d5c73331972f9e78d6ff483b1a9c679954450
+deleted: sha256:fd72c82b5a599d0c2cc4d74395968794eb546e22cee8378807bd2bf030a13bc4
+deleted: sha256:7d35fd4db4fc2458347c981f7ed02e05e32f7c46ba17de4cfdc81d9c1d1b4203
+deleted: sha256:7085a7359ed730054a98f0801ff04e02c87c3a540e16a379f90bd18d8f590d19
+deleted: sha256:b01d57c93d519c0df34bc4321149bc263b170b6d0a4d16cdd88e1fe337351de0
+deleted: sha256:caaf6f97b6e131fe514487a7dd2d4ce8095bee31b2ff7354ce07e9c0c422e41c
+deleted: sha256:b98c9edd9c6b045234df33a312b0436995feea9295847379fd05add9932caf39
+deleted: sha256:9fc4fb263710d507f7c99ab7f6e4b08be729acf4d8fdf61842e5487d6b6764d0
+deleted: sha256:24feabf520860838999acda3d54f7d43d1bbff86371e8e3583b1d27756b9610b
+deleted: sha256:9059cfb72fe5e029779d2391f29b71998aeefb4cdbb1fe879745f957295cff8d
+
+Total reclaimed space: 3.426GB
+root@dzematapp-server1:~# docker builder prune -af
+ID                                              RECLAIMABLE     SIZE            LAST ACCESSED
+cuxl3ycxio8v8uw0ephzx9j2w*                      true            156.1MB         2 hours ago
+ttamno3m2g2x2ock4bh4qkvto                       true    464.2kB         57 minutes ago
+hfu2odf9wdze7s64bejr8f9al*                      true    136.2MB         About an hour ago
+p30jknd2o91x7bhwyyz25l8hy*                      true    3.088kB         About an hour ago
+6q8vd7lnra0460l4te1lq2u84*                      true    0B              2 hours ago
+lcme9vryq9putnyt6cpcsoclj*                      true    136.2MB         2 hours ago
+iqtn6lp7pe9xy8ho8bk6ehn9r*                      true    3.088kB         57 minutes ago
+o294uj0mvwkd2yv986qkg4n5y*                      true    3.088kB         2 hours ago
+96by1de8klunvfcvvo572mdbz*                      true    156.1MB         2 hours ago
+fc44a6xxdfdz67pexcthh90x2                       true    464.2kB         2 hours ago
+zhmlea48cl0n3c63gvkj7vcw3                       true    653.7kB         57 minutes ago
+lclbet007mlwyqxl2jw79hx69*                      true    136.2MB         2 hours ago
+hweb4paazh3prgujqbq6fhrrg                       true    24.03MB         About an hour ago
+r8uk9ne9ku70sh4g1r7j96jen                       true    464.2kB         About an hour ago
+3qchdtgyfjgdtqlad3naegala*                      true    3.088kB         2 hours ago
+smf7mknx9yircstne8guscef3*                      true    156.1MB         About an hour ago
+p3e1thl3m2ede6jkts45o4usn                       true    653.7kB         2 hours ago
+lm4qyyg6f3cczya6o8tu2uob1*                      true    136.2MB         57 minutes ago
+h6uuqyp2qnd19w6nuwjohk82o                       true    24.03MB         2 hours ago
+p78qzlnmayueb3a9j0eg4l0d1*                      true    0B              About an hour ago
+mq8jox66o4nki67e5gsem9kpe                       true    464.2kB         2 hours ago
+tti00lg5din1vndy370s2tlsi*                      true    156.1MB         57 minutes ago
+j2f54qjyzgxzcyruudzy4fp6u*                      true    0B              2 hours ago
+zkx86clmeekmh77sr4fgfg6yl*                      true    0B              57 minutes ago
+r8wjfeqyzkwia5nkq9lquqxf1                       true    24.03MB         57 minutes ago
+yhhyoxri0mtx2bok2kg9ezulp                       true    2.554MB         2 hours ago
+2tolobt4btgclr0xb6aihachz                       true    24.03MB         2 hours ago
+z5byp3t2afrgb39o3uu9s6ojc                       true    129.3MB         57 minutes ago
+irc1s5wng8kprocs40kwk5o4d                       true    653.7kB         About an hour ago
+noh1lyjut7oz45gwttkz4ddn6                       true    2.554MB         About an hour ago
+dgw4b5lsu2uqck05hkpmb5kvy                       true    129.3MB         2 hours ago
+ioaf5tzs7ynvclm331u0oyttf                       true    24.03MB         57 minutes ago
+ec9eow6jh8tognn2cby3y1qhs                       true    2.554MB         2 hours ago
+stmnnb7n4kpkc8hgfhjtm31oy                       true    2.554MB         57 minutes ago
+z4mr4dpkr4l4qbu6qllugx8pi                       true    152.5MB         About an hour ago
+l8wohizz0xpo5ht7f14r6zg67                       true    129.3MB         About an hour ago
+xnyyc0lk6z5bjfspybnv7rayd                       true    653.7kB         2 hours ago
+9fus8h9vyigx3qavjdme7cvbv                       true    152.5MB         2 hours ago
+k6m734tbnmiana4be78j2f6xf                       true    24.03MB         About an hour ago
+wochaa2y99hopb7v61lvt5h5o                       true    152.5MB         57 minutes ago
+hnm7ankuh8l7z985iek4nnqrs                       true    129.3MB         2 hours ago
+s1cpwsnswbsvjzdiqsh5984xi                       true    24.03MB         2 hours ago
+mxndmo7zt3n7b465jqp0h7m42                       true    152.5MB         2 hours ago
+i4ig1g3twas52ldpnnk89tq6g                       true    24.03MB         2 hours ago
+j1rek8x8znwpa1h3any8fmc58                       true    600.3kB         57 minutes ago
+fnc0tflzte34aqk73183pgb57                       true    165.9MB         57 minutes ago
+5h82gscjuxo9xf57imawtgia7                       true    963.5MB         2 hours ago
+qp6z6be7cmrbh1hnfr47620n5                       true    1.579kB         2 hours ago
+zwyc5v72yuqir856cr8i7fsbz                       true    1.338kB         2 hours ago
+yr4cmm6ldlltjlltz56qcem5c                       true    646B            2 hours ago
+v2vvt1j5hb7jkxsukhbsdf9g9                       true    4.47kB          2 hours ago
+a2mbx36xufmzvtjjpi27t2joe                       true    493.8kB         2 hours ago
+nvh2uikou230jqc8qcw3ztxw3                       true    1.338kB         2 hours ago
+rg4byvhxwo2gelgowqy10jm8j                       true    0B              2 hours ago
+mtqyznh58024qy2c14dvqg35g                       true    189B            2 hours ago
+hme8wl5mosxdnavylcgv9wbu8                       true    265B            2 hours ago
+92kau43w0qmococ6addj31f0h                       true    40.3MB          2 hours ago
+osiw71slyqcz7x7l5y4md7ssc                       true    197B            2 hours ago
+ogidsgyv3gyquv0u1efi4shbm                       true    646B            2 hours ago
+gjbvdjsaiwobvljges3q0qqw4                       true    903B            2 hours ago
+petw4mk4xwdcxvbwudhkbu0kb                       true    493.8kB         2 hours ago
+e6b0umjx64yqd8cdm80ltlzbh                       true    0B              2 hours ago
+1onz01sqheyofpyvxfau9u27q                       true    30.4MB          2 hours ago
+qw32juos4g8otsbb96xglhpct                       true    0B              2 hours ago
+ia3qo8nfyhyxep4glyzhn7pc5                       true    0B              2 hours ago
+kgofvlvflecbp0bipdrdo9q59                       true    0B              2 hours ago
+hkpe6ojyiad6uv5loijv4ezcv                       true    0B              2 hours ago
+ved68ci2el8ml2n6w4xlnt9vc                       true    0B              2 hours ago
+Total:  3.705GB
+root@dzematapp-server1:~# 
