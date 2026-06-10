@@ -372,12 +372,22 @@ export default function GrupaPage() {
     <div class="name">${esc(c.displayName)}</div>
     <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(c.username)}</span></div>
     <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(c.generatedPassword)}</span></div>
-    ${(c.roditelji && c.roditelji.length > 0) ? c.roditelji.map((r, idx) => `
+    ${((): string => {
+      // Normalizuj: singular c.roditel (generatedPassword) i plural c.roditelji (password)
+      // u jedinstven niz da print window uvijek prikaže roditelja bez obzira na izvor.
+      const rods: Array<{username: string; displayName: string | null; password: string}> =
+        c.roditelji && c.roditelji.length > 0
+          ? c.roditelji.map(r => ({ username: r.username, displayName: r.displayName ?? null, password: r.password }))
+          : c.roditel
+            ? [{ username: c.roditel.username, displayName: c.roditel.displayName, password: c.roditel.generatedPassword }]
+            : [];
+      return rods.map((r, idx) => `
     <div class="parent-block">
-      <div class="section-title">${t("Roditelj")}${c.roditelji!.length > 1 ? ` ${idx + 1}` : ""}${r.displayName ? ` — ${esc(r.displayName)}` : ""}</div>
+      <div class="section-title">${t("Roditelj")}${rods.length > 1 ? ` ${idx + 1}` : ""}${r.displayName ? ` — ${esc(r.displayName)}` : ""}</div>
       <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(r.username)}</span></div>
       <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(r.password)}</span></div>
-    </div>`).join("") : ""}
+    </div>`).join("");
+    })()}
     <div class="grupa-info">${esc(grupa?.naziv || "")} · mekteb.net</div>
   </div>`).join("")}
 </div></body></html>`;

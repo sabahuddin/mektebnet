@@ -470,13 +470,17 @@ export default function MuallimPanel() {
       .finally(() => setKalendarSveLoading(false));
   }, [token, activeTab, kalendarMode, kalendarSve]);
 
-  // Učitaj mekteb dokumente kad glavni muallim otvori "Mekteb" tab.
+  // Učitaj mekteb dokumente:
+  // - za glavnog muallima: kad otvori "Mekteb" tab (ima i upload/brisanje)
+  // - za obične muallime: kad otvori "Pregled" tab (read-only prikaz)
   useEffect(() => {
-    if (!token || activeTab !== "mekteb") return;
+    if (!token) return;
+    if (mektebMeta.isGlavni && activeTab !== "mekteb") return;
+    if (!mektebMeta.isGlavni && activeTab !== "pregled") return;
     apiRequest<MektebDokument[]>("GET", "/muallim/mekteb/dokumenti", undefined, token)
       .then(setMektebDokumenti)
       .catch(() => setMektebDokumenti([]));
-  }, [token, activeTab]);
+  }, [token, activeTab, mektebMeta.isGlavni]);
 
   async function handleUploadDokument() {
     if (!token || !dokFile) return;
@@ -1108,6 +1112,32 @@ export default function MuallimPanel() {
                               {t("Odobri")}
                             </Button>
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* DOKUMENTI MEKTEBA — read-only za obične muallime */}
+                {!mektebMeta.isGlavni && mektebDokumenti && mektebDokumenti.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-border/50 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FileText className="w-4 h-4 text-primary" />
+                      <h3 className="font-bold text-sm text-foreground">{t("Dokumenti mekteba")}</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {mektebDokumenti.map(d => (
+                        <div key={d.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-bold text-foreground truncate">{d.naziv}</div>
+                            {d.opis && <div className="text-xs text-muted-foreground truncate">{d.opis}</div>}
+                          </div>
+                          <button
+                            onClick={() => openAuthorizedFile(`/muallim/mekteb/dokumenti/${d.id}/file`, token).catch((e: any) => toast({ title: t("Greška"), description: e?.message || t("Otvaranje nije uspjelo"), variant: "destructive" }))}
+                            className="text-xs font-bold text-primary hover:underline shrink-0"
+                          >
+                            {t("Otvori")}
+                          </button>
                         </div>
                       ))}
                     </div>

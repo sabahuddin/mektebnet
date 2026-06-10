@@ -498,12 +498,12 @@ const dokumentUpload = multer({
   },
 });
 
-// GET /api/muallim/mekteb/dokumenti — lista dokumenata mekteba (glavni only).
+// GET /api/muallim/mekteb/dokumenti — lista dokumenata mekteba (svi muallimi u mektebu).
 router.get("/mekteb/dokumenti", async (req, res) => {
   try {
     const ctx = await getMektebCtx(req.user!.userId);
-    if (!ctx?.mektebId || !ctx.isGlavni) {
-      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+    if (!ctx?.mektebId) {
+      res.status(403).json({ error: "Muallim nije u mektebu" });
       return;
     }
     const docs = await db.select().from(mektebDokumentiTable)
@@ -593,12 +593,12 @@ router.delete("/mekteb/dokumenti/:id", async (req, res) => {
   }
 });
 
-// GET /api/muallim/mekteb/dokumenti/:id/file — autorizovani download (glavni only).
+// GET /api/muallim/mekteb/dokumenti/:id/file — autorizovani download (svi muallimi u mektebu).
 router.get("/mekteb/dokumenti/:id/file", async (req, res) => {
   try {
     const ctx = await getMektebCtx(req.user!.userId);
-    if (!ctx?.mektebId || !ctx.isGlavni) {
-      res.status(403).json({ error: "Samo glavni muallim ima pristup" });
+    if (!ctx?.mektebId) {
+      res.status(403).json({ error: "Muallim nije u mektebu" });
       return;
     }
     const id = parseInt(req.params.id, 10);
