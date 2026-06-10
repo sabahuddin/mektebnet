@@ -19,3 +19,5 @@
 - [Admin editor prijevoda](prijevodi-override-editor.md) — ispravke prijevoda idu kroz /admin/prijevodi (ui_prijevodi override + content_prijevodi), NE editovanjem locales/*.json.
 - [content_prijevodi overlay pokrivenost](content-overlay-coverage.md) — overlay mora pokriti i list i detail rute za svaki modul; lako je prevesti listu a zaboraviti detalj (content_html ostaje bs).
 - [Jezik miješanje — remount](jezik-mijesanje-remount.md) — content ide preko apiRequest+useEffect (ne React Query); promjena jezika ne refetch-a → fix je `<Router key={lang}>` remount u App.tsx.
+- [Prijevod detekcija + bulk AI](prevod-detekcija-i-bulk.md) — "nepreveden" detektuj retencijom bosanskih markera (žđć), NE egzaktnom jednakošću; bulk prevedi gpt-5-mini reasoning_effort:minimal kroz bash skriptu, bounded resumable chunkovi.
+- [PROD_DATABASE_URL direktan pristup](prevod-detekcija-i-bulk.md) — prod self-hosted DB je čitljiv/upisiv iz Replit dev preko bash node (sandbox strip-a secrete); upis podataka je odmah live, bez redeploya.
