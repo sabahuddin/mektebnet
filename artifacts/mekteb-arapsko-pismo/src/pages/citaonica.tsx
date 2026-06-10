@@ -188,13 +188,13 @@ function KategorijaAccordion({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="font-extrabold text-violet-900 text-base sm:text-lg">{kategorija.naziv}</h2>
+            <h2 className="font-extrabold text-violet-900 text-base sm:text-lg">{t(kategorija.naziv)}</h2>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-violet-200 text-violet-800">
               {knjige.length}
             </span>
           </div>
           {kategorija.opis && (
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-1">{kategorija.opis}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-1">{t(kategorija.opis)}</p>
           )}
         </div>
         <motion.div

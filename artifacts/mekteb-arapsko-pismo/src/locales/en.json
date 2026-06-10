@@ -1214,7 +1214,7 @@
   "Nije položeno:": "Not completed:",
   "Potrebno {prag}%.": "Required {prag}%.",
   "Greška pri učitavanju.": "Loading error.",
-  "Sve sure": "All suras",
+  "Sve sure": "All surahs",
   "Mushaf · stranica {br} / {ukupno}": "Mushaf · page {br} of {ukupno}",
   "← Sljedeća": "← Next",
   "Broj stranice": "Page number",
@@ -1264,7 +1264,7 @@
   "🎉 Bravo! Sve si pronašao!": "🎉 Bravo! You found everything!",
   "👆 Klikni svaki": "👆 Click each",
   "koji pronađeš": "that you find",
-  "Sura {broj} · {tip} · {n} ajeta": "Sura {broj} · {tip} · {n} ayahs",
+  "Sura {broj} · {tip} · {n} ajeta": "Surah {broj} · {tip} · {n} ayahs",
   "← Sljedeća sura": "← Next Surah",
   "Prethodna sura →": "Previous Surah →",
   "Ajet {n} / {ukupno}": "Ayah {n} / {ukupno}",
@@ -2347,5 +2347,11 @@
   "Dodaj u banku": "Add to bank",
   "Zadnjih 7 dana": "Last 7 days",
   "Zadnjih 30 dana": "Last 30 days",
-  "Kur'an": "Qur'an"
+  "Kur'an": "Qur'an",
+  "Mekkanska": "Meccan",
+  "Medinska": "Medinan",
+  "Priče o vjerovjesnicima": "Stories about the Prophets",
+  "Životne priče poslanika u hronološkom redu.": "The life stories of the Prophets in chronological order.",
+  "Ostale knjige": "Other books",
+  "Hadis za djecu, ahlak teme, dove i druge islamske teme.": "Hadith for children, manners topics, supplications and other Islamic themes."
 }

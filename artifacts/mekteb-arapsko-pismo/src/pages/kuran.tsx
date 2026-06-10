@@ -131,7 +131,7 @@ export default function KuranPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground font-semibold mt-0.5">
-                      <span>{revelationLabel(s.revelationType)}</span>
+                      <span>{t(revelationLabel(s.revelationType))}</span>
                       <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
                       <span>{t("{n} ajeta", { n: String(s.numberOfAyahs) })}</span>
                     </div>
