@@ -35,8 +35,8 @@ export default function Home() {
     {
       href: "/kuran",
       icon: BookMarked,
-      label: "Kur'an Časni",
-      desc: "Čitanje Kur'ana sa više učača, odabirom sure i stranice (Mushaf)",
+      label: t("Kur'an Časni"),
+      desc: t("Čitanje Kur'ana sa više učača, odabirom sure i stranice (Mushaf)"),
       color: "from-teal-500 to-emerald-600",
       bg: "bg-teal-50",
       border: "border-teal-200",
@@ -174,7 +174,7 @@ export default function Home() {
               <span className="text-primary">Mekteb<span className="text-secondary">.net</span></span>
             </h1>
             <p className="text-sm md:text-base text-muted-foreground font-medium mt-2">
-              Islamska edukativna platforma
+              {t("Islamska edukativna platforma")}
             </p>
             {user?.role === "ucenik" && (
               <div className="flex items-center gap-3 flex-wrap mt-4 justify-center md:justify-start">
