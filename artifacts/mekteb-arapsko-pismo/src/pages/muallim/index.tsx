@@ -887,19 +887,9 @@ export default function MuallimPanel() {
 
   const monthNames = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
 
-  if (!user || (user.role !== "muallim" && user.role !== "admin")) {
-    return (
-      <Layout>
-        <div className="text-center py-20">
-          <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo muallimima")}</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
-        </div>
-      </Layout>
-    );
-  }
-
   // Mekteb kontekst (isGlavni + naziv mekteba) — učitava se jednom; određuje
   // da li glavni muallim vidi tabove "Muallimi" i "Mekteb" statistiku.
+  // MORA biti prije auth guard conditional return (Rules of Hooks).
   useEffect(() => {
     if (!token) return;
     apiRequest<{ isGlavni: boolean; mektebNaziv: string | null }>("GET", "/muallim/info", undefined, token)
@@ -928,6 +918,17 @@ export default function MuallimPanel() {
     if (!token || activeTab !== "mekteb" || mektebStatsAll) return;
     apiRequest<MektebStatsAll>("GET", "/muallim/mekteb/statistika", undefined, token).then(setMektebStatsAll).catch(() => {});
   }, [token, activeTab, mektebStatsAll]);
+
+  if (!user || (user.role !== "muallim" && user.role !== "admin")) {
+    return (
+      <Layout>
+        <div className="text-center py-20">
+          <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo muallimima")}</p>
+          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const handleKreirajMuallima = async () => {
     if (!token || !novMuallimIme.trim()) return;
