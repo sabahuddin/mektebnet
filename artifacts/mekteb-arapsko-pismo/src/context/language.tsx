@@ -27,6 +27,8 @@ const SUPPORTED: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
  * posebne Vite chunkove (~150-190 KB svaki) i skidaju samo na zahtjev.
  */
 const flatCache: Partial<Record<Lang, Record<string, string>>> = {};
+/** Stabilan prazan objekat — izbjegava nepotreban re-render za BS korisnike. */
+const EMPTY_DICT: Record<string, string> = {};
 
 async function loadFlatDict(lang: Lang): Promise<Record<string, string>> {
   if (flatCache[lang]) return flatCache[lang]!;
@@ -90,13 +92,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Flat rječnik za aktivni jezik — lazy učitan iz posebnog Vite chunka.
   // Za bosanski je uvijek {} (BS je izvor, nema prijevoda).
   const [flatDict, setFlatDict] = useState<Record<string, string>>(
-    () => flatCache[detectInitialLang()] ?? {}
+    () => flatCache[detectInitialLang()] ?? EMPTY_DICT
   );
   const queryClient = useQueryClient();
 
   // Učitaj flat rječnik kad se jezik promijeni (ili na startu za ne-BS lang).
   useEffect(() => {
-    if (lang === "bs") { setFlatDict({}); return; }
+    if (lang === "bs") { setFlatDict(EMPTY_DICT); return; }
     let cancelled = false;
     loadFlatDict(lang).then(dict => {
       if (!cancelled) setFlatDict(dict);
