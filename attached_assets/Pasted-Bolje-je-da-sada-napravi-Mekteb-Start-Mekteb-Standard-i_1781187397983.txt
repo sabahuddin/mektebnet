@@ -1,0 +1,83 @@
+Bolje je da sada napraviš Mekteb Start, Mekteb Standard i Mekteb Pro, jer tako odmah gradiš ozbiljan cjenovnik koji kasnije možeš prenijeti na Paddle.
+Tvoj model bi onda bio:
+Glavni paketi
+Mekteb Start
+Za mektebe koji žele samo osnovnu evidenciju i rad s učenicima.
+Uključuje:
+1 muallim
+do 100 učeničkih računa
+evidencija učenika
+zadaci / osnovni rad na platformi
+bez roditeljskih računa
+bez punog pristupa lekcijama i kvizovima
+Cijena:
+BiH: 75 €
+Dijaspora: 150 €
+Mekteb Standard
+Za mektebe koji žele uključiti i roditelje.
+Uključuje:
+1 muallim
+do 100 učeničkih računa
+do 100 roditeljskih računa
+roditelji mogu pratiti dijete
+komunikacija roditelj–muallim
+evidencija, zadaci, osnovni izvještaji
+Cijena:
+BiH: 100 €
+Dijaspora: 200 €
+Mekteb Pro
+Za mektebe koji žele kompletan edukativni sistem.
+Uključuje sve iz Standard paketa, plus:
+pristup lekcijama
+kvizovi
+testovi
+radni materijali
+planovi časova
+napredna statistika
+certifikati / diplome
+pristup edukativnim sadržajima platforme
+Cijena:
+BiH: 150 €
+Dijaspora: 300 €
+Dodaci
+Onda u Shopu dodaš posebne proizvode kao dodatke:
+Dodatak	BiH	Dijaspora
+Dodatni muallim	15 €	30 €
+Dodatnih 50 učenika	20 €	40 €
+Dodatnih 50 roditelja	10 €	20 €
+Dodatnih 100 učenika + 100 roditelja	50 €	100 €
+Obavezno u opisu svakog dodatka napiši:
+Ovaj dodatak vrijedi samo uz aktivan Mekteb paket i ne može se koristiti samostalno.
+Kako bih to ja postavio u BMC Shopu
+Napravi proizvode ovako:
+Mekteb Start BiH
+Mekteb Start Dijaspora
+Mekteb Standard BiH
+Mekteb Standard Dijaspora
+Mekteb Pro BiH
+Mekteb Pro Dijaspora
+Zatim posebna kategorija:
+Dodaci za mektebe
+Tu staviš:
++ 1 muallim BiH
++ 1 muallim Dijaspora
++ 50 učenika BiH
++ 50 učenika Dijaspora
++ 50 roditelja BiH
++ 50 roditelja Dijaspora
+Najvažnije
+Nemoj u dodatke stavljati previše opcija. Dovoljno je ovo:
+muallim
+učenici
+roditelji
+Sve drugo možeš ručno dogovarati.
+Moj favorit
+Ja bih javno najviše gurao Mekteb Standard.
+Start je dobar za one koji nemaju roditelje u sistemu.
+Standard je realni glavni paket.
+Pro je za ozbiljne mektebe koji žele kompletan sadržaj.
+Na stranici možeš napisati:
+Najčešći izbor: Mekteb Standard
+A kod Pro:
+Najbolji izbor za mektebe koji žele gotove lekcije, kvizove i nastavne materijale.
+To psihološki dobro radi: korisnik vidi osnovni, preporučeni i napredni paket.
