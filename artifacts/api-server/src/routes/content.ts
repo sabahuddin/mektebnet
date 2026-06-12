@@ -20,6 +20,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte, lt, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import { sendEmail } from "../lib/email.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
 import {
@@ -1261,6 +1262,85 @@ router.get("/ui-prijevodi", async (_req, res) => {
       (out[r.jezik] ??= {})[r.kljuc] = r.prijevod;
     }
     res.json(out);
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// Javna kontakt forma. Šalje poruku posjetioca na info@mekteb.net. Jednostavan
+// in-memory rate limit (max 5 poruka po IP-u u 10 minuta) sprječava zloupotrebu.
+const kontaktHits = new Map<string, number[]>();
+const KONTAKT_WINDOW_MS = 10 * 60 * 1000;
+const KONTAKT_MAX = 5;
+
+router.post("/kontakt", async (req, res) => {
+  try {
+    const ip = (req.headers["x-forwarded-for"]?.toString().split(",")[0] || req.ip || "?").trim();
+    const now = Date.now();
+
+    // Periodično očisti stale unose da kontaktHits Map ne raste neograničeno.
+    if (kontaktHits.size > 5000) {
+      for (const [key, times] of kontaktHits) {
+        const fresh = times.filter((t) => now - t < KONTAKT_WINDOW_MS);
+        if (fresh.length === 0) kontaktHits.delete(key);
+        else kontaktHits.set(key, fresh);
+      }
+    }
+
+    const hits = (kontaktHits.get(ip) || []).filter((t) => now - t < KONTAKT_WINDOW_MS);
+    if (hits.length >= KONTAKT_MAX) {
+      return res.status(429).json({ error: "Previše poruka. Pokušajte ponovo za nekoliko minuta." });
+    }
+
+    const ime = String(req.body?.ime ?? "").trim();
+    const email = String(req.body?.email ?? "").trim();
+    const predmet = String(req.body?.predmet ?? "").trim();
+    const poruka = String(req.body?.poruka ?? "").trim();
+
+    if (!ime || !email || !poruka) {
+      return res.status(400).json({ error: "Molimo popunite ime, email i poruku." });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Unesite ispravnu email adresu." });
+    }
+    if (ime.length > 120 || email.length > 160 || predmet.length > 200 || poruka.length > 5000) {
+      return res.status(400).json({ error: "Unos je predugačak." });
+    }
+
+    hits.push(now);
+    kontaktHits.set(ip, hits);
+
+    const esc = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const html = `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+        <div style="background:#0d9488;padding:20px;border-radius:12px 12px 0 0">
+          <h2 style="color:white;margin:0">Nova poruka — Kontakt forma</h2>
+        </div>
+        <div style="padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px">
+          <table style="width:100%;border-collapse:collapse">
+            <tr><td style="padding:6px 12px;font-weight:bold;border:1px solid #e5e7eb">Ime</td><td style="padding:6px 12px;border:1px solid #e5e7eb">${esc(ime)}</td></tr>
+            <tr><td style="padding:6px 12px;font-weight:bold;border:1px solid #e5e7eb">Email</td><td style="padding:6px 12px;border:1px solid #e5e7eb">${esc(email)}</td></tr>
+            <tr><td style="padding:6px 12px;font-weight:bold;border:1px solid #e5e7eb">Predmet</td><td style="padding:6px 12px;border:1px solid #e5e7eb">${esc(predmet) || "—"}</td></tr>
+          </table>
+          <p style="margin:16px 0 4px;font-weight:bold;color:#111827">Poruka:</p>
+          <p style="white-space:pre-wrap;color:#374151;line-height:1.6;margin:0">${esc(poruka)}</p>
+          <p style="margin-top:16px;color:#6b7280;font-size:14px">Poslano preko kontakt forme na mekteb.net</p>
+        </div>
+      </div>
+    `;
+
+    const sent = await sendEmail(
+      "info@mekteb.net",
+      `[Mekteb.net] Kontakt: ${predmet || "(bez predmeta)"}`,
+      html,
+    );
+    if (!sent) {
+      return res.status(502).json({
+        error: "Slanje poruke trenutno nije uspjelo. Pokušajte ponovo ili nam pišite direktno na info@mekteb.net.",
+      });
+    }
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

@@ -14,6 +14,12 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
     port: SMTP_PORT,
     secure: SMTP_PORT === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
+    // Ograničeni timeouti: ako je SMTP nedostupan/spor (npr. Coolify blokira port),
+    // send brzo padne u catch → false, umjesto da request visi do default 2 min.
+    // Bitno za awaitane pozive (kontakt forma vraća 502 na neuspjeh).
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
   console.log(`[Email] SMTP configured: ${SMTP_HOST}:${SMTP_PORT}`);
 } else {

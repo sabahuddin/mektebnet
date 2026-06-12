@@ -20,6 +20,13 @@ import Home from "./pages/home";
 import VodicPage from "./pages/vodic";
 import NotFound from "@/pages/not-found";
 
+// Informativne / pravne stranice
+import ImpressumPage from "./pages/impressum";
+import KontaktPage from "./pages/kontakt";
+import UvjetiPage from "./pages/uvjeti";
+import PrivatnostPage from "./pages/privatnost";
+import KolaciciPage from "./pages/kolacici";
+
 // Arapsko pismo module
 import ArapskoPismoPage from "./pages/arapsko-pismo";
 import LessonDetail from "./pages/lesson-detail";
@@ -108,6 +115,13 @@ function Router() {
       {/* Root */}
       <Route path="/" component={Home} />
       <Route path="/vodic" component={VodicPage} />
+
+      {/* Informativne / pravne stranice */}
+      <Route path="/impressum" component={ImpressumPage} />
+      <Route path="/kontakt" component={KontaktPage} />
+      <Route path="/uvjeti" component={UvjetiPage} />
+      <Route path="/privatnost" component={PrivatnostPage} />
+      <Route path="/kolacici" component={KolaciciPage} />
 
       {/* Auth */}
       <Route path="/login" component={LoginPage} />
