@@ -441,13 +441,15 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   }
 }
 
-/* Audio player umetnut u tekst lekcije */
+/* Audio player umetnut u tekst lekcije — fallback stil za goli <audio>
+   (vidi se samo kratko prije nego JS učita prilagođeni plejer, ili ako JS
+   ne radi). Centriran. */
 .ilmihal-content audio.lesson-audio,
 .ilmihal-content audio {
   display: block;
   width: 100%;
   max-width: 480px;
-  margin: 1rem 0;
+  margin: 1rem auto;
   border-radius: 999px;
   outline: none;
   background: linear-gradient(135deg, #f5f3ff, #ede9fe);
@@ -458,6 +460,103 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   .ilmihal-content audio.lesson-audio,
   .ilmihal-content audio {
     max-width: 100%;
+  }
+}
+
+/* Prilagođeni "Mektebnet" audio plejer — zamjenjuje nativni kontroler (koji
+   u nekim browserima pokazuje "Emitiranje uživo" za fajlove bez poznatog
+   trajanja). Centriran i responzivan; koristi se i u učeničkom prikazu i u
+   Tiptap editoru, pa je selektor namjerno globalan. */
+.mekteb-audio {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 420px;
+  margin: 1rem auto;
+  padding: 0.4rem 0.9rem 0.4rem 0.4rem;
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border: 1px solid #ddd6fe;
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(168, 85, 247, 0.18);
+  box-sizing: border-box;
+}
+.mekteb-audio audio {
+  display: none !important;
+}
+.mekteb-audio__play {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
+  transition: transform 0.1s ease;
+}
+.mekteb-audio__play:hover {
+  transform: scale(1.06);
+}
+.mekteb-audio__play:active {
+  transform: scale(0.96);
+}
+.mekteb-audio__play svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+}
+.mekteb-audio__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mekteb-audio__label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #6d28d9;
+  line-height: 1.1;
+  margin-bottom: 0.3rem;
+}
+.mekteb-audio__bar {
+  position: relative;
+  height: 7px;
+  border-radius: 999px;
+  background: #ddd6fe;
+  cursor: pointer;
+  overflow: hidden;
+}
+.mekteb-audio__progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #a855f7, #7c3aed);
+  border-radius: 999px;
+}
+.mekteb-audio__time {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: #7c3aed;
+  min-width: 3rem;
+  text-align: right;
+  white-space: nowrap;
+}
+.mekteb-audio.ProseMirror-selectednode {
+  outline: 3px solid #a855f7;
+  outline-offset: 4px;
+}
+@media (max-width: 640px) {
+  .mekteb-audio {
+    max-width: 100%;
+    gap: 0.6rem;
   }
 }
 

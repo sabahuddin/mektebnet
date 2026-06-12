@@ -24,3 +24,4 @@
 - [Prijevod detekcija + bulk AI](prevod-detekcija-i-bulk.md) — "nepreveden" detektuj retencijom bosanskih markera (žđć), NE egzaktnom jednakošću; bulk prevedi gpt-5-mini reasoning_effort:minimal kroz bash skriptu, bounded resumable chunkovi.
 - [PROD_DATABASE_URL direktan pristup](prevod-detekcija-i-bulk.md) — prod self-hosted DB je čitljiv/upisiv iz Replit dev preko bash node (sandbox strip-a secrete); upis podataka je odmah live, bez redeploya.
 - [SMTP na produkciji — port i async](smtp-produkcija.md) — Coolify hosting blokira port 465 (SSL); koristi 587 (STARTTLS). Registracijski mailovi moraju biti fire-and-forget (.catch), ne await — inače request visi.
+- [Custom audio plejer](audio-player-custom.md) — native "Emitiranje uživo" se ne može mijenjati; wrappamo <audio> u .mekteb-audio; serijalizacija (getHTML) ostaje goli <audio controls>.

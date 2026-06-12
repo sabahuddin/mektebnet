@@ -11,6 +11,7 @@ import Youtube from "@tiptap/extension-youtube";
 import { Node, mergeAttributes } from "@tiptap/core";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { getApiBase } from "@/lib/api";
+import { buildAudioPlayer } from "@/lib/audio-player";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
@@ -99,6 +100,24 @@ const AudioBlock = Node.create({
     const attrs: Record<string, any> = { src, controls: "true", preload: "metadata", class: "lesson-audio" };
     if (title) attrs["data-title"] = title;
     return ["audio", mergeAttributes(attrs)];
+  },
+  // Prikaži prilagođeni "Mektebnet" plejer i unutar editora (umjesto golog
+  // nativnog kontrolera). Serijalizacija (getHTML) i dalje koristi renderHTML
+  // iznad, pa snimljeni sadržaj ostaje običan <audio> koji se kod učenika
+  // wrappa preko RjecnikContent-a.
+  addNodeView() {
+    return ({ node }) => {
+      const dom = buildAudioPlayer(node.attrs.src, node.attrs.title);
+      dom.classList.add("mekteb-audio--editor");
+      return {
+        dom,
+        ignoreMutation: () => true,
+        stopEvent: (event: Event) => {
+          const t = event.target as HTMLElement | null;
+          return !!(t && t.closest(".mekteb-audio__play, .mekteb-audio__bar"));
+        },
+      };
+    };
   },
 });
 

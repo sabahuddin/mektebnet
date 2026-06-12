@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { processRjecnik, fetchRjecnik, getRjecnikSync } from "@/lib/rjecnik";
+import { enhanceAllAudioPlayers } from "@/lib/audio-player";
 import { X } from "lucide-react";
 
 interface Props {
@@ -32,6 +33,14 @@ export function RjecnikContent({ html, className }: Props) {
   }, []);
 
   const processed = useMemo(() => processRjecnik(html, dict), [html, dict]);
+
+  // Zamijeni nativne <audio> kontrolere prilagođenim "Mektebnet" plejerom
+  // (centriran, responzivan, bez natpisa "Emitiranje uživo"). Pokreće se
+  // nakon svakog re-rendera sadržaja jer dangerouslySetInnerHTML iznova
+  // kreira audio elemente.
+  useEffect(() => {
+    enhanceAllAudioPlayers(ref.current);
+  }, [processed]);
 
   const handleClick = useCallback((e: MouseEvent) => {
     const el = e.target as HTMLElement;
