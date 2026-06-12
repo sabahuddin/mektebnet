@@ -8,6 +8,7 @@ import { LanguageProvider, useLanguage } from "@/context/language";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { PushPrompt } from "@/components/push-prompt";
 import { InstallPrompt } from "@/components/install-prompt";
+import { CookieConsent } from "@/components/cookie-consent";
 
 // Auth pages
 import LoginPage from "./pages/login";
@@ -253,6 +254,7 @@ function App() {
             <HeartbeatMount />
             <AppRoutes />
             <OfflineIndicator />
+            <CookieConsent />
             <PushPrompt />
             <InstallPrompt />
             <Toaster />
