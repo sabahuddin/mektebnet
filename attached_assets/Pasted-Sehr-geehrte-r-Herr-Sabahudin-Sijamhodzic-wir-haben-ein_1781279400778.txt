@@ -1,0 +1,86 @@
+Sehr geehrte(r) Herr Sabahudin Sijamhodzic,
+
+wir haben einen Sicherheitshinweis vom Bundesamt für Sicherheit in der Informationstechnik (BSI) für (die IP-Adresse) eines Servers erhalten, den Sie bei uns betreiben. Diese Meldung leiten wir automatisch an Sie weiter, zu Ihrer Information.
+
+Die Originalmeldung ist unten angefügt. Zusätzliche Informationen finden Sie in den How-To Anleitungen, auf die in dem Bericht verwiesen wird. Bitte beachten Sie, dass wir keine weiteren Informationen zur Verfügung haben.
+
+Diese Meldung bedeutet nicht, dass Ihr Server in Abuse Aktivitäten verwickelt war. Sie weisen Sie lediglich auf ein potenzielles Problem auf Ihrem Server hin, das ausgenutzt werden könnte und in der Regel recht einfach zu beheben ist.
+
+Sie brauchen weder uns noch dem BSI eine Antwort zu schicken.
+
+Bei weiteren Fragen wenden Sie sich bitte unter Beibehaltung der Ticketnummer der Originalmeldung [CB-Report#...] in der Betreffzeile an certbund@bsi.bund.de. Antworten Sie nicht an reports@reports.cert-bund.de, da diese Adresse nur zum Versand der Reports dient und Nachrichten an diese Adresse nicht gelesen werden.
+
+Mit freundlichen Grüßen
+
+Abuse Team
+
+Hetzner Online GmbH
+Industriestr. 25
+91710 Gunzenhausen
+Tel: +49 9831 5050
+Fax: +49 9831 5053
+www.hetzner.de
+
+Registergericht Ansbach, HRB 6089
+Geschäftsführer: Martin Hetzner, Stephan Konvickova, Günther Müller
+
+Hinweise zur Verarbeitung Ihrer personenbezogenen Daten
+im Rahmen der Kommunikation mit Ihnen finden Sie unter:
+www.hetzner.com/de/privacy-policy-notice
+
+Sie haben die Möglichkeit, gegen eine für Sie negative Entscheidung
+Beschwerde einzulegen. Bitte antworten Sie hierzu auf dieses Ticket.
+Bei einer endgültigen Entscheidung können Sie sich ebenfalls über
+info@hetzner.com beschweren.
+Wir sind weder bereit noch verpflichtet an einem
+Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+teilzunehmen.
+
+
+> Sehr geehrte Damen und Herren,
+>
+> PostgreSQL ist ein relationales Datenbank-Managementsystem (DBMS),
+> das häufig im Zusammenhang mit Webanwendungen eingesetzt wird.
+>
+> Unbefugte Zugriffe auf das DBMS unter Ausnutzung von Schwachstellen,
+> Fehlkonfigurationen oder mittels ausgespähter Zugangsdaten können dazu führen,
+> dass Angreifende in den Datenbanken gespeicherten Informationen ausspähen,
+> manipulieren oder löschen können, was weitreichende Folgen haben kann.
+>
+> Zum Schutz vor Angriffen sollte ein Zugriff auf das DBMS daher grundsätzlich
+> nur vom Anwendungsserver sowie von vertrauenswürdigen Administrationsnetzen
+> (ggf. über eine VPN-Anbindung) aus möglich sein. Keinesfalls sollte ein
+> direkter Zugriff aus dem Internet auf das DBMS erlaubt sein.
+>
+> Nachfolgend senden wir Ihnen eine Liste von IP-Adressen in Ihrem
+> Netzbereich, unter denen zum angegebenen Zeitpunkt (Zeitstempel UTC)
+> offen aus dem Internet erreichbare PostgreSQL-Server identifiziert wurden.
+>
+> Wir möchten Sie bitten, den Sachverhalt zu prüfen und entsprechende
+> Maßnahmen zur Absicherung betroffener Systeme zu ergreifen.
+>
+> Diese E-Mail ist mittels PGP digital signiert.
+> Informationen zu dem verwendeten Schlüssel finden Sie unter:
+> <https://reports.cert-bund.de/digitale-signatur>
+>
+> Bitte beachten Sie:
+> Dies ist eine automatisch generierte Nachricht. Antworten an die
+> Absenderadresse <reports@reports.cert-bund.de> werden NICHT gelesen
+> und automatisch verworfen. Bei Rückfragen wenden Sie sich bitte
+> unter Beibehaltung der Ticketnummer [CB-Report#...] in der
+> Betreffzeile an <certbund@bsi.bund.de>.
+>
+> Betroffene Systeme in Ihrem Netzbereich:
+>
+> Format: ASN | IP | Timestamp (UTC) | Port
+>  24940 | 91.98.234.55 | 2026-06-02 10:47:53 | 5432
+>
+> Mit freundlichen Grüßen / Kind regards
+> Team CERT-Bund
+>
+> Bundesamt für Sicherheit in der Informationstechnik
+> Federal Office for Information Security (BSI)
+> CERT-Bund
+> Godesberger Allee 87, 53175 Bonn, Germany
+>
+
