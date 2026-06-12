@@ -453,6 +453,9 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [docUploading, setDocUploading] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const [audioUploading, setAudioUploading] = useState(false);
+  const [showAudioGallery, setShowAudioGallery] = useState(false);
+  const [audioFiles, setAudioFiles] = useState<{name:string;url:string;size:number;modified:string}[]>([]);
+  const [audioGalleryLoading, setAudioGalleryLoading] = useState(false);
   const docInputRef = useRef<HTMLInputElement>(null);
 
   const loadGallery = useCallback(async () => {
@@ -838,6 +841,30 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     e.target.value = "";
   }, [handleAudioUpload]);
 
+  // Biblioteka već uploadovanih audio fajlova — ponovna upotreba bez 2x uploada.
+  const openAudioGallery = useCallback(async () => {
+    setShowAudioGallery(true);
+    setAudioGalleryLoading(true);
+    try {
+      const resp = await fetch(`${getApiBase()}/admin/uploads-audio`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await resp.json();
+      setAudioFiles(Array.isArray(data) ? data : data.files || []);
+    } catch { /* mreža — prikaži prazno */ }
+    setAudioGalleryLoading(false);
+  }, [token]);
+
+  const insertAudioFromLibrary = useCallback((url: string, name?: string) => {
+    if (!editor) return;
+    editor.chain().focus().insertContent({
+      type: "audioBlock",
+      attrs: { src: url, title: name || null },
+    }).run();
+    setShowAudioGallery(false);
+    toast({ title: t("Audio dodat ✓"), description: t("Player umetnut u lekciju") });
+  }, [editor, toast, t]);
+
   const insertCustomBlock = useCallback((type: "arabic-card" | "info-box" | "info-card") => {
     if (!editor) return;
     const nodeMap: Record<string, string> = { "arabic-card": "arabicCard", "info-box": "infoBox", "info-card": "infoCard" };
@@ -950,6 +977,47 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
                         {copiedUrl === img.url ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
                       </button>
                       <p className="text-[10px] text-gray-400 truncate mt-1 px-0.5">{img.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {showAudioGallery && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAudioGallery(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+              <h3 className="text-base font-bold text-gray-800">{t("Audio biblioteka — odaberi postojeći fajl")}</h3>
+              <button type="button" onClick={() => setShowAudioGallery(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {audioGalleryLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                </div>
+              ) : audioFiles.length === 0 ? (
+                <p className="text-center text-gray-400 py-12">{t("Nema uploadovanih audio fajlova")}</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {audioFiles.map(af => (
+                    <div key={af.url} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 hover:border-purple-300 bg-gray-50/60">
+                      <Music className="w-5 h-5 text-purple-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-700 truncate">{af.name}</p>
+                        <p className="text-[10px] text-gray-400 mb-1">{(af.size / 1024).toFixed(0)} KB</p>
+                        <audio controls preload="none" src={af.url} className="w-full h-8" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => insertAudioFromLibrary(af.url, af.name)}
+                        className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition-colors"
+                      >
+                        {t("Umetni")}
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1128,6 +1196,9 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         </MenuButton>
         <MenuButton onClick={() => audioInputRef.current?.click()} disabled={audioUploading} title={t("Umetni audio (MP3, M4A...)")}>
           {audioUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4 text-purple-600" />}
+        </MenuButton>
+        <MenuButton onClick={openAudioGallery} title={t("Audio iz biblioteke (ponovna upotreba)")}>
+          <FolderOpen className="w-4 h-4 text-purple-600" />
         </MenuButton>
         <MenuButton
           onClick={() => {

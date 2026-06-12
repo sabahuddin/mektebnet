@@ -887,6 +887,24 @@ router.get("/uploads", (_req, res) => {
   }
 });
 
+// GET /api/admin/uploads-audio — već uploadovani audio fajlovi (za ponovnu
+// upotrebu u drugim lekcijama bez ponovnog uploada).
+router.get("/uploads-audio", (_req, res) => {
+  try {
+    if (!fs.existsSync(uploadsDir)) return res.json([]);
+    const files = fs.readdirSync(uploadsDir)
+      .filter(f => /\.(mp3|m4a|aac|ogg|oga|opus|wav|webm)$/i.test(f))
+      .map(f => {
+        const stat = fs.statSync(path.join(uploadsDir, f));
+        return { name: f, url: `/uploads/${f}`, size: stat.size, modified: stat.mtime };
+      })
+      .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
+    res.json(files);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/admin/orphan-uploads — slike koje postoje na disku ali NE postoje
 // kao /uploads/<name> referenca u contentHtml-u nijedne lekcije.
 // Vraća { orphans: [...], used: [...], lekcije: [...] } da UI može popunjavati dropdown.
