@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Send, MessageSquare, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, Phone, Send, MessageSquare, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function KontaktPage() {
@@ -68,6 +68,15 @@ export default function KontaktPage() {
               <span>
                 <span className="block text-xs text-muted-foreground">{t("Email")}</span>
                 <span className="font-semibold text-foreground group-hover:text-primary transition-colors">info@mekteb.net</span>
+              </span>
+            </a>
+            <a href="https://wa.me/387603202010" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
+              <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary shrink-0">
+                <Phone className="w-5 h-5" />
+              </span>
+              <span>
+                <span className="block text-xs text-muted-foreground">WhatsApp</span>
+                <span className="font-semibold text-foreground group-hover:text-primary transition-colors">+387 60 320 20 10</span>
               </span>
             </a>
             <p className="text-sm text-muted-foreground leading-relaxed mt-2">

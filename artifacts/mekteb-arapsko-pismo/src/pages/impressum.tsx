@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
-import { Info, Mail, Globe } from "lucide-react";
+import { Info, Mail, Globe, Phone } from "lucide-react";
 
 export default function ImpressumPage() {
   const { t } = useLanguage();
@@ -42,6 +42,12 @@ export default function ImpressumPage() {
                   <Mail className="w-4 h-4" />
                 </span>
                 <a href="mailto:info@mekteb.net" className="text-primary font-semibold hover:underline">info@mekteb.net</a>
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 text-primary shrink-0">
+                  <Phone className="w-4 h-4" />
+                </span>
+                <a href="https://wa.me/387603202010" target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline">+387 60 320 20 10</a>
               </li>
               <li className="flex items-center gap-3">
                 <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 text-primary shrink-0">

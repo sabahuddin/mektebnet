@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/language";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA, Mail } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -461,6 +461,11 @@ export function Layout({ children }: LayoutProps) {
                 <li>
                   <a href="mailto:info@mekteb.net" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
                     <Mail className="w-3.5 h-3.5" /> info@mekteb.net
+                  </a>
+                </li>
+                <li>
+                  <a href="https://wa.me/387603202010" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+                    <Phone className="w-3.5 h-3.5" /> +387 60 320 20 10
                   </a>
                 </li>
               </ul>
