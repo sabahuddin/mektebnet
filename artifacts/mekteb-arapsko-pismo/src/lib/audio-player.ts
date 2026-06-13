@@ -37,7 +37,10 @@ export function enhanceAudioPlayer(
   }
   audio.dataset.mektebAudio = "1";
   audio.removeAttribute("controls");
-  audio.preload = "metadata";
+  // Ne dozvoli browseru da sam odmah krene puniti izvor — `ensureSeekable()`
+  // ispod prvo provjeri podržava li server HTTP Range. Tako izbjegavamo
+  // dvostruko preuzimanje (browserov auto-load + naš probe).
+  audio.preload = "none";
 
   const wrap = document.createElement("div");
   wrap.className = "mekteb-audio";
@@ -133,6 +136,94 @@ export function enhanceAudioPlayer(
   // listener, "loadedmetadata" se neće ponovo okinuti — pokreni ručno da
   // seek/trajanje ne ostanu trajno onemogućeni.
   if (audio.readyState >= 1) handleMetadata();
+
+  // ── Premotavanje (seek) fix ────────────────────────────────────────────────
+  // Neki proxyji ispred produkcije (npr. Cloudflare) IGNORIŠU HTTP Range
+  // zahtjeve i vrate cijeli fajl sa statusom 200 umjesto 206. Tada je
+  // `audio.seekable` prazan pa SVAKO premotavanje vrati snimak na početak
+  // (a nativni plejer prikaže "Emitiranje uživo" jer trajanje ostane nepoznato).
+  //
+  // Strategija: pošalji mali Range probe (2 bajta).
+  //   • 206  → server poštuje Range; direktan (streaming) izvor je premotljiv.
+  //   • 200  → Range ignorisan; tijelo tog odgovora JE cijeli fajl, pa ga
+  //            iskoristimo kao blob i postavimo `blob:` URL kao izvor. Blob je
+  //            uvijek potpuno premotljiv jer su podaci lokalni — bez servera.
+  let blobUrl: string | null = null;
+  const loadDirect = () => {
+    audio.preload = "metadata";
+    audio.load();
+  };
+  const ensureSeekable = async () => {
+    const src = audio.getAttribute("src") || audio.currentSrc || "";
+    if (!src || src.startsWith("blob:")) {
+      loadDirect();
+      return;
+    }
+    let probe: Response;
+    try {
+      probe = await fetch(src, { headers: { Range: "bytes=0-1" } });
+    } catch {
+      loadDirect(); // mreža/CORS — zadrži originalni izvor
+      return;
+    }
+    // Range radi → streaming izvor je premotljiv; odbaci probe tijelo.
+    if (probe.status === 206) {
+      try {
+        await probe.body?.cancel();
+      } catch {
+        /* noop */
+      }
+      loadDirect();
+      return;
+    }
+    // 403/404/500… — ne pravi blob od greške.
+    if (!probe.ok) {
+      loadDirect();
+      return;
+    }
+    const ct = probe.headers.get("content-type") || "";
+    if (ct.includes("text/html")) {
+      loadDirect();
+      return;
+    }
+    // 200 → Range ignorisan; probe tijelo je cijeli fajl (jedno preuzimanje).
+    let blob: Blob;
+    try {
+      blob = await probe.blob();
+    } catch {
+      loadDirect();
+      return;
+    }
+    if (!blob.size) {
+      loadDirect();
+      return;
+    }
+    // Sačuvaj poziciju/stanje ako je korisnik već krenuo slušati direktan izvor
+    // dok je preuzimanje teklo.
+    const wasPlaying = !audio.paused && !audio.ended;
+    const prevTime = audio.currentTime || 0;
+    blobUrl = URL.createObjectURL(blob);
+    // Zakači restore PRIJE postavljanja izvora — brzi "loadedmetadata" se inače
+    // može okinuti prije nego stignemo dodati listener.
+    if (wasPlaying || prevTime > 0) {
+      const onMeta = () => {
+        audio.removeEventListener("loadedmetadata", onMeta);
+        if (prevTime > 0 && isFinite(audio.duration)) {
+          try {
+            audio.currentTime = Math.min(prevTime, audio.duration);
+          } catch {
+            /* noop */
+          }
+        }
+        if (wasPlaying) audio.play().catch(() => {});
+      };
+      audio.addEventListener("loadedmetadata", onMeta);
+    }
+    audio.preload = "metadata";
+    audio.src = blobUrl;
+    audio.load();
+  };
+  void ensureSeekable();
 
   let dragging = false;
   const render = (cur: number) => {

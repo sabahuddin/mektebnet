@@ -46,3 +46,24 @@ reorder UI-ja (vidi reorder-touch-drag.md) — djeca su na tabletima, HTML5 drag
 pregazi preview. Ručicu/seek prikaži tek kad je trajanje poznato (`.is-seekable`),
 jer Infinity-duration fajlovi i dalje gase seek graciozno. Dodaj i `durationchange`
 listener (ne samo loadedmetadata) — trajanje za neke fajlove stigne naknadno.
+
+# Cloudflare guta Range → seek se vraćao na 0 (blob fallback)
+
+Premotavanje (drag commit postavi `audio.currentTime`) na PRODUKCIJI je uvijek vraćalo
+snimak na 0, iako u dev-u radi. Uzrok NIJE klijent: `express.static` na originu vraća
+`206` + `accept-ranges`, ali Cloudflare ISPRED mekteb.net (čak i na cache MISS) vrati
+`200` bez `accept-ranges`/`content-range` — dakle Range zahtjev se IGNORIŠE. Tada je
+`audio.seekable` prazan pa svaki `currentTime=` resetuje na 0 (i nativni plejer pokaže
+"Emitiranje uživo" jer trajanje ostane nepoznato).
+**Why:** Ne mogu mijenjati Cloudflare/Coolify proxy iz koda; fix mora biti klijentski i
+otporan na proxy koji ne servira 206.
+**How to apply:** U `enhanceAudioPlayer` postavi `preload="none"`, pa `ensureSeekable()`:
+`fetch(src, {headers:{Range:"bytes=0-1"}})`. Ako `206` → server poštuje Range, pusti
+direktan (streaming) izvor (`preload=metadata`+`load()`). Ako `200` → Range ignorisan a
+tijelo TOG odgovora JE cijeli fajl → `URL.createObjectURL(blob)` i postavi kao `audio.src`
+(blob URL je uvijek potpuno premotljiv, podaci su lokalni; jedno preuzimanje). Bail na
+direktan izvor kod fetch throw / `!probe.ok` / `text/html` / prazan blob. Probe za 206 je
+2 bajta (jeftino u dev-u); puni download samo tamo gdje Range ionako ne radi. Dijagnoza:
+`curl -D- -H "Range: bytes=1000-2000" <url>` → 206 znači da Range radi, 200 da ne radi.
+Poznati kompromis: blob URL se NE revoke-uje (curenje vezano za životni vijek stranice) —
+ok za kratke lekcijske klipove; ako editor pravi mnogo plejera u jednoj sesiji, dodaj revoke.

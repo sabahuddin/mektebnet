@@ -26,4 +26,4 @@
 - [PROD_DATABASE_URL direktan pristup](prevod-detekcija-i-bulk.md) — prod self-hosted DB je čitljiv/upisiv iz Replit dev preko bash node (sandbox strip-a secrete); upis podataka je odmah live, bez redeploya.
 - [Batch prijevod po indeksu](prevod-detekcija-i-bulk.md) — kratke stringove (kviz) mapiraj po INDEKSU, ne po echo-ključu; izvor ima latinica/ćirilica homoglife pa model "popravi" ključ i posao se tiho preskoči (system+user prompt moraju tražiti isti oblik).
 - [SMTP na produkciji — port i async](smtp-produkcija.md) — Coolify hosting blokira port 465 (SSL); koristi 587 (STARTTLS). Registracijski mailovi moraju biti fire-and-forget (.catch), ne await — inače request visi.
-- [Custom audio plejer](audio-player-custom.md) — native "Emitiranje uživo" se ne može mijenjati; wrappamo <audio> u .mekteb-audio; serijalizacija (getHTML) ostaje goli <audio controls>.
+- [Custom audio plejer](audio-player-custom.md) — wrappamo <audio> u .mekteb-audio; Cloudflare guta Range (200 umjesto 206) pa se seek vraćao na 0 → fix je blob: fallback; serijalizacija ostaje goli <audio>.
