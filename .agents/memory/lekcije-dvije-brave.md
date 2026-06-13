@@ -24,9 +24,15 @@ otključanom. Nekonzistentnost između dvije brave; gate na stranici je zaostali
 ne konsultuje medaljon-blok logiku mape. Komentar u kodu kaže "dalje otključavanje ide kroz
 mapu", ali gate to ne implementira — samo tvrdo reže `r > 10`.
 
-**How to apply:** Kad mijenjaš logiku otključavanja/napretka, OBAVEZNO uskladi OBA gate-a.
-Ispravan fix: stranica lekcije treba dopustiti lekcije do otključanog bloka na osnovu
-`completedCount`/osvojenih medaljona (ista logika kao mapa), ne tvrdi `redoslijed <= 10`.
+**Riješeno:** Unlock logika je izdvojena u `src/lib/lekcija-unlock.ts`
+(`computeUnlockedCellCount` + `isEtapaPassed`) i koriste je OBA gate-a. Stranica lekcije
+sada dohvati `/mapa/nivo/:nivo`, nađe indeks lekcije u nizu i blokira samo ako je
+`idx >= unlockedCellCount` (umjesto starog tvrdog `redoslijed <= 10`). Ovo i poravnava
+gosta na prvih 5 i učenika na prvih 10 (kao mapa), uz konzervativni fallback na stari
+limit ako `/mapa` zahtjev padne.
+
+**How to apply:** NE vraćaj tvrdi `redoslijed`-limit u stranicu lekcije. Sve promjene
+logike otključavanja idu u `src/lib/lekcija-unlock.ts` da oba gate-a ostanu identična.
 
 **Sporedno (nije glavni uzrok 11/12):** lekcija se broji kao završena tek nakon strogog
 anti-cheat gate-a (≥300s aktivnog čitanja; 30s za intro slugove; ≥85% skrol; otvorene sve

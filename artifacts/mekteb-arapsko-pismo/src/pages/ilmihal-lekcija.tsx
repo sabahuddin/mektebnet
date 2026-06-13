@@ -3,6 +3,7 @@ import { useParams, useLocation, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
+import { computeUnlockedCellCount } from "@/lib/lekcija-unlock";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { RjecnikContent } from "@/components/rjecnik-content";
@@ -22,6 +23,15 @@ import { CelebrationModal, type CelebrationData } from "@/components/celebration
 import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
 const H5PPlayerLazy = lazy(() => import("@/components/h5p-player").then(m => ({ default: m.H5PPlayer })));
+
+// Minimalni oblik /mapa/nivo/:nivo odgovora — samo polja potrebna za gate
+// otključavanja lekcije (ista logika kao mapa, vidi @/lib/lekcija-unlock).
+interface MapaUnlockData {
+  lekcije: { id: number; redoslijed: number }[];
+  medaljoni: { id: number; posAfterRedoslijed: number; imaKviz?: boolean; isGating?: boolean }[];
+  zavrsene: number[];
+  osvojeniMedaljoni: number[];
+}
 
 interface LekcijaKvizPitanje {
   question: string;
@@ -2398,18 +2408,45 @@ export default function IlmihalLekcijaPage() {
     // (učenici vide H5P/URL prilozi, muallim/admin sve). Bez tokena
     // dobijemo lekciju ali bez priloga, što razbije H5P prikaz.
     apiRequest<Lekcija>("GET", `/content/ilmihal/${slug}`, undefined, token)
-      .then(data => {
-        // Gate pristupa lekciji preko direktnog URL-a:
-        //   - neprijavljeni korisnik: samo prvih 5 lekcija (redoslijed <= 5)
-        //   - prijavljeni učenik: prvih 10 lekcija (redoslijed <= 10) — dalje
-        //     otključavanje ide kroz mapu (medaljon blokovi).
-        //   - admin/muallim/roditelj: puni pristup.
+      .then(async (data) => {
+        // Gate pristupa lekciji MORA pratiti ISTU logiku otključavanja kao
+        // mapa (medaljon-blokovi), a NE tvrdi redoslijed<=10. Ranije je ovdje
+        // stajao hard-limit (r > 10), pa je mapa otključala sljedeću lekciju
+        // ali ju je ova stranica i dalje blokirala — 12. lekcija se nije
+        // otvarala iako je mapa pokazivala otključano (vidi memory:
+        // lekcije-dvije-brave). Sada dohvatimo mapu nivoa i izračunamo isti
+        // broj otključanih ćelija pa blokiramo samo lekcije iza granice.
         const isPrivileged =
           user?.role === "admin" || user?.role === "muallim" || user?.role === "roditelj";
         if (!isPrivileged) {
-          const limit = !user ? 5 : 10;
-          const r = data.redoslijed ?? 0;
-          if (r > limit) {
+          let blocked = false;
+          try {
+            const mapa = await apiRequest<MapaUnlockData>(
+              "GET", `/mapa/nivo/${data.nivo ?? 1}`, undefined, token || undefined,
+            );
+            const lekcijeSorted = [...(mapa.lekcije ?? [])].sort(
+              (a, b) => a.redoslijed - b.redoslijed,
+            );
+            const zavrseneSet = new Set(mapa.zavrsene ?? []);
+            const osvojeniSet = new Set(mapa.osvojeniMedaljoni ?? []);
+            const completedCount = lekcijeSorted.filter((l) => zavrseneSet.has(l.id)).length;
+            const unlocked = computeUnlockedCellCount({
+              isPrivileged: false,
+              isGuest: !user,
+              totalCells: lekcijeSorted.length,
+              medaljoni: mapa.medaljoni ?? [],
+              completedCount,
+              osvojeniSet,
+            });
+            const idx = lekcijeSorted.findIndex((l) => l.id === data.id);
+            // Lekcija nije u mapi (npr. medaljon/dodatak van glavnog niza) →
+            // padni na konzervativni redoslijed-limit.
+            blocked = idx >= 0 ? idx >= unlocked : (data.redoslijed ?? 0) > (!user ? 5 : 10);
+          } catch {
+            // Mapa nedostupna → konzervativni fallback (stari limit).
+            blocked = (data.redoslijed ?? 0) > (!user ? 5 : 10);
+          }
+          if (blocked) {
             toast({
               title: t("Zaključano"),
               description: !user

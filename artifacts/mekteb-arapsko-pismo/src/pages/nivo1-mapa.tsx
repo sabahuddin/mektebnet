@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
+import { computeUnlockedCellCount, isEtapaPassed } from "@/lib/lekcija-unlock";
 import { Check, Sparkles, X } from "lucide-react";
 
 const mapaPozadinaUrl = `${import.meta.env.BASE_URL}images/mapa/pozadina-pcele.png`;
@@ -114,7 +115,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   // postoji s konfigurisanim kvizom, vrata vode na /krunisanje/:nivo
   // (završni izazov); inače na sljedeću mapu po starom toku.
   const sveEtapePolozene = medaljoniSorted.length > 0
-    && medaljoniSorted.every((m) => isEtapaPassed(m));
+    && medaljoniSorted.every((m) => isEtapaPassed(m, completedCount, osvojeniSet));
   const krunisanjeMeta = data?.krunisanje ?? null;
   const krunisanjePolozeno = !!krunisanjeMeta
     && (data?.polozenaKrunisanja ?? []).includes(krunisanjeMeta.id);
@@ -161,29 +162,19 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   //       legacy claim za one bez ispita), ili
   //   (b) etapa nema konfigurisan kviz I sve lekcije te etape su završene
   //       (kompatibilnost — daje "soft" napredak dok admin ne unese pitanja).
-  function isEtapaPassed(m: Medaljon): boolean {
-    // Task #126: ako etapa NIJE gating (admin toggle), tretiramo je kao
-    // "uvijek prošla" za potrebe otključavanja sljedećih lekcija — student
-    // je i dalje može osvojiti (kviz/legacy claim), ali ne blokira napredak.
-    if (m.isGating === false) return true;
-    if (osvojeniSet.has(m.id)) return true;
-    if (!m.imaKviz && completedCount >= m.posAfterRedoslijed) return true;
-    return false;
-  }
-  const unlockedCellCount = (() => {
-    if (isPrivilegedRole) return TOTAL_CELLS;
-    if (!user) return Math.min(TOTAL_CELLS, 5);
-    // Prvih 10 lekcija uvijek otvoreno za prijavljene učenike.
-    let unlocked = Math.min(TOTAL_CELLS, 10);
-    for (const m of medaljoniSorted) {
-      if (isEtapaPassed(m)) {
-        unlocked = Math.min(TOTAL_CELLS, m.posAfterRedoslijed + 10);
-      } else {
-        break;
-      }
-    }
-    return unlocked;
-  })();
+  // isEtapaPassed + unlockedCellCount logika je izdvojena u @/lib/lekcija-unlock
+  // da je stranica lekcije (ilmihal-lekcija.tsx) koristi ISTU — inače mapa
+  // otključa lekciju, a stranica je i dalje blokira (vidi memory:
+  // lekcije-dvije-brave). Task #126: etape koje NISU gating tretiraju se kao
+  // "uvijek prošle" za otključavanje (student ih svejedno može osvojiti).
+  const unlockedCellCount = computeUnlockedCellCount({
+    isPrivileged: isPrivilegedRole,
+    isGuest: !user,
+    totalCells: TOTAL_CELLS,
+    medaljoni: medaljoniSorted,
+    completedCount,
+    osvojeniSet,
+  });
 
   // Snake mapping: logički indeks → (logicalRow, col).
   function rowColFor(i: number): { logicalRow: number; col: number } {
