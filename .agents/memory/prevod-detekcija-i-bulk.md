@@ -33,3 +33,25 @@ Dodatni signal: `len_ratio` pravog prijevoda — de/sq/tr ~1.05–1.15 duži, ar
 **Why:** Ranija Čitaonica imala 38/60 content_html redova "prevedeno" a zapravo bosanski (kopija izvora
 sa sitnim diffom); egzaktna detekcija ih je promašila. Overlay servira `prijevod` bez provjere izvor_hash
 → ispravka reda u prod bazi je ODMAH live na mekteb.net, bez redeploya (podaci ≠ kod).
+
+# Batch prijevod KRATKIH stringova (kviz/text) — mapiraj po INDEKSU, ne po echo-ključu
+
+**Pravilo:** Za batch prijevod niza stringova traži od modela `{"prijevodi":[...]}` niz ISTE DUŽINE
+i ISTOG REDOSLIJEDA pa zip-uj s NAŠIM originalima po indeksu. NE oslanjaj se na `dict[original]`
+(model echo-uje ključ pa ga "popravi").
+**Why:** Izvorni mekteb sadržaj sadrži pomiješana pisma — latinica + ćirilica **homoglifi** (npr.
+"Džemal**удином**", "Kur**ана** **о** životu") i pravopisne greške. Pri echo-key mapiranju model
+normalizuje/ispravi ključ → `dict[original]` promaši → cijeli posao se TIHO preskoči (4 reda bila
+0/5 jezika dok nije otkriveno). Bilo kakvo egzaktno string-matchanje protiv izvora puca na ovome.
+**How to apply:** system I user prompt MORAJU tražiti ISTI oblik odgovora; kontradikcija (system traži
+map `ključ=original`, user traži niz) → model nekad vrati drugi oblik i tihi fallback puca — uskladi oba.
+Drži length-guard (arr.length === items.length) da odbaciš misalignment umjesto da upišeš pogrešno;
+za izolaciju problematičnog reda spusti `--chunk` (1–4). Invarijanta kviza: prevedeni `answer` mora
+ostati ∈ prevedenim `options` (FE poredi tekstualno, opcije izmiješane) — postiže se prevođenjem
+SVIH stringova (pitanje+opcije+odgovor) kroz isti dict.
+
+**kviz_pitanja je MIJEŠAN tip u produ:** dio redova je jsonb `array`, dio je dvostruko-enkodiran JSON
+`string` (jsonb scalar). Raw SQL (`db.execute`) NE prolazi kroz drizzle auto-JSON.parse (serving put
+to radi automatski) → string-redove ručno `JSON.parse` pa `Array.isArray` provjeri. Postoji i 1 outlier
+red s bosanskim ključevima `pitanje/odgovori/tacanOdgovor` koji FE (`QuizQuestion`=question/options/answer)
+ne renderuje pa je prijevod bespredmetan.

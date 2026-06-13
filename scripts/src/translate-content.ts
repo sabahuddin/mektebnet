@@ -123,7 +123,7 @@ Pravila:
 - Zadrži islamske/arapske termine i vlastita imena prirodno za ciljni jezik (npr. Allah, Kur'an, sura, ajet, ezan, salavat, mekteb, muallim, ilmihal, abdest); nazive sura i dova NE prevodi (npr. El-Fatiha, El-Ihlas ostaju isti).
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Zadrži placeholdere u vitičastim zagradama {ovako} i HTML/markup ako postoji.
-- Vrati ISKLJUČIVO validan JSON objekt: ključ = originalni bosanski tekst, vrijednost = prijevod. Bez objašnjenja.`;
+- Vrati ISKLJUČIVO validan JSON objekt oblika {"prijevodi": [...]} gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz. Bez objašnjenja.`;
 
 async function translateTexts(items: string[], targetName: string): Promise<Record<string, string>> {
   const data = await callOpenAI({
@@ -132,10 +132,36 @@ async function translateTexts(items: string[], targetName: string): Promise<Reco
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: TEXT_SYS(targetName) },
-      { role: "user", content: `Prevedi svaki string iz ovog JSON niza i vrati JSON objekt original->prijevod:\n${JSON.stringify(items)}` },
+      {
+        role: "user",
+        // Mapiranje po INDEKSU (ne po echo-u originalnog ključa): neki izvorni
+        // stringovi sadrže pravopisne greške ili pomiješana pisma (latinica +
+        // ćirilica homoglifi), pa model "popravi" ključ i echo-key matching
+        // (dict[original]) promaši → cijeli posao bi se preskočio. Tražimo niz
+        // prijevoda istog redoslijeda i dužine pa zip-ujemo s našim originalima.
+        content:
+          `Prevedi svaki string iz ulaznog niza. Vrati JSON objekt oblika {"prijevodi": [...]} ` +
+          `gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz ` +
+          `(prijevodi[i] je prijevod od ulaz[i]). Prevedi po značenju i kad izvorni tekst sadrži ` +
+          `pravopisne greške ili pomiješana pisma; NE izostavljaj nijedan element.\n` +
+          `Ulaz (${items.length} stringova):\n${JSON.stringify(items)}`,
+      },
     ],
   });
-  return JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+  const rawContent = data.choices?.[0]?.message?.content ?? "{}";
+  let parsed: any;
+  try { parsed = JSON.parse(rawContent); } catch { return {}; }
+  const out: Record<string, string> = {};
+  const arr: unknown = Array.isArray(parsed) ? parsed : (parsed?.prijevodi ?? parsed?.translations ?? parsed?.prevodi);
+  if (Array.isArray(arr) && arr.length === items.length) {
+    items.forEach((s, i) => { if (typeof arr[i] === "string") out[s] = arr[i] as string; });
+    return out;
+  }
+  // Fallback: stari oblik {original: prijevod} (ako model ne ispoštuje niz).
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    for (const s of items) if (typeof parsed[s] === "string") out[s] = parsed[s];
+  }
+  return out;
 }
 
 const HTML_SYS = (targetName: string) => `Ti si profesionalni prevodilac za islamsku edukativnu platformu za djecu (mekteb).
@@ -185,7 +211,12 @@ async function run() {
   // Postojeći prijevodi: ključ "tabela|red|polje|jezik" -> izvor_hash
   const existing = new Map<string, string>();
   {
-    const r = (await db.execute(sql`SELECT tabela, red_id, polje, jezik, izvor_hash FROM content_prijevodi`)) as unknown as { rows: any[] };
+    // Skupi samo prijevode za tabele iz --tables (kad je filter zadat) — inače
+    // bi se na svakom pokretu učitavalo desetine hiljada redova preko mreže.
+    const where = ONLY_TABLES.length
+      ? ` WHERE tabela IN (${ONLY_TABLES.map((t) => `'${t.replace(/'/g, "''")}'`).join(", ")})`
+      : "";
+    const r = (await db.execute(sql.raw(`SELECT tabela, red_id, polje, jezik, izvor_hash FROM content_prijevodi${where}`))) as unknown as { rows: any[] };
     for (const row of r.rows) existing.set(`${row.tabela}|${row.red_id}|${row.polje}|${row.jezik}`, row.izvor_hash);
   }
 
@@ -208,7 +239,15 @@ async function run() {
           // stringove (pitanje + opcije + tačan odgovor). Tačan odgovor je
           // jednak jednoj od opcija pa kroz isti dict ostaje usklađen → FE
           // poredi `selected === answer` po tekstu (opcije su izmiješane).
-          const arr: any[] = Array.isArray(raw) ? raw : [];
+          // Neki redovi imaju kviz_pitanja kao dvostruko-enkodiran JSON string
+          // (jsonb scalar). Ovdje čitamo preko raw SQL (db.execute) koji NE
+          // provlači vrijednost kroz drizzle jsonb mapiranje (serving putanja to
+          // radi automatski), pa takvi redovi stignu kao string — JSON.parse-amo.
+          let arr: any[] = [];
+          if (Array.isArray(raw)) arr = raw;
+          else if (typeof raw === "string" && raw.trim()) {
+            try { const p = JSON.parse(raw); if (Array.isArray(p)) arr = p; } catch { /* nije validan niz — preskoči */ }
+          }
           const collected: string[] = [];
           for (const item of arr) {
             if (item && typeof item.question === "string" && item.question.trim()) collected.push(item.question);
