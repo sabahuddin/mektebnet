@@ -21,6 +21,10 @@ export const CT_TABLES: Record<string, CTTable> = {
   ilmihal_lekcije: { tabela: "ilmihal_lekcije", fields: [
     { col: "naslov", resKey: "naslov", type: "text" },
     { col: "content_html", resKey: "contentHtml", type: "html" },
+    // "Provjeri znanje" mini-kviz (niz objekata {question, options[], answer}).
+    // Generator (scripts/translate-content.ts, tip "kvizPitanja") sprema cijeli
+    // prevedeni niz kao JSON; ovdje ga samo JSON.parse-amo nazad u kvizPitanja.
+    { col: "kviz_pitanja", resKey: "kvizPitanja", type: "jsonbArray" },
   ] },
   knjige: { tabela: "knjige", fields: [
     { col: "naslov", resKey: "naslov", type: "text" },

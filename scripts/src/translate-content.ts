@@ -36,7 +36,7 @@ const LANG_NAMES: Record<string, string> = {
   ar: "Arapski (العربية)",
 };
 
-type FieldType = "text" | "html" | "jsonbArray";
+type FieldType = "text" | "html" | "jsonbArray" | "kvizPitanja";
 interface TableCfg {
   tabela: string;
   fields: { col: string; type: FieldType }[];
@@ -45,7 +45,7 @@ interface TableCfg {
 // Prevodiva polja po tabeli (imena kolona u bazi). Ovo mora ostati usklađeno sa
 // overlay konfiguracijom u api-server (lib/content-translatable.ts).
 const TABLES: TableCfg[] = [
-  { tabela: "ilmihal_lekcije", fields: [{ col: "naslov", type: "text" }, { col: "content_html", type: "html" }] },
+  { tabela: "ilmihal_lekcije", fields: [{ col: "naslov", type: "text" }, { col: "content_html", type: "html" }, { col: "kviz_pitanja", type: "kvizPitanja" }] },
   { tabela: "knjige", fields: [{ col: "naslov", type: "text" }, { col: "content_html", type: "html" }] },
   { tabela: "medaljoni", fields: [{ col: "naziv", type: "text" }, { col: "opis", type: "text" }, { col: "content_html", type: "html" }] },
   { tabela: "rjecnik", fields: [{ col: "rijec", type: "text" }, { col: "definicija", type: "text" }] },
@@ -171,7 +171,7 @@ async function upsert(tabela: string, redId: number, polje: string, jezik: strin
   `);
 }
 
-interface TextJob { tabela: string; redId: number; polje: string; jezik: string; type: "text" | "jsonbArray"; strings: string[]; hash: string; }
+interface TextJob { tabela: string; redId: number; polje: string; jezik: string; type: "text" | "jsonbArray" | "kvizPitanja"; strings: string[]; hash: string; arr?: any[]; }
 interface HtmlJob { tabela: string; redId: number; polje: string; jezik: string; html: string; hash: string; }
 
 async function run() {
@@ -202,7 +202,24 @@ async function run() {
         const raw = row[f.col];
         let srcStr: string;
         let strings: string[] = [];
-        if (f.type === "jsonbArray") {
+        let objArr: any[] | undefined;
+        if (f.type === "kvizPitanja") {
+          // Niz objekata {question, options[], answer}. Skupi sve prevodive
+          // stringove (pitanje + opcije + tačan odgovor). Tačan odgovor je
+          // jednak jednoj od opcija pa kroz isti dict ostaje usklađen → FE
+          // poredi `selected === answer` po tekstu (opcije su izmiješane).
+          const arr: any[] = Array.isArray(raw) ? raw : [];
+          const collected: string[] = [];
+          for (const item of arr) {
+            if (item && typeof item.question === "string" && item.question.trim()) collected.push(item.question);
+            if (Array.isArray(item?.options)) for (const o of item.options) if (typeof o === "string" && o.trim()) collected.push(o);
+            if (typeof item?.answer === "string" && item.answer.trim()) collected.push(item.answer);
+          }
+          strings = Array.from(new Set(collected));
+          if (strings.length === 0) continue;
+          objArr = arr;
+          srcStr = JSON.stringify(arr);
+        } else if (f.type === "jsonbArray") {
           const arr: unknown[] = Array.isArray(raw) ? raw : [];
           strings = arr.filter((x): x is string => typeof x === "string" && x.trim() !== "");
           if (strings.length === 0) continue;
@@ -217,7 +234,7 @@ async function run() {
           const key = `${t.tabela}|${redId}|${f.col}|${jezik}`;
           if (existing.get(key) === hash) continue; // već prevedeno, izvor nepromijenjen
           if (f.type === "html") htmlJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, html: srcStr, hash });
-          else textJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, type: f.type, strings, hash });
+          else textJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, type: f.type, strings, hash, arr: objArr });
         }
       }
     }
@@ -250,6 +267,20 @@ async function run() {
         try {
           const dict = await translateTexts(uniq, LANG_NAMES[jezik]);
           for (const j of chunk) {
+            if (j.type === "kvizPitanja") {
+              // Svi stringovi moraju biti prevedeni, inače preskoči (retry idući
+              // pokret) — pola-prevedeni kviz bi razbio poklapanje odgovora.
+              if (j.strings.some((s) => typeof dict[s] !== "string" || dict[s] === "")) { failed++; continue; }
+              const rebuilt = (j.arr ?? []).map((item: any) => ({
+                ...item,
+                question: typeof item?.question === "string" ? (dict[item.question] ?? item.question) : item?.question,
+                options: Array.isArray(item?.options) ? item.options.map((o: string) => (typeof o === "string" ? (dict[o] ?? o) : o)) : item?.options,
+                answer: typeof item?.answer === "string" ? (dict[item.answer] ?? item.answer) : item?.answer,
+              }));
+              await upsert(j.tabela, j.redId, j.polje, j.jezik, JSON.stringify(rebuilt), j.hash);
+              doneJobs++;
+              continue;
+            }
             const parts = j.strings.map((s) => dict[s]);
             if (parts.some((p) => typeof p !== "string" || p === "")) { failed++; continue; }
             const prijevod = j.type === "jsonbArray" ? JSON.stringify(parts) : (parts[0] as string);
