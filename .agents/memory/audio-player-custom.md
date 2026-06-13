@@ -30,3 +30,19 @@ NE može promijeniti niti se nativni kontroler pouzdano centrirati/stilizovati.
   ostaje trajno onemogućen.
 - Admin raw-HTML preview staze (dangerouslySetInnerHTML u ilmihal-lekcija.tsx)
   su NAMJERNO nepokrivene (admin-only, niži prioritet).
+
+# Seek/premotavanje mora podržavati prevlačenje + dodir
+
+Seek-traka NE smije biti samo klik na tanku liniju. Treba: vidljiva ručica (thumb),
+veća dodirna zona (bar ~20px iako je vizuelna traka 7px), i prevlačenje preko
+**Pointer Events** (pointerdown/move/up + setPointerCapture), uz `touch-action:none`
+na baru da prevlačenje ne skrola stranicu.
+**Why:** Korisnik je prijavio "nema opciju da premotavam"; klik-only seek na 7px traci
+bez ručice djeci na tabletima izgleda kao da seek ne postoji. Pattern je isti kao kod
+reorder UI-ja (vidi reorder-touch-drag.md) — djeca su na tabletima, HTML5 drag ne radi.
+**How to apply:** Tokom prevlačenja radi samo VIZUELNI preview (ne diraj
+`audio.currentTime` dok ne pustiš, da reprodukcija ne trza); commit na pointerup.
+`update()` (timeupdate handler) mora imati `if (dragging) return` da playback ne
+pregazi preview. Ručicu/seek prikaži tek kad je trajanje poznato (`.is-seekable`),
+jer Infinity-duration fajlovi i dalje gase seek graciozno. Dodaj i `durationchange`
+listener (ne samo loadedmetadata) — trajanje za neke fajlove stigne naknadno.

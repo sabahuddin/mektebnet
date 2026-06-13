@@ -525,10 +525,27 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
 }
 .mekteb-audio__bar {
   position: relative;
+  display: flex;
+  align-items: center;
+  height: 20px;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+.mekteb-audio__bar:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+.mekteb-audio:not(.is-seekable) .mekteb-audio__bar {
+  cursor: default;
+}
+.mekteb-audio__track {
+  position: relative;
+  width: 100%;
   height: 7px;
   border-radius: 999px;
   background: #ddd6fe;
-  cursor: pointer;
   overflow: hidden;
 }
 .mekteb-audio__progress {
@@ -539,6 +556,28 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   width: 0%;
   background: linear-gradient(90deg, #a855f7, #7c3aed);
   border-radius: 999px;
+}
+.mekteb-audio__handle {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #7c3aed;
+  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.mekteb-audio.is-seekable .mekteb-audio__handle {
+  opacity: 1;
+}
+.mekteb-audio.is-seekable .mekteb-audio__bar:hover .mekteb-audio__handle,
+.mekteb-audio.is-seekable .mekteb-audio__bar:active .mekteb-audio__handle {
+  transform: translate(-50%, -50%) scale(1.25);
 }
 .mekteb-audio__time {
   flex: 0 0 auto;

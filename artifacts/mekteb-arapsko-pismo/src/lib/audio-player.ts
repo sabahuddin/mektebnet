@@ -59,10 +59,22 @@ export function enhanceAudioPlayer(
   bar.className = "mekteb-audio__bar";
   bar.setAttribute("role", "slider");
   bar.setAttribute("aria-label", "Pozicija u snimku");
+  bar.setAttribute("aria-valuemin", "0");
+  bar.setAttribute("aria-valuenow", "0");
+  bar.tabIndex = 0;
+
+  const track = document.createElement("div");
+  track.className = "mekteb-audio__track";
 
   const progress = document.createElement("div");
   progress.className = "mekteb-audio__progress";
-  bar.appendChild(progress);
+  track.appendChild(progress);
+
+  const handle = document.createElement("div");
+  handle.className = "mekteb-audio__handle";
+
+  bar.appendChild(track);
+  bar.appendChild(handle);
   body.appendChild(label);
   body.appendChild(bar);
 
@@ -84,7 +96,9 @@ export function enhanceAudioPlayer(
   const showDuration = () => {
     if (isFinite(audio.duration) && audio.duration > 0) {
       durationKnown = true;
-      time.textContent = `0:00 / ${fmt(audio.duration)}`;
+      wrap.classList.add("is-seekable");
+      bar.setAttribute("aria-valuemax", String(Math.floor(audio.duration)));
+      time.textContent = `${fmt(audio.currentTime || 0)} / ${fmt(audio.duration)}`;
     }
   };
 
@@ -113,19 +127,29 @@ export function enhanceAudioPlayer(
     }
   };
   audio.addEventListener("loadedmetadata", handleMetadata);
+  // Trajanje za neke fajlove postane poznato tek naknadno ("durationchange").
+  audio.addEventListener("durationchange", showDuration);
   // Ako su metapodaci već učitani (keširan audio) prije nego smo zakačili
   // listener, "loadedmetadata" se neće ponovo okinuti — pokreni ručno da
   // seek/trajanje ne ostanu trajno onemogućeni.
   if (audio.readyState >= 1) handleMetadata();
 
-  const update = () => {
-    const cur = audio.currentTime || 0;
+  let dragging = false;
+  const render = (cur: number) => {
     if (durationKnown && audio.duration > 0) {
-      progress.style.width = `${Math.min(100, (cur / audio.duration) * 100)}%`;
+      const pct = Math.min(100, Math.max(0, (cur / audio.duration) * 100));
+      progress.style.width = `${pct}%`;
+      handle.style.left = `${pct}%`;
+      bar.setAttribute("aria-valuenow", String(Math.floor(cur)));
       time.textContent = `${fmt(cur)} / ${fmt(audio.duration)}`;
     } else {
       time.textContent = fmt(cur);
     }
+  };
+  const update = () => {
+    // Dok korisnik prevlači, ne dozvoli da reprodukcija pregazi "preview".
+    if (dragging) return;
+    render(audio.currentTime || 0);
   };
   audio.addEventListener("timeupdate", update);
 
@@ -138,6 +162,8 @@ export function enhanceAudioPlayer(
   audio.addEventListener("ended", () => {
     setPlaying(false);
     progress.style.width = "0%";
+    handle.style.left = "0%";
+    bar.setAttribute("aria-valuenow", "0");
   });
 
   play.addEventListener("click", (e) => {
@@ -146,19 +172,82 @@ export function enhanceAudioPlayer(
     else audio.pause();
   });
 
-  const seek = (clientX: number) => {
+  const ratioFromX = (clientX: number): number | null => {
+    const rect = track.getBoundingClientRect();
+    if (rect.width <= 0) return null;
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  };
+  // Vizuelni "preview" tokom prevlačenja — ne diramo audio.currentTime dok ne
+  // pustimo, da reprodukcija ne "trza".
+  const previewAt = (clientX: number) => {
     if (!durationKnown || !(audio.duration > 0)) return;
-    const rect = bar.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const r = ratioFromX(clientX);
+    if (r === null) return;
+    render(r * audio.duration);
+  };
+  const commitAt = (clientX: number) => {
+    if (!durationKnown || !(audio.duration > 0)) return;
+    const r = ratioFromX(clientX);
+    if (r === null) return;
     try {
-      audio.currentTime = ratio * audio.duration;
+      audio.currentTime = r * audio.duration;
     } catch {
       /* noop */
     }
-    update();
   };
-  bar.addEventListener("click", (e) => seek(e.clientX));
+  // Pointer Events pokrivaju i miš i dodir (tableti) jednim kodom; HTML5 drag
+  // ne radi pouzdano na touch uređajima. Običan tap = pointerdown + pointerup
+  // na istom mjestu, pa i to premota.
+  bar.addEventListener("pointerdown", (e) => {
+    if (!durationKnown || !(audio.duration > 0)) return;
+    dragging = true;
+    try {
+      bar.setPointerCapture(e.pointerId);
+    } catch {
+      /* noop */
+    }
+    e.preventDefault();
+    previewAt(e.clientX);
+  });
+  bar.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    previewAt(e.clientX);
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (!dragging) return;
+    dragging = false;
+    try {
+      bar.releasePointerCapture(e.pointerId);
+    } catch {
+      /* noop */
+    }
+    commitAt(e.clientX);
+    render(audio.currentTime || 0);
+  };
+  bar.addEventListener("pointerup", endDrag);
+  bar.addEventListener("pointercancel", endDrag);
+  // Tipkovnica (role="slider"): strelice ±5s, Home/End na početak/kraj.
+  bar.addEventListener("keydown", (e) => {
+    if (!durationKnown || !(audio.duration > 0)) return;
+    let delta = 0;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") delta = 5;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") delta = -5;
+    else if (e.key === "Home") delta = -1e9;
+    else if (e.key === "End") delta = 1e9;
+    else return;
+    e.preventDefault();
+    const next = Math.min(
+      audio.duration,
+      Math.max(0, (audio.currentTime || 0) + delta),
+    );
+    try {
+      audio.currentTime = next;
+    } catch {
+      /* noop */
+    }
+    render(next);
+  });
 
   return wrap;
 }
