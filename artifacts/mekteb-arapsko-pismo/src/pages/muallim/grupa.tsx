@@ -373,13 +373,13 @@ export default function GrupaPage() {
     <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(c.username)}</span></div>
     <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(c.generatedPassword)}</span></div>
     ${((): string => {
-      // Normalizuj: singular c.roditel (generatedPassword) i plural c.roditelji (password)
+      // Normalizuj: singular c.roditelj (generatedPassword) i plural c.roditelji (password)
       // u jedinstven niz da print window uvijek prikaže roditelja bez obzira na izvor.
       const rods: Array<{username: string; displayName: string | null; password: string}> =
         c.roditelji && c.roditelji.length > 0
           ? c.roditelji.map(r => ({ username: r.username, displayName: r.displayName ?? null, password: r.password }))
-          : c.roditel
-            ? [{ username: c.roditel.username, displayName: c.roditel.displayName, password: c.roditel.generatedPassword }]
+          : c.roditelj
+            ? [{ username: c.roditelj.username, displayName: c.roditelj.displayName, password: c.roditelj.generatedPassword }]
             : [];
       return rods.map((r, idx) => `
     <div class="parent-block">
@@ -411,7 +411,7 @@ export default function GrupaPage() {
     apiRequest<CreatedUcenik[]>("POST", "/muallim/print-kartice", { ucenikIds }, token!)
       .then(cards => {
         openPrintWindow(cards);
-        toast({ title: t("Lozinke resetirane"), description: t("Nove lozinke su na karticama. Stare lozinke više ne važe.") });
+        toast({ title: t("Kartice su spremne"), description: t("Na karticama su standardne lozinke — iste za učenika i roditelja i ne mijenjaju se pri ponovnom printu.") });
       })
       .catch(() => {
         toast({ title: t("Greška"), description: t("Nije moguće generisati kartice"), variant: "destructive" });

@@ -72,6 +72,18 @@ function generatePairCredentials() {
   return { suffix, password: `Mekteb${suffix}` };
 }
 
+// Izvuci standardnu lozinku iz korisničkog imena. Imena su oblika "ime.NNNN",
+// a standardna lozinka je "MektebNNNN". Učenik i roditelj iz istog para dijele
+// isti NNNN, pa ovako printanje kartica uvijek daje ISTU lozinku za oboje i ne
+// mijenja je pri svakom printu (deterministički, umjesto nasumičnog reseta).
+function passwordFromUsername(username: string, userId: number): string {
+  const m = username.match(/\.(\d{3,})$/);
+  // Fallback (korisničko ime bez brojčanog sufiksa — praktički se ne dešava jer
+  // se sva imena generišu kao "ime.NNNN") koristi stabilan userId, nikad nasumično,
+  // da printanje i tada daje uvijek ISTU lozinku.
+  return m ? `Mekteb${m[1]}` : `Mekteb${userId}`;
+}
+
 function isUniqueViolation(e: any) {
   return e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
 }
@@ -1955,8 +1967,9 @@ router.post("/print-kartice", async (req, res) => {
         roditeljNewPass.set(r.id, { username: r.username, displayName: r.displayName, password: "demo123" });
         continue;
       }
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      const newPass = `Mekteb${rand}`;
+      // Standardna lozinka izvedena iz korisničkog imena (MektebNNNN) — uvijek
+      // ista pri svakom printu i identična kao kod učenika iz istog para.
+      const newPass = passwordFromUsername(r.username, r.id);
       const hash = await bcrypt.hash(newPass, 10);
       await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, r.id));
       roditeljNewPass.set(r.id, { username: r.username, displayName: r.displayName, password: newPass });
@@ -1977,8 +1990,9 @@ router.post("/print-kartice", async (req, res) => {
       if (isDemo) {
         newPass = "demo123";
       } else {
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        newPass = `Mekteb${rand}`;
+        // Standardna lozinka izvedena iz korisničkog imena (MektebNNNN) —
+        // stabilna pri svakom printu, ne mijenja se nasumično.
+        newPass = passwordFromUsername(u.username, u.id);
         const hash = await bcrypt.hash(newPass, 10);
         await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, u.id));
       }

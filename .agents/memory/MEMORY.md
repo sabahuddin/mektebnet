@@ -27,3 +27,4 @@
 - [Batch prijevod po indeksu](prevod-detekcija-i-bulk.md) — kratke stringove (kviz) mapiraj po INDEKSU, ne po echo-ključu; izvor ima latinica/ćirilica homoglife pa model "popravi" ključ i posao se tiho preskoči (system+user prompt moraju tražiti isti oblik).
 - [SMTP na produkciji — port i async](smtp-produkcija.md) — Coolify hosting blokira port 465 (SSL); koristi 587 (STARTTLS). Registracijski mailovi moraju biti fire-and-forget (.catch), ne await — inače request visi.
 - [Custom audio plejer](audio-player-custom.md) — wrappamo <audio> u .mekteb-audio; Cloudflare guta Range (200 umjesto 206) pa se seek vraćao na 0 → fix je blob: fallback; serijalizacija ostaje goli <audio>.
+- [Kartice — standardna lozinka i print](kartice-lozinke.md) — lozinka=Mekteb<sufiks iz username-a>; print mora biti deterministički (ne random), par dijeli sufiks/lozinku.
