@@ -1922,7 +1922,10 @@ router.get("/lekcije-za-plan", async (req, res) => {
   }
 });
 
-// POST /api/muallim/print-kartice — reset passwords for students and return plaintext for printing
+// POST /api/muallim/print-kartice — SAMO prikaz za štampu kartica. Vraća
+// standardne lozinke (Mekteb<broj>, deterministički izvedene iz korisničkog
+// imena) i NE mijenja bazu. Lozinka koja se printa = ona koja je trenutno u
+// upotrebi, jer se prijava/reset uvijek drže iste standardne vrijednosti.
 router.post("/print-kartice", async (req, res) => {
   try {
     const { ucenikIds } = req.body as { ucenikIds: number[] };
@@ -1947,8 +1950,8 @@ router.post("/print-kartice", async (req, res) => {
       .from(usersTable).where(inArray(usersTable.id, allowedIds));
 
     // Roditelji povezani sa ovim učenicima (samo "approved" veze).
-    // Jedan roditelj može imati više djece → reset šifre radimo SAMO JEDNOM
-    // po roditelju, ista se lozinka pojavljuje na svim karticama te djece.
+    // Jedan roditelj može imati više djece → ista se standardna lozinka
+    // pojavljuje na svim karticama te djece.
     const veze = await db.select({
       roditeljId: roditeljUcenikTable.roditeljId,
       ucenikId: roditeljUcenikTable.ucenikId,
@@ -1967,12 +1970,10 @@ router.post("/print-kartice", async (req, res) => {
         roditeljNewPass.set(r.id, { username: r.username, displayName: r.displayName, password: "demo123" });
         continue;
       }
-      // Standardna lozinka izvedena iz korisničkog imena (MektebNNNN) — uvijek
-      // ista pri svakom printu i identična kao kod učenika iz istog para.
-      const newPass = passwordFromUsername(r.username, r.id);
-      const hash = await bcrypt.hash(newPass, 10);
-      await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, r.id));
-      roditeljNewPass.set(r.id, { username: r.username, displayName: r.displayName, password: newPass });
+      // SAMO prikaz standardne lozinke (Mekteb<broj>) — ista za učenika i
+      // roditelja iz para. Print NE mijenja bazu.
+      const pass = passwordFromUsername(r.username, r.id);
+      roditeljNewPass.set(r.id, { username: r.username, displayName: r.displayName, password: pass });
     }
     // Mapa ucenikId → niz roditelja (najčešće 0 ili 1, rijetko više).
     const roditeljiPoUceniku = new Map<number, Array<{ username: string; displayName: string | null; password: string }>>();
@@ -1986,16 +1987,8 @@ router.post("/print-kartice", async (req, res) => {
     const results = [];
     for (const u of users) {
       const isDemo = u.username.toLowerCase().startsWith("demo.");
-      let newPass: string;
-      if (isDemo) {
-        newPass = "demo123";
-      } else {
-        // Standardna lozinka izvedena iz korisničkog imena (MektebNNNN) —
-        // stabilna pri svakom printu, ne mijenja se nasumično.
-        newPass = passwordFromUsername(u.username, u.id);
-        const hash = await bcrypt.hash(newPass, 10);
-        await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, u.id));
-      }
+      // SAMO prikaz trenutne standardne lozinke (Mekteb<broj>) — print NE mijenja bazu.
+      const newPass = isDemo ? "demo123" : passwordFromUsername(u.username, u.id);
       results.push({
         id: u.id,
         displayName: u.displayName,
@@ -3428,16 +3421,11 @@ router.post("/ucenik/:id/reset-password", async (req, res) => {
       return;
     }
 
-    const customRaw = (req.body?.password as string | undefined)?.trim();
-    let newPassword: string;
-    if (customRaw && customRaw.length > 0) {
-      if (customRaw.length < 4) { res.status(400).json({ error: "Šifra mora imati najmanje 4 karaktera" }); return; }
-      newPassword = customRaw;
-    } else {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      newPassword = `Mekteb${rand}`;
-    }
-
+    // "Resetiraj šifru" UVIJEK vraća na standardnu/izvornu lozinku izvedenu iz
+    // korisničkog imena (Mekteb<broj>) — ista koja se printa na kartici i koju
+    // dijeli par učenik/roditelj. Nema nasumičnih ni custom lozinki, da prijava
+    // i odštampana kartica uvijek budu usklađeni.
+    const newPassword = passwordFromUsername(user.username, user.id);
     const hash = await bcrypt.hash(newPassword, 10);
     await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, ucenikId));
 
@@ -3827,7 +3815,7 @@ router.delete("/ucenik/:id/hard", async (req, res) => {
 // ── RESET ŠIFRE RODITELJA ──────────────────────────────────────────────────────
 // POST /api/muallim/roditelj/:id/reset-password
 // Resetuje šifru roditelju koji je povezan sa nekim učenikom u muallimovoj grupi.
-// Body: { password?: string } — ako nije zadat, generiše Mekteb####.
+// UVIJEK vraća na standardnu lozinku Mekteb<broj> (izvedenu iz korisničkog imena).
 router.post("/roditelj/:id/reset-password", async (req, res) => {
   try {
     const roditeljId = parseInt(req.params.id);
@@ -3857,16 +3845,10 @@ router.post("/roditelj/:id/reset-password", async (req, res) => {
       if (profili.length === 0) { res.status(403).json({ error: "Roditelj nije povezan ni s jednim vašim učenikom" }); return; }
     }
 
-    const customRaw = (req.body?.password as string | undefined)?.trim();
-    let newPassword: string;
-    if (customRaw && customRaw.length > 0) {
-      if (customRaw.length < 4) { res.status(400).json({ error: "Šifra mora imati najmanje 4 karaktera" }); return; }
-      newPassword = customRaw;
-    } else {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      newPassword = `Mekteb${rand}`;
-    }
-
+    // "Resetiraj šifru" UVIJEK vraća na standardnu/izvornu lozinku izvedenu iz
+    // korisničkog imena (Mekteb<broj>) — ista koju dijeli par učenik/roditelj i
+    // koja se printa na kartici. Nema nasumičnih ni custom lozinki.
+    const newPassword = passwordFromUsername(user.username, user.id);
     const hash = await bcrypt.hash(newPassword, 10);
     await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, roditeljId));
 

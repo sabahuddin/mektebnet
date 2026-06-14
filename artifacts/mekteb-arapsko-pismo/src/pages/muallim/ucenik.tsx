@@ -152,7 +152,6 @@ export default function UcenikPage() {
   const [planLekcije, setPlanLekcije] = useState<{ id: number; lekcijaNaslov: string }[]>([]);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [showResetForm, setShowResetForm] = useState(false);
-  const [customPassword, setCustomPassword] = useState("");
   const [resettingPass, setResettingPass] = useState(false);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [copiedPass, setCopiedPass] = useState(false);
@@ -211,20 +210,19 @@ export default function UcenikPage() {
   }, [token, id]);
 
 
-  async function resetPassword(forceGenerate: boolean = false) {
+  async function resetPassword() {
     if (!token || !id) return;
     setResettingPass(true);
     try {
-      const body = !forceGenerate && customPassword.trim() ? { password: customPassword.trim() } : {};
       const res = await apiRequest<{ ok: boolean; newPassword: string; displayName: string; username: string }>(
         "POST",
         `/muallim/ucenik/${parseInt(id)}/reset-password`,
-        body,
+        {},
         token
       );
       setNewPassword(res.newPassword);
       setCopiedPass(false);
-      toast({ title: t("Šifra je promijenjena!"), description: t("Nova šifra je prikazana ispod.") });
+      toast({ title: t("Šifra vraćena na standardnu!"), description: t("Standardna šifra je prikazana ispod.") });
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće resetovati šifru"), variant: "destructive" });
     } finally {
@@ -311,7 +309,7 @@ export default function UcenikPage() {
         "POST", `/muallim/roditelj/${roditeljId}/reset-password`, {}, token,
       );
       setResetRoditeljPass({ id: roditeljId, password: res.newPassword, displayName: res.displayName });
-      toast({ title: t("Šifra roditelja resetovana!"), description: t("Nova šifra prikazana ispod.") });
+      toast({ title: t("Šifra roditelja vraćena na standardnu!"), description: t("Standardna šifra je prikazana ispod.") });
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće resetovati šifru roditelja"), variant: "destructive" });
     } finally {
@@ -410,7 +408,7 @@ export default function UcenikPage() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button
-                  onClick={() => { setShowResetForm(s => !s); setNewPassword(null); setCustomPassword(""); }}
+                  onClick={() => { setShowResetForm(s => !s); setNewPassword(null); }}
                   variant="outline"
                   className="rounded-xl font-bold text-sm flex items-center gap-1.5"
                   data-testid="btn-toggle-reset-password"
@@ -449,48 +447,23 @@ export default function UcenikPage() {
                 data-testid="form-reset-password"
               >
                 <h3 className="font-extrabold text-foreground mb-2 flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-primary" /> {t("Promijeni šifru za {ime}", { ime: ucenik.displayName })}
+                  <KeyRound className="w-5 h-5 text-primary" /> {t("Šifra za {ime}", { ime: ucenik.displayName })}
                 </h3>
                 <p className="text-xs text-muted-foreground mb-3">
-                  {t("Generiši automatsku šifru u formatu")} <strong>Mekteb####</strong> {t("ili unesi vlastitu (najmanje 4 karaktera) i klikni \"Postavi\".")}
+                  {t("Standardna šifra je oblika")} <strong>Mekteb####</strong> {t("(broj iz korisničkog imena) i identična je onoj na odštampanoj kartici. Reset vraća šifru na tu standardnu vrijednost.")}
                 </p>
-                <div className="flex flex-col gap-3">
-                  <Button
-                    onClick={() => { setCustomPassword(""); resetPassword(true); }}
-                    disabled={resettingPass}
-                    className="rounded-xl font-bold flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 w-full sm:w-auto"
-                    data-testid="btn-generate-mekteb-sifra"
-                  >
-                    {resettingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                    {t("Generiši Mekteb####")}
-                  </Button>
-                  <div className="flex gap-2 items-end flex-wrap">
-                    <div className="flex-1 min-w-[200px]">
-                      <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ili unesi vlastitu šifru")}</label>
-                      <input
-                        type="text"
-                        value={customPassword}
-                        onChange={e => setCustomPassword(e.target.value)}
-                        placeholder={t("Npr. Mekteb2026")}
-                        className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        data-testid="input-nova-sifra"
-                      />
-                    </div>
-                    <Button
-                      onClick={() => resetPassword(false)}
-                      disabled={resettingPass || customPassword.trim().length < 4}
-                      variant="outline"
-                      className="rounded-xl font-bold flex items-center gap-1.5"
-                      data-testid="btn-confirm-reset-password"
-                    >
-                      {resettingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                      {t("Postavi")}
-                    </Button>
-                  </div>
-                </div>
+                <Button
+                  onClick={() => resetPassword()}
+                  disabled={resettingPass}
+                  className="rounded-xl font-bold flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 w-full sm:w-auto"
+                  data-testid="btn-reset-standardna-sifra"
+                >
+                  {resettingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                  {t("Vrati na standardnu šifru")}
+                </Button>
                 {newPassword && (
                   <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4" data-testid="display-nova-sifra">
-                    <p className="text-xs text-emerald-700 font-bold mb-1">{t("Nova šifra je postavljena. Predajte je učeniku:")}</p>
+                    <p className="text-xs text-emerald-700 font-bold mb-1">{t("Standardna šifra je postavljena. Predajte je učeniku:")}</p>
                     <div className="flex gap-2 items-center flex-wrap">
                       <code className="bg-white border border-emerald-300 rounded-lg px-3 py-2 text-base font-mono font-bold text-emerald-800 flex-1">{newPassword}</code>
                       <Button
@@ -561,7 +534,7 @@ export default function UcenikPage() {
                           </div>
                           {resetRoditeljPass?.id === r.id && (
                             <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
-                              <span className="text-[11px] font-bold text-emerald-700">{t("Nova šifra:")}</span>
+                              <span className="text-[11px] font-bold text-emerald-700">{t("Standardna šifra:")}</span>
                               <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{resetRoditeljPass.password}</code>
                               <Button
                                 size="sm" variant="outline"

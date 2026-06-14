@@ -1,12 +1,14 @@
 ---
-name: Kartice — standardna lozinka i print
-description: Kako se izvode lozinke učenika/roditelja i zašto print kartica mora biti deterministički, ne random
+name: Kartice — standardna lozinka, print je pure-read
+description: Kako se izvode lozinke učenika/roditelja; print SAMO prikazuje, samo reset upisuje standardnu šifru
 ---
 
-Standardna lozinka učenika/roditelja je `Mekteb<NNNN>`, gdje je `NNNN` brojčani sufiks iz korisničkog imena (imena su oblika `ime.NNNN`). Učenik i roditelj kreirani ZAJEDNO (bulk) dijele isti sufiks → istu lozinku.
+Standardna lozinka učenika/roditelja je `Mekteb<NNNN>`, gdje je `NNNN` brojčani sufiks iz korisničkog imena (imena su oblika `ime.NNNN`). Učenik i roditelj kreirani ZAJEDNO (bulk) dijele isti sufiks → istu lozinku. Bulk-create već generiše `Mekteb<sufiks>` kao početnu lozinku (par retry-ja sa NOVIM shared sufiksom na username koliziju).
 
-Pravilo: print kartica (`/muallim/print-kartice`) NE smije generisati nasumične lozinke. Mora izvesti lozinku iz username-a (`passwordFromUsername(username, userId)`) i resetovati hash na nju — deterministički, stabilno pri svakom printu, identično za par. Fallback (username bez sufiksa) je stabilan `Mekteb<userId>`, nikad random.
+Helper `passwordFromUsername(username, userId)`: regex `/\.(\d{3,})$/` → `Mekteb<NNNN>`; fallback (username bez sufiksa) je stabilan `Mekteb<userId>`, nikad random.
 
-**Why:** Raniji print je svakom učeniku i svakom roditelju davao zaseban `Mekteb${random}` → par je imao RAZLIČITE lozinke koje su se mijenjale pri SVAKOM printu. Korisnik: "to je strašno, NIKAKO NE TREBA TAKO".
+Pravilo (NOVI model): print kartica (`/muallim/print-kartice`) je PURE READ — SAMO računa i prikazuje `passwordFromUsername(...)`, NE radi bcrypt.hash ni db.update. Promjenu (upis novog hash-a) rade ISKLJUČIVO reset rute: `/ucenik/:id/reset-password` i `/roditelj/:id/reset-password`, koje UVIJEK vraćaju na `passwordFromUsername(user.username, user.id)` (prazan `{}` body; nema custom-password grane). Demo nalozi (`demo.*`) se prikazuju kao `demo123` i reset im se odbija.
 
-**How to apply:** Pri svakoj izmjeni print/reset tokova drži invarijantu: lozinka = `Mekteb<sufiks>` (fallback `Mekteb<userId>`), nikad random; lozinke su bcrypt-hashane pa se plaintext ne može pročitati kasnije — zato print resetuje na izvodljivu vrijednost. Bulk-create već garantuje da par dijeli sufiks (cijela transakcija se retry-ja sa NOVIM shared sufiksom na username koliziju). Demo nalozi (`demo.*`) ostaju `demo123`.
+**Why:** Raniji print je pri SVAKOM printu resetovao hash (i nekad davao par RAZLIČITE random lozinke). Korisnik je tražio: dodavanje učenika NE printa odmah; print SAMO prikazuje trenutno stanje i ne mijenja ništa; reset VRAĆA na stalnu `Mekteb<broj>` (svako dijete svoju stalnu šifru, NE globalni Mekteb2026).
+
+**How to apply:** Drži invarijantu: print = čitanje (deterministički prikaz `Mekteb<sufiks>`, stabilno pri svakom pozivu, identično za par), reset = jedini upis (vrati na istu izvedenu vrijednost). Pri izmjenama UI teksta koristi "standardna šifra", ne "nova/resetovana". NE dirati: muallim password reset (`PUT /mekteb/muallimi/:id`), admin `/admin/reset-password`, ni self-service `/api/auth/reset-password` (email). Caveat: legacy nalozi sa starim custom/random hash-om će prikazati standardnu šifru koja ne radi dok se ne klikne reset — to je očekivano u novom modelu (nema mass-migracije).

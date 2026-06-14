@@ -317,7 +317,7 @@ export default function GrupaPage() {
         "POST", `/muallim/roditelj/${roditeljId}/reset-password`, {}, token,
       );
       setParentResetResult({ id: roditeljId, password: res.newPassword, displayName: res.displayName });
-      toast({ title: t("Šifra roditelja resetovana!") });
+      toast({ title: t("Šifra roditelja vraćena na standardnu!") });
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Reset neuspješan"), variant: "destructive" });
     } finally {
@@ -401,17 +401,13 @@ export default function GrupaPage() {
   }
 
   function printCards() {
-    if (createdStudents.length > 0) {
-      openPrintWindow(createdStudents);
-      return;
-    }
     if (studentiGrupe.length === 0) return;
     setPrintLoading(true);
     const ucenikIds = studentiGrupe.map(s => s.id);
     apiRequest<CreatedUcenik[]>("POST", "/muallim/print-kartice", { ucenikIds }, token!)
       .then(cards => {
         openPrintWindow(cards);
-        toast({ title: t("Kartice su spremne"), description: t("Na karticama su standardne lozinke — iste za učenika i roditelja i ne mijenjaju se pri ponovnom printu.") });
+        toast({ title: t("Kartice su spremne za štampu"), description: t("Prikazane su trenutne standardne lozinke — štampanje ne mijenja i ne resetuje nijednu šifru.") });
       })
       .catch(() => {
         toast({ title: t("Greška"), description: t("Nije moguće generisati kartice"), variant: "destructive" });
@@ -585,12 +581,15 @@ export default function GrupaPage() {
                     ))}
                   </div>
                 </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 text-sm text-blue-900 flex items-start gap-2">
+                  <Printer className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>{t("Kartice s lozinkama možete odštampati bilo kada preko dugmeta \"Printaj kartice\" na vrhu stranice grupe. Štampanje samo prikazuje trenutne lozinke i ništa ne mijenja.")}</span>
+                </div>
                 <div className="flex gap-3">
-                  <Button onClick={printCards} className="flex-1 rounded-xl font-bold flex items-center justify-center gap-2">
-                    <Printer className="w-4 h-4" /> {t("Printaj kartice s lozinkama")}
-                  </Button>
-                  <Button variant="outline" onClick={() => { setCreatedStudents([]); setBulkNames(""); }}
-                    className="rounded-xl">{t("Dodaj još")}</Button>
+                  <Button onClick={() => { setCreatedStudents([]); setBulkNames(""); }}
+                    className="flex-1 rounded-xl font-bold">{t("Dodaj još")}</Button>
+                  <Button variant="outline" onClick={() => { setCreatedStudents([]); setShowBulkAdd(false); }}
+                    className="rounded-xl">{t("Gotovo")}</Button>
                 </div>
               </div>
             ) : (
@@ -927,7 +926,7 @@ export default function GrupaPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">{t("Resetuj šifru roditelju učenika {ime}.", { ime: parentResetTarget.displayName })}</p>
+              <p className="text-sm text-muted-foreground mb-4">{t("Vrati šifru roditelja učenika {ime} na standardnu.", { ime: parentResetTarget.displayName })}</p>
 
               {parentResetLoading ? (
                 <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
@@ -953,7 +952,7 @@ export default function GrupaPage() {
                       </div>
                       {parentResetResult?.id === r.id && (
                         <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] font-bold text-emerald-700">{t("Nova šifra:")}</span>
+                          <span className="text-[11px] font-bold text-emerald-700">{t("Standardna šifra:")}</span>
                           <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{parentResetResult.password}</code>
                           <Button size="sm" variant="outline"
                             onClick={async () => { try { await navigator.clipboard.writeText(parentResetResult.password); toast({ title: t("Kopirano!") }); } catch {} }}
