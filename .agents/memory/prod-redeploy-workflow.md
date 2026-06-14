@@ -16,3 +16,10 @@ notifikacije/OneSignal i sve ostalo testira samo na produkciji.
 - Ako korisnik kaže "ne radi" / "isto je" odmah nakon promjene, prvo provjeri je li produkcija redeployana,
   ne pretpostavljaj bug u kodu.
 - Za debug produkcije koristi prod bazu (self-hosted) kao izvor istine, ne dev DB.
+- **Prije nego kažeš "uradi redeploy", provjeri da github/main STVARNO sadrži fix.** Lokalni HEAD ume biti
+  10+ commitova ispred `github/main` (Coolify deploya s github/main). Provjeri ciljanim:
+  `git show github/main:<putanja> | grep <marker>` — ako je 0, fix nije pushan i redeploy sam neće pomoći
+  (treba push PA redeploy).
+- **Code-vs-schema izolacija za prod 500:** ako feature radi u dev a 500 na prod, pokreni tačan niz INSERT-a
+  protiv prod baze unutar `DO $$ ... RAISE EXCEPTION 'PROBE_OK' END $$;` (sve se rollbackuje, ništa ne ostaje).
+  Prođe li probe → baza je dobra, uzrok je nedeployan/star kod, ne schema.
