@@ -657,6 +657,20 @@ export default function AdminBankaPitanjaPage() {
                                 <span key={i} className={p.meta!.incorrect?.includes(w) ? "text-red-600 line-through font-semibold mr-1" : "mr-1"}>{w}</span>
                               ))}
                             </span>
+                          ) : p.vrsta === "reorder" ? (
+                            (() => {
+                              const co = Array.isArray(p.correctOrder) && p.correctOrder.length === p.opcije.length
+                                ? p.correctOrder
+                                : p.opcije.map((_, i) => i + 1);
+                              const ordered = p.opcije
+                                .map((o, i) => ({ o, pos: co[i] ?? (i + 1) }))
+                                .sort((a, b) => a.pos - b.pos);
+                              return ordered.map((it, i) => (
+                                <span key={i}>
+                                  {it.o}{i < ordered.length - 1 ? " → " : ""}
+                                </span>
+                              ));
+                            })()
                           ) : (
                             p.opcije.map((o, i) => (
                               <span key={i} className={i === p.correctIndex ? "text-emerald-700 font-semibold" : ""}>
