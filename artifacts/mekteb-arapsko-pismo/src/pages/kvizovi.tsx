@@ -65,7 +65,7 @@ function KvizCard({ k, nivo, locked, onLockedClick }: { k: Kviz; nivo: number | 
         </div>
         {k.kategorija && KATEGORIJE_LABELS[k.kategorija] && (
           <span className={`inline-block text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full mb-2 ${locked ? "bg-muted text-muted-foreground" : "bg-amber-100 text-amber-800"}`}>
-            {KATEGORIJE_LABELS[k.kategorija]}
+            {t(KATEGORIJE_LABELS[k.kategorija])}
           </span>
         )}
         <div className="flex items-center justify-between">
@@ -73,7 +73,7 @@ function KvizCard({ k, nivo, locked, onLockedClick }: { k: Kviz; nivo: number | 
             {pitanjaCount > 0 ? `${pitanjaCount} ${t("kviz.pitanja")}` : t("kviz.uPripremi")}
           </span>
           <div className={`flex items-center gap-1 ${locked ? "text-muted-foreground" : info?.color ?? "text-amber-700"} font-bold text-sm`}>
-            {locked ? "Zaključano" : t("kviz.pokreni")}
+            {locked ? t("Zaključano") : t("kviz.pokreni")}
             {locked
               ? <Lock className="w-3 h-3" />
               : <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
@@ -210,13 +210,13 @@ export default function KvizoviPage() {
                 onClick={() => setGroupMode("nivo")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupMode === "nivo" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground"}`}
               >
-                <LayoutGrid className="w-3.5 h-3.5" /> Po nivou
+                <LayoutGrid className="w-3.5 h-3.5" /> {t("Po nivou")}
               </button>
               <button
                 onClick={() => setGroupMode("kategorija")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupMode === "kategorija" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground"}`}
               >
-                <FolderTree className="w-3.5 h-3.5" /> Po oblasti
+                <FolderTree className="w-3.5 h-3.5" /> {t("Po oblasti")}
               </button>
             </div>
             <select
@@ -224,12 +224,12 @@ export default function KvizoviPage() {
               onChange={e => setFilterKategorija(e.target.value)}
               className="px-3 py-2 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
             >
-              <option value="">Sve oblasti</option>
-              {dostupneKategorije.map(k => <option key={k} value={k}>{KATEGORIJE_LABELS[k] || k}</option>)}
+              <option value="">{t("Sve oblasti")}</option>
+              {dostupneKategorije.map(k => <option key={k} value={k}>{t(KATEGORIJE_LABELS[k] || k)}</option>)}
             </select>
             {filterKategorija && (
               <button onClick={() => setFilterKategorija("")} className="text-sm text-muted-foreground hover:text-foreground underline">
-                Očisti filter
+                {t("Očisti filter")}
               </button>
             )}
           </div>
@@ -246,7 +246,7 @@ export default function KvizoviPage() {
               .map(([kat, list]) => (
                 <div key={kat}>
                   <h2 className="text-sm font-extrabold uppercase tracking-wider text-amber-700 mb-4">
-                    {kat === "_nesvrstano" ? "Nesvrstano" : (KATEGORIJE_LABELS[kat] || kat)} — {list.length} {pluralKviz(list.length)}
+                    {kat === "_nesvrstano" ? t("Nesvrstano") : t(KATEGORIJE_LABELS[kat] || kat)} — {list.length} {pluralKviz(list.length)}
                   </h2>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {list.map((k, i) => (

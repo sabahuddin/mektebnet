@@ -2432,5 +2432,20 @@
   "Greška pri slanju poruke.": "Error sending message.",
   "Imate pitanje ili prijedlog? Javite nam se!": "Have a question or suggestion? Contact us!",
   "Za pitanja o pretplati, tehničku podršku ili saradnju, slobodno nam pišite. Trudimo se odgovoriti što prije.": "For questions about subscription, technical support or collaboration, feel free to write to us. We strive to respond as soon as possible.",
-  "Pošalji novu poruku": "Send a new message"
+  "Pošalji novu poruku": "Send a new message",
+  "Vjerovanje": "Faith",
+  "Namaz": "Prayer",
+  "Ahlak": "Ethics",
+  "Historija": "History",
+  "Bosna": "Bosnia",
+  "Sure": "Suras",
+  "Dove": "Supplications",
+  "Halal/Haram": "Halal/Haram",
+  "Sufara": "Sufara",
+  "Opće": "General",
+  "Po nivou": "By level",
+  "Po oblasti": "By topic",
+  "Sve oblasti": "All topics",
+  "Očisti filter": "Clear filter",
+  "Nesvrstano": "Uncategorized"
 }
