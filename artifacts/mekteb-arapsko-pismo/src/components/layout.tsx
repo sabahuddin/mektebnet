@@ -37,7 +37,10 @@ type NavLink = {
 
 const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
 
-const LANG_ORDER: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
+// Arapski (ar) i turski (tr) su isključeni sa prekidača — vidljivi su samo
+// bs/sq/de/en. (visibleLangs se gradi filtriranjem ovog niza, pa ar/tr nestaju
+// i za anonimne i za prijavljene korisnike bez obzira na muallim-dozvole.)
+const LANG_ORDER: Lang[] = ["bs", "sq", "de", "en"];
 
 function LanguageSwitcher() {
   const { lang, setLang, t } = useLanguage();

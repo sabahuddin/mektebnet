@@ -19,7 +19,12 @@ type UiOverrides = Partial<Record<Lang, Record<string, string>>>;
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
 const STORAGE_KEY = "mekteb-lang";
-const SUPPORTED: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
+// Aktivni jezici za prekidač. Arapski (ar) i turski (tr) su namjerno isključeni
+// sa homepage prekidača — nisu odabirljivi. Korisnik koji je ranije sačuvao
+// "ar"/"tr" u localStorage pada nazad na bosanski (detectInitialLang), a setLang
+// blokira programatski izbor ar/tr. Prevodna mašinerija (i18n/overlay) ostaje
+// netaknuta za eventualni budući povratak tih jezika.
+const SUPPORTED: Lang[] = ["bs", "sq", "de", "en"];
 
 /**
  * Lazy cache za flat rječnike — učitava se SAMO kad korisnik odabere taj jezik.

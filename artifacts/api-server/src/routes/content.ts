@@ -29,6 +29,13 @@ import {
   applyEffectiveOrder,
 } from "../lib/raspored.js";
 import { getLang, overlayRows, overlayOne } from "../lib/content-translatable.js";
+import {
+  INTERACTIVE_TABLE,
+  canonicalQuestionHash,
+  validateAndMergeInteractive,
+  isInteractiveType,
+  type InteractiveQuestion,
+} from "../lib/interactive-translatable.js";
 
 const router = Router();
 
@@ -563,6 +570,19 @@ router.get("/kvizovi/:slug", async (req, res) => {
     };
 
     if (jsonbPitanja.length > 0) {
+      // Overlay prijevoda za INLINE interaktivna pitanja (dragDrop/markWords).
+      // Ona nemaju red u banci, pa prijevode čitamo iz content_prijevodi
+      // (tabela=kvizovi_pitanja, red_id=kviz.id), keširane SADRŽAJNIM hashom
+      // pitanja (polje=hash). Jedan upit po kvizu; samo za ne-bs jezike.
+      let interMap: Map<string, string> | null = null;
+      if (lang !== "bs" && jsonbPitanja.some((p) => isInteractiveType((p as InteractiveQuestion).type))) {
+        const tr = (await db.execute(
+          sql`SELECT polje, prijevod FROM content_prijevodi
+              WHERE tabela = ${INTERACTIVE_TABLE} AND jezik = ${lang} AND red_id = ${kviz.id}`,
+        )) as unknown as { rows: { polje: string; prijevod: string }[] };
+        interMap = new Map(tr.rows.map((r) => [r.polje, r.prijevod]));
+      }
+
       const pitanja = jsonbPitanja.map((p) => {
         // KRITIČNO: za dragDrop/markWords NE radi banka lookup po tekstu.
         // Generička pitanja kao "Dopuni:" i "Pronađi greške:" imaju 40+
@@ -572,7 +592,18 @@ router.get("/kvizovi/:slug", async (req, res) => {
         // riječi. JSONB već ima ispravan inline meta — koristi ga direktno.
         const tipRaw = (typeof p?.type === "string" ? p.type : "").toLowerCase();
         const isInteractive = tipRaw === "dragdrop" || tipRaw === "markwords";
-        if (isInteractive) return p;
+        if (isInteractive) {
+          // Prijevod (ako postoji i prođe validaciju) inače fallback na bosanski.
+          if (interMap) {
+            const { polje } = canonicalQuestionHash(p);
+            const payload = interMap.get(polje);
+            if (payload) {
+              const merged = validateAndMergeInteractive(p as InteractiveQuestion, payload);
+              if (merged) return merged;
+            }
+          }
+          return p;
+        }
 
         const q = typeof p?.question === "string" ? p.question : null;
         if (q) {
