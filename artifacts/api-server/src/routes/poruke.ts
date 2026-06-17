@@ -350,6 +350,19 @@ router.post("/bulk", async (req, res) => {
 
     await db.insert(porukeTable).values(values);
 
+    // Best-effort push svim primateljima — ne čekamo, ne propagiramo grešku.
+    const senderName = req.user!.displayName || "Mekteb";
+    const previewBody = sadrzaj.trim().length > 80
+      ? sadrzaj.trim().slice(0, 80) + "…"
+      : sadrzaj.trim();
+    sendPushNotification({
+      userIds: validIds,
+      title: `Nova poruka od ${senderName}`,
+      body: previewBody,
+      url: "/poruke",
+      data: { type: "poruka", posiljateljId: userId },
+    }).catch((err) => console.error("[Poruke bulk push]", err));
+
     res.status(201).json({ sent: validIds.length });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

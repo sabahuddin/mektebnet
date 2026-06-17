@@ -30,3 +30,4 @@
 - [Kartice — standardna lozinka i print](kartice-lozinke.md) — lozinka=Mekteb<sufiks>; print je PURE READ (samo prikaz), samo reset rute upisuju standardni hash; par dijeli sufiks/lozinku.
 - [Banka reorder redoslijed](banka-reorder-redoslijed.md) — correctOrder[i]=pozicija opcije[i]; tačna sekvenca = sort po correctOrder; preview mora sortirati, ne storage redoslijed.
 - [Prijevod interaktivnih pitanja](interaktivna-pitanja-prijevod.md) — dragDrop validacija: isti BROJ "DROP" tokena (ne dužina/pozicija, red riječi pomjera prazninu); markWords indeksi znaju biti van granica → model nađe grešku iz objašnjenja.
+- [Roditeljske notifikacije](roditelj-notifikacije.md) — roditelj dobija obavijest za poruku/zadaću/ocjenu; prisustvo NAMJERNO ne šalje; grading notify gejtovan na uspješan ocjeneTable sync.

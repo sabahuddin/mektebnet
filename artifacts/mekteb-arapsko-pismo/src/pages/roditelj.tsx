@@ -67,6 +67,8 @@ interface Ocjena {
   ocjena: number;
   napomena?: string;
   datum: string;
+  lekcijaNaziv?: string | null;
+  zadacaId?: number | null;
 }
 
 interface RoditeljObavjestenje {
@@ -79,11 +81,11 @@ interface RoditeljObavjestenje {
   createdAt: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  prisutan: { label: "Prisutan", color: "text-emerald-600 bg-emerald-50", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  odsutan: { label: "Odsutan", color: "text-red-600 bg-red-50", icon: <XCircle className="w-3.5 h-3.5" /> },
-  zakasnio: { label: "Zakasnio", color: "text-amber-600 bg-amber-50", icon: <AlertCircle className="w-3.5 h-3.5" /> },
-  opravdan: { label: "Opravdan", color: "text-blue-600 bg-blue-50", icon: <AlertCircle className="w-3.5 h-3.5" /> },
+const STATUS_CONFIG: Record<string, { label: string; letter: string; color: string; circle: string; icon: React.ReactNode }> = {
+  prisutan: { label: "Prisutan", letter: "P", color: "text-emerald-600 bg-emerald-50", circle: "bg-emerald-500 text-white border-emerald-600", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+  odsutan: { label: "Odsutan", letter: "O", color: "text-red-600 bg-red-50", circle: "bg-red-500 text-white border-red-600", icon: <XCircle className="w-3.5 h-3.5" /> },
+  zakasnio: { label: "Zakasnio", letter: "Z", color: "text-amber-600 bg-amber-50", circle: "bg-amber-500 text-white border-amber-600", icon: <AlertCircle className="w-3.5 h-3.5" /> },
+  opravdan: { label: "Opravdan", letter: "OP", color: "text-blue-600 bg-blue-50", circle: "bg-blue-500 text-white border-blue-600", icon: <AlertCircle className="w-3.5 h-3.5" /> },
 };
 
 const OCJENA_COLOR = ["", "text-red-700 bg-red-100", "text-orange-700 bg-orange-100", "text-amber-700 bg-amber-100", "text-blue-700 bg-blue-100", "text-emerald-700 bg-emerald-100"];
@@ -204,7 +206,11 @@ function DijeteContent({
   gameStats: GameStatsResp | null;
 }) {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [childSubTab, setChildSubTab] = useState<ChildSubTab>("kalendar");
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [newPw, setNewPw] = useState("");
+  const [isChangingPw, setIsChangingPw] = useState(false);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [godine, setGodine] = useState<string[]>([]);
@@ -267,10 +273,28 @@ function DijeteContent({
       .catch(() => setDokumenti([]));
   }, [dijete.id, token]);
 
-  const filteredZadace = useMemo(() =>
-    zadace.filter(z => z.djecaIds.includes(dijete.id)),
-    [zadace, dijete.id],
-  );
+  async function changePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || !newPw) return;
+    setIsChangingPw(true);
+    try {
+      await apiRequest("PUT", "/roditelj/dijete-lozinka", { ucenikId: dijete.id, newPassword: newPw }, token);
+      toast({ title: t("Lozinka promijenjena!") });
+      setShowPwForm(false);
+      setNewPw("");
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err?.message || t("Nije moguće promijeniti lozinku"), variant: "destructive" });
+    } finally {
+      setIsChangingPw(false);
+    }
+  }
+
+  const filteredZadace = useMemo(() => {
+    const ocijenjeneZadace = new Set(
+      ocjene.map(o => o.zadacaId).filter((x): x is number => x != null),
+    );
+    return zadace.filter(z => z.djecaIds.includes(dijete.id) && !ocijenjeneZadace.has(z.id));
+  }, [zadace, ocjene, dijete.id]);
 
   const entriesByDate = useMemo(() => {
     const map: Record<string, KalendarEntry[]> = {};
@@ -325,6 +349,13 @@ function DijeteContent({
           <div className="font-extrabold text-foreground truncate">{dijete.displayName}</div>
           <div className="text-xs text-muted-foreground font-mono truncate">{dijete.username}</div>
         </div>
+        <button
+          onClick={() => { setShowPwForm(v => !v); setNewPw(""); }}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary font-bold transition-colors shrink-0 rounded-lg px-2 py-1.5 hover:bg-muted/50"
+          data-testid="btn-promijeni-lozinku"
+        >
+          <KeyRound className="w-3.5 h-3.5" /> {t("Promijeni lozinku")}
+        </button>
         {godine.length > 0 && (
           <select
             data-testid="select-mektebska-godina-dijete"
@@ -339,6 +370,22 @@ function DijeteContent({
           </select>
         )}
       </div>
+
+      {showPwForm && (
+        <motion.form initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+          onSubmit={changePassword}
+          className="bg-white border border-border/50 rounded-xl p-4 flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="text-xs font-bold text-muted-foreground mb-1 block">{t("Nova lozinka za {ime}", { ime: dijete.displayName })}</label>
+            <input type="password" required minLength={6} placeholder={t("Min. 6 znakova")}
+              value={newPw} onChange={e => setNewPw(e.target.value)}
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+          <Button type="submit" size="sm" disabled={isChangingPw} className="rounded-xl shrink-0">
+            {isChangingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Spremi")}
+          </Button>
+        </motion.form>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {summaryLoading ? (
@@ -521,26 +568,39 @@ function DijeteContent({
       {childSubTab === "prisustvo" && (
         <div className="bg-white border border-border/50 rounded-2xl p-4">
           {detailLoading ? (
-            <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-xl" />)}</div>
+            <div className="flex flex-wrap gap-3">{Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-14 w-12 rounded-xl" />)}</div>
           ) : prisustvo.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">{t("Nema evidencije prisustva")}</p>
           ) : (
-            <div className="space-y-1.5 max-h-80 overflow-y-auto">
-              {[...prisustvo].sort((a, b) => b.datum.localeCompare(a.datum)).map(p => {
-                const cfg = STATUS_CONFIG[p.status] || STATUS_CONFIG.prisutan;
-                return (
-                  <div key={p.id} className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{p.datum}</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${cfg.color}`}>
-                        {cfg.icon} {cfg.label}
+            <>
+              <div className="flex flex-wrap gap-3 max-h-80 overflow-y-auto">
+                {[...prisustvo].sort((a, b) => b.datum.localeCompare(a.datum)).map(p => {
+                  const cfg = STATUS_CONFIG[p.status] || STATUS_CONFIG.prisutan;
+                  const parts = p.datum.split("-");
+                  const dm = parts.length === 3 ? `${parts[2]}.${parts[1]}.` : p.datum;
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex flex-col items-center gap-1"
+                      title={`${p.datum} — ${t(cfg.label)}${p.napomena ? ` (${p.napomena})` : ""}`}
+                    >
+                      <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{dm}</span>
+                      <span className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-extrabold ${cfg.circle}`}>
+                        {cfg.letter}
                       </span>
-                      {p.napomena && <span className="text-xs text-muted-foreground">({p.napomena})</span>}
                     </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-4 pt-4 border-t border-border/40">
+                {Object.values(STATUS_CONFIG).map(cfg => (
+                  <div key={cfg.letter} className="flex items-center gap-1.5">
+                    <span className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-extrabold ${cfg.circle}`}>{cfg.letter}</span>
+                    <span className="text-xs text-muted-foreground font-medium">{t(cfg.label)}</span>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -552,19 +612,35 @@ function DijeteContent({
           ) : ocjene.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">{t("Nema unesenih ocjena")}</p>
           ) : (
-            <div className="space-y-1.5 max-h-80 overflow-y-auto">
-              {[...ocjene].sort((a, b) => b.datum.localeCompare(a.datum)).map(o => (
-                <div key={o.id} className="flex items-center justify-between text-sm">
-                  <div>
-                    <span className="font-medium text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
-                    {o.napomena && <span className="text-muted-foreground ml-2">— {o.napomena}</span>}
-                    <span className="text-muted-foreground ml-2 text-xs">{o.datum}</span>
-                  </div>
-                  <span className={`text-sm font-extrabold px-2.5 py-0.5 rounded-full ${OCJENA_COLOR[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
-                    {o.ocjena}
-                  </span>
-                </div>
-              ))}
+            <div className="max-h-80 overflow-y-auto -mx-1">
+              <table className="w-full text-sm border-collapse">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="text-left text-xs text-muted-foreground border-b border-border/60">
+                    <th className="py-2 px-2 font-bold">{t("Lekcija")}</th>
+                    <th className="py-2 px-2 font-bold">{t("Kategorija")}</th>
+                    <th className="py-2 px-2 font-bold whitespace-nowrap">{t("Datum")}</th>
+                    <th className="py-2 px-2 font-bold text-right">{t("Ocjena")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...ocjene].sort((a, b) => b.datum.localeCompare(a.datum)).map(o => (
+                    <tr
+                      key={o.id}
+                      className="border-b border-border/30 last:border-0"
+                      title={o.napomena ? `${t("Napomena")}: ${o.napomena}` : undefined}
+                    >
+                      <td className="py-2 px-2 text-foreground">{o.lekcijaNaziv || <span className="text-muted-foreground">—</span>}</td>
+                      <td className="py-2 px-2 text-muted-foreground">{kategorijaOcjeneLabel(o.kategorija)}</td>
+                      <td className="py-2 px-2 text-muted-foreground whitespace-nowrap tabular-nums">{o.datum}</td>
+                      <td className="py-2 px-2 text-right">
+                        <span className={`inline-block text-sm font-extrabold px-2.5 py-0.5 rounded-full ${OCJENA_COLOR[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
+                          {o.ocjena}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -644,39 +720,54 @@ function DijeteContent({
           ) : filteredZadace.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">{t("Nema zadaća za {ime}", { ime: dijete.displayName })}</p>
           ) : (
-            <div className="space-y-3">
-              {filteredZadace.map(z => {
-                const expired = z.rokDo ? new Date(z.rokDo) < new Date(new Date().toDateString()) : false;
-                return (
-                  <div key={z.id} className={`border rounded-xl p-4 ${expired ? "border-red-200 bg-red-50/30" : "border-border/50"}`}>
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h3 className="font-extrabold text-foreground text-base">{z.naslov}</h3>
-                      {expired && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{t("Isteklo")}</span>}
-                    </div>
-                    {z.grupaNaziv && (
-                      <span className="text-xs text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5 font-medium">{z.grupaNaziv}</span>
-                    )}
-                    {z.opis && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{z.opis}</p>}
-                    <div className="flex items-center gap-4 flex-wrap mt-2">
-                      {z.rokDo && (
-                        <span className={`text-xs flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-muted-foreground"}`}>
-                          <Clock className="w-3 h-3" /> {t("Rok:")} {new Date(z.rokDo).toLocaleDateString("bs-BA")}
-                        </span>
-                      )}
-                      {z.lekcijaNaslov && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <BookOpen className="w-3 h-3" /> {z.lekcijaNaslov}
-                        </span>
-                      )}
-                      {(z.prolongCount ?? 0) > 0 && (
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
-                          {t("Prolongirano ×{n}", { n: String(z.prolongCount) })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="max-h-80 overflow-y-auto -mx-1">
+              <table className="w-full text-sm border-collapse">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="text-left text-xs text-muted-foreground border-b border-border/60">
+                    <th className="py-2 px-2 font-bold">{t("Zadaća")}</th>
+                    <th className="py-2 px-2 font-bold whitespace-nowrap">{t("Rok")}</th>
+                    <th className="py-2 px-2 font-bold text-right">{t("Status")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredZadace.map(z => {
+                    const expired = z.rokDo ? new Date(z.rokDo) < new Date(new Date().toDateString()) : false;
+                    return (
+                      <tr key={z.id} className="border-b border-border/30 last:border-0 align-top">
+                        <td className="py-2 px-2">
+                          <div className="font-bold text-foreground">{z.naslov}</div>
+                          {z.lekcijaNaslov && z.lekcijaNaslov !== z.naslov && (
+                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <BookOpen className="w-3 h-3 shrink-0" /> {z.lekcijaNaslov}
+                            </div>
+                          )}
+                          {z.opis && <div className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{z.opis}</div>}
+                          {z.grupaNaziv && (
+                            <div className="text-[11px] text-muted-foreground/80 mt-0.5">{z.grupaNaziv}</div>
+                          )}
+                        </td>
+                        <td className={`py-2 px-2 whitespace-nowrap tabular-nums ${expired ? "text-red-600 font-bold" : "text-muted-foreground"}`}>
+                          {z.rokDo ? new Date(z.rokDo).toLocaleDateString("bs-BA") : "—"}
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            {expired ? (
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{t("Isteklo")}</span>
+                            ) : (
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{t("Aktivna")}</span>
+                            )}
+                            {(z.prolongCount ?? 0) > 0 && (
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                                {t("Prolongirano ×{n}", { n: String(z.prolongCount) })}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

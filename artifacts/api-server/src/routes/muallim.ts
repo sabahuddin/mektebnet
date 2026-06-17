@@ -138,8 +138,10 @@ async function notifyApprovedRoditelji(opts: {
   naslov: string;
   sadrzaj: string;
   logTag: string;
+  pushUrl?: string;
+  pushData?: Record<string, unknown>;
 }) {
-  const { ucenikId, posiljateljId, naslov, sadrzaj, logTag } = opts;
+  const { ucenikId, posiljateljId, naslov, sadrzaj, logTag, pushUrl, pushData } = opts;
 
   try {
     const veze = await db
@@ -166,6 +168,19 @@ async function notifyApprovedRoditelji(opts: {
       } catch (err) {
         console.error(`[${logTag}] In-app poruka insert failed`, logCtx, err);
       }
+    }
+
+    // Push notifikacija svim roditeljima (best-effort, ne propagira grešku).
+    try {
+      await sendPushNotification({
+        userIds: roditeljIds,
+        title: naslov,
+        body: sadrzaj.length > 120 ? sadrzaj.slice(0, 120) + "…" : sadrzaj,
+        url: pushUrl ?? "/poruke",
+        data: pushData,
+      });
+    } catch (pushErr) {
+      console.error(`[${logTag}] push notifikacija nije uspjela`, { ucenikId }, pushErr);
     }
   } catch (err) {
     console.error(`[${logTag}] notifyApprovedRoditelji failed`, { ucenikId, posiljateljId }, err);
@@ -1253,11 +1268,6 @@ router.post("/prisustvo", async (req, res) => {
     const { grupaId, datum, prisustvo } = req.body;
     // prisustvo: [{ ucenikId, status, napomena }]
 
-    // Pratimo koji su zapisi prešli u "odsutan"/"zakasnio" da bismo poslije
-    // poslali notifikaciju roditeljima (samo na promjenu, ne na ponovni save).
-    const NOTIFY_STATUSES = new Set(["odsutan", "zakasnio"]);
-    const toNotify: { ucenikId: number; status: string }[] = [];
-
     for (const p of prisustvo) {
       const newStatus = p.status || "prisutan";
 
@@ -1270,9 +1280,6 @@ router.post("/prisustvo", async (req, res) => {
         await db.update(priustvoTable)
           .set({ status: newStatus, napomena: p.napomena })
           .where(eq(priustvoTable.id, prev.id));
-        if (NOTIFY_STATUSES.has(newStatus) && prev.status !== newStatus) {
-          toNotify.push({ ucenikId: p.ucenikId, status: newStatus });
-        }
       } else {
         await db.insert(priustvoTable).values({
           ucenikId: p.ucenikId,
@@ -1282,42 +1289,11 @@ router.post("/prisustvo", async (req, res) => {
           status: newStatus,
           napomena: p.napomena || null,
         });
-        if (NOTIFY_STATUSES.has(newStatus)) {
-          toNotify.push({ ucenikId: p.ucenikId, status: newStatus });
-        }
       }
     }
 
+    // Prisustvo NE generiše obavijesti roditeljima (po zahtjevu korisnika) — samo evidencija.
     res.json({ success: true });
-
-    // Notifikacije roditelja — pokrećemo nakon odgovora kako ne bismo blokirali UI
-    if (toNotify.length > 0) {
-      (async () => {
-        const ucenikIds = [...new Set(toNotify.map(t => t.ucenikId))];
-        const ucenici = await db
-          .select({ id: usersTable.id, displayName: usersTable.displayName })
-          .from(usersTable)
-          .where(inArray(usersTable.id, ucenikIds));
-        const imeMap = Object.fromEntries(ucenici.map(u => [u.id, u.displayName]));
-        const statusText: Record<string, string> = {
-          odsutan: "odsutno",
-          zakasnio: "zakasnilo",
-        };
-        for (const t of toNotify) {
-          const ime = imeMap[t.ucenikId] || "vaše dijete";
-          const stText = statusText[t.status] || t.status;
-          const naslov = `Izostanak: ${ime} (${datum})`;
-          const sadrzaj = `Vaše dijete ${ime} je dana ${datum} evidentirano kao ${stText}.`;
-          await notifyApprovedRoditelji({
-            ucenikId: t.ucenikId,
-            posiljateljId: req.user!.userId,
-            naslov,
-            sadrzaj,
-            logTag: "prisustvo-notify",
-          });
-        }
-      })().catch(err => console.error("[prisustvo-notify] background notify failed", err));
-    }
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -1369,6 +1345,7 @@ router.post("/ocjene", async (req, res) => {
         naslov,
         sadrzaj,
         logTag: "ocjene-notify",
+        pushData: { type: "ocjena" },
       });
     })().catch(err => console.error("[ocjene-notify] background notify failed", err));
   } catch (err) {
@@ -3064,6 +3041,28 @@ router.post("/zadace", async (req, res) => {
       }).catch((err) => console.error("[Zadace push]", err));
     }
 
+    // In-app + push obavijest roditeljima ciljanih učenika.
+    if (notifyIds.length > 0) {
+      (async () => {
+        const djeca = await db
+          .select({ id: usersTable.id, displayName: usersTable.displayName })
+          .from(usersTable)
+          .where(inArray(usersTable.id, notifyIds));
+        const imeMap = new Map(djeca.map(d => [d.id, d.displayName]));
+        for (const uid of notifyIds) {
+          const ime = imeMap.get(uid) || "vaše dijete";
+          await notifyApprovedRoditelji({
+            ucenikId: uid,
+            posiljateljId: req.user!.userId,
+            naslov: `Nova zadaća za ${ime}`,
+            sadrzaj: `Vaše dijete ${ime} je dobilo novu zadaću: "${naslovFinal}".`,
+            logTag: "zadaca-notify-roditelj",
+            pushData: { type: "zadaca", zadacaId: nova.id },
+          });
+        }
+      })().catch(err => console.error("[zadaca-notify-roditelj] background notify failed", err));
+    }
+
     res.status(201).json({ ...nova, ucenikIds: validUcenikIds });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -3305,6 +3304,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     // Ocjena iz zadaće se evidentira i u tabeli ocjene (kategorija "zadaća"),
     // da se vidi među redovnim ocjenama učenika. Upsert preko zadaca_id —
     // ponovna ocjena ažurira isti red; brisanje ocjene uklanja red.
+    let ocjeneSyncOk = true;
     try {
       const [postojecaOcjena] = await db.select({ id: ocjeneTable.id }).from(ocjeneTable)
         .where(and(eq(ocjeneTable.zadacaId, id), eq(ocjeneTable.ucenikId, ucenikId)));
@@ -3337,7 +3337,33 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
         }
       }
     } catch (ocErr) {
+      ocjeneSyncOk = false;
       console.error("[zadaca ocjena->ocjene]", ocErr);
+    }
+
+    // Obavijesti roditelje kad zadaća dobije NOVU ili promijenjenu ocjenu.
+    // Šaljemo samo ako je ocjena uspješno upisana u tabelu ocjene, da roditelj
+    // ne dobije obavijest za ocjenu koja se neće prikazati u njihovom panelu.
+    const prevOcjena = postojeci?.ocjena ?? null;
+    if (ocjeneSyncOk && ocjenaVal !== null && ocjenaVal !== prevOcjena) {
+      (async () => {
+        const [dijete] = await db
+          .select({ displayName: usersTable.displayName })
+          .from(usersTable)
+          .where(eq(usersTable.id, ucenikId));
+        const ime = dijete?.displayName || "vaše dijete";
+        const lekcija = zadaca.lekcijaNaslov || zadaca.naslov || "";
+        await notifyApprovedRoditelji({
+          ucenikId,
+          posiljateljId: req.user!.userId,
+          naslov: `Nova ocjena za ${ime}`,
+          sadrzaj: lekcija
+            ? `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaVal} iz zadaće "${lekcija}".`
+            : `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaVal} iz zadaće.`,
+          logTag: "zadaca-ocjena-notify",
+          pushData: { type: "ocjena", zadacaId: id },
+        });
+      })().catch(err => console.error("[zadaca-ocjena-notify] background notify failed", err));
     }
 
     // Kapi meda (znanjska valuta = total_hasanat) — primijeni samo razliku
