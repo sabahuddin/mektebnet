@@ -163,6 +163,16 @@ router.post("/link-dijete", async (req, res) => {
       return;
     }
 
+    // Model 1 učenik = 1 roditelj (licence): odbij zahtjev ako učenik već ima
+    // DRUGOG odobrenog roditelja. (Ako je odobreni roditelj baš ovaj, ispod
+    // ON CONFLICT grana javlja precizniju poruku "već ste povezani".)
+    const [vecImaDrugog] = await db.select().from(roditeljUcenikTable)
+      .where(and(eq(roditeljUcenikTable.ucenikId, ucenik.id), eq(roditeljUcenikTable.status, "approved")));
+    if (vecImaDrugog && vecImaDrugog.roditeljId !== req.user!.userId) {
+      res.status(409).json({ error: "Ovaj učenik već ima povezanog roditelja." });
+      return;
+    }
+
     // Atomic insert with ON CONFLICT — relies on unique index (roditelj_id, ucenik_id)
     // onConflictDoNothing vraća prazan array ako je duplikat
     const inserted = await db.insert(roditeljUcenikTable).values({

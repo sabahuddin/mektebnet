@@ -1095,6 +1095,19 @@ router.post("/ucenici/:id/povezi-roditelja", async (req, res) => {
       return;
     }
 
+    // Model 1 učenik = 1 roditelj (licence): odbij ako učenik već ima DRUGOG
+    // odobrenog roditelja. (Ako je odobreni roditelj baš ovaj, ispod javljamo
+    // precizniju poruku "već je povezan".)
+    const [vecImaDrugog] = await db.select().from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    if (vecImaDrugog && vecImaDrugog.roditeljId !== roditelj.id) {
+      res.status(409).json({ error: "Učenik već ima povezanog roditelja. Jedan učenik može imati samo jednog roditelja." });
+      return;
+    }
+
     // Provjeri da li veza već postoji.
     const [postojeca] = await db.select().from(roditeljUcenikTable)
       .where(and(
@@ -1165,6 +1178,14 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
     const [profil] = await db.select().from(ucenikProfiliTable)
       .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
+
+    // Model 1 učenik = 1 roditelj (licence): odbij ako učenik već ima odobrenog roditelja.
+    const [vecImaRoditelja] = await db.select().from(roditeljUcenikTable)
+      .where(and(eq(roditeljUcenikTable.ucenikId, ucenikId), eq(roditeljUcenikTable.status, "approved")));
+    if (vecImaRoditelja) {
+      res.status(409).json({ error: "Učenik već ima povezanog roditelja. Jedan učenik može imati samo jednog roditelja." });
+      return;
+    }
 
     // Pokušaj iskoristiti isti 4-cifreni sufiks kao učenik (npr. amir.4567 →
     // ismet.4567 / Mekteb4567). Ako sufiks bude zauzet ili učenikov username
@@ -1388,6 +1409,20 @@ router.post("/approve-roditelj", async (req, res) => {
     const profili = await db.select().from(ucenikProfiliTable)
       .where(and(eq(ucenikProfiliTable.userId, request.ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId)));
     if (profili.length === 0) { res.status(403).json({ error: "Učenik nije vaš" }); return; }
+
+    // Model 1 učenik = 1 roditelj (licence): ne dozvoli odobravanje drugog
+    // roditelja za učenika koji već ima odobrenog (odbijanje je i dalje OK).
+    if (approved) {
+      const [vecImaRoditelja] = await db.select().from(roditeljUcenikTable)
+        .where(and(
+          eq(roditeljUcenikTable.ucenikId, request.ucenikId),
+          eq(roditeljUcenikTable.status, "approved"),
+        ));
+      if (vecImaRoditelja && vecImaRoditelja.roditeljId !== request.roditeljId) {
+        res.status(409).json({ error: "Učenik već ima povezanog roditelja. Jedan učenik može imati samo jednog roditelja." });
+        return;
+      }
+    }
 
     await db.update(roditeljUcenikTable)
       .set({

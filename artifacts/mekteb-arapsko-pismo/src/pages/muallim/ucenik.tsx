@@ -327,6 +327,10 @@ export default function UcenikPage() {
     } catch {}
   }
 
+  // Model 1 učenik = 1 roditelj: kad učenik već ima odobrenog roditelja,
+  // muallim ne može dodati/povezati drugog (forme se sakrivaju).
+  const imaApprovedRoditelja = roditelji.some(r => r.status === "approved");
+
   const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
   const odsutnih = prisustvo.filter(p => p.status === "odsutan").length;
   const zakasnio = prisustvo.filter(p => p.status === "zakasnio").length;
@@ -554,7 +558,7 @@ export default function UcenikPage() {
                 )}
 
                 {/* Poveži postojećeg roditelja (npr. roditelj već ima drugo dijete u mektebu) */}
-                {!kreiraniRoditelj && (
+                {!kreiraniRoditelj && !imaApprovedRoditelja && (
                   <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
                     <p className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5" /> {t("Poveži postojećeg roditelja:")}
@@ -585,35 +589,8 @@ export default function UcenikPage() {
                   </div>
                 )}
 
-                {/* Forma za novog */}
-                {!kreiraniRoditelj ? (
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground mb-2">{t("Ili dodaj novi nalog za roditelja:")}</p>
-                    <div className="flex gap-2 flex-wrap">
-                      <input
-                        type="text"
-                        value={novoRoditeljIme}
-                        onChange={e => setNovoRoditeljIme(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter" && novoRoditeljIme.trim() && !savingRoditelj) addRoditelj(); }}
-                        placeholder={t("Ime i prezime roditelja")}
-                        className="flex-1 min-w-[200px] border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        data-testid="input-roditelj-ime"
-                      />
-                      <Button
-                        onClick={addRoditelj}
-                        disabled={savingRoditelj || !novoRoditeljIme.trim()}
-                        className="rounded-xl font-bold flex items-center gap-1.5"
-                        data-testid="btn-dodaj-roditelja"
-                      >
-                        {savingRoditelj ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        {t("Dodaj")}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {t("Kreiraće se nalog s automatskom šifrom")} <strong>Mekteb####</strong>. {t("Roditelj se odmah povezuje s učenikom i NE ulazi u kvotu licenci.")}
-                    </p>
-                  </div>
-                ) : (
+                {/* Forma za novog / poruka "već ima roditelja" / kreirani roditelj */}
+                {kreiraniRoditelj ? (
                   <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
                     <h4 className="font-extrabold text-blue-900 mb-2 flex items-center gap-1.5">
                       <Check className="w-4 h-4" /> {t("Roditelj kreiran!")}
@@ -644,12 +621,48 @@ export default function UcenikPage() {
                         {copiedRoditelj ? t("Kopirano!") : t("Kopiraj kredencijale")}
                       </Button>
                       <Button
-                        onClick={() => { setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
+                        onClick={() => { setShowRoditeljForm(false); setKreiraniRoditelj(null); setNovoRoditeljIme(""); }}
                         className="rounded-xl flex items-center gap-1.5"
+                        data-testid="btn-gotovo-roditelj"
                       >
-                        <PlusCircle className="w-4 h-4" /> {t("Dodaj još jednog")}
+                        <Check className="w-4 h-4" /> {t("Gotovo")}
                       </Button>
                     </div>
+                  </div>
+                ) : imaApprovedRoditelja ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-2.5" data-testid="poruka-jedan-roditelj">
+                    <Users className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-amber-900">{t("Učenik već ima povezanog roditelja.")}</p>
+                      <p className="text-xs text-amber-800 mt-1">{t("Jedan učenik može imati samo jednog roditelja (1 učenik = 1 roditelj). Za promjenu roditelja obratite se administraciji.")}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground mb-2">{t("Ili dodaj novi nalog za roditelja:")}</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <input
+                        type="text"
+                        value={novoRoditeljIme}
+                        onChange={e => setNovoRoditeljIme(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" && novoRoditeljIme.trim() && !savingRoditelj) addRoditelj(); }}
+                        placeholder={t("Ime i prezime roditelja")}
+                        className="flex-1 min-w-[200px] border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        data-testid="input-roditelj-ime"
+                      />
+                      <Button
+                        onClick={addRoditelj}
+                        disabled={savingRoditelj || !novoRoditeljIme.trim()}
+                        className="rounded-xl font-bold flex items-center gap-1.5"
+                        data-testid="btn-dodaj-roditelja"
+                      >
+                        {savingRoditelj ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                        {t("Dodaj")}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {t("Kreiraće se nalog s automatskom šifrom")} <strong>Mekteb####</strong>. {t("Roditelj se odmah povezuje s učenikom i NE ulazi u kvotu licenci.")}
+                    </p>
                   </div>
                 )}
               </motion.div>
