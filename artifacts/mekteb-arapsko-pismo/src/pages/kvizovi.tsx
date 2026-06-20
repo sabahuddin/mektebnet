@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/api";
 import { HelpCircle, ChevronRight, Trophy, BookOpen, LayoutGrid, FolderTree, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 interface Kviz {
   id: number;
@@ -118,6 +119,7 @@ export default function KvizoviPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   // Task #133: roditelj (porodica) = gost → otključan samo prvi ilmihal kviz.
   const isGuestLike = !user || user.role === "roditelj";
   const [kvizovi, setKvizovi] = useState<Kviz[]>([]);
@@ -131,6 +133,11 @@ export default function KvizoviPage() {
       description: user?.role === "roditelj"
         ? t("Registrujte se kao poseban korisnik da pristupite svim kvizovima.")
         : t("Prijavite se ili registrujte da pristupite svim kvizovima."),
+      action: (
+        <ToastAction altText={t("Registruj se")} onClick={() => setLocation("/registracija")}>
+          {t("Registruj se")}
+        </ToastAction>
+      ),
     });
   };
 

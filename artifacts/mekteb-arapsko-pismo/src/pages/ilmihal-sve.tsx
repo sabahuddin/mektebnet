@@ -362,6 +362,15 @@ export default function IlmihalSvePage() {
                                 {isLocked && (
                                   <div className="text-[11px] text-amber-800/60 mt-0.5">
                                     {lockedMsg}
+                                    {isGuestLike && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setLocation("/registracija")}
+                                        className="ml-1 underline font-semibold text-amber-800 hover:text-amber-900"
+                                      >
+                                        {t("Registruj se")}
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </div>

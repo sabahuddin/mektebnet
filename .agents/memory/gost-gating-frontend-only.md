@@ -25,3 +25,11 @@ i dalje fire-aju i upisuju napredak/hasanat. Vizuelni gate nije dovoljan — dod
 `isGuestLike` i na guardove write-funkcija da gost-like rola ostane read-only kao
 neprijavljeni gost. Backend gating SAMO za tu rolu je pogrešan: učinio bi je strožijom
 od gosta.
+
+**Blocked akcija ≠ tihi no-op:** Code review traži da svaka zaključana lekcija/kviz I
+svaka blokirana "doing" akcija (gost-like) pokaže poruku + registracijski CTA (dugme/
+link na /registracija), ne samo tiho return-a. Stavi `isGuestLike` provjeru PRIJE
+token-provjere (npr. `if(isGuestLike){promptRegister();return} if(!token)return`) da
+gost I roditelj dobiju isti CTA. Drži poruke ulogno-svjesne (roditelj → "poseban
+učenički korisnik"; gost → "prijavi/registruj se"), ali CTA dosljedan na SVIM
+lock-površinama (toast, lista-red, blokada-ekran).

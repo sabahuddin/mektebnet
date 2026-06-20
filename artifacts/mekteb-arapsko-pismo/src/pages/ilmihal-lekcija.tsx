@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Maskota } from "@/components/maskota";
 import { PcelaRating } from "@/components/PcelaRating";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
@@ -1400,6 +1401,31 @@ function getYoutubeEmbedUrl(url: string): string | null {
   } catch { return null; }
 }
 
+// Task #133: gost-like korisnik (neprijavljen ILI roditelj) je read-only. Kad
+// pokuša "doing" akciju (završi lekciju, H5P, embed) ili otključavanje, pokaži
+// poruku + CTA na registraciju (poseban učenički nalog) umjesto tihog no-opa /
+// generičke backend greške. Jedinstveno za gosta i roditelja.
+function useRegisterPrompt() {
+  const { toast } = useToast();
+  const { t } = useLanguage();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  return useCallback(() => {
+    toast({
+      title: t("Registracija potrebna"),
+      description:
+        user?.role === "roditelj"
+          ? t("Registrujte se kao poseban (učenički) korisnik da pratite napredak i skupljate kapi meda.")
+          : t("Registruj se da pratiš napredak i skupljaš kapi meda."),
+      action: (
+        <ToastAction altText={t("Registruj se")} onClick={() => setLocation("/registracija")}>
+          {t("Registruj se")}
+        </ToastAction>
+      ),
+    });
+  }, [toast, t, user, setLocation]);
+}
+
 function PriloziSection({
   lekcija,
   token,
@@ -1423,6 +1449,8 @@ function PriloziSection({
   const isAdmin = canManage;
   const { user } = useAuth();
   const { t } = useLanguage();
+  const isGuestLike = !user || user?.role === "roditelj";
+  const promptRegister = useRegisterPrompt();
   const [open, setOpen] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   // `lekcija.prilozi` može stići naknadno (npr. token postane dostupan tek
@@ -1549,6 +1577,9 @@ function PriloziSection({
   }, [token]);
 
   const handleH5pCompleted = useCallback(async (priloziId: number, score: number, maxScore: number) => {
+    // Gost-like (gost/roditelj) je read-only — ne upisuje H5P rezultat; umjesto
+    // generičke backend greške (403) pokaži poziv na registraciju.
+    if (isGuestLike) { promptRegister(); return; }
     if (!token) return;
     if (h5pSubmitting[priloziId]) return;
     setH5pSubmitting(prev => ({ ...prev, [priloziId]: true }));
@@ -1585,7 +1616,7 @@ function PriloziSection({
     } finally {
       setH5pSubmitting(prev => ({ ...prev, [priloziId]: false }));
     }
-  }, [token, h5pSubmitting, onH5pCelebration, toast, refreshH5pAttempts]);
+  }, [token, h5pSubmitting, onH5pCelebration, toast, refreshH5pAttempts, isGuestLike, promptRegister]);
 
   const handleAddUrl = async () => {
     if (!urlValue.trim() || !token) return;
@@ -1653,6 +1684,8 @@ function PriloziSection({
   };
 
   const handleClaimEmbed = async (a: Prilog) => {
+    // Gost-like (gost/roditelj) je read-only — ne preuzima kapi meda; pokaži CTA.
+    if (isGuestLike) { promptRegister(); return; }
     if (!token || claimingEmbed) return;
     if (claimedEmbeds.has(a.id)) return;
     setClaimingEmbed(true);
@@ -2262,6 +2295,7 @@ export default function IlmihalLekcijaPage() {
   // napredak/hasanat/vrijeme; write-akcije (markComplete, heartbeat, quizPassed)
   // su gejtovane na isGuestLike da roditelj ne dobije više od gosta.
   const isGuestLike = !user || user.role === "roditelj";
+  const promptRegister = useRegisterPrompt();
   const { toast } = useToast();
   const { t } = useLanguage();
   const [lekcija, setLekcija] = useState<Lekcija | null>(null);
@@ -2463,6 +2497,11 @@ export default function IlmihalLekcijaPage() {
                   ? t("Prijavi se da otključaš više lekcija.")
                   : t("Završi prethodne lekcije da otključaš ovu."),
               variant: "destructive",
+              action: isGuestLike ? (
+                <ToastAction altText={t("Registruj se")} onClick={() => setLocation("/registracija")}>
+                  {t("Registruj se")}
+                </ToastAction>
+              ) : undefined,
             });
             setLocation(`/ilmihal?nivo=${data.nivo ?? 1}`);
             return;
@@ -2619,8 +2658,10 @@ export default function IlmihalLekcijaPage() {
   };
 
   const markComplete = async () => {
-    // Gost-like (roditelj/neprijavljen) ne upisuje napredak — read-only kao gost.
-    if (!lekcija || isGuestLike) return;
+    if (!lekcija) return;
+    // Gost-like (roditelj/neprijavljen) je read-only — ne upisuje napredak; pokaži
+    // poziv na registraciju (poseban učenički nalog) umjesto tihog no-opa.
+    if (isGuestLike) { promptRegister(); return; }
     try {
       const resp = await apiRequest<{ progressDelta?: { newCompletion: boolean; streakDays: number; totalHasanat: number; previousHasanat?: number; previousStreakDays?: number; hasanatGained?: number; streakIncreased?: boolean; novelyEarnedBadges?: string[]; newBadges?: { id: string; naziv: string; opis: string; ikona: string }[] } }>(
         "POST", "/content/napredak", {
