@@ -50,10 +50,9 @@ import KvizPage from "./pages/kviz";
 import CitaonicaPage from "./pages/citaonica";
 import CitaonicaKnjigaPage from "./pages/citaonica-knjiga";
 
-// Kur'an
-import KuranPage from "./pages/kuran";
-import KuranSuraPage from "./pages/kuran-sura";
-import KuranStranicaPage from "./pages/kuran-stranica";
+// Kur'an (Task #133: privremeno u razvoju — sve rute vode na placeholder;
+// originalne stranice kuran*.tsx ostaju u kodu za kasnije aktiviranje)
+import KuranURazvojuPage from "./pages/kuran-u-razvoju";
 
 // Roditelj panel
 import RoditeljPage from "./pages/roditelj";
@@ -158,10 +157,10 @@ function Router() {
       <Route path="/citaonica" component={CitaonicaPage} />
       <Route path="/citaonica/:slug" component={CitaonicaKnjigaPage} />
 
-      {/* Kur'an */}
-      <Route path="/kuran" component={KuranPage} />
-      <Route path="/kuran/stranica/:p" component={KuranStranicaPage} />
-      <Route path="/kuran/:n" component={KuranSuraPage} />
+      {/* Kur'an — privremeno u razvoju (Task #133) */}
+      <Route path="/kuran" component={KuranURazvojuPage} />
+      <Route path="/kuran/stranica/:p" component={KuranURazvojuPage} />
+      <Route path="/kuran/:n" component={KuranURazvojuPage} />
 
       {/* Roditelj panel */}
       <Route path="/roditelj/kalendar" component={RoditeljKalendarPage} />

@@ -46,9 +46,14 @@ export default function IlmihalSvePage() {
   const [predmet, setPredmet] = useState<string>("");
 
   // Gate: ucenik (i nelogovan posjetilac) moze otvoriti samo zavrsene
-  // lekcije + prvu sljedecu nezavrsenu. Muallim/admin/roditelj vide sve
-  // kao otvoreno (oni pregledaju gradivo, ne uce).
-  const enforceProgress = !user || user.role === "ucenik";
+  // lekcije + prvu sljedecu nezavrsenu. Muallim/admin vide sve kao otvoreno
+  // (oni pregledaju gradivo, ne uce).
+  // Task #133: roditelj = gost → gost-gate (prvih 5 lekcija, po POZICIJI),
+  // identično mapi/stranici lekcije (computeUnlockedCellCount → min(total, 5)).
+  // Bitno: gost-like NE smije ići kroz progresijski (firstUndoneAll) put jer
+  // bi to bez napretka otključalo samo 1. lekciju umjesto prvih 5.
+  const isGuestLike = !user || user.role === "roditelj";
+  const enforceProgress = !user || user.role === "ucenik" || user.role === "roditelj";
 
   useEffect(() => {
     setLoading(true);
@@ -316,8 +321,21 @@ export default function IlmihalSvePage() {
                           const isDone = !!l.zavrseno;
                           const isNext = enforceProgress && realIdx === firstUndoneAll;
                           const isDodatak = l.slug.startsWith("dodatak-nivo");
-                          const isLocked =
-                            enforceProgress && !isDone && !isNext && !isDodatak;
+                          // Gost-like (nelogovan / roditelj): prvih 5 lekcija po
+                          // poziciji (kao computeUnlockedCellCount → min(total, 5)),
+                          // ne progresijski. Ostali (učenik) → firstUndoneAll put.
+                          const isLocked = isGuestLike
+                            ? !isDodatak && realIdx >= 5
+                            : enforceProgress && !isDone && !isNext && !isDodatak;
+                          // Poruka za zaključanu lekciju ovisi o tipu korisnika:
+                          // roditelj → registruj se kao poseban korisnik; gost →
+                          // prijavi se; učenik → završi prethodnu.
+                          const lockedMsg =
+                            user?.role === "roditelj"
+                              ? t("Registrujte se kao poseban korisnik da otključate sve lekcije.")
+                              : !user
+                                ? t("Prijavi se da otključaš više lekcija.")
+                                : t("Zaključano — završi prethodnu lekciju");
                           const idx = realIdx;
 
                           const rowInner = (
@@ -343,7 +361,7 @@ export default function IlmihalSvePage() {
                                 </div>
                                 {isLocked && (
                                   <div className="text-[11px] text-amber-800/60 mt-0.5">
-                                    {t("Zaključano — završi prethodnu lekciju")}
+                                    {lockedMsg}
                                   </div>
                                 )}
                               </div>
@@ -383,7 +401,7 @@ export default function IlmihalSvePage() {
                                     className="flex items-center gap-3 px-3 py-3 sm:py-3.5 rounded-xl opacity-70 cursor-not-allowed select-none"
                                     aria-disabled="true"
                                     data-testid={`locked-lekcija-${l.slug}`}
-                                    title={t("Zaključano — završi prethodnu lekciju")}
+                                    title={lockedMsg}
                                   >
                                     {rowInner}
                                   </div>

@@ -2416,8 +2416,11 @@ export default function IlmihalLekcijaPage() {
         // otvarala iako je mapa pokazivala otključano (vidi memory:
         // lekcije-dvije-brave). Sada dohvatimo mapu nivoa i izračunamo isti
         // broj otključanih ćelija pa blokiramo samo lekcije iza granice.
+        // Task #133: roditelj = gost (osim panela) → nije privilegovan; gating
+        // identičan neprijavljenom gostu (prvih 5 lekcija).
         const isPrivileged =
-          user?.role === "admin" || user?.role === "muallim" || user?.role === "roditelj";
+          user?.role === "admin" || user?.role === "muallim";
+        const isGuestLike = !user || user?.role === "roditelj";
         if (!isPrivileged) {
           let blocked = false;
           try {
@@ -2432,7 +2435,7 @@ export default function IlmihalLekcijaPage() {
             const completedCount = lekcijeSorted.filter((l) => zavrseneSet.has(l.id)).length;
             const unlocked = computeUnlockedCellCount({
               isPrivileged: false,
-              isGuest: !user,
+              isGuest: isGuestLike,
               totalCells: lekcijeSorted.length,
               medaljoni: mapa.medaljoni ?? [],
               completedCount,
@@ -2441,17 +2444,19 @@ export default function IlmihalLekcijaPage() {
             const idx = lekcijeSorted.findIndex((l) => l.id === data.id);
             // Lekcija nije u mapi (npr. medaljon/dodatak van glavnog niza) →
             // padni na konzervativni redoslijed-limit.
-            blocked = idx >= 0 ? idx >= unlocked : (data.redoslijed ?? 0) > (!user ? 5 : 10);
+            blocked = idx >= 0 ? idx >= unlocked : (data.redoslijed ?? 0) > (isGuestLike ? 5 : 10);
           } catch {
             // Mapa nedostupna → konzervativni fallback (stari limit).
-            blocked = (data.redoslijed ?? 0) > (!user ? 5 : 10);
+            blocked = (data.redoslijed ?? 0) > (isGuestLike ? 5 : 10);
           }
           if (blocked) {
             toast({
               title: t("Zaključano"),
-              description: !user
-                ? t("Prijavi se da otključaš više lekcija.")
-                : t("Završi prethodne lekcije da otključaš ovu."),
+              description: user?.role === "roditelj"
+                ? t("Registrujte se kao poseban korisnik da otključate sve lekcije.")
+                : !user
+                  ? t("Prijavi se da otključaš više lekcija.")
+                  : t("Završi prethodne lekcije da otključaš ovu."),
               variant: "destructive",
             });
             setLocation(`/ilmihal?nivo=${data.nivo ?? 1}`);

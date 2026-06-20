@@ -28,9 +28,11 @@ export function isEtapaPassed(
 }
 
 // Broj otključanih ćelija (lekcija) za datog korisnika:
-//   - privilegovan (admin/muallim/roditelj): sve,
+//   - privilegovan (admin/muallim): sve,
 //   - gost: prvih 5,
 //   - učenik: prvih 10 + 10 po svakoj uzastopno položenoj etapi.
+// NAPOMENA (Task #133): roditelj NIJE privilegovan — pozivaoci ga šalju kao
+// `isGuest: true` (gost), pa dobija prvih 5. Ne vraćaj ga u privilegovane.
 export function computeUnlockedCellCount(opts: {
   isPrivileged: boolean;
   isGuest: boolean;

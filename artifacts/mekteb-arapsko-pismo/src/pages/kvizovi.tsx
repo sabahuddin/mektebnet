@@ -118,6 +118,8 @@ export default function KvizoviPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
+  // Task #133: roditelj (porodica) = gost → otključan samo prvi ilmihal kviz.
+  const isGuestLike = !user || user.role === "roditelj";
   const [kvizovi, setKvizovi] = useState<Kviz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [groupMode, setGroupMode] = useState<GroupMode>("nivo");
@@ -125,8 +127,10 @@ export default function KvizoviPage() {
 
   const showLockedToast = () => {
     toast({
-      title: "🔒 Samo za registrirane korisnike",
-      description: "Prijavite se ili registrujte da biste pristupili svim kvizovima.",
+      title: t("Samo za registrovane korisnike"),
+      description: user?.role === "roditelj"
+        ? t("Registrujte se kao poseban korisnik da pristupite svim kvizovima.")
+        : t("Prijavite se ili registrujte da pristupite svim kvizovima."),
     });
   };
 
@@ -176,16 +180,16 @@ export default function KvizoviPage() {
   // Guest gating: samo prvi kviz (najmanji ID) je otvoren gostima.
   const unlockedSlugs = useMemo(() => {
     const set = new Set<string>();
-    if (!user) {
+    if (isGuestLike) {
       const first = kvizovi
         .filter(k => k.modul === "ilmihal" || !k.modul)
         .sort((a, b) => a.id - b.id)[0];
       if (first) set.add(first.slug);
     }
     return set;
-  }, [user, kvizovi]);
+  }, [isGuestLike, kvizovi]);
 
-  const isLocked = (k: Kviz) => !user && !unlockedSlugs.has(k.slug);
+  const isLocked = (k: Kviz) => isGuestLike && !unlockedSlugs.has(k.slug);
 
   return (
     <Layout>

@@ -31,3 +31,4 @@
 - [Banka reorder redoslijed](banka-reorder-redoslijed.md) — correctOrder[i]=pozicija opcije[i]; tačna sekvenca = sort po correctOrder; preview mora sortirati, ne storage redoslijed.
 - [Prijevod interaktivnih pitanja](interaktivna-pitanja-prijevod.md) — dragDrop validacija: isti BROJ "DROP" tokena (ne dužina/pozicija, red riječi pomjera prazninu); markWords indeksi znaju biti van granica → model nađe grešku iz objašnjenja.
 - [Roditeljske notifikacije](roditelj-notifikacije.md) — roditelj dobija obavijest za poruku/zadaću/ocjenu; prisustvo NAMJERNO ne šalje; grading notify gejtovan na uspješan ocjeneTable sync.
+- [Gost-gating frontend-only](gost-gating-frontend-only.md) — lekcije(5)/kvizovi(1) gate je samo na frontu; backend gate-uje samo `ucenik`, pa "rola=gost" (npr. roditelj) ne traži backend izmjene.

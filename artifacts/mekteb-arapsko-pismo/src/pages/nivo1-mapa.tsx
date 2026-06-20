@@ -151,9 +151,13 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   // Pravila pristupa:
   //   - neprijavljen (gost): samo prvih 5 lekcija otključano
   //   - prijavljen učenik: prvih 10 + dodatnih 10 po svakom medaljonu
-  //   - admin/muallim/roditelj: sve otključano (puni pristup)
+  //   - admin/muallim: sve otključano (puni pristup)
+  // Task #133: roditelj (porodica) se tretira kao GOST na cijeloj platformi
+  // (osim roditeljskog panela) → NIJE privilegovan i otključava samo prvih 5
+  // lekcija, isto kao neprijavljeni posjetilac.
   const isPrivilegedRole =
-    user?.role === "admin" || user?.role === "muallim" || user?.role === "roditelj";
+    user?.role === "admin" || user?.role === "muallim";
+  const isGuestLike = !user || user?.role === "roditelj";
 
   // Etapa-based gating: svaki blok od 10 lekcija (lek 11-20, 21-30, ...) je
   // otključan SAMO ako je prethodna etapa (medaljon) "položena". Etapa se
@@ -169,7 +173,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   // "uvijek prošle" za otključavanje (student ih svejedno može osvojiti).
   const unlockedCellCount = computeUnlockedCellCount({
     isPrivileged: isPrivilegedRole,
-    isGuest: !user,
+    isGuest: isGuestLike,
     totalCells: TOTAL_CELLS,
     medaljoni: medaljoniSorted,
     completedCount,

@@ -97,7 +97,7 @@ export const translations = {
     register: {
       naslov: "Registracija",
       ucenik: "Učenik / Korisnik",
-      roditelj: "Roditelj",
+      roditelj: "Porodica",
       mekteb: "Mekteb",
       imeIPrezime: "Ime i prezime",
       korisnickoIme: "Korisničko ime",

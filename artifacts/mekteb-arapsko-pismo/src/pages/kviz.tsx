@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { Layout } from "@/components/layout";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen, GripVertical } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen, GripVertical, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -538,8 +538,12 @@ export default function KvizPage() {
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
   const { toast } = useToast();
+  // Task #133: roditelj (porodica) = gost → smije otvoriti samo prvi kviz.
+  const isRoditelj = user?.role === "roditelj";
+  const isGuestLike = !user || isRoditelj;
   const [kviz, setKviz] = useState<Kviz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [blockedGuest, setBlockedGuest] = useState(false);
   const [pitanja, setPitanja] = useState<Pitanje[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -595,8 +599,29 @@ export default function KvizPage() {
 
   useEffect(() => {
     if (!slug) return;
+    setIsLoading(true);
+    setBlockedGuest(false);
     apiRequest<Kviz>("GET", `/content/kvizovi/${slug}`)
-      .then(data => {
+      .then(async data => {
+        // Task #133: gost/roditelj smije otvoriti SAMO prvi ilmihal kviz
+        // (najmanji id), isto kao na listi kvizova. Ostali → poruka za
+        // registraciju kao poseban korisnik.
+        if (isGuestLike) {
+          try {
+            const all = await apiRequest<{ id: number; slug: string; modul?: string }[]>(
+              "GET", "/content/kvizovi",
+            );
+            const first = all
+              .filter(k => k.modul === "ilmihal" || !k.modul)
+              .sort((a, b) => a.id - b.id)[0];
+            if (!first || first.slug !== slug) {
+              setBlockedGuest(true);
+              return;
+            }
+          } catch {
+            /* lista nedostupna → ne blokiraj lažno (fail-open) */
+          }
+        }
         setKviz(data);
         if (data.pitanja.length > 0) {
           const pool = shuffle(data.pitanja);
@@ -619,9 +644,32 @@ export default function KvizPage() {
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [slug]);
+  }, [slug, isGuestLike]);
 
   if (isLoading) return <Layout><div className="max-w-2xl mx-auto"><Skeleton className="h-96 rounded-3xl" /></div></Layout>;
+
+  if (blockedGuest) {
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto text-center py-20">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+            <Lock className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-extrabold text-foreground mb-2">{t("Samo za registrovane korisnike")}</h2>
+          <p className="text-muted-foreground mb-6">
+            {isRoditelj
+              ? t("Registrujte se kao poseban korisnik da pristupite svim kvizovima.")
+              : t("Prijavite se ili registrujte da pristupite svim kvizovima.")}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={() => setLocation("/registracija")} className="rounded-2xl">{t("Registruj se")}</Button>
+            <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">{t("Nazad")}</Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (!kviz) return <Layout><div className="text-center py-20 text-muted-foreground">{t("Kviz nije pronađen")}</div></Layout>;
 
   if (kviz.pitanja.length === 0) {
