@@ -2258,6 +2258,10 @@ export default function IlmihalLekcijaPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user, token } = useAuth();
+  // Task #133: roditelj = gost → read-only kao neprijavljeni gost. Ne upisuje
+  // napredak/hasanat/vrijeme; write-akcije (markComplete, heartbeat, quizPassed)
+  // su gejtovane na isGuestLike da roditelj ne dobije više od gosta.
+  const isGuestLike = !user || user.role === "roditelj";
   const { toast } = useToast();
   const { t } = useLanguage();
   const [lekcija, setLekcija] = useState<Lekcija | null>(null);
@@ -2320,7 +2324,8 @@ export default function IlmihalLekcijaPage() {
   // toast ako se desi race.
   const handleQuizPassed = useCallback(() => {
     setQuizPassed(true);
-    if (!lekcija || !token) return;
+    // Gost-like (roditelj/neprijavljen) ne perzistira quizPassed — read-only.
+    if (!lekcija || !token || isGuestLike) return;
     apiRequest("POST", "/content/napredak", {
       contentType: "ilmihal",
       contentId: lekcija.id,
@@ -2328,7 +2333,7 @@ export default function IlmihalLekcijaPage() {
       quizPassed: true,
       timeSpentSeconds: timeSpentRef.current,
     }, token).catch(() => {/* ignore — markComplete će ponovo poslati ako treba */});
-  }, [lekcija?.id, token]);
+  }, [lekcija?.id, token, isGuestLike]);
 
   const displayNivo = (nivo: number) => nivo;
 
@@ -2509,7 +2514,7 @@ export default function IlmihalLekcijaPage() {
   // svaki "drift" lokalnog ticka (npr. tab je bio neaktivan) automatski
   // ispravlja prema server-store vrijednosti.
   useEffect(() => {
-    if (!lekcija || !user || !token) return;
+    if (!lekcija || isGuestLike || !token) return;
     const sendHeartbeat = () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       apiRequest<{ timeSpentSeconds: number }>("POST", "/content/heartbeat", {
@@ -2528,7 +2533,7 @@ export default function IlmihalLekcijaPage() {
     sendHeartbeat();
     const id = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_S * 1000);
     return () => window.clearInterval(id);
-  }, [lekcija?.id, user?.id, token]);
+  }, [lekcija?.id, user?.id, token, isGuestLike]);
 
   // Scroll progress tracker — koristi scroll na window-u jer sadržaj lekcije
   // se renderira u glavnom toku stranice. Kad učenik dođe blizu dna (>=85%),
@@ -2614,7 +2619,8 @@ export default function IlmihalLekcijaPage() {
   };
 
   const markComplete = async () => {
-    if (!lekcija || !user) return;
+    // Gost-like (roditelj/neprijavljen) ne upisuje napredak — read-only kao gost.
+    if (!lekcija || isGuestLike) return;
     try {
       const resp = await apiRequest<{ progressDelta?: { newCompletion: boolean; streakDays: number; totalHasanat: number; previousHasanat?: number; previousStreakDays?: number; hasanatGained?: number; streakIncreased?: boolean; novelyEarnedBadges?: string[]; newBadges?: { id: string; naziv: string; opis: string; ikona: string }[] } }>(
         "POST", "/content/napredak", {

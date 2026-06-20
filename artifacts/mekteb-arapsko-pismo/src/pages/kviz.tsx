@@ -867,7 +867,9 @@ export default function KvizPage() {
   const next = () => {
     if (isLast) {
       const bodovi = Math.round((score / pitanja.length) * 100);
-      if (user && token) {
+      // Task #133: roditelj = gost → read-only; ne upisuje napredak/rezultat
+      // (kao neprijavljeni gost). Kviz se rješava lokalno, ali se ne perzistira.
+      if (user && token && !isGuestLike) {
         // Pošalji greške u "Popravi saće" sistem (fire-and-forget; ne blokira
         // kviz flow ako server ne odgovori). Idempotentno preko UNIQUE
         // (user, source_type, source_id, question_index).

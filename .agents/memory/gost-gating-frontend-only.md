@@ -18,3 +18,10 @@ diranja DB role.
 frontend gate tačkama (mapa lekcija, lista/stranica lekcije, lista/stranica kviza).
 Ne diraj backend osim ako se traži prava sigurnosna brava (tada gate i goste). Igrice
 su poseban slučaj — već su strože (`role !== "ucenik"` blokira sve osim učenika).
+
+**Zamka — write akcije:** Prijavljena "gost-like" rola (npr. roditelj) IMA token, pa
+write-akcije koje pravi gost ne može (markComplete/heartbeat/quizPassed/kviz-rezultat)
+i dalje fire-aju i upisuju napredak/hasanat. Vizuelni gate nije dovoljan — dodaj
+`isGuestLike` i na guardove write-funkcija da gost-like rola ostane read-only kao
+neprijavljeni gost. Backend gating SAMO za tu rolu je pogrešan: učinio bi je strožijom
+od gosta.
