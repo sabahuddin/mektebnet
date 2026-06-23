@@ -34,8 +34,8 @@ export const KVIZ_TAGOVI = [
   "ponasanje", "obici", "ljubaznost", "postenje", "srdacnost", "pomaganje",
   // Historija (5)
   "zivot_poslanika", "ashabi", "islamska_civilizacija", "osvajanja", "kalifi",
-  // Bosna (6)
-  "nas_ucenjaci", "dzamije", "tradicije", "ilahije", "manastiri", "dijaspora",
+  // Bosna (5)
+  "nas_ucenjaci", "dzamije", "tradicije", "ilahije", "dijaspora",
 ] as const;
 export type KvizTag = (typeof KVIZ_TAGOVI)[number];
 
@@ -49,7 +49,7 @@ export const KVIZ_TAG_KATEGORIJA_MAP: Record<KvizTag, KvizKategorija> = {
   zivot_poslanika: "historija", ashabi: "historija", islamska_civilizacija: "historija",
   osvajanja: "historija", kalifi: "historija",
   nas_ucenjaci: "bosna", dzamije: "bosna", tradicije: "bosna", ilahije: "bosna",
-  manastiri: "bosna", dijaspora: "bosna",
+  dijaspora: "bosna",
 };
 
 // Čitljivi nazivi tagova — koriste se za seed `kviz_tagovi` tabele i kao
@@ -65,7 +65,7 @@ export const KVIZ_TAGOVI_META: Record<KvizTag, string> = {
   zivot_poslanika: "Život poslanika", ashabi: "Ashabi",
   islamska_civilizacija: "Isl. civilizacija", osvajanja: "Osvajanja", kalifi: "Kalifi",
   nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije",
-  ilahije: "Ilahije", manastiri: "Manastiri", dijaspora: "Dijaspora",
+  ilahije: "Ilahije", dijaspora: "Dijaspora",
 };
 
 // Vrsta pitanja u banci.

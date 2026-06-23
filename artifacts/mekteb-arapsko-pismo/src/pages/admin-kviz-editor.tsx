@@ -122,14 +122,14 @@ const KATEGORIJA_TAGOVI: Record<string, string[]> = {
   ibadet: ["namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram"],
   ahlak: ["ponasanje", "obici", "ljubaznost", "postenje", "srdacnost", "pomaganje"],
   historija: ["zivot_poslanika", "ashabi", "islamska_civilizacija", "osvajanja", "kalifi"],
-  bosna: ["nas_ucenjaci", "dzamije", "tradicije", "ilahije", "manastiri", "dijaspora"],
+  bosna: ["nas_ucenjaci", "dzamije", "tradicije", "ilahije", "dijaspora"],
 };
 const TAG_LABELS: Record<string, string> = {
   allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici", ahiret: "Ahiret", kuran: "Kuran", sure: "Sure", ajeti: "Ajeti",
   namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž", dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram",
   ponasanje: "Ponašanje", obici: "Običaji", ljubaznost: "Ljubaznost", postenje: "Poštenje", srdacnost: "Srdacnost", pomaganje: "Pomaganje",
   zivot_poslanika: "Život poslanika", ashabi: "Ashabi", islamska_civilizacija: "Isl. civilizacija", osvajanja: "Osvajanja", kalifi: "Kalifi",
-  nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije", ilahije: "Ilahije", manastiri: "Manastiri", dijaspora: "Dijaspora",
+  nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije", ilahije: "Ilahije", dijaspora: "Dijaspora",
 };
 
 const slugify = (s: string) => s.toLowerCase()
