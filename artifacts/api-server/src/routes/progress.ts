@@ -329,7 +329,7 @@ router.post(
       if (result.alreadyClaimed) {
         return res.json({ hasanatGained: 0, alreadyClaimed: true });
       }
-      res.json({
+      return res.json({
         hasanatGained: reward,
         totalHasanat: result.totalHasanat,
         previousHasanat: result.previousHasanat,
@@ -337,7 +337,7 @@ router.post(
       });
     } catch (err) {
       req.log.error({ err }, "Failed to claim embed completion");
-      res.status(500).json({ error: "internal_error", message: "Failed to claim" });
+      return res.status(500).json({ error: "internal_error", message: "Failed to claim" });
     }
   },
 );

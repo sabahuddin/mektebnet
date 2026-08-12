@@ -427,6 +427,26 @@ async function runResidualSchema() {
       END $$;
     `);
 
+    // Arhiviranje grupa (muallim) — grupa se ne briše nego arhivira; učenici
+    // se oslobode, a snapshot članstva ostaje u grupe_arhiva_clanovi.
+    await db.execute(sql`ALTER TABLE grupe ADD COLUMN IF NOT EXISTS is_archived boolean NOT NULL DEFAULT false;`);
+    await db.execute(sql`ALTER TABLE grupe ADD COLUMN IF NOT EXISTS archived_at timestamp;`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS grupe_arhiva_clanovi (
+        id serial PRIMARY KEY,
+        grupa_id integer NOT NULL,
+        ucenik_id integer NOT NULL,
+        display_name varchar(255),
+        username varchar(100),
+        archived_at timestamp NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`ALTER TABLE grupe_arhiva_clanovi ADD COLUMN IF NOT EXISTS display_name varchar(255);`);
+    await db.execute(sql`ALTER TABLE grupe_arhiva_clanovi ADD COLUMN IF NOT EXISTS username varchar(100);`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS grupe_arhiva_clanovi_grupa_ucenik_uidx ON grupe_arhiva_clanovi (grupa_id, ucenik_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS grupe_arhiva_clanovi_grupa_idx ON grupe_arhiva_clanovi (grupa_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS grupe_arhiva_clanovi_ucenik_idx ON grupe_arhiva_clanovi (ucenik_id);`);
+
     // Kviz kategorije (admin-definisane). Tabela + idempotent seed iz
     // KVIZ_KATEGORIJE_META ako je tabela prazna (prvi start nakon migracije).
     await db.execute(sql`

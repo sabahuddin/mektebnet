@@ -678,11 +678,135 @@ router.get("/mekteb/dokumenti/:id/file", async (req, res) => {
   }
 });
 
+// Validacija ciljne grupe pri dodjeli učenika: grupa mora postojati, pripadati
+// pozivaocu (osim admina) i NE smije biti arhivirana.
+async function validateTargetGrupa(
+  grupaId: number,
+  userId: number,
+  isAdmin: boolean,
+): Promise<{ status: number; error: string } | null> {
+  if (!Number.isFinite(grupaId) || grupaId <= 0) {
+    return { status: 400, error: "Neispravna grupa" };
+  }
+  const rows = await db.execute(sql`SELECT muallim_id, is_archived FROM grupe WHERE id = ${grupaId}`);
+  const g = rows.rows[0] as { muallim_id: number; is_archived: boolean } | undefined;
+  if (!g) return { status: 404, error: "Grupa nije pronađena" };
+  if (!isAdmin && g.muallim_id !== userId) return { status: 403, error: "Grupa ne pripada vama" };
+  if (g.is_archived) return { status: 400, error: "Grupa je arhivirana — učenici se ne mogu dodavati u arhiviranu grupu" };
+  return null;
+}
+
 // GET /api/muallim/grupe
 router.get("/grupe", async (req, res) => {
   try {
     const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, req.user!.userId));
-    res.json(grupe);
+    // Arhiva kolone nisu u drizzle šemi (schema folder je zaključan) — dovuci ih raw upitom.
+    const arhivaRows = await db.execute(sql`SELECT id, is_archived, archived_at FROM grupe WHERE muallim_id = ${req.user!.userId}`);
+    const arhivaMap = new Map(
+      (arhivaRows.rows as Array<{ id: number; is_archived: boolean; archived_at: string | null }>)
+        .map(r => [r.id, r]),
+    );
+    res.json(grupe.map(g => ({
+      ...g,
+      isArchived: arhivaMap.get(g.id)?.is_archived ?? false,
+      archivedAt: arhivaMap.get(g.id)?.archived_at ?? null,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/grupe/:id/arhiviraj — arhiviraj grupu: snapshot članstva,
+// oslobodi učenike (grupaId=null), označi grupu arhiviranom. Podaci (ocjene,
+// prisustvo, zadaće, plan) ostaju netaknuti.
+router.post("/grupe/:id/arhiviraj", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+    const grupaWhere = isAdmin
+      ? eq(grupeTable.id, grupaId)
+      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
+    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+
+    let transitioned = false;
+    await db.transaction(async (tx) => {
+      // Konkurentno-siguran prelaz: samo jedan zahtjev može arhivirati.
+      const upd = await tx.execute(sql`
+        UPDATE grupe SET is_archived = true, archived_at = NOW(), is_active = false
+        WHERE id = ${grupaId} AND is_archived = false
+        RETURNING id
+      `);
+      if (upd.rows.length === 0) return; // već arhivirana
+      transitioned = true;
+      // Snapshot trenutnog članstva — trajni zapis ko je bio u grupi
+      // (sa imenom, da zapis preživi i eventualno brisanje naloga).
+      await tx.execute(sql`
+        INSERT INTO grupe_arhiva_clanovi (grupa_id, ucenik_id, display_name, username)
+        SELECT ${grupaId}, up.user_id, u.display_name, u.username
+        FROM ucenik_profili up
+        JOIN users u ON u.id = up.user_id
+        WHERE up.grupa_id = ${grupaId}
+        ON CONFLICT (grupa_id, ucenik_id) DO NOTHING
+      `);
+      // Oslobodi učenike da mogu u druge grupe.
+      await tx.update(ucenikProfiliTable)
+        .set({ grupaId: null })
+        .where(eq(ucenikProfiliTable.grupaId, grupaId));
+    });
+    if (!transitioned) {
+      res.status(400).json({ error: "Grupa je već arhivirana" });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Arhiviranje grupe error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/grupe/:id/vrati — vrati grupu iz arhive (učenici se NE
+// vraćaju automatski — snapshot ostaje kao historijski zapis).
+router.post("/grupe/:id/vrati", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+    const grupaWhere = isAdmin
+      ? eq(grupeTable.id, grupaId)
+      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
+    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+    await db.execute(sql`UPDATE grupe SET is_archived = false, archived_at = NULL, is_active = true WHERE id = ${grupaId}`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/grupe/:id/arhiva-clanovi — bivši članovi arhivirane grupe.
+router.get("/grupe/:id/arhiva-clanovi", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+    const grupaWhere = isAdmin
+      ? eq(grupeTable.id, grupaId)
+      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
+    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+    const rows = await db.execute(sql`
+      SELECT gac.ucenik_id AS "ucenikId",
+             gac.archived_at AS "archivedAt",
+             COALESCE(u.display_name, gac.display_name) AS "displayName",
+             COALESCE(u.username, gac.username) AS "username"
+      FROM grupe_arhiva_clanovi gac
+      LEFT JOIN users u ON u.id = gac.ucenik_id
+      WHERE gac.grupa_id = ${grupaId}
+      ORDER BY COALESCE(u.display_name, gac.display_name) ASC
+    `);
+    res.json(rows.rows);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -741,6 +865,13 @@ router.delete("/grupe/:id", async (req, res) => {
       : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
     const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+
+    // Arhivirana grupa je zaštićena od brisanja — prvo je vrati iz arhive.
+    const arhCheck = await db.execute(sql`SELECT is_archived FROM grupe WHERE id = ${grupaId}`);
+    if ((arhCheck.rows[0] as { is_archived?: boolean } | undefined)?.is_archived) {
+      res.status(400).json({ error: "Arhivirana grupa se ne može obrisati. Prvo je vrati iz arhive." });
+      return;
+    }
 
     await db.transaction(async (tx) => {
       await tx.update(ucenikProfiliTable)
@@ -806,6 +937,11 @@ router.post("/ucenici", async (req, res) => {
     if (!displayName?.trim()) {
       res.status(400).json({ error: "Ime i prezime učenika je obavezno" });
       return;
+    }
+
+    if (grupaId) {
+      const grupaErr = await validateTargetGrupa(parseInt(String(grupaId)), req.user!.userId, req.user!.role === "admin");
+      if (grupaErr) { res.status(grupaErr.status).json({ error: grupaErr.error }); return; }
     }
 
     // Roditelj (ako je poslan) ne ulazi u kvotu — broji se samo učenik
@@ -939,6 +1075,11 @@ router.post("/ucenici/bulk", async (req, res) => {
     if (normalized.length === 0) {
       res.status(400).json({ error: "Lista učenika je obavezna" });
       return;
+    }
+
+    if (body.grupaId) {
+      const grupaErr = await validateTargetGrupa(parseInt(String(body.grupaId)), req.user!.userId, req.user!.role === "admin");
+      if (grupaErr) { res.status(grupaErr.status).json({ error: grupaErr.error }); return; }
     }
 
     const muallimId = req.user!.userId;
@@ -1251,6 +1392,10 @@ router.put("/ucenici/:id/grupa", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.id);
     const { grupaId } = req.body;
+    if (grupaId) {
+      const err = await validateTargetGrupa(parseInt(String(grupaId)), req.user!.userId, req.user!.role === "admin");
+      if (err) { res.status(err.status).json({ error: err.error }); return; }
+    }
     const [updated] = await db.update(ucenikProfiliTable)
       .set({ grupaId: grupaId || null })
       .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId)))
@@ -3707,7 +3852,7 @@ router.post("/obavjestenja", async (req, res) => {
           await sendPushNotification({
             userIds: roditeljIds,
             title: "Novo obavještenje",
-            message: naslov.trim(),
+            body: naslov.trim(),
             url: "/roditelj?tab=obavjestenja",
           });
         } catch {}

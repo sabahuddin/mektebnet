@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload, Pencil
+  Heart, School, Copy, KeyRound, Upload, Pencil, Archive
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -117,6 +117,8 @@ interface Grupa {
   skolskaGodina: string;
   daniNastave: string[];
   vrijemeNastave: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
 }
 
 interface KalendarEntry {
@@ -792,6 +794,26 @@ export default function MuallimPanel() {
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
   }
 
+  async function arhivirajGrupu(grupaId: number) {
+    if (!token) return;
+    if (!confirm(t("Arhivirati ovu grupu? Učenici će biti oslobođeni za druge grupe, a podaci grupe (ocjene, prisustvo, članstvo) ostaju sačuvani u arhivi."))) return;
+    try {
+      await apiRequest("POST", `/muallim/grupe/${grupaId}/arhiviraj`, undefined, token);
+      setGrupe(prev => prev.map(g => g.id === grupaId ? { ...g, isArchived: true, archivedAt: new Date().toISOString() } : g));
+      setUcenici(prev => prev.map(u => u.grupaId === grupaId ? { ...u, grupaId: undefined, grupaIme: undefined } : u));
+      toast({ title: t("Grupa arhivirana") });
+    } catch { toast({ title: t("Greška"), variant: "destructive" }); }
+  }
+
+  async function vratiGrupu(grupaId: number) {
+    if (!token) return;
+    try {
+      await apiRequest("POST", `/muallim/grupe/${grupaId}/vrati`, undefined, token);
+      setGrupe(prev => prev.map(g => g.id === grupaId ? { ...g, isArchived: false, archivedAt: null } : g));
+      toast({ title: t("Grupa vraćena iz arhive") });
+    } catch { toast({ title: t("Greška"), variant: "destructive" }); }
+  }
+
   async function deleteGrupa(grupaId: number) {
     if (!token) return;
     if (!confirm(t("Da li ste sigurni da želite obrisati ovu grupu? Učenici neće biti obrisani, samo premješteni bez grupe."))) return;
@@ -993,7 +1015,7 @@ export default function MuallimPanel() {
   // Tabovi "Muallimi" i "Mekteb" se prikazuju SAMO glavnom muallimu.
   const TABS = [
     { id: "pregled", label: t("Pregled"), icon: BarChart3 },
-    { id: "grupe", label: t("Grupe ({n})", { n: String(grupe.length) }), icon: GraduationCap },
+    { id: "grupe", label: t("Grupe ({n})", { n: String(grupe.filter(g => !g.isArchived).length) }), icon: GraduationCap },
     { id: "statistika", label: t("Statistika"), icon: TrendingUp },
     ...(mektebMeta.isGlavni ? [
       { id: "muallimi", label: t("Muallimi"), icon: Users },
@@ -1059,7 +1081,7 @@ export default function MuallimPanel() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     { label: t("Ukupno učenika"), value: ucenici.length, sub: t("{n} aktivnih", { n: String(ucenici.filter(u => u.aktivanStatus).length) }), icon: Users, color: "text-primary", bg: "bg-primary/5" },
-                    { label: t("Aktivnih grupa"), value: grupe.length, sub: grupe.length > 0 ? t("prosj. {n} po grupi", { n: (ucenici.length / grupe.length).toFixed(1) }) : "—", icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
+                    { label: t("Aktivnih grupa"), value: grupe.filter(g => !g.isArchived).length, sub: grupe.filter(g => !g.isArchived).length > 0 ? t("prosj. {n} po grupi", { n: (ucenici.length / grupe.filter(g => !g.isArchived).length).toFixed(1) }) : "—", icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
                     {
                       label: t("Prosj. prisustvo"),
                       value: dashboardStats?.prosjekPrisustva !== null && dashboardStats?.prosjekPrisustva !== undefined ? `${dashboardStats.prosjekPrisustva}%` : "—",
@@ -1268,20 +1290,26 @@ export default function MuallimPanel() {
                     </Button>
                   </Link>
                 </div>
-                {grupe.length === 0 ? (
+                {grupe.filter(g => !g.isArchived).length === 0 ? (
                   <div className="text-center py-16 text-muted-foreground bg-white rounded-2xl border border-border/50">
                     <GraduationCap className="w-10 h-10 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">{t("Nema grupa. Kreiraj prvu grupu (razred).")}</p>
                   </div>
                 ) : (
                   <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {grupe.map((g, i) => (
+                    {grupe.filter(g => !g.isArchived).map((g, i) => (
                       <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                         <div className="bg-white border-2 border-secondary/20 rounded-2xl p-5 hover:border-secondary hover:shadow-md transition-all group relative">
-                          <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
-                            className="absolute top-3 right-3 text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="absolute top-3 right-3 flex items-center gap-1">
+                            <button onClick={(e) => { e.stopPropagation(); arhivirajGrupu(g.id); }}
+                              className="text-amber-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title={t("Arhiviraj grupu")}>
+                              <Archive className="w-4 h-4" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
+                              className="text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                           <Link href={`/muallim/grupa/${g.id}`}>
                             <div className="cursor-pointer">
                               <GraduationCap className="w-8 h-8 text-secondary mb-3" />
@@ -1297,6 +1325,34 @@ export default function MuallimPanel() {
                     ))}
                   </div>
                 )}
+                {grupe.some(g => g.isArchived) && (
+                  <div className="mt-8">
+                    <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-3">
+                      <Archive className="w-5 h-5 text-muted-foreground" />
+                      {t("Arhiva grupa")} ({grupe.filter(g => g.isArchived).length})
+                    </h3>
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {grupe.filter(g => g.isArchived).map(g => (
+                        <div key={g.id} className="bg-muted/40 border-2 border-border/60 rounded-2xl p-5 relative opacity-80 hover:opacity-100 transition-opacity">
+                          <Link href={`/muallim/grupa/${g.id}`}>
+                            <div className="cursor-pointer">
+                              <Archive className="w-7 h-7 text-muted-foreground mb-3" />
+                              <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {g.skolskaGodina}
+                                {g.archivedAt ? ` · ${t("arhivirana")} ${new Date(g.archivedAt).toLocaleDateString("bs-BA")}` : ""}
+                              </p>
+                            </div>
+                          </Link>
+                          <Button variant="outline" size="sm" className="mt-3 rounded-xl font-bold"
+                            onClick={() => vratiGrupu(g.id)}>
+                            {t("Vrati iz arhive")}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -1308,7 +1364,7 @@ export default function MuallimPanel() {
                 <p className="font-bold text-foreground mb-2">{t("Evidencija prisustva")}</p>
                 <p className="text-sm">{t("Odaberi grupu da uneseš prisustvo za danas")}</p>
                 <div className="flex flex-wrap gap-3 justify-center mt-6">
-                  {grupe.map(g => (
+                  {grupe.filter(g => !g.isArchived).map(g => (
                     <Link key={g.id} href={`/muallim/prisustvo/${g.id}`}>
                       <button className="bg-primary/10 text-primary border border-primary/20 rounded-xl px-5 py-3 font-bold hover:bg-primary hover:text-primary-foreground transition-all">
                         {g.naziv}
@@ -1327,7 +1383,7 @@ export default function MuallimPanel() {
                     <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
                     <p className="font-bold text-foreground mb-2">{t("Odaberi grupu za plan lekcija")}</p>
                     <div className="flex flex-wrap gap-3 justify-center mt-6">
-                      {grupe.map(g => (
+                      {grupe.filter(g => !g.isArchived).map(g => (
                         <button key={g.id} onClick={() => setPlanGrupaId(g.id)}
                           className="bg-violet-50 text-violet-700 border border-violet-200 rounded-xl px-5 py-3 font-bold hover:bg-violet-600 hover:text-white transition-all">
                           {g.naziv}
@@ -1490,7 +1546,7 @@ export default function MuallimPanel() {
                       data-testid="btn-stat-mekteb">
                       {t("Cijeli mekteb")}
                     </button>
-                    {grupe.map(g => (
+                    {grupe.filter(g => !g.isArchived).map(g => (
                       <button key={g.id}
                         onClick={() => { setStatMode("grupa"); setStatGrupaId(g.id); }}
                         className={`rounded-xl px-4 py-2 text-sm font-bold border transition-all ${statGrupaId === g.id ? "bg-primary text-primary-foreground border-primary" : "bg-white text-foreground border-border/50 hover:bg-muted/50"}`}>
@@ -2237,7 +2293,7 @@ export default function MuallimPanel() {
                     <ClipboardList className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
                     <p className="font-bold text-foreground mb-2">{t("Odaberi grupu za zadaće")}</p>
                     <div className="flex flex-wrap gap-3 justify-center mt-6">
-                      {grupe.map(g => (
+                      {grupe.filter(g => !g.isArchived).map(g => (
                         <button key={g.id} onClick={() => setZadGrupaId(g.id)}
                           className="bg-primary/10 text-primary border border-primary/20 rounded-xl px-5 py-3 font-bold hover:bg-primary hover:text-primary-foreground transition-all">
                           {g.naziv}
@@ -2589,7 +2645,7 @@ export default function MuallimPanel() {
                       data-testid="btn-kal-sve">
                       {t("Svi termini")}
                     </button>
-                    {grupe.map(g => (
+                    {grupe.filter(g => !g.isArchived).map(g => (
                       <button key={g.id}
                         onClick={() => { setKalendarMode("grupa"); setSelectedGrupaId(g.id); }}
                         className={`rounded-xl px-4 py-2 text-sm font-bold border transition-all ${selectedGrupaId === g.id ? "bg-primary text-primary-foreground border-primary" : "bg-white text-foreground border-border/50 hover:bg-muted/50"}`}>
@@ -2784,7 +2840,7 @@ export default function MuallimPanel() {
                             <div className="text-sm font-bold text-emerald-800 mb-2">
                               {t("Kopiraj datume nastave i praznike iz druge tvoje grupe u trenutnu grupu")}
                             </div>
-                            {grupe.filter(g => g.id !== selectedGrupaId).length === 0 ? (
+                            {grupe.filter(g => !g.isArchived && g.id !== selectedGrupaId).length === 0 ? (
                               <div className="text-sm text-emerald-700">{t("Nemaš drugu grupu za kopiranje.")}</div>
                             ) : (
                               <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -2793,7 +2849,7 @@ export default function MuallimPanel() {
                                   onChange={(e) => setCopyFromGrupaId(e.target.value ? Number(e.target.value) : null)}
                                   className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-foreground flex-1">
                                   <option value="">{t("— odaberi izvornu grupu —")}</option>
-                                  {grupe.filter(g => g.id !== selectedGrupaId).map(g => (
+                                  {grupe.filter(g => !g.isArchived && g.id !== selectedGrupaId).map(g => (
                                     <option key={g.id} value={g.id}>{g.naziv}</option>
                                   ))}
                                 </select>
@@ -3026,7 +3082,7 @@ export default function MuallimPanel() {
                     >
                       <Printer className="w-4 h-4" /> {t("Svi učenici")} ({ucenici.length})
                     </Button>
-                    {grupe.map(g => (
+                    {grupe.filter(g => !g.isArchived).map(g => (
                       <Button
                         key={g.id}
                         onClick={() => setLocation(`/muallim/izvjestaj/grupa/${g.id}`)}

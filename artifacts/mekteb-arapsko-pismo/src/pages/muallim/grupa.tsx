@@ -24,6 +24,15 @@ interface Grupa {
   datumKraja?: string | null;
   daniNastave: string[];
   vrijemeNastave: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
+}
+
+interface ArhivaClan {
+  ucenikId: number;
+  displayName: string;
+  username: string;
+  archivedAt: string;
 }
 
 function fmtDatum(s?: string | null) {
@@ -110,6 +119,7 @@ export default function GrupaPage() {
   const [moveLoading, setMoveLoading] = useState(false);
 
   const [showAddExisting, setShowAddExisting] = useState(false);
+  const [arhivaClanovi, setArhivaClanovi] = useState<ArhivaClan[]>([]);
 
   // Ocjena modal
   const [ocjenaTarget, setOcjenaTarget] = useState<Ucenik | null>(null);
@@ -148,6 +158,10 @@ export default function GrupaPage() {
     ]).then(([grupe, ucenici, status, lekcije]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
+      if (g?.isArchived) {
+        apiRequest<ArhivaClan[]>("GET", `/muallim/grupe/${grupaId}/arhiva-clanovi`, undefined, token)
+          .then(setArhivaClanovi).catch(() => {});
+      }
       setSveGrupe(grupe);
       setSviStudenti(ucenici);
       setStudentiGrupe(ucenici.filter(u => (u.profil as any)?.grupaId === grupaId || (u as any).grupaId === grupaId));
@@ -526,15 +540,41 @@ export default function GrupaPage() {
           </div>
         )}
 
+        {grupa.isArchived && (
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-6">
+            <p className="font-extrabold text-amber-800 mb-1">{t("Grupa je arhivirana")}</p>
+            <p className="text-sm text-amber-700">
+              {t("Podaci grupe (ocjene, prisustvo, članstvo) su sačuvani. Učenici su oslobođeni i mogu se dodati u druge grupe.")}
+              {grupa.archivedAt ? ` (${new Date(grupa.archivedAt).toLocaleDateString("bs-BA")})` : ""}
+            </p>
+            {arhivaClanovi.length > 0 && (
+              <div className="mt-3">
+                <p className="font-bold text-amber-800 text-sm mb-2">{t("Bivši članovi grupe")} ({arhivaClanovi.length}):</p>
+                <div className="flex flex-wrap gap-2">
+                  {arhivaClanovi.map(c => (
+                    <span key={c.ucenikId} className="bg-white border border-amber-200 rounded-lg px-2.5 py-1 text-sm font-medium text-foreground">
+                      {c.displayName || c.username}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2 mb-6">
-          <Button onClick={() => { setShowBulkAdd(true); setCreatedStudents([]); setBulkNames(""); }}
-            className="rounded-xl font-bold flex items-center gap-2">
-            <UserPlus className="w-4 h-4" /> {t("Dodaj učenike")}
-          </Button>
-          <Button variant="outline" onClick={() => setShowAddExisting(true)}
-            className="rounded-xl font-bold flex items-center gap-2">
-            <Plus className="w-4 h-4" /> {t("Dodaj postojećeg")}
-          </Button>
+          {!grupa.isArchived && (
+            <>
+              <Button onClick={() => { setShowBulkAdd(true); setCreatedStudents([]); setBulkNames(""); }}
+                className="rounded-xl font-bold flex items-center gap-2">
+                <UserPlus className="w-4 h-4" /> {t("Dodaj učenike")}
+              </Button>
+              <Button variant="outline" onClick={() => setShowAddExisting(true)}
+                className="rounded-xl font-bold flex items-center gap-2">
+                <Plus className="w-4 h-4" /> {t("Dodaj postojećeg")}
+              </Button>
+            </>
+          )}
           {(studentiGrupe.length > 0 || createdStudents.length > 0) && (
             <Button variant="outline" onClick={printCards} disabled={printLoading} className="rounded-xl font-bold flex items-center gap-2">
               {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} {t("Printaj kartice")}
