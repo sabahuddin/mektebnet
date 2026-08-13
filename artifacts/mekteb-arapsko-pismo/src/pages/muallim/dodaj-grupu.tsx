@@ -10,6 +10,16 @@ import { useLanguage } from "@/context/language";
 
 const DANI = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja"];
 
+/** Vraća tekuću mektebsku godinu u formatu "Mektebska YYYY/YY".
+ *  Nova mektebska godina počinje u augustu (8. mj.). */
+function getCurrentSkolskaGodina(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1; // 1–12
+  const startYear = month >= 8 ? year : year - 1;
+  return `Mektebska ${startYear}/${String(startYear + 1).slice(-2)}`;
+}
+
 interface Grupa {
   id: number;
   naziv: string;
@@ -34,7 +44,7 @@ export default function DodajGrupuPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const [naziv, setNaziv] = useState("");
-  const [skolskaGodina, setSkolskaGodina] = useState("Mektebska 2025/26");
+  const [skolskaGodina, setSkolskaGodina] = useState(getCurrentSkolskaGodina);
   const [datumPocetka, setDatumPocetka] = useState("");
   const [datumKraja, setDatumKraja] = useState("");
   const [vrijemeNastave, setVrijemeNastave] = useState("");
