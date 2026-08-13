@@ -403,6 +403,11 @@ export default function MuallimPanel() {
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [passChanging, setPassChanging] = useState(false);
+  // Modal za potvrdu brisanja grupe (zahtijeva upis naziva)
+  const [deleteGrupaTarget, setDeleteGrupaTarget] = useState<Grupa | null>(null);
+  const [deleteGrupaConfirm, setDeleteGrupaConfirm] = useState("");
+  const [deletingGrupa, setDeletingGrupa] = useState(false);
+
   const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
@@ -819,15 +824,28 @@ export default function MuallimPanel() {
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
   }
 
-  async function deleteGrupa(grupaId: number) {
-    if (!token) return;
-    if (!confirm(t("Da li ste sigurni da želite obrisati ovu grupu? Učenici neće biti obrisani, samo premješteni bez grupe."))) return;
+  function deleteGrupa(grupaId: number) {
+    const g = grupe.find(x => x.id === grupaId);
+    if (!g) return;
+    setDeleteGrupaTarget(g);
+    setDeleteGrupaConfirm("");
+  }
+
+  async function confirmDeleteGrupa() {
+    if (!token || !deleteGrupaTarget) return;
+    setDeletingGrupa(true);
     try {
-      await apiRequest("DELETE", `/muallim/grupe/${grupaId}`, undefined, token);
-      setGrupe(prev => prev.filter(g => g.id !== grupaId));
-      setUcenici(prev => prev.map(u => u.grupaId === grupaId ? { ...u, grupaId: undefined, grupaIme: undefined } : u));
+      await apiRequest("DELETE", `/muallim/grupe/${deleteGrupaTarget.id}`, undefined, token);
+      setGrupe(prev => prev.filter(g => g.id !== deleteGrupaTarget.id));
+      setUcenici(prev => prev.map(u => u.grupaId === deleteGrupaTarget.id ? { ...u, grupaId: undefined, grupaIme: undefined } : u));
       toast({ title: t("Grupa obrisana") });
-    } catch { toast({ title: t("Greška"), variant: "destructive" }); }
+      setDeleteGrupaTarget(null);
+      setDeleteGrupaConfirm("");
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    } finally {
+      setDeletingGrupa(false);
+    }
   }
 
   async function saveProfile() {
@@ -3269,6 +3287,83 @@ export default function MuallimPanel() {
           </>
         )}
       </div>
+
+      {/* Modal: potvrda brisanja grupe — zahtijeva upis tačnog naziva */}
+      {deleteGrupaTarget && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => { if (!deletingGrupa) { setDeleteGrupaTarget(null); setDeleteGrupaConfirm(""); } }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-foreground text-lg">{t("Trajno brisanje grupe")}</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">{t("Ova akcija se ne može poništiti.")}</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-800 space-y-1">
+              <p className="font-bold">{t("Brisanjem grupe trajno se brišu:")}</p>
+              <ul className="list-disc list-inside space-y-0.5 text-red-700">
+                <li>{t("Sve evidencije prisustva")}</li>
+                <li>{t("Plan lekcija")}</li>
+                <li>{t("Mektebski kalendar grupe")}</li>
+                <li>{t("Zadaće dodijeljene grupi")}</li>
+              </ul>
+              <p className="mt-2 text-red-900">{t("Učenici i njihove ocjene se ne brišu, ali ostaju bez grupe.")}</p>
+              <p className="mt-1 font-bold text-red-900">{t("Ako želiš sačuvati podatke — koristi arhiviranje, ne brisanje.")}</p>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm font-bold text-foreground mb-1.5">
+                {t("Upiši naziv grupe da potvrdiš:")}
+                {" "}
+                <span className="font-mono text-red-700">„{deleteGrupaTarget.naziv}"</span>
+              </p>
+              <input
+                type="text"
+                value={deleteGrupaConfirm}
+                onChange={e => setDeleteGrupaConfirm(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && deleteGrupaConfirm === deleteGrupaTarget.naziv && !deletingGrupa) {
+                    confirmDeleteGrupa();
+                  }
+                }}
+                placeholder={deleteGrupaTarget.naziv}
+                className="w-full border border-red-300 rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+                autoFocus
+                data-testid="input-potvrda-naziv-grupe"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => { setDeleteGrupaTarget(null); setDeleteGrupaConfirm(""); }}
+                disabled={deletingGrupa}
+                className="flex-1 rounded-xl"
+              >
+                {t("Otkaži")}
+              </Button>
+              <Button
+                onClick={confirmDeleteGrupa}
+                disabled={deletingGrupa || deleteGrupaConfirm !== deleteGrupaTarget.naziv}
+                className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                data-testid="btn-potvrdi-brisanje-grupe"
+              >
+                {deletingGrupa ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1" /> {t("Obriši trajno")}</>}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }
