@@ -178,6 +178,7 @@ export default function UcenikPage() {
   const [roditeljRezultati, setRoditeljRezultati] = useState<RoditeljPretraga[]>([]);
   const [pretragaRoditelja, setPretragaRoditelja] = useState(false);
   const [linkujemPostojeceg, setLinkujemPostojeceg] = useState(false);
+  const [uklaniRoditeljId, setUklaniRoditeljId] = useState<number | null>(null);
 
   // Pregled zadaća ovog učenika (read-only). Dodavanje ide iz Muallim → Zadaća.
   const [zadace, setZadace] = useState<ZadacaPregled[]>([]);
@@ -367,9 +368,22 @@ export default function UcenikPage() {
     } catch {}
   }
 
+  async function ukloniRoditelja(roditeljId: number) {
+    if (!token || !id) return;
+    setUklaniRoditeljId(roditeljId);
+    try {
+      await apiRequest("DELETE", `/muallim/ucenici/${parseInt(id)}/roditelji/${roditeljId}`, undefined, token);
+      setRoditelji(prev => prev.filter(r => r.id !== roditeljId));
+      toast({ title: t("Roditelj uklonjen"), description: t("Veza je raskinuta. Nalog roditelja nije obrisan.") });
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće ukloniti roditelja"), variant: "destructive" });
+    } finally {
+      setUklaniRoditeljId(null);
+    }
+  }
+
   // Model 1 učenik = 1 roditelj: kad učenik već ima odobrenog roditelja,
-  // muallim ne može dodati/povezati drugog (forme se sakrivaju).
-  const imaApprovedRoditelja = roditelji.some(r => r.status === "approved");
+  const approvedRoditeljiCount = roditelji.filter(r => r.status === "approved").length;
 
   const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
   const odsutnih = prisustvo.filter(p => p.status === "odsutan").length;
@@ -575,6 +589,18 @@ export default function UcenikPage() {
                               {resetRoditeljId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
                               {t("Reset šifre")}
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => ukloniRoditelja(r.id)}
+                              disabled={uklaniRoditeljId === r.id}
+                              className="rounded-lg text-[11px] font-bold flex items-center gap-1 h-7 px-2 text-red-600 border-red-200 hover:bg-red-50"
+                              data-testid={`btn-ukloni-roditelja-${r.id}`}
+                              title={t("Ukloni vezu s roditeljem (ne briše nalog)")}
+                            >
+                              {uklaniRoditeljId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+                              {t("Ukloni")}
+                            </Button>
                           </div>
                           {resetRoditeljPass?.id === r.id && (
                             <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
@@ -598,7 +624,7 @@ export default function UcenikPage() {
                 )}
 
                 {/* Poveži postojećeg roditelja (npr. roditelj već ima drugo dijete u mektebu) */}
-                {!kreiraniRoditelj && !imaApprovedRoditelja && (
+                {!kreiraniRoditelj && approvedRoditeljiCount < 2 && (
                   <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
                     <p className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5" /> {t("Poveži postojećeg roditelja:")}
@@ -708,15 +734,7 @@ export default function UcenikPage() {
                       </Button>
                     </div>
                   </div>
-                ) : imaApprovedRoditelja ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-2.5" data-testid="poruka-jedan-roditelj">
-                    <Users className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-bold text-amber-900">{t("Učenik već ima povezanog roditelja.")}</p>
-                      <p className="text-xs text-amber-800 mt-1">{t("Jedan učenik može imati samo jednog roditelja (1 učenik = 1 roditelj). Za promjenu roditelja obratite se administraciji.")}</p>
-                    </div>
-                  </div>
-                ) : (
+                ) : approvedRoditeljiCount < 2 ? (
                   <div>
                     <p className="text-xs font-bold text-muted-foreground mb-2">{t("Ili dodaj novi nalog za roditelja:")}</p>
                     <div className="flex gap-2 flex-wrap">
@@ -743,7 +761,7 @@ export default function UcenikPage() {
                       {t("Kreiraće se nalog s automatskom šifrom")} <strong>Mekteb####</strong>. {t("Roditelj se odmah povezuje s učenikom i NE ulazi u kvotu licenci.")}
                     </p>
                   </div>
-                )}
+                ) : null}
               </motion.div>
             )}
 

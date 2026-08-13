@@ -374,38 +374,18 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS embed_completions_student_prilozi_uidx ON embed_completions (student_id, prilozi_id);`);
 
-    // Model 1 učenik = 1 roditelj (licence): tvrda DB garancija da učenik može
-    // imati najviše JEDNOG odobrenog roditelja. App-level provjere (muallim.ts
-    // + roditelj.ts) su prva linija; ovaj parcijalni unique indeks zatvara race.
-    // OPREZ: ako u zatečenoj bazi POSTOJE učenici s 2+ odobrena roditelja,
-    // CREATE INDEX bi pao i srušio startup — zato prvo prebrojimo duplikate i u
-    // tom slučaju PRESKAČEMO indeks (oslanjamo se na app-level + log warning).
-    // Postojeće veze NE diramo (mogu biti stvarne porodice); ograničenje vrijedi
-    // unaprijed.
+    // Dozvoljeni su max 2 odobrena roditelja po učeniku (razvedeni roditelji).
+    // Stari unique indeks (roditelj_ucenik_one_approved_per_ucenik_idx) je
+    // uklonjen jer blokira drugi roditeljski profil. Dropujemo ga idempotentno.
     try {
-      const dupRes = await exec<{ count: string }>(sql`
-        SELECT COUNT(*)::text AS count FROM (
-          SELECT ucenik_id FROM roditelj_ucenik
-          WHERE status = 'approved'
-          GROUP BY ucenik_id HAVING COUNT(*) > 1
-        ) d;
+      await db.execute(sql`
+        DROP INDEX IF EXISTS roditelj_ucenik_one_approved_per_ucenik_idx;
       `);
-      const dupCount = Number(dupRes.rows[0]?.count ?? "0");
-      if (dupCount > 0) {
-        logger.warn(
-          `[residual-schema] roditelj_ucenik: ${dupCount} učenika ima 2+ odobrena roditelja — preskačem unique indeks (jedan roditelj po učeniku). Oslanjamo se na app-level provjere.`,
-        );
-      } else {
-        await db.execute(sql`
-          CREATE UNIQUE INDEX IF NOT EXISTS roditelj_ucenik_one_approved_per_ucenik_idx
-          ON roditelj_ucenik (ucenik_id) WHERE status = 'approved';
-        `);
-      }
     } catch (err) {
-      logger.warn("[residual-schema] roditelj_ucenik one-approved-per-ucenik indeks nije kreiran", err);
+      logger.warn("[residual-schema] roditelj_ucenik drop old unique idx failed", err);
     }
 
-    // Ocjene sadržaja (5 pčelica) — jedna aktivna ocjena po (user, tip, id).
+        // Ocjene sadržaja (5 pčelica) — jedna aktivna ocjena po (user, tip, id).
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS ocjene_sadrzaja (
         id serial PRIMARY KEY,

@@ -1538,18 +1538,15 @@ router.post("/ucenici/:id/povezi-roditelja", async (req, res) => {
       return;
     }
 
-    // Model 1 učenik = 1 roditelj (licence): odbij ako učenik već ima DRUGOG
-    // odobrenog roditelja. (Ako je odobreni roditelj baš ovaj, ispod javljamo
-    // precizniju poruku "već je povezan".)
-    const [vecImaDrugog] = await db.select().from(roditeljUcenikTable)
-      .where(and(
-        eq(roditeljUcenikTable.ucenikId, ucenikId),
-        eq(roditeljUcenikTable.status, "approved"),
-      ));
-    if (vecImaDrugog && vecImaDrugog.roditeljId !== roditelj.id) {
-      res.status(409).json({ error: "Učenik već ima povezanog roditelja. Jedan učenik može imati samo jednog roditelja." });
+    // Dozvoljeni su max 2 odobrena roditelja po učeniku — provjeri limit.
+    const approvedVeze1 = await db.select({ roditeljId: roditeljUcenikTable.roditeljId })
+      .from(roditeljUcenikTable)
+      .where(and(eq(roditeljUcenikTable.ucenikId, ucenikId), eq(roditeljUcenikTable.status, "approved")));
+    if (approvedVeze1.length >= 2) {
+      res.status(409).json({ error: "Učenik već ima 2 povezana roditelja — maksimalni broj." });
       return;
     }
+
 
     // Provjeri da li veza već postoji.
     const [postojeca] = await db.select().from(roditeljUcenikTable)
@@ -1620,11 +1617,12 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
     const profil = await getManageableUcenikProfile(muallimId, ucenikId);
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
 
-    // Model 1 učenik = 1 roditelj (licence): odbij ako učenik već ima odobrenog roditelja.
-    const [vecImaRoditelja] = await db.select().from(roditeljUcenikTable)
+    // Dozvoljeni su max 2 odobrena roditelja po učeniku — provjeri limit.
+    const approvedVeze2 = await db.select({ id: roditeljUcenikTable.id })
+      .from(roditeljUcenikTable)
       .where(and(eq(roditeljUcenikTable.ucenikId, ucenikId), eq(roditeljUcenikTable.status, "approved")));
-    if (vecImaRoditelja) {
-      res.status(409).json({ error: "Učenik već ima povezanog roditelja. Jedan učenik može imati samo jednog roditelja." });
+    if (approvedVeze2.length >= 2) {
+      res.status(409).json({ error: "Učenik već ima 2 povezana roditelja — maksimalni broj." });
       return;
     }
 
@@ -1686,6 +1684,32 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
     res.status(500).json({ error: "Greška servera" });
   }
 });
+
+// DELETE /api/muallim/ucenici/:ucenikId/roditelji/:roditeljId
+// Razvezuje (uklanja) vezu između rodatelja i učenika. NE briše roditeljski nalog.
+// Muallim mora biti vlasnik učenika (ili glavni muallim džemata).
+router.delete("/ucenici/:ucenikId/roditelji/:roditeljId", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    const roditeljId = parseInt(req.params.roditeljId);
+    const muallimId = req.user!.userId;
+
+    const profil = await getManageableUcenikProfile(muallimId, ucenikId);
+    if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
+
+    const result = await db.delete(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.roditeljId, roditeljId),
+      ));
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[DELETE /muallim/ucenici/:ucenikId/roditelji/:roditeljId]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 
 // PUT /api/muallim/ucenici/:id/grupa - prebaci učenika u drugu grupu.
 // Obični muallim: samo vlastiti učenici, vlastite grupe.
