@@ -18,6 +18,7 @@ import { LekcijaPicker } from "@/components/LekcijaPicker";
 
 interface Grupa {
   id: number;
+  muallimId?: number;
   naziv: string;
   skolskaGodina: string;
   datumPocetka?: string | null;
@@ -26,6 +27,7 @@ interface Grupa {
   vrijemeNastave: string;
   isArchived?: boolean;
   archivedAt?: string | null;
+  muallimDisplayName?: string | null;
 }
 
 interface ArhivaClan {
@@ -429,9 +431,11 @@ export default function GrupaPage() {
       .finally(() => setPrintLoading(false));
   }
 
+  // Učenici bez ikakve grupe — mogu se dodati u ovu grupu.
+  // Za glavnog muallima: svi slobodni učenici džemata.
   const bezGrupe = sviStudenti.filter(u => {
     const gId = (u.profil as any)?.grupaId || (u as any).grupaId;
-    return !gId || gId !== grupaId;
+    return !gId;
   });
 
   if (isLoading) {
@@ -812,8 +816,10 @@ export default function GrupaPage() {
               <select value={moveTargetGrupaId} onChange={e => setMoveTargetGrupaId(e.target.value)}
                 className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20 mb-4">
                 <option value="">{t("Bez grupe")}</option>
-                {sveGrupe.filter(g => g.id !== grupaId).map(g => (
-                  <option key={g.id} value={g.id}>{g.naziv}</option>
+                {sveGrupe.filter(g => !g.isArchived && g.id !== grupaId).map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.muallimDisplayName ? `${g.naziv} (${g.muallimDisplayName})` : g.naziv}
+                  </option>
                 ))}
               </select>
               <div className="flex gap-3">

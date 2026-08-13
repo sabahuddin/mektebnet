@@ -109,16 +109,20 @@ interface Ucenik {
   grupaId?: number;
   grupaIme?: string;
   aktivanStatus: boolean;
+  muallimId?: number | null;
+  muallimDisplayName?: string | null;
 }
 
 interface Grupa {
   id: number;
+  muallimId?: number;
   naziv: string;
   skolskaGodina: string;
   daniNastave: string[];
   vrijemeNastave: string;
   isArchived?: boolean;
   archivedAt?: string | null;
+  muallimDisplayName?: string | null;
 }
 
 interface KalendarEntry {
@@ -1297,32 +1301,42 @@ export default function MuallimPanel() {
                   </div>
                 ) : (
                   <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {grupe.filter(g => !g.isArchived).map((g, i) => (
-                      <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                        <div className="bg-white border-2 border-secondary/20 rounded-2xl p-5 hover:border-secondary hover:shadow-md transition-all group relative">
-                          <div className="absolute top-3 right-3 flex items-center gap-1">
-                            <button onClick={(e) => { e.stopPropagation(); arhivirajGrupu(g.id); }}
-                              className="text-amber-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title={t("Arhiviraj grupu")}>
-                              <Archive className="w-4 h-4" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
-                              className="text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <Link href={`/muallim/grupa/${g.id}`}>
-                            <div className="cursor-pointer">
-                              <GraduationCap className="w-8 h-8 text-secondary mb-3" />
-                              <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
-                              <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => u.grupaId === g.id).length} {t("učenika")}</p>
-                              <div className="flex items-center gap-1 text-secondary font-bold text-sm mt-3">
-                                {t("Otvori")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                              </div>
+                    {grupe.filter(g => !g.isArchived).map((g, i) => {
+                      const isVlasnik = !g.muallimId || g.muallimId === user?.id;
+                      return (
+                        <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                          <div className={`bg-white border-2 rounded-2xl p-5 hover:shadow-md transition-all group relative ${isVlasnik ? "border-secondary/20 hover:border-secondary" : "border-blue-100 hover:border-blue-300"}`}>
+                            <div className="absolute top-3 right-3 flex items-center gap-1">
+                              {isVlasnik && (
+                                <>
+                                  <button onClick={(e) => { e.stopPropagation(); arhivirajGrupu(g.id); }}
+                                    className="text-amber-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title={t("Arhiviraj grupu")}>
+                                    <Archive className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
+                                    className="text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
-                          </Link>
-                        </div>
-                      </motion.div>
-                    ))}
+                            <Link href={`/muallim/grupa/${g.id}`}>
+                              <div className="cursor-pointer">
+                                <GraduationCap className={`w-8 h-8 mb-3 ${isVlasnik ? "text-secondary" : "text-blue-400"}`} />
+                                <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
+                                {g.muallimDisplayName && !isVlasnik && (
+                                  <p className="text-xs text-blue-600 font-bold mt-0.5">{g.muallimDisplayName}</p>
+                                )}
+                                <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => u.grupaId === g.id).length} {t("učenika")}</p>
+                                <div className={`flex items-center gap-1 font-bold text-sm mt-3 ${isVlasnik ? "text-secondary" : "text-blue-500"}`}>
+                                  {t("Otvori")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                              </div>
+                            </Link>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 )}
                 {grupe.some(g => g.isArchived) && (
@@ -1332,24 +1346,32 @@ export default function MuallimPanel() {
                       {t("Arhiva grupa")} ({grupe.filter(g => g.isArchived).length})
                     </h3>
                     <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {grupe.filter(g => g.isArchived).map(g => (
+                      {grupe.filter(g => g.isArchived).map(g => {
+                        const isVlasnik = !g.muallimId || g.muallimId === user?.id;
+                        return (
                         <div key={g.id} className="bg-muted/40 border-2 border-border/60 rounded-2xl p-5 relative opacity-80 hover:opacity-100 transition-opacity">
                           <Link href={`/muallim/grupa/${g.id}`}>
                             <div className="cursor-pointer">
                               <Archive className="w-7 h-7 text-muted-foreground mb-3" />
                               <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
+                              {g.muallimDisplayName && !isVlasnik && (
+                                <p className="text-xs text-blue-600 font-bold mt-0.5">{g.muallimDisplayName}</p>
+                              )}
                               <p className="text-sm text-muted-foreground mt-1">
                                 {g.skolskaGodina}
                                 {g.archivedAt ? ` · ${t("arhivirana")} ${new Date(g.archivedAt).toLocaleDateString("bs-BA")}` : ""}
                               </p>
                             </div>
                           </Link>
+                          {isVlasnik && (
                           <Button variant="outline" size="sm" className="mt-3 rounded-xl font-bold"
                             onClick={() => vratiGrupu(g.id)}>
                             {t("Vrati iz arhive")}
                           </Button>
+                          )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1366,8 +1388,9 @@ export default function MuallimPanel() {
                 <div className="flex flex-wrap gap-3 justify-center mt-6">
                   {grupe.filter(g => !g.isArchived).map(g => (
                     <Link key={g.id} href={`/muallim/prisustvo/${g.id}`}>
-                      <button className="bg-primary/10 text-primary border border-primary/20 rounded-xl px-5 py-3 font-bold hover:bg-primary hover:text-primary-foreground transition-all">
-                        {g.naziv}
+                      <button className="bg-primary/10 text-primary border border-primary/20 rounded-xl px-5 py-3 font-bold hover:bg-primary hover:text-primary-foreground transition-all text-left">
+                        <div>{g.naziv}</div>
+                        {g.muallimDisplayName && <div className="text-[10px] opacity-70 font-medium">{g.muallimDisplayName}</div>}
                       </button>
                     </Link>
                   ))}
@@ -1385,8 +1408,9 @@ export default function MuallimPanel() {
                     <div className="flex flex-wrap gap-3 justify-center mt-6">
                       {grupe.filter(g => !g.isArchived).map(g => (
                         <button key={g.id} onClick={() => setPlanGrupaId(g.id)}
-                          className="bg-violet-50 text-violet-700 border border-violet-200 rounded-xl px-5 py-3 font-bold hover:bg-violet-600 hover:text-white transition-all">
-                          {g.naziv}
+                          className="bg-violet-50 text-violet-700 border border-violet-200 rounded-xl px-5 py-3 font-bold hover:bg-violet-600 hover:text-white transition-all text-left">
+                          <div>{g.naziv}</div>
+                          {g.muallimDisplayName && <div className="text-[10px] opacity-70 font-medium">{g.muallimDisplayName}</div>}
                         </button>
                       ))}
                     </div>
