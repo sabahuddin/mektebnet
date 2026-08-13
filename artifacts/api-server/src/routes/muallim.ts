@@ -972,7 +972,7 @@ router.get("/ucenici", async (req, res) => {
       const rows = await db.execute(sql`
         SELECT up.user_id, up.muallim_id, up.grupa_id, up.mekteb_id, up.is_archived,
                u.display_name, u.username, u.email, u.role,
-               u.total_hasanat, u.total_med, u.last_seen_at, u.total_screentime_sec,
+               u.last_seen_at, u.total_screentime_sec,
                mu.display_name AS muallim_display_name,
                g.naziv AS grupa_naziv
         FROM ucenik_profili up
@@ -987,7 +987,7 @@ router.get("/ucenici", async (req, res) => {
       type Row = {
         user_id: number; muallim_id: number; grupa_id: number | null; mekteb_id: number | null;
         is_archived: boolean | null; display_name: string; username: string; email: string | null;
-        role: string; total_hasanat: number | null; total_med: number | null;
+        role: string;
         last_seen_at: string | null; total_screentime_sec: number | null;
         muallim_display_name: string | null; grupa_naziv: string | null;
       };
@@ -997,8 +997,6 @@ router.get("/ucenici", async (req, res) => {
         username: r.username,
         email: r.email,
         role: r.role,
-        totalHasanat: r.total_hasanat,
-        totalMed: r.total_med,
         lastSeenAt: r.last_seen_at,
         totalScreentimeSec: r.total_screentime_sec,
         grupaId: r.grupa_id,
