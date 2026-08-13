@@ -720,14 +720,30 @@ router.get("/grupe", async (req, res) => {
     const ctx = await getMektebCtx(userId);
 
     if (ctx?.isGlavni && ctx.mektebId) {
+      // Svi muallimi džemata → njihove grupe.
+      // Koristimo subquery umjesto JOIN-a s boolen ORDER BY
+      // da izbjegnemo moguće greške na starijim PG verzijama.
       const rows = await db.execute(sql`
-        SELECT g.*,
-               u.display_name AS muallim_display_name,
-               u.id AS muallim_user_id
+        SELECT
+          g.id,
+          g.muallim_id,
+          g.naziv,
+          g.skolska_godina,
+          g.dani_nastave,
+          g.vrijeme_nastave,
+          g.datum_pocetka,
+          g.datum_kraja,
+          COALESCE(g.is_archived, false) AS is_archived,
+          g.archived_at,
+          u.display_name AS muallim_display_name
         FROM grupe g
-        JOIN muallim_profili mp ON mp.user_id = g.muallim_id AND mp.mekteb_id = ${ctx.mektebId}
         JOIN users u ON u.id = g.muallim_id
-        ORDER BY (g.muallim_id = ${userId}) DESC, g.naziv ASC
+        WHERE g.muallim_id IN (
+          SELECT user_id FROM muallim_profili WHERE mekteb_id = ${ctx.mektebId}
+        )
+        ORDER BY
+          CASE WHEN g.muallim_id = ${userId} THEN 0 ELSE 1 END,
+          g.naziv ASC
       `);
       res.json((rows.rows as Record<string, unknown>[]).map(r => ({
         id: r.id,
