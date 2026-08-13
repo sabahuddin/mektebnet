@@ -222,6 +222,28 @@ async function getMektebCtx(userId: number) {
   return { mektebId: profil.mektebId ?? null, isGlavni: profil.isGlavni ?? false, licenceCount: profil.licenceCount };
 }
 
+// Vrati profil učenika ako muallim smije upravljati njime.
+// Obični muallim vidi samo vlastite učenike, a glavni sve učenike svog mekteba.
+// Provjera pripadnosti mektebu ide preko vlasničkog muallim profila, jer
+// ucenik_profili.mekteb_id može biti NULL kod starijih učenika.
+async function getManageableUcenikProfile(muallimId: number, ucenikId: number) {
+  const [profil] = await db.select().from(ucenikProfiliTable)
+    .where(eq(ucenikProfiliTable.userId, ucenikId));
+  if (!profil) return null;
+  if (profil.muallimId === muallimId) return profil;
+
+  const ctx = await getMektebCtx(muallimId);
+  if (!ctx?.isGlavni || !ctx.mektebId || !profil.muallimId) return null;
+
+  const [vlasnik] = await db.select({ userId: muallimProfiliTable.userId })
+    .from(muallimProfiliTable)
+    .where(and(
+      eq(muallimProfiliTable.userId, profil.muallimId),
+      eq(muallimProfiliTable.mektebId, ctx.mektebId),
+    ));
+  return vlasnik ? profil : null;
+}
+
 // GET /api/muallim/mekteb/info — osnovni podaci o mektebu trenutnog muallima.
 router.get("/mekteb/info", async (req, res) => {
   try {
@@ -1317,9 +1339,7 @@ router.get("/ucenici/:id/roditelji", async (req, res) => {
     const ucenikId = parseInt(req.params.id);
     const muallimId = req.user!.userId;
 
-    // Provjera vlasništva — učenik mora pripadati ovom muallimu.
-    const [profil] = await db.select().from(ucenikProfiliTable)
-      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+    const profil = await getManageableUcenikProfile(muallimId, ucenikId);
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
 
     const veze = await db
@@ -1358,9 +1378,7 @@ router.post("/ucenici/:id/povezi-roditelja", async (req, res) => {
     }
     const username = rawUsername.replace(/^@/, "").toLowerCase();
 
-    // Provjera vlasništva — učenik mora pripadati ovom muallimu.
-    const [profil] = await db.select().from(ucenikProfiliTable)
-      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+    const profil = await getManageableUcenikProfile(muallimId, ucenikId);
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
 
     // Pronađi roditelja po korisničkom imenu.
@@ -1450,9 +1468,7 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
       return;
     }
 
-    // Provjera vlasništva
-    const [profil] = await db.select().from(ucenikProfiliTable)
-      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+    const profil = await getManageableUcenikProfile(muallimId, ucenikId);
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
 
     // Model 1 učenik = 1 roditelj (licence): odbij ako učenik već ima odobrenog roditelja.
