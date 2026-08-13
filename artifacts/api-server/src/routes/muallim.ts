@@ -1012,9 +1012,22 @@ router.get("/grupe/:id/izvjestaj", async (req, res) => {
 // POST /api/muallim/grupe
 router.post("/grupe", async (req, res) => {
   try {
-    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, datumPocetka, datumKraja } = req.body;
+    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, datumPocetka, datumKraja, muallimId: bodyMuallimId } = req.body;
+    const userId = req.user!.userId;
+    let muallimId = userId;
+
+    // Glavni muallim može dodijeliti grupu drugom muallimu svog mekteba
+    if (bodyMuallimId && Number(bodyMuallimId) !== userId) {
+      const ctx = await getMektebCtx(userId);
+      if (ctx?.isGlavni && ctx.mektebId) {
+        const [ciljni] = await db.select().from(muallimProfiliTable)
+          .where(and(eq(muallimProfiliTable.userId, Number(bodyMuallimId)), eq(muallimProfiliTable.mektebId, ctx.mektebId)));
+        if (ciljni) muallimId = Number(bodyMuallimId);
+      }
+    }
+
     const [nova] = await db.insert(grupeTable).values({
-      muallimId: req.user!.userId,
+      muallimId,
       naziv,
       skolskaGodina,
       daniNastave: daniNastave || [],
@@ -1031,7 +1044,22 @@ router.post("/grupe", async (req, res) => {
 // PUT /api/muallim/grupe/:id
 router.put("/grupe/:id", async (req, res) => {
   try {
-    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja } = req.body;
+    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja, muallimId: bodyMuallimId } = req.body;
+    const userId = req.user!.userId;
+    const grupaId = parseInt(req.params.id);
+    const ctx = await getMektebCtx(userId);
+
+    // Provjeri vlasništvo nad grupom: obični muallim samo vlastite, glavni muallim sve u svom mektebu
+    const grupaWhere = ctx?.isGlavni && ctx.mektebId
+      ? sql`g.id = ${grupaId} AND EXISTS (
+          SELECT 1 FROM muallim_profili mp
+          WHERE mp.user_id = g.muallim_id AND mp.mekteb_id = ${ctx.mektebId}
+        )`
+      : sql`g.id = ${grupaId} AND g.muallim_id = ${userId}`;
+
+    const existing = await db.execute(sql`SELECT id FROM grupe g WHERE ${grupaWhere}`);
+    if (!existing.rows.length) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+
     const updateData: Record<string, unknown> = {};
     if (naziv !== undefined) updateData.naziv = naziv;
     if (skolskaGodina !== undefined) updateData.skolskaGodina = skolskaGodina;
@@ -1040,9 +1068,17 @@ router.put("/grupe/:id", async (req, res) => {
     if (isActive !== undefined) updateData.isActive = isActive;
     if (datumPocetka !== undefined) updateData.datumPocetka = datumPocetka;
     if (datumKraja !== undefined) updateData.datumKraja = datumKraja;
+
+    // Reassign muallima — samo glavni muallim smije, ciljni mora biti u istom mektebu
+    if (bodyMuallimId !== undefined && ctx?.isGlavni && ctx.mektebId) {
+      const [ciljni] = await db.select().from(muallimProfiliTable)
+        .where(and(eq(muallimProfiliTable.userId, Number(bodyMuallimId)), eq(muallimProfiliTable.mektebId, ctx.mektebId)));
+      if (ciljni) updateData.muallimId = Number(bodyMuallimId);
+    }
+
     const [updated] = await db.update(grupeTable)
       .set(updateData)
-      .where(and(eq(grupeTable.id, parseInt(req.params.id)), eq(grupeTable.muallimId, req.user!.userId)))
+      .where(eq(grupeTable.id, grupaId))
       .returning();
     res.json(updated);
   } catch (err) {

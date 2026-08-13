@@ -3,7 +3,7 @@ import { useLocation, useParams } from "wouter";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { ArrowLeft, GraduationCap, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
@@ -28,6 +28,13 @@ interface Grupa {
   datumKraja?: string | null;
   daniNastave: string[];
   vrijemeNastave: string;
+  muallimId?: number;
+}
+
+interface Muallim {
+  userId: number;
+  displayName: string;
+  isGlavni: boolean;
 }
 
 function dateInput(s?: string | null) {
@@ -40,7 +47,7 @@ export default function DodajGrupuPage() {
   const params = useParams();
   const editId = params.id ? parseInt(params.id) : null;
   const isEdit = editId !== null;
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
   const [naziv, setNaziv] = useState("");
@@ -52,6 +59,30 @@ export default function DodajGrupuPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(isEdit);
   const [loaded, setLoaded] = useState(!isEdit);
+
+  // Muallim dodjela (samo za glavnog muallima)
+  const [muallimi, setMuallimi] = useState<Muallim[]>([]);
+  const [isGlavni, setIsGlavni] = useState(false);
+  const [selectedMuallimId, setSelectedMuallimId] = useState<number | null>(null);
+
+  // Učitaj listu muallima — 403 znači da korisnik nije glavni, ignoriramo grešku
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<Muallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token)
+      .then(lista => {
+        setMuallimi(lista);
+        setIsGlavni(true);
+        // Postavi defaultnog muallima na samog sebe ako još nije odabran
+        if (!selectedMuallimId && user?.id) {
+          setSelectedMuallimId(user.id);
+        }
+      })
+      .catch(() => {
+        // 403 → nije glavni muallim, nema dropdowna
+        setIsGlavni(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   useEffect(() => {
     if (!isEdit || !token) return;
@@ -70,6 +101,7 @@ export default function DodajGrupuPage() {
         setDatumKraja(dateInput(g.datumKraja));
         setVrijemeNastave(g.vrijemeNastave || "");
         setDaniNastave(g.daniNastave || []);
+        if (g.muallimId) setSelectedMuallimId(g.muallimId);
         setLoaded(true);
       })
       .catch(() => toast({ title: t("Greška"), description: t("Nije moguće učitati grupu"), variant: "destructive" }))
@@ -85,7 +117,7 @@ export default function DodajGrupuPage() {
     if (!token || !naziv.trim() || !loaded) return;
     setIsLoading(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         naziv: naziv.trim(),
         skolskaGodina,
         datumPocetka: datumPocetka || null,
@@ -93,6 +125,10 @@ export default function DodajGrupuPage() {
         vrijemeNastave,
         daniNastave,
       };
+      // Glavnom muallimu pošalji odabranog muallima
+      if (isGlavni && selectedMuallimId) {
+        payload.muallimId = selectedMuallimId;
+      }
       if (isEdit) {
         await apiRequest("PUT", `/muallim/grupe/${editId}`, payload, token);
         toast({ title: t("Sačuvano!"), description: t(`Grupa "{naziv}" je ažurirana`, { naziv }) });
@@ -135,6 +171,28 @@ export default function DodajGrupuPage() {
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-6 space-y-5">
+
+          {/* Muallim grupe — samo za glavnog muallima */}
+          {isGlavni && muallimi.length > 0 && (
+            <div>
+              <label className="text-sm font-bold text-foreground mb-1.5 flex items-center gap-1.5">
+                <User className="w-4 h-4 text-muted-foreground" />
+                {t("Muallim grupe")}
+              </label>
+              <select
+                value={selectedMuallimId ?? ""}
+                onChange={e => setSelectedMuallimId(Number(e.target.value))}
+                className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20"
+              >
+                {muallimi.map(m => (
+                  <option key={m.userId} value={m.userId}>
+                    {m.displayName}{m.isGlavni ? ` (${t("vi")})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-bold text-foreground mb-1.5 block">
               {t("Naziv grupe")} <span className="text-red-500">*</span>

@@ -1433,7 +1433,7 @@ export default function MuallimPanel() {
                 ) : (
                   <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {grupe.filter(g => !g.isArchived).map((g, i) => {
-                      const isVlasnik = !g.muallimId || g.muallimId === user?.id;
+                      const isVlasnik = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
                       return (
                         <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                           <div className={`bg-white border-2 rounded-2xl p-5 hover:shadow-md transition-all group relative ${isVlasnik ? "border-secondary/20 hover:border-secondary" : "border-blue-100 hover:border-blue-300"}`}>
@@ -1478,7 +1478,7 @@ export default function MuallimPanel() {
                     </h3>
                     <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                       {grupe.filter(g => g.isArchived).map(g => {
-                        const isVlasnik = !g.muallimId || g.muallimId === user?.id;
+                        const isVlasnik = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
                         return (
                         <div key={g.id} className="bg-muted/40 border-2 border-border/60 rounded-2xl p-5 relative opacity-80 hover:opacity-100 transition-opacity">
                           <Link href={`/muallim/grupa/${g.id}`}>

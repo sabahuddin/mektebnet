@@ -9,6 +9,7 @@ import {
   Loader2, GraduationCap, X, Plus, Trash2, Star, ClipboardList, KeyRound,
   AlertTriangle, BookOpen, Copy, Check,
   CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles, ListOrdered, Pencil,
+  User, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -142,6 +143,13 @@ export default function GrupaPage() {
   const [deleteTarget, setDeleteTarget] = useState<Ucenik | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Promjena muallima grupe (samo za glavnog)
+  const [isGlavni, setIsGlavni] = useState(false);
+  const [mektebMuallimi, setMektebMuallimi] = useState<{ userId: number; displayName: string; isGlavni: boolean }[]>([]);
+  const [showChangeMuallim, setShowChangeMuallim] = useState(false);
+  const [changeMuallimId, setChangeMuallimId] = useState<number | null>(null);
+  const [changingMuallim, setChangingMuallim] = useState(false);
+
   // Reset šifre roditelja
   const [parentResetTarget, setParentResetTarget] = useState<Ucenik | null>(null);
   const [parentResetList, setParentResetList] = useState<RoditeljVeza[]>([]);
@@ -150,6 +158,14 @@ export default function GrupaPage() {
   const [parentResetWorking, setParentResetWorking] = useState<number | null>(null);
 
   const grupaId = parseInt(id || "0");
+
+  // Učitaj muallime mekteba (403 = korisnik nije glavni → nema modal za promjenu)
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<{ userId: number; displayName: string; isGlavni: boolean }[]>("GET", "/muallim/mekteb/muallimi", undefined, token)
+      .then(lista => { setMektebMuallimi(lista); setIsGlavni(true); })
+      .catch(() => { setIsGlavni(false); });
+  }, [token]);
 
   useEffect(() => {
     if (!token || !grupaId) return;
@@ -432,6 +448,21 @@ export default function GrupaPage() {
       .finally(() => setPrintLoading(false));
   }
 
+  async function confirmChangeMuallim() {
+    if (!token || !grupa || changeMuallimId === null) return;
+    setChangingMuallim(true);
+    try {
+      const updated = await apiRequest<Grupa>("PUT", `/muallim/grupe/${grupa.id}`, { muallimId: changeMuallimId }, token);
+      setGrupa(prev => prev ? { ...prev, muallimId: updated.muallimId, muallimDisplayName: updated.muallimDisplayName } : prev);
+      setShowChangeMuallim(false);
+      toast({ title: t("Muallim grupe promijenjen") });
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    } finally {
+      setChangingMuallim(false);
+    }
+  }
+
   // Učenici bez ikakve grupe — mogu se dodati u ovu grupu.
   // Za glavnog muallima: svi slobodni učenici džemata.
   const bezGrupe = sviStudenti.filter(u => {
@@ -506,6 +537,22 @@ export default function GrupaPage() {
                 {t("Mektebska godina: {od} – {do}", { od: fmtDatum(grupa.datumPocetka) || "—", do: fmtDatum(grupa.datumKraja) || "—" })}
               </p>
             )}
+            {/* Muallim grupe */}
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground">
+                {t("Muallim:")} <span className="font-semibold text-foreground">{grupa.muallimDisplayName || t("—")}</span>
+              </span>
+              {isGlavni && (
+                <button
+                  onClick={() => { setChangeMuallimId(grupa.muallimId ?? null); setShowChangeMuallim(true); }}
+                  className="ml-1 flex items-center gap-0.5 text-xs text-emerald-600 hover:text-emerald-800 font-bold transition-colors"
+                  title={t("Promijeni muallima grupe")}
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="text-right">
             <div className="text-3xl font-black text-secondary">{studentiGrupe.length}</div>
@@ -1057,6 +1104,53 @@ export default function GrupaPage() {
           </div>
         )}
       </div>
+
+      {/* Modal: promjena muallima grupe (samo za glavnog) */}
+      {showChangeMuallim && isGlavni && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => { if (!changingMuallim) setShowChangeMuallim(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                <User className="w-5 h-5 text-emerald-700" />
+              </div>
+              <h3 className="font-extrabold text-foreground">{t("Promijeni muallima grupe")}</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              {t("Odaberi muallima koji će biti odgovoran za grupu")} <span className="font-bold text-foreground">„{grupa?.naziv}"</span>.
+            </p>
+            <div className="space-y-2 mb-5">
+              {mektebMuallimi.map(m => (
+                <label key={m.userId}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${changeMuallimId === m.userId ? "border-emerald-400 bg-emerald-50" : "border-border hover:border-emerald-200 hover:bg-emerald-50/40"}`}>
+                  <input type="radio" className="sr-only" checked={changeMuallimId === m.userId}
+                    onChange={() => setChangeMuallimId(m.userId)} />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${changeMuallimId === m.userId ? "border-emerald-500 bg-emerald-500" : "border-muted-foreground"}`}>
+                    {changeMuallimId === m.userId && <div className="w-2 h-2 rounded-full bg-white" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-bold text-sm text-foreground">{m.displayName}</span>
+                    {m.isGlavni && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-full font-extrabold">{t("GLAVNI")}</span>}
+                  </div>
+                  {changeMuallimId === m.userId && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowChangeMuallim(false)} disabled={changingMuallim} className="flex-1 rounded-xl">
+                {t("Otkaži")}
+              </Button>
+              <Button onClick={confirmChangeMuallim}
+                disabled={changingMuallim || changeMuallimId === null || changeMuallimId === grupa?.muallimId}
+                className="flex-1 rounded-xl font-bold">
+                {changingMuallim ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Potvrdi")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }
