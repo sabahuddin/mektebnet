@@ -951,47 +951,47 @@ router.get("/ucenici", async (req, res) => {
     const ctx = await getMektebCtx(userId);
 
     if (ctx?.isGlavni && ctx.mektebId) {
-      // Svi učenici džemata po mektebId (isArchived = false).
-      const profili = await db.select().from(ucenikProfiliTable)
-        .where(and(eq(ucenikProfiliTable.mektebId, ctx.mektebId), eq(ucenikProfiliTable.isArchived, false)));
-      if (profili.length === 0) { res.json([]); return; }
-
-      const userIds = profili.map(p => p.userId);
-      const korisnici = userIds.length > 0
-        ? await db.select().from(usersTable).where(inArray(usersTable.id, userIds))
-        : [];
-
-      // Muallim nazivi
-      const muallimIds = [...new Set(profili.map(p => p.muallimId).filter(Boolean))] as number[];
-      const muallimKorisnici = muallimIds.length > 0
-        ? await db.select({ id: usersTable.id, displayName: usersTable.displayName })
-            .from(usersTable).where(inArray(usersTable.id, muallimIds))
-        : [];
-      const muallimNameMap = new Map(muallimKorisnici.map(u => [u.id, u.displayName]));
-
-      // Sve grupe džemata za nazive
-      const grupeRows = await db.execute(sql`
-        SELECT g.id, g.naziv, g.muallim_id
-        FROM grupe g
-        JOIN muallim_profili mp ON mp.user_id = g.muallim_id AND mp.mekteb_id = ${ctx.mektebId}
+      // Svi učenici džemata — join kroz muallim_profili (siguran i za starije zapise
+      // gdje ucenik_profili.mekteb_id može biti NULL).
+      const rows = await db.execute(sql`
+        SELECT up.user_id, up.muallim_id, up.grupa_id, up.mekteb_id, up.is_archived,
+               u.display_name, u.username, u.email, u.role,
+               u.total_hasanat, u.total_med, u.last_seen_at, u.total_screentime_sec,
+               mu.display_name AS muallim_display_name,
+               g.naziv AS grupa_naziv
+        FROM ucenik_profili up
+        JOIN muallim_profili mp ON mp.user_id = up.muallim_id AND mp.mekteb_id = ${ctx.mektebId}
+        JOIN users u ON u.id = up.user_id
+        LEFT JOIN users mu ON mu.id = up.muallim_id
+        LEFT JOIN grupe g ON g.id = up.grupa_id
+        WHERE (up.is_archived = false OR up.is_archived IS NULL)
+        ORDER BY u.display_name ASC
       `);
-      const grupaMap = new Map((grupeRows.rows as Array<{ id: number; naziv: string; muallim_id: number }>)
-        .map(g => [g.id, g.naziv]));
 
-      const result = korisnici.map(u => {
-        const profil = profili.find(p => p.userId === u.id);
-        return {
-          ...u,
-          passwordHash: undefined,
-          profil,
-          grupaId: profil?.grupaId || null,
-          grupaIme: profil?.grupaId ? grupaMap.get(profil.grupaId) || null : null,
-          muallimId: profil?.muallimId || null,
-          muallimDisplayName: profil?.muallimId ? muallimNameMap.get(profil.muallimId) || null : null,
-          aktivanStatus: true,
-        };
-      });
-      res.json(result);
+      type Row = {
+        user_id: number; muallim_id: number; grupa_id: number | null; mekteb_id: number | null;
+        is_archived: boolean | null; display_name: string; username: string; email: string | null;
+        role: string; total_hasanat: number | null; total_med: number | null;
+        last_seen_at: string | null; total_screentime_sec: number | null;
+        muallim_display_name: string | null; grupa_naziv: string | null;
+      };
+      res.json((rows.rows as Row[]).map(r => ({
+        id: r.user_id,
+        displayName: r.display_name,
+        username: r.username,
+        email: r.email,
+        role: r.role,
+        totalHasanat: r.total_hasanat,
+        totalMed: r.total_med,
+        lastSeenAt: r.last_seen_at,
+        totalScreentimeSec: r.total_screentime_sec,
+        grupaId: r.grupa_id,
+        grupaIme: r.grupa_naziv,
+        muallimId: r.muallim_id,
+        muallimDisplayName: r.muallim_display_name,
+        aktivanStatus: true,
+        profil: { userId: r.user_id, muallimId: r.muallim_id, grupaId: r.grupa_id, mektebId: r.mekteb_id, isArchived: r.is_archived ?? false },
+      })));
       return;
     }
 
