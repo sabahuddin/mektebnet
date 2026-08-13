@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, X, Clock, BookOpen, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -102,6 +102,13 @@ interface RoditeljVeza {
   approvedAt: string | null;
 }
 
+interface RoditeljPretraga {
+  id: number;
+  displayName: string;
+  username: string;
+  brojDjece: number;
+}
+
 interface KreiraniRoditelj {
   id: number;
   displayName: string;
@@ -167,6 +174,9 @@ export default function UcenikPage() {
   const [resetRoditeljPass, setResetRoditeljPass] = useState<{ id: number; password: string; displayName: string } | null>(null);
   // Povezivanje POSTOJEĆEG roditelja (drugo dijete istih roditelja itd.)
   const [postojeciUsername, setPostojeciUsername] = useState("");
+  const [odabraniRoditelj, setOdabraniRoditelj] = useState<RoditeljPretraga | null>(null);
+  const [roditeljRezultati, setRoditeljRezultati] = useState<RoditeljPretraga[]>([]);
+  const [pretragaRoditelja, setPretragaRoditelja] = useState(false);
   const [linkujemPostojeceg, setLinkujemPostojeceg] = useState(false);
 
   // Pregled zadaća ovog učenika (read-only). Dodavanje ide iz Muallim → Zadaća.
@@ -208,6 +218,33 @@ export default function UcenikPage() {
       }
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [token, id]);
+
+  useEffect(() => {
+    if (!token || postojeciUsername.trim().length < 2 || odabraniRoditelj) {
+      setRoditeljRezultati([]);
+      setPretragaRoditelja(false);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setPretragaRoditelja(true);
+      try {
+        const results = await apiRequest<RoditeljPretraga[]>(
+          "GET",
+          `/muallim/roditelji/pretraga?q=${encodeURIComponent(postojeciUsername.trim())}`,
+          undefined,
+          token,
+        );
+        setRoditeljRezultati(results);
+      } catch {
+        setRoditeljRezultati([]);
+      } finally {
+        setPretragaRoditelja(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [token, postojeciUsername, odabraniRoditelj]);
 
 
   async function resetPassword() {
@@ -270,8 +307,9 @@ export default function UcenikPage() {
   }
 
   async function linkPostojecegRoditelja() {
-    if (!token || !id || !postojeciUsername.trim()) {
-      toast({ title: t("Unesite korisničko ime postojećeg roditelja"), variant: "destructive" });
+    const username = odabraniRoditelj?.username || postojeciUsername.trim();
+    if (!token || !id || !username) {
+      toast({ title: t("Pretražite i odaberite roditelja"), variant: "destructive" });
       return;
     }
     setLinkujemPostojeceg(true);
@@ -279,7 +317,7 @@ export default function UcenikPage() {
       const linked = await apiRequest<{ id: number; displayName: string; username: string; status: string }>(
         "POST",
         `/muallim/ucenici/${parseInt(id)}/povezi-roditelja`,
-        { roditeljUsername: postojeciUsername.trim() },
+        { roditeljUsername: username },
         token,
       );
       setRoditelji(prev => {
@@ -293,6 +331,8 @@ export default function UcenikPage() {
         }];
       });
       setPostojeciUsername("");
+      setOdabraniRoditelj(null);
+      setRoditeljRezultati([]);
       toast({ title: t("Roditelj povezan!"), description: t("{ime} sada može pratiti ovog učenika.", { ime: linked.displayName }) });
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće povezati roditelja"), variant: "destructive" });
@@ -563,28 +603,67 @@ export default function UcenikPage() {
                     <p className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5" /> {t("Poveži postojećeg roditelja:")}
                     </p>
-                    <div className="flex gap-2 flex-wrap">
-                      <input
-                        type="text"
-                        value={postojeciUsername}
-                        onChange={e => setPostojeciUsername(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter" && postojeciUsername.trim() && !linkujemPostojeceg) linkPostojecegRoditelja(); }}
-                        placeholder={t("Korisničko ime roditelja")}
-                        className="flex-1 min-w-[200px] border border-blue-200 rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-                        data-testid="input-roditelj-postojeci-username"
-                      />
-                      <Button
-                        onClick={linkPostojecegRoditelja}
-                        disabled={linkujemPostojeceg || !postojeciUsername.trim()}
-                        className="rounded-xl font-bold flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
-                        data-testid="btn-poveži-postojećeg-roditelja"
-                      >
-                        {linkujemPostojeceg ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        {t("Poveži")}
-                      </Button>
+                    <div className="relative">
+                      <div className="flex gap-2 flex-wrap">
+                        <div className="relative flex-1 min-w-[240px]">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={odabraniRoditelj ? odabraniRoditelj.displayName : postojeciUsername}
+                            onChange={e => {
+                              setOdabraniRoditelj(null);
+                              setPostojeciUsername(e.target.value);
+                            }}
+                            onKeyDown={e => { if (e.key === "Enter" && odabraniRoditelj && !linkujemPostojeceg) linkPostojecegRoditelja(); }}
+                            placeholder={t("Pretraži ime ili prezime roditelja")}
+                            className="w-full border border-blue-200 rounded-xl pl-9 pr-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                            data-testid="input-roditelj-pretraga"
+                          />
+                        </div>
+                        <Button
+                          onClick={linkPostojecegRoditelja}
+                          disabled={linkujemPostojeceg || !odabraniRoditelj}
+                          className="rounded-xl font-bold flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                          data-testid="btn-poveži-postojećeg-roditelja"
+                        >
+                          {linkujemPostojeceg ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                          {t("Poveži")}
+                        </Button>
+                      </div>
+                      {(pretragaRoditelja || roditeljRezultati.length > 0) && !odabraniRoditelj && (
+                        <div className="absolute z-20 left-0 right-[92px] mt-1 bg-white border border-blue-200 rounded-xl shadow-lg overflow-hidden">
+                          {pretragaRoditelja ? (
+                            <div className="px-3 py-3 text-sm text-muted-foreground flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" /> {t("Pretražujem roditelje...")}
+                            </div>
+                          ) : (
+                            roditeljRezultati.map(r => (
+                              <button
+                                key={r.id}
+                                type="button"
+                                onClick={() => {
+                                  setOdabraniRoditelj(r);
+                                  setPostojeciUsername(r.username);
+                                  setRoditeljRezultati([]);
+                                }}
+                                className="w-full text-left px-3 py-2.5 hover:bg-blue-50 border-b last:border-b-0 border-blue-100 flex items-center justify-between gap-3"
+                                data-testid={`roditelj-rezultat-${r.id}`}
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-bold text-sm text-blue-950 truncate">{r.displayName}</span>
+                                  <span className="block text-xs text-blue-700 font-mono truncate">@{r.username}</span>
+                                </span>
+                                <span className="text-[11px] text-blue-600 shrink-0">
+                                  {t("{n} djece", { n: String(r.brojDjece) })}
+                                </span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
                     <p className="text-xs text-blue-700 mt-2">
-                      {t("Ako roditelj već ima račun u mektebu (npr. drugo dijete) — unesi njegovo korisničko ime i odmah povezuje sa ovim učenikom. Ne kreira novi nalog.")}
+                      {t("Upiši dio imena ili prezimena, odaberi roditelja sa liste i klikni Poveži. Prikazuju se roditelji koji već imaju dijete u ovom mektebu.")}
                     </p>
                   </div>
                 )}

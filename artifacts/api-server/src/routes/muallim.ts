@@ -244,6 +244,59 @@ async function getManageableUcenikProfile(muallimId: number, ucenikId: number) {
   return vlasnik ? profil : null;
 }
 
+// GET /api/muallim/roditelji/pretraga?q=... — postojeći roditelji iz
+// muallimovog mekteba, za povezivanje s drugim djetetom bez ručnog unosa
+// korisničkog imena.
+router.get("/roditelji/pretraga", async (req, res) => {
+  try {
+    const query = String(req.query.q ?? "").trim();
+    if (query.length < 2) {
+      res.json([]);
+      return;
+    }
+
+    const userId = req.user!.userId;
+    const ctx = await getMektebCtx(userId);
+    const mektebFilter = ctx?.isGlavni && ctx.mektebId
+      ? sql`mp.mekteb_id = ${ctx.mektebId}`
+      : sql`mp.user_id = ${userId}`;
+    const pattern = `%${query}%`;
+
+    const rows = await db.execute(sql`
+      SELECT r.id, r.display_name, r.username,
+             COUNT(DISTINCT ru.ucenik_id)::int AS broj_djece
+      FROM roditelj_ucenik ru
+      JOIN users r ON r.id = ru.roditelj_id AND r.role = 'roditelj'
+      JOIN ucenik_profili up ON up.user_id = ru.ucenik_id
+      JOIN muallim_profili mp ON mp.user_id = up.muallim_id
+      WHERE ru.status = 'approved'
+        AND ${mektebFilter}
+        AND (
+          r.display_name ILIKE ${pattern}
+          OR r.username ILIKE ${pattern}
+        )
+      GROUP BY r.id, r.display_name, r.username
+      ORDER BY r.display_name ASC
+      LIMIT 10
+    `);
+
+    res.json((rows.rows as Array<{
+      id: number;
+      display_name: string;
+      username: string;
+      broj_djece: number;
+    }>).map(r => ({
+      id: r.id,
+      displayName: r.display_name,
+      username: r.username,
+      brojDjece: r.broj_djece,
+    })));
+  } catch (err) {
+    console.error("[GET /muallim/roditelji/pretraga]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // GET /api/muallim/mekteb/info — osnovni podaci o mektebu trenutnog muallima.
 router.get("/mekteb/info", async (req, res) => {
   try {
