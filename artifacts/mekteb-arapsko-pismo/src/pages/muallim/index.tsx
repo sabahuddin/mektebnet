@@ -403,10 +403,12 @@ export default function MuallimPanel() {
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [passChanging, setPassChanging] = useState(false);
-  // Modal za potvrdu brisanja grupe (zahtijeva upis naziva)
+  // Modal za potvrdu brisanja grupe (korak 1: spasi izvještaj, korak 2: upiši naziv)
   const [deleteGrupaTarget, setDeleteGrupaTarget] = useState<Grupa | null>(null);
   const [deleteGrupaConfirm, setDeleteGrupaConfirm] = useState("");
   const [deletingGrupa, setDeletingGrupa] = useState(false);
+  const [izvjestajSpasen, setIzvjestajSpasen] = useState(false);
+  const [downloadingIzvjestaj, setDownloadingIzvjestaj] = useState(false);
 
   const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
@@ -829,6 +831,101 @@ export default function MuallimPanel() {
     if (!g) return;
     setDeleteGrupaTarget(g);
     setDeleteGrupaConfirm("");
+    setIzvjestajSpasen(false);
+  }
+
+  function closeDeleteModal() {
+    if (deletingGrupa) return;
+    setDeleteGrupaTarget(null);
+    setDeleteGrupaConfirm("");
+    setIzvjestajSpasen(false);
+  }
+
+  async function downloadIzvjestajGrupe() {
+    if (!token || !deleteGrupaTarget) return;
+    setDownloadingIzvjestaj(true);
+    try {
+      type IzvjestajRow = Record<string, unknown>;
+      type IzvjestajData = {
+        grupa: { id: number; naziv: string; skolskaGodina: string };
+        ucenici: IzvjestajRow[];
+        prisustvo: IzvjestajRow[];
+        ocjene: IzvjestajRow[];
+        planLekcija: IzvjestajRow[];
+      };
+      const data = await apiRequest("GET", `/muallim/grupe/${deleteGrupaTarget.id}/izvjestaj`, undefined, token) as IzvjestajData;
+
+      // Gradi CSV s BOM-om za ispravno kodiranje u Excelu
+      const bom = "\uFEFF";
+      const sep = ";";
+      const lines: string[] = [];
+
+      const esc = (v: unknown) => {
+        const s = v == null ? "" : String(v);
+        return s.includes(sep) || s.includes('"') || s.includes("\n")
+          ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+
+      // Naslov dokumenta
+      lines.push(`IZVJEŠTAJ GRUPE${sep}${esc(data.grupa.naziv)}${sep}${esc(data.grupa.skolskaGodina)}`);
+      lines.push(`Preuzeto${sep}${new Date().toLocaleDateString("bs-BA")}`);
+      lines.push("");
+
+      // === UČENICI ===
+      lines.push("UČENICI");
+      lines.push(["Ime i prezime", "Korisničko ime"].map(esc).join(sep));
+      for (const u of (data.ucenici ?? [])) {
+        lines.push([u.displayName, u.username].map(esc).join(sep));
+      }
+      lines.push(`Ukupno${sep}${data.ucenici?.length ?? 0}`);
+      lines.push("");
+
+      // === PRISUSTVO ===
+      lines.push("PRISUSTVO");
+      lines.push(["Datum", "Učenik", "Status", "Napomena"].map(esc).join(sep));
+      for (const p of (data.prisustvo ?? [])) {
+        const statusBs = p.status === "prisutan" ? "Prisutan" : p.status === "odsutan" ? "Odsutan" : p.status === "opravdano" ? "Opravdano" : String(p.status ?? "");
+        lines.push([p.datum, p.ucenikIme, statusBs, p.napomena].map(esc).join(sep));
+      }
+      if (!data.prisustvo?.length) lines.push("(nema evidentiranog prisustva)");
+      lines.push("");
+
+      // === OCJENE ===
+      lines.push("OCJENE");
+      lines.push(["Datum", "Učenik", "Kategorija", "Ocjena", "Lekcija", "Napomena"].map(esc).join(sep));
+      for (const o of (data.ocjene ?? [])) {
+        lines.push([o.datum, o.ucenikIme, o.kategorija, o.ocjena, o.lekcijaNaziv, o.napomena].map(esc).join(sep));
+      }
+      if (!data.ocjene?.length) lines.push("(nema evidentiranih ocjena)");
+      lines.push("");
+
+      // === PLAN LEKCIJA ===
+      lines.push("PLAN LEKCIJA");
+      lines.push(["Datum", "Lekcija", "Napomena"].map(esc).join(sep));
+      for (const pl of (data.planLekcija ?? [])) {
+        lines.push([pl.datum, pl.lekcijaNaslov, pl.napomena].map(esc).join(sep));
+      }
+      if (!data.planLekcija?.length) lines.push("(nema unesenih lekcija)");
+
+      const csv = bom + lines.join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const naziv = deleteGrupaTarget.naziv.replace(/[^a-zA-Z0-9čćšđžČĆŠĐŽ _-]/g, "");
+      a.href = url;
+      a.download = `Izvjestaj_${naziv}_${deleteGrupaTarget.skolskaGodina}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setIzvjestajSpasen(true);
+      toast({ title: t("Izvještaj preuzet"), description: t("Možeš nastaviti s brisanjem.") });
+    } catch {
+      toast({ title: t("Greška pri preuzimanju izvještaja"), variant: "destructive" });
+    } finally {
+      setDownloadingIzvjestaj(false);
+    }
   }
 
   async function confirmDeleteGrupa() {
@@ -841,6 +938,7 @@ export default function MuallimPanel() {
       toast({ title: t("Grupa obrisana") });
       setDeleteGrupaTarget(null);
       setDeleteGrupaConfirm("");
+      setIzvjestajSpasen(false);
     } catch {
       toast({ title: t("Greška"), variant: "destructive" });
     } finally {
@@ -3288,64 +3386,105 @@ export default function MuallimPanel() {
         )}
       </div>
 
-      {/* Modal: potvrda brisanja grupe — zahtijeva upis tačnog naziva */}
+      {/* Modal: potvrda brisanja grupe — korak 1: spasi izvještaj, korak 2: upiši naziv */}
       {deleteGrupaTarget && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => { if (!deletingGrupa) { setDeleteGrupaTarget(null); setDeleteGrupaConfirm(""); } }}
+          onClick={closeDeleteModal}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+            {/* Naslov */}
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
               <div>
                 <h3 className="font-extrabold text-foreground text-lg">{t("Trajno brisanje grupe")}</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">{t("Ova akcija se ne može poništiti.")}</p>
+                <p className="text-sm text-muted-foreground">{t("Ova akcija se ne može poništiti.")}</p>
               </div>
             </div>
 
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-800 space-y-1">
-              <p className="font-bold">{t("Brisanjem grupe trajno se brišu:")}</p>
-              <ul className="list-disc list-inside space-y-0.5 text-red-700">
-                <li>{t("Sve evidencije prisustva")}</li>
-                <li>{t("Plan lekcija")}</li>
-                <li>{t("Mektebski kalendar grupe")}</li>
-                <li>{t("Zadaće dodijeljene grupi")}</li>
+            {/* Šta se briše */}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm space-y-2">
+              <p className="font-bold text-red-800">{t("Brisanjem grupe")} <span className="font-mono">„{deleteGrupaTarget.naziv}"</span> {t("trajno se brišu:")}</p>
+              <ul className="space-y-1 text-red-700">
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />{t("Sve evidencije prisustva")}</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />{t("Plan lekcija")}</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />{t("Mektebski kalendar grupe")}</li>
+                <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />{t("Zadaće dodijeljene grupi")}</li>
               </ul>
-              <p className="mt-2 text-red-900">{t("Učenici i njihove ocjene se ne brišu, ali ostaju bez grupe.")}</p>
-              <p className="mt-1 font-bold text-red-900">{t("Ako želiš sačuvati podatke — koristi arhiviranje, ne brisanje.")}</p>
+              <p className="text-red-800 pt-1 border-t border-red-200">{t("Učenici i njihove ocjene ostaju — samo se odvajaju od grupe.")}</p>
             </div>
 
-            <div className="mb-4">
-              <p className="text-sm font-bold text-foreground mb-1.5">
-                {t("Upiši naziv grupe da potvrdiš:")}
-                {" "}
-                <span className="font-mono text-red-700">„{deleteGrupaTarget.naziv}"</span>
-              </p>
-              <input
-                type="text"
-                value={deleteGrupaConfirm}
-                onChange={e => setDeleteGrupaConfirm(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === "Enter" && deleteGrupaConfirm === deleteGrupaTarget.naziv && !deletingGrupa) {
-                    confirmDeleteGrupa();
-                  }
-                }}
-                placeholder={deleteGrupaTarget.naziv}
-                className="w-full border border-red-300 rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
-                autoFocus
-                data-testid="input-potvrda-naziv-grupe"
-              />
+            {/* Korak 1: Spasi izvještaj */}
+            <div className={`rounded-xl border-2 p-4 transition-colors ${izvjestajSpasen ? "border-green-300 bg-green-50" : "border-amber-300 bg-amber-50"}`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-sm ${izvjestajSpasen ? "bg-green-500 text-white" : "bg-amber-400 text-white"}`}>
+                  {izvjestajSpasen ? <CheckCircle2 className="w-5 h-5" /> : "1"}
+                </div>
+                <div className="flex-1">
+                  <p className={`font-bold text-sm ${izvjestajSpasen ? "text-green-800" : "text-amber-900"}`}>
+                    {izvjestajSpasen ? t("Izvještaj je preuzet ✓") : t("Spasi izvještaj grupe")}
+                  </p>
+                  <p className={`text-xs mt-0.5 ${izvjestajSpasen ? "text-green-700" : "text-amber-800"}`}>
+                    {izvjestajSpasen
+                      ? t("Prisustvo, ocjene i plan lekcija su sačuvani u CSV fajlu.")
+                      : t("Preuzmi prisustvo, ocjene i plan lekcija kao CSV fajl — jedini način da sačuvaš ove podatke.")}
+                  </p>
+                  {!izvjestajSpasen && (
+                    <Button
+                      onClick={downloadIzvjestajGrupe}
+                      disabled={downloadingIzvjestaj}
+                      className="mt-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm h-9 px-4"
+                    >
+                      {downloadingIzvjestaj
+                        ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />{t("Preuzimam...")}</>
+                        : <><Download className="w-4 h-4 mr-1.5" />{t("Preuzmi izvještaj (.csv)")}</>}
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-3">
+            {/* Korak 2: Upiši naziv grupe */}
+            <div className={`rounded-xl border-2 p-4 transition-colors ${!izvjestajSpasen ? "border-gray-200 bg-gray-50 opacity-50 pointer-events-none" : "border-red-300 bg-white"}`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-sm ${izvjestajSpasen ? "bg-red-500 text-white" : "bg-gray-300 text-white"}`}>
+                  2
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-foreground mb-2">
+                    {t("Upiši naziv grupe da potvrdiš brisanje:")}
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteGrupaConfirm}
+                    onChange={e => setDeleteGrupaConfirm(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && izvjestajSpasen && deleteGrupaConfirm === deleteGrupaTarget.naziv && !deletingGrupa) {
+                        confirmDeleteGrupa();
+                      }
+                    }}
+                    placeholder={deleteGrupaTarget.naziv}
+                    className="w-full border border-red-300 rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+                    autoFocus={izvjestajSpasen}
+                    data-testid="input-potvrda-naziv-grupe"
+                  />
+                  {izvjestajSpasen && deleteGrupaConfirm.length > 0 && deleteGrupaConfirm !== deleteGrupaTarget.naziv && (
+                    <p className="text-xs text-red-600 mt-1">{t("Naziv se ne podudara.")}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Akcije */}
+            <div className="flex gap-3 pt-1">
               <Button
                 variant="outline"
-                onClick={() => { setDeleteGrupaTarget(null); setDeleteGrupaConfirm(""); }}
+                onClick={closeDeleteModal}
                 disabled={deletingGrupa}
                 className="flex-1 rounded-xl"
               >
@@ -3353,11 +3492,13 @@ export default function MuallimPanel() {
               </Button>
               <Button
                 onClick={confirmDeleteGrupa}
-                disabled={deletingGrupa || deleteGrupaConfirm !== deleteGrupaTarget.naziv}
-                className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                disabled={deletingGrupa || !izvjestajSpasen || deleteGrupaConfirm !== deleteGrupaTarget.naziv}
+                className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-40"
                 data-testid="btn-potvrdi-brisanje-grupe"
               >
-                {deletingGrupa ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1" /> {t("Obriši trajno")}</>}
+                {deletingGrupa
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <><Trash2 className="w-4 h-4 mr-1.5" />{t("Obriši trajno")}</>}
               </Button>
             </div>
           </div>

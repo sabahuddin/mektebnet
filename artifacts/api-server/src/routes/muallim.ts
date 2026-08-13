@@ -949,6 +949,66 @@ router.get("/grupe/:id/arhiva-clanovi", async (req, res) => {
   }
 });
 
+// GET /api/muallim/grupe/:id/izvjestaj — svi podaci grupe za preuzimanje prije brisanja
+router.get("/grupe/:id/izvjestaj", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+    const grupaWhere = isAdmin
+      ? eq(grupeTable.id, grupaId)
+      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
+    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+
+    const [ucenici, prisustvo, ocjene, planLekcija] = await Promise.all([
+      db.execute(sql`
+        SELECT up.user_id AS id, u.display_name AS "displayName", u.username
+        FROM ucenik_profili up
+        JOIN users u ON u.id = up.user_id
+        WHERE up.grupa_id = ${grupaId}
+        ORDER BY u.display_name ASC
+      `),
+      db.execute(sql`
+        SELECT p.datum, p.ucenik_id AS "ucenikId", u.display_name AS "ucenikIme",
+               p.status, p.napomena
+        FROM prisustvo p
+        JOIN users u ON u.id = p.ucenik_id
+        WHERE p.grupa_id = ${grupaId}
+        ORDER BY p.datum ASC, u.display_name ASC
+      `),
+      db.execute(sql`
+        SELECT o.datum, o.ucenik_id AS "ucenikId", u.display_name AS "ucenikIme",
+               o.kategorija, o.ocjena,
+               o.lekcija_naziv AS "lekcijaNaziv", o.napomena
+        FROM ocjene o
+        JOIN users u ON u.id = o.ucenik_id
+        WHERE o.grupa_id = ${grupaId}
+        ORDER BY o.datum ASC, u.display_name ASC
+      `),
+      db.execute(sql`
+        SELECT pl.datum, pl.napomena,
+               COALESCE(il.naslov, '') AS "lekcijaNaslov"
+        FROM plan_lekcija pl
+        LEFT JOIN ilmihal_lekcije il ON il.id = pl.lekcija_id
+        WHERE pl.grupa_id = ${grupaId}
+        ORDER BY pl.datum ASC
+      `),
+    ]);
+
+    res.json({
+      grupa: { id: grupa.id, naziv: grupa.naziv, skolskaGodina: grupa.skolskaGodina },
+      ucenici: ucenici.rows,
+      prisustvo: prisustvo.rows,
+      ocjene: ocjene.rows,
+      planLekcija: planLekcija.rows,
+    });
+  } catch (err) {
+    console.error("Izvještaj grupe error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // POST /api/muallim/grupe
 router.post("/grupe", async (req, res) => {
   try {
