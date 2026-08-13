@@ -51,6 +51,7 @@ interface Ucenik {
   profil?: { grupaId?: number };
   lastSeenAt?: string | null;
   totalScreentimeSec?: number | null;
+  roditeljPovezan?: boolean;
 }
 
 interface CreatedUcenik {
@@ -736,6 +737,16 @@ export default function GrupaPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-bold text-foreground truncate">{u.displayName}</p>
+                          {u.roditeljPovezan && (
+                            <span
+                              className="inline-flex items-center justify-center shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
+                              title={t("Roditelj povezan")}
+                              aria-label={t("Roditelj povezan")}
+                              data-testid={`roditelj-povezan-grupa-${u.id}`}
+                            >
+                              R
+                            </span>
+                          )}
                           {isOnline(u.lastSeenAt) && (
                             <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{t("online")}</span>
                           )}

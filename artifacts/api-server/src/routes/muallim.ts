@@ -974,7 +974,13 @@ router.get("/ucenici", async (req, res) => {
                u.display_name, u.username, u.email, u.role,
                u.last_seen_at, u.total_screentime_sec,
                mu.display_name AS muallim_display_name,
-               g.naziv AS grupa_naziv
+               g.naziv AS grupa_naziv,
+               EXISTS (
+                 SELECT 1
+                 FROM roditelj_ucenik ru
+                 WHERE ru.ucenik_id = up.user_id
+                   AND ru.status = 'approved'
+               ) AS roditelj_povezan
         FROM ucenik_profili up
         JOIN muallim_profili mp ON mp.user_id = up.muallim_id AND mp.mekteb_id = ${ctx.mektebId}
         JOIN users u ON u.id = up.user_id
@@ -990,6 +996,7 @@ router.get("/ucenici", async (req, res) => {
         role: string;
         last_seen_at: string | null; total_screentime_sec: number | null;
         muallim_display_name: string | null; grupa_naziv: string | null;
+        roditelj_povezan: boolean;
       };
       res.json((rows.rows as Row[]).map(r => ({
         id: r.user_id,
@@ -1003,6 +1010,7 @@ router.get("/ucenici", async (req, res) => {
         grupaIme: r.grupa_naziv,
         muallimId: r.muallim_id,
         muallimDisplayName: r.muallim_display_name,
+        roditeljPovezan: r.roditelj_povezan,
         aktivanStatus: true,
         profil: { userId: r.user_id, muallimId: r.muallim_id, grupaId: r.grupa_id, mektebId: r.mekteb_id, isArchived: r.is_archived ?? false },
       })));
@@ -1015,6 +1023,13 @@ router.get("/ucenici", async (req, res) => {
 
     const userIds = profili.map(p => p.userId);
     const korisnici = await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
+    const roditeljskeVeze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
+      .from(roditeljUcenikTable)
+      .where(and(
+        inArray(roditeljUcenikTable.ucenikId, userIds),
+        eq(roditeljUcenikTable.status, "approved"),
+      ));
+    const uceniciSPovezanimRoditeljem = new Set(roditeljskeVeze.map(v => v.ucenikId));
     const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, userId));
     const grupaMap = Object.fromEntries(grupe.map(g => [g.id, g.naziv]));
 
@@ -1026,6 +1041,7 @@ router.get("/ucenici", async (req, res) => {
         profil,
         grupaId: profil?.grupaId || null,
         grupaIme: profil?.grupaId ? grupaMap[profil.grupaId] || null : null,
+        roditeljPovezan: uceniciSPovezanimRoditeljem.has(u.id),
         aktivanStatus: profil ? !profil.isArchived : true,
       };
     });

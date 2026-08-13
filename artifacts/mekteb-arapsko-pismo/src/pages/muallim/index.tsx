@@ -109,6 +109,7 @@ interface Ucenik {
   grupaId?: number;
   grupaIme?: string;
   aktivanStatus: boolean;
+  roditeljPovezan?: boolean;
   muallimId?: number | null;
   muallimDisplayName?: string | null;
 }
@@ -1255,7 +1256,21 @@ export default function MuallimPanel() {
                         {ucenici.map((u, i) => (
                           <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
                             className="border-b border-border/30 hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3 font-bold text-foreground">{u.displayName}</td>
+                            <td className="px-4 py-3 font-bold text-foreground">
+                              <span className="inline-flex items-center gap-2">
+                                {u.displayName}
+                                {u.roditeljPovezan && (
+                                  <span
+                                    className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
+                                    title={t("Roditelj povezan")}
+                                    aria-label={t("Roditelj povezan")}
+                                    data-testid={`roditelj-povezan-${u.id}`}
+                                  >
+                                    R
+                                  </span>
+                                )}
+                              </span>
+                            </td>
                             <td className="px-4 py-3 text-muted-foreground font-mono text-sm">{u.username}</td>
                             <td className="px-4 py-3 text-muted-foreground text-sm">{u.grupaIme || "—"}</td>
                             <td className="px-4 py-3">
@@ -2432,6 +2447,16 @@ export default function MuallimPanel() {
                                             }}
                                             className="w-4 h-4 accent-primary" />
                                           <span className="text-sm font-medium text-foreground truncate">{u.displayName}</span>
+                                          {u.roditeljPovezan && (
+                                            <span
+                                              className="inline-flex items-center justify-center shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
+                                              title={t("Roditelj povezan")}
+                                              aria-label={t("Roditelj povezan")}
+                                              data-testid={`roditelj-povezan-zadaca-${u.id}`}
+                                            >
+                                              R
+                                            </span>
+                                          )}
                                         </label>
                                       );
                                     })}
