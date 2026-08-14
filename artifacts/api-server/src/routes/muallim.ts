@@ -1000,11 +1000,8 @@ router.post("/grupe/:id/arhiviraj", async (req, res) => {
   try {
     const grupaId = parseInt(req.params.id);
     const userId = req.user!.userId;
-    const isAdmin = req.user!.role === "admin";
-    const grupaWhere = isAdmin
-      ? eq(grupeTable.id, grupaId)
-      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
-    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    const userRole = req.user!.role;
+    const grupa = await verifyGrupaAccess(grupaId, userId, userRole);
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
 
     let transitioned = false;
@@ -1094,11 +1091,8 @@ router.get("/grupe/:id/izvjestaj", async (req, res) => {
   try {
     const grupaId = parseInt(req.params.id);
     const userId = req.user!.userId;
-    const isAdmin = req.user!.role === "admin";
-    const grupaWhere = isAdmin
-      ? eq(grupeTable.id, grupaId)
-      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
-    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    const userRole = req.user!.role;
+    const grupa = await verifyGrupaAccess(grupaId, userId, userRole);
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
 
     const [ucenici, prisustvo, ocjene, planLekcija] = await Promise.all([
@@ -1231,12 +1225,8 @@ router.delete("/grupe/:id", async (req, res) => {
   try {
     const grupaId = parseInt(req.params.id);
     const userId = req.user!.userId;
-    const isAdmin = req.user!.role === "admin";
-
-    const grupaWhere = isAdmin
-      ? eq(grupeTable.id, grupaId)
-      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
-    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    const userRole = req.user!.role;
+    const grupa = await verifyGrupaAccess(grupaId, userId, userRole);
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
 
     // Arhivirana grupa je zaštićena od brisanja — prvo je vrati iz arhive.
