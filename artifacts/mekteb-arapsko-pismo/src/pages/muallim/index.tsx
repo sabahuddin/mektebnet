@@ -124,7 +124,20 @@ interface Grupa {
   isArchived?: boolean;
   archivedAt?: string | null;
   muallimDisplayName?: string | null;
+  sekundarniMuallimi?: { id: number; displayName: string }[];
 }
+
+// Paleta boja za kartice — svaki muallim dobija svoju boju determinisztički po ID-u.
+const MUALLIM_PALETA = [
+  { border: "border-teal-400/60 hover:border-teal-500",   icon: "text-teal-600",   link: "text-teal-600"   },
+  { border: "border-blue-300   hover:border-blue-500",     icon: "text-blue-500",   link: "text-blue-500"   },
+  { border: "border-violet-300 hover:border-violet-500",   icon: "text-violet-500", link: "text-violet-500" },
+  { border: "border-emerald-300 hover:border-emerald-500", icon: "text-emerald-600",link: "text-emerald-600"},
+  { border: "border-amber-300  hover:border-amber-500",    icon: "text-amber-600",  link: "text-amber-600"  },
+  { border: "border-rose-300   hover:border-rose-500",     icon: "text-rose-500",   link: "text-rose-500"   },
+  { border: "border-cyan-300   hover:border-cyan-500",     icon: "text-cyan-600",   link: "text-cyan-600"   },
+  { border: "border-orange-300 hover:border-orange-500",   icon: "text-orange-500", link: "text-orange-500" },
+] as const;
 
 interface KalendarEntry {
   id: number;
@@ -1432,42 +1445,61 @@ export default function MuallimPanel() {
                   </div>
                 ) : (
                   <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {grupe.filter(g => !g.isArchived).map((g, i) => {
-                      const isVlasnik = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
-                      return (
-                        <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                          <div className={`bg-white border-2 rounded-2xl p-5 hover:shadow-md transition-all group relative ${isVlasnik ? "border-secondary/20 hover:border-secondary" : "border-blue-100 hover:border-blue-300"}`}>
-                            <div className="absolute top-3 right-3 flex items-center gap-1">
-                              {isVlasnik && (
-                                <>
-                                  <button onClick={(e) => { e.stopPropagation(); arhivirajGrupu(g.id); }}
-                                    className="text-amber-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title={t("Arhiviraj grupu")}>
-                                    <Archive className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
-                                    className="text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                            <Link href={`/muallim/grupa/${g.id}`}>
-                              <div className="cursor-pointer">
-                                <GraduationCap className={`w-8 h-8 mb-3 ${isVlasnik ? "text-secondary" : "text-blue-400"}`} />
-                                <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
-                                {g.muallimDisplayName && !isVlasnik && (
-                                  <p className="text-xs text-blue-600 font-bold mt-0.5">{g.muallimDisplayName}</p>
+                    {(() => {
+                      // Dodijeli boju svaki muallimId — trenutni korisnik = [0] (teal)
+                      const muallimColorMap = new Map<number, number>();
+                      if (user?.id) muallimColorMap.set(user.id, 0);
+                      let ci = 1;
+                      for (const g of grupe) {
+                        if (g.muallimId && !muallimColorMap.has(g.muallimId)) {
+                          muallimColorMap.set(g.muallimId, ci % MUALLIM_PALETA.length);
+                          ci++;
+                        }
+                      }
+                      return grupe.filter(g => !g.isArchived).map((g, i) => {
+                        const paleta = MUALLIM_PALETA[(g.muallimId ? muallimColorMap.get(g.muallimId) : 0) ?? 0];
+                        // Može brisati/arhivirati samo vlasnik ili glavni
+                        const mozeBrisati = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
+                        return (
+                          <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                            <div className={`bg-white border-2 rounded-2xl p-5 hover:shadow-md transition-all group relative ${paleta.border}`}>
+                              <div className="absolute top-3 right-3 flex items-center gap-1">
+                                {mozeBrisati && (
+                                  <>
+                                    <button onClick={(e) => { e.stopPropagation(); arhivirajGrupu(g.id); }}
+                                      className="text-amber-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title={t("Arhiviraj grupu")}>
+                                      <Archive className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
+                                      className="text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
                                 )}
-                                <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => u.grupaId === g.id).length} {t("učenika")}</p>
-                                <div className={`flex items-center gap-1 font-bold text-sm mt-3 ${isVlasnik ? "text-secondary" : "text-blue-500"}`}>
-                                  {t("Otvori")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                                </div>
                               </div>
-                            </Link>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                              <Link href={`/muallim/grupa/${g.id}`}>
+                                <div className="cursor-pointer">
+                                  <GraduationCap className={`w-8 h-8 mb-3 ${paleta.icon}`} />
+                                  <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
+                                  {g.muallimDisplayName && (
+                                    <p className={`text-xs font-bold mt-0.5 ${paleta.icon}`}>{g.muallimDisplayName}</p>
+                                  )}
+                                  {(g.sekundarniMuallimi ?? []).length > 0 && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      + {(g.sekundarniMuallimi ?? []).map(m => m.displayName).join(", ")}
+                                    </p>
+                                  )}
+                                  <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => u.grupaId === g.id).length} {t("učenika")}</p>
+                                  <div className={`flex items-center gap-1 font-bold text-sm mt-3 ${paleta.link}`}>
+                                    {t("Otvori")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                                  </div>
+                                </div>
+                              </Link>
+                            </div>
+                          </motion.div>
+                        );
+                      });
+                    })()}
                   </div>
                 )}
                 {grupe.some(g => g.isArchived) && (

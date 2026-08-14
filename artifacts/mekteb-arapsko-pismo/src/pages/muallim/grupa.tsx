@@ -29,6 +29,7 @@ interface Grupa {
   isArchived?: boolean;
   archivedAt?: string | null;
   muallimDisplayName?: string | null;
+  sekundarniMuallimi?: { id: number; displayName: string }[];
 }
 
 interface ArhivaClan {
@@ -150,6 +151,12 @@ export default function GrupaPage() {
   const [changeMuallimId, setChangeMuallimId] = useState<number | null>(null);
   const [changingMuallim, setChangingMuallim] = useState(false);
 
+  // Sekundarni muallimi grupe
+  const [sekundarniMuallimi, setSekundarniMuallimi] = useState<{ id: number; displayName: string }[]>([]);
+  const [showAddSecMuallim, setShowAddSecMuallim] = useState(false);
+  const [addSecMuallimId, setAddSecMuallimId] = useState<number | "">("");
+  const [addingSecMuallim, setAddingSecMuallim] = useState(false);
+
   // Reset šifre roditelja
   const [parentResetTarget, setParentResetTarget] = useState<Ucenik | null>(null);
   const [parentResetList, setParentResetList] = useState<RoditeljVeza[]>([]);
@@ -177,6 +184,7 @@ export default function GrupaPage() {
     ]).then(([grupe, ucenici, status, lekcije]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
+      setSekundarniMuallimi(g?.sekundarniMuallimi ?? []);
       if (g?.isArchived) {
         apiRequest<ArhivaClan[]>("GET", `/muallim/grupe/${grupaId}/arhiva-clanovi`, undefined, token)
           .then(setArhivaClanovi).catch(() => {});
@@ -463,6 +471,35 @@ export default function GrupaPage() {
     }
   }
 
+  async function addSekundarniMuallim() {
+    if (!token || !grupa || !addSecMuallimId) return;
+    setAddingSecMuallim(true);
+    try {
+      const res = await apiRequest<{ ok: boolean; muallim: { id: number; displayName: string } }>(
+        "POST", `/muallim/grupe/${grupa.id}/muallimi`, { muallimId: Number(addSecMuallimId) }, token,
+      );
+      setSekundarniMuallimi(prev => [...prev.filter(m => m.id !== res.muallim.id), res.muallim]);
+      setShowAddSecMuallim(false);
+      setAddSecMuallimId("");
+      toast({ title: t("Muallim dodan grupi!") });
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message, variant: "destructive" });
+    } finally {
+      setAddingSecMuallim(false);
+    }
+  }
+
+  async function removeSekundarniMuallim(muallimId: number) {
+    if (!token || !grupa) return;
+    try {
+      await apiRequest("DELETE", `/muallim/grupe/${grupa.id}/muallimi/${muallimId}`, undefined, token);
+      setSekundarniMuallimi(prev => prev.filter(m => m.id !== muallimId));
+      toast({ title: t("Muallim uklonjen iz grupe") });
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    }
+  }
+
   // Učenici bez ikakve grupe — mogu se dodati u ovu grupu.
   // Za glavnog muallima: svi slobodni učenici džemata.
   const bezGrupe = sviStudenti.filter(u => {
@@ -537,20 +574,68 @@ export default function GrupaPage() {
                 {t("Mektebska godina: {od} – {do}", { od: fmtDatum(grupa.datumPocetka) || "—", do: fmtDatum(grupa.datumKraja) || "—" })}
               </p>
             )}
-            {/* Muallim grupe */}
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground">
-                {t("Muallim:")} <span className="font-semibold text-foreground">{grupa.muallimDisplayName || t("—")}</span>
-              </span>
-              {isGlavni && (
+            {/* Muallim(i) grupe */}
+            <div className="mt-1.5 space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground">
+                  {t("Muallim:")} <span className="font-semibold text-foreground">{grupa.muallimDisplayName || t("—")}</span>
+                </span>
+                {isGlavni && (
+                  <button
+                    onClick={() => { setChangeMuallimId(grupa.muallimId ?? null); setShowChangeMuallim(true); }}
+                    className="ml-1 flex items-center gap-0.5 text-xs text-emerald-600 hover:text-emerald-800 font-bold transition-colors"
+                    title={t("Promijeni muallima grupe")}
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              {/* Sekundarni muallimi */}
+              {sekundarniMuallimi.map(sm => (
+                <div key={sm.id} className="flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="text-xs text-blue-700 font-semibold">{sm.displayName}</span>
+                  {isGlavni && (
+                    <button
+                      onClick={() => removeSekundarniMuallim(sm.id)}
+                      className="ml-0.5 text-red-400 hover:text-red-600 transition-colors"
+                      title={t("Ukloni muallima iz grupe")}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {/* Dugme za dodavanje sekundarnog muallima */}
+              {isGlavni && !showAddSecMuallim && (
                 <button
-                  onClick={() => { setChangeMuallimId(grupa.muallimId ?? null); setShowChangeMuallim(true); }}
-                  className="ml-1 flex items-center gap-0.5 text-xs text-emerald-600 hover:text-emerald-800 font-bold transition-colors"
-                  title={t("Promijeni muallima grupe")}
+                  onClick={() => setShowAddSecMuallim(true)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 transition-colors mt-0.5"
                 >
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  <Plus className="w-3 h-3" /> {t("Dodaj muallima grupi")}
                 </button>
+              )}
+              {isGlavni && showAddSecMuallim && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <select
+                    value={addSecMuallimId}
+                    onChange={e => setAddSecMuallimId(e.target.value ? Number(e.target.value) : "")}
+                    className="text-xs border border-border rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">{t("— odaberi muallima —")}</option>
+                    {mektebMuallimi
+                      .filter(m => m.userId !== grupa.muallimId && !sekundarniMuallimi.find(s => s.id === m.userId))
+                      .map(m => <option key={m.userId} value={m.userId}>{m.displayName}</option>)
+                    }
+                  </select>
+                  <Button size="sm" className="h-7 px-2 text-xs rounded-lg" disabled={!addSecMuallimId || addingSecMuallim} onClick={addSekundarniMuallim}>
+                    {addingSecMuallim ? <Loader2 className="w-3 h-3 animate-spin" /> : t("Dodaj")}
+                  </Button>
+                  <button onClick={() => { setShowAddSecMuallim(false); setAddSecMuallimId(""); }} className="text-muted-foreground hover:text-foreground">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               )}
             </div>
           </div>

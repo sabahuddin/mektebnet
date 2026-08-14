@@ -820,6 +820,17 @@ router.get("/grupe", async (req, res) => {
           CASE WHEN g.muallim_id = ${userId} THEN 0 ELSE 1 END,
           g.naziv ASC
       `);
+      const glavniGrupeIds = (rows.rows as any[]).map(r => r.id as number);
+      const secMuallimiGlavni = glavniGrupeIds.length > 0 ? await db.execute(sql`
+        SELECT gm.grupa_id, u.id, u.display_name
+        FROM grupa_muallimi gm JOIN users u ON u.id = gm.muallim_id
+        WHERE gm.grupa_id = ANY(${glavniGrupeIds}::int[])
+      `) : { rows: [] };
+      const secMapGlavni = new Map<number, { id: number; displayName: string }[]>();
+      for (const r of secMuallimiGlavni.rows as any[]) {
+        if (!secMapGlavni.has(r.grupa_id)) secMapGlavni.set(r.grupa_id, []);
+        secMapGlavni.get(r.grupa_id)!.push({ id: r.id, displayName: r.display_name });
+      }
       res.json((rows.rows as Record<string, unknown>[]).map(r => ({
         id: r.id,
         muallimId: r.muallim_id,
@@ -832,23 +843,125 @@ router.get("/grupe", async (req, res) => {
         muallimDisplayName: r.muallim_display_name,
         isArchived: r.is_archived ?? false,
         archivedAt: r.archived_at ?? null,
+        sekundarniMuallimi: secMapGlavni.get(r.id as number) ?? [],
       })));
       return;
     }
 
-    // Obični muallim — vlastite grupe
-    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, userId));
-    const arhivaRows = await db.execute(sql`SELECT id, is_archived, archived_at FROM grupe WHERE muallim_id = ${userId}`);
-    const arhivaMap = new Map(
-      (arhivaRows.rows as Array<{ id: number; is_archived: boolean; archived_at: string | null }>)
-        .map(r => [r.id, r]),
-    );
-    res.json(grupe.map(g => ({
-      ...g,
-      isArchived: arhivaMap.get(g.id)?.is_archived ?? false,
-      archivedAt: arhivaMap.get(g.id)?.archived_at ?? null,
+    // Obični muallim — vlastite grupe + grupe gdje je sekundarni muallim
+    const sveGrupeRows = await db.execute(sql`
+      SELECT DISTINCT g.id, g.muallim_id, g.naziv, g.skolska_godina,
+        g.dani_nastave, g.vrijeme_nastave, g.datum_pocetka, g.datum_kraja,
+        COALESCE(g.is_archived, false) AS is_archived, g.archived_at,
+        u.display_name AS muallim_display_name,
+        CASE WHEN g.muallim_id = ${userId} THEN 0 ELSE 1 END AS sort_key
+      FROM grupe g
+      JOIN users u ON u.id = g.muallim_id
+      WHERE g.muallim_id = ${userId}
+        OR g.id IN (SELECT grupa_id FROM grupa_muallimi WHERE muallim_id = ${userId})
+      ORDER BY sort_key, g.naziv ASC
+    `);
+    const grupeIds = (sveGrupeRows.rows as any[]).map(r => r.id as number);
+    const secMuallimiRows = grupeIds.length > 0 ? await db.execute(sql`
+      SELECT gm.grupa_id, u.id, u.display_name
+      FROM grupa_muallimi gm JOIN users u ON u.id = gm.muallim_id
+      WHERE gm.grupa_id = ANY(${grupeIds}::int[])
+    `) : { rows: [] };
+    const secMap = new Map<number, { id: number; displayName: string }[]>();
+    for (const r of secMuallimiRows.rows as any[]) {
+      if (!secMap.has(r.grupa_id)) secMap.set(r.grupa_id, []);
+      secMap.get(r.grupa_id)!.push({ id: r.id, displayName: r.display_name });
+    }
+    res.json((sveGrupeRows.rows as any[]).map(r => ({
+      id: r.id,
+      muallimId: r.muallim_id,
+      naziv: r.naziv,
+      skolskaGodina: r.skolska_godina,
+      daniNastave: r.dani_nastave,
+      vrijemeNastave: r.vrijeme_nastave,
+      datumPocetka: r.datum_pocetka ?? null,
+      datumKraja: r.datum_kraja ?? null,
+      isArchived: r.is_archived ?? false,
+      archivedAt: r.archived_at ?? null,
+      muallimDisplayName: r.muallim_display_name,
+      sekundarniMuallimi: secMap.get(r.id as number) ?? [],
     })));
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/muallim/grupe/:id/muallimi — dodaj sekundarnog muallima grupi
+// Samo vlasnik grupe, admin, ili glavni muallim džemata.
+router.post("/grupe/:id/muallimi", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const { muallimId } = req.body as { muallimId?: number };
+    if (!grupaId || !muallimId) {
+      res.status(400).json({ error: "grupaId i muallimId su obavezni" }); return;
+    }
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+    const ctx = await getMektebCtx(userId);
+
+    // Provjeri da li korisnik ima pravo upravljati ovom grupom (vlasnik ili glavni)
+    const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
+    if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+    const isVlasnik = grupa.muallimId === userId;
+    const isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId);
+    if (!isAdmin && !isVlasnik && !isGlavniInSameMekteb) {
+      res.status(403).json({ error: "Samo vlasnik ili glavni muallim mogu dodavati muallime grupi" }); return;
+    }
+
+    // Provjeri da ciljni muallim postoji i pripada istom mektebu
+    const targetCtx = await getMektebCtx(muallimId);
+    if (!isAdmin && ctx?.mektebId && targetCtx?.mektebId !== ctx.mektebId) {
+      res.status(403).json({ error: "Muallim ne pripada ovom džematu" }); return;
+    }
+    if (muallimId === grupa.muallimId) {
+      res.status(400).json({ error: "Taj muallim je već primarni vlasnik grupe" }); return;
+    }
+
+    await db.execute(sql`
+      INSERT INTO grupa_muallimi (grupa_id, muallim_id)
+      VALUES (${grupaId}, ${muallimId})
+      ON CONFLICT (grupa_id, muallim_id) DO NOTHING
+    `);
+    const [muallimUser] = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
+      .from(usersTable).where(eq(usersTable.id, muallimId));
+    res.json({ ok: true, muallim: { id: muallimUser.id, displayName: muallimUser.displayName } });
+  } catch (err) {
+    console.error("grupe muallimi POST error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/muallim/grupe/:id/muallimi/:muallimId — ukloni sekundarnog muallima
+router.delete("/grupe/:id/muallimi/:muallimId", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const muallimId = parseInt(req.params.muallimId);
+    if (!grupaId || !muallimId) {
+      res.status(400).json({ error: "Neispravni parametri" }); return;
+    }
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+    const ctx = await getMektebCtx(userId);
+
+    const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
+    if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+    const isVlasnik = grupa.muallimId === userId;
+    const isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId);
+    if (!isAdmin && !isVlasnik && !isGlavniInSameMekteb) {
+      res.status(403).json({ error: "Samo vlasnik ili glavni muallim mogu uklanjati muallime" }); return;
+    }
+
+    await db.execute(sql`
+      DELETE FROM grupa_muallimi WHERE grupa_id = ${grupaId} AND muallim_id = ${muallimId}
+    `);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("grupe muallimi DELETE error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -2104,7 +2217,7 @@ router.get("/svi-rezultati", async (req, res) => {
 
 // ── KALENDAR ───────────────────────────────────────────────────────────────────
 
-// Helper: verify group ownership (muallim owns the group, admin, or glavni muallim in same džemat)
+// Helper: verify group ownership (muallim owns the group, admin, glavni muallim, or secondary muallim)
 async function verifyGrupaAccess(grupaId: number, userId: number, userRole: string) {
   if (userRole === "admin") {
     const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
@@ -2114,7 +2227,7 @@ async function verifyGrupaAccess(grupaId: number, userId: number, userRole: stri
   const [grupaOwned] = await db.select().from(grupeTable)
     .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId)));
   if (grupaOwned) return grupaOwned;
-  // Glavni muallim — može vidjeti sve grupe svog džemata
+  // Glavni muallim — može pristupiti svim grupama svog džemata
   const ctx = await getMektebCtx(userId);
   if (ctx?.isGlavni && ctx.mektebId) {
     const rows = await db.execute(sql`
@@ -2124,7 +2237,14 @@ async function verifyGrupaAccess(grupaId: number, userId: number, userRole: stri
     `);
     return (rows.rows[0] as typeof grupaOwned) || null;
   }
-  return null;
+  // Sekundarni muallim — dodijeljen grupi ali nije primarni vlasnik
+  const secRow = await db.execute(sql`
+    SELECT g.* FROM grupe g
+    JOIN grupa_muallimi gm ON gm.grupa_id = g.id
+    WHERE g.id = ${grupaId} AND gm.muallim_id = ${userId}
+    LIMIT 1
+  `);
+  return (secRow.rows[0] as typeof grupaOwned) || null;
 }
 
 // ── PER-GRUPA RASPORED LEKCIJA ──────────────────────────────────────────────
