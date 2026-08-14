@@ -129,7 +129,7 @@ export default function GrupaPage() {
   // Ocjena modal
   const [ocjenaTarget, setOcjenaTarget] = useState<Ucenik | null>(null);
   const [newOcjena, setNewOcjena] = useState({
-    kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "",
+    kategorija: "usmeno", ocjena: 6, lekcijaNaziv: "", napomena: "",
     datum: new Date().toISOString().split("T")[0],
   });
   const [savingOcjena, setSavingOcjena] = useState(false);
@@ -274,7 +274,7 @@ export default function GrupaPage() {
   function openOcjena(u: Ucenik) {
     setOcjenaTarget(u);
     setNewOcjena({
-      kategorija: "usmeno", ocjena: 5, lekcijaNaziv: "", napomena: "",
+      kategorija: "usmeno", ocjena: 6, lekcijaNaziv: "", napomena: "",
       datum: new Date().toISOString().split("T")[0],
     });
   }
@@ -999,11 +999,11 @@ export default function GrupaPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–5)")}</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–6)")}</label>
                     <select value={newOcjena.ocjena}
                       onChange={e => setNewOcjena(o => ({ ...o, ocjena: parseInt(e.target.value) }))}
                       className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-bold">
-                      {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
+                      {[6,5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>
                 </div>

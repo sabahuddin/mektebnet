@@ -502,9 +502,6 @@ export default function MuallimPanel() {
   }, [token]);
 
   // Odvojeni fetch za dashboard-stats — re-fetcha kad se promijeni odabrana godina.
-  // Ako API vrati 0 grupe ali postoje dostupne godine u bazi, automatski prebaci
-  // na najnoviju godinu koja ima podatke (sprečava situaciju gdje računata
-  // "trenutna" školska godina još nema grupe u bazi — npr. ljeto između dvije godine).
   useEffect(() => {
     if (!token) return;
     setDashboardStatsLoading(true);
@@ -513,20 +510,7 @@ export default function MuallimPanel() {
       "GET",
       `/muallim/dashboard-stats?skolskaGodina=${encodeURIComponent(selectedYear)}`,
       undefined, token,
-    ).then(ds => {
-      if (
-        ds.ukupnoGrupa === 0 &&
-        ds.dostupneGodine &&
-        ds.dostupneGodine.length > 0 &&
-        !ds.dostupneGodine.includes(selectedYear)
-      ) {
-        // Automatski prebaci na najnoviju godinu koja ima podatke —
-        // ovo pokreće novi fetch pa ne postavljamo ds ovdje.
-        setSelectedYear(ds.dostupneGodine[0]);
-      } else {
-        setDashboardStats(ds);
-      }
-    })
+    ).then(ds => setDashboardStats(ds))
       .catch(() => {})
       .finally(() => setDashboardStatsLoading(false));
   }, [token, selectedYear]);
@@ -1291,15 +1275,15 @@ export default function MuallimPanel() {
             {activeTab === "pregled" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 {(() => {
-                  // Dostupne godine — preferiramo listu iz API odgovora (uključuje
-                  // arhivirane grupe). Ne dodajemo selectedYear ako ga nema u bazi —
-                  // inače se pojavljuju fantomske opcije bez podataka.
-                  const dostupneGodine = (() => {
-                    if (dashboardStats?.dostupneGodine && dashboardStats.dostupneGodine.length > 0) {
-                      return dashboardStats.dostupneGodine;
-                    }
-                    const years = new Set(grupe.map(g => g.skolskaGodina).filter(Boolean));
-                    return [...years].sort().reverse();
+                  // Dropdown uvijek prikazuje 3 fiksne godine: prošla, tekuća, sljedeća.
+                  // Vrijednost (value) je puni format "2026/27", label kratki "26/27".
+                  const schoolYearOptions = (() => {
+                    const base = computeCurrentSchoolYear(); // npr. "2026/27"
+                    const startYear = parseInt(base.slice(0, 4)); // 2026
+                    return [startYear - 1, startYear, startYear + 1].map(y => ({
+                      value: `${y}/${String(y + 1).slice(2)}`,
+                      label: `${String(y).slice(2)}/${String(y + 1).slice(2)}`,
+                    }));
                   })();
                   const aktivneGodine = grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear);
                   const nUcenika = dashboardStats?.ukupnoUcenika ?? 0;
@@ -1354,8 +1338,8 @@ export default function MuallimPanel() {
                             onChange={e => setSelectedYear(e.target.value)}
                             className="text-2xl font-extrabold text-violet-600 bg-transparent border-none outline-none cursor-pointer appearance-none pr-6 w-full leading-tight"
                           >
-                            {dostupneGodine.map(y => (
-                              <option key={y} value={y}>{y}</option>
+                            {schoolYearOptions.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                           </select>
                           <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400 pointer-events-none" />
