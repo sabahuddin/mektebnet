@@ -2908,17 +2908,34 @@ router.get("/grupa/:id/statistika", async (req, res) => {
   }
 });
 
-// GET /api/muallim/dashboard-stats — agregat za panel pregled (cijeli mekteb)
+// GET /api/muallim/dashboard-stats — agregat za panel pregled
+// Query param: ?skolskaGodina=2025/26  →  filtrira po školskoj godini.
+// Ako nije navedena, vraća sve (backward compat).
 router.get("/dashboard-stats", async (req, res) => {
   try {
     const muallimId = req.user!.userId;
-    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
-    const skolskaGodina = profil?.tekucaSkolskaGodina || null;
+    const filterYear = (req.query.skolskaGodina as string) || null;
 
-    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+    // Sve grupe muallima, opcionalno filtrirane po godini
+    const sveGrupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+    const grupe = filterYear
+      ? sveGrupe.filter(g => g.skolskaGodina === filterYear)
+      : sveGrupe;
     const grupeIds = grupe.map(g => g.id);
-    const profili = await db.select().from(ucenikProfiliTable)
-      .where(eq(ucenikProfiliTable.muallimId, muallimId));
+
+    // Učenici koji su u grupama te godine (grupaId IN grupeIds).
+    // Kad nema filtera, vraćamo sve učenike muallima (staro ponašanje).
+    let profili;
+    if (filterYear) {
+      profili = grupeIds.length > 0
+        ? await db.select().from(ucenikProfiliTable)
+            .where(and(eq(ucenikProfiliTable.muallimId, muallimId), inArray(ucenikProfiliTable.grupaId, grupeIds)))
+        : [];
+    } else {
+      profili = await db.select().from(ucenikProfiliTable)
+        .where(eq(ucenikProfiliTable.muallimId, muallimId));
+    }
+
     const ucenikIds = profili.map(p => p.userId);
     const aktivnihUcenika = profili.filter(p => !p.isArchived).length;
 
@@ -2928,17 +2945,29 @@ router.get("/dashboard-stats", async (req, res) => {
     let ukupnoKvizovaUradeno = 0;
     let ukupnoBodova = 0;
     let danasnjePrisustvoPct: number | null = null;
+    let danasnjeEvidentirano = 0;
 
     if (ucenikIds.length > 0) {
       const today = new Date().toISOString().split("T")[0];
+      // Za prisustvo i ocjene filtriramo po grupaId kad imamo filter-godinu,
+      // jer prisustvo nema direktnu vezu sa skolskaGodina
       const [prisustvo, ocjene, kvizovi, lekcije, danasnje] = await Promise.all([
-        db.select().from(priustvoTable).where(eq(priustvoTable.muallimId, muallimId)),
-        db.select().from(ocjeneTable).where(eq(ocjeneTable.muallimId, muallimId)),
+        filterYear && grupeIds.length > 0
+          ? db.select().from(priustvoTable)
+              .where(and(eq(priustvoTable.muallimId, muallimId), inArray(priustvoTable.grupaId, grupeIds)))
+          : db.select().from(priustvoTable).where(eq(priustvoTable.muallimId, muallimId)),
+        filterYear && grupeIds.length > 0
+          ? db.select().from(ocjeneTable)
+              .where(and(eq(ocjeneTable.muallimId, muallimId), inArray(ocjeneTable.grupaId, grupeIds)))
+          : db.select().from(ocjeneTable).where(eq(ocjeneTable.muallimId, muallimId)),
         db.select().from(kvizRezultatiTable).where(inArray(kvizRezultatiTable.userId, ucenikIds)),
         db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
           .where(and(inArray(korisnikNapredakTable.userId, ucenikIds), eq(korisnikNapredakTable.zavrsen, true))),
-        db.select().from(priustvoTable)
-          .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, today))),
+        filterYear && grupeIds.length > 0
+          ? db.select().from(priustvoTable)
+              .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, today), inArray(priustvoTable.grupaId, grupeIds)))
+          : db.select().from(priustvoTable)
+              .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, today))),
       ]);
 
       const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
@@ -2949,17 +2978,21 @@ router.get("/dashboard-stats", async (req, res) => {
       ukupnoLekcijaZavrseno = lekcije.length;
       ukupnoKvizovaUradeno = kvizovi.length;
       ukupnoBodova = kvizovi.reduce((a, k) => a + (k.bodovi || 0), 0);
-
       const danasPrisutnih = danasnje.filter(p => p.status === "prisutan").length;
       danasnjePrisustvoPct = danasnje.length > 0 ? Math.round((danasPrisutnih / danasnje.length) * 100) : null;
+      danasnjeEvidentirano = danasnje.length;
     }
 
     const denom = aktivnihUcenika || profili.length || 1;
+    // Dostupne godine (sve grupe ovog muallima) — za frontend dropdown
+    const dostupneGodine = [...new Set(sveGrupe.map(g => g.skolskaGodina).filter(Boolean))].sort().reverse();
+
     res.json({
       ukupnoUcenika: profili.length,
       aktivnihUcenika,
       ukupnoGrupa: grupe.length,
-      skolskaGodina,
+      skolskaGodina: filterYear,
+      dostupneGodine,
       prosjekPrisustva,
       prosjekOcjena,
       ukupnoLekcijaZavrseno,
@@ -2968,8 +3001,7 @@ router.get("/dashboard-stats", async (req, res) => {
       prosjekKvizovaPoUceniku: Math.round((ukupnoKvizovaUradeno / denom) * 10) / 10,
       ukupnoBodova,
       danasnjePrisustvoPct,
-      danasnjeEvidentirano: ucenikIds.length > 0 ? (await db.select().from(priustvoTable)
-        .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, new Date().toISOString().split("T")[0])))).length : 0,
+      danasnjeEvidentirano,
     });
   } catch (err) {
     console.error("Dashboard stats error:", err);

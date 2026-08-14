@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload, Pencil, Archive
+  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,7 @@ interface DashboardStats {
   aktivnihUcenika: number;
   ukupnoGrupa: number;
   skolskaGodina: string | null;
+  dostupneGodine?: string[];
   prosjekPrisustva: number | null;
   prosjekOcjena: number | null;
   ukupnoLekcijaZavrseno: number;
@@ -67,6 +68,18 @@ interface DashboardStats {
   ukupnoBodova: number;
   danasnjePrisustvoPct: number | null;
   danasnjeEvidentirano: number;
+}
+
+// Školska godina počinje 15. avgusta.
+// Aug 14, 2026 → 2025/26; Aug 15, 2026 → 2026/27.
+function computeCurrentSchoolYear(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1; // 1–12
+  const d = now.getDate();
+  const newYearStarted = m > 8 || (m === 8 && d >= 15);
+  const startYear = newYearStarted ? y : y - 1;
+  return `${startYear}/${String(startYear + 1).slice(2)}`;
 }
 
 interface MektebStats {
@@ -426,6 +439,8 @@ export default function MuallimPanel() {
   const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [dashboardStatsLoading, setDashboardStatsLoading] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<string>(() => computeCurrentSchoolYear());
   const [mektebStats, setMektebStats] = useState<MektebStats | null>(null);
   const [mektebStatsLoading, setMektebStatsLoading] = useState(false);
   const [statMode, setStatMode] = useState<"mekteb" | "grupa">("mekteb");
@@ -478,14 +493,26 @@ export default function MuallimPanel() {
     Promise.all([
       apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
-      apiRequest<DashboardStats>("GET", "/muallim/dashboard-stats", undefined, token).catch(() => null),
-    ]).then(([u, g, ds]) => {
+    ]).then(([u, g]) => {
       setUcenici(u);
       setGrupe(g);
-      if (ds) setDashboardStats(ds);
     }).catch(() => {}).finally(() => setIsLoading(false));
     loadPendingRoditelji();
   }, [token]);
+
+  // Odvojeni fetch za dashboard-stats — re-fetcha kad se promijeni odabrana godina.
+  useEffect(() => {
+    if (!token) return;
+    setDashboardStatsLoading(true);
+    setDashboardStats(null);
+    apiRequest<DashboardStats>(
+      "GET",
+      `/muallim/dashboard-stats?skolskaGodina=${encodeURIComponent(selectedYear)}`,
+      undefined, token,
+    ).then(ds => setDashboardStats(ds))
+      .catch(() => {})
+      .finally(() => setDashboardStatsLoading(false));
+  }, [token, selectedYear]);
 
   useEffect(() => {
     if (!token || activeTab !== "statistika" || statMode !== "mekteb" || mektebStats) return;
@@ -1212,33 +1239,78 @@ export default function MuallimPanel() {
             {/* PREGLED */}
             {activeTab === "pregled" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { label: t("Ukupno učenika"), value: ucenici.length, sub: t("{n} aktivnih", { n: String(ucenici.filter(u => u.aktivanStatus).length) }), icon: Users, color: "text-primary", bg: "bg-primary/5" },
-                    { label: t("Aktivnih grupa"), value: grupe.filter(g => !g.isArchived).length, sub: grupe.filter(g => !g.isArchived).length > 0 ? t("prosj. {n} po grupi", { n: (ucenici.length / grupe.filter(g => !g.isArchived).length).toFixed(1) }) : "—", icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
-                    {
-                      label: t("Prosj. prisustvo"),
-                      value: dashboardStats?.prosjekPrisustva !== null && dashboardStats?.prosjekPrisustva !== undefined ? `${dashboardStats.prosjekPrisustva}%` : "—",
-                      sub: dashboardStats?.danasnjeEvidentirano ? t("danas {n}%", { n: String(dashboardStats.danasnjePrisustvoPct ?? 0) }) : t("danas još nema"),
-                      icon: CalendarCheck,
-                      color: dashboardStats?.prosjekPrisustva !== null && dashboardStats?.prosjekPrisustva !== undefined && dashboardStats.prosjekPrisustva >= 80 ? "text-emerald-600" : dashboardStats?.prosjekPrisustva !== null && dashboardStats?.prosjekPrisustva !== undefined && dashboardStats.prosjekPrisustva >= 50 ? "text-amber-600" : "text-emerald-600",
-                      bg: "bg-emerald-50",
-                    },
-                    {
-                      label: t("Mektebska godina"),
-                      value: dashboardStats?.skolskaGodina || grupe[0]?.skolskaGodina || "—",
-                      sub: t("tekuća"),
-                      icon: Clock, color: "text-violet-600", bg: "bg-violet-50",
-                    },
-                  ].map(stat => (
-                    <div key={stat.label} className={`${stat.bg} border border-border/50 rounded-2xl p-5`}>
-                      <stat.icon className={`w-6 h-6 ${stat.color} mb-3`} />
-                      <div className={`text-2xl font-extrabold ${stat.color}`}>{stat.value}</div>
-                      <div className="text-sm text-muted-foreground font-medium mt-1">{stat.label}</div>
-                      {stat.sub && <div className="text-xs text-muted-foreground/70 mt-0.5">{stat.sub}</div>}
+                {(() => {
+                  // Dostupne godine — iz grupe koje su već učitane (ima ih odmah)
+                  const dostupneGodine = (() => {
+                    const years = new Set(grupe.map(g => g.skolskaGodina).filter(Boolean));
+                    years.add(selectedYear);
+                    return [...years].sort().reverse();
+                  })();
+                  const aktivneGodine = grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear);
+                  const nUcenika = dashboardStats?.ukupnoUcenika ?? 0;
+                  const nAktivnih = dashboardStats?.aktivnihUcenika ?? 0;
+                  const nGrupa = dashboardStats?.ukupnoGrupa ?? 0;
+                  const prisustvoVal = dashboardStats?.prosjekPrisustva;
+                  const prisustvoColor = prisustvoVal !== null && prisustvoVal !== undefined
+                    ? (prisustvoVal >= 80 ? "text-emerald-600" : prisustvoVal >= 50 ? "text-amber-600" : "text-red-500")
+                    : "text-emerald-600";
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Ukupno učenika */}
+                      <div className="bg-primary/5 border border-border/50 rounded-2xl p-5">
+                        <Users className="w-6 h-6 text-primary mb-3" />
+                        <div className="text-2xl font-extrabold text-primary">
+                          {dashboardStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : nUcenika}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium mt-1">{t("Ukupno učenika")}</div>
+                        <div className="text-xs text-muted-foreground/70 mt-0.5">{t("{n} aktivnih", { n: String(nAktivnih) })}</div>
+                      </div>
+                      {/* Aktivnih grupa */}
+                      <div className="bg-secondary/5 border border-border/50 rounded-2xl p-5">
+                        <GraduationCap className="w-6 h-6 text-secondary mb-3" />
+                        <div className="text-2xl font-extrabold text-secondary">
+                          {dashboardStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : nGrupa}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium mt-1">{t("Aktivnih grupa")}</div>
+                        <div className="text-xs text-muted-foreground/70 mt-0.5">
+                          {nGrupa > 0 && nUcenika > 0 ? t("prosj. {n} po grupi", { n: (nUcenika / nGrupa).toFixed(1) }) : "—"}
+                        </div>
+                      </div>
+                      {/* Prosj. prisustvo */}
+                      <div className="bg-emerald-50 border border-border/50 rounded-2xl p-5">
+                        <CalendarCheck className="w-6 h-6 text-emerald-600 mb-3" />
+                        <div className={`text-2xl font-extrabold ${prisustvoColor}`}>
+                          {dashboardStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" />
+                            : prisustvoVal !== null && prisustvoVal !== undefined ? `${prisustvoVal}%` : "—"}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium mt-1">{t("Prosj. prisustvo")}</div>
+                        <div className="text-xs text-muted-foreground/70 mt-0.5">
+                          {dashboardStats?.danasnjeEvidentirano
+                            ? t("danas {n}%", { n: String(dashboardStats.danasnjePrisustvoPct ?? 0) })
+                            : t("danas još nema")}
+                        </div>
+                      </div>
+                      {/* Mektebska godina — interaktivni selector */}
+                      <div className="bg-violet-50 border border-border/50 rounded-2xl p-5 relative">
+                        <Clock className="w-6 h-6 text-violet-600 mb-3" />
+                        <div className="relative">
+                          <select
+                            value={selectedYear}
+                            onChange={e => setSelectedYear(e.target.value)}
+                            className="text-2xl font-extrabold text-violet-600 bg-transparent border-none outline-none cursor-pointer appearance-none pr-6 w-full leading-tight"
+                          >
+                            {dostupneGodine.map(y => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400 pointer-events-none" />
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium mt-1">{t("Mektebska godina")}</div>
+                        <div className="text-xs text-muted-foreground/70 mt-0.5">{t("odaberi godinu")}</div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
                 {/* Druga vrsta — agregat akademskih pokazatelja kroz cijeli mekteb */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
