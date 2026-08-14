@@ -1851,7 +1851,17 @@ router.put("/ucenici/:id/grupa", async (req, res) => {
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
 
     const isOwner = profil.muallimId === userId;
-    const isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId && profil.mektebId === ctx.mektebId);
+    // profil.mektebId može biti NULL za starije učenike → provjeri i kroz muallimov profil
+    let isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId && profil.mektebId === ctx.mektebId);
+    if (!isGlavniInSameMekteb && ctx?.isGlavni && ctx.mektebId) {
+      const check = await db.execute(sql`
+        SELECT 1 FROM ucenik_profili up
+        JOIN muallim_profili mp ON mp.user_id = up.muallim_id
+        WHERE up.user_id = ${ucenikId} AND mp.mekteb_id = ${ctx.mektebId}
+        LIMIT 1
+      `);
+      isGlavniInSameMekteb = check.rows.length > 0;
+    }
     if (!isAdmin && !isOwner && !isGlavniInSameMekteb) {
       res.status(403).json({ error: "Učenik ne pripada vama" }); return;
     }
