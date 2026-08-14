@@ -77,7 +77,7 @@ function computeCurrentSchoolYear(): string {
   const y = now.getFullYear();
   const m = now.getMonth() + 1; // 1–12
   const d = now.getDate();
-  const newYearStarted = m > 8 || (m === 8 && d >= 15);
+  const newYearStarted = m >= 8; // od 1. avgusta prikazujemo novu školsku godinu
   const startYear = newYearStarted ? y : y - 1;
   return `${startYear}/${String(startYear + 1).slice(2)}`;
 }
