@@ -3705,6 +3705,173 @@ router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
   }
 });
 
+// Izvoz spiska svih učenika mekteba — glavni muallim dobija cijeli mekteb,
+// obični muallim samo svoje/dodijeljene grupe. Jedan glavni list je sortiran
+// po muallimu i grupi, a dodatni listovi daju spisak po muallimu i grupama.
+router.get("/mekteb/spisak-excel", async (req, res) => {
+  try {
+    const XLSX = await import("xlsx");
+    const userId = req.user!.userId;
+    const userRole = req.user!.role;
+    const ctx = await getMektebCtx(userId);
+    const filterYear = String(req.query.skolskaGodina ?? "").trim() || null;
+
+    let scopeSql;
+    if (userRole === "admin") {
+      scopeSql = sql`TRUE`;
+    } else if (ctx?.isGlavni && ctx.mektebId) {
+      scopeSql = sql`owner.mekteb_id = ${ctx.mektebId}`;
+    } else {
+      scopeSql = sql`(
+        up.muallim_id = ${userId}
+        OR EXISTS (
+          SELECT 1 FROM grupa_muallimi gm_access
+          WHERE gm_access.grupa_id = up.grupa_id
+            AND gm_access.muallim_id = ${userId}
+        )
+      )`;
+    }
+
+    const yearSql = filterYear ? sql`AND g.skolska_godina = ${filterYear}` : sql``;
+    const rows = await db.execute(sql`
+      SELECT
+        up.user_id,
+        u.display_name,
+        u.username,
+        g.id AS grupa_id,
+        COALESCE(g.naziv, 'Bez grupe') AS grupa_naziv,
+        g.skolska_godina,
+        COALESCE((
+          SELECT string_agg(names.display_name, ', ' ORDER BY names.display_name)
+          FROM (
+            SELECT primary_muallim.display_name
+            FROM users primary_muallim
+            WHERE primary_muallim.id = g.muallim_id
+            UNION
+            SELECT secondary_muallim.display_name
+            FROM users secondary_muallim
+            JOIN grupa_muallimi gm_names ON gm_names.muallim_id = secondary_muallim.id
+            WHERE gm_names.grupa_id = g.id
+          ) names
+        ), 'Bez muallima') AS muallimi
+      FROM ucenik_profili up
+      JOIN users u ON u.id = up.user_id
+      JOIN muallim_profili owner ON owner.user_id = up.muallim_id
+      LEFT JOIN grupe g ON g.id = up.grupa_id
+      WHERE (up.is_archived = false OR up.is_archived IS NULL)
+        AND ${scopeSql}
+        ${yearSql}
+      ORDER BY muallimi ASC, grupa_naziv ASC, u.display_name ASC
+    `);
+
+    type SpisakRow = {
+      user_id: number;
+      display_name: string;
+      username: string;
+      grupa_id: number | null;
+      grupa_naziv: string;
+      skolska_godina: string | null;
+      muallimi: string;
+    };
+    const spisak = rows.rows as SpisakRow[];
+    const wb = XLSX.utils.book_new();
+
+    const pregledRows: any[] = [
+      ["SPISAK UČENIKA MEKTEBA"],
+      ...(filterYear ? [["Školska godina", filterYear]] : [["Školske godine", "Sve"]]),
+      [],
+      ["R.br.", "Muallim(i)", "Grupa", "Školska godina", "Učenik", "Korisničko ime"],
+    ];
+    spisak.forEach((r, index) => {
+      pregledRows.push([
+        index + 1,
+        sanitizeExcelCell(r.muallimi),
+        sanitizeExcelCell(r.grupa_naziv),
+        sanitizeExcelCell(r.skolska_godina || ""),
+        sanitizeExcelCell(r.display_name),
+        sanitizeExcelCell(r.username),
+      ]);
+    });
+    const pregledSheet = XLSX.utils.aoa_to_sheet(pregledRows);
+    pregledSheet["!cols"] = [
+      { wch: 7 }, { wch: 28 }, { wch: 24 }, { wch: 18 }, { wch: 28 }, { wch: 24 },
+    ];
+    XLSX.utils.book_append_sheet(wb, pregledSheet, "Spisak učenika");
+
+    const poMuallimu = new Map<string, SpisakRow[]>();
+    for (const row of spisak) {
+      if (!poMuallimu.has(row.muallimi)) poMuallimu.set(row.muallimi, []);
+      poMuallimu.get(row.muallimi)!.push(row);
+    }
+    const muallimiRows: any[] = [["Muallim(i)", "Grupa", "Školska godina", "Broj učenika"]];
+    for (const [muallimi, rowsForMuallim] of poMuallimu) {
+      const poGrupi = new Map<string, SpisakRow[]>();
+      for (const row of rowsForMuallim) {
+        const key = `${row.grupa_naziv}\u0000${row.skolska_godina || ""}`;
+        if (!poGrupi.has(key)) poGrupi.set(key, []);
+        poGrupi.get(key)!.push(row);
+      }
+      for (const rowsForGrupa of poGrupi.values()) {
+        const first = rowsForGrupa[0];
+        muallimiRows.push([
+          sanitizeExcelCell(muallimi),
+          sanitizeExcelCell(first.grupa_naziv),
+          sanitizeExcelCell(first.skolska_godina || ""),
+          rowsForGrupa.length,
+        ]);
+      }
+    }
+    const muallimiSheet = XLSX.utils.aoa_to_sheet(muallimiRows);
+    muallimiSheet["!cols"] = [{ wch: 28 }, { wch: 24 }, { wch: 18 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, muallimiSheet, "Po muallimima");
+
+    const usedSheetNames = new Set(["Spisak učenika", "Po muallimima"]);
+    const safeSheetName = (name: string) => {
+      const base = (name || "Grupa").replace(/[\\/*?:[\]]/g, "").trim().slice(0, 31) || "Grupa";
+      let candidate = base;
+      let suffix = 2;
+      while (usedSheetNames.has(candidate)) {
+        const suffixText = ` (${suffix++})`;
+        candidate = `${base.slice(0, 31 - suffixText.length)}${suffixText}`;
+      }
+      usedSheetNames.add(candidate);
+      return candidate;
+    };
+    const poGrupama = new Map<string, SpisakRow[]>();
+    for (const row of spisak) {
+      const key = `${row.grupa_naziv}\u0000${row.skolska_godina || ""}`;
+      if (!poGrupama.has(key)) poGrupama.set(key, []);
+      poGrupama.get(key)!.push(row);
+    }
+    for (const rowsForGrupa of poGrupama.values()) {
+      const first = rowsForGrupa[0];
+      const groupRows: any[] = [
+        ["Grupa", sanitizeExcelCell(first.grupa_naziv)],
+        ["Muallim(i)", sanitizeExcelCell(first.muallimi)],
+        ["Školska godina", sanitizeExcelCell(first.skolska_godina || "")],
+        [],
+        ["R.br.", "Učenik", "Korisničko ime"],
+      ];
+      rowsForGrupa.forEach((r, index) => {
+        groupRows.push([index + 1, sanitizeExcelCell(r.display_name), sanitizeExcelCell(r.username)]);
+      });
+      const groupSheet = XLSX.utils.aoa_to_sheet(groupRows);
+      groupSheet["!cols"] = [{ wch: 7 }, { wch: 28 }, { wch: 24 }];
+      XLSX.utils.book_append_sheet(wb, groupSheet, safeSheetName(first.grupa_naziv));
+    }
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const suffix = filterYear ? `_${filterYear.replace("/", "-")}` : "";
+    const filename = `spisak_ucenika_mekteba${suffix}_${new Date().toISOString().split("T")[0]}.xlsx`;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="spisak_ucenika_mekteba.xlsx"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.send(Buffer.from(buf));
+  } catch (err) {
+    console.error("Mekteb roster Excel export error:", err);
+    res.status(500).json({ error: "Greška pri izvozu spiska učenika" });
+  }
+});
+
 // ── ZADAĆE ───────────────────────────────────────────────────────────────────
 
 router.get("/zadace", async (req, res) => {

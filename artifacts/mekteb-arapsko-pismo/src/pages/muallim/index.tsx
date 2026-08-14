@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
-import { apiRequest, openAuthorizedFile } from "@/lib/api";
+import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
   Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
@@ -453,6 +453,7 @@ export default function MuallimPanel() {
   const [statLoading, setStatLoading] = useState(false);
   const [statView, setStatView] = useState<"pregled" | "prisustvo" | "mjesecno">("pregled");
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingSpisak, setExportingSpisak] = useState(false);
 
   const [planGrupaId, setPlanGrupaId] = useState<number | null>(null);
   const [planLekcijaSep, setPlanLekcijaSep] = useState<PlanLekcija[]>([]);
@@ -573,6 +574,40 @@ export default function MuallimPanel() {
       setMektebDokumenti(prev => (prev || []).filter(d => d.id !== id));
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Brisanje nije uspjelo"), variant: "destructive" });
+    }
+  }
+
+  async function handleExportMektebSpisak() {
+    if (!token) return;
+    setExportingSpisak(true);
+    try {
+      const res = await fetch(`${getApiBase()}/muallim/mekteb/spisak-excel`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: t("Greška pri izvozu") }));
+        throw new Error(err.error || t("Greška pri izvozu"));
+      }
+      const disp = res.headers.get("Content-Disposition") || "";
+      const mStar = disp.match(/filename\*=UTF-8''([^;]+)/i);
+      const mPlain = disp.match(/filename="?([^";]+)"?/i);
+      const filename = mStar ? decodeURIComponent(mStar[1])
+        : mPlain ? mPlain[1]
+        : `spisak_ucenika_mekteba_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      toast({ title: t("Spisak je preuzet"), description: t("Excel sadrži pregled po muallimima i grupama.") });
+    } catch (e: any) {
+      toast({ title: t("Greška pri izvozu"), description: e?.message || t("Spisak nije moguće preuzeti"), variant: "destructive" });
+    } finally {
+      setExportingSpisak(false);
     }
   }
 
@@ -3344,6 +3379,17 @@ export default function MuallimPanel() {
                     {t(`Sastavlja izvještaj sa zaglavljem MEKTEB platforme — prisustvo, ocjene, kvizovi i napredak. Iz pregleda kliknite "Štampaj / Sačuvaj kao PDF".`)}
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {mektebMeta.isGlavni && (
+                      <Button
+                        onClick={handleExportMektebSpisak}
+                        disabled={exportingSpisak}
+                        className="rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2"
+                        data-testid="btn-export-spisak-mekteba"
+                      >
+                        {exportingSpisak ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+                        {t("Spisak cijelog mekteba (Excel)")}
+                      </Button>
+                    )}
                     <Button
                       onClick={() => setLocation("/muallim/izvjestaj/svi")}
                       className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
