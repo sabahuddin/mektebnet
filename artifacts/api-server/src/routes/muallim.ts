@@ -2905,26 +2905,53 @@ router.get("/dashboard-stats", async (req, res) => {
   try {
     const muallimId = req.user!.userId;
     const filterYear = (req.query.skolskaGodina as string) || null;
+    const userRole = req.user!.role;
+    const ctx = await getMektebCtx(muallimId);
 
-    // Sve grupe muallima, opcionalno filtrirane po godini
-    const sveGrupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+    // Dashboard mora koristiti iste grupe koje muallim vidi u GET /grupe:
+    // glavni vidi cijeli mekteb, sekundarni vidi dodijeljene grupe, a obični
+    // muallim svoje grupe. Ranije se ovdje gledao samo grupe.muallim_id,
+    // pa je Pregled glavnog/sekundarnog muallima ostajao prazan.
+    let dostupneGrupeRows: Array<{ id: number; skolskaGodina: string | null }>;
+    if (userRole === "admin") {
+      const rows = await db.execute(sql`
+        SELECT id, skolska_godina AS "skolskaGodina"
+        FROM grupe
+        ORDER BY id
+      `);
+      dostupneGrupeRows = rows.rows as typeof dostupneGrupeRows;
+    } else if (ctx?.isGlavni && ctx.mektebId) {
+      const rows = await db.execute(sql`
+        SELECT g.id, g.skolska_godina AS "skolskaGodina"
+        FROM grupe g
+        JOIN muallim_profili mp ON mp.user_id = g.muallim_id
+        WHERE mp.mekteb_id = ${ctx.mektebId}
+        ORDER BY g.id
+      `);
+      dostupneGrupeRows = rows.rows as typeof dostupneGrupeRows;
+    } else {
+      const rows = await db.execute(sql`
+        SELECT DISTINCT g.id, g.skolska_godina AS "skolskaGodina"
+        FROM grupe g
+        LEFT JOIN grupa_muallimi gm ON gm.grupa_id = g.id
+        WHERE g.muallim_id = ${muallimId} OR gm.muallim_id = ${muallimId}
+        ORDER BY g.id
+      `);
+      dostupneGrupeRows = rows.rows as typeof dostupneGrupeRows;
+    }
+
+    const sveGrupe = dostupneGrupeRows;
     const grupe = filterYear
       ? sveGrupe.filter(g => g.skolskaGodina === filterYear)
       : sveGrupe;
     const grupeIds = grupe.map(g => g.id);
 
-    // Učenici koji su u grupama te godine (grupaId IN grupeIds).
-    // Kad nema filtera, vraćamo sve učenike muallima (staro ponašanje).
-    let profili;
-    if (filterYear) {
-      profili = grupeIds.length > 0
-        ? await db.select().from(ucenikProfiliTable)
-            .where(and(eq(ucenikProfiliTable.muallimId, muallimId), inArray(ucenikProfiliTable.grupaId, grupeIds)))
-        : [];
-    } else {
-      profili = await db.select().from(ucenikProfiliTable)
-        .where(eq(ucenikProfiliTable.muallimId, muallimId));
-    }
+    // Profil je vezan za grupu; kod glavnog/sekundarnog muallima vlasnički
+    // muallim_id profila može biti drugi muallim, zato ne filtriramo po njemu.
+    const profili = grupeIds.length > 0
+      ? await db.select().from(ucenikProfiliTable)
+          .where(inArray(ucenikProfiliTable.grupaId, grupeIds))
+      : [];
 
     const ucenikIds = profili.map(p => p.userId);
     const aktivnihUcenika = profili.filter(p => !p.isArchived).length;
@@ -2939,25 +2966,24 @@ router.get("/dashboard-stats", async (req, res) => {
 
     if (ucenikIds.length > 0) {
       const today = new Date().toISOString().split("T")[0];
-      // Za prisustvo i ocjene filtriramo po grupaId kad imamo filter-godinu,
-      // jer prisustvo nema direktnu vezu sa skolskaGodina
+      // Prisustvo i ocjene filtriramo po dostupnim grupama. Ne ograničavamo
+      // muallim_id jer je zapis mogao unijeti sekundarni muallim.
       const [prisustvo, ocjene, kvizovi, lekcije, danasnje] = await Promise.all([
-        filterYear && grupeIds.length > 0
+        grupeIds.length > 0
           ? db.select().from(priustvoTable)
-              .where(and(eq(priustvoTable.muallimId, muallimId), inArray(priustvoTable.grupaId, grupeIds)))
-          : db.select().from(priustvoTable).where(eq(priustvoTable.muallimId, muallimId)),
-        filterYear && grupeIds.length > 0
+              .where(inArray(priustvoTable.grupaId, grupeIds))
+          : db.select().from(priustvoTable).where(sql`false`),
+        grupeIds.length > 0
           ? db.select().from(ocjeneTable)
-              .where(and(eq(ocjeneTable.muallimId, muallimId), inArray(ocjeneTable.grupaId, grupeIds)))
-          : db.select().from(ocjeneTable).where(eq(ocjeneTable.muallimId, muallimId)),
+              .where(inArray(ocjeneTable.grupaId, grupeIds))
+          : db.select().from(ocjeneTable).where(sql`false`),
         db.select().from(kvizRezultatiTable).where(inArray(kvizRezultatiTable.userId, ucenikIds)),
         db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
           .where(and(inArray(korisnikNapredakTable.userId, ucenikIds), eq(korisnikNapredakTable.zavrsen, true))),
-        filterYear && grupeIds.length > 0
+        grupeIds.length > 0
           ? db.select().from(priustvoTable)
-              .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, today), inArray(priustvoTable.grupaId, grupeIds)))
-          : db.select().from(priustvoTable)
-              .where(and(eq(priustvoTable.muallimId, muallimId), eq(priustvoTable.datum, today))),
+              .where(and(eq(priustvoTable.datum, today), inArray(priustvoTable.grupaId, grupeIds)))
+          : db.select().from(priustvoTable).where(sql`false`),
       ]);
 
       const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
