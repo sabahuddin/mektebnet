@@ -502,6 +502,9 @@ export default function MuallimPanel() {
   }, [token]);
 
   // Odvojeni fetch za dashboard-stats — re-fetcha kad se promijeni odabrana godina.
+  // Ako API vrati 0 grupe ali postoje dostupne godine u bazi, automatski prebaci
+  // na najnoviju godinu koja ima podatke (sprečava situaciju gdje računata
+  // "trenutna" školska godina još nema grupe u bazi — npr. ljeto između dvije godine).
   useEffect(() => {
     if (!token) return;
     setDashboardStatsLoading(true);
@@ -510,7 +513,20 @@ export default function MuallimPanel() {
       "GET",
       `/muallim/dashboard-stats?skolskaGodina=${encodeURIComponent(selectedYear)}`,
       undefined, token,
-    ).then(ds => setDashboardStats(ds))
+    ).then(ds => {
+      if (
+        ds.ukupnoGrupa === 0 &&
+        ds.dostupneGodine &&
+        ds.dostupneGodine.length > 0 &&
+        !ds.dostupneGodine.includes(selectedYear)
+      ) {
+        // Automatski prebaci na najnoviju godinu koja ima podatke —
+        // ovo pokreće novi fetch pa ne postavljamo ds ovdje.
+        setSelectedYear(ds.dostupneGodine[0]);
+      } else {
+        setDashboardStats(ds);
+      }
+    })
       .catch(() => {})
       .finally(() => setDashboardStatsLoading(false));
   }, [token, selectedYear]);
@@ -1275,10 +1291,14 @@ export default function MuallimPanel() {
             {activeTab === "pregled" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 {(() => {
-                  // Dostupne godine — iz grupe koje su već učitane (ima ih odmah)
+                  // Dostupne godine — preferiramo listu iz API odgovora (uključuje
+                  // arhivirane grupe). Ne dodajemo selectedYear ako ga nema u bazi —
+                  // inače se pojavljuju fantomske opcije bez podataka.
                   const dostupneGodine = (() => {
+                    if (dashboardStats?.dostupneGodine && dashboardStats.dostupneGodine.length > 0) {
+                      return dashboardStats.dostupneGodine;
+                    }
                     const years = new Set(grupe.map(g => g.skolskaGodina).filter(Boolean));
-                    years.add(selectedYear);
                     return [...years].sort().reverse();
                   })();
                   const aktivneGodine = grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear);
