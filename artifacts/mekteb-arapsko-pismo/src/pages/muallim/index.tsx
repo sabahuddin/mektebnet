@@ -502,6 +502,8 @@ export default function MuallimPanel() {
   }, [token]);
 
   // Odvojeni fetch za dashboard-stats — re-fetcha kad se promijeni odabrana godina.
+  // Auto-fallback: ako odabrana godina nema grupe ali baza ima podatke za druge
+  // godine, automatski prebaci na najnoviju godinu s podacima (jednom, bez petlje).
   useEffect(() => {
     if (!token) return;
     setDashboardStatsLoading(true);
@@ -510,7 +512,18 @@ export default function MuallimPanel() {
       "GET",
       `/muallim/dashboard-stats?skolskaGodina=${encodeURIComponent(selectedYear)}`,
       undefined, token,
-    ).then(ds => setDashboardStats(ds))
+    ).then(ds => {
+      const hasData = ds.ukupnoGrupa > 0;
+      const altYears = (ds.dostupneGodine ?? []).filter(y => y !== selectedYear);
+      if (!hasData && altYears.length > 0) {
+        // Prebaci na najnoviju godinu koja stvarno ima grupe — sprečava prikazivanje
+        // nula kad je default tekuća schulska godina ali grupe su još pod prošlom.
+        setSelectedYear(altYears[0]);
+        // ds za ovu godinu nećemo prikazati — novi fetch dođe automatski.
+      } else {
+        setDashboardStats(ds);
+      }
+    })
       .catch(() => {})
       .finally(() => setDashboardStatsLoading(false));
   }, [token, selectedYear]);
@@ -1275,14 +1288,19 @@ export default function MuallimPanel() {
             {activeTab === "pregled" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 {(() => {
-                  // Dropdown uvijek prikazuje 3 fiksne godine: prošla, tekuća, sljedeća.
-                  // Vrijednost (value) je puni format "2026/27", label kratki "26/27".
+                  // Dropdown: 3 fiksne godine (prošla/tekuća/sljedeća) + sve stvarne
+                  // godine iz baze (dostupneGodine). Ako muallim ima grupe pod "25/26"
+                  // a default je "26/27", ta godina mora biti vidljiva u dropdownu.
                   const schoolYearOptions = (() => {
                     const base = computeCurrentSchoolYear(); // npr. "2026/27"
-                    const startYear = parseInt(base.slice(0, 4)); // 2026
-                    return [startYear - 1, startYear, startYear + 1].map(y => ({
-                      value: `${y}/${String(y + 1).slice(2)}`,
-                      label: `${String(y).slice(2)}/${String(y + 1).slice(2)}`,
+                    const startYear = parseInt(base.slice(0, 4));
+                    const fixed = [startYear - 1, startYear, startYear + 1]
+                      .map(y => `${y}/${String(y + 1).slice(2)}`);
+                    const fromDb = dashboardStats?.dostupneGodine ?? [];
+                    const all = [...new Set([...fixed, ...fromDb])].sort().reverse();
+                    return all.map(y => ({
+                      value: y,
+                      label: y.slice(2), // "2025/26" → "25/26"
                     }));
                   })();
                   const aktivneGodine = grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear);
