@@ -1248,6 +1248,9 @@ router.delete("/grupe/:id", async (req, res) => {
       await tx.delete(planLekcijaTable).where(eq(planLekcijaTable.grupaId, grupaId));
       await tx.delete(mektebKalendarTable).where(eq(mektebKalendarTable.grupaId, grupaId));
       await tx.delete(priustvoTable).where(eq(priustvoTable.grupaId, grupaId));
+      // FK constraint: mora se obrisati prije grupe
+      await tx.delete(grupaRasporedTable).where(eq(grupaRasporedTable.grupaId, grupaId));
+      await tx.execute(sql`DELETE FROM grupa_muallimi WHERE grupa_id = ${grupaId}`);
       await tx.delete(grupeTable).where(eq(grupeTable.id, grupaId));
     });
 
