@@ -1122,9 +1122,8 @@ router.get("/grupe/:id/izvjestaj", async (req, res) => {
       `),
       db.execute(sql`
         SELECT pl.datum, pl.napomena,
-               COALESCE(il.naslov, '') AS "lekcijaNaslov"
+               COALESCE(pl.lekcija_naslov, '') AS "lekcijaNaslov"
         FROM plan_lekcija pl
-        LEFT JOIN ilmihal_lekcije il ON il.id = pl.lekcija_id
         WHERE pl.grupa_id = ${grupaId}
         ORDER BY pl.datum ASC
       `),
