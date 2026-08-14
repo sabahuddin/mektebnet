@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Megaphone, Plus, Trash2, Edit3, Image, X, Loader2, Users,
-  Send, ChevronDown, Mail, User, Save, Heart
+  Send, ChevronDown, Mail, User, Save, Heart, Clock, GraduationCap
 } from "lucide-react";
 
 interface Obavjestenje {
@@ -38,6 +38,9 @@ interface RoditeljEntry {
     displayName: string;
     grupaId: number | null;
     grupaNaziv: string | null;
+    daniNastave: string[] | null;
+    vrijemeNastave: string | null;
+    muallimDisplayName: string | null;
   }[];
 }
 
@@ -398,13 +401,31 @@ export default function RoditeljiTab({
                     </a>
                   )}
                 </div>
-                <div className="pl-13 space-y-1">
+                <div className="pl-13 space-y-2">
                   {r.djeca.map(d => (
-                    <div key={d.id} className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Dijete:</span>
-                      <span className="font-semibold text-foreground">{d.displayName}</span>
-                      {d.grupaNaziv && (
-                        <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{d.grupaNaziv}</span>
+                    <div key={d.id} className="text-sm space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-muted-foreground">{t("Dijete")}:</span>
+                        <span className="font-semibold text-foreground">{d.displayName}</span>
+                        {d.grupaNaziv && (
+                          <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{d.grupaNaziv}</span>
+                        )}
+                        {d.muallimDisplayName && (
+                          <span className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3" />{d.muallimDisplayName}
+                          </span>
+                        )}
+                      </div>
+                      {(d.daniNastave?.length || d.vrijemeNastave) && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground pl-1">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          {Array.isArray(d.daniNastave) && d.daniNastave.length > 0 && (
+                            <span>{d.daniNastave.join(", ")}</span>
+                          )}
+                          {d.vrijemeNastave && (
+                            <span>{d.daniNastave?.length ? "·" : ""} {d.vrijemeNastave}</span>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}

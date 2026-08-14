@@ -2104,14 +2104,27 @@ router.get("/svi-rezultati", async (req, res) => {
 
 // ── KALENDAR ───────────────────────────────────────────────────────────────────
 
-// Helper: verify group ownership (muallim owns the group, or user is admin)
+// Helper: verify group ownership (muallim owns the group, admin, or glavni muallim in same džemat)
 async function verifyGrupaAccess(grupaId: number, userId: number, userRole: string) {
   if (userRole === "admin") {
     const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
     return grupa || null;
   }
-  const [grupa] = await db.select().from(grupeTable).where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId)));
-  return grupa || null;
+  // Owner?
+  const [grupaOwned] = await db.select().from(grupeTable)
+    .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId)));
+  if (grupaOwned) return grupaOwned;
+  // Glavni muallim — može vidjeti sve grupe svog džemata
+  const ctx = await getMektebCtx(userId);
+  if (ctx?.isGlavni && ctx.mektebId) {
+    const rows = await db.execute(sql`
+      SELECT g.* FROM grupe g
+      JOIN muallim_profili mp ON mp.user_id = g.muallim_id
+      WHERE g.id = ${grupaId} AND mp.mekteb_id = ${ctx.mektebId}
+    `);
+    return (rows.rows[0] as typeof grupaOwned) || null;
+  }
+  return null;
 }
 
 // ── PER-GRUPA RASPORED LEKCIJA ──────────────────────────────────────────────
@@ -4300,10 +4313,44 @@ router.delete("/obavjestenja/:id", async (req, res) => {
 
 router.get("/roditelji-lista", async (req, res) => {
   try {
-    const profili = await db.select().from(ucenikProfiliTable)
-      .where(eq(ucenikProfiliTable.muallimId, req.user!.userId));
+    const userId = req.user!.userId;
+    const ctx = await getMektebCtx(userId);
+
+    let profili: any[];
+    let grupeAll: any[];
+    let muallimUserMap: Record<number, string> = {};
+
+    if (ctx?.isGlavni && ctx.mektebId) {
+      // Glavni muallim — svi učenici džemata
+      const rows = await db.execute(sql`
+        SELECT up.*, mu.display_name AS muallim_display_name
+        FROM ucenik_profili up
+        JOIN muallim_profili mp ON mp.user_id = up.muallim_id
+        JOIN users mu ON mu.id = up.muallim_id
+        WHERE mp.mekteb_id = ${ctx.mektebId}
+      `);
+      profili = rows.rows as any[];
+      for (const r of profili as any[]) {
+        if (r.muallim_id) muallimUserMap[r.muallim_id] = r.muallim_display_name || "";
+      }
+      // Sve grupe džemata
+      const grupeRows = await db.execute(sql`
+        SELECT g.* FROM grupe g
+        JOIN muallim_profili mp ON mp.user_id = g.muallim_id
+        WHERE mp.mekteb_id = ${ctx.mektebId}
+      `);
+      grupeAll = grupeRows.rows as any[];
+    } else {
+      // Obični muallim — samo vlastiti učenici i grupe
+      profili = await db.select().from(ucenikProfiliTable)
+        .where(eq(ucenikProfiliTable.muallimId, userId));
+      grupeAll = await db.select().from(grupeTable)
+        .where(eq(grupeTable.muallimId, userId));
+    }
+
     if (profili.length === 0) { res.json([]); return; }
-    const ucenikIds = profili.map(p => p.userId);
+    const ucenikIds = profili.map((p: any) => p.user_id ?? p.userId);
+
     const links = await db.select().from(roditeljUcenikTable)
       .where(and(
         inArray(roditeljUcenikTable.ucenikId, ucenikIds),
@@ -4316,10 +4363,22 @@ router.get("/roditelji-lista", async (req, res) => {
       .where(inArray(usersTable.id, allUserIds));
     const userMap = Object.fromEntries(users.map(u => [u.id, u]));
 
-    const grupeAll = await db.select().from(grupeTable)
-      .where(eq(grupeTable.muallimId, req.user!.userId));
-    const grupaMap = Object.fromEntries(grupeAll.map(g => [g.id, g.naziv]));
-    const profilMap = Object.fromEntries(profili.map(p => [p.userId, p]));
+    // grupaMap: id → { naziv, daniNastave, vrijemeNastave, muallimId }
+    const grupaMap: Record<number, { naziv: string; daniNastave: any; vrijemeNastave: string | null; muallimId: number | null }> = {};
+    for (const g of grupeAll as any[]) {
+      const gId = g.id;
+      grupaMap[gId] = {
+        naziv: g.naziv,
+        daniNastave: g.dani_nastave ?? g.daniNastave ?? null,
+        vrijemeNastave: g.vrijeme_nastave ?? g.vrijemeNastave ?? null,
+        muallimId: g.muallim_id ?? g.muallimId ?? null,
+      };
+    }
+    const profilMap: Record<number, any> = {};
+    for (const p of profili as any[]) {
+      const uid = p.user_id ?? p.userId;
+      profilMap[uid] = p;
+    }
 
     const roditeljMap = new Map<number, { roditelj: any; djeca: any[] }>();
     for (const link of links) {
@@ -4338,11 +4397,16 @@ router.get("/roditelji-lista", async (req, res) => {
       }
       const ucenik = userMap[link.ucenikId];
       const profil = profilMap[link.ucenikId];
+      const grupaId = profil?.grupa_id ?? profil?.grupaId;
+      const grupaInfo = grupaId ? grupaMap[grupaId] : null;
       roditeljMap.get(link.roditeljId)!.djeca.push({
         id: link.ucenikId,
         displayName: ucenik?.displayName || `#${link.ucenikId}`,
-        grupaId: profil?.grupaId,
-        grupaNaziv: profil?.grupaId ? grupaMap[profil.grupaId] || null : null,
+        grupaId: grupaId ?? null,
+        grupaNaziv: grupaInfo?.naziv ?? null,
+        daniNastave: grupaInfo?.daniNastave ?? null,
+        vrijemeNastave: grupaInfo?.vrijemeNastave ?? null,
+        muallimDisplayName: grupaInfo?.muallimId ? (muallimUserMap[grupaInfo.muallimId] ?? null) : null,
       });
     }
 
