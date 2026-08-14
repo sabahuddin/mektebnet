@@ -821,11 +821,15 @@ router.get("/grupe", async (req, res) => {
           g.naziv ASC
       `);
       const glavniGrupeIds = (rows.rows as any[]).map(r => r.id as number);
-      const secMuallimiGlavni = glavniGrupeIds.length > 0 ? await db.execute(sql`
+      const secMuallimiGlavni = await db.execute(sql`
         SELECT gm.grupa_id, u.id, u.display_name
         FROM grupa_muallimi gm JOIN users u ON u.id = gm.muallim_id
-        WHERE gm.grupa_id = ANY(${glavniGrupeIds}::int[])
-      `) : { rows: [] };
+        WHERE gm.grupa_id IN (
+          SELECT id FROM grupe WHERE muallim_id IN (
+            SELECT user_id FROM muallim_profili WHERE mekteb_id = ${ctx.mektebId}
+          )
+        )
+      `);
       const secMapGlavni = new Map<number, { id: number; displayName: string }[]>();
       for (const r of secMuallimiGlavni.rows as any[]) {
         if (!secMapGlavni.has(r.grupa_id)) secMapGlavni.set(r.grupa_id, []);
@@ -848,44 +852,67 @@ router.get("/grupe", async (req, res) => {
       return;
     }
 
-    // Obični muallim — vlastite grupe + grupe gdje je sekundarni muallim
-    const sveGrupeRows = await db.execute(sql`
-      SELECT DISTINCT g.id, g.muallim_id, g.naziv, g.skolska_godina,
+    // Obični muallim — vlastite grupe (drizzle) + grupe gdje je sekundarni muallim (raw SQL)
+    // Koristimo odvojene queryje umjesto DISTINCT na jsonb kolonama.
+    const grupeOwn = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, userId));
+    const grupeSecRows = await db.execute(sql`
+      SELECT g.id, g.muallim_id, g.naziv, g.skolska_godina,
         g.dani_nastave, g.vrijeme_nastave, g.datum_pocetka, g.datum_kraja,
         COALESCE(g.is_archived, false) AS is_archived, g.archived_at,
-        u.display_name AS muallim_display_name,
-        CASE WHEN g.muallim_id = ${userId} THEN 0 ELSE 1 END AS sort_key
+        u.display_name AS muallim_display_name
       FROM grupe g
       JOIN users u ON u.id = g.muallim_id
-      WHERE g.muallim_id = ${userId}
-        OR g.id IN (SELECT grupa_id FROM grupa_muallimi WHERE muallim_id = ${userId})
-      ORDER BY sort_key, g.naziv ASC
+      JOIN grupa_muallimi gm ON gm.grupa_id = g.id
+      WHERE gm.muallim_id = ${userId} AND g.muallim_id != ${userId}
     `);
-    const grupeIds = (sveGrupeRows.rows as any[]).map(r => r.id as number);
-    const secMuallimiRows = grupeIds.length > 0 ? await db.execute(sql`
+    const arhivaRows2 = await db.execute(sql`
+      SELECT id, is_archived, archived_at FROM grupe
+      WHERE muallim_id = ${userId}
+        OR id IN (SELECT grupa_id FROM grupa_muallimi WHERE muallim_id = ${userId})
+    `);
+    const arhivaMap2 = new Map(
+      (arhivaRows2.rows as Array<{ id: number; is_archived: boolean; archived_at: string | null }>)
+        .map(r => [r.id, r]),
+    );
+    const secMuallimiRows2 = await db.execute(sql`
       SELECT gm.grupa_id, u.id, u.display_name
       FROM grupa_muallimi gm JOIN users u ON u.id = gm.muallim_id
-      WHERE gm.grupa_id = ANY(${grupeIds}::int[])
-    `) : { rows: [] };
+      WHERE gm.grupa_id IN (
+        SELECT id FROM grupe WHERE muallim_id = ${userId}
+        UNION ALL
+        SELECT grupa_id FROM grupa_muallimi WHERE muallim_id = ${userId}
+      )
+    `);
     const secMap = new Map<number, { id: number; displayName: string }[]>();
-    for (const r of secMuallimiRows.rows as any[]) {
+    for (const r of secMuallimiRows2.rows as any[]) {
       if (!secMap.has(r.grupa_id)) secMap.set(r.grupa_id, []);
       secMap.get(r.grupa_id)!.push({ id: r.id, displayName: r.display_name });
     }
-    res.json((sveGrupeRows.rows as any[]).map(r => ({
-      id: r.id,
-      muallimId: r.muallim_id,
-      naziv: r.naziv,
-      skolskaGodina: r.skolska_godina,
-      daniNastave: r.dani_nastave,
-      vrijemeNastave: r.vrijeme_nastave,
-      datumPocetka: r.datum_pocetka ?? null,
-      datumKraja: r.datum_kraja ?? null,
-      isArchived: r.is_archived ?? false,
-      archivedAt: r.archived_at ?? null,
-      muallimDisplayName: r.muallim_display_name,
-      sekundarniMuallimi: secMap.get(r.id as number) ?? [],
-    })));
+    const ownIds = new Set(grupeOwn.map(g => g.id));
+    const allGrupe = [
+      ...grupeOwn.map(g => ({
+        id: g.id, muallimId: g.muallimId, naziv: g.naziv,
+        skolskaGodina: g.skolskaGodina, daniNastave: g.daniNastave,
+        vrijemeNastave: g.vrijemeNastave,
+        datumPocetka: (g as any).datumPocetka ?? null,
+        datumKraja: (g as any).datumKraja ?? null,
+        isArchived: arhivaMap2.get(g.id)?.is_archived ?? false,
+        archivedAt: arhivaMap2.get(g.id)?.archived_at ?? null,
+        muallimDisplayName: null as string | null,
+        sekundarniMuallimi: secMap.get(g.id) ?? [],
+      })),
+      ...(grupeSecRows.rows as any[]).filter(r => !ownIds.has(r.id)).map(r => ({
+        id: r.id, muallimId: r.muallim_id, naziv: r.naziv,
+        skolskaGodina: r.skolska_godina, daniNastave: r.dani_nastave,
+        vrijemeNastave: r.vrijeme_nastave,
+        datumPocetka: r.datum_pocetka ?? null, datumKraja: r.datum_kraja ?? null,
+        isArchived: arhivaMap2.get(r.id)?.is_archived ?? r.is_archived ?? false,
+        archivedAt: arhivaMap2.get(r.id)?.archived_at ?? r.archived_at ?? null,
+        muallimDisplayName: r.muallim_display_name as string | null,
+        sekundarniMuallimi: secMap.get(r.id) ?? [],
+      })),
+    ];
+    res.json(allGrupe);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
