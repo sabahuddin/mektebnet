@@ -31,7 +31,15 @@ export function useUnreadPoruke(): number {
           undefined,
           t,
         );
-        if (!cancelled) setCount(data.count ?? 0);
+        if (!cancelled) {
+          const n = data.count ?? 0;
+          setCount(n);
+          // Ažuriraj badge na PWA ikoni (Badging API — Chrome/Edge/Android)
+          if ("setAppBadge" in navigator) {
+            if (n > 0) navigator.setAppBadge(n).catch(() => {});
+            else navigator.clearAppBadge?.().catch(() => {});
+          }
+        }
       } catch {}
     };
 
@@ -44,6 +52,8 @@ export function useUnreadPoruke(): number {
       cancelled = true;
       window.clearInterval(id);
       window.removeEventListener(PORUKE_READ_EVENT, onRead);
+      // Ako se korisnik odjavi, skini badge
+      if ("clearAppBadge" in navigator) navigator.clearAppBadge?.().catch(() => {});
     };
   }, [user?.id, token, location]);
 

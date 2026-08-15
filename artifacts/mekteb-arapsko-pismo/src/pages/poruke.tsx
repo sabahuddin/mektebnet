@@ -95,6 +95,9 @@ export default function PorukePage() {
   useEffect(() => {
     loadRazgovori();
     loadKontakti();
+    // Korisnik je otvorio Poruke — skini badge s PWA ikone.
+    // Tačan broj nepročitanih će postaviti use-unread-poruke hook nakon fetcha.
+    if ("clearAppBadge" in navigator) navigator.clearAppBadge?.().catch(() => {});
   }, [token]);
 
   useEffect(() => {
