@@ -7,6 +7,28 @@ import { apiRequest } from "@/lib/api";
 import { isLekcijaUnlocked, isEtapaPassed } from "@/lib/lekcija-unlock";
 import { Check, Sparkles, X, Lock } from "lucide-react";
 
+// Mala kamilica (SVG) — oznaka za preduvjet koji još nije završen
+function ChamomileSvg({ size = 20 }: { size?: number }) {
+  const petals = [0, 45, 90, 135, 180, 225, 270, 315];
+  return (
+    <svg viewBox="0 0 20 20" width={size} height={size} aria-hidden>
+      {petals.map((angle) => (
+        <ellipse
+          key={angle}
+          cx="10" cy="4.2"
+          rx="1.7" ry="3"
+          fill="white"
+          stroke="#d1d5db"
+          strokeWidth="0.5"
+          transform={`rotate(${angle} 10 10)`}
+        />
+      ))}
+      <circle cx="10" cy="10" r="3.6" fill="#fbbf24" />
+      <circle cx="10" cy="10" r="1.8" fill="#f59e0b" />
+    </svg>
+  );
+}
+
 const mapaPozadinaUrl = `${import.meta.env.BASE_URL}images/mapa/pozadina-pcele.png`;
 
 interface Lekcija {
@@ -584,10 +606,10 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                       const done = zavrseneSet.has(l.id);
                       return (
                         <li key={l.id} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold ${done ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${done ? "bg-emerald-500" : "bg-amber-200"}`}>
+                          <span className="w-5 h-5 flex items-center justify-center flex-shrink-0">
                             {done
-                              ? <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                              : <Lock className="w-2.5 h-2.5 text-amber-700" />
+                              ? <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><Check className="w-3 h-3 text-white" strokeWidth={3} /></span>
+                              : <ChamomileSvg size={20} />
                             }
                           </span>
                           {l.naslov}
