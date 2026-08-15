@@ -98,6 +98,7 @@ export default function PrisustvoPage() {
       }));
       await apiRequest("POST", "/muallim/prisustvo", { grupaId: parseInt(grupaId), datum, prisustvo: prisustvoData }, token);
       toast({ title: t("Prisustvo sačuvano!"), description: t("Evidentirano za {datum}", { datum }) });
+      setLocation(`/muallim/grupa/${grupaId}`);
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće sačuvati prisustvo"), variant: "destructive" });
     } finally {

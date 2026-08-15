@@ -3021,7 +3021,7 @@ export default function MuallimPanel() {
                               return (
                                 <button key={dateStr}
                                   onClick={() => setSelectedDate(dateStr)}
-                                  className={`relative aspect-square rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5
+                                  className={`relative aspect-square rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5
                                     ${isSelected ? "ring-2 ring-primary ring-offset-1" : ""}
                                     ${tipStyle ? `${tipStyle.bg} ${tipStyle.text} border ${tipStyle.border}` : "hover:bg-muted/50 border border-transparent"}`}>
                                   {day}
@@ -3128,10 +3128,10 @@ export default function MuallimPanel() {
                 ) : kalendarLoading ? (
                   <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
                 ) : (
-                  <div className="grid lg:grid-cols-3 gap-6">
+                  <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
                     <div className="lg:col-span-2">
-                      <div className="bg-white border border-border/50 rounded-2xl p-5">
-                        <div className="flex items-center justify-between mb-4">
+                      <div className="bg-white border border-border/50 rounded-2xl p-3 sm:p-5">
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
                           <button onClick={() => setCurrentMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 })}
                             className="p-2 hover:bg-muted rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
                           <h3 className="font-extrabold text-lg text-foreground">
@@ -3141,24 +3141,24 @@ export default function MuallimPanel() {
                             className="p-2 hover:bg-muted rounded-lg"><ChevronRight className="w-5 h-5" /></button>
                         </div>
 
-                        <div className="flex items-center gap-3 mb-4 flex-wrap">
+                        <div className="flex items-center gap-2 mb-3 sm:mb-4 flex-wrap">
                           <span className="text-sm font-bold text-muted-foreground mr-1">{t("Označi dan kao:")}</span>
                           {Object.entries(TIP_COLORS).map(([key, val]) => (
                             <button key={key} onClick={() => setActiveTip(key as any)}
-                              className={`text-sm font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${activeTip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
+                              className={`text-xs sm:text-sm font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 transition-all ${activeTip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
                               {val.label}
                             </button>
                           ))}
                           <button onClick={() => { setBatchMode(!batchMode); setBatchDatumi([]); }}
-                            className={`text-sm font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${batchMode ? "bg-violet-100 border-violet-400 text-violet-700" : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
-                            {batchMode ? t("✓ Grupno označavanje") : t("Grupno označavanje")}
+                            className={`text-xs sm:text-sm font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 transition-all ${batchMode ? "bg-violet-100 border-violet-400 text-violet-700" : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
+                            {batchMode ? t("✓ Grupno") : t("Grupno")}
                           </button>
                           <button
                             onClick={() => { setShowCopyKalendar(v => !v); setCopyFromGrupaId(null); setCopyOverride(false); }}
-                            className={`text-sm font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${showCopyKalendar ? "bg-emerald-100 border-emerald-400 text-emerald-700" : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
-                            {t("Kopiraj iz druge grupe")}
+                            className={`text-xs sm:text-sm font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 transition-all ${showCopyKalendar ? "bg-emerald-100 border-emerald-400 text-emerald-700" : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
+                            {t("Kopiraj")}
                           </button>
-                          <button onClick={() => { setSelectedGrupaId(null); setBatchMode(false); setBatchDatumi([]); setShowCopyKalendar(false); }} className="ml-auto text-sm text-muted-foreground hover:text-foreground font-medium">
+                          <button onClick={() => { setSelectedGrupaId(null); setBatchMode(false); setBatchDatumi([]); setShowCopyKalendar(false); }} className="ml-auto text-xs sm:text-sm text-muted-foreground hover:text-foreground font-medium">
                             {t("← Promijeni grupu")}
                           </button>
                         </div>
@@ -3217,9 +3217,9 @@ export default function MuallimPanel() {
                           </div>
                         )}
 
-                        <div className="grid grid-cols-7 gap-1">
+                        <div className="grid grid-cols-7 gap-0.5 sm:gap-1.5">
                           {DAYS_BS.map(d => (
-                            <div key={d} className="text-center text-xs font-extrabold text-muted-foreground py-2">{d}</div>
+                            <div key={d} className="text-center text-[10px] sm:text-xs font-extrabold text-muted-foreground py-1 sm:py-2">{d}</div>
                           ))}
                           {getDaysInMonth(currentMonth.year, currentMonth.month).map((day, i) => {
                             if (day === null) return <div key={`e-${i}`} />;
@@ -3310,7 +3310,7 @@ export default function MuallimPanel() {
                                   <input type="text" placeholder={entry?.tip === "vazan_datum" ? t("Naziv važnog datuma") : entry?.tip === "ramazan" ? t("Npr. Ramazan 1446") : t("Opis (opcionalno)")} value={opisInput}
                                     onChange={e => setOpisInput(e.target.value)}
                                     onBlur={() => { if (entry) saveKalendarEntry(selectedDate, entry.tip, opisInput); }}
-                                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                                    className="w-full border border-border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
                                 </div>
                               );
                             })()}
