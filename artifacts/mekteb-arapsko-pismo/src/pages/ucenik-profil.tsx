@@ -303,6 +303,7 @@ const TIP_COLORS: Record<string, { bg: string; border: string; text: string; lab
   mekteb: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-700", label: "Mekteb" },
   ferije: { bg: "bg-red-100", border: "border-red-400", text: "text-red-700", label: "Ferije" },
   vazan_datum: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-700", label: "Važan datum" },
+  ramazan: { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-700", label: "Ramazan" },
 };
 
 const OCJENA_COLORS = ["", "bg-red-100 text-red-700", "bg-orange-100 text-orange-700", "bg-amber-100 text-amber-700", "bg-blue-100 text-blue-700", "bg-emerald-100 text-emerald-700", "bg-emerald-200 text-emerald-800"];
@@ -1276,6 +1277,7 @@ export default function UcenikProfilPage() {
                         <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {t("Mekteb")}</span>
                         <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> {t("Ferije")}</span>
                         <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> {t("Važan datum")}</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-purple-200 border border-purple-400" /> {t("Ramazan")}</span>
                         <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> {t("Lekcija")}</span>
                         <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> {t("Rok zadaće")}</span>
                       </div>

@@ -168,6 +168,7 @@ const TIP_COLORS: Record<string, { bg: string; border: string; text: string; lab
   mekteb: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-700", label: "Mekteb" },
   ferije: { bg: "bg-red-100", border: "border-red-400", text: "text-red-700", label: "Ferije" },
   vazan_datum: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-700", label: "Važan datum" },
+  ramazan: { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-700", label: "Ramazan" },
 };
 
 const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];

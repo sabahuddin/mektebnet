@@ -2405,7 +2405,7 @@ router.post("/kalendar", async (req, res) => {
   try {
     const { grupaId, datum, tip, opis } = req.body;
     if (!grupaId || !datum || !tip) { res.status(400).json({ error: "grupaId, datum i tip su obavezni" }); return; }
-    if (!["mekteb", "ferije", "vazan_datum"].includes(tip)) { res.status(400).json({ error: "tip mora biti: mekteb, ferije, vazan_datum" }); return; }
+    if (!["mekteb", "ferije", "vazan_datum", "ramazan"].includes(tip)) { res.status(400).json({ error: "tip mora biti: mekteb, ferije, vazan_datum, ramazan" }); return; }
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
@@ -2438,8 +2438,8 @@ router.post("/kalendar/batch", async (req, res) => {
     if (!grupaId || !datumi || !Array.isArray(datumi) || datumi.length === 0 || !tip) {
       res.status(400).json({ error: "grupaId, datumi (niz) i tip su obavezni" }); return;
     }
-    if (!["mekteb", "ferije", "vazan_datum"].includes(tip)) {
-      res.status(400).json({ error: "tip mora biti: mekteb, ferije, vazan_datum" }); return;
+    if (!["mekteb", "ferije", "vazan_datum", "ramazan"].includes(tip)) {
+      res.status(400).json({ error: "tip mora biti: mekteb, ferije, vazan_datum, ramazan" }); return;
     }
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);

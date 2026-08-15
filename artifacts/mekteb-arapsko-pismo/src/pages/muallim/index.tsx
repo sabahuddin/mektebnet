@@ -156,7 +156,7 @@ interface KalendarEntry {
   id: number;
   grupaId: number;
   datum: string;
-  tip: "mekteb" | "ferije" | "vazan_datum";
+  tip: "mekteb" | "ferije" | "vazan_datum" | "ramazan";
   opis?: string;
 }
 
@@ -271,6 +271,7 @@ const TIP_COLORS: Record<string, { bg: string; border: string; text: string; lab
   mekteb: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-700", label: "Mekteb" },
   ferije: { bg: "bg-red-100", border: "border-red-400", text: "text-red-700", label: "Ferije" },
   vazan_datum: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-700", label: "Važan datum" },
+  ramazan: { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-700", label: "Ramazan" },
 };
 
 const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
@@ -410,7 +411,7 @@ export default function MuallimPanel() {
   const [planLekcija, setPlanLekcija] = useState<PlanLekcija[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [kalendarLoading, setKalendarLoading] = useState(false);
-  const [activeTip, setActiveTip] = useState<"mekteb" | "ferije" | "vazan_datum">("mekteb");
+  const [activeTip, setActiveTip] = useState<"mekteb" | "ferije" | "vazan_datum" | "ramazan">("mekteb");
   const [opisInput, setOpisInput] = useState("");
   const [dostupneLekcije, setDostupneLekcije] = useState<IlmihalLekcija[]>([]);
   const [showLekcijaSelect, setShowLekcijaSelect] = useState(false);
@@ -660,7 +661,7 @@ export default function MuallimPanel() {
       const updated = await apiRequest<KalendarEntry[]>("GET", `/muallim/kalendar?grupaId=${selectedGrupaId}`, undefined, token);
       setKalendar(updated);
       setBatchDatumi([]);
-      toast({ title: t("{n} dana označeno kao {tip}!", { n: String(batchDatumi.length), tip: activeTip === "mekteb" ? t("Mekteb") : activeTip === "ferije" ? t("Ferije") : t("Važan datum") }) });
+      toast({ title: t("{n} dana označeno kao {tip}!", { n: String(batchDatumi.length), tip: activeTip === "mekteb" ? t("Mekteb") : activeTip === "ferije" ? t("Ferije") : activeTip === "ramazan" ? t("Ramazan") : t("Važan datum") }) });
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
     finally { setBatchSaving(false); }
   }
@@ -3009,8 +3010,9 @@ export default function MuallimPanel() {
                               const dayEntries = kalendarSve.kalendar.filter(k => k.datum === dateStr);
                               const dayLekcije = kalendarSve.planLekcija.filter(p => p.datum === dateStr);
                               const isSelected = selectedDate === dateStr;
-                              // Boja po dominantnom tipu (prioritet: vazan_datum > ferije > mekteb)
+                              // Boja po dominantnom tipu (prioritet: vazan_datum > ramazan > ferije > mekteb)
                               const dominantTip = dayEntries.find(e => e.tip === "vazan_datum")?.tip
+                                ?? dayEntries.find(e => e.tip === "ramazan")?.tip
                                 ?? dayEntries.find(e => e.tip === "ferije")?.tip
                                 ?? dayEntries[0]?.tip;
                               const tipStyle = dominantTip ? TIP_COLORS[dominantTip] : null;
@@ -3259,6 +3261,7 @@ export default function MuallimPanel() {
                           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {t("Mekteb")}</span>
                           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> {t("Ferije")}</span>
                           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> {t("Važan datum")}</span>
+                          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-purple-200 border border-purple-400" /> {t("Ramazan")}</span>
                           <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> {t("Ima lekcije")}</span>
                         </div>
                       </div>
@@ -3304,7 +3307,7 @@ export default function MuallimPanel() {
                                       {entry.opis}
                                     </div>
                                   )}
-                                  <input type="text" placeholder={entry?.tip === "vazan_datum" ? t("Naziv važnog datuma") : t("Opis (opcionalno)")} value={opisInput}
+                                  <input type="text" placeholder={entry?.tip === "vazan_datum" ? t("Naziv važnog datuma") : entry?.tip === "ramazan" ? t("Npr. Ramazan 1446") : t("Opis (opcionalno)")} value={opisInput}
                                     onChange={e => setOpisInput(e.target.value)}
                                     onBlur={() => { if (entry) saveKalendarEntry(selectedDate, entry.tip, opisInput); }}
                                     className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
