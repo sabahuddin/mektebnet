@@ -423,6 +423,10 @@ export default function MuallimPanel() {
   const [copyFromGrupaId, setCopyFromGrupaId] = useState<number | null>(null);
   const [copyOverride, setCopyOverride] = useState(false);
   const [copyingKalendar, setCopyingKalendar] = useState(false);
+  // Kopiranje u grupe (za glavnog muallima)
+  const [copyToMode, setCopyToMode] = useState<"from" | "to">("from");
+  const [copyToGrupeIds, setCopyToGrupeIds] = useState<number[]>([]);
+  const [copyingToGrupe, setCopyingToGrupe] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -680,7 +684,42 @@ export default function MuallimPanel() {
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
   }
 
-  async function copyKalendarFromGrupa() {
+  async function copyKalendarToGrupe() {
+    if (!token || !selectedGrupaId || copyToGrupeIds.length === 0) {
+      toast({ title: t("Odaberi bar jednu grupu"), variant: "destructive" });
+      return;
+    }
+    setCopyingToGrupe(true);
+    let ukupnoKopirano = 0;
+    let greske = 0;
+    try {
+      for (const tgtId of copyToGrupeIds) {
+        try {
+          const result = await apiRequest<{ kopirano: number; preskoceno: number; ukupno: number }>(
+            "POST", "/muallim/kalendar/kopiraj",
+            { sourceGrupaId: selectedGrupaId, targetGrupaId: tgtId, override: copyOverride },
+            token,
+          );
+          ukupnoKopirano += result.kopirano;
+        } catch { greske++; }
+      }
+      toast({
+        title: t("Kalendar kopiran!"),
+        description: t("Kopirano u {n} grupe{g}.", {
+          n: String(copyToGrupeIds.length - greske),
+          g: greske > 0 ? t(", {e} grešaka", { e: String(greske) }) : "",
+        }),
+      });
+      setShowCopyKalendar(false);
+      setCopyToGrupeIds([]);
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće kopirati"), variant: "destructive" });
+    } finally {
+      setCopyingToGrupe(false);
+    }
+  }
+
+    async function copyKalendarFromGrupa() {
     if (!token || !selectedGrupaId || !copyFromGrupaId) {
       toast({ title: t("Odaberi izvornu grupu"), variant: "destructive" });
       return;
@@ -3165,37 +3204,107 @@ export default function MuallimPanel() {
 
                         {showCopyKalendar && (
                           <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                            <div className="text-sm font-bold text-emerald-800 mb-2">
-                              {t("Kopiraj datume nastave i praznike iz druge tvoje grupe u trenutnu grupu")}
-                            </div>
-                            {grupe.filter(g => !g.isArchived && g.id !== selectedGrupaId).length === 0 ? (
-                              <div className="text-sm text-emerald-700">{t("Nemaš drugu grupu za kopiranje.")}</div>
-                            ) : (
-                              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                                <select
-                                  value={copyFromGrupaId ?? ""}
-                                  onChange={(e) => setCopyFromGrupaId(e.target.value ? Number(e.target.value) : null)}
-                                  className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-foreground flex-1">
-                                  <option value="">{t("— odaberi izvornu grupu —")}</option>
-                                  {grupe.filter(g => !g.isArchived && g.id !== selectedGrupaId).map(g => (
-                                    <option key={g.id} value={g.id}>{g.naziv}</option>
-                                  ))}
-                                </select>
-                                <label className="flex items-center gap-2 text-sm text-emerald-800 font-medium select-none">
-                                  <input type="checkbox" checked={copyOverride} onChange={(e) => setCopyOverride(e.target.checked)} className="w-4 h-4 accent-emerald-600" />
-                                  {t("Prepiši postojeće")}
-                                </label>
-                                <Button
-                                  onClick={copyKalendarFromGrupa}
-                                  disabled={!copyFromGrupaId || copyingKalendar}
-                                  className="rounded-xl font-bold text-sm px-4 py-2 h-auto flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                  {copyingKalendar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                  {t("Kopiraj")}
-                                </Button>
+                            {mektebMeta.isGlavni && (
+                              <div className="flex gap-2 mb-3">
+                                <button onClick={() => setCopyToMode("from")}
+                                  className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${copyToMode === "from" ? "bg-emerald-600 text-white border-emerald-600" : "border-emerald-300 text-emerald-800 hover:bg-emerald-100"}`}>
+                                  {t("Kopiraj IZ grupe")}
+                                </button>
+                                <button onClick={() => setCopyToMode("to")}
+                                  className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${copyToMode === "to" ? "bg-emerald-600 text-white border-emerald-600" : "border-emerald-300 text-emerald-800 hover:bg-emerald-100"}`}>
+                                  {t("Kopiraj U grupe")}
+                                </button>
                               </div>
                             )}
+
+                            {copyToMode === "from" && (
+                              <>
+                                <div className="text-sm font-bold text-emerald-800 mb-2">
+                                  {t("Kopiraj datume nastave i praznike iz druge grupe u trenutnu grupu")}
+                                </div>
+                                {grupe.filter(g => !g.isArchived && g.id !== selectedGrupaId).length === 0 ? (
+                                  <div className="text-sm text-emerald-700">{t("Nema druge grupe za kopiranje.")}</div>
+                                ) : (
+                                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                    <select
+                                      value={copyFromGrupaId ?? ""}
+                                      onChange={(e) => setCopyFromGrupaId(e.target.value ? Number(e.target.value) : null)}
+                                      className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-foreground flex-1">
+                                      <option value="">{t("— odaberi izvornu grupu —")}</option>
+                                      {grupe.filter(g => !g.isArchived && g.id !== selectedGrupaId).map(g => (
+                                        <option key={g.id} value={g.id}>
+                                          {g.muallimDisplayName ? `${g.naziv} (${g.muallimDisplayName})` : g.naziv}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <label className="flex items-center gap-2 text-sm text-emerald-800 font-medium select-none">
+                                      <input type="checkbox" checked={copyOverride} onChange={(e) => setCopyOverride(e.target.checked)} className="w-4 h-4 accent-emerald-600" />
+                                      {t("Prepiši postojeće")}
+                                    </label>
+                                    <Button onClick={copyKalendarFromGrupa} disabled={!copyFromGrupaId || copyingKalendar}
+                                      className="rounded-xl font-bold text-sm px-4 py-2 h-auto flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                      {copyingKalendar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                      {t("Kopiraj")}
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {copyToMode === "to" && mektebMeta.isGlavni && (() => {
+                              const ostaleGrupe = grupe.filter(g => !g.isArchived && g.id !== selectedGrupaId);
+                              const muallimi = [...new Map(ostaleGrupe.filter(g => g.muallimDisplayName).map(g => [g.muallimId, g.muallimDisplayName])).entries()];
+                              return (
+                                <>
+                                  <div className="text-sm font-bold text-emerald-800 mb-2">
+                                    {t("Kopiraj kalendar ove grupe u odabrane grupe:")}
+                                  </div>
+                                  {ostaleGrupe.length === 0 ? (
+                                    <div className="text-sm text-emerald-700">{t("Nema grupa u džematu.")}</div>
+                                  ) : (
+                                    <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                                      {muallimi.map(([mId, mName]) => (
+                                        <div key={mId}>
+                                          <div className="text-[11px] font-extrabold text-emerald-700 uppercase tracking-wide mb-1">{mName}</div>
+                                          {ostaleGrupe.filter(g => g.muallimId === mId).map(g => (
+                                            <label key={g.id} className="flex items-center gap-2 text-sm text-emerald-900 cursor-pointer hover:bg-emerald-100 rounded px-2 py-1 select-none">
+                                              <input type="checkbox"
+                                                checked={copyToGrupeIds.includes(g.id)}
+                                                onChange={e => setCopyToGrupeIds(prev => e.target.checked ? [...prev, g.id] : prev.filter(id => id !== g.id))}
+                                                className="w-4 h-4 accent-emerald-600" />
+                                              {g.naziv}
+                                            </label>
+                                          ))}
+                                        </div>
+                                      ))}
+                                      {ostaleGrupe.filter(g => !g.muallimDisplayName || g.muallimId === undefined).map(g => (
+                                        <label key={g.id} className="flex items-center gap-2 text-sm text-emerald-900 cursor-pointer hover:bg-emerald-100 rounded px-2 py-1 select-none">
+                                          <input type="checkbox"
+                                            checked={copyToGrupeIds.includes(g.id)}
+                                            onChange={e => setCopyToGrupeIds(prev => e.target.checked ? [...prev, g.id] : prev.filter(id => id !== g.id))}
+                                            className="w-4 h-4 accent-emerald-600" />
+                                          {g.naziv}
+                                        </label>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <div className="flex flex-wrap gap-2 items-center">
+                                    <label className="flex items-center gap-2 text-sm text-emerald-800 font-medium select-none">
+                                      <input type="checkbox" checked={copyOverride} onChange={(e) => setCopyOverride(e.target.checked)} className="w-4 h-4 accent-emerald-600" />
+                                      {t("Prepiši postojeće")}
+                                    </label>
+                                    <Button onClick={copyKalendarToGrupe} disabled={copyToGrupeIds.length === 0 || copyingToGrupe}
+                                      className="rounded-xl font-bold text-sm px-4 py-2 h-auto flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                      {copyingToGrupe ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                      {t("Kopiraj u {n} grupe", { n: String(copyToGrupeIds.length) })}
+                                    </Button>
+                                  </div>
+                                </>
+                              );
+                            })()}
+
                             <div className="text-xs text-emerald-700 mt-2">
-                              {t("Kopiraju se svi datumi (mekteb, ferije, važni datumi). Po defaultu se preskaču datumi koji već postoje u trenutnoj grupi.")}
+                              {t("Kopiraju se svi datumi (mekteb, ferije, važni datumi). Po defaultu se preskaču datumi koji već postoje.")}
                             </div>
                           </div>
                         )}
