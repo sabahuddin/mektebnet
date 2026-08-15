@@ -3388,7 +3388,7 @@ export default function MuallimPanel() {
                             <>
                               <h4 className="font-extrabold text-sm text-foreground mb-3">{t("Označeni datumi — ovaj mjesec")}</h4>
                               <div className="space-y-1.5">
-                                {[...kalendar].sort((a, b) => a.datum.localeCompare(b.datum)).map(entry => {
+                                {[...kalendar].filter(e => e.datum.startsWith(`${currentMonth.year}-${String(currentMonth.month+1).padStart(2,"0")}`)).sort((a, b) => a.datum.localeCompare(b.datum)).map(entry => {
                                   const ts = TIP_COLORS[entry.tip];
                                   return (
                                     <div key={entry.id}
