@@ -3021,7 +3021,7 @@ export default function MuallimPanel() {
                               return (
                                 <button key={dateStr}
                                   onClick={() => setSelectedDate(dateStr)}
-                                  className={`relative aspect-square rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all flex flex-col items-center justify-center gap-0.5
+                                  className={`relative h-8 rounded-md text-xs font-bold transition-all flex flex-col items-center justify-center gap-0
                                     ${isSelected ? "ring-2 ring-primary ring-offset-1" : ""}
                                     ${tipStyle ? `${tipStyle.bg} ${tipStyle.text} border ${tipStyle.border}` : "hover:bg-muted/50 border border-transparent"}`}>
                                   {day}
@@ -3129,8 +3129,8 @@ export default function MuallimPanel() {
                   <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
                 ) : (
                   <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
-                    <div className="lg:col-span-2">
-                      <div className="bg-white border border-border/50 rounded-2xl p-3 sm:p-5">
+                    <div>
+                      <div className="bg-white border border-border/50 rounded-2xl p-3">
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
                           <button onClick={() => setCurrentMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 })}
                             className="p-2 hover:bg-muted rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
@@ -3217,7 +3217,7 @@ export default function MuallimPanel() {
                           </div>
                         )}
 
-                        <div className="grid grid-cols-7 gap-0.5 sm:gap-1.5">
+                        <div className="grid grid-cols-7 gap-0.5">
                           {DAYS_BS.map(d => (
                             <div key={d} className="text-center text-[10px] sm:text-xs font-extrabold text-muted-foreground py-1 sm:py-2">{d}</div>
                           ))}
@@ -3247,10 +3247,7 @@ export default function MuallimPanel() {
                                   ${!isBatchSelected && isSelected ? "ring-2 ring-primary ring-offset-1" : ""}
                                   ${!isBatchSelected && tipStyle ? `${tipStyle.bg} ${tipStyle.text} border ${tipStyle.border}` : !isBatchSelected ? "hover:bg-muted/50 border border-transparent" : ""}`}>
                                 {day}
-                                {entry?.tip === "vazan_datum" && entry?.opis && (
-                                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[7px] font-bold text-blue-700 truncate max-w-full px-0.5 leading-tight">{entry.opis.substring(0, 8)}</div>
-                                )}
-                                {hasLekcije && !entry?.opis && <div className="w-1.5 h-1.5 bg-violet-500 rounded-full absolute bottom-1" />}
+                                {hasLekcije && <div className="w-1 h-1 bg-violet-500 rounded-full absolute bottom-0.5" />}
                                 {isBatchSelected && <div className="w-2 h-2 bg-violet-500 rounded-full absolute top-1 right-1" />}
                               </button>
                             );
@@ -3267,7 +3264,7 @@ export default function MuallimPanel() {
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="lg:col-span-2 space-y-4">
                       {selectedDate && (
                         <>
                           <div className="bg-white border border-border/50 rounded-2xl p-5">
@@ -3380,10 +3377,41 @@ export default function MuallimPanel() {
                         </>
                       )}
                       {!selectedDate && (
-                        <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
-                          <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
-                          <p className="text-sm text-muted-foreground">{t("Klikni na dan u kalendaru za detalje")}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{t("Dupli klik označava dan aktivnim tipom")}</p>
+                        <div className="bg-white border border-border/50 rounded-2xl p-5">
+                          {kalendar.length === 0 ? (
+                            <div className="text-center py-6">
+                              <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+                              <p className="text-sm text-muted-foreground">{t("Klikni na dan u kalendaru za detalje")}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{t("Dupli klik označava dan aktivnim tipom")}</p>
+                            </div>
+                          ) : (
+                            <>
+                              <h4 className="font-extrabold text-sm text-foreground mb-3">{t("Označeni datumi — ovaj mjesec")}</h4>
+                              <div className="space-y-1.5">
+                                {[...kalendar].sort((a, b) => a.datum.localeCompare(b.datum)).map(entry => {
+                                  const ts = TIP_COLORS[entry.tip];
+                                  return (
+                                    <div key={entry.id}
+                                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border cursor-pointer hover:opacity-90 transition-opacity ${ts?.bg} ${ts?.border}`}
+                                      onClick={() => { setSelectedDate(entry.datum); setOpisInput(entry.opis || ''); }}>
+                                      <div className="shrink-0 w-8 text-center">
+                                        <div className={`text-sm font-extrabold leading-tight ${ts?.text}`}>{entry.datum.slice(8)}</div>
+                                        <div className={`text-[10px] leading-tight ${ts?.text} opacity-70`}>{monthNames[parseInt(entry.datum.slice(5,7))-1]?.slice(0,3)}</div>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <span className={`text-xs font-bold ${ts?.text}`}>{ts?.label}</span>
+                                        {entry.opis && <p className={`text-xs ${ts?.text} opacity-80 truncate mt-0.5`}>{entry.opis}</p>}
+                                      </div>
+                                      <button onClick={e => { e.stopPropagation(); deleteKalendarEntry(entry.id); }}
+                                        className="shrink-0 text-red-400 hover:text-red-600 p-0.5 rounded">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
