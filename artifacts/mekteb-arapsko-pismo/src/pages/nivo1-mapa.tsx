@@ -5,7 +5,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { isLekcijaUnlocked, isEtapaPassed } from "@/lib/lekcija-unlock";
-import { Check, Sparkles, X } from "lucide-react";
+import { Check, Sparkles, X, Lock } from "lucide-react";
 
 const mapaPozadinaUrl = `${import.meta.env.BASE_URL}images/mapa/pozadina-pcele.png`;
 
@@ -68,6 +68,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   const [, setLocation] = useLocation();
   const [data, setData] = useState<MapaData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lockedPopup, setLockedPopup] = useState<Lekcija | null>(null);
 
   useEffect(() => {
     apiRequest<MapaData>("GET", `/mapa/nivo/${nivo}`, undefined, token || undefined)
@@ -477,12 +478,17 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                 <button
                   key={`l-${lekcija.id}`}
                   data-cell-index={i}
-                  onClick={() => !isLocked && setLocation(`/ilmihal/${lekcija.slug}`)}
-                  disabled={isLocked && !isDone}
-                  className="relative flex items-center justify-center disabled:cursor-not-allowed"
+                  onClick={() => {
+                    if (isLocked) {
+                      setLockedPopup(lekcija);
+                    } else {
+                      setLocation(`/ilmihal/${lekcija.slug}`);
+                    }
+                  }}
+                  className="relative flex items-center justify-center"
                   style={{ gridRow: displayRow + 1, gridColumn: col + 1 }}
                   data-testid={`mapa-polje-lekcija-${lekcija.id}`}
-                  title={isLocked ? t("Zaključano — završi prethodne lekcije") : lekcija.naslov}
+                  title={isLocked ? t("Zaključano") : lekcija.naslov}
                 >
                   <div className="relative">
                     {isCurrent && (
@@ -530,6 +536,80 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
           )}
         </div>
       </div>
+
+      {/* Popup za zaključanu lekciju — pokazuje preduvjete učeniku */}
+      {lockedPopup && (() => {
+        const preduvjetiNazivi = (lockedPopup.uvjetiIds ?? [])
+          .map((id) => lekcijeSorted.find((l) => l.id === id))
+          .filter(Boolean) as Lekcija[];
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+            onClick={() => setLockedPopup(null)}
+          >
+            {/* Pozadinska maglica */}
+            <div className="absolute inset-0 bg-black/40" />
+            <motion.div
+              initial={{ opacity: 0, y: 32 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 32 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Zaglavlje */}
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide mb-0.5">{t("Zaključana lekcija")}</p>
+                  <h3 className="font-extrabold text-foreground leading-tight">{lockedPopup.naslov}</h3>
+                </div>
+                <button
+                  onClick={() => setLockedPopup(null)}
+                  className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center flex-shrink-0 transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+
+              {preduvjetiNazivi.length > 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Da bi otključao/la ovu lekciju, prvo završi:")}
+                  </p>
+                  <ul className="space-y-2">
+                    {preduvjetiNazivi.map((l) => {
+                      const done = zavrseneSet.has(l.id);
+                      return (
+                        <li key={l.id} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold ${done ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${done ? "bg-emerald-500" : "bg-amber-200"}`}>
+                            {done
+                              ? <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                              : <Lock className="w-2.5 h-2.5 text-amber-700" />
+                            }
+                          </span>
+                          {l.naslov}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {preduvjetiNazivi.every((l) => zavrseneSet.has(l.id)) && (
+                    <p className="mt-3 text-xs text-center text-emerald-700 font-bold">
+                      ✅ {t("Sve preduvjetne lekcije su završene!")}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("Ova lekcija je trenutno zaključana.")}
+                </p>
+              )}
+            </motion.div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
