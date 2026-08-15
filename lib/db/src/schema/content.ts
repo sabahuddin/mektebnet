@@ -128,6 +128,10 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   locked: boolean("locked").notNull().default(false),
   lockedAt: timestamp("locked_at"),
   lockedNote: text("locked_note"),
+  // Preduvjeti lekcije: lista ID-jeva lekcija koje student mora završiti
+  // prije nego što mu se ova lekcija otključa. Maksimalno 6 preduvjeta.
+  // Prazna lista ([]) = lekcija uvijek otključana (bez preduvjeta).
+  uvjetiIds: jsonb("uvjeti_ids").$type<number[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

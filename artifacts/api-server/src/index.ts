@@ -221,6 +221,7 @@ async function runResidualSchema() {
     // su prvi put backfill-ovane iz priprema HTML-a (Predmet</div><div>VALUE</div>),
     // a dalje ih admin direktno mijenja kroz UI. Idempotentno na svaki start.
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS predmet varchar(60);`);
+    await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS uvjeti_ids JSONB NOT NULL DEFAULT '[]'::jsonb;`);
     // Jednokratni backfill: popuni predmet iz content_html-a samo za redove
     // gdje je predmet NULL (preskače već postavljene). POSIX regex hvata
     // vrijednost između <div>Predmet</div> i sljedećeg <div>...</div>.

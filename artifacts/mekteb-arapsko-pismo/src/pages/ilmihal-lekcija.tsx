@@ -3,7 +3,7 @@ import { useParams, useLocation, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
-import { computeUnlockedCellCount } from "@/lib/lekcija-unlock";
+import { isLekcijaUnlocked } from "@/lib/lekcija-unlock";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { RjecnikContent } from "@/components/rjecnik-content";
@@ -28,7 +28,7 @@ const H5PPlayerLazy = lazy(() => import("@/components/h5p-player").then(m => ({ 
 // Minimalni oblik /mapa/nivo/:nivo odgovora — samo polja potrebna za gate
 // otključavanja lekcije (ista logika kao mapa, vidi @/lib/lekcija-unlock).
 interface MapaUnlockData {
-  lekcije: { id: number; redoslijed: number }[];
+  lekcije: { id: number; redoslijed: number; uvjetiIds?: number[] }[];
   medaljoni: { id: number; posAfterRedoslijed: number; imaKviz?: boolean; isGating?: boolean }[];
   zavrsene: number[];
   osvojeniMedaljoni: number[];
@@ -64,6 +64,8 @@ interface Lekcija {
   contentHtml: string;
   audioSrc?: string;
   predmet?: string | null;
+  /** Lista ID-jeva lekcija koje student mora završiti da bi ova bila dostupna. */
+  uvjetiIds?: number[];
   kvizPitanja?: LekcijaKvizPitanje[] | null;
   prilozi?: Prilog[];
   locked?: boolean;
@@ -2311,6 +2313,12 @@ export default function IlmihalLekcijaPage() {
   const [savingPredmet, setSavingPredmet] = useState(false);
   const [predmetModalOpen, setPredmetModalOpen] = useState(false);
   const [predmetDraft, setPredmetDraft] = useState("");
+  // Preduvjeti (uvjetiIds) admin editor stanja
+  const [uvjetiModalOpen, setUvjetiModalOpen] = useState(false);
+  const [uvjetiDraft, setUvjetiDraft] = useState<number[]>([]);
+  const [savingUvjeti, setSavingUvjeti] = useState(false);
+  const [allLekcijeLista, setAllLekcijeLista] = useState<{ id: number; nivo: number; naslov: string; redoslijed: number }[]>([]);
+  const [loadingLista, setLoadingLista] = useState(false);
   const [kategorijeOpcije, setKategorijeOpcije] = useState<{ slug: string; naziv: string }[]>([]);
   const [loadingKategorije, setLoadingKategorije] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
@@ -2410,6 +2418,58 @@ export default function IlmihalLekcijaPage() {
     }
   };
 
+  // Otvori modal za preduvjete i učitaj listu lekcija za picker (lazy, samo jednom).
+  const otvoriUvjetiModal = async () => {
+    if (!lekcija || !token) return;
+    setUvjetiDraft(lekcija.uvjetiIds ?? []);
+    setUvjetiModalOpen(true);
+    if (allLekcijeLista.length === 0) {
+      setLoadingLista(true);
+      try {
+        const data = await apiRequest<{ id: number; nivo: number; naslov: string; redoslijed: number }[]>(
+          "GET", "/admin/ilmihal/lista", undefined, token,
+        );
+        // Isključi samu sebe da ne može biti preduvjet samoj sebi.
+        setAllLekcijeLista(data.filter((l) => l.id !== lekcija.id));
+      } catch {
+        toast({ title: t("Greška"), description: t("Ne mogu učitati listu lekcija."), variant: "destructive" });
+      } finally {
+        setLoadingLista(false);
+      }
+    }
+  };
+
+  const handleSaveUvjeti = async () => {
+    if (!lekcija || !token) return;
+    setSavingUvjeti(true);
+    try {
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { uvjetiIds: uvjetiDraft }, token);
+      setLekcija((prev) => prev ? { ...prev, uvjetiIds: uvjetiDraft } : prev);
+      toast({
+        title: t("Preduvjeti ažurirani"),
+        description: uvjetiDraft.length > 0
+          ? t("{n} preduvjet(a) postavljeno.", { n: String(uvjetiDraft.length) })
+          : t("Lekcija nema preduvjeta — uvijek je dostupna."),
+      });
+      setUvjetiModalOpen(false);
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Ne mogu spasiti preduvjete."), variant: "destructive" });
+    } finally {
+      setSavingUvjeti(false);
+    }
+  };
+
+  const toggleUvjet = (id: number) => {
+    setUvjetiDraft((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 6) {
+        toast({ title: t("Maksimum 6 preduvjeta"), variant: "destructive" });
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
   const handleSaveNaslov = async () => {
     if (!lekcija || !token) return;
     const novi = naslovDraft.trim();
@@ -2470,20 +2530,21 @@ export default function IlmihalLekcijaPage() {
               (a, b) => a.redoslijed - b.redoslijed,
             );
             const zavrseneSet = new Set(mapa.zavrsene ?? []);
-            const osvojeniSet = new Set(mapa.osvojeniMedaljoni ?? []);
-            const completedCount = lekcijeSorted.filter((l) => zavrseneSet.has(l.id)).length;
-            const unlocked = computeUnlockedCellCount({
-              isPrivileged: false,
-              isGuest: isGuestLike,
-              totalCells: lekcijeSorted.length,
-              medaljoni: mapa.medaljoni ?? [],
-              completedCount,
-              osvojeniSet,
-            });
             const idx = lekcijeSorted.findIndex((l) => l.id === data.id);
-            // Lekcija nije u mapi (npr. medaljon/dodatak van glavnog niza) →
-            // padni na konzervativni redoslijed-limit.
-            blocked = idx >= 0 ? idx >= unlocked : (data.redoslijed ?? 0) > (isGuestLike ? 5 : 10);
+            if (idx >= 0) {
+              // Provjeri preduvjete za ovu lekciju (isti algoritam kao na mapi).
+              blocked = !isLekcijaUnlocked({
+                uvjetiIds: lekcijeSorted[idx].uvjetiIds ?? [],
+                completedIds: zavrseneSet,
+                isPrivileged: false,
+                isGuest: isGuestLike,
+                index: idx,
+              });
+            } else {
+              // Lekcija nije u mapi (npr. medaljon/dodatak van glavnog niza) →
+              // konzervativni fallback po redoslijedu.
+              blocked = (data.redoslijed ?? 0) > (isGuestLike ? 5 : 10);
+            }
           } catch {
             // Mapa nedostupna → konzervativni fallback (stari limit).
             blocked = (data.redoslijed ?? 0) > (isGuestLike ? 5 : 10);
@@ -2944,10 +3005,85 @@ export default function IlmihalLekcijaPage() {
               {savingPredmet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PenLine className="w-3.5 h-3.5" />}
               {t("Predmet:")} {lekcija.predmet || "—"}
             </button>
+            <button onClick={otvoriUvjetiModal} disabled={savingUvjeti}
+              title={t("Postavi preduvjete — lekcije koje učenik mora završiti da bi ova bila dostupna")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors disabled:opacity-50">
+              {savingUvjeti ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+              {t("Preduvjeti:")} {(lekcija.uvjetiIds ?? []).length > 0 ? (lekcija.uvjetiIds ?? []).length : "—"}
+            </button>
             <button onClick={() => setShowEditor(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
               <FilePen className="w-3.5 h-3.5" /> {t("Uredi sadržaj")}
             </button>
+          </div>
+        )}
+
+        {/* Preduvjeti modal (admin) — odabir do 6 lekcija koje učenik mora završiti */}
+        {uvjetiModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            onClick={() => !savingUvjeti && setUvjetiModalOpen(false)}>
+            <div className="bg-white rounded-2xl p-5 w-full max-w-md shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-extrabold text-base text-foreground mb-1">{t("Preduvjeti lekcije")}</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                {t("Učenik mora završiti odabrane lekcije da bi ova postala dostupna. Maksimalno 6 preduvjeta. Ostavi prazno da bude uvijek dostupna.")}
+              </p>
+              {uvjetiDraft.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {uvjetiDraft.map((id) => {
+                    const l = allLekcijeLista.find((x) => x.id === id);
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 text-xs font-semibold">
+                        {l ? `Nivo ${l.nivo} / ${l.redoslijed}. ${l.naslov.slice(0, 28)}` : `#${id}`}
+                        <button onClick={() => toggleUvjet(id)} className="hover:text-red-600 transition-colors">×</button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="flex-1 overflow-y-auto border border-border rounded-xl divide-y divide-border min-h-0 mb-4">
+                {loadingLista ? (
+                  <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+                ) : allLekcijeLista.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-muted-foreground">{t("Nema dostupnih lekcija.")}</div>
+                ) : (
+                  [1, 2, 3].flatMap((nv) => {
+                    const nivoLekcije = allLekcijeLista.filter((l) => l.nivo === nv);
+                    if (nivoLekcije.length === 0) return [];
+                    return [
+                      <div key={`header-${nv}`} className="px-3 py-1.5 bg-gray-50 text-xs font-bold text-muted-foreground sticky top-0">
+                        {t("Nivo {nivo}", { nivo: String(nv) })}
+                      </div>,
+                      ...nivoLekcije.map((l) => {
+                        const isSelected = uvjetiDraft.includes(l.id);
+                        const isDisabled = !isSelected && uvjetiDraft.length >= 6;
+                        return (
+                          <button key={l.id} onClick={() => toggleUvjet(l.id)} disabled={isDisabled}
+                            className={`w-full text-left flex items-center gap-3 px-3 py-2 transition-colors ${isSelected ? "bg-orange-50" : isDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50"}`}>
+                            <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"}`}>
+                              {isSelected && <span className="text-white text-[10px] font-black">✓</span>}
+                            </div>
+                            <span className="text-sm text-foreground">
+                              <span className="text-muted-foreground text-xs mr-1">{l.redoslijed}.</span>
+                              {l.naslov}
+                            </span>
+                          </button>
+                        );
+                      }),
+                    ];
+                  })
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setUvjetiModalOpen(false)} disabled={savingUvjeti}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+                  {t("Odustani")}
+                </button>
+                <button onClick={handleSaveUvjeti} disabled={savingUvjeti || loadingLista}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  {savingUvjeti ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {t("Sačuvaj")}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

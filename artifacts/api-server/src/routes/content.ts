@@ -257,50 +257,21 @@ router.get("/ilmihal/:slug", async (req, res) => {
               }
             }
           }
-          // 2) Prethodna etapa istog nivoa (medaljon sa posAfterRedoslijed < lekcija.redoslijed).
+          // 2) Preduvjeti (uvjetiIds) — lekcija je zaključana dok student ne završi
+          // sve lekcije navedene u listi preduvjeta. Prazna lista = uvijek otključano.
+          // Identična logika je na frontendu (isLekcijaUnlocked u lekcija-unlock.ts).
           if (!lockedReason) {
-            const medaljoniNivoa = await db
-              .select()
-              .from(medaljoniTable)
-              .where(eq(medaljoniTable.nivo, lekcija.nivo))
-              .orderBy(desc(medaljoniTable.posAfterRedoslijed));
-            // Prethodna etapa po EFEKTIVNOM redoslijedu studenta (najveći
-            // posAfterRedoslijed koji je još uvijek ispod pozicije lekcije).
-            const priorMed = medaljoniNivoa.find(
-              (m) => m.posAfterRedoslijed < effLekcijaPos,
-            );
-            // Task #126: poštuj `is_gating` toggle — ako je etapa
-            // konfigurisana kao non-gating, NE blokiraj sljedeće lekcije.
-            if (priorMed && priorMed.isGating) {
-              const [osvojen] = await db
-                .select({ medaljonId: studentMedaljoniTable.medaljonId })
-                .from(studentMedaljoniTable)
-                .where(and(
-                  eq(studentMedaljoniTable.studentId, studentId),
-                  eq(studentMedaljoniTable.medaljonId, priorMed.id),
-                ))
+            const uvjetiIds = Array.isArray(lekcija.uvjetiIds) ? (lekcija.uvjetiIds as number[]) : [];
+            if (uvjetiIds.length > 0) {
+              const [progRow] = await db
+                .select({ completed: studentProgressTable.completedLessons })
+                .from(studentProgressTable)
+                .where(eq(studentProgressTable.studentId, studentId))
                 .limit(1);
-              const medImaKviz = Array.isArray(priorMed.kvizPitanjaIds)
-                && (priorMed.kvizPitanjaIds as unknown[]).length > 0;
-              let priorPassed = !!osvojen;
-              if (!priorPassed && !medImaKviz) {
-                // Fallback: bez konfigurisanog ispita — prethodne lekcije
-                // do `posAfterRedoslijed` moraju biti gotove.
-                const [progRow] = await db
-                  .select({ completed: studentProgressTable.completedLessons })
-                  .from(studentProgressTable)
-                  .where(eq(studentProgressTable.studentId, studentId))
-                  .limit(1);
-                const doneSet = new Set((progRow?.completed as number[] | undefined) ?? []);
-                const trebaju = regularLekcije.filter(
-                  (l) => (effMap.get(l.id) ?? l.redoslijed) <= priorMed.posAfterRedoslijed,
-                );
-                priorPassed = trebaju.every((l) => doneSet.has(l.id));
-              }
-              if (!priorPassed) {
-                lockedReason = medImaKviz
-                  ? `Položi etapu "${priorMed.naziv}" da otključaš ovu lekciju.`
-                  : `Završi sve lekcije etape "${priorMed.naziv}" da otključaš ovu lekciju.`;
+              const doneSet = new Set((progRow?.completed as number[] | undefined) ?? []);
+              const missingIds = uvjetiIds.filter((id) => !doneSet.has(id));
+              if (missingIds.length > 0) {
+                lockedReason = `Završi preduvjete da otključaš ovu lekciju (${missingIds.length} od ${uvjetiIds.length} nije završeno).`;
               }
             }
           }

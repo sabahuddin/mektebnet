@@ -1,4 +1,12 @@
-// Dijeljena logika otključavanja lekcija (medaljon-blokovi).
+// Dijeljena logika otključavanja lekcija.
+//
+// Nova logika (prerequisiti): svaka lekcija ima listu uvjetiIds — lekcija je
+// otključana tek kad student završi sve navedene preduvjete. Lekcije bez
+// uvjeta (uvjetiIds=[]) su uvijek otključane (nema sekvencijalnog blokera).
+// Gost dobija max 5 lekcija; privilegovani (admin/muallim) sve.
+//
+// Stara logika (computeUnlockedCellCount) ostaje za kompatibilnost s
+// provjerama vrata i etapa, ali NE koristi se za per-lekcija lock.
 //
 // Koriste je OBA gate-a — mapa (nivo1-mapa.tsx) i stranica lekcije
 // (ilmihal-lekcija.tsx) — da bi otključavanje bilo identično. Ako se logika
@@ -33,6 +41,24 @@ export function isEtapaPassed(
 //   - učenik: prvih 10 + 10 po svakoj uzastopno položenoj etapi.
 // NAPOMENA (Task #133): roditelj NIJE privilegovan — pozivaoci ga šalju kao
 // `isGuest: true` (gost), pa dobija prvih 5. Ne vraćaj ga u privilegovane.
+// Per-lekcija provjera otključanosti na osnovu prerequisita (uvjetiIds).
+// Identična logika mora biti i na backend-u (content.ts gate).
+// Vidi .agents/memory/lekcije-dvije-brave.md.
+export function isLekcijaUnlocked(opts: {
+  uvjetiIds: number[];
+  completedIds: Set<number>;
+  isPrivileged: boolean;
+  isGuest: boolean;
+  index: number; // 0-based pozicija u sortiranoj listi
+}): boolean {
+  const { uvjetiIds, completedIds, isPrivileged, isGuest, index } = opts;
+  if (isPrivileged) return true;
+  if (isGuest) return index < 5;
+  // Učenik: otključano ako nema uvjeta ILI su svi uvjeti ispunjeni.
+  if (uvjetiIds.length === 0) return true;
+  return uvjetiIds.every((id) => completedIds.has(id));
+}
+
 export function computeUnlockedCellCount(opts: {
   isPrivileged: boolean;
   isGuest: boolean;

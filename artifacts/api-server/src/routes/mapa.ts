@@ -43,6 +43,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
           slug: ilmihalLekcijeTable.slug,
           naslov: ilmihalLekcijeTable.naslov,
           redoslijed: ilmihalLekcijeTable.redoslijed,
+          uvjetiIds: ilmihalLekcijeTable.uvjetiIds,
         })
         .from(ilmihalLekcijeTable)
         // Isključi medaljon-lekcije (slug `medaljon-nivo{N}-{ord}`) — one NISU

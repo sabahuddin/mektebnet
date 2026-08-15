@@ -1487,6 +1487,27 @@ router.post("/ucenik", async (req, res) => {
   }
 });
 
+// GET /api/admin/ilmihal/lista — kompaktna lista svih lekcija za prerequisit picker
+// (id, nivo, naslov, redoslijed). Mora biti PRIJE router.put("/ilmihal/:id") da
+// Express ne pohvata "lista" kao :id parametar za PUT (različiti HTTP metodi, ali
+// radi jasnoće i za buduće GET /:id endpointe).
+router.get("/ilmihal/lista", async (req, res) => {
+  try {
+    const lekcije = await db
+      .select({
+        id: ilmihalLekcijeTable.id,
+        nivo: ilmihalLekcijeTable.nivo,
+        naslov: ilmihalLekcijeTable.naslov,
+        redoslijed: ilmihalLekcijeTable.redoslijed,
+      })
+      .from(ilmihalLekcijeTable)
+      .orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
+    res.json(lekcije);
+  } catch (err) {
+    res.status(500).json({ error: "Greška pri dohvatu liste lekcija" });
+  }
+});
+
 router.post("/ilmihal", async (req, res) => {
   try {
     const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja } = req.body;
@@ -1506,7 +1527,7 @@ router.post("/ilmihal", async (req, res) => {
 router.put("/ilmihal/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet } = req.body;
+    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds } = req.body;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
     const updates: Record<string, any> = {};
@@ -1537,6 +1558,13 @@ router.put("/ilmihal/:id", async (req, res) => {
     if (contentHtml !== undefined) {
       updates.locked = true;
       updates.lockedNote = "Auto-zaključano pri uređivanju";
+    }
+    if (uvjetiIds !== undefined) {
+      // Prihvati samo integer ID-jeve, max 6 preduvjeta.
+      const ids = Array.isArray(uvjetiIds)
+        ? uvjetiIds.filter((x: unknown) => Number.isInteger(x) && (x as number) > 0).slice(0, 6)
+        : [];
+      updates.uvjetiIds = ids;
     }
     await db.update(ilmihalLekcijeTable).set(updates).where(eq(ilmihalLekcijeTable.id, id));
     res.json({ success: true });

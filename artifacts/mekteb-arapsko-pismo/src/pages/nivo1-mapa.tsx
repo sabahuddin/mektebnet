@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
-import { computeUnlockedCellCount, isEtapaPassed } from "@/lib/lekcija-unlock";
+import { isLekcijaUnlocked, isEtapaPassed } from "@/lib/lekcija-unlock";
 import { Check, Sparkles, X } from "lucide-react";
 
 const mapaPozadinaUrl = `${import.meta.env.BASE_URL}images/mapa/pozadina-pcele.png`;
@@ -14,6 +14,7 @@ interface Lekcija {
   slug: string;
   naslov: string;
   redoslijed: number;
+  uvjetiIds?: number[];
 }
 interface Medaljon {
   id: number;
@@ -159,26 +160,13 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     user?.role === "admin" || user?.role === "muallim";
   const isGuestLike = !user || user?.role === "roditelj";
 
-  // Etapa-based gating: svaki blok od 10 lekcija (lek 11-20, 21-30, ...) je
-  // otključan SAMO ako je prethodna etapa (medaljon) "položena". Etapa se
-  // smatra položenom ako je:
-  //   (a) student osvojio medaljon (kviz položen za etape s ispitom, ili
-  //       legacy claim za one bez ispita), ili
-  //   (b) etapa nema konfigurisan kviz I sve lekcije te etape su završene
-  //       (kompatibilnost — daje "soft" napredak dok admin ne unese pitanja).
-  // isEtapaPassed + unlockedCellCount logika je izdvojena u @/lib/lekcija-unlock
-  // da je stranica lekcije (ilmihal-lekcija.tsx) koristi ISTU — inače mapa
-  // otključa lekciju, a stranica je i dalje blokira (vidi memory:
-  // lekcije-dvije-brave). Task #126: etape koje NISU gating tretiraju se kao
-  // "uvijek prošle" za otključavanje (student ih svejedno može osvojiti).
-  const unlockedCellCount = computeUnlockedCellCount({
-    isPrivileged: isPrivilegedRole,
-    isGuest: isGuestLike,
-    totalCells: TOTAL_CELLS,
-    medaljoni: medaljoniSorted,
-    completedCount,
-    osvojeniSet,
-  });
+  // Per-lekcija otključavanje na osnovu preduvjeta (uvjetiIds).
+  // Svaka lekcija nosi listu ID-jeva koje student mora završiti da bi je
+  // otključao. Lekcije bez preduvjeta (uvjetiIds=[]) su uvijek dostupne
+  // studentu. Gost: max prvih 5; admin/muallim: sve.
+  // isLekcijaUnlocked logika je u @/lib/lekcija-unlock — ista se koristi i na
+  // stranici lekcije (ilmihal-lekcija.tsx) da bi oba gate-a bila sinhronizovana
+  // (vidi .agents/memory/lekcije-dvije-brave.md).
 
   // Snake mapping: logički indeks → (logicalRow, col).
   function rowColFor(i: number): { logicalRow: number; col: number } {
@@ -463,9 +451,15 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
               const { logicalRow, col } = rowColFor(i);
               const displayRow = displayRowFor(logicalRow);
               const isCurrent = i === currentCellIndex;
-              const isLocked = i >= unlockedCellCount;
 
               const lekcija = lekcijeSorted[i];
+              const isLocked = !isLekcijaUnlocked({
+                uvjetiIds: lekcija?.uvjetiIds ?? [],
+                completedIds: zavrseneSet,
+                isPrivileged: isPrivilegedRole,
+                isGuest: isGuestLike,
+                index: i,
+              });
               if (!lekcija) {
                 return (
                   <div
