@@ -7,24 +7,51 @@ import { apiRequest } from "@/lib/api";
 import { isLekcijaUnlocked, isEtapaPassed } from "@/lib/lekcija-unlock";
 import { Check, Sparkles, X, Lock } from "lucide-react";
 
-// Mala kamilica (SVG) — oznaka za preduvjet koji još nije završen
+// Mala kamilica za popup listu preduvjeta
 function ChamomileSvg({ size = 20 }: { size?: number }) {
   const petals = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <svg viewBox="0 0 20 20" width={size} height={size} aria-hidden>
       {petals.map((angle) => (
-        <ellipse
-          key={angle}
-          cx="10" cy="4.2"
-          rx="1.7" ry="3"
-          fill="white"
-          stroke="#d1d5db"
-          strokeWidth="0.5"
-          transform={`rotate(${angle} 10 10)`}
-        />
+        <ellipse key={angle} cx="10" cy="4.2" rx="1.7" ry="3"
+          fill="white" stroke="#d1d5db" strokeWidth="0.5"
+          transform={`rotate(${angle} 10 10)`} />
       ))}
       <circle cx="10" cy="10" r="3.6" fill="#fbbf24" />
       <circle cx="10" cy="10" r="1.8" fill="#f59e0b" />
+    </svg>
+  );
+}
+
+// Velika kamilica za stazu lekcija (dostupne, neprečitane)
+function MapaKamilica({ label, current = false }: { label: number; current?: boolean }) {
+  const petals = [0, 45, 90, 135, 180, 225, 270, 315];
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      className="w-12 h-12 sm:w-16 sm:h-16 drop-shadow-md transition-transform hover:scale-110 active:scale-95"
+      aria-hidden
+    >
+      {/* Latice */}
+      {petals.map((angle) => (
+        <ellipse key={angle} cx="32" cy="10" rx="5.5" ry="10"
+          fill="white" stroke="#e5e7eb" strokeWidth="1"
+          transform={`rotate(${angle} 32 32)`} />
+      ))}
+      {/* Žuta sredina */}
+      <circle cx="32" cy="32" r="14" fill={current ? "#fde047" : "#fbbf24"} />
+      <circle cx="32" cy="32" r="9"  fill={current ? "#facc15" : "#f59e0b"} />
+      {/* Broj lekcije */}
+      <text
+        x="32" y="37"
+        textAnchor="middle"
+        fontSize={label > 99 ? "11" : label > 9 ? "13" : "15"}
+        fontWeight="900"
+        fill="#78350f"
+        style={{ fontFamily: "sans-serif" }}
+      >
+        {label}
+      </text>
     </svg>
   );
 }
@@ -516,24 +543,18 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                     {isCurrent && (
                       <span className="absolute inset-0 rounded-full bg-amber-300 animate-ping opacity-70" />
                     )}
-                    <div
-                      className={`relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-black text-lg sm:text-2xl shadow-lg transition-transform ${
-                        isDone
-                          ? "bg-gradient-to-br from-amber-300 to-amber-500 text-amber-950 ring-2 ring-amber-800 active:scale-95 hover:scale-110"
-                          : isCurrent
-                            ? "bg-gradient-to-br from-yellow-200 to-amber-400 text-amber-950 ring-4 ring-white active:scale-95 hover:scale-110"
-                            : isLocked
-                              ? "bg-gray-300 text-gray-800 ring-2 ring-gray-700"
-                              : "bg-gradient-to-br from-yellow-300 to-amber-400 text-amber-950 ring-2 ring-amber-800 active:scale-95 hover:scale-110"
-                      }`}
-                      style={{
-                        textShadow: isLocked
-                          ? "none"
-                          : "0 1px 0 rgba(255,255,255,0.6), 0 -1px 0 rgba(120,53,15,0.25)",
-                      }}
-                    >
-                      {i + 1}
-                    </div>
+                    {isDone ? (
+                      <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-black text-lg sm:text-2xl shadow-lg bg-gradient-to-br from-amber-300 to-amber-500 text-amber-950 ring-2 ring-amber-800 hover:scale-110 transition-transform"
+                        style={{ textShadow: "0 1px 0 rgba(255,255,255,0.6), 0 -1px 0 rgba(120,53,15,0.25)" }}>
+                        {i + 1}
+                      </div>
+                    ) : isLocked ? (
+                      <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-black text-lg sm:text-2xl shadow-md bg-gray-300 text-gray-500 ring-2 ring-gray-400">
+                        {i + 1}
+                      </div>
+                    ) : (
+                      <MapaKamilica label={i + 1} current={isCurrent} />
+                    )}
                     {isDone && (
                       <span
                         className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500 ring-2 ring-white flex items-center justify-center shadow-md z-10"
