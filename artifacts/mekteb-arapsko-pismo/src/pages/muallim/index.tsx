@@ -3132,12 +3132,12 @@ export default function MuallimPanel() {
                     <div>
                       <div className="bg-white border border-border/50 rounded-2xl p-3">
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
-                          <button onClick={() => setCurrentMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 })}
+                          <button onClick={() => { setCurrentMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 }); setSelectedDate(null); }}
                             className="p-2 hover:bg-muted rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
                           <h3 className="font-extrabold text-lg text-foreground">
                             {monthNames[currentMonth.month]} {currentMonth.year}
                           </h3>
-                          <button onClick={() => setCurrentMonth(p => p.month === 11 ? { year: p.year + 1, month: 0 } : { ...p, month: p.month + 1 })}
+                          <button onClick={() => { setCurrentMonth(p => p.month === 11 ? { year: p.year + 1, month: 0 } : { ...p, month: p.month + 1 }); setSelectedDate(null); }}
                             className="p-2 hover:bg-muted rounded-lg"><ChevronRight className="w-5 h-5" /></button>
                         </div>
 
@@ -3265,13 +3265,65 @@ export default function MuallimPanel() {
                     </div>
 
                     <div className="lg:col-span-2 space-y-4">
+                      {/* Lista označenih datuma — uvijek vidljiva */}
+                      <div className="bg-white border border-border/50 rounded-2xl p-5">
+                        {(() => {
+                          const monthPrefix = `${currentMonth.year}-${String(currentMonth.month+1).padStart(2,"0")}`;
+                          const monthEntries = [...kalendar].filter(e => e.datum.startsWith(monthPrefix)).sort((a, b) => a.datum.localeCompare(b.datum));
+                          if (monthEntries.length === 0) {
+                            return (
+                              <div className="text-center py-6">
+                                <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+                                <p className="text-sm text-muted-foreground">{t("Klikni na dan u kalendaru za detalje")}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{t("Dupli klik označava dan aktivnim tipom")}</p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <>
+                              <h4 className="font-extrabold text-sm text-foreground mb-3">{t("Označeni datumi — ovaj mjesec")}</h4>
+                              <div className="space-y-1.5">
+                                {monthEntries.map(entry => {
+                                  const ts = TIP_COLORS[entry.tip];
+                                  const isActive = selectedDate === entry.datum;
+                                  return (
+                                    <div key={entry.id}
+                                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border cursor-pointer transition-all ${ts?.bg} ${isActive ? `${ts?.border} ring-2 ring-offset-1 ring-primary/40` : ts?.border} hover:opacity-90`}
+                                      onClick={() => { setSelectedDate(isActive ? null : entry.datum); setOpisInput(entry.opis || ''); }}>
+                                      <div className="shrink-0 w-8 text-center">
+                                        <div className={`text-sm font-extrabold leading-tight ${ts?.text}`}>{entry.datum.slice(8)}</div>
+                                        <div className={`text-[10px] leading-tight ${ts?.text} opacity-70`}>{monthNames[parseInt(entry.datum.slice(5,7))-1]?.slice(0,3)}</div>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <span className={`text-xs font-bold ${ts?.text}`}>{ts?.label}</span>
+                                        {entry.opis && <p className={`text-xs ${ts?.text} opacity-80 truncate mt-0.5`}>{entry.opis}</p>}
+                                      </div>
+                                      <button onClick={e => { e.stopPropagation(); deleteKalendarEntry(entry.id); }}
+                                        className="shrink-0 text-red-400 hover:text-red-600 p-0.5 rounded">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Detalj odabranog datuma — prikazan ispod liste */}
                       {selectedDate && (
                         <>
                           <div className="bg-white border border-border/50 rounded-2xl p-5">
-                            <h4 className="font-extrabold text-foreground mb-3 flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-primary" />
-                              {selectedDate}
-                            </h4>
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-extrabold text-foreground flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-primary" />
+                                {selectedDate}
+                              </h4>
+                              <button onClick={() => setSelectedDate(null)} className="text-xs text-muted-foreground hover:text-foreground font-medium px-2 py-1 rounded-lg hover:bg-muted">
+                                ✕ {t("Zatvori")}
+                              </button>
+                            </div>
                             {(() => {
                               const entry = kalendar.find(k => k.datum === selectedDate);
                               return (
@@ -3299,15 +3351,11 @@ export default function MuallimPanel() {
                                       </button>
                                     )}
                                   </div>
-                                  {entry?.tip === "vazan_datum" && entry?.opis && (
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold text-blue-800">
-                                      {entry.opis}
-                                    </div>
-                                  )}
-                                  <input type="text" placeholder={entry?.tip === "vazan_datum" ? t("Naziv važnog datuma") : entry?.tip === "ramazan" ? t("Npr. Ramazan 1446") : t("Opis (opcionalno)")} value={opisInput}
+                                  <textarea placeholder={entry?.tip === "vazan_datum" ? t("Naziv važnog datuma") : entry?.tip === "ramazan" ? t("Npr. Ramazan 1446") : t("Opis (opcionalno)")} value={opisInput}
                                     onChange={e => setOpisInput(e.target.value)}
                                     onBlur={() => { if (entry) saveKalendarEntry(selectedDate, entry.tip, opisInput); }}
-                                    className="w-full border border-border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                                    rows={3}
+                                    className="w-full border border-border rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                                 </div>
                               );
                             })()}
@@ -3340,7 +3388,6 @@ export default function MuallimPanel() {
                                 ))}
                               </div>
                             )}
-
                             {showLekcijaSelect ? (
                               <div className="space-y-2">
                                 <div className="max-h-64 overflow-y-auto border border-border rounded-lg">
@@ -3376,45 +3423,7 @@ export default function MuallimPanel() {
                           </div>
                         </>
                       )}
-                      {!selectedDate && (
-                        <div className="bg-white border border-border/50 rounded-2xl p-5">
-                          {kalendar.length === 0 ? (
-                            <div className="text-center py-6">
-                              <Calendar className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
-                              <p className="text-sm text-muted-foreground">{t("Klikni na dan u kalendaru za detalje")}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{t("Dupli klik označava dan aktivnim tipom")}</p>
-                            </div>
-                          ) : (
-                            <>
-                              <h4 className="font-extrabold text-sm text-foreground mb-3">{t("Označeni datumi — ovaj mjesec")}</h4>
-                              <div className="space-y-1.5">
-                                {[...kalendar].filter(e => e.datum.startsWith(`${currentMonth.year}-${String(currentMonth.month+1).padStart(2,"0")}`)).sort((a, b) => a.datum.localeCompare(b.datum)).map(entry => {
-                                  const ts = TIP_COLORS[entry.tip];
-                                  return (
-                                    <div key={entry.id}
-                                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border cursor-pointer hover:opacity-90 transition-opacity ${ts?.bg} ${ts?.border}`}
-                                      onClick={() => { setSelectedDate(entry.datum); setOpisInput(entry.opis || ''); }}>
-                                      <div className="shrink-0 w-8 text-center">
-                                        <div className={`text-sm font-extrabold leading-tight ${ts?.text}`}>{entry.datum.slice(8)}</div>
-                                        <div className={`text-[10px] leading-tight ${ts?.text} opacity-70`}>{monthNames[parseInt(entry.datum.slice(5,7))-1]?.slice(0,3)}</div>
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <span className={`text-xs font-bold ${ts?.text}`}>{ts?.label}</span>
-                                        {entry.opis && <p className={`text-xs ${ts?.text} opacity-80 truncate mt-0.5`}>{entry.opis}</p>}
-                                      </div>
-                                      <button onClick={e => { e.stopPropagation(); deleteKalendarEntry(entry.id); }}
-                                        className="shrink-0 text-red-400 hover:text-red-600 p-0.5 rounded">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    </div>                    </div>
                   </div>
                 )}
               </motion.div>
