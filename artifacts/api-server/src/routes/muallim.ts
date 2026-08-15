@@ -2642,17 +2642,41 @@ router.post("/print-kartice", async (req, res) => {
       return;
     }
 
-    const profili = await db.select().from(ucenikProfiliTable)
-      .where(and(
-        inArray(ucenikProfiliTable.userId, ucenikIds),
-        eq(ucenikProfiliTable.muallimId, req.user!.userId)
-      ));
+    const userId = req.user!.userId;
+    const ctx = await getMektebCtx(userId);
 
-    if (profili.length === 0) {
+    // Glavni muallim smije printati kartice za sve učenike svog mekteba.
+    // Obični muallim samo za svoje učenike.
+    let allowedIds: number[];
+    if (ctx?.isGlavni && ctx.mektebId) {
+      const muallimDzamata = await db
+        .select({ userId: muallimProfiliTable.userId })
+        .from(muallimProfiliTable)
+        .where(eq(muallimProfiliTable.mektebId, ctx.mektebId));
+      const muallimIds = muallimDzamata.map(m => m.userId);
+      const profili = muallimIds.length > 0
+        ? await db.select({ userId: ucenikProfiliTable.userId })
+            .from(ucenikProfiliTable)
+            .where(and(
+              inArray(ucenikProfiliTable.userId, ucenikIds),
+              inArray(ucenikProfiliTable.muallimId, muallimIds),
+            ))
+        : [];
+      allowedIds = profili.map(p => p.userId);
+    } else {
+      const profili = await db.select({ userId: ucenikProfiliTable.userId })
+        .from(ucenikProfiliTable)
+        .where(and(
+          inArray(ucenikProfiliTable.userId, ucenikIds),
+          eq(ucenikProfiliTable.muallimId, userId),
+        ));
+      allowedIds = profili.map(p => p.userId);
+    }
+
+    if (allowedIds.length === 0) {
       res.status(403).json({ error: "Nemate pristup ovim učenicima" });
       return;
     }
-    const allowedIds = profili.map(p => p.userId);
 
     const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
       .from(usersTable).where(inArray(usersTable.id, allowedIds));

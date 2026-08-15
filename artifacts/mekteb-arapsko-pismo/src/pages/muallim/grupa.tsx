@@ -389,23 +389,23 @@ export default function GrupaPage() {
   @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Nunito', sans-serif; }
-  @media print { @page { margin: 10mm; } }
-  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media print { @page { margin: 8mm; } }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .card {
-    border: 2px solid #14b8a6; border-radius: 16px; padding: 16px;
+    border: 2px solid #14b8a6; border-radius: 12px; padding: 10px;
     page-break-inside: avoid; background: #f0fdfa;
   }
-  .logo { text-align: center; font-size: 18px; font-weight: 800; color: #0d9488; margin-bottom: 10px; }
-  .name { font-size: 15px; font-weight: 800; color: #134e4a; margin-bottom: 6px; }
-  .section-title { font-size: 11px; font-weight: 800; color: #0d9488; text-transform: uppercase; letter-spacing: 0.5px; margin: 10px 0 4px; }
-  .field { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed #99f6e4; gap: 8px; }
+  .logo { text-align: center; font-size: 14px; font-weight: 800; color: #0d9488; margin-bottom: 5px; }
+  .name { font-size: 13px; font-weight: 800; color: #134e4a; margin-bottom: 3px; }
+  .section-title { font-size: 10px; font-weight: 800; color: #0d9488; text-transform: uppercase; letter-spacing: 0.5px; margin: 6px 0 2px; }
+  .field { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; border-bottom: 1px dashed #99f6e4; gap: 6px; }
   .label { color: #5eead4; font-weight: 600; flex-shrink: 0; }
   .value { color: #134e4a; font-weight: 800; font-family: monospace; text-align: right; word-break: break-all; }
-  .parent-block { background: #fef3c7; border: 1px dashed #f59e0b; border-radius: 10px; padding: 8px 10px; margin-top: 8px; }
+  .parent-block { background: #fef3c7; border: 1px dashed #f59e0b; border-radius: 8px; padding: 5px 8px; margin-top: 5px; }
   .parent-block .field { border-bottom-color: #fde68a; }
   .parent-block .label { color: #b45309; }
   .parent-block .value { color: #78350f; }
-  .grupa-info { text-align: center; color: #5eead4; font-size: 10px; margin-top: 8px; }
+  .grupa-info { text-align: center; color: #5eead4; font-size: 9px; margin-top: 5px; }
 </style></head><body>
 <div class="grid">${cards.map(c => `
   <div class="card">
