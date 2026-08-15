@@ -3606,6 +3606,8 @@ router.get("/statistika-sadrzaja", async (_req, res) => {
         l.naslov,
         l.nivo,
         l.slug,
+        l.redoslijed,
+        COALESCE(l.uvjeti_ids, '[]'::jsonb) AS uvjeti_ids,
         COALESCE(c.zavrseno, 0)::int AS zavrseno,
         COALESCE(o.avg_ocjena, 0)::float AS avg_ocjena,
         COALESCE(o.broj_ocjena, 0)::int AS broj_ocjena

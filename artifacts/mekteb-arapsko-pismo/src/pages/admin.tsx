@@ -8,7 +8,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2, Languages
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2, Languages, Lock, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
@@ -1436,6 +1436,66 @@ export default function AdminPage() {
   const [statLoading, setStatLoading] = useState(false);
   const [statSubTab, setStatSubTab] = useState<"lekcije" | "prilozi" | "kvizovi">("lekcije");
   const [statSort, setStatSort] = useState<{ field: string; dir: "asc" | "desc" }>({ field: "zavrseno", dir: "desc" });
+  // Preduvjeti modal (admin panel → Lekcije tab)
+  const [preduvjetiRow, setPreduvjetiRow] = useState<any | null>(null);
+  const [preduvjetiDraft, setPreduvjetiDraft] = useState<number[]>([]);
+  const [savingPreduvjeti, setSavingPreduvjeti] = useState(false);
+  const [allLekcijeListaAdmin, setAllLekcijeListaAdmin] = useState<{ id: number; nivo: number; naslov: string; redoslijed: number }[]>([]);
+  const [loadingListaAdmin, setLoadingListaAdmin] = useState(false);
+
+  const otvoriPreduvjetiAdmin = async (row: any) => {
+    setPreduvjetiRow(row);
+    setPreduvjetiDraft(Array.isArray(row.uvjeti_ids) ? row.uvjeti_ids : []);
+    if (allLekcijeListaAdmin.length === 0) {
+      setLoadingListaAdmin(true);
+      try {
+        const data = await apiRequest<{ id: number; nivo: number; naslov: string; redoslijed: number }[]>(
+          "GET", "/admin/ilmihal/lista", undefined, token,
+        );
+        setAllLekcijeListaAdmin(data);
+      } catch {
+        toast({ title: t("Greška"), description: t("Ne mogu učitati listu lekcija."), variant: "destructive" });
+      } finally {
+        setLoadingListaAdmin(false);
+      }
+    }
+  };
+
+  const handleSavePreduvjetiAdmin = async () => {
+    if (!preduvjetiRow || !token) return;
+    setSavingPreduvjeti(true);
+    try {
+      await apiRequest("PUT", `/admin/ilmihal/${preduvjetiRow.id}`, { uvjetiIds: preduvjetiDraft }, token);
+      setStatSadrzaja((prev) => ({
+        ...prev,
+        lekcije: prev.lekcije.map((l) =>
+          l.id === preduvjetiRow.id ? { ...l, uvjeti_ids: preduvjetiDraft } : l,
+        ),
+      }));
+      toast({
+        title: t("Preduvjeti ažurirani"),
+        description: preduvjetiDraft.length > 0
+          ? t("{n} preduvjet(a) postavljeno.", { n: String(preduvjetiDraft.length) })
+          : t("Lekcija nema preduvjeta."),
+      });
+      setPreduvjetiRow(null);
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Ne mogu spasiti preduvjete."), variant: "destructive" });
+    } finally {
+      setSavingPreduvjeti(false);
+    }
+  };
+
+  const togglePreduvjetAdmin = (id: number) => {
+    setPreduvjetiDraft((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 6) {
+        toast({ title: t("Maksimum 6 preduvjeta"), variant: "destructive" });
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
 
   const loadStatistikaSadrzaja = async () => {
     setStatLoading(true);
@@ -2331,29 +2391,113 @@ export default function AdminPage() {
                   );
                   if (statSubTab === "lekcije") {
                     return (
+                      <>
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border/40 bg-muted/30">
                             <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="naslov" label={t("Lekcija")} /></th>
                             <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="nivo" label={t("Nivo")} /></th>
+                            <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground">{t("Preduvjeti")}</th>
                             <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="zavrseno" label={t("Završili")} /></th>
                             <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="avg_ocjena" label={t("Prosj. ocjena")} /></th>
                             <th className="text-left px-4 py-2.5 font-extrabold text-xs text-muted-foreground"><SortBtn f="broj_ocjena" label={t("Br. ocjena")} /></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {sorted.map((r: any) => (
+                          {sorted.map((r: any) => {
+                            const uvjetiCount = Array.isArray(r.uvjeti_ids) ? r.uvjeti_ids.length : 0;
+                            return (
                             <tr key={r.id} className="border-b border-border/20 hover:bg-muted/20">
-                              <td className="px-4 py-3 font-bold text-foreground">{r.naslov}</td>
+                              <td className="px-4 py-3 font-bold text-foreground">
+                                <a href={`/ilmihal/${r.slug}`} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 hover:text-primary hover:underline transition-colors">
+                                  {r.naslov}
+                                  <ExternalLink className="w-3 h-3 text-muted-foreground opacity-60 flex-shrink-0" />
+                                </a>
+                              </td>
                               <td className="px-4 py-3 text-xs text-muted-foreground">N{r.nivo ?? "-"}</td>
+                              <td className="px-4 py-3">
+                                <button onClick={() => otvoriPreduvjetiAdmin(r)}
+                                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition-colors ${uvjetiCount > 0 ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                                  title={t("Uredi preduvjete ove lekcije")}>
+                                  <Lock className="w-3 h-3" />
+                                  {uvjetiCount > 0 ? uvjetiCount : "—"}
+                                </button>
+                              </td>
                               <td className="px-4 py-3 text-sm tabular-nums">{r.zavrseno}</td>
                               <td className="px-4 py-3 text-sm tabular-nums">{r.broj_ocjena > 0 ? `${Number(r.avg_ocjena).toFixed(2)} 🐝` : "—"}</td>
                               <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.broj_ocjena}</td>
                             </tr>
-                          ))}
-                          {sorted.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("Nema podataka")}</td></tr>}
+                            );
+                          })}
+                          {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">{t("Nema podataka")}</td></tr>}
                         </tbody>
                       </table>
+                      {/* Preduvjeti modal (admin panel) */}
+                      {preduvjetiRow && (
+                        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+                          onClick={() => !savingPreduvjeti && setPreduvjetiRow(null)}>
+                          <div className="bg-white rounded-2xl p-5 w-full max-w-md shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="font-extrabold text-base mb-1">{t("Preduvjeti lekcije")}</h3>
+                            <p className="text-xs text-muted-foreground mb-1 font-semibold">{preduvjetiRow.naslov}</p>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              {t("Odaberi lekcije koje učenik mora završiti da bi ova postala dostupna. Maksimalno 6.")}
+                            </p>
+                            {preduvjetiDraft.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mb-3">
+                                {preduvjetiDraft.map((id) => {
+                                  const l = allLekcijeListaAdmin.find((x) => x.id === id);
+                                  return (
+                                    <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 text-xs font-semibold">
+                                      {l ? `N${l.nivo}/${l.redoslijed}. ${l.naslov.slice(0, 24)}` : `#${id}`}
+                                      <button onClick={() => togglePreduvjetAdmin(id)} className="hover:text-red-600">×</button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <div className="flex-1 overflow-y-auto border border-border rounded-xl divide-y divide-border min-h-0 mb-4">
+                              {loadingListaAdmin ? (
+                                <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+                              ) : (
+                                [1, 2, 3].flatMap((nv) => {
+                                  const nivoLekcije = allLekcijeListaAdmin.filter((l) => l.nivo === nv && l.id !== preduvjetiRow.id);
+                                  if (nivoLekcije.length === 0) return [];
+                                  return [
+                                    <div key={`h-${nv}`} className="px-3 py-1.5 bg-gray-50 text-xs font-bold text-muted-foreground sticky top-0">
+                                      {t("Nivo {nivo}", { nivo: String(nv) })}
+                                    </div>,
+                                    ...nivoLekcije.map((l) => {
+                                      const isSelected = preduvjetiDraft.includes(l.id);
+                                      const isDisabled = !isSelected && preduvjetiDraft.length >= 6;
+                                      return (
+                                        <button key={l.id} onClick={() => togglePreduvjetAdmin(l.id)} disabled={isDisabled}
+                                          className={`w-full text-left flex items-center gap-3 px-3 py-2 transition-colors ${isSelected ? "bg-orange-50" : isDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-50"}`}>
+                                          <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center ${isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"}`}>
+                                            {isSelected && <span className="text-white text-[10px] font-black">✓</span>}
+                                          </div>
+                                          <span className="text-sm"><span className="text-muted-foreground text-xs mr-1">{l.redoslijed}.</span>{l.naslov}</span>
+                                        </button>
+                                      );
+                                    }),
+                                  ];
+                                })
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => setPreduvjetiRow(null)} disabled={savingPreduvjeti}
+                                className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+                                {t("Odustani")}
+                              </button>
+                              <button onClick={handleSavePreduvjetiAdmin} disabled={savingPreduvjeti || loadingListaAdmin}
+                                className="flex-1 px-3 py-2 rounded-xl text-sm font-bold bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                                {savingPreduvjeti ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {t("Sačuvaj")}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      </>
                     );
                   }
                   if (statSubTab === "prilozi") {
