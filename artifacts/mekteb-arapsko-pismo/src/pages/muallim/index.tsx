@@ -3423,7 +3423,7 @@ export default function MuallimPanel() {
                           </div>
                         </>
                       )}
-                    </div>                    </div>
+                    </div>
                   </div>
                 )}
               </motion.div>
