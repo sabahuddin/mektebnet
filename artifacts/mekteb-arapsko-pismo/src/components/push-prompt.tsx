@@ -68,7 +68,18 @@ export function PushPrompt() {
 
     // Mali delay da banner ne iskoči odmah na home — daje korisniku vremena
     // da se snađe nakon login-a.
-    const t = setTimeout(() => setVisible(true), 4000);
+    const t = setTimeout(() => {
+      // Re-check u trenutku prikaza: ako je dozvola u međuvremenu data
+      // (npr. kroz OneSignal-ov vlastiti "Subscribe" prompt), ne prikazuj
+      // banner — tiho dovrši registraciju u pozadini.
+      if (!isCapacitorNative() && typeof Notification !== "undefined"
+          && Notification.permission === "granted") {
+        markPrompted();
+        requestPushPermission().catch(() => {});
+        return;
+      }
+      setVisible(true);
+    }, 4000);
     return () => clearTimeout(t);
   }, [isAuthenticated]);
 
