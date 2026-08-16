@@ -5018,12 +5018,12 @@ router.post("/ucenik/:id/zvjezdice", async (req, res) => {
       res.status(400).json({ error: "tip mora biti 'pozitivna' ili 'negativna'" });
       return;
     }
-    const [row] = await db.execute(sql`
+    const result = await db.execute(sql`
       INSERT INTO zvjezdice_log (ucenik_id, muallim_id, tip, razlog)
       VALUES (${ucenikId}, ${req.user!.userId}, ${tip}, ${razlog || null})
       RETURNING id, ucenik_id, muallim_id, tip, razlog, created_at
     `);
-    res.status(201).json(row);
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error("zvjezdice add error:", err);
     res.status(500).json({ error: "Greška servera" });
@@ -5034,7 +5034,7 @@ router.post("/ucenik/:id/zvjezdice", async (req, res) => {
 router.get("/ucenik/:id/zvjezdice", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.id);
-    const entries = await db.execute(sql`
+    const entriesResult = await db.execute(sql`
       SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
              u.display_name AS muallim_ime
       FROM zvjezdice_log zl
@@ -5043,16 +5043,16 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
       ORDER BY zl.created_at DESC
       LIMIT 100
     `);
-    const totals = await db.execute(sql`
+    const totalsResult = await db.execute(sql`
       SELECT
         COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
         COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
       FROM zvjezdice_log
       WHERE ucenik_id = ${ucenikId}
     `);
-    const t = (totals as any[])[0] || { pozitivne: "0", negativne: "0" };
+    const t = (totalsResult.rows[0] as any) || { pozitivne: "0", negativne: "0" };
     res.json({
-      entries,
+      entries: entriesResult.rows,
       pozitivne: parseInt(t.pozitivne) || 0,
       negativne: parseInt(t.negativne) || 0,
     });
@@ -5066,11 +5066,10 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
 router.get("/grupa/:id/zvjezdice-summary", async (req, res) => {
   try {
     const grupaId = parseInt(req.params.id);
-    // Učenici ove grupe
     const ucenici = await db.execute(sql`
       SELECT user_id FROM ucenik_profili WHERE grupa_id = ${grupaId}
     `);
-    const ids = (ucenici as any[]).map(u => u.user_id);
+    const ids = ucenici.rows.map((u: any) => u.user_id);
     if (ids.length === 0) { res.json([]); return; }
     const rows = await db.execute(sql`
       SELECT
@@ -5081,7 +5080,7 @@ router.get("/grupa/:id/zvjezdice-summary", async (req, res) => {
       WHERE ucenik_id = ANY(${ids}::integer[])
       GROUP BY ucenik_id
     `);
-    res.json(rows);
+    res.json(rows.rows);
   } catch (err) {
     console.error("zvjezdice summary error:", err);
     res.status(500).json({ error: "Greška servera" });
