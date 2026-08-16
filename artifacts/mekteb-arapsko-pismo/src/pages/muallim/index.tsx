@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw
+  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw, Bell
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
 import { useLanguage } from "@/context/language";
+import { PushToggle } from "@/components/push-toggle";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -3788,6 +3789,14 @@ export default function MuallimPanel() {
                       {t("Promijeni šifru")}
                     </Button>
                   </div>
+                </div>
+
+                {/* Push obavijesti */}
+                <div className="bg-white border border-border/50 rounded-2xl p-5">
+                  <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-primary" /> {t("Obavijesti")}
+                  </h3>
+                  <PushToggle />
                 </div>
 
                 {/* Bulk reset šifri — samo za glavnog muallima */}
