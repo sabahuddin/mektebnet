@@ -164,6 +164,8 @@ export default function GrupaPage() {
   const [zvjezdiceSummary, setZvjezdiceSummary] = useState<Map<number, { pozitivne: number; negativne: number }>>(new Map());
   // Inline Ponašanje panel — otvoren za kojeg učenika
   const [ponasanjeOpenId, setPonasanjeOpenId] = useState<number | null>(null);
+  const [pozDropOpen, setPozDropOpen] = useState<number | null>(null);
+  const [negDropOpen, setNegDropOpen] = useState<number | null>(null);
   // Kategorije zvjezdica definisane od admina
   const [zvjezdiceKategorije, setZvjezdiceKategorije] = useState<{id:number; tip:string; naziv:string}[]>([]);
 
@@ -985,40 +987,69 @@ export default function GrupaPage() {
                       </button>
                     </div>
 
-                    {/* Inline Ponašanje panel — kategorije za dodavanje zvjezdica */}
+                    {/* Inline Ponašanje panel — dva dugmeta s dropdown-om po kategorijama */}
                     {ponasanjeOpenId === u.id && (() => {
                       const pozKat = zvjezdiceKategorije.filter(k => k.tip === "pozitivna");
                       const negKat = zvjezdiceKategorije.filter(k => k.tip === "negativna");
                       return (
-                        <div className="mt-2 pt-2 border-t border-border/30 space-y-2">
-                          <div>
-                            <p className="text-[10px] font-extrabold text-amber-600 mb-1">⭐ {t("Pozitivne")}</p>
-                            <div className="flex flex-wrap gap-1">
-                              <button onClick={() => addZvjezdica(u.id, "pozitivna")}
-                                className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold hover:bg-amber-100 border border-amber-200 transition-colors">
-                                +⭐
+                        <div className="mt-2 pt-2 border-t border-border/30">
+                          <div className="flex gap-2 justify-center">
+                            {/* ⭐ Pozitivna */}
+                            <div className="relative">
+                              <button
+                                onClick={() => setPozDropOpen(pozDropOpen === u.id ? null : u.id)}
+                                className="flex flex-col items-center gap-0.5 px-6 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors font-bold text-sm"
+                              >
+                                <span className="text-xl leading-none">⭐</span>
+                                <span className="text-[10px] font-extrabold">{t("Pozitivna")}</span>
                               </button>
-                              {pozKat.map(k => (
-                                <button key={k.id} onClick={() => addZvjezdica(u.id, "pozitivna", k.id)}
-                                  className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold hover:bg-amber-100 border border-amber-200 transition-colors">
-                                  ⭐ {k.naziv}
-                                </button>
-                              ))}
+                              {pozDropOpen === u.id && (
+                                <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                                  <button
+                                    onClick={() => { addZvjezdica(u.id, "pozitivna"); setPozDropOpen(null); }}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-700 font-medium border-b border-border/40"
+                                  >
+                                    ⭐ {t("Bez kategorije")}
+                                  </button>
+                                  {pozKat.map(k => (
+                                    <button key={k.id}
+                                      onClick={() => { addZvjezdica(u.id, "pozitivna", k.id); setPozDropOpen(null); }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-700"
+                                    >
+                                      ⭐ {k.naziv}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-extrabold text-gray-600 mb-1">★ {t("Negativne")}</p>
-                            <div className="flex flex-wrap gap-1">
-                              <button onClick={() => addZvjezdica(u.id, "negativna")}
-                                className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-[10px] font-bold hover:bg-gray-200 border border-gray-200 transition-colors">
-                                +★
+
+                            {/* ★ Negativna */}
+                            <div className="relative">
+                              <button
+                                onClick={() => setNegDropOpen(negDropOpen === u.id ? null : u.id)}
+                                className="flex flex-col items-center gap-0.5 px-6 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-gray-700 hover:bg-gray-200 transition-colors font-bold text-sm"
+                              >
+                                <span className="text-xl leading-none">★</span>
+                                <span className="text-[10px] font-extrabold">{t("Negativna")}</span>
                               </button>
-                              {negKat.map(k => (
-                                <button key={k.id} onClick={() => addZvjezdica(u.id, "negativna", k.id)}
-                                  className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-[10px] font-bold hover:bg-gray-200 border border-gray-200 transition-colors">
-                                  ★ {k.naziv}
-                                </button>
-                              ))}
+                              {negDropOpen === u.id && (
+                                <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                                  <button
+                                    onClick={() => { addZvjezdica(u.id, "negativna"); setNegDropOpen(null); }}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-700 font-medium border-b border-border/40"
+                                  >
+                                    ★ {t("Bez kategorije")}
+                                  </button>
+                                  {negKat.map(k => (
+                                    <button key={k.id}
+                                      onClick={() => { addZvjezdica(u.id, "negativna", k.id); setNegDropOpen(null); }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                                    >
+                                      ★ {k.naziv}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
