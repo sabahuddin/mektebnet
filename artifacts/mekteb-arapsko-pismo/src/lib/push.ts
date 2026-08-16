@@ -108,8 +108,10 @@ export async function initOneSignal(): Promise<void> {
       await OneSignal.init({
         appId,
         allowLocalhostAsSecureOrigin: true,
+        // App je PWA — VitePWA-in workbox SW drži scope "/". OneSignal worker
+        // MORA na poseban scope, inače se dva SW-a pregaze i subscribe pada.
         serviceWorkerPath: "OneSignalSDKWorker.js",
-        serviceWorkerParam: { scope: "/" },
+        serviceWorkerParam: { scope: "/push/onesignal/" },
         // OneSignal type expects full notifyButton text dict even when disabled —
         // cast to any since we explicitly set enable:false (button never renders).
         notifyButton: { enable: false } as any,
