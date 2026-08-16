@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import {
   MessageSquare, Send, Loader2, InboxIcon, Users,
   CheckSquare, Square, Search, X, ChevronLeft, Inbox, SendHorizonal,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,6 +65,9 @@ function UnreadBadge({ n }: { n: number }) {
   );
 }
 
+const ROLE_ORDER = ["muallim", "admin", "ucenik", "roditelj"];
+const ROLE_LABELS: Record<string, string> = { muallim: "Muallimi", admin: "Admini", ucenik: "Učenici", roditelj: "Roditelji" };
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function PorukePage() {
@@ -81,9 +85,12 @@ export default function PorukePage() {
   const [isSending, setIsSending] = useState(false);
   const [tekst, setTekst] = useState("");
 
-  // Active top tab: "nova" | "primljene" | "poslane" | "bulk" | "muallimi" | "admini" | "grupa:X"
+  // Active top tab: "nova" | "primljene" | "poslane" | "bulk"
   const [activeTab, setActiveTab] = useState("primljene");
-  const [contactSearch, setContactSearch] = useState("");
+
+  // Left panel filters
+  const [grupaFilter, setGrupaFilter] = useState<string>("");
+  const [leftSearch, setLeftSearch] = useState("");
 
   // Bulk
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -117,12 +124,11 @@ export default function PorukePage() {
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [poruke]);
 
   useEffect(() => {
-    if (activeTab === "nova") { setContactSearch(""); setTimeout(() => searchRef.current?.focus(), 80); }
+    if (activeTab === "nova") { setLeftSearch(""); setTimeout(() => searchRef.current?.focus(), 80); }
   }, [activeTab]);
 
   // ── Derived data ───────────────────────────────────────────────────────────
 
-  // Map userId → razgovor for quick lookup
   const razgovorMap = useMemo(() => {
     const m = new Map<number, Razgovor>();
     for (const r of razgovori) m.set(r.saKorisnikom.id, r);
@@ -132,97 +138,65 @@ export default function PorukePage() {
   const ukupnoNeprocitano = useMemo(() =>
     razgovori.reduce((s, r) => s + r.neprocitano, 0), [razgovori]);
 
-  // Build tab list from actual contacts
+  // Simple top tabs — no per-group tabs
   const tabs = useMemo(() => {
     const list: { key: string; label: string; icon?: React.ReactNode; separator?: boolean }[] = [
       { key: "nova", label: t("Nova poruka"), icon: <MessageSquare className="w-3.5 h-3.5" /> },
       { key: "primljene", label: t("Primljene"), icon: <Inbox className="w-3.5 h-3.5" /> },
       { key: "poslane", label: t("Poslane"), icon: <SendHorizonal className="w-3.5 h-3.5" /> },
     ];
-
-    const hasMuallimi = kontakti.some(k => k.role === "muallim");
-    const hasAdmini = kontakti.some(k => k.role === "admin");
-    const allGrupe = [...new Set(kontakti.flatMap(k => getGrupe(k)))].sort((a, b) => a.localeCompare(b, "bs"));
-
-    if (hasMuallimi || hasAdmini || allGrupe.length > 0) {
-      list.push({ key: "__sep1", label: "", separator: true });
-    }
-    if (hasMuallimi) list.push({ key: "muallimi", label: t("Muallimi") });
-    if (hasAdmini) list.push({ key: "admini", label: t("Admini") });
-    for (const g of allGrupe) list.push({ key: `grupa:${g}`, label: g });
-
     if (canBulkSend) {
-      list.push({ key: "__sep2", label: "", separator: true });
+      list.push({ key: "__sep1", label: "", separator: true });
       list.push({ key: "bulk", label: t("Pošalji više"), icon: <Users className="w-3.5 h-3.5" /> });
     }
     return list;
-  }, [kontakti, canBulkSend, t]);
+  }, [canBulkSend, t]);
 
-  // Unread count per tab
-  const unreadPerTab = useMemo(() => {
-    const m: Record<string, number> = { primljene: 0 };
-    for (const r of razgovori) {
-      if (!r.neprocitano) continue;
-      m.primljene = (m.primljene || 0) + r.neprocitano;
-      // Assign to group tabs
-      const k = r.saKorisnikom;
-      if (k.role === "muallim") m.muallimi = (m.muallimi || 0) + r.neprocitano;
-      if (k.role === "admin") m.admini = (m.admini || 0) + r.neprocitano;
-      for (const g of getGrupe(k)) {
-        m[`grupa:${g}`] = (m[`grupa:${g}`] || 0) + r.neprocitano;
-      }
-    }
-    return m;
-  }, [razgovori]);
+  // Unread counts
+  const unreadPrimljene = useMemo(() =>
+    razgovori.reduce((s, r) => s + r.neprocitano, 0), [razgovori]);
 
-  // Left panel items — changes based on activeTab
-  const leftContent = useMemo(() => {
+  // Groups for the dropdown (visible only to muallim/admin)
+  const grupeList = useMemo(() =>
+    [...new Set(kontakti.flatMap(k => getGrupe(k)))].sort((a, b) => a.localeCompare(b, "bs")),
+    [kontakti]
+  );
+
+  // Left panel: always shows accordion sections grouped by role
+  const leftSections = useMemo(() => {
+    type Item = { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number };
+    let items: Item[] = [];
+
     if (activeTab === "primljene") {
-      return razgovori
+      items = razgovori
         .filter(r => r.zadnjaPoruka.posiljateljId !== user?.id)
         .map(r => ({ korisnik: r.saKorisnikom, lastMsg: r.zadnjaPoruka.sadrzaj, lastTime: r.zadnjaPoruka.createdAt, unread: r.neprocitano }));
-    }
-    if (activeTab === "poslane") {
-      return razgovori
+    } else if (activeTab === "poslane") {
+      items = razgovori
         .filter(r => r.zadnjaPoruka.posiljateljId === user?.id)
         .map(r => ({ korisnik: r.saKorisnikom, lastMsg: r.zadnjaPoruka.sadrzaj, lastTime: r.zadnjaPoruka.createdAt, unread: r.neprocitano }));
+    } else if (activeTab === "nova") {
+      let filtered = kontakti;
+      if (grupaFilter) filtered = filtered.filter(k => getGrupe(k).includes(grupaFilter));
+      if (leftSearch.trim()) filtered = filtered.filter(k => k.displayName.toLowerCase().includes(leftSearch.toLowerCase()));
+      items = sortAZ(filtered).map(k => {
+        const r = razgovorMap.get(k.id);
+        return { korisnik: k, lastMsg: r?.zadnjaPoruka.sadrzaj, lastTime: r?.zadnjaPoruka.createdAt, unread: r?.neprocitano || 0 };
+      });
     }
-    // For contact-based tabs, merge with razgovorMap for unread info
-    let filtered: Korisnik[] = [];
-    if (activeTab === "nova") {
-      filtered = kontakti;
-      if (contactSearch.trim()) filtered = filtered.filter(k => k.displayName.toLowerCase().includes(contactSearch.toLowerCase()));
-    } else if (activeTab === "muallimi") {
-      filtered = kontakti.filter(k => k.role === "muallim");
-    } else if (activeTab === "admini") {
-      filtered = kontakti.filter(k => k.role === "admin");
-    } else if (activeTab.startsWith("grupa:")) {
-      const grp = activeTab.slice("grupa:".length);
-      filtered = kontakti.filter(k => getGrupe(k).includes(grp));
-    }
-    return sortAZ(filtered).map(k => {
-      const r = razgovorMap.get(k.id);
-      return { korisnik: k, lastMsg: r?.zadnjaPoruka.sadrzaj, lastTime: r?.zadnjaPoruka.createdAt, unread: r?.neprocitano || 0 };
-    });
-  }, [activeTab, razgovori, kontakti, razgovorMap, contactSearch, user?.id]);
 
-  // For group tabs, split into Učenici/Roditelji sections
-  const groupSections = useMemo(() => {
-    if (!activeTab.startsWith("grupa:") && activeTab !== "muallimi" && activeTab !== "admini" && activeTab !== "nova") return null;
-    const items = leftContent as { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number }[];
-    const byRole: Record<string, typeof items> = {};
+    // Group by role
+    const byRole: Record<string, Item[]> = {};
     for (const item of items) {
-      const r = item.korisnik.role;
-      if (!byRole[r]) byRole[r] = [];
-      byRole[r].push(item);
+      if (!byRole[item.korisnik.role]) byRole[item.korisnik.role] = [];
+      byRole[item.korisnik.role].push(item);
     }
-    const order = ["muallim", "admin", "ucenik", "roditelj"];
-    return order.filter(r => byRole[r]?.length).map(r => ({
+    return ROLE_ORDER.filter(r => byRole[r]?.length).map(r => ({
       role: r,
-      label: ({ muallim: t("Muallimi"), admin: t("Admini"), ucenik: t("Učenici"), roditelj: t("Roditelji") } as Record<string, string>)[r] || r,
+      label: t(ROLE_LABELS[r] || r),
       items: byRole[r],
     }));
-  }, [leftContent, activeTab, t]);
+  }, [activeTab, razgovori, kontakti, razgovorMap, grupaFilter, leftSearch, user?.id, t]);
 
   // Bulk
   const grupeNaziviBulk = useMemo(() =>
@@ -318,8 +292,8 @@ export default function PorukePage() {
           <div className="flex items-center px-1 py-1 gap-0.5 min-w-max">
             {tabs.map(tab => {
               if (tab.separator) return <div key={tab.key} className="w-px h-5 bg-border/50 mx-1" />;
-              const unread = unreadPerTab[tab.key] || 0;
               const isActive = activeTab === tab.key;
+              const unread = tab.key === "primljene" ? unreadPrimljene : 0;
               return (
                 <button
                   key={tab.key}
@@ -346,91 +320,71 @@ export default function PorukePage() {
         {/* ══ MAIN PANEL ═══════════════════════════════════════════════════ */}
         <div className="flex flex-1 min-h-0 bg-white border-x border-b border-border/50 rounded-b-2xl overflow-hidden">
 
-          {/* ── LEFT: contact/conversation list (hidden for bulk; hidden on mobile when conversation open) ── */}
+          {/* ── LEFT: contact/conversation list ── */}
           {activeTab !== "bulk" && (
             <div className={`border-r border-border/50 flex-col shrink-0
-              ${aktivan ? "hidden md:flex md:w-56 lg:w-64" : "flex w-full md:w-56 lg:w-64"}`}>
+              ${aktivan ? "hidden md:flex md:w-60 lg:w-72" : "flex w-full md:w-60 lg:w-72"}`}>
 
-              {/* Search — only for "nova" tab */}
-              {activeTab === "nova" && (
-                <div className="p-2 border-b border-border/30">
+              {/* Group filter dropdown — only for muallim/admin with groups */}
+              {(user.role === "muallim" || user.role === "admin") && grupeList.length > 0 && (
+                <div className="px-2 pt-2 pb-1 border-b border-border/30">
                   <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                    <input ref={searchRef} type="text" placeholder={t("Pretraži...")}
-                      value={contactSearch} onChange={e => setContactSearch(e.target.value)}
-                      className="w-full pl-8 pr-7 py-1.5 text-xs border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                    {contactSearch && (
-                      <button onClick={() => setContactSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
+                    <select
+                      value={grupaFilter}
+                      onChange={e => { setGrupaFilter(e.target.value); setAktivan(null); }}
+                      className="w-full appearance-none border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white cursor-pointer"
+                    >
+                      <option value="">{t("Sve grupe")}</option>
+                      {grupeList.map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
               )}
 
-              {/* List */}
+              {/* Search input — visible on "nova" tab or always */}
+              <div className="px-2 py-1.5 border-b border-border/30">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    placeholder={t("Pretraži...")}
+                    value={leftSearch}
+                    onChange={e => setLeftSearch(e.target.value)}
+                    className="w-full pl-8 pr-7 py-1.5 text-xs border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  {leftSearch && (
+                    <button onClick={() => setLeftSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Accordion list by role */}
               <div className="flex-1 overflow-y-auto">
                 {isLoadingLista ? (
                   <div className="p-2 space-y-1.5">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-11 rounded-lg" />)}</div>
-                ) : (
-
-                  // ── Grouped view (groups/contacts tabs) ──
-                  groupSections ? (
-                    groupSections.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center p-4 gap-2">
-                        <InboxIcon className="w-7 h-7 text-muted-foreground opacity-20" />
-                        <p className="text-[11px] text-muted-foreground">{t("Nema kontakata")}</p>
-                      </div>
-                    ) : groupSections.map(sec => (
-                      <div key={sec.role}>
-                        <div className="px-3 py-1 bg-muted/20 border-b border-border/20 sticky top-0 z-10">
-                          <span className="text-[9px] font-extrabold text-muted-foreground/70 uppercase tracking-widest">
-                            {sec.label} <span className="opacity-60 font-normal">({sec.items.length})</span>
-                          </span>
-                        </div>
-                        {sec.items.map(item => (
-                          <button key={item.korisnik.id} onClick={() => openRazgovor(item.korisnik)}
-                            className={`w-full flex items-center gap-2 px-3 py-2.5 border-b border-border/15 hover:bg-muted/30 text-left transition-colors
-                              ${aktivan?.id === item.korisnik.id ? "bg-muted/50 border-l-2 border-l-primary" : ""}`}>
-                            <Avatar name={item.korisnik.displayName} size="sm" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1 justify-between">
-                                <span className="text-xs font-bold text-foreground truncate">{item.korisnik.displayName}</span>
-                                <UnreadBadge n={item.unread} />
-                              </div>
-                              {item.lastMsg && <p className="text-[10px] text-muted-foreground truncate mt-0.5 leading-tight">{item.lastMsg}</p>}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    ))
-
-                  // ── Flat conversation list (primljene / poslane) ──
-                  ) : (
-                    (leftContent as { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number }[]).length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center p-4 gap-2">
-                        <InboxIcon className="w-7 h-7 text-muted-foreground opacity-20" />
-                        <p className="text-[11px] text-muted-foreground">{t("Nema poruka")}</p>
-                      </div>
-                    ) : (leftContent as { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number }[]).map(item => (
-                      <button key={item.korisnik.id} onClick={() => openRazgovor(item.korisnik)}
-                        className={`w-full flex items-center gap-2 px-3 py-2.5 border-b border-border/15 hover:bg-muted/30 text-left transition-colors
-                          ${aktivan?.id === item.korisnik.id ? "bg-muted/50 border-l-2 border-l-primary" : ""}`}>
-                        <Avatar name={item.korisnik.displayName} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1 justify-between">
-                            <span className="text-xs font-bold text-foreground truncate">{item.korisnik.displayName}</span>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <UnreadBadge n={item.unread} />
-                              {item.lastTime && <span className="text-[9px] text-muted-foreground/50">{formatTime(item.lastTime)}</span>}
-                            </div>
-                          </div>
-                          {item.lastMsg && <p className="text-[10px] text-muted-foreground truncate mt-0.5 leading-tight">{item.lastMsg}</p>}
-                        </div>
-                      </button>
-                    ))
-                  )
-                )}
+                ) : leftSections.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4 gap-2">
+                    <InboxIcon className="w-7 h-7 text-muted-foreground opacity-20" />
+                    <p className="text-[11px] text-muted-foreground">
+                      {activeTab === "primljene" ? t("Nema primljenih poruka") :
+                       activeTab === "poslane" ? t("Nema poslanih poruka") : t("Nema kontakata")}
+                    </p>
+                  </div>
+                ) : leftSections.map(sec => (
+                  <RoleSection
+                    key={sec.role}
+                    label={sec.label}
+                    items={sec.items}
+                    aktivan={aktivan}
+                    onOpen={openRazgovor}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -582,5 +536,65 @@ export default function PorukePage() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+// ─── Collapsible role section for the left panel ──────────────────────────────
+
+function RoleSection({
+  label, items, aktivan, onOpen,
+}: {
+  label: string;
+  items: { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number }[];
+  aktivan: Korisnik | null;
+  onOpen: (k: Korisnik) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const totalUnread = items.reduce((s, i) => s + i.unread, 0);
+
+  return (
+    <div>
+      {/* Section header — clickable to collapse */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-3 py-1.5 bg-muted/20 border-b border-border/20 sticky top-0 z-10 flex items-center justify-between hover:bg-muted/40 transition-colors"
+      >
+        <span className="text-[9px] font-extrabold text-muted-foreground/70 uppercase tracking-widest flex items-center gap-1.5">
+          {label}
+          <span className="opacity-60 font-normal normal-case tracking-normal text-[9px]">({items.length})</span>
+          {totalUnread > 0 && (
+            <span className="bg-primary text-primary-foreground text-[8px] rounded-full min-w-[14px] h-3.5 flex items-center justify-center font-bold px-1">
+              {totalUnread}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`} />
+      </button>
+
+      {/* Items */}
+      {open && items.map(item => (
+        <button
+          key={item.korisnik.id}
+          onClick={() => onOpen(item.korisnik)}
+          className={`w-full flex items-center gap-2 px-3 py-2.5 border-b border-border/15 hover:bg-muted/30 text-left transition-colors
+            ${aktivan?.id === item.korisnik.id ? "bg-muted/50 border-l-2 border-l-primary" : ""}`}
+        >
+          <Avatar name={item.korisnik.displayName} size="sm" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 justify-between">
+              <span className="text-xs font-bold text-foreground truncate">{item.korisnik.displayName}</span>
+              <div className="flex items-center gap-1 shrink-0">
+                <UnreadBadge n={item.unread} />
+                {item.lastTime && <span className="text-[9px] text-muted-foreground/50">{formatTime(item.lastTime)}</span>}
+              </div>
+            </div>
+            {item.lastMsg && (
+              <p className="text-[10px] text-muted-foreground truncate mt-0.5 leading-tight">{item.lastMsg}</p>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
   );
 }
