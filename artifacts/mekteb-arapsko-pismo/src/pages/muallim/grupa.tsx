@@ -232,7 +232,7 @@ export default function GrupaPage() {
   async function addZvjezdica(ucenikId: number, tip: "pozitivna" | "negativna", kategorijaId?: number) {
     if (!token) return;
     try {
-      await apiRequest("POST", `/muallim/ucenik/${ucenikId}/zvjezdice`, { tip, kategorija_id: kategorijaId || null }, token);
+      await apiRequest("POST", `/muallim/ucenik/${ucenikId}/zvjezdice`, { tip, kategorija_id: kategorijaId ?? null }, token);
       setZvjezdiceSummary(prev => {
         const next = new Map(prev);
         const cur = next.get(ucenikId) ?? { pozitivne: 0, negativne: 0 };
@@ -241,8 +241,10 @@ export default function GrupaPage() {
         return next;
       });
       setPonasanjeOpenId(null);
-    } catch {
-      toast({ title: t("Greška pri dodavanju zvjezdice"), variant: "destructive" });
+      toast({ title: tip === "pozitivna" ? "⭐ Zvjezdica dodijeljena!" : "★ Negativna zvjezdica dodijeljena" });
+    } catch (err: any) {
+      console.error("addZvjezdica greška:", err);
+      toast({ title: `Greška: ${err?.message || "Server nije odgovorio"}`, variant: "destructive" });
     }
   }
 

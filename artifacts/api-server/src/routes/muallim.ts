@@ -5031,12 +5031,25 @@ router.post("/ucenik/:id/zvjezdice", async (req, res) => {
       res.status(400).json({ error: "tip mora biti 'pozitivna' ili 'negativna'" });
       return;
     }
-    const result = await db.execute(sql`
-      INSERT INTO zvjezdice_log (ucenik_id, muallim_id, tip, razlog, kategorija_id)
-      VALUES (${ucenikId}, ${req.user!.userId}, ${tip}, ${razlog || null}, ${kategorija_id || null})
-      RETURNING id, ucenik_id, muallim_id, tip, razlog, kategorija_id, created_at
-    `);
-    res.status(201).json(result.rows[0]);
+    // Pokušaj sa kategorija_id; ako kolona ne postoji (stara produkcija), padne na INSERT bez nje
+    let row: any;
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO zvjezdice_log (ucenik_id, muallim_id, tip, razlog, kategorija_id)
+        VALUES (${ucenikId}, ${req.user!.userId}, ${tip}, ${razlog || null}, ${kategorija_id ?? null})
+        RETURNING id, ucenik_id, muallim_id, tip, razlog, kategorija_id, created_at
+      `);
+      row = result.rows[0];
+    } catch {
+      // Fallback — bez kategorija_id (za slučaj da kolona još ne postoji)
+      const result = await db.execute(sql`
+        INSERT INTO zvjezdice_log (ucenik_id, muallim_id, tip, razlog)
+        VALUES (${ucenikId}, ${req.user!.userId}, ${tip}, ${razlog || null})
+        RETURNING id, ucenik_id, muallim_id, tip, razlog, created_at
+      `);
+      row = result.rows[0];
+    }
+    res.status(201).json(row);
   } catch (err) {
     console.error("zvjezdice add error:", err);
     res.status(500).json({ error: "Greška servera" });
@@ -5047,17 +5060,37 @@ router.post("/ucenik/:id/zvjezdice", async (req, res) => {
 router.get("/ucenik/:id/zvjezdice", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.id);
-    const entriesResult = await db.execute(sql`
-      SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
-             u.display_name AS muallim_ime,
-             k.naziv AS kategorija_naziv
-      FROM zvjezdice_log zl
-      JOIN korisnici u ON u.id = zl.muallim_id
-      LEFT JOIN zvjezdice_kategorije k ON k.id = zl.kategorija_id
-      WHERE zl.ucenik_id = ${ucenikId}
-      ORDER BY zl.created_at DESC
-      LIMIT 100
-    `);
+
+    // Pokušaj sa JOIN-om na kategorije; ako zvjezdice_kategorije ne postoji, padne na jednostavniji upit
+    let entries: any[] = [];
+    try {
+      const r = await db.execute(sql`
+        SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
+               u.display_name AS muallim_ime,
+               k.naziv AS kategorija_naziv
+        FROM zvjezdice_log zl
+        JOIN korisnici u ON u.id = zl.muallim_id
+        LEFT JOIN zvjezdice_kategorije k ON k.id = zl.kategorija_id
+        WHERE zl.ucenik_id = ${ucenikId}
+        ORDER BY zl.created_at DESC
+        LIMIT 100
+      `);
+      entries = r.rows;
+    } catch {
+      // Fallback bez kategorija (ako zvjezdice_kategorije tabela još ne postoji)
+      const r = await db.execute(sql`
+        SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
+               u.display_name AS muallim_ime,
+               null AS kategorija_naziv
+        FROM zvjezdice_log zl
+        JOIN korisnici u ON u.id = zl.muallim_id
+        WHERE zl.ucenik_id = ${ucenikId}
+        ORDER BY zl.created_at DESC
+        LIMIT 100
+      `);
+      entries = r.rows;
+    }
+
     const totalsResult = await db.execute(sql`
       SELECT
         COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
@@ -5067,7 +5100,7 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
     `);
     const t = (totalsResult.rows[0] as any) || { pozitivne: "0", negativne: "0" };
     res.json({
-      entries: entriesResult.rows,
+      entries,
       pozitivne: parseInt(t.pozitivne) || 0,
       negativne: parseInt(t.negativne) || 0,
     });
