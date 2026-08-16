@@ -3,14 +3,6 @@ import { requireAuth } from "../middlewares/auth.js";
 import { upsertPushToken, deletePushToken } from "../lib/push.js";
 
 const router = Router();
-
-// GET /push/config — javni endpoint, bez auth. Vraća OneSignal App ID koji
-// je dostupan samo na backendu (Coolify runtime env var). Frontend ga koristi
-// ako build-time VITE_ONESIGNAL_APP_ID nije bio dostupan pri kompajliranju.
-router.get("/config", (_req, res) => {
-  res.json({ appId: process.env.ONESIGNAL_APP_ID || "" });
-});
-
 router.use(requireAuth);
 
 const ALLOWED_PLATFORMS = ["web", "ios", "android"] as const;

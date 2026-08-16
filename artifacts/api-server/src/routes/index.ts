@@ -40,6 +40,12 @@ router.use("/games", gamesRouter);
 router.use("/h5p", h5pRouter);
 router.use("/popravi-sace", popraviSaceRouter);
 router.use("/misije", misijeRouter);
+// GET /push/config — javni endpoint, bez auth.
+// OneSignal App ID je dostupan samo na backendu (Coolify runtime env var).
+// Frontend ga dohvata ako build-time VITE_ONESIGNAL_APP_ID nije bio dostupan.
+router.get("/push/config", (_req, res) => {
+  res.json({ appId: process.env.ONESIGNAL_APP_ID || "" });
+});
 router.use("/push", pushRouter);
 router.use("/mapa", mapaRouter);
 router.use("/aktivnost", aktivnostRouter);
