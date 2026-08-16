@@ -44,7 +44,12 @@ router.use("/misije", misijeRouter);
 // OneSignal App ID je dostupan samo na backendu (Coolify runtime env var).
 // Frontend ga dohvata ako build-time VITE_ONESIGNAL_APP_ID nije bio dostupan.
 router.get("/push/config", (_req, res) => {
-  res.json({ appId: process.env.ONESIGNAL_APP_ID || "" });
+  res.json({
+    appId:
+      process.env.ONESIGNAL_APP_ID ||
+      process.env.VITE_ONESIGNAL_APP_ID ||
+      "",
+  });
 });
 router.use("/push", pushRouter);
 router.use("/mapa", mapaRouter);

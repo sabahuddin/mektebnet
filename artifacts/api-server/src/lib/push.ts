@@ -2,7 +2,8 @@ import { db } from "@workspace/db";
 import { pushTokensTable } from "@workspace/db/schema";
 import { eq, inArray, and } from "drizzle-orm";
 
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || "";
+const ONESIGNAL_APP_ID =
+  process.env.ONESIGNAL_APP_ID || process.env.VITE_ONESIGNAL_APP_ID || "";
 const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || "";
 const ONESIGNAL_API_URL = "https://api.onesignal.com/notifications";
 
