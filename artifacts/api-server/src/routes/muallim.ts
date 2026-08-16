@@ -4437,6 +4437,67 @@ router.get("/zadace-pregled-badge", async (req, res) => {
   }
 });
 
+// ── BULK RESET ŠIFRI — SAMO GLAVNI MUALLIM ────────────────────────────────────
+// POST /api/muallim/bulk-reset-passwords
+// Resetuje sve šifre učenika i roditelja u mektebu na standardnu Mekteb<broj>.
+// Samo glavni muallim može pokrenuti ovu operaciju.
+router.post("/bulk-reset-passwords", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.isGlavni || !ctx.mektebId) {
+      res.status(403).json({ error: "Samo glavni muallim može resetirati sve šifre" });
+      return;
+    }
+
+    const mektebId = ctx.mektebId;
+
+    // Svi aktivni učenici u mektebu
+    const ucenikProfili = await db.select({ userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.mektebId, mektebId), eq(ucenikProfiliTable.isArchived, false)));
+
+    const ucenikIds = ucenikProfili.map(p => p.userId);
+    if (ucenikIds.length === 0) {
+      res.json({ ok: true, resetovano: 0 });
+      return;
+    }
+
+    // Dohvati user zapise za učenike
+    const ucenikUsers = await db.select({ id: usersTable.id, username: usersTable.username, role: usersTable.role })
+      .from(usersTable)
+      .where(and(inArray(usersTable.id, ucenikIds), eq(usersTable.role, "ucenik")));
+
+    // Dohvati roditelje ovih učenika (preko roditelj_ucenik tabele)
+    const roditeljVeze = await db.select({ roditeljId: roditeljUcenikTable.roditeljId })
+      .from(roditeljUcenikTable)
+      .where(inArray(roditeljUcenikTable.ucenikId, ucenikIds));
+
+    const roditeljIds = [...new Set(roditeljVeze.map(v => v.roditeljId))];
+    const roditeljUsers = roditeljIds.length > 0
+      ? await db.select({ id: usersTable.id, username: usersTable.username, role: usersTable.role })
+          .from(usersTable)
+          .where(and(inArray(usersTable.id, roditeljIds), eq(usersTable.role, "roditelj")))
+      : [];
+
+    const sviKorisnici = [...ucenikUsers, ...roditeljUsers]
+      .filter(u => !u.username.toLowerCase().startsWith("demo."));
+
+    // Resetuj šifre (bcrypt je spor — radimo sekvencijalno da ne overloadamo server)
+    let resetovano = 0;
+    for (const user of sviKorisnici) {
+      const newPassword = passwordFromUsername(user.username, user.id);
+      const hash = await bcrypt.hash(newPassword, 10);
+      await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, user.id));
+      resetovano++;
+    }
+
+    res.json({ ok: true, resetovano });
+  } catch (err) {
+    console.error("Bulk reset passwords error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // ── RESET ŠIFRE 1 UČENIKA ──────────────────────────────────────────────────────
 
 // POST /api/muallim/ucenik/:id/reset-password

@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search
+  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -430,6 +430,8 @@ export default function MuallimPanel() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [showBulkResetConfirm, setShowBulkResetConfirm] = useState(false);
+  const [bulkResetting, setBulkResetting] = useState(false);
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
@@ -3739,6 +3741,65 @@ export default function MuallimPanel() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Bulk reset šifri — samo za glavnog muallima */}
+                {mektebMeta.isGlavni && (
+                  <div className="bg-white border border-red-200 rounded-2xl p-5">
+                    <h3 className="font-extrabold text-foreground mb-1 flex items-center gap-2">
+                      <RotateCcw className="w-5 h-5 text-red-500" /> {t("Reset svih šifri učenika")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {t("Vraća šifre svih učenika i roditelja u mektebu na standardnu lozinku")} <span className="font-mono font-bold text-foreground">Mekteb1234</span> {t("(broj iz korisničkog imena). Korisno kad se zaborave šifre.")}
+                    </p>
+                    {!showBulkResetConfirm ? (
+                      <Button
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
+                        onClick={() => setShowBulkResetConfirm(true)}
+                      >
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        {t("Resetuj sve šifre na default")}
+                      </Button>
+                    ) : (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+                        <p className="text-sm font-bold text-red-800">
+                          ⚠️ {t("Jesi li siguran? Sve prilagođene šifre će biti zamijenjene standardnom Mekteb lozinkom.")}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            className="bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                            disabled={bulkResetting}
+                            onClick={async () => {
+                              setBulkResetting(true);
+                              try {
+                                const res = await apiRequest<{ ok: boolean; resetovano: number }>(
+                                  "POST", "/muallim/bulk-reset-passwords", {}, token
+                                );
+                                toast({ title: `✅ ${t("Resetovano")} ${res.resetovano} ${t("korisnika na standardnu šifru.")}` });
+                                setShowBulkResetConfirm(false);
+                              } catch (e: any) {
+                                toast({ title: t("Greška pri resetu šifri"), description: e?.message, variant: "destructive" });
+                              } finally {
+                                setBulkResetting(false);
+                              }
+                            }}
+                          >
+                            {bulkResetting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <RotateCcw className="w-4 h-4 mr-1" />}
+                            {t("Da, resetuj sve")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="rounded-xl"
+                            disabled={bulkResetting}
+                            onClick={() => setShowBulkResetConfirm(false)}
+                          >
+                            {t("Odustani")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
           </>
