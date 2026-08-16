@@ -887,12 +887,12 @@ export default function GrupaPage() {
               <p className="text-sm mt-1">{t("Dodaj učenike koristeći dugme iznad")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-b-2xl">
               {studentiGrupe.map((u, i) => {
                 const settingsOpen = settingsOpenId === u.id;
                 return (
                   <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                    className="relative bg-muted/20 border border-border/40 rounded-2xl p-4 hover:border-primary/20 hover:bg-white transition-all">
+                    className="relative bg-white border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all">
 
                     {/* Gornji red: avatar + ime (klikabilno → profil) + zupčanik */}
                     <div className="flex items-center gap-3 mb-3">
