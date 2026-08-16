@@ -230,16 +230,30 @@ export async function requestPushPermission(): Promise<boolean> {
     return ok;
   }
 
-  if (!initialized || !isWebPushSupported()) return false;
+  if (!isWebPushSupported()) return false;
+  // Ako init nije završio (ili je ranije pao — npr. mreža, spor fetch App ID-a),
+  // pokušaj ponovo sada. Bez ovoga klik na toggle tiho ne uradi ništa.
+  if (!initialized) {
+    try {
+      await initOneSignal();
+    } catch {}
+  }
+  if (!initialized) return false;
   try {
     await OneSignal.Notifications.requestPermission();
-    if (OneSignal.User.PushSubscription.optedIn) {
-      const playerId = OneSignal.User.PushSubscription.id;
-      if (playerId) {
-        await registerToken(playerId);
-        setPushEnabledLocally(true);
-        return true;
+    // OneSignal upisuje subscription asinhrono — pričekaj do ~5s da se pojavi
+    // playerId (bez ovoga toggle zna vratiti false iako je korisnik dozvolio).
+    for (let i = 0; i < 10; i++) {
+      if (OneSignal.User.PushSubscription.optedIn) {
+        const playerId = OneSignal.User.PushSubscription.id;
+        if (playerId) {
+          await registerToken(playerId);
+          setPushEnabledLocally(true);
+          return true;
+        }
       }
+      if (typeof Notification !== "undefined" && Notification.permission === "denied") break;
+      await new Promise((r) => setTimeout(r, 500));
     }
     return false;
   } catch (err) {

@@ -34,6 +34,7 @@ export function PushToggle() {
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const [busy, setBusy] = useState<boolean>(false);
+  const [attemptError, setAttemptError] = useState<string | null>(null);
   const [perm, setPerm] = useState<PermState>(
     !supported ? "unsupported" : (Notification.permission as PermState),
   );
@@ -93,10 +94,16 @@ export function PushToggle() {
         await disablePush();
         setEnabled(false);
       } else {
+        setAttemptError(null);
         const ok = await requestPushPermission();
         setEnabled(ok);
         if (typeof Notification !== "undefined") {
           setPerm(Notification.permission as PermState);
+        }
+        if (!ok && Notification.permission !== "denied") {
+          setAttemptError(
+            t("Uključivanje nije uspjelo. Provjeri internet vezu, pa zatvori i ponovo otvori aplikaciju i pokušaj opet."),
+          );
         }
       }
     } finally {
@@ -147,6 +154,11 @@ export function PushToggle() {
         <p className="text-xs text-muted-foreground mt-1.5">
           {t("Primaj obavijesti o novim porukama, novim zadaćama i podsjetnicima — i kad mekteb nije otvoren u pregledniku.")}
         </p>
+        {attemptError && !disabledReason && (
+          <p className="text-xs text-amber-700 font-medium mt-2" data-testid="text-push-attempt-error">
+            {attemptError}
+          </p>
+        )}
         {disabledReason && (
           <p
             className="text-xs text-amber-700 font-medium mt-2"
