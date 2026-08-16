@@ -11,3 +11,5 @@ description: Kako je konfigurisan OneSignal App ID na produkciji i zamke build-t
 - PWA sukob: VitePWA workbox SW drži scope `/` — OneSignal worker MORA na poseban scope (`serviceWorkerParam: { scope: "/push/onesignal/" }`), inače se SW-ovi pregaze i subscribe tiho pada.
 - OneSignal `init()` zna baciti grešku NAKON što interno postavi "initialized" flag → retry baca "SDK already initialized"; tretiraj tu poruku kao uspješan init i nastavi.
 - Klik na toggle mora retry-ati init i prikazati stvarnu grešku (lastPushError) — tihi `return false` je danima maskirao pravi uzrok.
+- "Can only be used on: https://..." = Site URL u OneSignal dashboardu (Settings → Web Configuration) se ne poklapa s originom; fix je u dashboardu, ne u kodu.
+- v16 flow: permission → optIn() → playerId stiže ASINHRONO (zna >5s); optedIn=true tretiraj kao uspjeh, change listener registruje playerId u backend kad stigne.
