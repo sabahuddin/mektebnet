@@ -311,7 +311,7 @@ export default function PorukePage() {
 
   return (
     <Layout>
-      <div className="flex flex-col w-full" style={{ height: "calc(100vh - 7rem)" }}>
+      <div className="flex flex-col w-full" style={{ height: "calc(100dvh - 4rem)" }}>
 
         {/* ══ TOP TAB BAR ══════════════════════════════════════════════════ */}
         <div className="bg-white border border-border/50 rounded-t-2xl overflow-x-auto shrink-0">
@@ -346,9 +346,10 @@ export default function PorukePage() {
         {/* ══ MAIN PANEL ═══════════════════════════════════════════════════ */}
         <div className="flex flex-1 min-h-0 bg-white border-x border-b border-border/50 rounded-b-2xl overflow-hidden">
 
-          {/* ── LEFT: contact/conversation list (hidden for bulk) ── */}
+          {/* ── LEFT: contact/conversation list (hidden for bulk; hidden on mobile when conversation open) ── */}
           {activeTab !== "bulk" && (
-            <div className="w-56 sm:w-64 border-r border-border/50 flex flex-col shrink-0">
+            <div className={`border-r border-border/50 flex-col shrink-0
+              ${aktivan ? "hidden md:flex md:w-56 lg:w-64" : "flex w-full md:w-56 lg:w-64"}`}>
 
               {/* Search — only for "nova" tab */}
               {activeTab === "nova" && (
@@ -435,7 +436,9 @@ export default function PorukePage() {
           )}
 
           {/* ── RIGHT: conversation / bulk / empty ── */}
-          <div className={`flex flex-col min-w-0 ${activeTab === "bulk" ? "w-full" : "flex-1"}`}>
+          <div className={`flex-col min-w-0
+            ${activeTab === "bulk" ? "w-full" : "flex-1"}
+            ${!aktivan && activeTab !== "bulk" ? "hidden md:flex" : "flex"}`}>
             <AnimatePresence mode="wait">
 
               {/* Bulk compose */}
