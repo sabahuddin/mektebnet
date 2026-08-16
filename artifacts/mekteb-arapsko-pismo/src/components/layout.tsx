@@ -325,6 +325,16 @@ export function Layout({ children }: LayoutProps) {
               </Link>
             )}
 
+            {/* Brza prečica na poruke — vidljiva na mobilnom kad ima nepročitanih */}
+            {user && unreadPoruke > 0 && (
+              <Link href="/poruke" className="lg:hidden relative p-2 rounded-xl hover:bg-muted transition-colors" aria-label={`${unreadPoruke} nepročitanih poruka`}>
+                <MessageSquare className="w-6 h-6 text-primary" />
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm leading-none">
+                  {unreadPoruke > 99 ? "99+" : unreadPoruke}
+                </span>
+              </Link>
+            )}
+
             <Button variant="ghost" size="icon" className="lg:hidden text-primary rounded-xl" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
