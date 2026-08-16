@@ -5005,4 +5005,99 @@ router.get("/grupa/:id/lekcije-status", async (req, res) => {
   }
 });
 
+// ─── Zvjezdice (classroom management) ───────────────────────────────────────
+// Dvije vrste: 'pozitivna' (žuta) i 'negativna' (crna).
+// Svaki zapis = jedna dodijeljena zvjezdica s opcionalnim razlogom.
+
+// POST /api/muallim/ucenik/:id/zvjezdice — dodaj zvjezdicu
+router.post("/ucenik/:id/zvjezdice", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const { tip, razlog } = req.body;
+    if (!["pozitivna", "negativna"].includes(tip)) {
+      res.status(400).json({ error: "tip mora biti 'pozitivna' ili 'negativna'" });
+      return;
+    }
+    const [row] = await db.execute(sql`
+      INSERT INTO zvjezdice_log (ucenik_id, muallim_id, tip, razlog)
+      VALUES (${ucenikId}, ${req.user!.userId}, ${tip}, ${razlog || null})
+      RETURNING id, ucenik_id, muallim_id, tip, razlog, created_at
+    `);
+    res.status(201).json(row);
+  } catch (err) {
+    console.error("zvjezdice add error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/ucenik/:id/zvjezdice — log + totali za jednog učenika
+router.get("/ucenik/:id/zvjezdice", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const entries = await db.execute(sql`
+      SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
+             u.display_name AS muallim_ime
+      FROM zvjezdice_log zl
+      JOIN korisnici u ON u.id = zl.muallim_id
+      WHERE zl.ucenik_id = ${ucenikId}
+      ORDER BY zl.created_at DESC
+      LIMIT 100
+    `);
+    const totals = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
+        COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
+      FROM zvjezdice_log
+      WHERE ucenik_id = ${ucenikId}
+    `);
+    const t = (totals as any[])[0] || { pozitivne: "0", negativne: "0" };
+    res.json({
+      entries,
+      pozitivne: parseInt(t.pozitivne) || 0,
+      negativne: parseInt(t.negativne) || 0,
+    });
+  } catch (err) {
+    console.error("zvjezdice get error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/grupa/:id/zvjezdice-summary — totali za sve učenike u grupi
+router.get("/grupa/:id/zvjezdice-summary", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    // Učenici ove grupe
+    const ucenici = await db.execute(sql`
+      SELECT user_id FROM ucenik_profili WHERE grupa_id = ${grupaId}
+    `);
+    const ids = (ucenici as any[]).map(u => u.user_id);
+    if (ids.length === 0) { res.json([]); return; }
+    const rows = await db.execute(sql`
+      SELECT
+        ucenik_id,
+        COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
+        COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
+      FROM zvjezdice_log
+      WHERE ucenik_id = ANY(${ids}::integer[])
+      GROUP BY ucenik_id
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error("zvjezdice summary error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/muallim/ucenik/:id/zvjezdice — reset svih zvjezdica za učenika
+router.delete("/ucenik/:id/zvjezdice", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    await db.execute(sql`DELETE FROM zvjezdice_log WHERE ucenik_id = ${ucenikId}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("zvjezdice reset error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 export default router;

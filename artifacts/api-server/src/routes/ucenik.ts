@@ -413,4 +413,21 @@ router.get("/dokumenti/:id/file", async (req, res) => {
   }
 });
 
+// GET /api/ucenik/moje-zvjezdice — učenik čita vlastite totale zvjezdica
+router.get("/moje-zvjezdice", async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const rows = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
+        COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
+      FROM zvjezdice_log WHERE ucenik_id = ${userId}
+    `);
+    const r = (rows as any[])[0] || {};
+    res.json({ pozitivne: parseInt(String(r.pozitivne ?? 0)) || 0, negativne: parseInt(String(r.negativne ?? 0)) || 0 });
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 export default router;

@@ -691,7 +691,24 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS grupa_muallimi_uidx ON grupa_muallimi (grupa_id, muallim_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupa_muallimi_muallim_idx ON grupa_muallimi (muallim_id);`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi) ready");
+    // Zvjezdice — classroom management (ponašanje i rad na času).
+    // Dvije vrste: 'pozitivna' (žuta) i 'negativna' (crna). Svaki zapis = jedna
+    // dodijeljena zvjezdica od muallima. Totali se računaju aggregacijom.
+    // Vidljivo: muallim (CRUD), roditelj (čitanje), učenik (čitanje).
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS zvjezdice_log (
+        id serial PRIMARY KEY,
+        ucenik_id integer NOT NULL,
+        muallim_id integer NOT NULL,
+        tip varchar(20) NOT NULL,
+        razlog text,
+        created_at timestamp NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS zvjezdice_log_ucenik_idx ON zvjezdice_log (ucenik_id, created_at DESC);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS zvjezdice_log_muallim_idx ON zvjezdice_log (muallim_id);`);
+
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi + zvjezdice_log) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

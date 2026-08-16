@@ -184,6 +184,13 @@ export default function UcenikPage() {
   const [zadace, setZadace] = useState<ZadacaPregled[]>([]);
   const [zadSubTab, setZadSubTab] = useState<"utoku" | "zavrseno">("utoku");
 
+  // Zvjezdice — classroom management
+  const [zvjezdice, setZvjezdice] = useState<{ entries: any[]; pozitivne: number; negativne: number } | null>(null);
+  const [zvjezdiceLoading, setZvjezdiceLoading] = useState(false);
+  const [zvjezdiceRazlog, setZvjezdiceRazlog] = useState("");
+  const [dodajZvjezdiceLoading, setDodajZvjezdiceLoading] = useState(false);
+  const [resetZvjezdiceLoading, setResetZvjezdiceLoading] = useState(false);
+
   useEffect(() => {
     if (!token || !id) return;
     const ucenikId = parseInt(id);
@@ -219,6 +226,50 @@ export default function UcenikPage() {
       }
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [token, id]);
+
+  // Zvjezdice učenika (classroom management)
+  useEffect(() => {
+    if (!token || !id) return;
+    setZvjezdiceLoading(true);
+    apiRequest<{ entries: any[]; pozitivne: number; negativne: number }>(
+      "GET", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, undefined, token
+    ).then(setZvjezdice).catch(() => {}).finally(() => setZvjezdiceLoading(false));
+  }, [token, id]);
+
+  async function dodajZvjezdicu(tip: "pozitivna" | "negativna") {
+    if (!token || !id) return;
+    setDodajZvjezdiceLoading(true);
+    try {
+      await apiRequest("POST", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, {
+        tip, razlog: zvjezdiceRazlog.trim() || null,
+      }, token);
+      setZvjezdiceRazlog("");
+      // Osvježi log
+      const updated = await apiRequest<{ entries: any[]; pozitivne: number; negativne: number }>(
+        "GET", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, undefined, token
+      );
+      setZvjezdice(updated);
+      toast({ title: tip === "pozitivna" ? t("⭐ Zvjezdica dodijeljena!") : t("⚫ Negativna zvjezdica dodijeljena") });
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    } finally {
+      setDodajZvjezdiceLoading(false);
+    }
+  }
+
+  async function resetujZvjezdice() {
+    if (!token || !id) return;
+    setResetZvjezdiceLoading(true);
+    try {
+      await apiRequest("DELETE", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, undefined, token);
+      setZvjezdice({ entries: [], pozitivne: 0, negativne: 0 });
+      toast({ title: t("Zvjezdice resetovane") });
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    } finally {
+      setResetZvjezdiceLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!token || postojeciUsername.trim().length < 2 || odabraniRoditelj) {
@@ -846,6 +897,83 @@ export default function UcenikPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Zvjezdice — classroom management */}
+            <div className="bg-white border border-border/50 rounded-2xl p-5 mb-6">
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                <h2 className="font-extrabold text-foreground flex items-center gap-2">
+                  <span className="text-lg">⭐</span> {t("Zvjezdice — ponašanje")}
+                  {zvjezdice && (
+                    <span className="flex items-center gap-2 ml-2">
+                      <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 rounded-full px-2.5 py-0.5 text-sm font-extrabold border border-amber-200">⭐ {zvjezdice.pozitivne}</span>
+                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-sm font-extrabold border border-gray-200">⚫ {zvjezdice.negativne}</span>
+                    </span>
+                  )}
+                </h2>
+                {zvjezdice && (zvjezdice.pozitivne > 0 || zvjezdice.negativne > 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetujZvjezdice}
+                    disabled={resetZvjezdiceLoading}
+                    className="rounded-xl text-xs text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    {resetZvjezdiceLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t("Resetuj")}
+                  </Button>
+                )}
+              </div>
+
+              {/* Brzi dodavanje bez razloga */}
+              <div className="flex gap-2 mb-4">
+                <Button
+                  onClick={() => dodajZvjezdicu("pozitivna")}
+                  disabled={dodajZvjezdiceLoading}
+                  className="rounded-xl font-bold flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white flex-1 sm:flex-none"
+                >
+                  {dodajZvjezdiceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "⭐"}
+                  {t("Pozitivna")}
+                </Button>
+                <Button
+                  onClick={() => dodajZvjezdicu("negativna")}
+                  disabled={dodajZvjezdiceLoading}
+                  variant="outline"
+                  className="rounded-xl font-bold flex items-center gap-1.5 flex-1 sm:flex-none"
+                >
+                  {dodajZvjezdiceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "⚫"}
+                  {t("Negativna")}
+                </Button>
+              </div>
+
+              {/* Opcionalni razlog */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={zvjezdiceRazlog}
+                  onChange={e => setZvjezdiceRazlog(e.target.value)}
+                  placeholder={t("Razlog (opcionalno)...")}
+                  className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  onKeyDown={e => { if (e.key === "Enter" && !dodajZvjezdiceLoading) dodajZvjezdicu("pozitivna"); }}
+                />
+              </div>
+
+              {/* Log poslednjih unosa */}
+              {zvjezdiceLoading ? (
+                <div className="text-sm text-muted-foreground">{t("Učitavanje...")}</div>
+              ) : zvjezdice && zvjezdice.entries.length > 0 ? (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {zvjezdice.entries.slice(0, 20).map((e: any) => (
+                    <div key={e.id} className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-2.5 py-1.5">
+                      <span>{e.tip === "pozitivna" ? "⭐" : "⚫"}</span>
+                      <span className="font-medium text-foreground">{e.tip === "pozitivna" ? t("Pozitivna") : t("Negativna")}</span>
+                      {e.razlog && <span className="text-muted-foreground">— {e.razlog}</span>}
+                      <span className="ml-auto shrink-0 text-[10px]">{new Date(e.created_at).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">{t("Učenik nema zvjezdica")}</p>
+              )}
             </div>
 
             {/* Pregled zadaća učenika (read-only). Dodaje se iz Muallim → Zadaća. */}

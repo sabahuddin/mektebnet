@@ -19,7 +19,7 @@ import {
   obavjestenjaTable,
   mektebDokumentiTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, asc, desc } from "drizzle-orm";
+import { eq, and, inArray, asc, desc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../lib/badges.js";
 import { computeGameStats } from "./games.js";
@@ -818,6 +818,34 @@ router.get("/dijete/:ucenikId/dokumenti/:id/file", async (req, res) => {
     streamDokument(res, doc);
   } catch (err) {
     console.error("roditelj dokument file error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/roditelj/dijete/:id/zvjezdice — roditelj čita zvjezdice svog djeteta
+router.get("/dijete/:id/zvjezdice", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const roditeljId = req.user!.userId;
+    const veze = await db
+      .select({ id: roditeljUcenikTable.id })
+      .from(roditeljUcenikTable)
+      .where(and(
+        eq(roditeljUcenikTable.roditeljId, roditeljId),
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.status, "approved")
+      ));
+    if (veze.length === 0) { res.status(403).json({ error: "Nemate pristup" }); return; }
+    const rows = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
+        COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
+      FROM zvjezdice_log WHERE ucenik_id = ${ucenikId}
+    `);
+    const r = (rows as any[])[0] || {};
+    res.json({ pozitivne: parseInt(String(r.pozitivne ?? 0)) || 0, negativne: parseInt(String(r.negativne ?? 0)) || 0 });
+  } catch (err) {
+    console.error("zvjezdice roditelj error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });

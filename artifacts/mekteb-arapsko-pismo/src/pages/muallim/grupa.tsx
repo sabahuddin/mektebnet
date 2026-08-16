@@ -160,6 +160,9 @@ export default function GrupaPage() {
   // Settings dropdown po učeniku (zupčanik na kartici)
   const [settingsOpenId, setSettingsOpenId] = useState<number | null>(null);
 
+  // Zvjezdice summary po učeniku (za prikaz na kartici)
+  const [zvjezdiceSummary, setZvjezdiceSummary] = useState<Map<number, { pozitivne: number; negativne: number }>>(new Map());
+
   // Reset šifre roditelja
   const [parentResetTarget, setParentResetTarget] = useState<Ucenik | null>(null);
   const [parentResetList, setParentResetList] = useState<RoditeljVeza[]>([]);
@@ -184,7 +187,8 @@ export default function GrupaPage() {
       apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
       apiRequest<LekcijaStatus[]>("GET", `/muallim/grupa/${grupaId}/lekcije-status`, undefined, token).catch(() => []),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
-    ]).then(([grupe, ucenici, status, lekcije]) => {
+      apiRequest<any[]>("GET", `/muallim/grupa/${grupaId}/zvjezdice-summary`, undefined, token).catch(() => []),
+    ]).then(([grupe, ucenici, status, lekcije, zvData]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
       setSekundarniMuallimi(g?.sekundarniMuallimi ?? []);
@@ -197,6 +201,9 @@ export default function GrupaPage() {
       setStudentiGrupe(ucenici.filter(u => (u.profil as any)?.grupaId === grupaId || (u as any).grupaId === grupaId));
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
       setIlmihalLekcije(lekcije);
+      setZvjezdiceSummary(new Map((zvData as any[]).map((r: any) => [
+        r.ucenik_id, { pozitivne: parseInt(r.pozitivne ?? 0) || 0, negativne: parseInt(r.negativne ?? 0) || 0 },
+      ])));
     }).catch(() => {}).finally(() => setIsLoading(false));
     apiRequest<{ count: number }>("GET", `/muallim/zadace-pregled-badge?grupaId=${grupaId}`, undefined, token)
       .then(r => setZadacaBadge(r?.count ?? 0)).catch(() => {});
@@ -212,6 +219,23 @@ export default function GrupaPage() {
       setStudentiGrupe(ucenici.filter(u => (u.profil as any)?.grupaId === grupaId || (u as any).grupaId === grupaId));
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
     }).catch(() => {});
+  }
+
+  async function addZvjezdica(ucenikId: number, tip: "pozitivna" | "negativna") {
+    if (!token) return;
+    try {
+      await apiRequest("POST", `/muallim/ucenik/${ucenikId}/zvjezdice`, { tip }, token);
+      // Optimistično ažuriranje — ne čekamo server
+      setZvjezdiceSummary(prev => {
+        const next = new Map(prev);
+        const cur = next.get(ucenikId) ?? { pozitivne: 0, negativne: 0 };
+        if (tip === "pozitivna") next.set(ucenikId, { ...cur, pozitivne: cur.pozitivne + 1 });
+        else next.set(ucenikId, { ...cur, negativne: cur.negativne + 1 });
+        return next;
+      });
+    } catch {
+      toast({ title: t("Greška pri dodavanju zvjezdice"), variant: "destructive" });
+    }
   }
 
   function parseBulkEntries(text: string) {
@@ -929,6 +953,30 @@ export default function GrupaPage() {
                         )}
                       </div>
                     </div>
+
+                    {/* Zvjezdice — ponašanje na času */}
+                    {(() => {
+                      const zv = zvjezdiceSummary.get(u.id) ?? { pozitivne: 0, negativne: 0 };
+                      return (
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[10px] font-extrabold text-muted-foreground shrink-0">{t("Ponašanje:")}</span>
+                          <span className="text-xs font-extrabold text-amber-500">⭐ {zv.pozitivne}</span>
+                          <span className="text-xs font-extrabold text-gray-600">⚫ {zv.negativne}</span>
+                          <div className="ml-auto flex gap-1">
+                            <button
+                              onClick={() => addZvjezdica(u.id, "pozitivna")}
+                              className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors border border-amber-200"
+                              title={t("Dodaj pozitivnu zvjezdicu")}
+                            >+⭐</button>
+                            <button
+                              onClick={() => addZvjezdica(u.id, "negativna")}
+                              className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition-colors border border-gray-200"
+                              title={t("Dodaj negativnu zvjezdicu")}
+                            >+⚫</button>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Akcije: Prisustvo, Ocjene, Zadaća, Kvizovi, Lekcije */}
                     <div className="grid grid-cols-5 gap-1">
