@@ -48,11 +48,7 @@ let initPromise: Promise<void> | null = null;
 // Zadnja stvarna greška (init ili permission) — UI je prikaže za dijagnostiku.
 export let lastPushError: string = "";
 
-// Privremeni dijagnostički trag — toggle prikaže zadnje korake pri neuspjehu.
-export const pushLog: string[] = [];
 function plog(s: string): void {
-  pushLog.push(s);
-  if (pushLog.length > 12) pushLog.shift();
   console.log("[Push]", s);
 }
 
