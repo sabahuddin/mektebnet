@@ -193,6 +193,14 @@ export default defineConfig({
         ]
       : []),
   ],
+  // ONESIGNAL_APP_ID je backend secret (bez VITE_ prefiksa) — Vite ga ne bi
+  // automatski expose-ao frontendu. Mapiramo ga ovdje eksplicitno da ne
+  // trebamo duplikovati secret pod novim imenom u Coolify/Replit.
+  define: {
+    "import.meta.env.VITE_ONESIGNAL_APP_ID": JSON.stringify(
+      process.env.ONESIGNAL_APP_ID ?? ""
+    ),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
