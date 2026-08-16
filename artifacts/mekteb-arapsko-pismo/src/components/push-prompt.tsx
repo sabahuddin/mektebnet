@@ -5,7 +5,6 @@ import { useLanguage } from "@/context/language";
 import { requestPushPermission, hasBeenPrompted, markPrompted, isCapacitorNative } from "@/lib/push";
 
 const DISMISS_KEY = "mekteb-push-dismissed";
-const APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) || "";
 
 function isAllowedOrigin(): boolean {
   if (typeof window === "undefined") return false;
@@ -37,10 +36,21 @@ export function PushPrompt() {
   const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [appIdReady, setAppIdReady] = useState(false);
+
+  // Dohvati App ID s backenda ako build-time vrijednost nije bila dostupna
+  useEffect(() => {
+    fetch("/api/push/config")
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { appId?: string } | null) => {
+        if (data?.appId) setAppIdReady(true);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (!APP_ID) return;
+    if (!appIdReady) return;
     if (!isPushSupported()) return;
     if (!isAllowedOrigin()) return;
 

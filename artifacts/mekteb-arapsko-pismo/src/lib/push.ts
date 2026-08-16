@@ -1,10 +1,31 @@
 import OneSignal from "react-onesignal";
 import { apiRequest } from "@/lib/api";
 
-const APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) || "";
+const BUILD_TIME_APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) || "";
 const SETTINGS_KEY = "mekteb-push-enabled";
 const PROMPTED_KEY = "mekteb-push-prompted";
 const TOKEN_KEY = "mekteb_token";
+
+// App ID se dohvata pri init-u: prvo build-time vrijednost, pa fallback na
+// backend endpoint ako Coolify nije dostavio env var pri kompajliranju.
+let resolvedAppId: string = BUILD_TIME_APP_ID;
+
+async function getAppId(): Promise<string> {
+  if (resolvedAppId) return resolvedAppId;
+  try {
+    const res = await fetch("/api/push/config");
+    if (res.ok) {
+      const data = await res.json() as { appId?: string };
+      resolvedAppId = data.appId || "";
+    }
+  } catch {}
+  return resolvedAppId;
+}
+
+// Brza sinhronijska provjera (za UI) — tačna tek kad je init završio
+export function isAppIdResolved(): boolean {
+  return !!resolvedAppId;
+}
 
 /**
  * `/push/register` i `/push/unregister` su iza `requireAuth` middleware-a u
@@ -61,11 +82,6 @@ async function getNative() {
 }
 
 export async function initOneSignal(): Promise<void> {
-  if (!APP_ID) {
-    console.warn("[Push] VITE_ONESIGNAL_APP_ID nije postavljen");
-    return;
-  }
-
   // Native (iOS/Android Capacitor): rutiraj na native modul.
   const native = await getNative();
   if (native) {
@@ -83,8 +99,14 @@ export async function initOneSignal(): Promise<void> {
 
   initPromise = (async () => {
     try {
+      const appId = await getAppId();
+      if (!appId) {
+        console.warn("[Push] OneSignal App ID nije dostupan (ni build-time ni backend)");
+        initPromise = null;
+        return;
+      }
       await OneSignal.init({
-        appId: APP_ID,
+        appId,
         allowLocalhostAsSecureOrigin: true,
         serviceWorkerPath: "OneSignalSDKWorker.js",
         serviceWorkerParam: { scope: "/" },

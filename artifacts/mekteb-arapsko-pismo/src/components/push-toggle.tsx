@@ -4,10 +4,9 @@ import {
   isPushOptedIn,
   requestPushPermission,
   disablePush,
+  isAppIdResolved,
 } from "@/lib/push";
 import { useLanguage } from "@/context/language";
-
-const APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined) || "";
 
 function isPushSupportedClient(): boolean {
   if (typeof window === "undefined") return false;
@@ -30,7 +29,8 @@ export function PushToggle() {
   const { t } = useLanguage();
   const supported = isPushSupportedClient();
   const allowedOrigin = isAllowedOrigin();
-  const configured = !!APP_ID;
+  // configured se provjerava dinamički: čeka da backend vrati App ID
+  const [configured, setConfigured] = useState<boolean>(isAppIdResolved());
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const [busy, setBusy] = useState<boolean>(false);
@@ -38,6 +38,17 @@ export function PushToggle() {
     !supported ? "unsupported" : (Notification.permission as PermState),
   );
   const intervalRef = useRef<number | null>(null);
+
+  // Ako build-time App ID nije dostupan, dohvati ga s backenda (jedan fetch)
+  useEffect(() => {
+    if (configured) return;
+    fetch("/api/push/config")
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { appId?: string } | null) => {
+        if (data?.appId) setConfigured(true);
+      })
+      .catch(() => {});
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!supported) return;
