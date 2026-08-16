@@ -302,6 +302,17 @@ export async function requestPushPermission(): Promise<boolean> {
       if (typeof Notification !== "undefined" && Notification.permission === "denied") break;
       await new Promise((r) => setTimeout(r, 500));
     }
+    // optedIn=true ali playerId još nije stigao — OneSignal ga kreira asinhrono
+    // na svom serveru i to zna trajati duže od poll prozora. Change listener
+    // (setupPushListeners) će registrovati ID u backend čim se pojavi; za
+    // korisnika je ovo uspjeh.
+    try {
+      if (OneSignal.User.PushSubscription.optedIn) {
+        plog("optedIn=true, playerId čekam u pozadini (listener će registrovati)");
+        setPushEnabledLocally(true);
+        return true;
+      }
+    } catch {}
     if (!lastPushError) {
       const perm = typeof Notification !== "undefined" ? Notification.permission : "?";
       const opted = (() => { try { return String(OneSignal.User.PushSubscription.optedIn); } catch { return "?"; } })();
