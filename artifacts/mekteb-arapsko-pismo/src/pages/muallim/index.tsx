@@ -1265,7 +1265,7 @@ export default function MuallimPanel() {
   // Tabovi "Muallimi" i "Mekteb" se prikazuju SAMO glavnom muallimu.
   const TABS = [
     { id: "pregled", label: t("Pregled"), icon: BarChart3 },
-    { id: "grupe", label: t("Grupe ({n})", { n: String(grupe.filter(g => !g.isArchived).length) }), icon: GraduationCap },
+    { id: "grupe", label: t("Grupe ({n})", { n: String(grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear).length) }), icon: GraduationCap },
     { id: "statistika", label: t("Statistika"), icon: TrendingUp },
     ...(mektebMeta.isGlavni ? [
       { id: "muallimi", label: t("Muallimi"), icon: Users },
