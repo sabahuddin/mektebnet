@@ -249,7 +249,7 @@ export default function UcenikPage() {
         "GET", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, undefined, token
       );
       setZvjezdice(updated);
-      toast({ title: tip === "pozitivna" ? t("⭐ Zvjezdica dodijeljena!") : t("⚫ Negativna zvjezdica dodijeljena") });
+      toast({ title: tip === "pozitivna" ? t("⭐ Zvjezdica dodijeljena!") : t("★ Negativna zvjezdica dodijeljena") });
     } catch {
       toast({ title: t("Greška"), variant: "destructive" });
     } finally {
@@ -907,7 +907,7 @@ export default function UcenikPage() {
                   {zvjezdice && (
                     <span className="flex items-center gap-2 ml-2">
                       <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 rounded-full px-2.5 py-0.5 text-sm font-extrabold border border-amber-200">⭐ {zvjezdice.pozitivne}</span>
-                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-sm font-extrabold border border-gray-200">⚫ {zvjezdice.negativne}</span>
+                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-sm font-extrabold border border-gray-200">★ {zvjezdice.negativne}</span>
                     </span>
                   )}
                 </h2>
@@ -940,7 +940,7 @@ export default function UcenikPage() {
                   variant="outline"
                   className="rounded-xl font-bold flex items-center gap-1.5 flex-1 sm:flex-none"
                 >
-                  {dodajZvjezdiceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "⚫"}
+                  {dodajZvjezdiceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "★"}
                   {t("Negativna")}
                 </Button>
               </div>
@@ -964,7 +964,7 @@ export default function UcenikPage() {
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {zvjezdice.entries.slice(0, 20).map((e: any) => (
                     <div key={e.id} className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-2.5 py-1.5">
-                      <span>{e.tip === "pozitivna" ? "⭐" : "⚫"}</span>
+                      <span>{e.tip === "pozitivna" ? "⭐" : "★"}</span>
                       <span className="font-medium text-foreground">{e.tip === "pozitivna" ? t("Pozitivna") : t("Negativna")}</span>
                       {e.razlog && <span className="text-muted-foreground">— {e.razlog}</span>}
                       <span className="ml-auto shrink-0 text-[10px]">{new Date(e.created_at).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>

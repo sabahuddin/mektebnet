@@ -635,7 +635,7 @@ export default function UcenikProfilPage() {
                   <div className="flex items-center gap-3 bg-white border border-border/50 rounded-2xl px-4 py-3 mb-5 flex-wrap">
                     <span className="text-sm font-extrabold text-muted-foreground shrink-0">{t("Ponašanje na času:")}</span>
                     <span className="text-base font-extrabold text-amber-500">⭐ {mojeZvjezdice.pozitivne}</span>
-                    <span className="text-base font-extrabold text-gray-600">⚫ {mojeZvjezdice.negativne}</span>
+                    <span className="text-base font-extrabold text-gray-600">★ {mojeZvjezdice.negativne}</span>
                     <span className="text-xs text-muted-foreground">{t("zvjezdice od muallima")}</span>
                   </div>
                 )}

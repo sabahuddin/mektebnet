@@ -961,7 +961,7 @@ export default function GrupaPage() {
                         <div className="flex items-center gap-2 mb-1.5">
                           <span className="text-[10px] font-extrabold text-muted-foreground shrink-0">{t("Ponašanje:")}</span>
                           <span className="text-xs font-extrabold text-amber-500">⭐ {zv.pozitivne}</span>
-                          <span className="text-xs font-extrabold text-gray-600">⚫ {zv.negativne}</span>
+                          <span className="text-xs font-extrabold text-gray-600">★ {zv.negativne}</span>
                           <div className="ml-auto flex gap-1">
                             <button
                               onClick={() => addZvjezdica(u.id, "pozitivna")}
@@ -972,7 +972,7 @@ export default function GrupaPage() {
                               onClick={() => addZvjezdica(u.id, "negativna")}
                               className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition-colors border border-gray-200"
                               title={t("Dodaj negativnu zvjezdicu")}
-                            >+⚫</button>
+                            >+★</button>
                           </div>
                         </div>
                       );

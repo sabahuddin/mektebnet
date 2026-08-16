@@ -568,7 +568,7 @@ function DijeteContent({
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <span className="text-xs font-extrabold text-amber-800 shrink-0">{t("Ponašanje na času:")}</span>
           <span className="text-sm font-extrabold text-amber-500">⭐ {dijeteZvjezdice.pozitivne}</span>
-          <span className="text-sm font-extrabold text-gray-700">⚫ {dijeteZvjezdice.negativne}</span>
+          <span className="text-sm font-extrabold text-gray-700">★ {dijeteZvjezdice.negativne}</span>
         </div>
       )}
 
