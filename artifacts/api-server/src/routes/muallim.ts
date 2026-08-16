@@ -5061,7 +5061,7 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.id);
 
-    // Pokušaj sa JOIN-om na kategorije; ako zvjezdice_kategorije ne postoji, padne na jednostavniji upit
+    // Tri nivoa fallback-a — svaki bez JOIN-a koji bi mogao ne postojati u produkciji
     let entries: any[] = [];
     try {
       const r = await db.execute(sql`
@@ -5077,18 +5077,31 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
       `);
       entries = r.rows;
     } catch {
-      // Fallback bez kategorija (ako zvjezdice_kategorije tabela još ne postoji)
-      const r = await db.execute(sql`
-        SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
-               u.display_name AS muallim_ime,
-               null AS kategorija_naziv
-        FROM zvjezdice_log zl
-        JOIN korisnici u ON u.id = zl.muallim_id
-        WHERE zl.ucenik_id = ${ucenikId}
-        ORDER BY zl.created_at DESC
-        LIMIT 100
-      `);
-      entries = r.rows;
+      try {
+        // Fallback 1: bez zvjezdice_kategorije JOIN-a
+        const r = await db.execute(sql`
+          SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
+                 u.display_name AS muallim_ime,
+                 null AS kategorija_naziv
+          FROM zvjezdice_log zl
+          JOIN korisnici u ON u.id = zl.muallim_id
+          WHERE zl.ucenik_id = ${ucenikId}
+          ORDER BY zl.created_at DESC
+          LIMIT 100
+        `);
+        entries = r.rows;
+      } catch {
+        // Fallback 2: apsolutni minimum — nula JOIN-ova
+        const r = await db.execute(sql`
+          SELECT id, tip, razlog, created_at,
+                 null AS muallim_ime, null AS kategorija_naziv
+          FROM zvjezdice_log
+          WHERE ucenik_id = ${ucenikId}
+          ORDER BY created_at DESC
+          LIMIT 100
+        `);
+        entries = r.rows;
+      }
     }
 
     const totalsResult = await db.execute(sql`

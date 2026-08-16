@@ -231,7 +231,9 @@ export default function UcenikPage() {
     setZvjezdiceLoading(true);
     apiRequest<{ entries: any[]; pozitivne: number; negativne: number }>(
       "GET", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, undefined, token
-    ).then(setZvjezdice).catch(() => {}).finally(() => setZvjezdiceLoading(false));
+    ).then(setZvjezdice).catch((err) => {
+      console.error("zvjezdice GET greška:", err?.message, err?.status);
+    }).finally(() => setZvjezdiceLoading(false));
   }, [token, id]);
 
   async function resetujZvjezdice() {
