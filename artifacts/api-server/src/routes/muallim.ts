@@ -4887,18 +4887,20 @@ router.post("/roditelj/:id/reset-password", async (req, res) => {
 
     // Provjera vlasništva: roditelj mora biti povezan sa BAREM JEDNIM
     // učenikom čiji je muallim ovaj korisnik (osim za admina).
+    // Glavni muallim može resetirati šifru roditelja bilo kojeg učenika u mektebu.
     if (req.user!.role !== "admin") {
+      const ctx = await getMuallimCtx(req.user!.userId);
       const veze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
         .from(roditeljUcenikTable)
         .where(eq(roditeljUcenikTable.roditeljId, roditeljId));
       if (veze.length === 0) { res.status(403).json({ error: "Roditelj nije povezan ni s jednim vašim učenikom" }); return; }
       const ucenikIds = veze.map(v => v.ucenikId);
+      const ucenikFilter = ctx?.isGlavni && ctx.mektebId
+        ? and(inArray(ucenikProfiliTable.userId, ucenikIds), eq(ucenikProfiliTable.mektebId, ctx.mektebId))
+        : and(inArray(ucenikProfiliTable.userId, ucenikIds), eq(ucenikProfiliTable.muallimId, req.user!.userId));
       const profili = await db.select({ userId: ucenikProfiliTable.userId })
         .from(ucenikProfiliTable)
-        .where(and(
-          inArray(ucenikProfiliTable.userId, ucenikIds),
-          eq(ucenikProfiliTable.muallimId, req.user!.userId),
-        ));
+        .where(ucenikFilter);
       if (profili.length === 0) { res.status(403).json({ error: "Roditelj nije povezan ni s jednim vašim učenikom" }); return; }
     }
 

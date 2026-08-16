@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown
+  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -440,6 +440,7 @@ export default function MuallimPanel() {
   const [deletingGrupa, setDeletingGrupa] = useState(false);
   const [izvjestajSpasen, setIzvjestajSpasen] = useState(false);
   const [downloadingIzvjestaj, setDownloadingIzvjestaj] = useState(false);
+  const [uceniciSearch, setUceniciSearch] = useState("");
 
   const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
@@ -1528,71 +1529,106 @@ export default function MuallimPanel() {
             {/* UČENICI */}
             {activeTab === "ucenici" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="flex justify-end mb-4">
-                  <Link href="/muallim/dodaj-ucenika">
-                    <Button className="rounded-xl font-bold flex items-center gap-2">
-                      <Plus className="w-4 h-4" /> {t("Dodaj učenika")}
-                    </Button>
-                  </Link>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="relative flex-1 max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder={t("Pretraži po imenu ili korisničkom imenu...")}
+                      value={uceniciSearch}
+                      onChange={e => setUceniciSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                    />
+                  </div>
+                  {uceniciSearch && (
+                    <span className="text-xs text-muted-foreground">
+                      {ucenici.filter(u => {
+                        const q = uceniciSearch.toLowerCase();
+                        return u.displayName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q);
+                      }).length} {t("rezultata")}
+                    </span>
+                  )}
+                  <div className="ml-auto">
+                    <Link href="/muallim/dodaj-ucenika">
+                      <Button className="rounded-xl font-bold flex items-center gap-2">
+                        <Plus className="w-4 h-4" /> {t("Dodaj učenika")}
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
                 <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
-                  {ucenici.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                      <p className="font-medium">{t("Nema učenika. Dodaj prvog učenika.")}</p>
-                    </div>
-                  ) : (
-                    <table className="w-full">
-                      <thead className="border-b border-border/50">
-                        <tr>
-                          {[t("Ime i prezime"), t("Korisničko ime"), t("Grupa"), t("Status"), ""].map(h => (
-                            <th key={h} className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ucenici.map((u, i) => (
-                          <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
-                            className="border-b border-border/30 hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3 font-bold text-foreground">
-                              <span className="inline-flex items-center gap-2">
-                                {u.displayName}
-                                {u.roditeljPovezan && (
-                                  <span
-                                    className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
-                                    title={t("Roditelj povezan")}
-                                    aria-label={t("Roditelj povezan")}
-                                    data-testid={`roditelj-povezan-${u.id}`}
-                                  >
-                                    R
-                                  </span>
-                                )}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground font-mono text-sm">{u.username}</td>
-                            <td className="px-4 py-3 text-muted-foreground text-sm">{u.grupaIme || "—"}</td>
-                            <td className="px-4 py-3">
-                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${u.aktivanStatus ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                                {u.aktivanStatus ? t("Aktivan") : t("Arhiviran")}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <Link href={`/muallim/ucenik/${u.id}`}>
-                                  <button className="text-primary hover:underline font-bold text-sm flex items-center gap-1">
-                                    {t("Detalji")} <ChevronRight className="w-3 h-3" />
+                  {(() => {
+                    const filtered = uceniciSearch.trim()
+                      ? ucenici.filter(u => {
+                          const q = uceniciSearch.toLowerCase();
+                          return u.displayName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q);
+                        })
+                      : ucenici;
+                    if (ucenici.length === 0) return (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                        <p className="font-medium">{t("Nema učenika. Dodaj prvog učenika.")}</p>
+                      </div>
+                    );
+                    if (filtered.length === 0) return (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Search className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                        <p className="font-medium">{t("Nema učenika koji odgovaraju pretrazi.")}</p>
+                      </div>
+                    );
+                    return (
+                      <table className="w-full">
+                        <thead className="border-b border-border/50">
+                          <tr>
+                            {[t("Ime i prezime"), t("Korisničko ime"), t("Grupa"), t("Status"), ""].map(h => (
+                              <th key={h} className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filtered.map((u, i) => (
+                            <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                              className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-3 font-bold text-foreground">
+                                <span className="inline-flex items-center gap-2">
+                                  {u.displayName}
+                                  {u.roditeljPovezan && (
+                                    <span
+                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
+                                      title={t("Roditelj povezan")}
+                                      aria-label={t("Roditelj povezan")}
+                                      data-testid={`roditelj-povezan-${u.id}`}
+                                    >
+                                      R
+                                    </span>
+                                  )}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground font-mono text-sm">{u.username}</td>
+                              <td className="px-4 py-3 text-muted-foreground text-sm">{u.grupaIme || "—"}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${u.aktivanStatus ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                                  {u.aktivanStatus ? t("Aktivan") : t("Arhiviran")}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <Link href={`/muallim/ucenik/${u.id}`}>
+                                    <button className="text-primary hover:underline font-bold text-sm flex items-center gap-1">
+                                      {t("Detalji")} <ChevronRight className="w-3 h-3" />
+                                    </button>
+                                  </Link>
+                                  <button onClick={() => deleteUcenik(u.id)} className="text-red-400 hover:text-red-600 p-1" title={t("Arhiviraj učenika")}>
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
-                                </Link>
-                                <button onClick={() => deleteUcenik(u.id)} className="text-red-400 hover:text-red-600 p-1" title={t("Arhiviraj učenika")}>
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                                </div>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  })()}
                 </div>
               </motion.div>
             )}
