@@ -128,6 +128,14 @@ export async function initOneSignal(): Promise<void> {
       initialized = true;
       console.log("[Push] OneSignal initialized");
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // SDK je interno već inicijalizovan (npr. prethodni init pao NAKON
+      // internog flaga) — tretiraj kao uspjeh i nastavi.
+      if (/already initialized/i.test(msg)) {
+        initialized = true;
+        console.warn("[Push] SDK je već inicijalizovan — nastavljam");
+        return;
+      }
       console.error("[Push] Init failed:", err);
       recordPushError("Init", err);
       initPromise = null;
