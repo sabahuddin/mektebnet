@@ -6,10 +6,11 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 // app otvorena, iz glavne niti).
 
 self.addEventListener("push", function () {
-  // Inkrementiraj badge bez broja (prikazuje točku/oznaku).
-  // Broj se ažurira kad se app otvori (iz use-unread-poruke hook-a).
+  // Postavi badge na 1 kad dođe push. iOS traži eksplicitni broj (ne "flag"
+  // mode bez argumenta) da prikaže crvenu značku na ikoni. Točan broj
+  // nepročitanih poruka hook postavi kad se app otvori.
   if ("setAppBadge" in self.navigator) {
-    self.navigator.setAppBadge().catch(function () {});
+    self.navigator.setAppBadge(1).catch(function () {});
   }
   // Daljnju obradu (prikaz notifikacije) preuzima OneSignal SDK.
 });
