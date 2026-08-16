@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { porukeTable, usersTable, ucenikProfiliTable, grupeTable, roditeljUcenikTable } from "@workspace/db/schema";
-import { eq, or, and, desc, inArray, isNull, sql } from "drizzle-orm";
+import { porukeTable, usersTable, ucenikProfiliTable, grupeTable, roditeljUcenikTable, muallimProfiliTable } from "@workspace/db/schema";
+import { eq, or, and, desc, inArray, isNull, sql, ne } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 
@@ -128,7 +128,14 @@ router.post("/", async (req, res) => {
     if (role === "admin") {
       allowed = true;
     } else if (role === "muallim") {
-      allowed = ["roditelj", "admin", "ucenik"].includes(target.role);
+      if (["roditelj", "admin", "ucenik"].includes(target.role)) {
+        allowed = true;
+      } else if (target.role === "muallim") {
+        // Samo glavni muallim smije pisati drugim muallimima
+        const [mp] = await db.select({ isGlavni: muallimProfiliTable.isGlavni })
+          .from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+        allowed = !!mp?.isGlavni;
+      }
     } else if (role === "roditelj") {
       if (target.role === "admin") {
         allowed = true;
@@ -211,6 +218,20 @@ router.get("/kontakti", async (req, res) => {
       const admini = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
         .from(usersTable).where(eq(usersTable.role, "admin"));
 
+      // Provjeri je li ovaj muallim glavni — ako jeste, dodaj ostale muallime istog mekteba
+      const [mprofil] = await db.select({ isGlavni: muallimProfiliTable.isGlavni, mektebId: muallimProfiliTable.mektebId })
+        .from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+
+      let muallimiContacts: Contact[] = [];
+      if (mprofil?.isGlavni && mprofil.mektebId) {
+        const ostali = await db
+          .select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
+          .from(usersTable)
+          .innerJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
+          .where(and(eq(muallimProfiliTable.mektebId, mprofil.mektebId), ne(usersTable.id, userId)));
+        muallimiContacts = ostali;
+      }
+
       const mojiUcenici = await db.select({
         userId: ucenikProfiliTable.userId,
         grupaId: ucenikProfiliTable.grupaId,
@@ -253,7 +274,6 @@ router.get("/kontakti", async (req, res) => {
           const roditeljUsers = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
             .from(usersTable).where(inArray(usersTable.id, roditeljIds));
 
-          // Map: roditeljId → set grupe naziva
           const ucenikGrupaMap: Record<number, number | null> = {};
           for (const u of mojiUcenici) ucenikGrupaMap[u.userId] = u.grupaId ?? null;
 
@@ -273,7 +293,7 @@ router.get("/kontakti", async (req, res) => {
         }
       }
 
-      contacts = [...admini, ...ucenikContacts, ...roditeljContacts];
+      contacts = [...admini, ...muallimiContacts, ...ucenikContacts, ...roditeljContacts];
     } else if (role === "roditelj") {
       // Admini uvijek
       const admini = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
