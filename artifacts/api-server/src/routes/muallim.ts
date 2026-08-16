@@ -4451,12 +4451,22 @@ router.post("/bulk-reset-passwords", async (req, res) => {
 
     const mektebId = ctx.mektebId;
 
-    // Svi aktivni učenici u mektebu
-    const ucenikProfili = await db.select({ userId: ucenikProfiliTable.userId })
-      .from(ucenikProfiliTable)
-      .where(and(eq(ucenikProfiliTable.mektebId, mektebId), eq(ucenikProfiliTable.isArchived, false)));
+    // Svi aktivni učenici u mektebu — DVA načina jer stariji nalozi imaju mekteb_id = NULL:
+    // 1. Direktno: ucenik_profili.mekteb_id = mektebId
+    // 2. Indirektno: ucenik_profili.muallim_id je muallim koji pripada ovom mektebu
+    const ucenikProfili = await db.execute(sql`
+      SELECT DISTINCT up.user_id AS "userId"
+      FROM ucenik_profili up
+      WHERE up.is_archived = false
+        AND (
+          up.mekteb_id = ${mektebId}
+          OR up.muallim_id IN (
+            SELECT user_id FROM muallim_profili WHERE mekteb_id = ${mektebId}
+          )
+        )
+    `);
 
-    const ucenikIds = ucenikProfili.map(p => p.userId);
+    const ucenikIds = (ucenikProfili.rows as Array<{ userId: number }>).map(p => p.userId);
     if (ucenikIds.length === 0) {
       res.json({ ok: true, resetovano: 0 });
       return;
