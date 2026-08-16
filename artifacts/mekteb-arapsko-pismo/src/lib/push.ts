@@ -265,6 +265,16 @@ export async function requestPushPermission(): Promise<boolean> {
   try {
     lastPushError = "";
     await OneSignal.Notifications.requestPermission();
+    // v16: dozvola ≠ subscription. Ako je subscription ranije opt-out-ovan
+    // (ili nikad kreiran), mora se eksplicitno optIn() — bez ovoga optedIn
+    // ostaje false iako je permission granted.
+    try {
+      if (!OneSignal.User.PushSubscription.optedIn) {
+        await OneSignal.User.PushSubscription.optIn();
+      }
+    } catch (err) {
+      console.warn("[Push] optIn failed:", err);
+    }
     // OneSignal upisuje subscription asinhrono — pričekaj do ~5s da se pojavi
     // playerId (bez ovoga toggle zna vratiti false iako je korisnik dozvolio).
     for (let i = 0; i < 10; i++) {
