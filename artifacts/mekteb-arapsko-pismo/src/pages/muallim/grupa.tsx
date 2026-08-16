@@ -9,7 +9,7 @@ import {
   Loader2, GraduationCap, X, Plus, Trash2, Star, ClipboardList, KeyRound,
   AlertTriangle, BookOpen, Copy, Check,
   CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles, ListOrdered, Pencil,
-  User, ChevronDown,
+  User, ChevronDown, Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -156,6 +156,9 @@ export default function GrupaPage() {
   const [showAddSecMuallim, setShowAddSecMuallim] = useState(false);
   const [addSecMuallimId, setAddSecMuallimId] = useState<number | "">("");
   const [addingSecMuallim, setAddingSecMuallim] = useState(false);
+
+  // Settings dropdown po učeniku (zupčanik na kartici)
+  const [settingsOpenId, setSettingsOpenId] = useState<number | null>(null);
 
   // Reset šifre roditelja
   const [parentResetTarget, setParentResetTarget] = useState<Ucenik | null>(null);
@@ -834,6 +837,11 @@ export default function GrupaPage() {
           </motion.div>
         )}
 
+        {/* Backdrop za zatvaranje settings dropdowna */}
+        {settingsOpenId !== null && (
+          <div className="fixed inset-0 z-10" onClick={() => setSettingsOpenId(null)} />
+        )}
+
         <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border/30">
             <h3 className="font-extrabold text-foreground flex items-center gap-2">
@@ -847,97 +855,111 @@ export default function GrupaPage() {
               <p className="text-sm mt-1">{t("Dodaj učenike koristeći dugme iznad")}</p>
             </div>
           ) : (
-            <div className="divide-y divide-border/30">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3">
               {studentiGrupe.map((u, i) => {
-                const status = lekcijeStatus.get(u.id);
+                const settingsOpen = settingsOpenId === u.id;
                 return (
-                  <motion.div key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                    className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3 hover:bg-muted/20 transition-colors">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                    className="relative bg-muted/20 border border-border/40 rounded-2xl p-4 hover:border-primary/20 hover:bg-white transition-all">
+
+                    {/* Gornji red: avatar + ime + zupčanik */}
+                    <div className="flex items-center gap-3 mb-3">
                       <div className="relative shrink-0">
-                        <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center text-sm font-extrabold text-primary">
+                        <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center text-sm font-extrabold text-primary">
                           {u.displayName.charAt(0)}
                         </div>
                         {isOnline(u.lastSeenAt) && (
-                          <span
-                            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white"
-                            title={t("Online")}
-                            data-testid={`online-dot-${u.id}`}
-                          />
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white"
+                            title={t("Online")} data-testid={`online-dot-${u.id}`} />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-bold text-foreground truncate">{u.displayName}</p>
                           {u.roditeljPovezan && (
-                            <span
-                              className="inline-flex items-center justify-center shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
-                              title={t("Roditelj povezan")}
-                              aria-label={t("Roditelj povezan")}
-                              data-testid={`roditelj-povezan-grupa-${u.id}`}
-                            >
-                              R
-                            </span>
+                            <span className="inline-flex items-center justify-center shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
+                              title={t("Roditelj povezan")} aria-label={t("Roditelj povezan")}
+                              data-testid={`roditelj-povezan-grupa-${u.id}`}>R</span>
                           )}
                           {isOnline(u.lastSeenAt) && (
                             <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{t("online")}</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                          <span className="font-mono">{u.username}</span>
-                          {(u.totalScreentimeSec ?? 0) > 0 && (
-                            <span className="text-[10px] font-bold text-muted-foreground/80" title={t("Ukupno vrijeme na platformi")}>
-                              ⏱ {formatScreentime(u.totalScreentimeSec)}
-                            </span>
-                          )}
-                          {status?.zadnjaLekcija ? (
-                            <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 rounded-full px-2 py-0.5 font-bold">
-                              <BookOpen className="w-3 h-3" />
-                              {t("Nivo {nivo} · {naslov}", { nivo: String(status.zadnjaLekcija.nivo), naslov: status.zadnjaLekcija.naslov })}
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-muted-foreground/70">
-                              <BookOpen className="w-3 h-3" /> {t("Nema završenih lekcija")}
-                            </span>
-                          )}
-                          {status && status.zavrsenoLekcija > 0 && (
-                            <span className="text-[10px] font-extrabold text-secondary">{t("{n} završeno", { n: String(status.zavrsenoLekcija) })}</span>
-                          )}
-                        </div>
+                      </div>
+
+                      {/* Settings zupčanik */}
+                      <div className="relative z-20 shrink-0">
+                        <button
+                          onClick={e => { e.stopPropagation(); setSettingsOpenId(settingsOpen ? null : u.id); }}
+                          className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                          title={t("Upravljanje učenikom")}
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                        {settingsOpen && (
+                          <div className="absolute right-0 top-8 z-30 bg-white border border-border/60 rounded-xl shadow-xl py-1 min-w-[170px]">
+                            <Link href={`/muallim/ucenik/${u.id}`}>
+                              <button className="w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-muted flex items-center gap-2 text-foreground"
+                                onClick={() => setSettingsOpenId(null)}>
+                                <User className="w-4 h-4" /> {t("Profil učenika")}
+                              </button>
+                            </Link>
+                            <button
+                              onClick={() => { setSettingsOpenId(null); openParentReset(u); }}
+                              className="w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-blue-50 text-blue-700 flex items-center gap-2"
+                              data-testid={`btn-roditelj-reset-${u.id}`}
+                            >
+                              <KeyRound className="w-4 h-4" /> {t("Šifra roditelja")}
+                            </button>
+                            <button
+                              onClick={() => { setSettingsOpenId(null); setMoveStudent(u); setMoveTargetGrupaId(""); setShowMoveModal(true); }}
+                              className="w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-cyan-50 text-cyan-700 flex items-center gap-2"
+                            >
+                              <ArrowRightLeft className="w-4 h-4" /> {t("Prebaci u grupu")}
+                            </button>
+                            <div className="border-t border-border/50 my-1" />
+                            <button
+                              onClick={() => { setSettingsOpenId(null); setDeleteTarget(u); }}
+                              className="w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-red-50 text-red-600 flex items-center gap-2"
+                              data-testid={`btn-delete-${u.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" /> {t("Obriši učenika")}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-wrap justify-end">
-                      <button onClick={() => openOcjena(u)}
-                        className="p-2 hover:bg-amber-50 rounded-lg text-amber-600 transition-colors" title={t("Daj ocjenu")}
-                        data-testid={`btn-ocjena-${u.id}`}
-                      >
+
+                    {/* Akcije: Prisustvo, Ocjene, Zadaća, Kvizovi, Lekcije */}
+                    <div className="grid grid-cols-5 gap-1">
+                      <Link href={`/muallim/prisustvo/${grupa.id}`}>
+                        <button className="flex flex-col items-center gap-0.5 py-2 w-full rounded-xl hover:bg-emerald-50 text-emerald-700 transition-colors">
+                          <CalendarCheck className="w-4 h-4" />
+                          <span className="text-[10px] font-bold leading-tight">{t("Prisustvo")}</span>
+                        </button>
+                      </Link>
+                      <button onClick={() => { openOcjena(u); }}
+                        className="flex flex-col items-center gap-0.5 py-2 rounded-xl hover:bg-amber-50 text-amber-600 transition-colors"
+                        data-testid={`btn-ocjena-${u.id}`}>
                         <Star className="w-4 h-4" />
+                        <span className="text-[10px] font-bold leading-tight">{t("Ocjene")}</span>
                       </button>
                       <button onClick={() => openZadacaForOne(u)}
-                        className="p-2 hover:bg-violet-50 rounded-lg text-violet-600 transition-colors" title={t("Zadaća samo za ovog učenika")}
-                        data-testid={`btn-zadaca-ucenik-${u.id}`}
-                      >
+                        className="flex flex-col items-center gap-0.5 py-2 rounded-xl hover:bg-violet-50 text-violet-600 transition-colors"
+                        data-testid={`btn-zadaca-ucenik-${u.id}`}>
                         <ClipboardList className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => openParentReset(u)}
-                        className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors" title={t("Resetuj šifru roditelja")}
-                        data-testid={`btn-roditelj-reset-${u.id}`}
-                      >
-                        <KeyRound className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => { setMoveStudent(u); setMoveTargetGrupaId(""); setShowMoveModal(true); }}
-                        className="p-2 hover:bg-cyan-50 rounded-lg text-cyan-500 transition-colors" title={t("Prebaci u drugu grupu")}>
-                        <ArrowRightLeft className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setDeleteTarget(u)}
-                        className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title={t("Obriši učenika trajno")}
-                        data-testid={`btn-delete-${u.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
+                        <span className="text-[10px] font-bold leading-tight">{t("Zadaća")}</span>
                       </button>
                       <Link href={`/muallim/ucenik/${u.id}`}>
-                        <button className="p-2 hover:bg-muted rounded-lg text-primary transition-colors" title={t("Detalji")}>
-                          <ChevronRight className="w-4 h-4" />
+                        <button className="flex flex-col items-center gap-0.5 py-2 w-full rounded-xl hover:bg-blue-50 text-blue-600 transition-colors">
+                          <ListOrdered className="w-4 h-4" />
+                          <span className="text-[10px] font-bold leading-tight">{t("Kvizovi")}</span>
+                        </button>
+                      </Link>
+                      <Link href={`/muallim/ucenik/${u.id}`}>
+                        <button className="flex flex-col items-center gap-0.5 py-2 w-full rounded-xl hover:bg-indigo-50 text-indigo-600 transition-colors">
+                          <BookOpen className="w-4 h-4" />
+                          <span className="text-[10px] font-bold leading-tight">{t("Lekcije")}</span>
                         </button>
                       </Link>
                     </div>
