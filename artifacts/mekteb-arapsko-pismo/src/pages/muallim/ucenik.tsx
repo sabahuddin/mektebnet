@@ -171,7 +171,7 @@ export default function UcenikPage() {
   const [kreiraniRoditelj, setKreiraniRoditelj] = useState<KreiraniRoditelj | null>(null);
   const [copiedRoditelj, setCopiedRoditelj] = useState(false);
   const [resetRoditeljId, setResetRoditeljId] = useState<number | null>(null);
-  const [resetRoditeljPass, setResetRoditeljPass] = useState<{ id: number; password: string; displayName: string } | null>(null);
+  const [resetRoditeljPass, setResetRoditeljPass] = useState<{ id: number; password: string; displayName: string; username: string } | null>(null);
   // Povezivanje POSTOJEĆEG roditelja (drugo dijete istih roditelja itd.)
   const [postojeciUsername, setPostojeciUsername] = useState("");
   const [odabraniRoditelj, setOdabraniRoditelj] = useState<RoditeljPretraga | null>(null);
@@ -349,7 +349,7 @@ export default function UcenikPage() {
       const res = await apiRequest<{ ok: boolean; newPassword: string; displayName: string; username: string }>(
         "POST", `/muallim/roditelj/${roditeljId}/reset-password`, {}, token,
       );
-      setResetRoditeljPass({ id: roditeljId, password: res.newPassword, displayName: res.displayName });
+      setResetRoditeljPass({ id: roditeljId, password: res.newPassword, displayName: res.displayName, username: res.username });
       toast({ title: t("Šifra roditelja vraćena na standardnu!"), description: t("Standardna šifra je prikazana ispod.") });
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće resetovati šifru roditelja"), variant: "destructive" });
@@ -565,11 +565,23 @@ export default function UcenikPage() {
                     <div className="space-y-1.5">
                       {roditelji.map(r => (
                         <div key={r.id} className="bg-muted/30 rounded-lg px-3 py-2 text-sm">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                              <span className="font-bold text-foreground truncate">{r.displayName}</span>
-                              <span className="font-mono text-xs text-muted-foreground shrink-0">{r.username}</span>
+                              <div className="min-w-0">
+                                <span className="font-bold text-foreground block truncate">{r.displayName}</span>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <span className="font-mono text-[11px] text-blue-700 font-bold bg-blue-50 px-1.5 py-0.5 rounded">{r.username}</span>
+                                  <button
+                                    type="button"
+                                    title={t("Kopiraj korisničko ime")}
+                                    onClick={async () => { try { await navigator.clipboard.writeText(r.username); toast({ title: t("Kopirano!"), description: r.username }); } catch {} }}
+                                    className="text-blue-500 hover:text-blue-700 transition-colors"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
                               r.status === "approved" ? "bg-emerald-100 text-emerald-700" :
@@ -603,16 +615,28 @@ export default function UcenikPage() {
                             </Button>
                           </div>
                           {resetRoditeljPass?.id === r.id && (
-                            <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2 flex-wrap">
-                              <span className="text-[11px] font-bold text-emerald-700">{t("Standardna šifra:")}</span>
-                              <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{resetRoditeljPass.password}</code>
-                              <Button
-                                size="sm" variant="outline"
-                                onClick={async () => { try { await navigator.clipboard.writeText(resetRoditeljPass.password); toast({ title: t("Kopirano!") }); } catch {} }}
-                                className="rounded-lg text-[11px] h-6 px-2"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
+                            <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-1.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-bold text-emerald-700 w-20 shrink-0">{t("Korisničko ime:")}</span>
+                                <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{resetRoditeljPass.username}</code>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-bold text-emerald-700 w-20 shrink-0">{t("Standardna šifra:")}</span>
+                                <code className="bg-white border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-emerald-800">{resetRoditeljPass.password}</code>
+                                <Button
+                                  size="sm" variant="outline"
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(`${t("Korisničko ime")}: ${resetRoditeljPass.username}\n${t("Lozinka")}: ${resetRoditeljPass.password}`);
+                                      toast({ title: t("Kopirano!") });
+                                    } catch {}
+                                  }}
+                                  className="rounded-lg text-[11px] h-6 px-2"
+                                  title={t("Kopiraj korisničko ime i lozinku")}
+                                >
+                                  <Copy className="w-3 h-3 mr-1" />{t("Kopiraj sve")}
+                                </Button>
+                              </div>
                             </div>
                           )}
                         </div>
