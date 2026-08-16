@@ -13,3 +13,6 @@ description: Kako je konfigurisan OneSignal App ID na produkciji i zamke build-t
 - Klik na toggle mora retry-ati init i prikazati stvarnu grešku (lastPushError) — tihi `return false` je danima maskirao pravi uzrok.
 - "Can only be used on: https://..." = Site URL u OneSignal dashboardu (Settings → Web Configuration) se ne poklapa s originom; fix je u dashboardu, ne u kodu.
 - v16 flow: permission → optIn() → playerId stiže ASINHRONO (zna >5s); optedIn=true tretiraj kao uspjeh, change listener registruje playerId u backend kad stigne.
+- Server 401 od OneSignal = ključ na Coolify nije isti kao pravi. OneSignal ima "Legacy API Key" i noviji named key — Coolify mora imati named key (os_v2_...). Legacy key ima drugačiji auth format i ne radi s našim kodom.
+- PushPrompt banner: ako je Notification.permission već "granted" (korisnik prošao OneSignal slidedown), ne prikazuj banner — tiho pozovi requestPushPermission() u pozadini.
+- Boot error overlay u main.tsx: korisna sigurnosna mreža za bijeli ekran — prikazuje grešku + dugme koje očisti SW/keš i reloada.
