@@ -960,7 +960,9 @@ export default function MuallimPanel() {
     if (!g) return;
     setDeleteGrupaTarget(g);
     setDeleteGrupaConfirm("");
-    setIzvjestajSpasen(false);
+    // Grupe s 0 učenika nemaju šta sačuvati — preskoči korak izvještaja
+    const studentCount = ucenici.filter(u => u.grupaId === grupaId).length;
+    setIzvjestajSpasen(studentCount === 0);
   }
 
   function closeDeleteModal() {

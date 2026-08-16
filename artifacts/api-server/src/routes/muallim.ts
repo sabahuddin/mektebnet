@@ -3055,7 +3055,36 @@ router.get("/dashboard-stats", async (req, res) => {
 router.get("/statistika-mekteb", async (req, res) => {
   try {
     const muallimId = req.user!.userId;
-    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+    const userRole = req.user!.role;
+    const ctx = await getMektebCtx(muallimId);
+
+    // Isti skup grupe kao u dashboard-stats i GET /grupe:
+    // admin → sve, glavni → cijeli mekteb, ostali → vlastite + sekundarne
+    let grupeRows: Array<{ id: number }>;
+    if (userRole === "admin") {
+      const rows = await db.execute(sql`SELECT id FROM grupe ORDER BY id`);
+      grupeRows = rows.rows as typeof grupeRows;
+    } else if (ctx?.isGlavni && ctx.mektebId) {
+      const rows = await db.execute(sql`
+        SELECT g.id FROM grupe g
+        JOIN muallim_profili mp ON mp.user_id = g.muallim_id
+        WHERE mp.mekteb_id = ${ctx.mektebId}
+        ORDER BY g.id
+      `);
+      grupeRows = rows.rows as typeof grupeRows;
+    } else {
+      const rows = await db.execute(sql`
+        SELECT DISTINCT g.id FROM grupe g
+        LEFT JOIN grupa_muallimi gm ON gm.grupa_id = g.id
+        WHERE g.muallim_id = ${muallimId} OR gm.muallim_id = ${muallimId}
+        ORDER BY g.id
+      `);
+      grupeRows = rows.rows as typeof grupeRows;
+    }
+    const grupeIds = grupeRows.map(r => r.id);
+    const grupe = grupeIds.length > 0
+      ? await db.select().from(grupeTable).where(inArray(grupeTable.id, grupeIds))
+      : [];
 
     if (grupe.length === 0) {
       res.json({
