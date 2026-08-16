@@ -4133,4 +4133,45 @@ router.put("/prijevodi/content/:id", async (req, res) => {
   }
 });
 
+// ── ZVJEZDICE KATEGORIJE ─────────────────────────────────────────────────────
+// Admin definira listu razloga/kategorija za dodjelu zvjezdica.
+// Muallim ih bira u dropdownu na kartici učenika.
+
+router.get("/zvjezdice-kategorije", async (_req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT id, tip, naziv, redoslijed FROM zvjezdice_kategorije ORDER BY tip, redoslijed, naziv
+    `);
+    res.json(result.rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+router.post("/zvjezdice-kategorije", async (req, res) => {
+  try {
+    const { tip, naziv } = req.body;
+    if (!["pozitivna", "negativna"].includes(tip) || !naziv?.trim()) {
+      return res.status(400).json({ error: "Neispravan tip ili naziv" });
+    }
+    const result = await db.execute(sql`
+      INSERT INTO zvjezdice_kategorije (tip, naziv) VALUES (${tip}, ${naziv.trim()})
+      RETURNING id, tip, naziv, redoslijed
+    `);
+    res.status(201).json(result.rows[0]);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+router.delete("/zvjezdice-kategorije/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.execute(sql`DELETE FROM zvjezdice_kategorije WHERE id = ${id}`);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
 export default router;

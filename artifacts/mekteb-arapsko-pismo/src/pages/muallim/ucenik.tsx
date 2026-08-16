@@ -184,11 +184,9 @@ export default function UcenikPage() {
   const [zadace, setZadace] = useState<ZadacaPregled[]>([]);
   const [zadSubTab, setZadSubTab] = useState<"utoku" | "zavrseno">("utoku");
 
-  // Zvjezdice — classroom management
+  // Zvjezdice — classroom management (read-only na profilu; dodavanje je na kartici grupe)
   const [zvjezdice, setZvjezdice] = useState<{ entries: any[]; pozitivne: number; negativne: number } | null>(null);
   const [zvjezdiceLoading, setZvjezdiceLoading] = useState(false);
-  const [zvjezdiceRazlog, setZvjezdiceRazlog] = useState("");
-  const [dodajZvjezdiceLoading, setDodajZvjezdiceLoading] = useState(false);
   const [resetZvjezdiceLoading, setResetZvjezdiceLoading] = useState(false);
 
   useEffect(() => {
@@ -235,27 +233,6 @@ export default function UcenikPage() {
       "GET", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, undefined, token
     ).then(setZvjezdice).catch(() => {}).finally(() => setZvjezdiceLoading(false));
   }, [token, id]);
-
-  async function dodajZvjezdicu(tip: "pozitivna" | "negativna") {
-    if (!token || !id) return;
-    setDodajZvjezdiceLoading(true);
-    try {
-      await apiRequest("POST", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, {
-        tip, razlog: zvjezdiceRazlog.trim() || null,
-      }, token);
-      setZvjezdiceRazlog("");
-      // Osvježi log
-      const updated = await apiRequest<{ entries: any[]; pozitivne: number; negativne: number }>(
-        "GET", `/muallim/ucenik/${parseInt(id)}/zvjezdice`, undefined, token
-      );
-      setZvjezdice(updated);
-      toast({ title: tip === "pozitivna" ? t("⭐ Zvjezdica dodijeljena!") : t("★ Negativna zvjezdica dodijeljena") });
-    } catch {
-      toast({ title: t("Greška"), variant: "destructive" });
-    } finally {
-      setDodajZvjezdiceLoading(false);
-    }
-  }
 
   async function resetujZvjezdice() {
     if (!token || !id) return;
@@ -885,21 +862,32 @@ export default function UcenikPage() {
                   </div>
                 )}
               </div>
-              <div className="bg-white border border-border/50 rounded-2xl p-4 col-span-2">
-                <CalendarCheck className="w-5 h-5 text-primary mb-2" />
-                <div className="text-lg font-extrabold text-foreground">{t("{n} časova evidentirano", { n: String(prisustvo.length) })}</div>
-                {prisustvo.length > 0 && (
-                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mt-2 flex">
-                    {prisutnih > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(prisutnih / prisustvo.length) * 100}%` }} title={t("Prisutan: {n}", { n: String(prisutnih) })} />}
-                    {zakasnio > 0 && <div className="bg-amber-400 h-full" style={{ width: `${(zakasnio / prisustvo.length) * 100}%` }} title={t("Zakasnio: {n}", { n: String(zakasnio) })} />}
-                    {opravdano > 0 && <div className="bg-blue-400 h-full" style={{ width: `${(opravdano / prisustvo.length) * 100}%` }} title={t("Opravdan: {n}", { n: String(opravdano) })} />}
-                    {odsutnih > 0 && <div className="bg-red-500 h-full" style={{ width: `${(odsutnih / prisustvo.length) * 100}%` }} title={t("Odsutan: {n}", { n: String(odsutnih) })} />}
-                  </div>
+              {/* 6. Zvjezdice stat kartica */}
+              <div className="bg-white border border-border/50 rounded-2xl p-4">
+                <span className="text-lg mb-1 block leading-none">⭐</span>
+                <div className="text-2xl font-extrabold text-amber-500">{zvjezdice?.pozitivne ?? "—"}</div>
+                <div className="text-sm text-muted-foreground font-medium">{t("Zvjezdice")}</div>
+                {zvjezdice && zvjezdice.negativne > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">★ {zvjezdice.negativne} {t("negativnih")}</div>
                 )}
               </div>
             </div>
 
-            {/* Zvjezdice — classroom management */}
+            {/* Prisustvo bar — sada ispod kartica */}
+            {prisustvo.length > 0 && (
+              <div className="bg-white border border-border/50 rounded-2xl p-4 mb-6">
+                <CalendarCheck className="w-5 h-5 text-primary mb-2" />
+                <div className="text-base font-extrabold text-foreground mb-2">{t("{n} časova evidentirano", { n: String(prisustvo.length) })}</div>
+                <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden flex">
+                  {prisutnih > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(prisutnih / prisustvo.length) * 100}%` }} title={t("Prisutan: {n}", { n: String(prisutnih) })} />}
+                  {zakasnio > 0 && <div className="bg-amber-400 h-full" style={{ width: `${(zakasnio / prisustvo.length) * 100}%` }} title={t("Zakasnio: {n}", { n: String(zakasnio) })} />}
+                  {opravdano > 0 && <div className="bg-blue-400 h-full" style={{ width: `${(opravdano / prisustvo.length) * 100}%` }} title={t("Opravdan: {n}", { n: String(opravdano) })} />}
+                  {odsutnih > 0 && <div className="bg-red-500 h-full" style={{ width: `${(odsutnih / prisustvo.length) * 100}%` }} title={t("Odsutan: {n}", { n: String(odsutnih) })} />}
+                </div>
+              </div>
+            )}
+
+            {/* Zvjezdice — pregled (dodavanje je na kartici u grupi) */}
             <div className="bg-white border border-border/50 rounded-2xl p-5 mb-6">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                 <h2 className="font-extrabold text-foreground flex items-center gap-2">
@@ -919,53 +907,22 @@ export default function UcenikPage() {
                     disabled={resetZvjezdiceLoading}
                     className="rounded-xl text-xs text-red-600 border-red-200 hover:bg-red-50"
                   >
-                    {resetZvjezdiceLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t("Resetuj")}
+                    {resetZvjezdiceLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t("Resetuj sve")}
                   </Button>
                 )}
               </div>
 
-              {/* Brzi dodavanje bez razloga */}
-              <div className="flex gap-2 mb-4">
-                <Button
-                  onClick={() => dodajZvjezdicu("pozitivna")}
-                  disabled={dodajZvjezdiceLoading}
-                  className="rounded-xl font-bold flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white flex-1 sm:flex-none"
-                >
-                  {dodajZvjezdiceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "⭐"}
-                  {t("Pozitivna")}
-                </Button>
-                <Button
-                  onClick={() => dodajZvjezdicu("negativna")}
-                  disabled={dodajZvjezdiceLoading}
-                  variant="outline"
-                  className="rounded-xl font-bold flex items-center gap-1.5 flex-1 sm:flex-none"
-                >
-                  {dodajZvjezdiceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "★"}
-                  {t("Negativna")}
-                </Button>
-              </div>
-
-              {/* Opcionalni razlog */}
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={zvjezdiceRazlog}
-                  onChange={e => setZvjezdiceRazlog(e.target.value)}
-                  placeholder={t("Razlog (opcionalno)...")}
-                  className="flex-1 border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  onKeyDown={e => { if (e.key === "Enter" && !dodajZvjezdiceLoading) dodajZvjezdicu("pozitivna"); }}
-                />
-              </div>
-
-              {/* Log poslednjih unosa */}
+              {/* Log — pregled zvjezdica sa kategorijom/razlogom */}
               {zvjezdiceLoading ? (
                 <div className="text-sm text-muted-foreground">{t("Učitavanje...")}</div>
               ) : zvjezdice && zvjezdice.entries.length > 0 ? (
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                  {zvjezdice.entries.slice(0, 20).map((e: any) => (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {zvjezdice.entries.map((e: any) => (
                     <div key={e.id} className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-2.5 py-1.5">
                       <span>{e.tip === "pozitivna" ? "⭐" : "★"}</span>
-                      <span className="font-medium text-foreground">{e.tip === "pozitivna" ? t("Pozitivna") : t("Negativna")}</span>
+                      <span className="font-medium text-foreground">
+                        {e.kategorija_naziv || (e.tip === "pozitivna" ? t("Pozitivna") : t("Negativna"))}
+                      </span>
                       {e.razlog && <span className="text-muted-foreground">— {e.razlog}</span>}
                       <span className="ml-auto shrink-0 text-[10px]">{new Date(e.created_at).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                     </div>

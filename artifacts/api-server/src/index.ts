@@ -1175,6 +1175,22 @@ async function startup() {
     logger.error({ err: e }, "zvjezdice_log schema failed");
   }
 
+  // zvjezdice_kategorije — admin-definisane kategorije (razlozi) za dodjelu zvjezdica
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS zvjezdice_kategorije (
+        id serial PRIMARY KEY,
+        tip varchar(20) NOT NULL,
+        naziv varchar(100) NOT NULL,
+        redoslijed integer DEFAULT 0 NOT NULL
+      );
+    `);
+    await db.execute(sql`ALTER TABLE zvjezdice_log ADD COLUMN IF NOT EXISTS kategorija_id integer;`);
+    logger.info("zvjezdice_kategorije schema ready");
+  } catch (e) {
+    logger.error({ err: e }, "zvjezdice_kategorije schema failed");
+  }
+
   await runDataBootstrap();
   await seedDemoUspjeh();
 

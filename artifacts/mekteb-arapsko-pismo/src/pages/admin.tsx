@@ -1425,6 +1425,112 @@ function RasporediModal({ token, korisnik, grupeAll, onClose, onSaved }: {
   );
 }
 
+// ── KATEGORIJE ZVJEZDICA ─────────────────────────────────────────────────────
+function KategorijeZvjezdica({ token }: { token: string }) {
+  const { t } = useLanguage();
+  const { toast } = useToast();
+  const [kategorije, setKategorije] = useState<{id:number; tip:string; naziv:string}[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [novaNaziv, setNovaNaziv] = useState("");
+  const [novaTip, setNovaTip] = useState<"pozitivna"|"negativna">("pozitivna");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiRequest<{id:number;tip:string;naziv:string}[]>("GET", "/admin/zvjezdice-kategorije", undefined, token)
+      .then(setKategorije).catch(() => {}).finally(() => setLoading(false));
+  }, [token]);
+
+  async function dodaj() {
+    if (!novaNaziv.trim()) return;
+    setSaving(true);
+    try {
+      const nova = await apiRequest<{id:number;tip:string;naziv:string}>("POST", "/admin/zvjezdice-kategorije", { tip: novaTip, naziv: novaNaziv.trim() }, token);
+      setKategorije(prev => [...prev, nova]);
+      setNovaNaziv("");
+      toast({ title: t("Kategorija dodana") });
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function obrisi(id: number) {
+    try {
+      await apiRequest("DELETE", `/admin/zvjezdice-kategorije/${id}`, undefined, token);
+      setKategorije(prev => prev.filter(k => k.id !== id));
+    } catch {
+      toast({ title: t("Greška pri brisanju"), variant: "destructive" });
+    }
+  }
+
+  const pozitivne = kategorije.filter(k => k.tip === "pozitivna");
+  const negativne = kategorije.filter(k => k.tip === "negativna");
+
+  return (
+    <div className="bg-white border border-border/50 rounded-2xl p-5">
+      <h3 className="font-extrabold text-foreground mb-1 flex items-center gap-2">
+        <span>⭐★</span> {t("Kategorije zvjezdica — ponašanje")}
+      </h3>
+      <p className="text-xs text-muted-foreground mb-4">
+        {t("Muallim bira kategoriju kada dodjeljuje zvjezdicu učeniku. Dodaj pozitivne (⭐) i negativne (★) razloge.")}
+      </p>
+
+      {loading ? <div className="text-sm text-muted-foreground">{t("Učitavanje...")}</div> : (
+        <div className="grid sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <p className="text-xs font-extrabold text-amber-600 mb-2">⭐ {t("Pozitivne")}</p>
+            <div className="space-y-1">
+              {pozitivne.length === 0 && <p className="text-xs text-muted-foreground italic">{t("Nema kategorija")}</p>}
+              {pozitivne.map(k => (
+                <div key={k.id} className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                  <span className="text-sm font-medium">⭐ {k.naziv}</span>
+                  <button onClick={() => obrisi(k.id)} className="text-red-400 hover:text-red-600 ml-2"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-extrabold text-gray-600 mb-2">★ {t("Negativne")}</p>
+            <div className="space-y-1">
+              {negativne.length === 0 && <p className="text-xs text-muted-foreground italic">{t("Nema kategorija")}</p>}
+              {negativne.map(k => (
+                <div key={k.id} className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5">
+                  <span className="text-sm font-medium">★ {k.naziv}</span>
+                  <button onClick={() => obrisi(k.id)} className="text-red-400 hover:text-red-600 ml-2"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forma za dodavanje */}
+      <div className="flex gap-2 flex-wrap border-t border-border/30 pt-3">
+        <select
+          value={novaTip}
+          onChange={e => setNovaTip(e.target.value as "pozitivna"|"negativna")}
+          className="border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <option value="pozitivna">⭐ {t("Pozitivna")}</option>
+          <option value="negativna">★ {t("Negativna")}</option>
+        </select>
+        <input
+          type="text"
+          value={novaNaziv}
+          onChange={e => setNovaNaziv(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && !saving) dodaj(); }}
+          placeholder={t("npr. Iskren, Pomaže drugima...")}
+          className="flex-1 min-w-[180px] border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <Button onClick={dodaj} disabled={saving || !novaNaziv.trim()} className="rounded-xl font-bold flex items-center gap-1.5">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {t("Dodaj")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
@@ -2729,6 +2835,7 @@ export default function AdminPage() {
 
         {activeMainTab === "sistemski" && (
           <div className="space-y-6">
+            <KategorijeZvjezdica token={token!} />
             <PendingPrilozi token={token!} />
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">

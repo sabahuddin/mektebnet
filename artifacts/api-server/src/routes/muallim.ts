@@ -5009,19 +5009,32 @@ router.get("/grupa/:id/lekcije-status", async (req, res) => {
 // Dvije vrste: 'pozitivna' (žuta) i 'negativna' (crna).
 // Svaki zapis = jedna dodijeljena zvjezdica s opcionalnim razlogom.
 
+// GET /api/muallim/zvjezdice-kategorije — lista kategorija za dropdown u muallim UI
+router.get("/zvjezdice-kategorije", async (_req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT id, tip, naziv FROM zvjezdice_kategorije ORDER BY tip, redoslijed, naziv
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("zvjezdice kategorije error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // POST /api/muallim/ucenik/:id/zvjezdice — dodaj zvjezdicu
 router.post("/ucenik/:id/zvjezdice", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.id);
-    const { tip, razlog } = req.body;
+    const { tip, razlog, kategorija_id } = req.body;
     if (!["pozitivna", "negativna"].includes(tip)) {
       res.status(400).json({ error: "tip mora biti 'pozitivna' ili 'negativna'" });
       return;
     }
     const result = await db.execute(sql`
-      INSERT INTO zvjezdice_log (ucenik_id, muallim_id, tip, razlog)
-      VALUES (${ucenikId}, ${req.user!.userId}, ${tip}, ${razlog || null})
-      RETURNING id, ucenik_id, muallim_id, tip, razlog, created_at
+      INSERT INTO zvjezdice_log (ucenik_id, muallim_id, tip, razlog, kategorija_id)
+      VALUES (${ucenikId}, ${req.user!.userId}, ${tip}, ${razlog || null}, ${kategorija_id || null})
+      RETURNING id, ucenik_id, muallim_id, tip, razlog, kategorija_id, created_at
     `);
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -5036,9 +5049,11 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
     const ucenikId = parseInt(req.params.id);
     const entriesResult = await db.execute(sql`
       SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
-             u.display_name AS muallim_ime
+             u.display_name AS muallim_ime,
+             k.naziv AS kategorija_naziv
       FROM zvjezdice_log zl
       JOIN korisnici u ON u.id = zl.muallim_id
+      LEFT JOIN zvjezdice_kategorije k ON k.id = zl.kategorija_id
       WHERE zl.ucenik_id = ${ucenikId}
       ORDER BY zl.created_at DESC
       LIMIT 100

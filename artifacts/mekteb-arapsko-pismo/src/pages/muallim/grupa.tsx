@@ -162,6 +162,10 @@ export default function GrupaPage() {
 
   // Zvjezdice summary po učeniku (za prikaz na kartici)
   const [zvjezdiceSummary, setZvjezdiceSummary] = useState<Map<number, { pozitivne: number; negativne: number }>>(new Map());
+  // Inline Ponašanje panel — otvoren za kojeg učenika
+  const [ponasanjeOpenId, setPonasanjeOpenId] = useState<number | null>(null);
+  // Kategorije zvjezdica definisane od admina
+  const [zvjezdiceKategorije, setZvjezdiceKategorije] = useState<{id:number; tip:string; naziv:string}[]>([]);
 
   // Reset šifre roditelja
   const [parentResetTarget, setParentResetTarget] = useState<Ucenik | null>(null);
@@ -188,7 +192,8 @@ export default function GrupaPage() {
       apiRequest<LekcijaStatus[]>("GET", `/muallim/grupa/${grupaId}/lekcije-status`, undefined, token).catch(() => []),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<any[]>("GET", `/muallim/grupa/${grupaId}/zvjezdice-summary`, undefined, token).catch(() => []),
-    ]).then(([grupe, ucenici, status, lekcije, zvData]) => {
+      apiRequest<{id:number;tip:string;naziv:string}[]>("GET", "/muallim/zvjezdice-kategorije", undefined, token).catch(() => []),
+    ]).then(([grupe, ucenici, status, lekcije, zvData, kategorije]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
       setSekundarniMuallimi(g?.sekundarniMuallimi ?? []);
@@ -204,6 +209,7 @@ export default function GrupaPage() {
       setZvjezdiceSummary(new Map((zvData as any[]).map((r: any) => [
         r.ucenik_id, { pozitivne: parseInt(r.pozitivne ?? 0) || 0, negativne: parseInt(r.negativne ?? 0) || 0 },
       ])));
+      setZvjezdiceKategorije(kategorije as any[]);
     }).catch(() => {}).finally(() => setIsLoading(false));
     apiRequest<{ count: number }>("GET", `/muallim/zadace-pregled-badge?grupaId=${grupaId}`, undefined, token)
       .then(r => setZadacaBadge(r?.count ?? 0)).catch(() => {});
@@ -221,11 +227,10 @@ export default function GrupaPage() {
     }).catch(() => {});
   }
 
-  async function addZvjezdica(ucenikId: number, tip: "pozitivna" | "negativna") {
+  async function addZvjezdica(ucenikId: number, tip: "pozitivna" | "negativna", kategorijaId?: number) {
     if (!token) return;
     try {
-      await apiRequest("POST", `/muallim/ucenik/${ucenikId}/zvjezdice`, { tip }, token);
-      // Optimistično ažuriranje — ne čekamo server
+      await apiRequest("POST", `/muallim/ucenik/${ucenikId}/zvjezdice`, { tip, kategorija_id: kategorijaId || null }, token);
       setZvjezdiceSummary(prev => {
         const next = new Map(prev);
         const cur = next.get(ucenikId) ?? { pozitivne: 0, negativne: 0 };
@@ -233,6 +238,7 @@ export default function GrupaPage() {
         else next.set(ucenikId, { ...cur, negativne: cur.negativne + 1 });
         return next;
       });
+      setPonasanjeOpenId(null);
     } catch {
       toast({ title: t("Greška pri dodavanju zvjezdice"), variant: "destructive" });
     }
@@ -886,30 +892,32 @@ export default function GrupaPage() {
                   <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                     className="relative bg-muted/20 border border-border/40 rounded-2xl p-4 hover:border-primary/20 hover:bg-white transition-all">
 
-                    {/* Gornji red: avatar + ime + zupčanik */}
+                    {/* Gornji red: avatar + ime (klikabilno → profil) + zupčanik */}
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="relative shrink-0">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center text-sm font-extrabold text-primary">
-                          {u.displayName.charAt(0)}
-                        </div>
-                        {isOnline(u.lastSeenAt) && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white"
-                            title={t("Online")} data-testid={`online-dot-${u.id}`} />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="font-bold text-foreground truncate">{u.displayName}</p>
-                          {u.roditeljPovezan && (
-                            <span className="inline-flex items-center justify-center shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
-                              title={t("Roditelj povezan")} aria-label={t("Roditelj povezan")}
-                              data-testid={`roditelj-povezan-grupa-${u.id}`}>R</span>
-                          )}
+                      <Link href={`/muallim/ucenik/${u.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                        <div className="relative shrink-0">
+                          <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center text-sm font-extrabold text-primary">
+                            {u.displayName.charAt(0)}
+                          </div>
                           {isOnline(u.lastSeenAt) && (
-                            <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{t("online")}</span>
+                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white"
+                              title={t("Online")} data-testid={`online-dot-${u.id}`} />
                           )}
                         </div>
-                      </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-foreground truncate">{u.displayName}</p>
+                            {u.roditeljPovezan && (
+                              <span className="inline-flex items-center justify-center shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
+                                title={t("Roditelj povezan")} aria-label={t("Roditelj povezan")}
+                                data-testid={`roditelj-povezan-grupa-${u.id}`}>R</span>
+                            )}
+                            {isOnline(u.lastSeenAt) && (
+                              <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{t("online")}</span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
 
                       {/* Settings zupčanik */}
                       <div className="relative z-20 shrink-0">
@@ -954,38 +962,20 @@ export default function GrupaPage() {
                       </div>
                     </div>
 
-                    {/* Zvjezdice — ponašanje na času */}
+                    {/* Zvjezdice summary — prikaz bez quick-add (dodavanje je u Ponašanje panelu) */}
                     {(() => {
                       const zv = zvjezdiceSummary.get(u.id) ?? { pozitivne: 0, negativne: 0 };
                       return (
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-2 mb-2">
                           <span className="text-[10px] font-extrabold text-muted-foreground shrink-0">{t("Ponašanje:")}</span>
                           <span className="text-xs font-extrabold text-amber-500">⭐ {zv.pozitivne}</span>
                           <span className="text-xs font-extrabold text-gray-600">★ {zv.negativne}</span>
-                          <div className="ml-auto flex gap-1">
-                            <button
-                              onClick={() => addZvjezdica(u.id, "pozitivna")}
-                              className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors border border-amber-200"
-                              title={t("Dodaj pozitivnu zvjezdicu")}
-                            >+⭐</button>
-                            <button
-                              onClick={() => addZvjezdica(u.id, "negativna")}
-                              className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition-colors border border-gray-200"
-                              title={t("Dodaj negativnu zvjezdicu")}
-                            >+★</button>
-                          </div>
                         </div>
                       );
                     })()}
 
-                    {/* Akcije: Prisustvo, Ocjene, Zadaća, Kvizovi, Lekcije */}
-                    <div className="grid grid-cols-5 gap-1">
-                      <Link href={`/muallim/prisustvo/${grupa.id}`}>
-                        <button className="flex flex-col items-center gap-0.5 py-2 w-full rounded-xl hover:bg-emerald-50 text-emerald-700 transition-colors">
-                          <CalendarCheck className="w-4 h-4" />
-                          <span className="text-[10px] font-bold leading-tight">{t("Prisustvo")}</span>
-                        </button>
-                      </Link>
+                    {/* Akcije: Ocjene, Zadaća, Ponašanje */}
+                    <div className="grid grid-cols-3 gap-1">
                       <button onClick={() => { openOcjena(u); }}
                         className="flex flex-col items-center gap-0.5 py-2 rounded-xl hover:bg-amber-50 text-amber-600 transition-colors"
                         data-testid={`btn-ocjena-${u.id}`}>
@@ -998,19 +988,54 @@ export default function GrupaPage() {
                         <ClipboardList className="w-4 h-4" />
                         <span className="text-[10px] font-bold leading-tight">{t("Zadaća")}</span>
                       </button>
-                      <Link href={`/muallim/ucenik/${u.id}`}>
-                        <button className="flex flex-col items-center gap-0.5 py-2 w-full rounded-xl hover:bg-blue-50 text-blue-600 transition-colors">
-                          <ListOrdered className="w-4 h-4" />
-                          <span className="text-[10px] font-bold leading-tight">{t("Kvizovi")}</span>
-                        </button>
-                      </Link>
-                      <Link href={`/muallim/ucenik/${u.id}`}>
-                        <button className="flex flex-col items-center gap-0.5 py-2 w-full rounded-xl hover:bg-indigo-50 text-indigo-600 transition-colors">
-                          <BookOpen className="w-4 h-4" />
-                          <span className="text-[10px] font-bold leading-tight">{t("Lekcije")}</span>
-                        </button>
-                      </Link>
+                      <button
+                        onClick={e => { e.stopPropagation(); setPonasanjeOpenId(ponasanjeOpenId === u.id ? null : u.id); setSettingsOpenId(null); }}
+                        className={`flex flex-col items-center gap-0.5 py-2 rounded-xl transition-colors ${ponasanjeOpenId === u.id ? "bg-amber-100 text-amber-700" : "hover:bg-amber-50 text-amber-600"}`}
+                      >
+                        <span className="text-base leading-none">⭐</span>
+                        <span className="text-[10px] font-bold leading-tight">{t("Ponašanje")}</span>
+                      </button>
                     </div>
+
+                    {/* Inline Ponašanje panel — kategorije za dodavanje zvjezdica */}
+                    {ponasanjeOpenId === u.id && (() => {
+                      const pozKat = zvjezdiceKategorije.filter(k => k.tip === "pozitivna");
+                      const negKat = zvjezdiceKategorije.filter(k => k.tip === "negativna");
+                      return (
+                        <div className="mt-2 pt-2 border-t border-border/30 space-y-2">
+                          <div>
+                            <p className="text-[10px] font-extrabold text-amber-600 mb-1">⭐ {t("Pozitivne")}</p>
+                            <div className="flex flex-wrap gap-1">
+                              <button onClick={() => addZvjezdica(u.id, "pozitivna")}
+                                className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold hover:bg-amber-100 border border-amber-200 transition-colors">
+                                +⭐
+                              </button>
+                              {pozKat.map(k => (
+                                <button key={k.id} onClick={() => addZvjezdica(u.id, "pozitivna", k.id)}
+                                  className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold hover:bg-amber-100 border border-amber-200 transition-colors">
+                                  ⭐ {k.naziv}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-extrabold text-gray-600 mb-1">★ {t("Negativne")}</p>
+                            <div className="flex flex-wrap gap-1">
+                              <button onClick={() => addZvjezdica(u.id, "negativna")}
+                                className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-[10px] font-bold hover:bg-gray-200 border border-gray-200 transition-colors">
+                                +★
+                              </button>
+                              {negKat.map(k => (
+                                <button key={k.id} onClick={() => addZvjezdica(u.id, "negativna", k.id)}
+                                  className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-[10px] font-bold hover:bg-gray-200 border border-gray-200 transition-colors">
+                                  ★ {k.naziv}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </motion.div>
                 );
               })}
