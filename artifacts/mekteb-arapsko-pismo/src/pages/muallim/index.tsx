@@ -443,6 +443,8 @@ export default function MuallimPanel() {
   const [izvjestajSpasen, setIzvjestajSpasen] = useState(false);
   const [downloadingIzvjestaj, setDownloadingIzvjestaj] = useState(false);
   const [uceniciSearch, setUceniciSearch] = useState("");
+  const [uceniciMuallimFilter, setUceniciMuallimFilter] = useState<number | "sve">("sve");
+  const [uceniciStatusFilter, setUceniciStatusFilter] = useState<"aktivni" | "svi">("aktivni");
 
   const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
@@ -1272,6 +1274,7 @@ export default function MuallimPanel() {
     { id: "grupe", label: t("Grupe ({n})", { n: String(grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear).length) }), icon: GraduationCap },
     { id: "statistika", label: t("Statistika"), icon: TrendingUp },
     ...(mektebMeta.isGlavni ? [
+      { id: "ucenici", label: t("Svi učenici"), icon: Users },
       { id: "muallimi", label: t("Muallimi"), icon: Users },
       { id: "mekteb", label: t("Mekteb"), icon: School },
     ] : []),
@@ -1530,28 +1533,49 @@ export default function MuallimPanel() {
               </motion.div>
             )}
 
-            {/* UČENICI */}
+            {/* UČENICI — svi učenici mekteba (samo glavni muallim) */}
             {activeTab === "ucenici" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="relative flex-1 max-w-xs">
+                {/* Toolbar: pretraga + filteri + dugme */}
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <div className="relative min-w-[200px] flex-1 max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     <input
                       type="text"
-                      placeholder={t("Pretraži po imenu ili korisničkom imenu...")}
+                      placeholder={t("Pretraži po imenu...")}
                       value={uceniciSearch}
                       onChange={e => setUceniciSearch(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
                     />
                   </div>
-                  {uceniciSearch && (
-                    <span className="text-xs text-muted-foreground">
-                      {ucenici.filter(u => {
-                        const q = uceniciSearch.toLowerCase();
-                        return u.displayName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q);
-                      }).length} {t("rezultata")}
-                    </span>
-                  )}
+                  {/* Filter po muallimu */}
+                  {mektebMeta.isGlavni && (() => {
+                    const muallimOptions = Array.from(
+                      new Map(ucenici.filter(u => u.muallimId && u.muallimDisplayName).map(u => [u.muallimId, u.muallimDisplayName!]))
+                    ).sort((a, b) => a[1].localeCompare(b[1]));
+                    if (muallimOptions.length < 2) return null;
+                    return (
+                      <select
+                        value={uceniciMuallimFilter === "sve" ? "sve" : String(uceniciMuallimFilter)}
+                        onChange={e => setUceniciMuallimFilter(e.target.value === "sve" ? "sve" : Number(e.target.value))}
+                        className="text-sm border border-border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      >
+                        <option value="sve">{t("Svi muallimi")}</option>
+                        {muallimOptions.map(([id, name]) => (
+                          <option key={id} value={String(id)}>{name}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
+                  {/* Filter aktivan/svi */}
+                  <select
+                    value={uceniciStatusFilter}
+                    onChange={e => setUceniciStatusFilter(e.target.value as "aktivni" | "svi")}
+                    className="text-sm border border-border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="aktivni">{t("Samo aktivni")}</option>
+                    <option value="svi">{t("Aktivni + arhivirani")}</option>
+                  </select>
                   <div className="ml-auto">
                     <Link href="/muallim/dodaj-ucenika">
                       <Button className="rounded-xl font-bold flex items-center gap-2">
@@ -1560,14 +1584,27 @@ export default function MuallimPanel() {
                     </Link>
                   </div>
                 </div>
+
+                {/* Tablica */}
                 <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
                   {(() => {
-                    const filtered = uceniciSearch.trim()
-                      ? ucenici.filter(u => {
-                          const q = uceniciSearch.toLowerCase();
-                          return u.displayName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q);
-                        })
-                      : ucenici;
+                    let filtered = ucenici;
+                    // Status filter
+                    if (uceniciStatusFilter === "aktivni") filtered = filtered.filter(u => u.aktivanStatus);
+                    // Muallim filter
+                    if (uceniciMuallimFilter !== "sve") filtered = filtered.filter(u => u.muallimId === uceniciMuallimFilter);
+                    // Tekst pretraga
+                    if (uceniciSearch.trim()) {
+                      const q = uceniciSearch.toLowerCase();
+                      filtered = filtered.filter(u =>
+                        u.displayName.toLowerCase().includes(q) ||
+                        u.username.toLowerCase().includes(q) ||
+                        (u.grupaIme || "").toLowerCase().includes(q)
+                      );
+                    }
+
+                    const showMuallimCol = mektebMeta.isGlavni;
+
                     if (ucenici.length === 0) return (
                       <div className="text-center py-12 text-muted-foreground">
                         <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -1575,62 +1612,73 @@ export default function MuallimPanel() {
                       </div>
                     );
                     if (filtered.length === 0) return (
-                      <div className="text-center py-12 text-muted-foreground">
+                      <div className="text-center py-8 text-muted-foreground">
                         <Search className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                        <p className="font-medium">{t("Nema učenika koji odgovaraju pretrazi.")}</p>
+                        <p className="font-medium">{t("Nema učenika koji odgovaraju filterima.")}</p>
                       </div>
                     );
                     return (
-                      <table className="w-full">
-                        <thead className="border-b border-border/50">
-                          <tr>
-                            {[t("Ime i prezime"), t("Korisničko ime"), t("Grupa"), t("Status"), ""].map(h => (
-                              <th key={h} className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filtered.map((u, i) => (
-                            <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
-                              className="border-b border-border/30 hover:bg-muted/30 transition-colors">
-                              <td className="px-4 py-3 font-bold text-foreground">
-                                <span className="inline-flex items-center gap-2">
-                                  {u.displayName}
-                                  {u.roditeljPovezan && (
-                                    <span
-                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
-                                      title={t("Roditelj povezan")}
-                                      aria-label={t("Roditelj povezan")}
-                                      data-testid={`roditelj-povezan-${u.id}`}
-                                    >
-                                      R
+                      <>
+                        <div className="px-4 py-2 border-b border-border/30 bg-muted/20 text-xs text-muted-foreground font-medium">
+                          {filtered.length} {t("učenika")}
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[500px]">
+                            <thead className="border-b border-border/50">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{t("Ime i prezime")}</th>
+                                <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{t("Korisničko ime")}</th>
+                                <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{t("Grupa")}</th>
+                                {showMuallimCol && <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{t("Muallim")}</th>}
+                                <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{t("Status")}</th>
+                                <th className="px-4 py-3" />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filtered.map((u, i) => (
+                                <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i * 0.015, 0.3) }}
+                                  className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+                                  <td className="px-4 py-3 font-bold text-foreground">
+                                    <span className="inline-flex items-center gap-2">
+                                      {u.displayName}
+                                      {u.roditeljPovezan && (
+                                        <span
+                                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black border border-emerald-200"
+                                          title={t("Roditelj povezan")}
+                                          aria-label={t("Roditelj povezan")}
+                                          data-testid={`roditelj-povezan-${u.id}`}
+                                        >R</span>
+                                      )}
                                     </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-muted-foreground font-mono text-sm">{u.username}</td>
+                                  <td className="px-4 py-3 text-muted-foreground text-sm">{u.grupaIme || "—"}</td>
+                                  {showMuallimCol && (
+                                    <td className="px-4 py-3 text-sm text-muted-foreground">{u.muallimDisplayName || "—"}</td>
                                   )}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground font-mono text-sm">{u.username}</td>
-                              <td className="px-4 py-3 text-muted-foreground text-sm">{u.grupaIme || "—"}</td>
-                              <td className="px-4 py-3">
-                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${u.aktivanStatus ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                                  {u.aktivanStatus ? t("Aktivan") : t("Arhiviran")}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <Link href={`/muallim/ucenik/${u.id}`}>
-                                    <button className="text-primary hover:underline font-bold text-sm flex items-center gap-1">
-                                      {t("Detalji")} <ChevronRight className="w-3 h-3" />
-                                    </button>
-                                  </Link>
-                                  <button onClick={() => deleteUcenik(u.id)} className="text-red-400 hover:text-red-600 p-1" title={t("Arhiviraj učenika")}>
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </motion.tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                  <td className="px-4 py-3">
+                                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${u.aktivanStatus ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                                      {u.aktivanStatus ? t("Aktivan") : t("Arhiviran")}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <Link href={`/muallim/ucenik/${u.id}`}>
+                                        <button className="text-primary hover:underline font-bold text-sm flex items-center gap-1">
+                                          {t("Detalji")} <ChevronRight className="w-3 h-3" />
+                                        </button>
+                                      </Link>
+                                      <button onClick={() => deleteUcenik(u.id)} className="text-red-400 hover:text-red-600 p-1" title={t("Arhiviraj učenika")}>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     );
                   })()}
                 </div>
