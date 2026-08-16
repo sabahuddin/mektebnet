@@ -45,6 +45,14 @@ export function getStoredAuthToken(): string | null {
 let initialized = false;
 let initPromise: Promise<void> | null = null;
 
+// Zadnja stvarna greška (init ili permission) — UI je prikaže za dijagnostiku.
+export let lastPushError: string = "";
+
+function recordPushError(prefix: string, err: unknown): void {
+  const msg = err instanceof Error ? err.message : String(err);
+  lastPushError = `${prefix}: ${msg}`;
+}
+
 export function isCapacitorNative(): boolean {
   return typeof (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor !== "undefined"
     && !!(window as unknown as { Capacitor: { isNativePlatform?: () => boolean } }).Capacitor.isNativePlatform?.();
@@ -102,6 +110,7 @@ export async function initOneSignal(): Promise<void> {
       const appId = await getAppId();
       if (!appId) {
         console.warn("[Push] OneSignal App ID nije dostupan (ni build-time ni backend)");
+        lastPushError = "App ID nije dostupan";
         initPromise = null;
         return;
       }
@@ -120,6 +129,7 @@ export async function initOneSignal(): Promise<void> {
       console.log("[Push] OneSignal initialized");
     } catch (err) {
       console.error("[Push] Init failed:", err);
+      recordPushError("Init", err);
       initPromise = null;
     }
   })();
@@ -240,8 +250,12 @@ export async function requestPushPermission(): Promise<boolean> {
       await initOneSignal();
     } catch {}
   }
-  if (!initialized) return false;
+  if (!initialized) {
+    if (!lastPushError) lastPushError = "OneSignal init nije uspio";
+    return false;
+  }
   try {
+    lastPushError = "";
     await OneSignal.Notifications.requestPermission();
     // OneSignal upisuje subscription asinhrono — pričekaj do ~5s da se pojavi
     // playerId (bez ovoga toggle zna vratiti false iako je korisnik dozvolio).
@@ -257,9 +271,16 @@ export async function requestPushPermission(): Promise<boolean> {
       if (typeof Notification !== "undefined" && Notification.permission === "denied") break;
       await new Promise((r) => setTimeout(r, 500));
     }
+    if (!lastPushError) {
+      const perm = typeof Notification !== "undefined" ? Notification.permission : "?";
+      const opted = (() => { try { return String(OneSignal.User.PushSubscription.optedIn); } catch { return "?"; } })();
+      const pid = (() => { try { return OneSignal.User.PushSubscription.id ? "ima" : "nema"; } catch { return "?"; } })();
+      lastPushError = `Subscription nije kreiran (permission=${perm}, optedIn=${opted}, playerId=${pid})`;
+    }
     return false;
   } catch (err) {
     console.error("[Push] permission request failed:", err);
+    recordPushError("Permission", err);
     return false;
   }
 }

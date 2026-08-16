@@ -101,8 +101,9 @@ export function PushToggle() {
           setPerm(Notification.permission as PermState);
         }
         if (!ok && Notification.permission !== "denied") {
+          const { lastPushError } = await import("@/lib/push");
           setAttemptError(
-            t("Uključivanje nije uspjelo. Provjeri internet vezu, pa zatvori i ponovo otvori aplikaciju i pokušaj opet."),
+            t("Uključivanje nije uspjelo.") + (lastPushError ? ` [${lastPushError}]` : ""),
           );
         }
       }
