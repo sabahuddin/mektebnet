@@ -100,10 +100,12 @@ export function PushToggle() {
         if (typeof Notification !== "undefined") {
           setPerm(Notification.permission as PermState);
         }
-        if (!ok && Notification.permission !== "denied") {
-          const { lastPushError } = await import("@/lib/push");
+        if (!ok) {
+          const { lastPushError, pushLog } = await import("@/lib/push");
           setAttemptError(
-            t("Uključivanje nije uspjelo.") + (lastPushError ? ` [${lastPushError}]` : ""),
+            t("Uključivanje nije uspjelo.")
+            + (lastPushError ? ` [${lastPushError}]` : "")
+            + (pushLog.length ? ` — trag: ${pushLog.join(" → ")}` : ""),
           );
         }
       }

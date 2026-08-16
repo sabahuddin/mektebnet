@@ -48,6 +48,14 @@ let initPromise: Promise<void> | null = null;
 // Zadnja stvarna greška (init ili permission) — UI je prikaže za dijagnostiku.
 export let lastPushError: string = "";
 
+// Privremeni dijagnostički trag — toggle prikaže zadnje korake pri neuspjehu.
+export const pushLog: string[] = [];
+function plog(s: string): void {
+  pushLog.push(s);
+  if (pushLog.length > 12) pushLog.shift();
+  console.log("[Push]", s);
+}
+
 function recordPushError(prefix: string, err: unknown): void {
   const msg = err instanceof Error ? err.message : String(err);
   lastPushError = `${prefix}: ${msg}`;
@@ -264,16 +272,20 @@ export async function requestPushPermission(): Promise<boolean> {
   }
   try {
     lastPushError = "";
+    plog(`perm prije=${typeof Notification !== "undefined" ? Notification.permission : "?"}`);
     await OneSignal.Notifications.requestPermission();
+    plog(`perm poslije=${typeof Notification !== "undefined" ? Notification.permission : "?"}`);
     // v16: dozvola ≠ subscription. Ako je subscription ranije opt-out-ovan
     // (ili nikad kreiran), mora se eksplicitno optIn() — bez ovoga optedIn
     // ostaje false iako je permission granted.
     try {
       if (!OneSignal.User.PushSubscription.optedIn) {
+        plog("optIn() pozivam");
         await OneSignal.User.PushSubscription.optIn();
+        plog(`optIn() gotov, optedIn=${OneSignal.User.PushSubscription.optedIn}, id=${OneSignal.User.PushSubscription.id ? "ima" : "nema"}`);
       }
     } catch (err) {
-      console.warn("[Push] optIn failed:", err);
+      plog(`optIn greška: ${err instanceof Error ? err.message : String(err)}`);
     }
     // OneSignal upisuje subscription asinhrono — pričekaj do ~5s da se pojavi
     // playerId (bez ovoga toggle zna vratiti false iako je korisnik dozvolio).
@@ -281,6 +293,7 @@ export async function requestPushPermission(): Promise<boolean> {
       if (OneSignal.User.PushSubscription.optedIn) {
         const playerId = OneSignal.User.PushSubscription.id;
         if (playerId) {
+          plog(`playerId dobijen (pokušaj ${i + 1})`);
           await registerToken(playerId);
           setPushEnabledLocally(true);
           return true;
