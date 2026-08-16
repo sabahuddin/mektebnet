@@ -962,18 +962,6 @@ export default function GrupaPage() {
                       </div>
                     </div>
 
-                    {/* Zvjezdice summary — prikaz bez quick-add (dodavanje je u Ponašanje panelu) */}
-                    {(() => {
-                      const zv = zvjezdiceSummary.get(u.id) ?? { pozitivne: 0, negativne: 0 };
-                      return (
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-extrabold text-muted-foreground shrink-0">{t("Ponašanje:")}</span>
-                          <span className="text-xs font-extrabold text-amber-500">⭐ {zv.pozitivne}</span>
-                          <span className="text-xs font-extrabold text-gray-600">★ {zv.negativne}</span>
-                        </div>
-                      );
-                    })()}
-
                     {/* Akcije: Ocjene, Zadaća, Ponašanje */}
                     <div className="grid grid-cols-3 gap-1">
                       <button onClick={() => { openOcjena(u); }}
