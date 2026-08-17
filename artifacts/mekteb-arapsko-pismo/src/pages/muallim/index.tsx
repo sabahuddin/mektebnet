@@ -84,6 +84,13 @@ function computeCurrentSchoolYear(): string {
   return `${startYear}/${String(startYear + 1).slice(2)}`;
 }
 
+function formatSchoolYearOptionLabel(value: string): string {
+  const cleaned = value.replace(/^Mektebska\s+/i, "").trim();
+  const match = cleaned.match(/^(\d{4})\/(\d{2}|\d{4})$/);
+  if (!match) return cleaned;
+  return `${match[1].slice(-2)}/${match[2].slice(-2)}`;
+}
+
 interface MektebStats {
   perGrupa: Array<{
     id: number;
@@ -1421,7 +1428,7 @@ export default function MuallimPanel() {
                     const all = [...new Set([...fixed, ...fromDb])].sort().reverse();
                     return all.map(y => ({
                       value: y,
-                      label: y.slice(2), // "2025/26" → "25/26"
+                      label: formatSchoolYearOptionLabel(y), // "2025/26" ili "Mektebska 2025/26" → "25/26"
                     }));
                   })();
                   const aktivneGodine = grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear);
