@@ -1173,13 +1173,13 @@ export default function UcenikProfilPage() {
               });
               return (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-1.5 mb-4">
                   <button onClick={() => setZadSubTab("aktivne")}
-                    className={`flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-extrabold border transition-all ${zadSubTab === "aktivne" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    className={`flex-1 sm:flex-none rounded-lg px-3 py-2 text-xs sm:text-sm font-extrabold border transition-all ${zadSubTab === "aktivne" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
                     {t("Aktivne ({n})", { n: String(aktivne.length) })}
                   </button>
                   <button onClick={() => setZadSubTab("zavrsene")}
-                    className={`flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-extrabold border transition-all ${zadSubTab === "zavrsene" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    className={`flex-1 sm:flex-none rounded-lg px-3 py-2 text-xs sm:text-sm font-extrabold border transition-all ${zadSubTab === "zavrsene" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
                     {t("Završene ({n})", { n: String(zavrsene.length) })}
                   </button>
                 </div>
@@ -1229,37 +1229,37 @@ export default function UcenikProfilPage() {
 
                       return (
                         <div key={z.id} data-testid={`zadaca-${z.id}`}
-                          className={`bg-white border-2 rounded-2xl p-5 ${isDone ? "border-emerald-200" : isOverdue ? "border-red-200" : isUrgent ? "border-amber-200" : "border-border/50"}`}>
-                          <div className="flex items-start justify-between gap-3 mb-2">
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                          className={`bg-white border-2 rounded-2xl p-4 sm:p-5 ${isDone ? "border-emerald-200" : isOverdue ? "border-red-200" : isUrgent ? "border-amber-200" : "border-border/50"}`}>
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
                               <div className={`p-2 rounded-xl ${isDone ? "bg-emerald-50" : isOverdue ? "bg-red-50" : isUrgent ? "bg-amber-50" : "bg-violet-50"}`}>
                                 {isDone ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : isOverdue ? <AlertCircle className="w-5 h-5 text-red-600" /> : <FileText className="w-5 h-5 text-violet-600" />}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-extrabold text-foreground text-base">{z.naslov}</h3>
+                                <h3 className="font-extrabold text-foreground text-base leading-snug break-words">{z.naslov}</h3>
                                 {z.lekcijaNaslov && (() => {
                                   const matchSlug = ilmihalLekcije.find(l => l.naslov === z.lekcijaNaslov)?.slug;
                                   return matchSlug ? (
-                                    <Link href={`/ilmihal/${matchSlug}`} className="text-xs text-primary hover:underline mt-0.5 inline-flex items-center gap-1">
+                                    <Link href={`/ilmihal/${matchSlug}`} className="text-xs text-primary hover:underline mt-0.5 inline-flex items-start gap-1 max-w-full">
                                       <BookOpen className="w-3 h-3" />{z.lekcijaNaslov}
                                     </Link>
                                   ) : (
-                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5 break-words">
                                       <BookOpen className="w-3 h-3 inline mr-1" />{z.lekcijaNaslov}
                                     </p>
                                   );
                                 })()}
                               </div>
                             </div>
-                            <span className={`shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold border ${rokColor}`}>
-                              <Clock className="w-3 h-3" /> {rokLabel}
+                            <span className={`self-start w-fit max-w-full inline-flex items-start gap-1 px-2.5 py-1 rounded-full text-xs leading-snug font-extrabold border ${rokColor}`}>
+                              <Clock className="w-3 h-3 mt-0.5 shrink-0" /> {rokLabel}
                             </span>
                           </div>
                           {z.opis && (
-                            <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-3 pl-12">{z.opis}</p>
+                            <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words mt-3 sm:pl-12">{z.opis}</p>
                           )}
                           {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
-                            <div className="flex flex-wrap items-center gap-2 mt-3 pl-12">
+                            <div className="flex flex-wrap items-center gap-2 mt-3 sm:pl-12">
                               {(z.ocjena ?? null) !== null && (
                                 <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">{t("Ocjena: {n}", { n: String(z.ocjena) })}</span>
                               )}
