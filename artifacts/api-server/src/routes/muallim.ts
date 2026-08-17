@@ -79,6 +79,40 @@ function isFromCurrentSchoolYear(date: string | null | undefined): boolean {
   return Boolean(date && date >= currentSchoolYearResetDate());
 }
 
+// Zvjezdice (žute = pozitivne, crne = negativne) za skup učenika, u tekućoj
+// mektebskoj godini. Vraća unos za SVAKOG traženog učenika — učenici bez
+// ijedne zvjezdice dobijaju nule, da se nikad ne izgube iz tabela i zbirova.
+async function getZvjezdiceZaUcenike(
+  ucenikIds: number[],
+): Promise<Map<number, { pozitivne: number; negativne: number }>> {
+  const map = new Map<number, { pozitivne: number; negativne: number }>();
+  for (const id of ucenikIds) map.set(id, { pozitivne: 0, negativne: 0 });
+  if (ucenikIds.length === 0) return map;
+  try {
+    const rows = await db.execute(sql`
+      SELECT ucenik_id,
+             COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
+             COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
+      FROM zvjezdice_log
+      WHERE ucenik_id IN (${sql.join(ucenikIds.map(id => sql`${id}`), sql`, `)})
+        AND created_at >= ${currentSchoolYearResetDate()}
+      GROUP BY ucenik_id
+    `);
+    for (const r of rows.rows as any[]) {
+      const id = Number(r.ucenik_id);
+      if (!map.has(id)) continue;
+      map.set(id, {
+        pozitivne: parseInt(r.pozitivne) || 0,
+        negativne: parseInt(r.negativne) || 0,
+      });
+    }
+  } catch (err) {
+    // Stara produkcija bez zvjezdice_log tabele — statistika ostaje na nulama.
+    console.error("zvjezdice agregat error:", err);
+  }
+  return map;
+}
+
 // Učenik i roditelj iz istog para dijele isti 4-cifreni sufiks i lozinku
 // (npr. amir.4567 / Mekteb4567 i ismet.4567 / Mekteb4567) — radi lakše
 // komunikacije muallim ↔ porodica. Muallim i dalje može resetovati šifru
@@ -582,6 +616,7 @@ router.get("/mekteb/statistika", async (req, res) => {
       return {
         id: g.id,
         naziv: g.naziv,
+        muallimId: g.muallimId,
         muallimNaziv: muallimNameMap.get(g.muallimId) ?? "Nepoznat",
         skolskaGodina: g.skolskaGodina,
         ukupnoUcenika: stats.ucenici.length,
@@ -590,8 +625,41 @@ router.get("/mekteb/statistika", async (req, res) => {
         prosjekOcjena: stats.grupaProsjekOcjena,
         ukupnoKvizova: stats.ukupnoKvizova,
         ukupnoBodova: stats.ukupnoBodovaGrupa,
+        zvjezdicePozitivne: stats.zvjezdicePozitivne,
+        zvjezdiceNegativne: stats.zvjezdiceNegativne,
       };
     }));
+
+    // Primarni prikaz mektebskog nivoa: red po MUALLIMU (agregat njegovih grupa).
+    // Grupe ostaju u odgovoru kao podatak nižeg nivoa (drill-down).
+    const muallimi = muallimProfili
+      .map(p => {
+        const njegoveGrupe = perGrupa.filter(g => g.muallimId === p.userId);
+        const ukupnoUcenika = njegoveGrupe.reduce((a, g) => a + g.ukupnoUcenika, 0);
+        const validPrisM = njegoveGrupe.filter(g => g.prisustvoPct !== null);
+        const ponderPris = validPrisM.reduce((a, g) => a + g.ukupnoUcenika, 0);
+        const validOcM = njegoveGrupe.filter(g => g.prosjekOcjena !== null);
+        const ponderOc = validOcM.reduce((a, g) => a + g.ukupnoUcenika, 0);
+        return {
+          muallimId: p.userId,
+          displayName: muallimNameMap.get(p.userId) ?? "Nepoznat",
+          isGlavni: p.isGlavni ?? false,
+          brojGrupa: njegoveGrupe.length,
+          ukupnoUcenika,
+          ukupnoCasova: njegoveGrupe.reduce((a, g) => a + g.ukupnoCasova, 0),
+          prisustvoPct: ponderPris > 0
+            ? Math.round(validPrisM.reduce((a, g) => a + (g.prisustvoPct || 0) * g.ukupnoUcenika, 0) / ponderPris)
+            : null,
+          prosjekOcjena: ponderOc > 0
+            ? Math.round((validOcM.reduce((a, g) => a + (g.prosjekOcjena || 0) * g.ukupnoUcenika, 0) / ponderOc) * 10) / 10
+            : null,
+          ukupnoKvizova: njegoveGrupe.reduce((a, g) => a + g.ukupnoKvizova, 0),
+          ukupnoBodova: njegoveGrupe.reduce((a, g) => a + g.ukupnoBodova, 0),
+          zvjezdicePozitivne: njegoveGrupe.reduce((a, g) => a + g.zvjezdicePozitivne, 0),
+          zvjezdiceNegativne: njegoveGrupe.reduce((a, g) => a + g.zvjezdiceNegativne, 0),
+        };
+      })
+      .sort((a, b) => (b.isGlavni ? 1 : 0) - (a.isGlavni ? 1 : 0) || a.displayName.localeCompare(b.displayName, "bs"));
 
     // Učenici cijelog mekteba (preko mektebId).
     const activeGrupaIds = grupe.map(g => g.id);
@@ -651,10 +719,23 @@ router.get("/mekteb/statistika", async (req, res) => {
         brojMuallima: muallimProfili.length,
         brojGrupa: grupe.length,
         prosjekPrisustva,
+        prosjekOcjena: (() => {
+          const validOc = perGrupa.filter(g => g.prosjekOcjena !== null);
+          const ponder = validOc.reduce((a, g) => a + g.ukupnoUcenika, 0);
+          return ponder > 0
+            ? Math.round((validOc.reduce((a, g) => a + (g.prosjekOcjena || 0) * g.ukupnoUcenika, 0) / ponder) * 10) / 10
+            : null;
+        })(),
+        ukupnoCasova: perGrupa.reduce((a, g) => a + g.ukupnoCasova, 0),
+        ukupnoKvizova: perGrupa.reduce((a, g) => a + g.ukupnoKvizova, 0),
+        ukupnoBodova: perGrupa.reduce((a, g) => a + g.ukupnoBodova, 0),
+        zvjezdicePozitivne: perGrupa.reduce((a, g) => a + g.zvjezdicePozitivne, 0),
+        zvjezdiceNegativne: perGrupa.reduce((a, g) => a + g.zvjezdiceNegativne, 0),
         ukupnoLekcijaZavrseno,
         napredakPoNivoima,
         ukupnoScreentimeSec,
       },
+      muallimi,
       perGrupa,
     });
   } catch (err) {
@@ -2876,7 +2957,7 @@ router.put("/profil/password", async (req, res) => {
 async function getGrupaFullStats(grupaId: number) {
   const profili = await db.select().from(ucenikProfiliTable)
     .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
-  if (profili.length === 0) return { ucenici: [], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[] };
+  if (profili.length === 0) return { ucenici: [], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[], zvjezdicePozitivne: 0, zvjezdiceNegativne: 0 };
 
   const ucenikIds = profili.map(p => p.userId);
   const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
@@ -2897,6 +2978,7 @@ async function getGrupaFullStats(grupaId: number) {
     ? await db.select().from(kvizRezultatiTable)
         .where(inArray(kvizRezultatiTable.userId, ucenikIds))
     : [];
+  const zvjezdiceMap = await getZvjezdiceZaUcenike(ucenikIds);
 
   const svaDatumi = [...new Set(svoPrisustvo.map(p => p.datum))].sort();
   const ukupnoCasova = svaDatumi.length;
@@ -2967,6 +3049,8 @@ async function getGrupaFullStats(grupaId: number) {
       kvizProsjecniProcenat,
       ukupnoBodova,
       kvizovaProslejSedmice,
+      zvjezdicePozitivne: zvjezdiceMap.get(uid)?.pozitivne ?? 0,
+      zvjezdiceNegativne: zvjezdiceMap.get(uid)?.negativne ?? 0,
     };
   });
 
@@ -3005,7 +3089,10 @@ async function getGrupaFullStats(grupaId: number) {
     return { datum: d, prisutan: prisutanCount, ukupno: recs.length, pct: recs.length > 0 ? Math.round((prisutanCount / recs.length) * 100) : null, perStudent };
   });
 
-  return { ucenici, ukupnoCasova, svaDatumi, mjesecniPregled, grupaPrisustvoPct, grupaProsjekOcjena, aktivnihProslejSedmice, ukupnoKvizova, ukupnoBodovaGrupa, prosjekBodovaGrupa, prisustvoPoDatumu };
+  const zvjezdicePozitivne = ucenici.reduce((a, u) => a + u.zvjezdicePozitivne, 0);
+  const zvjezdiceNegativne = ucenici.reduce((a, u) => a + u.zvjezdiceNegativne, 0);
+
+  return { ucenici, ukupnoCasova, svaDatumi, mjesecniPregled, grupaPrisustvoPct, grupaProsjekOcjena, aktivnihProslejSedmice, ukupnoKvizova, ukupnoBodovaGrupa, prosjekBodovaGrupa, prisustvoPoDatumu, zvjezdicePozitivne, zvjezdiceNegativne };
 }
 
 router.get("/grupa/:id/statistika", async (req, res) => {
@@ -3216,6 +3303,7 @@ router.get("/statistika-mekteb", async (req, res) => {
           prosjekPrisustva: null, prosjekOcjena: null,
           ukupnoKvizova: 0, ukupnoBodova: 0,
           prosjekLekcijaPoUceniku: 0, prosjekKvizovaPoUceniku: 0,
+          zvjezdicePozitivne: 0, zvjezdiceNegativne: 0,
         },
       });
       return;
@@ -3235,6 +3323,8 @@ router.get("/statistika-mekteb", async (req, res) => {
         ukupnoBodova: stats.ukupnoBodovaGrupa,
         prosjekBodova: stats.prosjekBodovaGrupa,
         aktivnihProslejSedmice: stats.aktivnihProslejSedmice,
+        zvjezdicePozitivne: stats.zvjezdicePozitivne,
+        zvjezdiceNegativne: stats.zvjezdiceNegativne,
       };
     }));
 
@@ -3278,6 +3368,8 @@ router.get("/statistika-mekteb", async (req, res) => {
         ukupnoLekcijaZavrseno: lekcije.length,
         prosjekLekcijaPoUceniku: Math.round((lekcije.length / denom) * 10) / 10,
         prosjekKvizovaPoUceniku: Math.round((totalKvizova / denom) * 10) / 10,
+        zvjezdicePozitivne: perGrupa.reduce((a, g) => a + g.zvjezdicePozitivne, 0),
+        zvjezdiceNegativne: perGrupa.reduce((a, g) => a + g.zvjezdiceNegativne, 0),
       },
     });
   } catch (err) {
@@ -4725,12 +4817,13 @@ async function buildUcenikIzvjestaj(ucenikId: number, muallimId?: number) {
     ? and(eq(ocjeneTable.ucenikId, ucenikId), eq(ocjeneTable.muallimId, muallimId))
     : eq(ocjeneTable.ucenikId, ucenikId);
 
-  const [prisustvo, ocjene, kvizRezultati, napredak] = await Promise.all([
+  const [prisustvo, ocjene, kvizRezultati, napredak, zvjezdiceMap] = await Promise.all([
     db.select().from(priustvoTable).where(prisustvoWhere).orderBy(asc(priustvoTable.datum)),
     db.select().from(ocjeneTable).where(ocjeneWhere).orderBy(desc(ocjeneTable.datum)),
     db.select().from(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, ucenikId)).orderBy(desc(kvizRezultatiTable.completedAt)),
     db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
       .where(and(eq(korisnikNapredakTable.userId, ucenikId), eq(korisnikNapredakTable.zavrsen, true))),
+    getZvjezdiceZaUcenike([ucenikId]),
   ]);
 
   return {
@@ -4741,6 +4834,8 @@ async function buildUcenikIzvjestaj(ucenikId: number, muallimId?: number) {
     ocjene: ocjene.filter(o => isFromCurrentSchoolYear(o.datum)),
     kvizRezultati,
     zavrseneLekcijeBroj: napredak.length,
+    zvjezdicePozitivne: zvjezdiceMap.get(ucenikId)?.pozitivne ?? 0,
+    zvjezdiceNegativne: zvjezdiceMap.get(ucenikId)?.negativne ?? 0,
   };
 }
 
@@ -4863,18 +4958,34 @@ router.get("/izvjestaj/svi", async (req, res) => {
       : [];
     // Globalni izvještaj ne prikazuje grupe, ali podaci pripadaju samo
     // aktivnim učenicima iz dozvoljenog skupa grupa.
-    const izvjestaji = (await Promise.all(profili.map(p =>
-      buildUcenikIzvjestaj(p.userId, req.user!.role === "admin" ? undefined : (p.muallimId ?? undefined)),
-    )))
+    const izvjestaji = (await Promise.all(profili.map(async p => {
+      const r = await buildUcenikIzvjestaj(p.userId, req.user!.role === "admin" ? undefined : (p.muallimId ?? undefined));
+      return r ? { ...r, muallimId: p.muallimId ?? null } : null;
+    })))
       .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    // Nivo izvještaja: mektebski (glavni muallim bez scope-a) prikazuje zbirni
+    // red po MUALLIMU, muallimski prikazuje zbirni red po GRUPI.
+    const mektebNivo = Boolean(ctx?.isGlavni && ctx.mektebId && !scopedView && req.user!.role !== "admin");
+    const muallimIdsUReportu = [...new Set(izvjestaji.map(u => u.muallimId).filter((x): x is number => x != null))];
+    const muallimNames = muallimIdsUReportu.length > 0
+      ? await db.select({ id: usersTable.id, displayName: usersTable.displayName })
+          .from(usersTable).where(inArray(usersTable.id, muallimIdsUReportu))
+      : [];
+    const muallimNameMap = new Map(muallimNames.map(u => [u.id, u.displayName]));
+    const ucenici = izvjestaji.map(u => ({
+      ...u,
+      muallimNaziv: u.muallimId != null ? (muallimNameMap.get(u.muallimId) ?? null) : null,
+    }));
 
     const header = await buildMektebHeader(muallimId);
     res.json({
       ...header,
       tip: "svi" as const,
-      naslov: "Svi učenici",
+      nivo: mektebNivo ? ("mekteb" as const) : ("muallim" as const),
+      naslov: mektebNivo ? "Cijeli mekteb" : "Sve moje grupe",
       podnaslov: header.skolskaGodina,
-      ucenici: izvjestaji,
+      ucenici,
     });
   } catch (err) {
     console.error("Izvjestaj svi error:", err);
@@ -5417,19 +5528,16 @@ router.get("/grupa/:id/zvjezdice-summary", async (req, res) => {
        WHERE grupa_id = ${grupaId}
          AND COALESCE(is_archived, false) = false
     `);
-    const ids = ucenici.rows.map((u: any) => u.user_id);
+    const ids = (ucenici.rows as any[]).map(u => Number(u.user_id));
     if (ids.length === 0) { res.json([]); return; }
-    const rows = await db.execute(sql`
-      SELECT
-        ucenik_id,
-        COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
-        COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
-      FROM zvjezdice_log
-      WHERE ucenik_id IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})
-        AND created_at >= ${currentSchoolYearResetDate()}
-      GROUP BY ucenik_id
-    `);
-    res.json(rows.rows);
+    // Vraćamo red za SVAKOG aktivnog učenika grupe (nule uključene), da
+    // statistika i izvještaji nikad ne izostave učenika bez zvjezdica.
+    const map = await getZvjezdiceZaUcenike(ids);
+    res.json(ids.map(id => ({
+      ucenik_id: id,
+      pozitivne: map.get(id)?.pozitivne ?? 0,
+      negativne: map.get(id)?.negativne ?? 0,
+    })));
   } catch (err) {
     console.error("zvjezdice summary error:", err);
     res.status(500).json({ error: "Greška servera" });

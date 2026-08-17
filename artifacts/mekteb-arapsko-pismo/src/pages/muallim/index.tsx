@@ -104,6 +104,8 @@ interface MektebStats {
     ukupnoBodova: number;
     prosjekBodova: number;
     aktivnihProslejSedmice: number;
+    zvjezdicePozitivne?: number;
+    zvjezdiceNegativne?: number;
   }>;
   global: {
     ukupnoGrupa: number;
@@ -116,6 +118,8 @@ interface MektebStats {
     ukupnoLekcijaZavrseno: number;
     prosjekLekcijaPoUceniku: number;
     prosjekKvizovaPoUceniku: number;
+    zvjezdicePozitivne?: number;
+    zvjezdiceNegativne?: number;
   };
 }
 
@@ -212,6 +216,8 @@ interface StatistikaUcenik {
   kvizProsjecniProcenat: number | null;
   ukupnoBodova: number;
   kvizovaProslejSedmice: number;
+  zvjezdicePozitivne?: number;
+  zvjezdiceNegativne?: number;
 }
 
 interface MjesecniPregled {
@@ -244,6 +250,8 @@ interface StatData {
   ukupnoBodovaGrupa: number;
   prosjekBodovaGrupa: number;
   prisustvoPoDatumu: PrisustvoPoDatumu[];
+  zvjezdicePozitivne?: number;
+  zvjezdiceNegativne?: number;
 }
 
 interface Zadaca {
@@ -311,13 +319,34 @@ interface MektebStatsAll {
     brojMuallima: number;
     brojGrupa: number;
     prosjekPrisustva: number | null;
+    prosjekOcjena?: number | null;
+    ukupnoCasova?: number;
+    ukupnoKvizova?: number;
+    ukupnoBodova?: number;
+    zvjezdicePozitivne?: number;
+    zvjezdiceNegativne?: number;
     ukupnoLekcijaZavrseno: number;
     napredakPoNivoima: { nivo: number; zavrseno: number }[];
     ukupnoScreentimeSec: number;
   };
+  muallimi?: {
+    muallimId: number;
+    displayName: string;
+    isGlavni: boolean;
+    brojGrupa: number;
+    ukupnoUcenika: number;
+    ukupnoCasova: number;
+    prisustvoPct: number | null;
+    prosjekOcjena: number | null;
+    ukupnoKvizova: number;
+    ukupnoBodova: number;
+    zvjezdicePozitivne: number;
+    zvjezdiceNegativne: number;
+  }[];
   perGrupa: {
     id: number;
     naziv: string;
+    muallimId?: number;
     muallimNaziv: string;
     skolskaGodina: string;
     ukupnoUcenika: number;
@@ -326,6 +355,8 @@ interface MektebStatsAll {
     prosjekOcjena: number | null;
     ukupnoKvizova: number;
     ukupnoBodova: number;
+    zvjezdicePozitivne?: number;
+    zvjezdiceNegativne?: number;
   }[];
 }
 
@@ -478,12 +509,15 @@ export default function MuallimPanel() {
   const [selectedYear, setSelectedYear] = useState<string>(() => computeCurrentSchoolYear());
   const [mektebStats, setMektebStats] = useState<MektebStats | null>(null);
   const [mektebStatsLoading, setMektebStatsLoading] = useState(false);
-  const [statMode, setStatMode] = useState<"mekteb" | "grupa">("mekteb");
   const [kalendarSve, setKalendarSve] = useState<KalendarSveData | null>(null);
   const [kalendarSveLoading, setKalendarSveLoading] = useState(false);
   const [kalendarMode, setKalendarMode] = useState<"sve" | "grupa">("sve");
 
   const [statGrupaId, setStatGrupaId] = useState<number | null>(null);
+  // Drill-down u statistici: Mekteb → Muallim → Grupa → Učenik.
+  // statMuallimId je postavljen samo kad glavni muallim s mektebskog nivoa
+  // otvori pojedinog muallima; za vlastite grupe nivo muallima je korijen.
+  const [statMuallimId, setStatMuallimId] = useState<number | null>(null);
   const [statData, setStatData] = useState<StatData | null>(null);
   const [statLoading, setStatLoading] = useState(false);
   const [statView, setStatView] = useState<"pregled" | "prisustvo" | "mjesecno">("pregled");
@@ -570,13 +604,13 @@ export default function MuallimPanel() {
   }, [scopedMuallimId, panelContext]);
 
   useEffect(() => {
-    if (!token || !mektebMetaLoaded || activeTab !== "statistika" || statMode !== "mekteb" || mektebStats) return;
+    if (!token || !mektebMetaLoaded || activeTab !== "statistika" || mektebStats) return;
     setMektebStatsLoading(true);
     apiRequest<MektebStats>("GET", `/muallim/statistika-mekteb${muallimScopeQuery}`, undefined, token)
       .then(setMektebStats)
       .catch(() => {})
       .finally(() => setMektebStatsLoading(false));
-  }, [token, mektebMetaLoaded, activeTab, statMode, mektebStats, scopedMuallimId]);
+  }, [token, mektebMetaLoaded, activeTab, mektebStats, scopedMuallimId]);
 
   useEffect(() => {
     if (!token || activeTab !== "kalendar" || kalendarMode !== "sve" || kalendarSve) return;
@@ -1223,11 +1257,14 @@ export default function MuallimPanel() {
     apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token).then(setMektebMuallimi).catch(() => setMektebMuallimi([]));
   }, [token, activeTab]);
 
-  // Učitaj zbirnu statistiku mekteba kad glavni muallim otvori "Mekteb" tab.
+  // Učitaj zbirnu statistiku mekteba kad glavni muallim otvori "Mekteb" tab
+  // ili kad je na mektebskom nivou u Statistici (drill-down po muallimima).
   useEffect(() => {
-    if (!token || activeTab !== "mekteb" || mektebStatsAll) return;
+    if (!token || mektebStatsAll) return;
+    const trebaZaStatistiku = activeTab === "statistika" && mektebMeta.isGlavni && !scopedMuallimId;
+    if (activeTab !== "mekteb" && !trebaZaStatistiku) return;
     apiRequest<MektebStatsAll>("GET", "/muallim/mekteb/statistika", undefined, token).then(setMektebStatsAll).catch(() => {});
-  }, [token, activeTab, mektebStatsAll]);
+  }, [token, activeTab, mektebStatsAll, mektebMeta.isGlavni, scopedMuallimId]);
 
   if (!user || (user.role !== "muallim" && user.role !== "admin")) {
     return (
@@ -1341,6 +1378,83 @@ export default function MuallimPanel() {
   const visibleTabs = panelContext === "moje" && mektebMeta.isGlavni && !isMuallimPreview
     ? TABS.filter(tab => !["ucenici", "muallimi", "mekteb"].includes(tab.id))
     : TABS;
+
+  // ── Hijerarhija statistike: Mekteb → Muallim → Grupa → Učenik ──────────────
+  // Mektebski nivo postoji samo glavnom muallimu kad NIJE sužen na jednog
+  // muallima ("Moje grupe" i pregled drugog muallima počinju od nivoa muallima).
+  const statMektebNivoDostupan = mektebMeta.isGlavni && !scopedMuallimId;
+  const statNivo: "mekteb" | "muallim" | "grupa" =
+    statGrupaId ? "grupa" : (statMektebNivoDostupan && !statMuallimId ? "mekteb" : "muallim");
+  // Podaci nivoa muallima: kad je glavni ušao u tuđeg muallima, dolaze iz
+  // mektebskog agregata; inače iz vlastitog (scoped) agregata.
+  const statMuallimRed = statMuallimId != null
+    ? mektebStatsAll?.muallimi?.find(m => m.muallimId === statMuallimId) ?? null
+    : null;
+  const statMuallimGrupe = statMuallimId != null
+    ? (mektebStatsAll?.perGrupa ?? []).filter(g => g.muallimId === statMuallimId)
+    : (mektebStats?.perGrupa ?? []);
+  const statMuallimNaziv = statMuallimId != null
+    ? (statMuallimRed?.displayName
+        || mektebMuallimi?.find(m => m.userId === statMuallimId)?.displayName
+        || t("Muallim"))
+    : (isMuallimPreview
+        ? (mektebMuallimi?.find(m => m.userId === selectedMuallimId)?.displayName || t("Muallim"))
+        : t("Moje grupe"));
+  const statGrupaNaziv = statGrupaId
+    ? (grupe.find(g => g.id === statGrupaId)?.naziv
+        || mektebStatsAll?.perGrupa.find(g => g.id === statGrupaId)?.naziv
+        || statMuallimGrupe.find(g => g.id === statGrupaId)?.naziv
+        || t("Grupa"))
+    : null;
+  // Scope za štampu/izvještaj na nivou muallima — glavni koji gleda tuđeg
+  // muallima štampa njegov skup, ne cijeli mekteb.
+  const statIzvjestajQuery = statMuallimId != null
+    ? `?muallimId=${encodeURIComponent(String(statMuallimId))}`
+    : muallimScopeQuery;
+
+  // Zbirni brojevi nivoa muallima: kad glavni gleda tuđeg muallima dolaze iz
+  // mektebskog agregata (statMuallimRed), inače iz vlastitog scoped agregata.
+  const statMuallimGlobal = statMuallimId != null
+    ? (statMuallimRed ? {
+        ukupnoUcenika: statMuallimRed.ukupnoUcenika,
+        ukupnoGrupa: statMuallimRed.brojGrupa,
+        ukupnoCasova: statMuallimRed.ukupnoCasova,
+        prosjekPrisustva: statMuallimRed.prisustvoPct,
+        prosjekOcjena: statMuallimRed.prosjekOcjena,
+        ukupnoKvizova: statMuallimRed.ukupnoKvizova,
+        ukupnoBodova: statMuallimRed.ukupnoBodova,
+        zvjezdicePozitivne: statMuallimRed.zvjezdicePozitivne,
+        zvjezdiceNegativne: statMuallimRed.zvjezdiceNegativne,
+      } : null)
+    : (mektebStats ? {
+        ukupnoUcenika: mektebStats.global.ukupnoUcenika,
+        ukupnoGrupa: mektebStats.global.ukupnoGrupa,
+        ukupnoCasova: mektebStats.global.ukupnoCasova,
+        prosjekPrisustva: mektebStats.global.prosjekPrisustva,
+        prosjekOcjena: mektebStats.global.prosjekOcjena,
+        ukupnoKvizova: mektebStats.global.ukupnoKvizova,
+        ukupnoBodova: mektebStats.global.ukupnoBodova,
+        zvjezdicePozitivne: mektebStats.global.zvjezdicePozitivne ?? 0,
+        zvjezdiceNegativne: mektebStats.global.zvjezdiceNegativne ?? 0,
+      } : null);
+
+  const otvoriStatMuallima = (muallimId: number) => {
+    setStatMuallimId(muallimId);
+    setStatGrupaId(null);
+    setStatData(null);
+  };
+  const otvoriStatGrupu = (grupaId: number) => {
+    setStatGrupaId(grupaId);
+  };
+  const nazadNaStatMekteb = () => {
+    setStatMuallimId(null);
+    setStatGrupaId(null);
+    setStatData(null);
+  };
+  const nazadNaStatMuallima = () => {
+    setStatGrupaId(null);
+    setStatData(null);
+  };
 
   return (
     <Layout>
@@ -2109,37 +2223,154 @@ export default function MuallimPanel() {
             {/* STATISTIKA */}
             {activeTab === "statistika" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                {/* Stalna traka za izbor pregleda — uvijek vidljiva */}
+                {/* Breadcrumb hijerarhije — Mekteb → Muallim → Grupa → Učenik */}
                 <div className="bg-white border border-border/50 rounded-2xl p-4 mb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-bold text-muted-foreground mr-2">{t("Pregled:")}</span>
-                    <button
-                      onClick={() => { setStatMode("mekteb"); setStatGrupaId(null); setStatData(null); }}
-                      className={`rounded-xl px-4 py-2 text-sm font-bold border transition-all ${statMode === "mekteb" && !statGrupaId ? "bg-primary text-primary-foreground border-primary" : "bg-primary/5 text-primary border-primary/20 hover:bg-primary/10"}`}
-                      data-testid="btn-stat-mekteb">
-                      {scopedMuallimId ? t("Sve moje grupe") : t("Cijeli mekteb")}
-                    </button>
-                    {grupe.filter(g => !g.isArchived).map(g => (
-                      <button key={g.id}
-                        onClick={() => { setStatMode("grupa"); setStatGrupaId(g.id); }}
-                        className={`rounded-xl px-4 py-2 text-sm font-bold border transition-all ${statGrupaId === g.id ? "bg-primary text-primary-foreground border-primary" : "bg-white text-foreground border-border/50 hover:bg-muted/50"}`}>
-                        {g.naziv}
-                      </button>
-                    ))}
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                    {statMektebNivoDostupan && (
+                      <>
+                        <button
+                          onClick={nazadNaStatMekteb}
+                          className={`rounded-xl px-3 py-1.5 font-bold border transition-all ${statNivo === "mekteb" ? "bg-primary text-primary-foreground border-primary" : "bg-primary/5 text-primary border-primary/20 hover:bg-primary/10"}`}
+                          data-testid="btn-stat-mekteb">
+                          {mektebMeta.mektebNaziv || t("Cijeli mekteb")}
+                        </button>
+                        {statNivo !== "mekteb" && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                      </>
+                    )}
+                    {statNivo !== "mekteb" && (
+                      <>
+                        <button
+                          onClick={nazadNaStatMuallima}
+                          className={`rounded-xl px-3 py-1.5 font-bold border transition-all ${statNivo === "muallim" ? "bg-primary text-primary-foreground border-primary" : "bg-primary/5 text-primary border-primary/20 hover:bg-primary/10"}`}
+                          data-testid="btn-stat-muallim">
+                          {statMuallimNaziv}
+                        </button>
+                        {statNivo === "grupa" && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                      </>
+                    )}
+                    {statNivo === "grupa" && (
+                      <span className="rounded-xl px-3 py-1.5 font-bold border bg-primary text-primary-foreground border-primary"
+                        data-testid="btn-stat-grupa">
+                        {statGrupaNaziv}
+                      </span>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {statNivo === "mekteb"
+                      ? t("Klikni na muallima da vidiš njegove grupe.")
+                      : statNivo === "muallim"
+                        ? t("Klikni na grupu da vidiš učenike.")
+                        : t("Klikni na učenika za detaljan profil.")}
+                  </p>
                 </div>
 
-                {statMode === "mekteb" && !statGrupaId ? (
-                  mektebStatsLoading ? (
+                {statNivo === "mekteb" ? (
+                  !mektebStatsAll ? (
                     <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
-                  ) : mektebStats ? (
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
+                        <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
+                          <School className="w-5 h-5 text-primary" />
+                          {t("Mekteb — zbir i prosjek po muallimima")}
+                        </h3>
+                        <Button onClick={() => setLocation("/muallim/izvjestaj/svi")}
+                          className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2">
+                          <Printer className="w-4 h-4" /> {t("Štampaj izvještaj mekteba")}
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-primary/5 border border-border/50 rounded-2xl p-5">
+                          <Users className="w-5 h-5 text-primary mb-2" />
+                          <div className="text-2xl font-extrabold text-primary">{mektebStatsAll.global.ukupnoUcenika}</div>
+                          <div className="text-sm text-muted-foreground font-medium">
+                            {t("Učenika · {m} muallima · {g} grupa", { m: String(mektebStatsAll.global.brojMuallima), g: String(mektebStatsAll.global.brojGrupa) })}
+                          </div>
+                        </div>
+                        <div className={`border border-border/50 rounded-2xl p-5 ${mektebStatsAll.global.prosjekPrisustva !== null && mektebStatsAll.global.prosjekPrisustva >= 80 ? "bg-emerald-50" : mektebStatsAll.global.prosjekPrisustva !== null && mektebStatsAll.global.prosjekPrisustva >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
+                          <Target className="w-5 h-5 mb-2 text-foreground/60" />
+                          <div className={`text-2xl font-extrabold ${mektebStatsAll.global.prosjekPrisustva !== null && mektebStatsAll.global.prosjekPrisustva >= 80 ? "text-emerald-600" : mektebStatsAll.global.prosjekPrisustva !== null && mektebStatsAll.global.prosjekPrisustva >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                            {mektebStatsAll.global.prosjekPrisustva !== null ? `${mektebStatsAll.global.prosjekPrisustva}%` : "—"}
+                          </div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Prosj. prisustvo (mekteb)")}</div>
+                        </div>
+                        <div className="bg-violet-50 border border-border/50 rounded-2xl p-5">
+                          <Star className="w-5 h-5 text-violet-600 mb-2" />
+                          <div className="text-2xl font-extrabold text-violet-600">{mektebStatsAll.global.prosjekOcjena ?? "—"}</div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Prosj. ocjena (mekteb)")}</div>
+                        </div>
+                        <div className="bg-amber-50 border border-border/50 rounded-2xl p-5">
+                          <Star className="w-5 h-5 text-amber-500 mb-2" />
+                          <div className="flex items-baseline gap-3">
+                            <span className="text-2xl font-extrabold text-amber-600">★ {mektebStatsAll.global.zvjezdicePozitivne ?? 0}</span>
+                            <span className="text-2xl font-extrabold text-slate-800">★ {mektebStatsAll.global.zvjezdiceNegativne ?? 0}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Žute / crne zvjezdice")}</div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+                        <div className="px-4 py-3 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+                          <h4 className="font-extrabold text-foreground flex items-center gap-2">
+                            <Users className="w-4 h-4 text-primary" /> {t("Muallimi")}
+                          </h4>
+                          <span className="text-xs text-muted-foreground">{(mektebStatsAll.muallimi ?? []).length} {t("muallima")}</span>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="border-b border-border/50 bg-muted/20">
+                              <tr>
+                                {[t("Muallim"), t("Grupa"), t("Učenika"), t("Prisustvo"), t("Prosj. ocjena"), t("Kvizovi"), t("Bodovi"), t("Zvjezdice")].map(h => (
+                                  <th key={h} className="px-3 py-2.5 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(mektebStatsAll.muallimi ?? []).map((m, i) => (
+                                <motion.tr key={m.muallimId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
+                                  className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
+                                  onClick={() => otvoriStatMuallima(m.muallimId)}
+                                  data-testid={`row-stat-muallim-${m.muallimId}`}>
+                                  <td className="px-3 py-3 font-bold text-foreground whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                      {m.displayName}
+                                      {m.isGlavni && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">{t("glavni")}</span>}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3 text-sm font-medium text-foreground">{m.brojGrupa}</td>
+                                  <td className="px-3 py-3 text-sm font-medium text-foreground">{m.ukupnoUcenika}</td>
+                                  <td className="px-3 py-3">
+                                    {m.prisustvoPct !== null ? (
+                                      <span className={`text-sm font-bold ${m.prisustvoPct >= 80 ? "text-emerald-600" : m.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>{m.prisustvoPct}%</span>
+                                    ) : <span className="text-sm text-muted-foreground">—</span>}
+                                  </td>
+                                  <td className="px-3 py-3 text-sm font-extrabold text-foreground">{m.prosjekOcjena ?? "—"}</td>
+                                  <td className="px-3 py-3 text-sm font-medium text-foreground">{m.ukupnoKvizova}</td>
+                                  <td className="px-3 py-3 text-sm font-extrabold text-amber-600">{m.ukupnoBodova}</td>
+                                  <td className="px-3 py-3 whitespace-nowrap">
+                                    <span className="text-sm font-extrabold text-amber-600">★ {m.zvjezdicePozitivne}</span>
+                                    <span className="text-sm font-extrabold text-slate-800 ml-2">★ {m.zvjezdiceNegativne}</span>
+                                  </td>
+                                </motion.tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ) : statNivo === "muallim" ? (
+                  mektebStatsLoading && !statMuallimGlobal ? (
+                    <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
+                  ) : statMuallimGlobal ? (
                     <div className="space-y-6">
                       <div className="flex items-center justify-between flex-wrap gap-3">
                         <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
                           <TrendingUp className="w-5 h-5 text-primary" />
-                          {scopedMuallimId ? t("Moje grupe — Agregatna statistika") : t("Cijeli mekteb — Agregatna statistika")}
+                          {t("{ime} — zbir i prosjek grupa", { ime: statMuallimNaziv })}
                         </h3>
-                        <Button onClick={() => setLocation(`/muallim/izvjestaj/svi${muallimScopeQuery}`)}
+                        <Button onClick={() => setLocation(`/muallim/izvjestaj/svi${statIzvjestajQuery}`)}
                           className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2">
                           <Printer className="w-4 h-4" /> {t("Štampaj sve učenike")}
                         </Button>
@@ -2148,46 +2379,103 @@ export default function MuallimPanel() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-primary/5 border border-border/50 rounded-2xl p-5">
                           <Users className="w-5 h-5 text-primary mb-2" />
-                          <div className="text-2xl font-extrabold text-primary">{mektebStats.global.ukupnoUcenika}</div>
-                          <div className="text-sm text-muted-foreground font-medium">{t("Učenika u {n} grupa", { n: String(mektebStats.global.ukupnoGrupa) })}</div>
+                          <div className="text-2xl font-extrabold text-primary">{statMuallimGlobal.ukupnoUcenika}</div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Učenika u {n} grupa", { n: String(statMuallimGlobal.ukupnoGrupa) })}</div>
                         </div>
                         <div className="bg-emerald-50 border border-border/50 rounded-2xl p-5">
                           <CalendarCheck className="w-5 h-5 text-emerald-600 mb-2" />
-                          <div className="text-2xl font-extrabold text-emerald-600">{mektebStats.global.ukupnoCasova}</div>
+                          <div className="text-2xl font-extrabold text-emerald-600">{statMuallimGlobal.ukupnoCasova}</div>
                           <div className="text-sm text-muted-foreground font-medium">{t("Održanih časova")}</div>
                         </div>
-                        <div className={`border border-border/50 rounded-2xl p-5 ${mektebStats.global.prosjekPrisustva !== null && mektebStats.global.prosjekPrisustva >= 80 ? "bg-emerald-50" : mektebStats.global.prosjekPrisustva !== null && mektebStats.global.prosjekPrisustva >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
+                        <div className={`border border-border/50 rounded-2xl p-5 ${statMuallimGlobal.prosjekPrisustva !== null && statMuallimGlobal.prosjekPrisustva >= 80 ? "bg-emerald-50" : statMuallimGlobal.prosjekPrisustva !== null && statMuallimGlobal.prosjekPrisustva >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
                           <Target className="w-5 h-5 mb-2 text-foreground/60" />
-                          <div className={`text-2xl font-extrabold ${mektebStats.global.prosjekPrisustva !== null && mektebStats.global.prosjekPrisustva >= 80 ? "text-emerald-600" : mektebStats.global.prosjekPrisustva !== null && mektebStats.global.prosjekPrisustva >= 50 ? "text-amber-600" : "text-red-600"}`}>
-                            {mektebStats.global.prosjekPrisustva !== null ? `${mektebStats.global.prosjekPrisustva}%` : "—"}
+                          <div className={`text-2xl font-extrabold ${statMuallimGlobal.prosjekPrisustva !== null && statMuallimGlobal.prosjekPrisustva >= 80 ? "text-emerald-600" : statMuallimGlobal.prosjekPrisustva !== null && statMuallimGlobal.prosjekPrisustva >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                            {statMuallimGlobal.prosjekPrisustva !== null ? `${statMuallimGlobal.prosjekPrisustva}%` : "—"}
                           </div>
-                          <div className="text-sm text-muted-foreground font-medium">{t("Prosj. prisustvo (mekteb)")}</div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Prosj. prisustvo")}</div>
                         </div>
                         <div className="bg-violet-50 border border-border/50 rounded-2xl p-5">
                           <Star className="w-5 h-5 text-violet-600 mb-2" />
-                          <div className="text-2xl font-extrabold text-violet-600">{mektebStats.global.prosjekOcjena ?? "—"}</div>
-                          <div className="text-sm text-muted-foreground font-medium">{t("Prosj. ocjena (mekteb)")}</div>
+                          <div className="text-2xl font-extrabold text-violet-600">{statMuallimGlobal.prosjekOcjena ?? "—"}</div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Prosj. ocjena")}</div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-blue-50 border border-border/50 rounded-2xl p-5">
-                          <BookOpen className="w-5 h-5 text-blue-600 mb-2" />
-                          <div className="text-2xl font-extrabold text-blue-600">{mektebStats.global.ukupnoLekcijaZavrseno}</div>
-                          <div className="text-sm text-muted-foreground font-medium">{t("Završenih lekcija")}</div>
-                          <div className="text-xs text-muted-foreground/70 mt-1">{t("prosj. {n} po učeniku", { n: String(mektebStats.global.prosjekLekcijaPoUceniku) })}</div>
-                        </div>
+                        {mektebStats && statMuallimId == null && (
+                          <div className="bg-blue-50 border border-border/50 rounded-2xl p-5">
+                            <BookOpen className="w-5 h-5 text-blue-600 mb-2" />
+                            <div className="text-2xl font-extrabold text-blue-600">{mektebStats.global.ukupnoLekcijaZavrseno}</div>
+                            <div className="text-sm text-muted-foreground font-medium">{t("Završenih lekcija")}</div>
+                            <div className="text-xs text-muted-foreground/70 mt-1">{t("prosj. {n} po učeniku", { n: String(mektebStats.global.prosjekLekcijaPoUceniku) })}</div>
+                          </div>
+                        )}
                         <div className="bg-amber-50 border border-border/50 rounded-2xl p-5">
                           <Award className="w-5 h-5 text-amber-600 mb-2" />
-                          <div className="text-2xl font-extrabold text-amber-600">{mektebStats.global.ukupnoKvizova}</div>
+                          <div className="text-2xl font-extrabold text-amber-600">{statMuallimGlobal.ukupnoKvizova}</div>
                           <div className="text-sm text-muted-foreground font-medium">{t("Urađenih kvizova")}</div>
-                          <div className="text-xs text-muted-foreground/70 mt-1">{t("prosj. {n} po učeniku", { n: String(mektebStats.global.prosjekKvizovaPoUceniku) })}</div>
                         </div>
                         <div className="bg-rose-50 border border-border/50 rounded-2xl p-5">
                           <Heart className="w-5 h-5 text-rose-600 mb-2" />
-                          <div className="text-2xl font-extrabold text-rose-600">{mektebStats.global.ukupnoBodova}</div>
+                          <div className="text-2xl font-extrabold text-rose-600">{statMuallimGlobal.ukupnoBodova}</div>
                           <div className="text-sm text-muted-foreground font-medium">{t("Ukupno bodova")}</div>
                         </div>
+                        <div className="bg-amber-50 border border-border/50 rounded-2xl p-5">
+                          <Star className="w-5 h-5 text-amber-500 mb-2" />
+                          <div className="flex items-baseline gap-3">
+                            <span className="text-2xl font-extrabold text-amber-600">★ {statMuallimGlobal.zvjezdicePozitivne}</span>
+                            <span className="text-2xl font-extrabold text-slate-800">★ {statMuallimGlobal.zvjezdiceNegativne}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Žute / crne zvjezdice")}</div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+                        <div className="px-4 py-3 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+                          <h4 className="font-extrabold text-foreground flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-primary" /> {t("Grupe")}
+                          </h4>
+                          <span className="text-xs text-muted-foreground">{statMuallimGrupe.length} {t("grupa")}</span>
+                        </div>
+                        {statMuallimGrupe.length === 0 ? (
+                          <div className="p-8 text-center text-muted-foreground">{t("Nema aktivnih grupa")}</div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="border-b border-border/50 bg-muted/20">
+                                <tr>
+                                  {[t("Grupa"), t("Učenika"), t("Časova"), t("Prisustvo"), t("Prosj. ocjena"), t("Kvizovi"), t("Bodovi"), t("Zvjezdice")].map(h => (
+                                    <th key={h} className="px-3 py-2.5 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {statMuallimGrupe.map((g, i) => (
+                                  <motion.tr key={g.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
+                                    className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
+                                    onClick={() => otvoriStatGrupu(g.id)}
+                                    data-testid={`row-stat-grupa-${g.id}`}>
+                                    <td className="px-3 py-3 font-bold text-foreground whitespace-nowrap">{g.naziv}</td>
+                                    <td className="px-3 py-3 text-sm font-medium text-foreground">{g.ukupnoUcenika}</td>
+                                    <td className="px-3 py-3 text-sm font-medium text-foreground">{g.ukupnoCasova}</td>
+                                    <td className="px-3 py-3">
+                                      {g.prisustvoPct !== null ? (
+                                        <span className={`text-sm font-bold ${g.prisustvoPct >= 80 ? "text-emerald-600" : g.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>{g.prisustvoPct}%</span>
+                                      ) : <span className="text-sm text-muted-foreground">—</span>}
+                                    </td>
+                                    <td className="px-3 py-3 text-sm font-extrabold text-foreground">{g.prosjekOcjena ?? "—"}</td>
+                                    <td className="px-3 py-3 text-sm font-medium text-foreground">{g.ukupnoKvizova}</td>
+                                    <td className="px-3 py-3 text-sm font-extrabold text-amber-600">{g.ukupnoBodova}</td>
+                                    <td className="px-3 py-3 whitespace-nowrap">
+                                      <span className="text-sm font-extrabold text-amber-600">★ {g.zvjezdicePozitivne ?? 0}</span>
+                                      <span className="text-sm font-extrabold text-slate-800 ml-2">★ {g.zvjezdiceNegativne ?? 0}</span>
+                                    </td>
+                                  </motion.tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -2203,7 +2491,7 @@ export default function MuallimPanel() {
                     <div className="flex items-center justify-between flex-wrap gap-3">
                       <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-primary" />
-                        {grupe.find(g => g.id === statGrupaId)?.naziv} {t("— Izvještaji")}
+                        {statGrupaNaziv} {t("— Izvještaji")}
                       </h3>
                       <div className="flex items-center gap-3 flex-wrap">
                         <Button onClick={() => setLocation(`/muallim/izvjestaj/grupa/${statGrupaId}`)}
@@ -2215,8 +2503,8 @@ export default function MuallimPanel() {
                           className="rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 flex items-center gap-2">
                           {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <><FileSpreadsheet className="w-4 h-4" /> {t("Excel izvještaj")}</>}
                         </Button>
-                        <button onClick={() => { setStatGrupaId(null); setStatData(null); }}
-                          className="text-sm text-muted-foreground hover:text-foreground font-medium">{t("← Promijeni grupu")}</button>
+                        <button onClick={nazadNaStatMuallima}
+                          className="text-sm text-muted-foreground hover:text-foreground font-medium">{t("← Nazad na grupe")}</button>
                       </div>
                     </div>
 
@@ -2242,6 +2530,14 @@ export default function MuallimPanel() {
                         <Star className="w-5 h-5 text-violet-600 mb-2" />
                         <div className="text-2xl font-extrabold text-violet-600">{statData.grupaProsjekOcjena || "—"}</div>
                         <div className="text-sm text-muted-foreground font-medium">{t("Prosj. ocjena grupe")}</div>
+                      </div>
+                      <div className="bg-amber-50 border border-border/50 rounded-2xl p-5">
+                        <Star className="w-5 h-5 text-amber-500 mb-2" />
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-2xl font-extrabold text-amber-600">★ {statData.zvjezdicePozitivne ?? 0}</span>
+                          <span className="text-2xl font-extrabold text-slate-800">★ {statData.zvjezdiceNegativne ?? 0}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium">{t("Žute / crne zvjezdice")}</div>
                       </div>
                     </div>
 
@@ -2271,7 +2567,7 @@ export default function MuallimPanel() {
                             <table className="w-full">
                               <thead className="border-b border-border/50 bg-muted/20">
                                 <tr>
-                                  {[t("Učenik"), t("Prisustvo"), t("P"), t("O"), t("Z"), t("OP"), t("Prosj. ocjena"), t("Kvizovi"), t("Bodovi")].map(h => (
+                                  {[t("Učenik"), t("Prisustvo"), t("P"), t("O"), t("Z"), t("OP"), t("Prosj. ocjena"), t("Kvizovi"), t("Bodovi"), t("Zvjezdice")].map(h => (
                                     <th key={h} className="px-3 py-2.5 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
                                   ))}
                                 </tr>
@@ -2322,6 +2618,10 @@ export default function MuallimPanel() {
                                     </td>
                                     <td className="px-3 py-3">
                                       <span className="text-sm font-extrabold text-amber-600">{u.ukupnoBodova || 0}</span>
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap">
+                                      <span className="text-sm font-extrabold text-amber-600">★ {u.zvjezdicePozitivne ?? 0}</span>
+                                      <span className="text-sm font-extrabold text-slate-800 ml-2">★ {u.zvjezdiceNegativne ?? 0}</span>
                                     </td>
                                   </motion.tr>
                                 ))}

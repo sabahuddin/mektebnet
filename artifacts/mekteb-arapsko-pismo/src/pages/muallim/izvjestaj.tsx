@@ -21,10 +21,17 @@ interface UcenikIzvjestaj {
   ocjene: Ocjena[];
   kvizRezultati: KvizRezultat[];
   zavrseneLekcijeBroj: number;
+  zvjezdicePozitivne?: number;
+  zvjezdiceNegativne?: number;
+  muallimId?: number | null;
+  muallimNaziv?: string | null;
 }
 
 interface IzvjestajData {
   tip: "ucenik" | "grupa" | "svi";
+  // "mekteb" = izvještaj cijelog mekteba (zbir po muallimima),
+  // "muallim" = izvještaj jednog muallima (zbir po grupama).
+  nivo?: "mekteb" | "muallim";
   naslov: string;
   podnaslov: string | null;
   mektebNaziv: string | null;
@@ -58,7 +65,29 @@ function statsForUcenik(u: UcenikIzvjestaj) {
   const prosjecnaOcjena = u.ocjene.length ? (u.ocjene.reduce((s, o) => s + o.ocjena, 0) / u.ocjene.length) : null;
   const ukupnoBodova = u.kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
   const kvizProsjek = u.kvizRezultati.length ? Math.round(u.kvizRezultati.reduce((s, r) => s + r.procenat, 0) / u.kvizRezultati.length) : null;
-  return { prisutnih, odsutnih, zakasnio, opravdano, prisustvoPct, prosjecnaOcjena, ukupnoBodova, kvizProsjek };
+  const zvjezdicePozitivne = u.zvjezdicePozitivne ?? 0;
+  const zvjezdiceNegativne = u.zvjezdiceNegativne ?? 0;
+  return { prisutnih, odsutnih, zakasnio, opravdano, prisustvoPct, prosjecnaOcjena, ukupnoBodova, kvizProsjek, zvjezdicePozitivne, zvjezdiceNegativne };
+}
+
+// Zbirni red za jedan nivo hijerarhije (grupa ili muallim) u izvještaju.
+function agregatZaUcenike(ucenici: UcenikIzvjestaj[]) {
+  const stats = ucenici.map(statsForUcenik);
+  const validPris = stats.filter(s => s.prisustvoPct !== null);
+  const validOc = stats.filter(s => s.prosjecnaOcjena !== null);
+  return {
+    brojUcenika: ucenici.length,
+    prisustvoPct: validPris.length > 0
+      ? Math.round(validPris.reduce((a, s) => a + (s.prisustvoPct || 0), 0) / validPris.length)
+      : null,
+    prosjekOcjena: validOc.length > 0
+      ? Math.round((validOc.reduce((a, s) => a + (s.prosjecnaOcjena || 0), 0) / validOc.length) * 100) / 100
+      : null,
+    ukupnoBodova: stats.reduce((a, s) => a + s.ukupnoBodova, 0),
+    lekcije: ucenici.reduce((a, u) => a + u.zavrseneLekcijeBroj, 0),
+    zvjezdicePozitivne: stats.reduce((a, s) => a + s.zvjezdicePozitivne, 0),
+    zvjezdiceNegativne: stats.reduce((a, s) => a + s.zvjezdiceNegativne, 0),
+  };
 }
 
 function fmtDate(s: string) {
@@ -365,7 +394,7 @@ export default function MuallimIzvjestajPage() {
                 <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" /> {t("Sumarni pregled")}
                 </h3>
-                <SumarniPregled ucenici={filteredUcenici} />
+                <SumarniPregled ucenici={filteredUcenici} nivo={data.tip === "svi" ? (data.nivo ?? "muallim") : "grupa"} />
               </div>
             )}
 
@@ -390,9 +419,26 @@ export default function MuallimIzvjestajPage() {
   );
 }
 
-function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
+function SumarniPregled({ ucenici, nivo }: { ucenici: UcenikIzvjestaj[]; nivo: "grupa" | "muallim" | "mekteb" }) {
   const { t } = useLanguage();
   const stats = ucenici.map(u => ({ u, ...statsForUcenik(u) }));
+  // Zbirni redovi neposredne djece nivoa: mekteb → muallimi, muallim → grupe.
+  // Na nivou grupe djeca su učenici, koji su ionako u tabeli ispod.
+  const podnivo = (() => {
+    if (nivo === "grupa") return null;
+    const map = new Map<string, UcenikIzvjestaj[]>();
+    for (const u of ucenici) {
+      const kljuc = nivo === "mekteb"
+        ? (u.muallimNaziv || t("Bez muallima"))
+        : (u.grupaNaziv || t("Bez grupe"));
+      const arr = map.get(kljuc);
+      if (arr) arr.push(u); else map.set(kljuc, [u]);
+    }
+    return [...map.entries()]
+      .map(([naziv, lista]) => ({ naziv, ...agregatZaUcenike(lista) }))
+      .sort((a, b) => a.naziv.localeCompare(b.naziv, "bs"));
+  })();
+  const ukupno = agregatZaUcenike(ucenici);
   const ukupnoCasova = Math.max(...stats.map(s => s.u.prisustvo.length), 0);
   const prosjekPrisustva = (() => {
     const valid = stats.filter(s => s.prisustvoPct !== null);
@@ -430,7 +476,56 @@ function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
           <div className="text-2xl font-extrabold text-violet-600">{prosjekOcjena || "—"}</div>
           <div className="text-xs text-muted-foreground font-medium">{t("Prosj. ocjena")}</div>
         </div>
+        <div className="bg-amber-50 print-bg-amber border border-border/50 rounded-xl p-4">
+          <Star className="w-4 h-4 text-amber-500 mb-1" />
+          <div className="text-2xl font-extrabold text-amber-600">{ukupno.zvjezdicePozitivne}</div>
+          <div className="text-xs text-muted-foreground font-medium">{t("Žutih zvjezdica")}</div>
+        </div>
+        <div className="bg-slate-100 border border-border/50 rounded-xl p-4">
+          <Star className="w-4 h-4 text-slate-700 mb-1" />
+          <div className="text-2xl font-extrabold text-slate-800">{ukupno.zvjezdiceNegativne}</div>
+          <div className="text-xs text-muted-foreground font-medium">{t("Crnih zvjezdica")}</div>
+        </div>
       </div>
+
+      {podnivo && podnivo.length > 1 && (
+        <div className="overflow-x-auto mb-5">
+          <h4 className="font-bold text-foreground mb-2 text-sm">
+            {nivo === "mekteb" ? t("Zbirno po muallimima") : t("Zbirno po grupama")}
+          </h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-border/50">
+                <th className="text-left py-2 px-2 font-bold text-foreground">{nivo === "mekteb" ? t("Muallim") : t("Grupa")}</th>
+                <th className="text-right py-2 px-2 font-bold text-foreground">{t("Učenika")}</th>
+                <th className="text-right py-2 px-2 font-bold text-foreground">{t("Prisustvo")}</th>
+                <th className="text-right py-2 px-2 font-bold text-foreground">{t("Prosj. ocjena")}</th>
+                <th className="text-right py-2 px-2 font-bold text-foreground">{t("Bodovi (kvizovi)")}</th>
+                <th className="text-right py-2 px-2 font-bold text-foreground">{t("Zvjezdice")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {podnivo.map(r => (
+                <tr key={r.naziv} className="border-b border-border/30" data-testid={`row-podnivo-${r.naziv}`}>
+                  <td className="py-2 px-2 font-medium text-foreground">{r.naziv}</td>
+                  <td className="py-2 px-2 text-right text-foreground">{r.brojUcenika}</td>
+                  <td className="py-2 px-2 text-right">
+                    {r.prisustvoPct !== null
+                      ? <span className={`font-bold ${r.prisustvoPct >= 80 ? "text-emerald-600" : r.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>{r.prisustvoPct}%</span>
+                      : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="py-2 px-2 text-right font-bold text-foreground">{r.prosjekOcjena !== null ? r.prosjekOcjena.toFixed(2) : "—"}</td>
+                  <td className="py-2 px-2 text-right text-foreground font-medium">{r.ukupnoBodova}</td>
+                  <td className="py-2 px-2 text-right whitespace-nowrap">
+                    <span className="font-bold text-amber-600">★ {r.zvjezdicePozitivne}</span>
+                    <span className="font-bold text-slate-800 ml-2">★ {r.zvjezdiceNegativne}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -442,6 +537,7 @@ function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
               <th className="text-right py-2 px-2 font-bold text-foreground">{t("Prosj. ocjena")}</th>
               <th className="text-right py-2 px-2 font-bold text-foreground">{t("Bodovi (kvizovi)")}</th>
               <th className="text-right py-2 px-2 font-bold text-foreground">{t("Lekcije završeno")}</th>
+              <th className="text-right py-2 px-2 font-bold text-foreground">{t("Zvjezdice")}</th>
             </tr>
           </thead>
           <tbody>
@@ -462,6 +558,10 @@ function SumarniPregled({ ucenici }: { ucenici: UcenikIzvjestaj[] }) {
                 </td>
                 <td className="py-2 px-2 text-right text-foreground font-medium">{s.ukupnoBodova}</td>
                 <td className="py-2 px-2 text-right text-foreground font-medium">{s.u.zavrseneLekcijeBroj}</td>
+                <td className="py-2 px-2 text-right whitespace-nowrap">
+                  <span className="font-bold text-amber-600">★ {s.zvjezdicePozitivne}</span>
+                  <span className="font-bold text-slate-800 ml-2">★ {s.zvjezdiceNegativne}</span>
+                </td>
               </tr>
             ))}
           </tbody>

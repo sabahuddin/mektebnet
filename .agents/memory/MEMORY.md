@@ -36,4 +36,5 @@
 - [Seed vraća obrisane tagove](seed-vraca-obrisane-tagove.md) — admin-obrisan kviz tag/kategorija se vrati na svaki restart jer ga idempotentni seed re-ubaci; ukloni iz koda (content.ts + 2 frontend duplikata), pa tek onda iz baze.
 - [OneSignal env na Coolify](onesignal-coolify-env.md) — VITE_ var mora biti Build Variable; backend /api/push/config je runtime fallback; router.use(requireAuth) hvata i ranije rute.
 - [Sira kvizovi](sira-app.md) — zaseban statički sajt (sira.mekteb.net, van repoa, izvor u attached_assets zip); localStorage-only bez backenda, pa admin statistika nužno vidi samo naloge s vlastitog uređaja.
+- [Dev grupe su neaktivne](dev-grupe-neaktivne.md) — demo grupe imaju is_active=false pa agregatna statistika izgleda prazna; nije bug, privremeno aktiviraj za provjeru.
 - [Scoped pregled muallima](scoped-muallim-pregled.md) — glavni muallim otvara drugi muallimski panel preko read-only muallimId scope-a, bez imitacije login identiteta.
