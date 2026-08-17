@@ -402,7 +402,7 @@ export default function MuallimPanel() {
     const t = params.get("tab");
     if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","h5p","profil"].includes(t)) {
       setActiveTab(t as TabId);
-      if (["ucenici", "muallimi", "mekteb"].includes(t)) setPanelContext("mekteb");
+      if (t === "ucenici") setPanelContext("mekteb");
       else setPanelContext("moje");
     }
     const mid = params.get("muallimId");
@@ -574,7 +574,11 @@ export default function MuallimPanel() {
       setUcenici(u);
       setGrupe(g);
     }).catch(() => {}).finally(() => setIsLoading(false));
-    loadPendingRoditelji();
+    if (!selectedMuallimId) {
+      loadPendingRoditelji();
+    } else {
+      setPendingRoditelji([]);
+    }
   }, [token, selectedMuallimId, panelContext, mektebMeta.isGlavni, user?.id]);
 
   // Odvojeni fetch za dashboard-stats — re-fetcha kad se promijeni odabrana godina.
@@ -629,11 +633,11 @@ export default function MuallimPanel() {
   }, [token, activeTab, kalendarMode, kalendarSve, scopedMuallimId]);
 
   // Učitaj mekteb dokumente:
-  // - za glavnog muallima: kad otvori "Mekteb" tab (ima i upload/brisanje)
+  // - za glavnog muallima: u Profilu (ima i upload/brisanje)
   // - za obične muallime: kad otvori "Pregled" tab (read-only prikaz)
   useEffect(() => {
     if (!token) return;
-    if (mektebMeta.isGlavni && activeTab !== "mekteb") return;
+    if (mektebMeta.isGlavni && activeTab !== "profil") return;
     if (!mektebMeta.isGlavni && activeTab !== "pregled") return;
     apiRequest<MektebDokument[]>("GET", "/muallim/mekteb/dokumenti", undefined, token)
       .then(setMektebDokumenti)
@@ -707,7 +711,7 @@ export default function MuallimPanel() {
   }
 
   async function handleApproveRoditelj(roditeljUcenikId: number, approved: boolean) {
-    if (!token) return;
+    if (!token || selectedMuallimId) return;
     setApprovingId(roditeljUcenikId);
     try {
       await apiRequest("POST", "/muallim/approve-roditelj", { roditeljUcenikId, approved }, token);
@@ -1248,28 +1252,35 @@ export default function MuallimPanel() {
       .finally(() => setMektebMetaLoaded(true));
   }, [token]);
 
-  // Sigurnosni guard: tabovi "Muallimi" i "Mekteb" su isključivo za glavnog
-  // muallima. Ako obični muallim direktnim URL-om (?tab=muallimi|mekteb) dođe do
-  // njih, vrati ga na "Pregled". Backend dodatno štiti osjetljive rute (403).
+  // Stari URL-ovi za uklonjene tabove vode u Profil glavnog muallima, odnosno
+  // u Pregled za običnog muallima. Backend dodatno štiti osjetljive rute (403).
   useEffect(() => {
-    if (!mektebMeta.isGlavni && (activeTab === "muallimi" || activeTab === "mekteb")) {
-      setActiveTab("pregled");
-    }
-  }, [mektebMeta.isGlavni, activeTab]);
+    if (!mektebMetaLoaded || !["muallimi", "mekteb"].includes(activeTab)) return;
+    setLocation(mektebMeta.isGlavni ? "/muallim?tab=profil" : "/muallim?tab=pregled");
+  }, [mektebMetaLoaded, mektebMeta.isGlavni, activeTab]);
 
-  // Učitaj muallime + info kad glavni muallim otvori "Muallimi" tab.
+  // Pregled drugog muallima je strogo read-only: Profil sadrži lične i
+  // mektebske izmjene, pa u tom kontekstu uvijek vraćamo na Pregled.
+  // MORA biti prije auth guard conditional return-a (Rules of Hooks).
   useEffect(() => {
-    if (!token || activeTab !== "muallimi") return;
+    if (selectedMuallimId !== null && activeTab === "profil") {
+      setLocation(`/muallim?tab=pregled&muallimId=${selectedMuallimId}`);
+    }
+  }, [selectedMuallimId, activeTab]);
+
+  // Učitaj muallime + info kad glavni muallim otvori Profil.
+  useEffect(() => {
+    if (!token || !mektebMeta.isGlavni || activeTab !== "profil") return;
     apiRequest<MektebInfo>("GET", "/muallim/mekteb/info", undefined, token).then(setMektebInfo).catch(() => {});
     apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token).then(setMektebMuallimi).catch(() => setMektebMuallimi([]));
-  }, [token, activeTab]);
+  }, [token, activeTab, mektebMeta.isGlavni]);
 
-  // Učitaj zbirnu statistiku mekteba kad glavni muallim otvori "Mekteb" tab
-  // ili kad je na mektebskom nivou u Statistici (drill-down po muallimima).
+  // Učitaj zbirnu statistiku kada je glavni muallim na mektebskom nivou
+  // Statistike (drill-down po muallimima).
   useEffect(() => {
     if (!token || mektebStatsAll) return;
     const trebaZaStatistiku = activeTab === "statistika" && mektebMeta.isGlavni && !scopedMuallimId;
-    if (activeTab !== "mekteb" && !trebaZaStatistiku) return;
+    if (!trebaZaStatistiku) return;
     apiRequest<MektebStatsAll>("GET", "/muallim/mekteb/statistika", undefined, token).then(setMektebStatsAll).catch(() => {});
   }, [token, activeTab, mektebStatsAll, mektebMeta.isGlavni, scopedMuallimId]);
 
@@ -1351,11 +1362,11 @@ export default function MuallimPanel() {
 
   const closeMuallimPreview = () => {
     setSelectedMuallimId(null);
-    setPanelContext("mekteb");
-    setActiveTab("muallimi");
+    setPanelContext("moje");
+    setActiveTab("profil");
     setMektebStats(null);
     setKalendarSve(null);
-    setLocation("/muallim?tab=muallimi");
+    setLocation("/muallim?tab=profil");
   };
 
   const isMuallimPreview = selectedMuallimId !== null;
@@ -1365,17 +1376,13 @@ export default function MuallimPanel() {
   // (Prisustvo, Plan lekcija, Zadaća, H5P statistika) preselili su se u Grupa
   // stranicu (kartice unutar grupe). Te blokove i dalje renderujemo niže — link
   // iz Grupe ih otvara preko ?tab=…&grupaId=… s pre-selektovanom grupom.
-  // Tabovi "Muallimi" i "Mekteb" se prikazuju SAMO glavnom muallimu.
+  // Postavke mekteba i upravljanje muallimima su dio taba Profil.
   const TABS = [
     { id: "pregled", label: t("Pregled"), icon: BarChart3 },
     { id: "grupe", label: t("Grupe ({n})", { n: String(grupe.filter(g => !g.isArchived && g.skolskaGodina === selectedYear).length) }), icon: GraduationCap },
     { id: "statistika", label: t("Statistika"), icon: TrendingUp },
     ...(mektebMeta.isGlavni ? [
       { id: "ucenici", label: t("Svi učenici"), icon: Users },
-      ...(canManageMekteb ? [
-        { id: "muallimi", label: t("Muallimi"), icon: Users },
-        { id: "mekteb", label: t("Mekteb"), icon: School },
-      ] : []),
     ] : []),
     { id: "izvjestaji", label: t("Izvještaji"), icon: FileText },
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
@@ -1383,7 +1390,9 @@ export default function MuallimPanel() {
     { id: "profil", label: t("Profil"), icon: Settings },
   ];
   const visibleTabs = panelContext === "moje" && mektebMeta.isGlavni && !isMuallimPreview
-    ? TABS.filter(tab => !["ucenici", "muallimi", "mekteb"].includes(tab.id))
+    ? TABS.filter(tab => tab.id !== "ucenici")
+    : isMuallimPreview
+      ? TABS.filter(tab => tab.id !== "profil")
     : TABS;
 
   // ── Hijerarhija statistike: Mekteb → Muallim → Grupa → Učenik ──────────────
@@ -1505,7 +1514,7 @@ export default function MuallimPanel() {
             </button>
             <button
               type="button"
-              onClick={() => { setPanelContext("mekteb"); setActiveTab("mekteb"); setSelectedMuallimId(null); setLocation("/muallim?tab=mekteb"); }}
+              onClick={() => { setPanelContext("mekteb"); setActiveTab("ucenici"); setSelectedMuallimId(null); setLocation("/muallim?tab=ucenici"); }}
               className={`rounded-xl px-4 py-3 text-left transition-all ${panelContext === "mekteb" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
               <span className="block text-sm font-extrabold">{t("Mekteb")}</span>
@@ -1679,7 +1688,7 @@ export default function MuallimPanel() {
                 {/* Izvještaji za štampu / PDF */}
                 {/* Izvještaji za štampu/PDF su premješteni u zasebni tab "Izvještaji". */}
 
-                {pendingRoditelji.length > 0 && (
+                {!isMuallimPreview && pendingRoditelji.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                     <div className="flex items-center gap-3 mb-4">
                       <UserPlus className="w-5 h-5 text-amber-600" />
@@ -1961,9 +1970,9 @@ export default function MuallimPanel() {
                     <p className="font-medium">{t("Nema grupa. Kreiraj prvu grupu (razred).")}</p>
                   </div>
                 ) : (
-                  <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="space-y-8">
                     {(() => {
-                      // Dodijeli boju svaki muallimId — trenutni korisnik = [0] (teal)
+                      // Boja ostaje pomoćni vizuelni signal, ali primarna podjela je po muallimu.
                       const muallimColorMap = new Map<number, number>();
                       if (user?.id) muallimColorMap.set(user.id, 0);
                       let ci = 1;
@@ -1973,47 +1982,67 @@ export default function MuallimPanel() {
                           ci++;
                         }
                       }
-                      return grupe.filter(g => !g.isArchived).map((g, i) => {
-                        const paleta = MUALLIM_PALETA[(g.muallimId ? muallimColorMap.get(g.muallimId) : 0) ?? 0];
-                        // Može brisati/arhivirati samo vlasnik ili glavni
-                        const mozeBrisati = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
+                      const poMuallimu = new Map<string, { naziv: string; grupe: Grupa[] }>();
+                      for (const g of grupe.filter(g => !g.isArchived)) {
+                        const key = g.muallimId ? String(g.muallimId) : "bez-muallima";
+                        const naziv = g.muallimDisplayName || (g.muallimId === user?.id ? t("Moje grupe") : t("Nedodijeljene grupe"));
+                        const sekcija = poMuallimu.get(key) || { naziv, grupe: [] };
+                        sekcija.grupe.push(g);
+                        poMuallimu.set(key, sekcija);
+                      }
+                      return Array.from(poMuallimu.entries()).map(([key, sekcija], sekcijaIndex) => {
+                        const first = sekcija.grupe[0];
+                        const paleta = MUALLIM_PALETA[(first.muallimId ? muallimColorMap.get(first.muallimId) : 0) ?? 0];
                         return (
-                          <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                            <div className={`bg-white border-2 rounded-2xl p-5 hover:shadow-md transition-all group relative ${paleta.border}`}>
-                              <div className="absolute top-3 right-3 flex items-center gap-1">
-                                {mozeBrisati && (
-                                  <>
-                                    <button onClick={(e) => { e.stopPropagation(); arhivirajGrupu(g.id); }}
-                                      className="text-amber-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title={t("Arhiviraj grupu")}>
-                                      <Archive className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
-                                      className="text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                              <Link href={`/muallim/grupa/${g.id}`}>
-                                <div className="cursor-pointer">
-                                  <GraduationCap className={`w-8 h-8 mb-3 ${paleta.icon}`} />
-                                  <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
-                                  {g.muallimDisplayName && (
-                                    <p className={`text-xs font-bold mt-0.5 ${paleta.icon}`}>{g.muallimDisplayName}</p>
-                                  )}
-                                  {(g.sekundarniMuallimi ?? []).length > 0 && (
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                      + {(g.sekundarniMuallimi ?? []).map(m => m.displayName).join(", ")}
-                                    </p>
-                                  )}
-                                  <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => u.grupaId === g.id).length} {t("učenika")}</p>
-                                  <div className={`flex items-center gap-1 font-bold text-sm mt-3 ${paleta.link}`}>
-                                    {t("Otvori")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </div>
-                              </Link>
+                          <section key={key}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <GraduationCap className={`w-5 h-5 ${paleta.icon}`} />
+                              <h3 className="font-extrabold text-foreground">{sekcija.naziv}</h3>
+                              <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                                {sekcija.grupe.length} {t("grupa")}
+                              </span>
                             </div>
-                          </motion.div>
+                            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                              {sekcija.grupe.map((g, i) => {
+                                const mozeBrisati = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
+                                return (
+                                  <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (sekcijaIndex * 0.1) + (i * 0.05) }}>
+                                    <div className={`bg-white border-2 rounded-2xl p-5 hover:shadow-md transition-all group relative ${paleta.border}`}>
+                                      <div className="absolute top-3 right-3 flex items-center gap-1">
+                                        {mozeBrisati && (
+                                          <>
+                                            <button onClick={(e) => { e.stopPropagation(); arhivirajGrupu(g.id); }}
+                                              className="text-amber-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title={t("Arhiviraj grupu")}>
+                                              <Archive className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); deleteGrupa(g.id); }}
+                                              className="text-red-300 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title={t("Obriši grupu")}>
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                      <Link href={`/muallim/grupa/${g.id}`}>
+                                        <div className="cursor-pointer">
+                                          <GraduationCap className={`w-8 h-8 mb-3 ${paleta.icon}`} />
+                                          <h4 className="font-extrabold text-foreground text-lg">{g.naziv}</h4>
+                                          {(g.sekundarniMuallimi ?? []).length > 0 && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                              + {(g.sekundarniMuallimi ?? []).map(m => m.displayName).join(", ")}
+                                            </p>
+                                          )}
+                                          <p className="text-sm text-muted-foreground mt-1">{g.skolskaGodina} · {ucenici.filter(u => u.grupaId === g.id).length} {t("učenika")}</p>
+                                          <div className={`flex items-center gap-1 font-bold text-sm mt-3 ${paleta.link}`}>
+                                            {t("Otvori")} <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                                          </div>
+                                        </div>
+                                      </Link>
+                                    </div>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </section>
                         );
                       });
                     })()}
@@ -2025,33 +2054,47 @@ export default function MuallimPanel() {
                       <Archive className="w-5 h-5 text-muted-foreground" />
                       {t("Arhiva grupa")} ({grupe.filter(g => g.isArchived).length})
                     </h3>
-                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {grupe.filter(g => g.isArchived).map(g => {
-                        const isVlasnik = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
-                        return (
-                        <div key={g.id} className="bg-muted/40 border-2 border-border/60 rounded-2xl p-5 relative opacity-80 hover:opacity-100 transition-opacity">
-                          <Link href={`/muallim/grupa/${g.id}`}>
-                            <div className="cursor-pointer">
-                              <Archive className="w-7 h-7 text-muted-foreground mb-3" />
-                              <h3 className="font-extrabold text-foreground text-lg">{g.naziv}</h3>
-                              {g.muallimDisplayName && !isVlasnik && (
-                                <p className="text-xs text-blue-600 font-bold mt-0.5">{g.muallimDisplayName}</p>
-                              )}
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {g.skolskaGodina}
-                                {g.archivedAt ? ` · ${t("arhivirana")} ${new Date(g.archivedAt).toLocaleDateString("bs-BA")}` : ""}
-                              </p>
+                    <div className="space-y-6">
+                      {(() => {
+                        const poMuallimu = new Map<string, { naziv: string; grupe: Grupa[] }>();
+                        for (const g of grupe.filter(g => g.isArchived)) {
+                          const key = g.muallimId ? String(g.muallimId) : "bez-muallima";
+                          const naziv = g.muallimDisplayName || (g.muallimId === user?.id ? t("Moje grupe") : t("Nedodijeljene grupe"));
+                          const sekcija = poMuallimu.get(key) || { naziv, grupe: [] };
+                          sekcija.grupe.push(g);
+                          poMuallimu.set(key, sekcija);
+                        }
+                        return Array.from(poMuallimu.entries()).map(([key, sekcija]) => (
+                          <section key={key}>
+                            <h4 className="font-bold text-sm text-muted-foreground mb-3">{sekcija.naziv}</h4>
+                            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                              {sekcija.grupe.map(g => {
+                                const isVlasnik = !g.muallimId || g.muallimId === user?.id || mektebMeta.isGlavni;
+                                return (
+                                  <div key={g.id} className="bg-muted/40 border-2 border-border/60 rounded-2xl p-5 relative opacity-80 hover:opacity-100 transition-opacity">
+                                    <Link href={`/muallim/grupa/${g.id}`}>
+                                      <div className="cursor-pointer">
+                                        <Archive className="w-7 h-7 text-muted-foreground mb-3" />
+                                        <h5 className="font-extrabold text-foreground text-lg">{g.naziv}</h5>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                          {g.skolskaGodina}
+                                          {g.archivedAt ? ` · ${t("arhivirana")} ${new Date(g.archivedAt).toLocaleDateString("bs-BA")}` : ""}
+                                        </p>
+                                      </div>
+                                    </Link>
+                                    {isVlasnik && (
+                                      <Button variant="outline" size="sm" className="mt-3 rounded-xl font-bold"
+                                        onClick={() => vratiGrupu(g.id)}>
+                                        {t("Vrati iz arhive")}
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          </Link>
-                          {isVlasnik && (
-                          <Button variant="outline" size="sm" className="mt-3 rounded-xl font-bold"
-                            onClick={() => vratiGrupu(g.id)}>
-                            {t("Vrati iz arhive")}
-                          </Button>
-                          )}
-                        </div>
-                        );
-                      })}
+                          </section>
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}
@@ -2340,6 +2383,39 @@ export default function MuallimPanel() {
                             <span className="text-2xl font-extrabold text-slate-800">★ {mektebStatsAll.global.zvjezdiceNegativne ?? 0}</span>
                           </div>
                           <div className="text-sm text-muted-foreground font-medium">{t("Žute / crne zvjezdice")}</div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-white rounded-2xl border border-border/50 p-5">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Award className="w-4 h-4 text-amber-500" />
+                            <h4 className="font-bold text-sm text-foreground">{t("Napredak po nivoima (Ilmihal)")}</h4>
+                          </div>
+                          {mektebStatsAll.global.napredakPoNivoima.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t("Još nema završenih lekcija.")}</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {mektebStatsAll.global.napredakPoNivoima.map(n => (
+                                <div key={n.nivo} className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">{t("Nivo {n}", { n: String(n.nivo) })}</span>
+                                  <span className="font-bold text-foreground">{t("{n} završenih", { n: String(n.zavrseno) })}</span>
+                                </div>
+                              ))}
+                              <div className="flex items-center justify-between text-sm pt-2 border-t border-border/50">
+                                <span className="text-muted-foreground">{t("Ukupno")}</span>
+                                <span className="font-extrabold text-foreground">{mektebStatsAll.global.ukupnoLekcijaZavrseno}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="bg-white rounded-2xl border border-border/50 p-5">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Clock className="w-4 h-4 text-violet-600" />
+                            <h4 className="font-bold text-sm text-foreground">{t("Aktivnost učenika")}</h4>
+                          </div>
+                          <div className="text-2xl font-extrabold text-violet-600">{formatScreentime(mektebStatsAll.global.ukupnoScreentimeSec)}</div>
+                          <div className="text-sm text-muted-foreground mt-1">{t("Ukupno aktivno vrijeme svih učenika na platformi")}</div>
                         </div>
                       </div>
 
@@ -2982,8 +3058,8 @@ export default function MuallimPanel() {
               </motion.div>
             )}
 
-            {/* MUALLIMI (samo glavni muallim) */}
-            {activeTab === "muallimi" && (
+            {/* PODEŠAVANJA MEKTEBA — samo glavni muallim */}
+            {activeTab === "profil" && canManageMekteb && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div className="bg-white rounded-2xl border border-border/50 p-5">
                   <div className="flex items-center gap-2 mb-1">
@@ -3141,8 +3217,8 @@ export default function MuallimPanel() {
               </motion.div>
             )}
 
-            {/* MEKTEB STATISTIKA (samo glavni muallim) */}
-            {activeTab === "mekteb" && (
+            {/* DOKUMENTI MEKTEBA — samo glavni muallim */}
+            {activeTab === "profil" && canManageMekteb && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 {/* DOKUMENTI — pravila, kućni red, obavještenja (PDF) */}
                 <div className="bg-white rounded-2xl border border-border/50 p-5">
@@ -3229,53 +3305,6 @@ export default function MuallimPanel() {
                   )}
                 </div>
 
-                {!mektebStatsAll ? (
-                  <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {[
-                        { label: t("Ukupno učenika"), value: mektebStatsAll.global.ukupnoUcenika, icon: Users, color: "text-primary", bg: "bg-primary/5" },
-                        { label: t("Muallima"), value: mektebStatsAll.global.brojMuallima, icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
-                        { label: t("Prosj. prisustvo"), value: mektebStatsAll.global.prosjekPrisustva !== null ? `${mektebStatsAll.global.prosjekPrisustva}%` : "—", icon: CalendarCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-                      ].map(s => (
-                        <div key={s.label} className={`${s.bg} border border-border/50 rounded-2xl p-5`}>
-                          <s.icon className={`w-6 h-6 ${s.color} mb-3`} />
-                          <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
-                          <div className="text-sm text-muted-foreground font-medium mt-1">{s.label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-white rounded-2xl border border-border/50 p-5">
-                        <div className="flex items-center gap-2 mb-3"><Award className="w-4 h-4 text-amber-500" /><h3 className="font-bold text-sm text-foreground">{t("Napredak po nivoima (Ilmihal)")}</h3></div>
-                        {mektebStatsAll.global.napredakPoNivoima.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">{t("Još nema završenih lekcija.")}</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {mektebStatsAll.global.napredakPoNivoima.map(n => (
-                              <div key={n.nivo} className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">{t("Nivo {n}", { n: String(n.nivo) })}</span>
-                                <span className="font-bold text-foreground">{t("{n} završenih", { n: String(n.zavrseno) })}</span>
-                              </div>
-                            ))}
-                            <div className="flex items-center justify-between text-sm pt-2 border-t border-border/50">
-                              <span className="text-muted-foreground">{t("Ukupno")}</span>
-                              <span className="font-extrabold text-foreground">{mektebStatsAll.global.ukupnoLekcijaZavrseno}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="bg-white rounded-2xl border border-border/50 p-5">
-                        <div className="flex items-center gap-2 mb-3"><Clock className="w-4 h-4 text-violet-600" /><h3 className="font-bold text-sm text-foreground">{t("Aktivnost učenika")}</h3></div>
-                        <div className="text-2xl font-extrabold text-violet-600">{formatScreentime(mektebStatsAll.global.ukupnoScreentimeSec)}</div>
-                        <div className="text-sm text-muted-foreground mt-1">{t("ukupno aktivno vrijeme")}</div>
-                      </div>
-                    </div>
-
-                  </>
-                )}
               </motion.div>
             )}
 
@@ -4389,8 +4418,8 @@ export default function MuallimPanel() {
                       <SelamSetting />
                 </div>
 
-                {/* Bulk reset šifri — samo za glavnog muallima */}
-                {mektebMeta.isGlavni && (
+                {/* Bulk reset šifri — samo za glavnog muallima (nikad u pregledu drugog muallima) */}
+                {canManageMekteb && (
                   <div className="bg-white border border-red-200 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground mb-1 flex items-center gap-2">
                       <RotateCcw className="w-5 h-5 text-red-500" /> {t("Reset svih šifri učenika")}
