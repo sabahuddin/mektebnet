@@ -208,12 +208,12 @@ router.get("/info", async (req, res) => {
   }
 });
 
-// ===========================================================================
+// ---------------------------------------------------------------------------
 // MEKTEB (škola) — glavni muallim administracija
 // Glavni (admin) muallim je onaj ko je registrovao mekteb. Jedino on kreira/
 // briše ostale muallimske naloge i vidi zbirnu statistiku cijelog mekteba.
 // Obični muallim NEMA pristup ovim rutama.
-// ===========================================================================
+// ---------------------------------------------------------------------------
 
 // Helper: vrati mekteb-kontekst muallima ({ mektebId, isGlavni }) ili null.
 async function getMektebCtx(userId: number) {
