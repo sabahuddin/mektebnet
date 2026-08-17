@@ -327,7 +327,7 @@ export default function UcenikProfilPage() {
   const [isLoading, setIsLoading] = useState(true);
   // Odabrana mektebska godina (null = default/tekuća; server vraća odabranu).
   const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"moj-put" | "pregled" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "dokumenti" | "postavke">("moj-put");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti" | "postavke">("zadace");
   const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
   const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene">("aktivne");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
@@ -424,14 +424,13 @@ export default function UcenikProfilPage() {
   const prosjecnaOcjena = profil && profil.ocjene.length ? (profil.ocjene.reduce((s, o) => s + o.ocjena, 0) / profil.ocjene.length).toFixed(1) : "—";
 
   const TABS = [
-    { id: "moj-put", label: t("Moj put"), icon: Footprints },
-    { id: "pregled", label: t("Pregled"), icon: User },
-    { id: "ocjene", label: t("Ocjene"), icon: Star },
     { id: "zadace", label: t("Zadaće"), icon: FileText, badge: zadace.length },
-    { id: "kalendar", label: t("Kalendar"), icon: Calendar },
+    { id: "ocjene", label: t("Ocjene"), icon: Star },
     { id: "kvizovi", label: t("Kvizovi"), icon: ClipboardList },
+    { id: "zvjezdice", label: t("Zvjezdice"), icon: Star },
+    { id: "kalendar", label: t("Kalendar"), icon: Calendar },
     { id: "dokumenti", label: t("Dokumenti"), icon: FileText, badge: dokumenti?.length ?? 0 },
-    { id: "postavke", label: t("Postavke"), icon: Settings },
+    { id: "profil", label: t("Profil"), icon: User },
   ] as const;
 
   const handleToggleSound = () => {
@@ -472,24 +471,26 @@ export default function UcenikProfilPage() {
           <div className="text-center py-20 text-muted-foreground">{t("Greška pri učitavanju profila")}</div>
         ) : (
           <>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md">
-                <User className="w-7 h-7 text-white" />
-              </div>
-              <div className="flex-1">
-                <h1 className="text-2xl font-extrabold text-foreground">{profil.user.displayName}</h1>
-                <p className="text-muted-foreground text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5 min-w-0">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                  <User className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl leading-tight font-extrabold text-foreground whitespace-nowrap truncate">{profil.user.displayName}</h1>
+                  <p className="text-muted-foreground text-xs sm:text-sm break-words">
                   {profil.grupa && <span className="font-medium">{profil.grupa.naziv}</span>}
                   {profil.muallim && <span> · {t("Muallim:")} {profil.muallim.displayName}</span>}
-                </p>
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                 {profil.mektebskaGodina && profil.mektebskaGodina.godine.length > 0 && (
                   <select
                     data-testid="select-mektebska-godina"
                     value={selectedGodina ?? profil.mektebskaGodina.odabrana ?? ""}
                     onChange={(e) => setSelectedGodina(e.target.value)}
-                    className="rounded-xl border border-border/60 bg-white px-3 py-2 text-sm font-bold text-foreground"
+                    className="rounded-xl border border-border/60 bg-white px-2.5 py-1.5 text-xs sm:text-sm font-bold text-foreground max-w-[170px]"
                     title={t("Mektebska godina")}
                   >
                     {profil.mektebskaGodina.godine.map((g) => (
@@ -497,22 +498,28 @@ export default function UcenikProfilPage() {
                     ))}
                   </select>
                 )}
-                <Button variant="outline" className="rounded-xl" onClick={() => setLocation("/poruke")}>
-                  <MessageSquare className="w-4 h-4 mr-1" /> {t("Poruke")}
+                <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => setActiveTab("moj-put")} title={t("Moj put")} aria-label={t("Moj put")}>
+                  <Footprints className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => setActiveTab("postavke")} title={t("Postavke")} aria-label={t("Postavke")}>
+                  <Settings className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => setLocation("/poruke")} title={t("Poruke")} aria-label={t("Poruke")}>
+                  <MessageSquare className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex gap-2 mb-6 flex-wrap">
+            <div className="flex gap-1.5 mb-5 flex-wrap max-w-full">
               {TABS.map(tab => {
                 const badge = "badge" in tab ? tab.badge : 0;
                 return (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
                     data-testid={`tab-${tab.id}`}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
-                    <tab.icon className="w-4 h-4" /> {tab.label}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs sm:text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {tab.label}
                     {badge > 0 && (
-                      <span className={`ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-extrabold ${activeTab === tab.id ? "bg-white text-primary" : "bg-orange-500 text-white"}`}>
+                      <span className={`ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold ${activeTab === tab.id ? "bg-white text-primary" : "bg-orange-500 text-white"}`}>
                         {badge}
                       </span>
                     )}
@@ -874,7 +881,7 @@ export default function UcenikProfilPage() {
                           <Award className="w-5 h-5 text-amber-500" /> {t("Moji bedževi ({earned}/{total})", { earned: String(earnedCount), total: String(totalCount) })}
                         </h3>
                         <button
-                          onClick={() => setActiveTab("pregled")}
+                          onClick={() => setActiveTab("profil")}
                           className="text-xs font-bold text-primary hover:underline"
                         >
                           {t("Vidi sve →")}
@@ -951,7 +958,7 @@ export default function UcenikProfilPage() {
               </motion.div>
             )}
 
-            {activeTab === "pregled" && (
+            {activeTab === "profil" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {profil.napredak && (
                   <div className="mb-6 bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50 border border-primary/20 rounded-3xl p-5">
@@ -1123,6 +1130,32 @@ export default function UcenikProfilPage() {
                       ))}
                     </div>
                   )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "zvjezdice" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="bg-white border border-border/50 rounded-2xl p-4 sm:p-5">
+                  <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
+                    <Star className="w-5 h-5 text-amber-500 fill-amber-400" /> {t("Zvjezdice")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">{t("Ponašanje na času:")}</p>
+                  {mojeZvjezdice === null ? (
+                    <Skeleton className="h-20 rounded-xl" />
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+                        <div className="text-2xl font-black text-amber-500">⭐ {mojeZvjezdice.pozitivne}</div>
+                        <div className="text-xs font-bold text-amber-800 mt-1">{t("Pozitivne")}</div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+                        <div className="text-2xl font-black text-slate-500">★ {mojeZvjezdice.negativne}</div>
+                        <div className="text-xs font-bold text-slate-700 mt-1">{t("Negativne")}</div>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-4">{t("Zvjezdice dodjeljuje muallim.")}</p>
                 </div>
               </motion.div>
             )}
