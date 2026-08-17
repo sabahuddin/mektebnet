@@ -16,3 +16,11 @@ Isti `muallimId` scope određuje i lični pregled glavnog muallima ("Moje grupe"
 **Why:** Bez toga prvi poziv krene bez scope-a, backend legitimno vrati agregat cijelog mekteba, a "fetch samo ako podatak još ne postoji" guard zaključa taj pogrešan rezultat — korisnik u "Moje grupe" vidi brojke cijelog mekteba.
 
 **How to apply:** Drži zaseban "kontekst učitan" flag u uslovu fetch efekta i resetuj keširane scope-ovisne podatke na promjenu scope-a. Naslovi i dugmad (npr. "Cijeli mekteb" vs "Moje grupe", štampanje svih učenika) također moraju pratiti aktivni scope, inače tekst laže i kad su podaci tačni.
+
+## Djeci-komponentama prosljeđuj izvedeni scope, ne sirovi "preview" izbor
+
+Postoje dvije različite vrijednosti: izbor "gledam drugog muallima" (prazan u ličnom pregledu) i izvedeni efektivni scope (koji u ličnom pregledu glavnog muallima pokazuje na njega samog). Pod-tabovi moraju dobiti **izvedeni** scope.
+
+**Why:** Kad tab dobije samo "preview" izbor, u "Moje grupe" pošalje zahtjev bez `muallimId`, backend legitimno vrati cijeli mekteb, i tab pokaže npr. sve roditelje džemata pored 4 vlastite grupe. Read-only zastavica se i dalje izvodi iz preview izbora, ne iz scope-a.
+
+**How to apply:** Kod svakog pod-taba provjeri da prop za scope dolazi iz izvedene vrijednosti; read-only ostaje vezan za preview izbor.
