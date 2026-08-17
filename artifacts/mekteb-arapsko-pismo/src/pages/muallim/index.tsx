@@ -3061,31 +3061,46 @@ export default function MuallimPanel() {
             {/* PODEŠAVANJA MEKTEBA — samo glavni muallim */}
             {activeTab === "profil" && canManageMekteb && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="bg-white rounded-2xl border border-border/50 p-5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <School className="w-5 h-5 text-secondary" />
-                    <h2 className="font-extrabold text-foreground">{t("Muallimi mekteba")}</h2>
+                <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-white to-secondary/10 p-5 sm:p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                        <School className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="font-extrabold text-foreground">{t("Muallimi mekteba")}</h2>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{t("Upravljajte timom, pristupima i zajedničkim dokumentima mekteba.")}</p>
+                      </div>
+                    </div>
+                    {mektebInfo && (
+                      <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${mektebInfo.slobodnoMjesta > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                        {mektebInfo.slobodnoMjesta > 0
+                          ? t("{n} slobodno", { n: String(mektebInfo.slobodnoMjesta) })
+                          : t("popunjeno")}
+                      </span>
+                    )}
                   </div>
                   {mektebInfo && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="mt-4 border-t border-primary/10 pt-3 text-sm text-muted-foreground">
                       {mektebInfo.naziv} · {t("{broj}/{dozvoljeno} naloga iskorišteno", { broj: String(mektebInfo.brojMuallima), dozvoljeno: String(mektebInfo.dozvoljenoMuallima) })}
-                      {mektebInfo.slobodnoMjesta > 0 ? ` · ${t("{n} slobodno", { n: String(mektebInfo.slobodnoMjesta) })}` : ` · ${t("popunjeno")}`}
                     </p>
                   )}
                 </div>
 
-              <div className="bg-white rounded-2xl border border-border/50 p-4">
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.85fr)]">
+                <div className="bg-white rounded-2xl border border-border/50 p-4 sm:p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="w-4 h-4 text-primary" />
                   <h3 className="font-extrabold text-sm text-foreground">{t("Pregled po muallimu")}</h3>
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                  <p className="mb-4 text-xs text-muted-foreground">{t("Otvorite pregled grupa i učenika svakog člana tima bez promjene svog naloga.")}</p>
+                  <div className="grid grid-flow-col auto-cols-[minmax(190px,1fr)] gap-2 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-2 sm:auto-cols-auto">
                   {(mektebMuallimi || []).map(m => (
                     <button
                       key={m.userId}
                       type="button"
                       onClick={() => openMuallimPreview(m.userId)}
-                      className="min-w-[190px] text-left rounded-xl border border-border/60 px-3 py-3 hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                        className="min-w-[190px] text-left rounded-xl border border-border/60 bg-gradient-to-br from-white to-muted/20 px-3 py-3 hover:border-primary/50 hover:bg-primary/5 transition-colors"
                       data-testid={`tab-muallim-${m.userId}`}
                     >
                       <span className="block text-sm font-extrabold text-foreground truncate">{m.displayName}</span>
@@ -3100,10 +3115,10 @@ export default function MuallimPanel() {
                 </div>
               </div>
 
-                <div className="bg-white rounded-2xl border border-border/50 p-5 space-y-3">
-                  <div className="flex items-center gap-2"><UserPlus className="w-4 h-4 text-primary" /><h3 className="font-bold text-sm text-foreground">{t("Dodaj muallima")}</h3></div>
+                <div className="h-fit rounded-2xl border border-primary/20 bg-white p-5 shadow-sm xl:sticky xl:top-6 space-y-3">
+                  <div className="flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10"><UserPlus className="w-4 h-4 text-primary" /></div><h3 className="font-extrabold text-sm text-foreground">{t("Dodaj muallima")}</h3></div>
                   <p className="text-xs text-muted-foreground">{t("Sistem će generisati korisničko ime i šifru koje proslijedite kolegi. Šifra se prikazuje samo jednom.")}</p>
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-col gap-2">
                     <input
                       value={novMuallimIme}
                       onChange={e => setNovMuallimIme(e.target.value)}
@@ -3114,7 +3129,7 @@ export default function MuallimPanel() {
                     <button
                       onClick={handleKreirajMuallima}
                       disabled={muallimSaving || !novMuallimIme.trim() || (mektebInfo ? mektebInfo.slobodnoMjesta <= 0 : false)}
-                      className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                       data-testid="button-kreiraj-muallim"
                     >
                       {muallimSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {t("Kreiraj")}
@@ -3140,13 +3155,21 @@ export default function MuallimPanel() {
                   )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="xl:col-span-2 rounded-2xl border border-border/50 bg-white p-4 sm:p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-secondary" />
+                      <h3 className="font-extrabold text-sm text-foreground">{t("Muallimi mekteba")}</h3>
+                    </div>
+                    {mektebMuallimi && <span className="text-xs font-bold text-muted-foreground">{mektebMuallimi.length} {t("ukupno")}</span>}
+                  </div>
                   {mektebMuallimi === null ? (
                     <Skeleton className="h-20 rounded-2xl" />
                   ) : mektebMuallimi.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground text-sm">{t("Još nema muallima.")}</div>
                   ) : (
-                    mektebMuallimi.map(m => (
+                    <div className="grid gap-3 md:grid-cols-2">
+                    {mektebMuallimi.map(m => (
                       <div key={m.userId} className="bg-white rounded-2xl border border-border/50 overflow-hidden" data-testid={`muallim-red-${m.userId}`}>
                         {editingMuallimId === m.userId ? (
                           <div className="p-4 space-y-3">
@@ -3211,26 +3234,31 @@ export default function MuallimPanel() {
                           </div>
                         )}
                       </div>
-                    ))
+                    ))}
+                    </div>
                   )}
+                </div>
                 </div>
               </motion.div>
             )}
 
             {/* DOKUMENTI MEKTEBA — samo glavni muallim */}
             {activeTab === "profil" && canManageMekteb && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
                 {/* DOKUMENTI — pravila, kućni red, obavještenja (PDF) */}
-                <div className="bg-white rounded-2xl border border-border/50 p-5">
+                <div className="bg-white rounded-2xl border border-border/50 p-5 sm:p-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <FileText className="w-4 h-4 text-primary" />
-                    <h3 className="font-bold text-sm text-foreground">{t("Dokumenti mekteba")}</h3>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10"><FileText className="w-4 h-4 text-primary" /></div>
+                    <div>
+                      <h3 className="font-extrabold text-sm text-foreground">{t("Dokumenti mekteba")}</h3>
+                      <p className="text-xs text-muted-foreground">{t("Zajednički dokumenti dostupni svim porodicama u mektebu.")}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-muted-foreground mb-5">
                     {t("Dodajte PDF dokumente (pravila, kućni red, obavještenja). Vidljivi su svim učenicima i roditeljima u mektebu.")}
                   </p>
 
-                  <div className="bg-muted/30 rounded-xl p-4 mb-4 space-y-3">
+                  <div className="rounded-xl border border-dashed border-primary/25 bg-primary/[0.03] p-4 mb-5 space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <input
                         type="text"
