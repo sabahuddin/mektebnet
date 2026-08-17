@@ -294,11 +294,14 @@ export default function PorukePage() {
 
   return (
     <Layout>
-      <div className="flex flex-col w-full" style={{ height: "calc(100dvh - 4rem)" }}>
+      <div
+        className="flex flex-col w-full min-h-[34rem] h-[calc(100dvh-8rem)]"
+        data-testid="poruke-workspace"
+      >
 
         {/* ══ TOP TAB BAR ══════════════════════════════════════════════════ */}
-        <div className="bg-white border border-border/50 rounded-t-2xl overflow-x-auto shrink-0">
-          <div className="flex items-center px-1 py-1 gap-0.5 min-w-max">
+        <div className="bg-white border border-border/50 border-b-0 rounded-t-2xl overflow-x-auto shrink-0 shadow-sm">
+          <div className="flex items-center px-2 py-2 gap-1 min-w-max">
             {tabs.map(tab => {
               if (tab.separator) return <div key={tab.key} className="w-px h-5 bg-border/50 mx-1" />;
               const isActive = activeTab === tab.key;
@@ -307,12 +310,12 @@ export default function PorukePage() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors whitespace-nowrap
                     ${isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
                 >
-                  {tab.icon}
+                  <span className="scale-110">{tab.icon}</span>
                   {tab.label}
                   {unread > 0 && (
                     <span className={`text-[9px] rounded-full min-w-[1rem] h-4 flex items-center justify-center font-bold px-1
@@ -327,21 +330,21 @@ export default function PorukePage() {
         </div>
 
         {/* ══ MAIN PANEL ═══════════════════════════════════════════════════ */}
-        <div className="flex flex-1 min-h-0 bg-white border-x border-b border-border/50 rounded-b-2xl overflow-hidden">
+        <div className="flex flex-1 min-h-0 bg-white border border-border/50 rounded-b-2xl overflow-hidden shadow-sm">
 
           {/* ── LEFT: contact/conversation list ── */}
           {activeTab !== "bulk" && (
-            <div className={`border-r border-border/50 flex-col shrink-0
-              ${aktivan ? "hidden md:flex md:w-60 lg:w-72" : "flex w-full md:w-60 lg:w-72"}`}>
+            <div className={`border-r border-border/50 flex-col shrink-0 bg-muted/[0.08]
+              ${aktivan ? "hidden md:flex md:w-72 lg:w-80" : "flex w-full md:w-72 lg:w-80"}`}>
 
               {/* Group filter dropdown — only for muallim/admin with groups */}
               {(user.role === "muallim" || user.role === "admin") && grupeList.length > 0 && (
-                <div className="px-2 pt-2 pb-1 border-b border-border/30">
+                  <div className="px-3 pt-3 pb-2 border-b border-border/30">
                   <div className="relative">
                     <select
                       value={grupaFilter}
                       onChange={e => { setGrupaFilter(e.target.value); setAktivan(null); }}
-                      className="w-full appearance-none border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white cursor-pointer"
+                      className="w-full appearance-none border border-border/60 rounded-xl pl-3 pr-8 py-2 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white cursor-pointer"
                     >
                       <option value="">{t("Sve grupe")}</option>
                       {grupeList.map(g => (
@@ -354,7 +357,7 @@ export default function PorukePage() {
               )}
 
               {/* Search input — visible on "nova" tab or always */}
-              <div className="px-2 py-1.5 border-b border-border/30">
+              <div className="px-3 py-2 border-b border-border/30">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                   <input
@@ -363,7 +366,7 @@ export default function PorukePage() {
                     placeholder={t("Pretraži...")}
                     value={leftSearch}
                     onChange={e => setLeftSearch(e.target.value)}
-                    className="w-full pl-8 pr-7 py-1.5 text-xs border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full pl-8 pr-7 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
                   />
                   {leftSearch && (
                     <button onClick={() => setLeftSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -407,7 +410,7 @@ export default function PorukePage() {
               {/* Bulk compose */}
               {activeTab === "bulk" && (
                 <motion.div key="bulk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="flex-1 overflow-y-auto p-5 max-w-2xl mx-auto w-full">
+                  className="flex-1 overflow-y-auto p-5 md:p-7 max-w-3xl mx-auto w-full">
                   <h3 className="font-extrabold text-foreground mb-1">{t("Pošalji poruku više korisnika")}</h3>
                   <p className="text-sm text-muted-foreground mb-4">{t("Odaberite primatelje i napišite poruku")}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -483,17 +486,17 @@ export default function PorukePage() {
               {activeTab !== "bulk" && aktivan && (
                 <motion.div key={aktivan.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="flex-1 flex flex-col min-h-0">
-                  <div className="px-4 py-3 border-b border-border/50 flex items-center gap-3 shrink-0">
+                  <div className="px-5 py-4 border-b border-border/50 flex items-center gap-3 shrink-0 bg-white">
                     <button onClick={() => setAktivan(null)} className="md:hidden text-muted-foreground hover:text-foreground">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <Avatar name={aktivan.displayName} size="sm" />
                     <div>
-                      <div className="font-extrabold text-sm text-foreground">{aktivan.displayName}</div>
-                      <div className="text-xs text-muted-foreground">{roleLabel(aktivan.role)}</div>
+                      <div className="font-extrabold text-base text-foreground">{aktivan.displayName}</div>
+                      <div className="text-sm text-muted-foreground">{roleLabel(aktivan.role)}</div>
                     </div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0">
+                  <div className="flex-1 overflow-y-auto p-5 md:p-6 flex flex-col gap-3 min-h-0 bg-gradient-to-b from-muted/[0.08] to-white">
                     {isLoadingRazgovor ? (
                       Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
@@ -501,8 +504,15 @@ export default function PorukePage() {
                         </div>
                       ))
                     ) : poruke.length === 0 ? (
-                      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-                        {t("Nema poruka — pošalji prvu!")}
+                      <div className="flex-1 flex items-center justify-center text-muted-foreground text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                            <MessageSquare className="w-7 h-7" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-foreground">{t("Nema poruka — pošalji prvu!")}</p>
+                          </div>
+                        </div>
                       </div>
                     ) : poruke.map(p => {
                       const isMoj = p.posiljateljId === user.id;
@@ -520,11 +530,12 @@ export default function PorukePage() {
                     })}
                     <div ref={endRef} />
                   </div>
-                  <form onSubmit={sendPoruka} className="p-3 border-t border-border/50 flex gap-2 shrink-0">
-                    <input type="text" placeholder={t("Napiši poruku...")} value={tekst}
+                  <form onSubmit={sendPoruka} className="p-3 md:p-4 border-t border-border/50 flex gap-3 shrink-0 bg-white shadow-[0_-6px_18px_rgba(0,0,0,0.03)]">
+                    <label className="sr-only" htmlFor="poruke-composer">{t("Napiši poruku...")}</label>
+                    <input id="poruke-composer" type="text" placeholder={t("Napiši poruku...")} value={tekst}
                       onChange={e => setTekst(e.target.value)} autoComplete="off"
-                      className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                    <Button type="submit" disabled={isSending || !tekst.trim()} className="rounded-xl px-4 shrink-0">
+                      className="flex-1 border border-border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                    <Button type="submit" disabled={isSending || !tekst.trim()} className="rounded-xl px-5 shrink-0">
                       {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </form>
@@ -534,9 +545,17 @@ export default function PorukePage() {
               {/* Empty state */}
               {activeTab !== "bulk" && !aktivan && (
                 <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="flex-1 flex items-center justify-center flex-col gap-3 text-muted-foreground">
-                  <MessageSquare className="w-12 h-12 opacity-10" />
-                  <p className="text-sm font-medium">{t("Odaberi razgovor ili napiši novu poruku")}</p>
+                  className="flex-1 flex items-center justify-center flex-col gap-4 text-muted-foreground text-center p-6 bg-gradient-to-b from-muted/[0.08] to-white">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                    <MessageSquare className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <p className="text-base font-bold text-foreground">{t("Odaberi razgovor ili napiši novu poruku")}</p>
+                  </div>
+                  <Button type="button" onClick={() => setActiveTab("nova")} className="rounded-xl gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    {t("Nova poruka")}
+                  </Button>
                 </motion.div>
               )}
 
