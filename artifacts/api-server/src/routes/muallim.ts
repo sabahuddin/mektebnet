@@ -63,6 +63,22 @@ function generateMektebPassword(suffix?: number) {
   return `Mekteb${suffix ?? randomSuffix()}`;
 }
 
+// Evidencija koja se resetuje na početku mektebske godine počinje 1. augusta.
+// Kvizovi, lekcije i ostali trajni napredak namjerno ne koriste ovaj filter.
+function currentSchoolYearResetDate(): string {
+  const now = new Date();
+  const year = now.getUTCMonth() >= 7 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+  return `${year}-08-01`;
+}
+
+function currentSchoolYearResetTimestamp(): Date {
+  return new Date(`${currentSchoolYearResetDate()}T00:00:00.000Z`);
+}
+
+function isFromCurrentSchoolYear(date: string | null | undefined): boolean {
+  return Boolean(date && date >= currentSchoolYearResetDate());
+}
+
 // Učenik i roditelj iz istog para dijele isti 4-cifreni sufiks i lozinku
 // (npr. amir.4567 / Mekteb4567 i ismet.4567 / Mekteb4567) — radi lakše
 // komunikacije muallim ↔ porodica. Muallim i dalje može resetovati šifru
@@ -554,7 +570,11 @@ router.get("/mekteb/statistika", async (req, res) => {
     const muallimNameMap = new Map(muallimUsers.map(u => [u.id, u.displayName]));
 
     const grupe = muallimIds.length > 0
-      ? await db.select().from(grupeTable).where(inArray(grupeTable.muallimId, muallimIds))
+      ? await db.select().from(grupeTable).where(and(
+          inArray(grupeTable.muallimId, muallimIds),
+          sql`COALESCE(is_archived, false) = false`,
+          sql`COALESCE(is_active, true) = true`,
+        ))
       : [];
 
     const perGrupa = await Promise.all(grupe.map(async (g) => {
@@ -574,8 +594,14 @@ router.get("/mekteb/statistika", async (req, res) => {
     }));
 
     // Učenici cijelog mekteba (preko mektebId).
-    const ucenikProfili = await db.select().from(ucenikProfiliTable)
-      .where(and(eq(ucenikProfiliTable.mektebId, mektebId), eq(ucenikProfiliTable.isArchived, false)));
+    const activeGrupaIds = grupe.map(g => g.id);
+    const ucenikProfili = activeGrupaIds.length > 0
+      ? await db.select().from(ucenikProfiliTable)
+          .where(and(
+            inArray(ucenikProfiliTable.grupaId, activeGrupaIds),
+            eq(ucenikProfiliTable.isArchived, false),
+          ))
+      : [];
     const ucenikIds = ucenikProfili.map(p => p.userId);
 
     // Prosječno prisustvo (ponderirano po broju učenika grupe).
@@ -840,6 +866,8 @@ router.get("/grupe", async (req, res) => {
         WHERE g.muallim_id IN (
           SELECT user_id FROM muallim_profili WHERE mekteb_id = ${ctx.mektebId}
         )
+          AND COALESCE(g.is_archived, false) = false
+          AND COALESCE(g.is_active, true) = true
         ORDER BY
           CASE WHEN g.muallim_id = ${userId} THEN 0 ELSE 1 END,
           g.naziv ASC
@@ -878,7 +906,11 @@ router.get("/grupe", async (req, res) => {
 
     // Obični muallim — vlastite grupe (drizzle) + grupe gdje je sekundarni muallim (raw SQL)
     // Koristimo odvojene queryje umjesto DISTINCT na jsonb kolonama.
-    const grupeOwn = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, userId));
+    const grupeOwn = await db.select().from(grupeTable).where(and(
+      eq(grupeTable.muallimId, userId),
+      sql`COALESCE(is_archived, false) = false`,
+      sql`COALESCE(is_active, true) = true`,
+    ));
     const grupeSecRows = await db.execute(sql`
       SELECT g.id, g.muallim_id, g.naziv, g.skolska_godina,
         g.dani_nastave, g.vrijeme_nastave, g.datum_pocetka, g.datum_kraja,
@@ -887,7 +919,10 @@ router.get("/grupe", async (req, res) => {
       FROM grupe g
       JOIN users u ON u.id = g.muallim_id
       JOIN grupa_muallimi gm ON gm.grupa_id = g.id
-      WHERE gm.muallim_id = ${userId} AND g.muallim_id != ${userId}
+      WHERE gm.muallim_id = ${userId}
+        AND g.muallim_id != ${userId}
+        AND COALESCE(g.is_archived, false) = false
+        AND COALESCE(g.is_active, true) = true
     `);
     const arhivaRows2 = await db.execute(sql`
       SELECT id, is_archived, archived_at FROM grupe
@@ -1316,6 +1351,8 @@ router.get("/ucenici", async (req, res) => {
         LEFT JOIN users mu ON mu.id = up.muallim_id
         LEFT JOIN grupe g ON g.id = up.grupa_id
         WHERE (up.is_archived = false OR up.is_archived IS NULL)
+          AND (up.grupa_id IS NULL OR COALESCE(g.is_archived, false) = false)
+          AND (up.grupa_id IS NULL OR COALESCE(g.is_active, true) = true)
         ORDER BY u.display_name ASC
       `);
 
@@ -1347,7 +1384,18 @@ router.get("/ucenici", async (req, res) => {
     }
 
     // Obični muallim — vlastiti učenici
-    const profili = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.muallimId, userId));
+    const profiliRaw = await db.select().from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.muallimId, userId));
+    const activeGrupaRows = await db.select({ id: grupeTable.id }).from(grupeTable)
+      .where(and(
+        eq(grupeTable.muallimId, userId),
+        sql`COALESCE(is_archived, false) = false`,
+        sql`COALESCE(is_active, true) = true`,
+      ));
+    const activeGrupaIds = new Set(activeGrupaRows.map(g => g.id));
+    const profili = profiliRaw.filter(p =>
+      !p.isArchived && (!p.grupaId || activeGrupaIds.has(p.grupaId)),
+    );
     if (profili.length === 0) { res.json([]); return; }
 
     const userIds = profili.map(p => p.userId);
@@ -1359,7 +1407,11 @@ router.get("/ucenici", async (req, res) => {
         eq(roditeljUcenikTable.status, "approved"),
       ));
     const uceniciSPovezanimRoditeljem = new Set(roditeljskeVeze.map(v => v.ucenikId));
-    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, userId));
+    const grupe = await db.select().from(grupeTable).where(and(
+      eq(grupeTable.muallimId, userId),
+      sql`COALESCE(is_archived, false) = false`,
+      sql`COALESCE(is_active, true) = true`,
+    ));
     const grupaMap = Object.fromEntries(grupe.map(g => [g.id, g.naziv]));
 
     const result = korisnici.map(u => {
@@ -2275,12 +2327,21 @@ router.get("/svi-rezultati", async (req, res) => {
 // Helper: verify group ownership (muallim owns the group, admin, glavni muallim, or secondary muallim)
 async function verifyGrupaAccess(grupaId: number, userId: number, userRole: string) {
   if (userRole === "admin") {
-    const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
+    const [grupa] = await db.select().from(grupeTable).where(and(
+      eq(grupeTable.id, grupaId),
+      sql`COALESCE(is_archived, false) = false`,
+      sql`COALESCE(is_active, true) = true`,
+    ));
     return grupa || null;
   }
   // Owner?
   const [grupaOwned] = await db.select().from(grupeTable)
-    .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId)));
+    .where(and(
+      eq(grupeTable.id, grupaId),
+      eq(grupeTable.muallimId, userId),
+      sql`COALESCE(is_archived, false) = false`,
+        sql`COALESCE(is_active, true) = true`,
+    ));
   if (grupaOwned) return grupaOwned;
   // Glavni muallim — može pristupiti svim grupama svog džemata
   const ctx = await getMektebCtx(userId);
@@ -2288,7 +2349,10 @@ async function verifyGrupaAccess(grupaId: number, userId: number, userRole: stri
     const rows = await db.execute(sql`
       SELECT g.* FROM grupe g
       JOIN muallim_profili mp ON mp.user_id = g.muallim_id
-      WHERE g.id = ${grupaId} AND mp.mekteb_id = ${ctx.mektebId}
+       WHERE g.id = ${grupaId}
+         AND mp.mekteb_id = ${ctx.mektebId}
+         AND COALESCE(g.is_archived, false) = false
+         AND COALESCE(g.is_active, true) = true
     `);
     return (rows.rows[0] as typeof grupaOwned) || null;
   }
@@ -2296,7 +2360,10 @@ async function verifyGrupaAccess(grupaId: number, userId: number, userRole: stri
   const secRow = await db.execute(sql`
     SELECT g.* FROM grupe g
     JOIN grupa_muallimi gm ON gm.grupa_id = g.id
-    WHERE g.id = ${grupaId} AND gm.muallim_id = ${userId}
+     WHERE g.id = ${grupaId}
+       AND gm.muallim_id = ${userId}
+       AND COALESCE(g.is_archived, false) = false
+       AND COALESCE(g.is_active, true) = true
     LIMIT 1
   `);
   return (secRow.rows[0] as typeof grupaOwned) || null;
@@ -2818,10 +2885,14 @@ async function getGrupaFullStats(grupaId: number) {
 
   const svoPrisustvoRaw = await db.select().from(priustvoTable)
     .where(eq(priustvoTable.grupaId, grupaId));
-  const svoPrisustvo = svoPrisustvoRaw.filter(p => ucenikIds.includes(p.ucenikId));
+  const svoPrisustvo = svoPrisustvoRaw.filter(p =>
+    ucenikIds.includes(p.ucenikId) && isFromCurrentSchoolYear(p.datum),
+  );
   const sveOcjeneRaw = await db.select().from(ocjeneTable)
     .where(eq(ocjeneTable.grupaId, grupaId));
-  const sveOcjene = sveOcjeneRaw.filter(o => ucenikIds.includes(o.ucenikId));
+  const sveOcjene = sveOcjeneRaw.filter(o =>
+    ucenikIds.includes(o.ucenikId) && isFromCurrentSchoolYear(o.datum),
+  );
   const kvizRezultati = ucenikIds.length > 0
     ? await db.select().from(kvizRezultatiTable)
         .where(inArray(kvizRezultatiTable.userId, ucenikIds))
@@ -2971,6 +3042,8 @@ router.get("/dashboard-stats", async (req, res) => {
       const rows = await db.execute(sql`
         SELECT id, skolska_godina AS "skolskaGodina"
         FROM grupe
+        WHERE COALESCE(is_archived, false) = false
+          AND COALESCE(is_active, true) = true
         ORDER BY id
       `);
       dostupneGrupeRows = rows.rows as typeof dostupneGrupeRows;
@@ -2980,6 +3053,8 @@ router.get("/dashboard-stats", async (req, res) => {
         FROM grupe g
         JOIN muallim_profili mp ON mp.user_id = g.muallim_id
         WHERE mp.mekteb_id = ${ctx.mektebId}
+          AND COALESCE(g.is_archived, false) = false
+          AND COALESCE(g.is_active, true) = true
         ORDER BY g.id
       `);
       dostupneGrupeRows = rows.rows as typeof dostupneGrupeRows;
@@ -2988,7 +3063,9 @@ router.get("/dashboard-stats", async (req, res) => {
         SELECT DISTINCT g.id, g.skolska_godina AS "skolskaGodina"
         FROM grupe g
         LEFT JOIN grupa_muallimi gm ON gm.grupa_id = g.id
-        WHERE g.muallim_id = ${muallimId} OR gm.muallim_id = ${muallimId}
+        WHERE (g.muallim_id = ${muallimId} OR gm.muallim_id = ${muallimId})
+          AND COALESCE(g.is_archived, false) = false
+          AND COALESCE(g.is_active, true) = true
         ORDER BY g.id
       `);
       dostupneGrupeRows = rows.rows as typeof dostupneGrupeRows;
@@ -3004,11 +3081,14 @@ router.get("/dashboard-stats", async (req, res) => {
     // muallim_id profila može biti drugi muallim, zato ne filtriramo po njemu.
     const profili = grupeIds.length > 0
       ? await db.select().from(ucenikProfiliTable)
-          .where(inArray(ucenikProfiliTable.grupaId, grupeIds))
+          .where(and(
+            inArray(ucenikProfiliTable.grupaId, grupeIds),
+            eq(ucenikProfiliTable.isArchived, false),
+          ))
       : [];
 
     const ucenikIds = profili.map(p => p.userId);
-    const aktivnihUcenika = profili.filter(p => !p.isArchived).length;
+    const aktivnihUcenika = profili.length;
 
     let prosjekPrisustva: number | null = null;
     let prosjekOcjena: number | null = null;
@@ -3022,7 +3102,7 @@ router.get("/dashboard-stats", async (req, res) => {
       const today = new Date().toISOString().split("T")[0];
       // Prisustvo i ocjene filtriramo po dostupnim grupama. Ne ograničavamo
       // muallim_id jer je zapis mogao unijeti sekundarni muallim.
-      const [prisustvo, ocjene, kvizovi, lekcije, danasnje] = await Promise.all([
+      const [prisustvoRaw, ocjeneRaw, kvizovi, lekcije, danasnjeRaw] = await Promise.all([
         grupeIds.length > 0
           ? db.select().from(priustvoTable)
               .where(inArray(priustvoTable.grupaId, grupeIds))
@@ -3039,6 +3119,9 @@ router.get("/dashboard-stats", async (req, res) => {
               .where(and(eq(priustvoTable.datum, today), inArray(priustvoTable.grupaId, grupeIds)))
           : db.select().from(priustvoTable).where(sql`false`),
       ]);
+      const prisustvo = prisustvoRaw.filter(p => isFromCurrentSchoolYear(p.datum));
+      const ocjene = ocjeneRaw.filter(o => isFromCurrentSchoolYear(o.datum));
+      const danasnje = danasnjeRaw.filter(p => isFromCurrentSchoolYear(p.datum));
 
       const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
       prosjekPrisustva = prisustvo.length > 0 ? Math.round((prisutnih / prisustvo.length) * 100) : null;
@@ -3092,13 +3175,20 @@ router.get("/statistika-mekteb", async (req, res) => {
     // admin → sve, glavni → cijeli mekteb, ostali → vlastite + sekundarne
     let grupeRows: Array<{ id: number }>;
     if (userRole === "admin") {
-      const rows = await db.execute(sql`SELECT id FROM grupe ORDER BY id`);
+      const rows = await db.execute(sql`
+        SELECT id FROM grupe
+        WHERE COALESCE(is_archived, false) = false
+          AND COALESCE(is_active, true) = true
+        ORDER BY id
+      `);
       grupeRows = rows.rows as typeof grupeRows;
     } else if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
       const rows = await db.execute(sql`
         SELECT g.id FROM grupe g
         JOIN muallim_profili mp ON mp.user_id = g.muallim_id
         WHERE mp.mekteb_id = ${ctx.mektebId}
+          AND COALESCE(g.is_archived, false) = false
+          AND COALESCE(g.is_active, true) = true
         ORDER BY g.id
       `);
       grupeRows = rows.rows as typeof grupeRows;
@@ -3106,7 +3196,9 @@ router.get("/statistika-mekteb", async (req, res) => {
       const rows = await db.execute(sql`
         SELECT DISTINCT g.id FROM grupe g
         LEFT JOIN grupa_muallimi gm ON gm.grupa_id = g.id
-        WHERE g.muallim_id = ${muallimId} OR gm.muallim_id = ${muallimId}
+        WHERE (g.muallim_id = ${muallimId} OR gm.muallim_id = ${muallimId})
+          AND COALESCE(g.is_archived, false) = false
+          AND COALESCE(g.is_active, true) = true
         ORDER BY g.id
       `);
       grupeRows = rows.rows as typeof grupeRows;
@@ -3162,7 +3254,10 @@ router.get("/statistika-mekteb", async (req, res) => {
 
     // Lekcije završeno preko korisnik-napredak za sve učenike svih grupa.
     const profili = await db.select().from(ucenikProfiliTable)
-      .where(eq(ucenikProfiliTable.muallimId, muallimId));
+      .where(and(
+        inArray(ucenikProfiliTable.grupaId, grupeIds),
+        eq(ucenikProfiliTable.isArchived, false),
+      ));
     const ucenikIds = profili.map(p => p.userId);
     const lekcije = ucenikIds.length > 0
       ? await db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
@@ -3199,7 +3294,11 @@ router.get("/kalendar/sve", async (req, res) => {
     const muallimId = await resolveViewMuallimId(req);
     if (!muallimId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
     const scopedView = Boolean(req.query.muallimId);
-    const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
+    const grupe = await db.select().from(grupeTable).where(and(
+      eq(grupeTable.muallimId, muallimId),
+      sql`COALESCE(is_archived, false) = false`,
+      sql`COALESCE(is_active, true) = true`,
+    ));
     const grupeIds = grupe.map(g => g.id);
     const grupaMap = new Map(grupe.map(g => [g.id, g.naziv]));
 
@@ -3964,10 +4063,24 @@ router.get("/mekteb/spisak-excel", async (req, res) => {
 router.get("/zadace", async (req, res) => {
   try {
     const grupaId = req.query.grupaId ? parseInt(req.query.grupaId as string) : undefined;
+    const activeGrupaRows = await db.select({ id: grupeTable.id }).from(grupeTable).where(and(
+      eq(grupeTable.muallimId, req.user!.userId),
+      sql`COALESCE(is_archived, false) = false`,
+      sql`COALESCE(is_active, true) = true`,
+    ));
+    const activeGrupaIds = new Set(activeGrupaRows.map(g => g.id));
     const where = grupaId
-      ? and(eq(zadaceTable.muallimId, req.user!.userId), eq(zadaceTable.grupaId, grupaId))
-      : eq(zadaceTable.muallimId, req.user!.userId);
-    const zadace = await db.select().from(zadaceTable).where(where).orderBy(desc(zadaceTable.createdAt));
+      ? and(
+          eq(zadaceTable.muallimId, req.user!.userId),
+          eq(zadaceTable.grupaId, grupaId),
+          gte(zadaceTable.createdAt, currentSchoolYearResetTimestamp()),
+        )
+      : and(
+          eq(zadaceTable.muallimId, req.user!.userId),
+          gte(zadaceTable.createdAt, currentSchoolYearResetTimestamp()),
+        );
+    const zadaceRaw = await db.select().from(zadaceTable).where(where).orderBy(desc(zadaceTable.createdAt));
+    const zadace = zadaceRaw.filter(z => activeGrupaIds.has(z.grupaId));
 
     if (zadace.length === 0) { res.json([]); return; }
 
@@ -4228,7 +4341,11 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
     if (!profil.grupaId) { res.json([]); return; }
 
     const grupneZadace = await db.select().from(zadaceTable)
-      .where(and(eq(zadaceTable.grupaId, profil.grupaId), eq(zadaceTable.isActive, true)))
+      .where(and(
+        eq(zadaceTable.grupaId, profil.grupaId),
+        eq(zadaceTable.isActive, true),
+        gte(zadaceTable.createdAt, currentSchoolYearResetTimestamp()),
+      ))
       .orderBy(desc(zadaceTable.createdAt));
     if (grupneZadace.length === 0) { res.json([]); return; }
 
@@ -4438,8 +4555,17 @@ router.get("/zadace-pregled-badge", async (req, res) => {
     const grupaId = req.query.grupaId ? parseInt(req.query.grupaId as string) : undefined;
     const today = new Date().toISOString().split("T")[0];
     const baseWhere = grupaId
-      ? and(eq(zadaceTable.muallimId, req.user!.userId), eq(zadaceTable.grupaId, grupaId), eq(zadaceTable.isActive, true))
-      : and(eq(zadaceTable.muallimId, req.user!.userId), eq(zadaceTable.isActive, true));
+      ? and(
+          eq(zadaceTable.muallimId, req.user!.userId),
+          eq(zadaceTable.grupaId, grupaId),
+          eq(zadaceTable.isActive, true),
+          gte(zadaceTable.createdAt, currentSchoolYearResetTimestamp()),
+        )
+      : and(
+          eq(zadaceTable.muallimId, req.user!.userId),
+          eq(zadaceTable.isActive, true),
+          gte(zadaceTable.createdAt, currentSchoolYearResetTimestamp()),
+        );
     const zadace = await db.select().from(zadaceTable).where(baseWhere);
     if (zadace.length === 0) { res.json({ count: 0 }); return; }
 
@@ -4580,7 +4706,10 @@ async function buildUcenikIzvjestaj(ucenikId: number, muallimId?: number) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, ucenikId));
   if (!user) return null;
 
-  const [profil] = await db.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+  const [profil] = await db.select().from(ucenikProfiliTable).where(and(
+    eq(ucenikProfiliTable.userId, ucenikId),
+    eq(ucenikProfiliTable.isArchived, false),
+  ));
   let grupa = null as { id: number; naziv: string } | null;
   if (profil?.grupaId) {
     const [g] = await db.select().from(grupeTable).where(eq(grupeTable.id, profil.grupaId));
@@ -4608,8 +4737,8 @@ async function buildUcenikIzvjestaj(ucenikId: number, muallimId?: number) {
     ucenik: { id: user.id, displayName: user.displayName, username: user.username },
     grupaNaziv: grupa?.naziv || null,
     grupaId: grupa?.id || null,
-    prisustvo,
-    ocjene,
+    prisustvo: prisustvo.filter(p => isFromCurrentSchoolYear(p.datum)),
+    ocjene: ocjene.filter(o => isFromCurrentSchoolYear(o.datum)),
     kvizRezultati,
     zavrseneLekcijeBroj: napredak.length,
   };
@@ -4695,10 +4824,48 @@ router.get("/izvjestaj/svi", async (req, res) => {
   try {
     const muallimId = await resolveViewMuallimId(req);
     if (!muallimId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
-    const profili = await db.select().from(ucenikProfiliTable)
-      .where(eq(ucenikProfiliTable.muallimId, muallimId));
-    // Filtriraj ocjene/prisustvo samo na ovog muallima.
-    const izvjestaji = (await Promise.all(profili.map(p => buildUcenikIzvjestaj(p.userId, muallimId))))
+    const ctx = await getMektebCtx(muallimId);
+    const scopedView = Boolean(req.query.muallimId);
+    let grupaIds: number[] = [];
+
+    if (req.user!.role === "admin") {
+      const rows = await db.select({ id: grupeTable.id }).from(grupeTable)
+        .where(and(
+          sql`COALESCE(is_archived, false) = false`,
+          sql`COALESCE(is_active, true) = true`,
+        ));
+      grupaIds = rows.map(g => g.id);
+    } else if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
+      const rows = await db.execute(sql`
+        SELECT g.id
+        FROM grupe g
+        JOIN muallim_profili mp ON mp.user_id = g.muallim_id
+        WHERE mp.mekteb_id = ${ctx.mektebId}
+          AND COALESCE(g.is_archived, false) = false
+          AND COALESCE(g.is_active, true) = true
+      `);
+      grupaIds = (rows.rows as Array<{ id: number }>).map(g => g.id);
+    } else {
+      const rows = await db.select({ id: grupeTable.id }).from(grupeTable)
+        .where(and(
+          eq(grupeTable.muallimId, muallimId),
+          sql`COALESCE(is_archived, false) = false`,
+          sql`COALESCE(is_active, true) = true`,
+        ));
+      grupaIds = rows.map(g => g.id);
+    }
+
+    const profili = grupaIds.length > 0
+      ? await db.select().from(ucenikProfiliTable).where(and(
+          inArray(ucenikProfiliTable.grupaId, grupaIds),
+          eq(ucenikProfiliTable.isArchived, false),
+        ))
+      : [];
+    // Globalni izvještaj ne prikazuje grupe, ali podaci pripadaju samo
+    // aktivnim učenicima iz dozvoljenog skupa grupa.
+    const izvjestaji = (await Promise.all(profili.map(p =>
+      buildUcenikIzvjestaj(p.userId, req.user!.role === "admin" ? undefined : (p.muallimId ?? undefined)),
+    )))
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
     const header = await buildMektebHeader(muallimId);
@@ -4722,10 +4889,17 @@ router.get("/izvjestaj/svi", async (req, res) => {
 router.get("/obavjestenja", async (req, res) => {
   try {
     const rows = await db.select().from(obavjestenjaTable)
-      .where(eq(obavjestenjaTable.muallimId, req.user!.userId))
+      .where(and(
+        eq(obavjestenjaTable.muallimId, req.user!.userId),
+        gte(obavjestenjaTable.createdAt, currentSchoolYearResetTimestamp()),
+      ))
       .orderBy(desc(obavjestenjaTable.createdAt));
     const grupeAll = await db.select().from(grupeTable)
-      .where(eq(grupeTable.muallimId, req.user!.userId));
+      .where(and(
+        eq(grupeTable.muallimId, req.user!.userId),
+        sql`COALESCE(is_archived, false) = false`,
+        sql`COALESCE(is_active, true) = true`,
+      ));
     const grupaMap = Object.fromEntries(grupeAll.map(g => [g.id, g.naziv]));
     res.json(rows.map(r => ({
       ...r,
@@ -5178,7 +5352,8 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
         FROM zvjezdice_log zl
         JOIN korisnici u ON u.id = zl.muallim_id
         LEFT JOIN zvjezdice_kategorije k ON k.id = zl.kategorija_id
-        WHERE zl.ucenik_id = ${ucenikId}
+         WHERE zl.ucenik_id = ${ucenikId}
+           AND zl.created_at >= ${currentSchoolYearResetDate()}
         ORDER BY zl.created_at DESC
         LIMIT 100
       `);
@@ -5192,7 +5367,8 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
                  null AS kategorija_naziv
           FROM zvjezdice_log zl
           JOIN korisnici u ON u.id = zl.muallim_id
-          WHERE zl.ucenik_id = ${ucenikId}
+           WHERE zl.ucenik_id = ${ucenikId}
+             AND zl.created_at >= ${currentSchoolYearResetDate()}
           ORDER BY zl.created_at DESC
           LIMIT 100
         `);
@@ -5203,7 +5379,8 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
           SELECT id, tip, razlog, created_at,
                  null AS muallim_ime, null AS kategorija_naziv
           FROM zvjezdice_log
-          WHERE ucenik_id = ${ucenikId}
+           WHERE ucenik_id = ${ucenikId}
+             AND created_at >= ${currentSchoolYearResetDate()}
           ORDER BY created_at DESC
           LIMIT 100
         `);
@@ -5217,6 +5394,7 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
         COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
       FROM zvjezdice_log
       WHERE ucenik_id = ${ucenikId}
+        AND created_at >= ${currentSchoolYearResetDate()}
     `);
     const t = (totalsResult.rows[0] as any) || { pozitivne: "0", negativne: "0" };
     res.json({
@@ -5235,7 +5413,9 @@ router.get("/grupa/:id/zvjezdice-summary", async (req, res) => {
   try {
     const grupaId = parseInt(req.params.id);
     const ucenici = await db.execute(sql`
-      SELECT user_id FROM ucenik_profili WHERE grupa_id = ${grupaId}
+       SELECT user_id FROM ucenik_profili
+       WHERE grupa_id = ${grupaId}
+         AND COALESCE(is_archived, false) = false
     `);
     const ids = ucenici.rows.map((u: any) => u.user_id);
     if (ids.length === 0) { res.json([]); return; }
@@ -5245,7 +5425,8 @@ router.get("/grupa/:id/zvjezdice-summary", async (req, res) => {
         COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
         COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
       FROM zvjezdice_log
-      WHERE ucenik_id = ANY(${ids}::integer[])
+      WHERE ucenik_id IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})
+        AND created_at >= ${currentSchoolYearResetDate()}
       GROUP BY ucenik_id
     `);
     res.json(rows.rows);

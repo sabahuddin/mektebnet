@@ -2177,63 +2177,6 @@ export default function MuallimPanel() {
                           <div className="text-2xl font-extrabold text-rose-600">{mektebStats.global.ukupnoBodova}</div>
                           <div className="text-sm text-muted-foreground font-medium">{t("Ukupno bodova")}</div>
                         </div>
-                        <div className="bg-secondary/5 border border-border/50 rounded-2xl p-5">
-                          <GraduationCap className="w-5 h-5 text-secondary mb-2" />
-                          <div className="text-2xl font-extrabold text-secondary">{mektebStats.global.ukupnoGrupa}</div>
-                          <div className="text-sm text-muted-foreground font-medium">{t("Grupa")}</div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
-                        <div className="px-4 py-3 bg-muted/30 border-b border-border/30">
-                          <h4 className="font-extrabold text-foreground flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4 text-primary" /> {t("Pregled po grupama")}
-                          </h4>
-                          <p className="text-xs text-muted-foreground mt-1">{t("Klikni grupu za detaljan pregled")}</p>
-                        </div>
-                        {mektebStats.perGrupa.length === 0 ? (
-                          <div className="p-8 text-center text-muted-foreground">{t("Nema kreiranih grupa")}</div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
-                              <thead className="border-b border-border/50 bg-muted/20">
-                                <tr>
-                                  {[t("Grupa"), t("Učenika"), t("Časova"), t("Prisustvo"), t("Prosj. ocjena"), t("Kvizova"), t("Bodova"), t("Aktivni 7d")].map(h => (
-                                    <th key={h} className="px-3 py-2.5 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {mektebStats.perGrupa.map(g => (
-                                  <tr key={g.id}
-                                    onClick={() => { setStatMode("grupa"); setStatGrupaId(g.id); }}
-                                    className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer">
-                                    <td className="px-3 py-3 font-bold text-foreground">{g.naziv}</td>
-                                    <td className="px-3 py-3 text-sm font-medium text-foreground">{g.ukupnoUcenika}</td>
-                                    <td className="px-3 py-3 text-sm font-medium text-foreground">{g.ukupnoCasova}</td>
-                                    <td className="px-3 py-3">
-                                      {g.prisustvoPct !== null ? (
-                                        <span className={`text-sm font-bold ${g.prisustvoPct >= 80 ? "text-emerald-600" : g.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
-                                          {g.prisustvoPct}%
-                                        </span>
-                                      ) : <span className="text-sm text-muted-foreground">—</span>}
-                                    </td>
-                                    <td className="px-3 py-3">
-                                      {g.prosjekOcjena !== null ? (
-                                        <span className={`text-sm font-extrabold ${g.prosjekOcjena >= 4 ? "text-emerald-600" : g.prosjekOcjena >= 2.5 ? "text-amber-600" : "text-red-600"}`}>
-                                          {g.prosjekOcjena}
-                                        </span>
-                                      ) : <span className="text-sm text-muted-foreground">—</span>}
-                                    </td>
-                                    <td className="px-3 py-3 text-sm font-medium text-foreground">{g.ukupnoKvizova}</td>
-                                    <td className="px-3 py-3 text-sm font-extrabold text-amber-600">{g.ukupnoBodova}</td>
-                                    <td className="px-3 py-3 text-sm font-medium text-emerald-600">{g.aktivnihProslejSedmice}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ) : (
@@ -2799,7 +2742,6 @@ export default function MuallimPanel() {
                       {[
                         { label: t("Ukupno učenika"), value: mektebStatsAll.global.ukupnoUcenika, icon: Users, color: "text-primary", bg: "bg-primary/5" },
                         { label: t("Muallima"), value: mektebStatsAll.global.brojMuallima, icon: GraduationCap, color: "text-secondary", bg: "bg-secondary/5" },
-                        { label: t("Grupa"), value: mektebStatsAll.global.brojGrupa, icon: BookMarked, color: "text-violet-600", bg: "bg-violet-50" },
                         { label: t("Prosj. prisustvo"), value: mektebStatsAll.global.prosjekPrisustva !== null ? `${mektebStatsAll.global.prosjekPrisustva}%` : "—", icon: CalendarCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
                       ].map(s => (
                         <div key={s.label} className={`${s.bg} border border-border/50 rounded-2xl p-5`}>
@@ -2837,37 +2779,6 @@ export default function MuallimPanel() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-border/50 p-5">
-                      <div className="flex items-center gap-2 mb-4"><TrendingUp className="w-4 h-4 text-primary" /><h3 className="font-bold text-sm text-foreground">{t("Usporedba po grupama")}</h3></div>
-                      {mektebStatsAll.perGrupa.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t("Još nema grupa.")}</p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="text-left text-xs text-muted-foreground border-b border-border/50">
-                                <th className="py-2 pr-3 font-bold">{t("Grupa")}</th>
-                                <th className="py-2 pr-3 font-bold">{t("Muallim")}</th>
-                                <th className="py-2 pr-3 font-bold text-right">{t("Učenika")}</th>
-                                <th className="py-2 pr-3 font-bold text-right">{t("Prisustvo")}</th>
-                                <th className="py-2 pr-3 font-bold text-right">{t("Prosj. ocjena")}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {mektebStatsAll.perGrupa.map(g => (
-                                <tr key={g.id} className="border-b border-border/30 last:border-0">
-                                  <td className="py-2 pr-3 font-bold text-foreground">{g.naziv}</td>
-                                  <td className="py-2 pr-3 text-muted-foreground">{g.muallimNaziv}</td>
-                                  <td className="py-2 pr-3 text-right">{g.ukupnoUcenika}</td>
-                                  <td className="py-2 pr-3 text-right">{g.prisustvoPct !== null ? `${g.prisustvoPct}%` : "—"}</td>
-                                  <td className="py-2 pr-3 text-right">{g.prosjekOcjena !== null ? g.prosjekOcjena.toFixed(1) : "—"}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
                   </>
                 )}
               </motion.div>
@@ -3800,17 +3711,6 @@ export default function MuallimPanel() {
                     >
                       <Printer className="w-4 h-4" /> {t("Svi učenici")} ({ucenici.length})
                     </Button>
-                    {grupe.filter(g => !g.isArchived).map(g => (
-                      <Button
-                        key={g.id}
-                        onClick={() => setLocation(`/muallim/izvjestaj/grupa/${g.id}`)}
-                        variant="outline"
-                        className="rounded-xl font-bold text-sm flex items-center gap-2"
-                        data-testid={`btn-izvjestaj-grupa-${g.id}`}
-                      >
-                        <FileText className="w-4 h-4" /> {t("Grupa:")} {g.naziv}
-                      </Button>
-                    ))}
                   </div>
                 </div>
               </motion.div>
