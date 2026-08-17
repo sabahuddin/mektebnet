@@ -383,6 +383,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
+  return;
 });
 
 // ── KVIZOVI ───────────────────────────────────────────────────────────────────
@@ -460,7 +461,7 @@ router.get("/kvizovi/:slug", async (req, res) => {
     // ima match u banci (po normalizovanom tekstu), koristi se banka verzija
     // (admin može uređivati u banci). Pitanja koja nisu u banci se vraćaju kakva
     // jesu iz JSONB-a (legacy/interactive).
-    const jsonbPitanja = Array.isArray(kviz.pitanja) ? (kviz.pitanja as Record<string, unknown>[]) : [];
+    const jsonbPitanja = Array.isArray(kviz.pitanja) ? (kviz.pitanja as unknown as Record<string, unknown>[]) : [];
 
     const linked = await db
       .select({
@@ -1346,6 +1347,7 @@ router.post("/kontakt", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
+  return;
 });
 
 export default router;

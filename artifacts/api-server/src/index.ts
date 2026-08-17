@@ -383,7 +383,7 @@ async function runResidualSchema() {
         DROP INDEX IF EXISTS roditelj_ucenik_one_approved_per_ucenik_idx;
       `);
     } catch (err) {
-      logger.warn("[residual-schema] roditelj_ucenik drop old unique idx failed", err);
+      logger.warn({ err }, "[residual-schema] roditelj_ucenik drop old unique idx failed");
     }
 
         // Ocjene sadržaja (5 pčelica) — jedna aktivna ocjena po (user, tip, id).

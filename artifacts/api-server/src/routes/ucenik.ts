@@ -423,7 +423,7 @@ router.get("/moje-zvjezdice", async (req, res) => {
         COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
       FROM zvjezdice_log WHERE ucenik_id = ${userId}
     `);
-    const r = (rows as any[])[0] || {};
+    const r = (rows as unknown as any[])[0] || {};
     res.json({ pozitivne: parseInt(String(r.pozitivne ?? 0)) || 0, negativne: parseInt(String(r.negativne ?? 0)) || 0 });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

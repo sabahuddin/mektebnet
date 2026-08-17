@@ -190,6 +190,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     console.error("[mapa/nivo] error", err);
     res.status(500).json({ error: "Greška pri učitavanju mape" });
   }
+  return;
 }
 
 router.get("/nivo/:n", (req, res) => handleMapaNivo(req.params.n, req, res));
@@ -208,7 +209,7 @@ router.get("/nivo1", (req, res) => handleMapaNivo(1, req, res));
 //      Nivo 1 bedž — ovo zatvara taj cheat vector.
 router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (req, res) => {
   try {
-    const slug = req.params.slug;
+    const slug = String(req.params.slug);
     const userId = String(req.user?.userId ?? "");
     if (!userId) return res.status(401).json({ error: "Niste prijavljeni" });
 
@@ -300,6 +301,7 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
     console.error("[mapa/medaljon/claim] error", err);
     res.status(500).json({ error: "Greška pri osvajanju medaljona" });
   }
+  return;
 });
 
 export default router;

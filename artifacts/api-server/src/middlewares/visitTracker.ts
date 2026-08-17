@@ -13,7 +13,7 @@ async function resolveGeo(ip: string): Promise<{ country: string; city: string }
     }
     const res = await fetch(`http://ip-api.com/json/${cleanIp}?fields=country,city`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
-      const data = await res.json();
+      const data = (await res.json()) as { country?: string; city?: string };
       const result = { country: data.country || "Unknown", city: data.city || "Unknown" };
       geoCache.set(ip, result);
       if (geoCache.size > 10000) geoCache = new Map();

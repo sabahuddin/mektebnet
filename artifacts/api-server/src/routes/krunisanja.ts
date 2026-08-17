@@ -94,6 +94,7 @@ router.get("/nivo/:n", async (req, res) => {
     console.error("[krunisanja/nivo] error", err);
     res.status(500).json({ error: "Greška pri učitavanju krunisanja" });
   }
+  return;
 });
 
 // POST /api/krunisanja/:id/start
@@ -141,6 +142,7 @@ router.post("/:id/start", requireAuth, requireRole("ucenik"), async (req, res) =
     console.error("[krunisanja/start] error", err);
     res.status(500).json({ error: "Greška pri pokretanju" });
   }
+  return;
 });
 
 // POST /api/krunisanja/:id/predaj
@@ -215,6 +217,7 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
     console.error("[krunisanja/predaj] error", err);
     res.status(500).json({ error: "Greška pri predaji" });
   }
+  return;
 });
 
 // GET /api/krunisanja/lekcija/:slug — pojedinačna krunska lekcija
@@ -249,6 +252,7 @@ router.get("/lekcija/:slug", async (req, res) => {
     console.error("[krunisanja/lekcija] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // Server-side gating za krunisanje:

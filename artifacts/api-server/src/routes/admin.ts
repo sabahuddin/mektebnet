@@ -70,6 +70,7 @@ router.use((req, res, next) => {
     return res.status(403).json({ error: "Nemaš dozvolu za ovu radnju" });
   }
   next();
+  return;
 });
 
 const __adminDirname = path.dirname(fileURLToPath(import.meta.url));
@@ -154,6 +155,7 @@ router.post("/upload-document", (req, res) => {
     } catch (e: any) {
       res.status(500).json({ error: "Greška pri obradi dokumenta: " + e.message });
     }
+    return;
   });
 });
 
@@ -203,6 +205,7 @@ router.post("/upload", (req, res) => {
     } catch (e: any) {
       res.status(500).json({ error: "Greška pri obradi slike: " + e.message });
     }
+    return;
   });
 });
 
@@ -228,6 +231,7 @@ router.post("/upload-audio", (req, res) => {
     const url = `/uploads/${req.file.filename}`;
     console.log(`[Upload-Audio] ${req.file.originalname} -> ${req.file.filename} (${(req.file.size / 1024).toFixed(0)}KB)`);
     res.json({ url, filename: req.file.originalname, size: req.file.size });
+    return;
   });
 });
 
@@ -291,6 +295,7 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
       });
       res.status(500).json({ error: "Greška servera pri snimanju priloga. Pokušaj ponovo." });
     }
+    return;
   });
 });
 
@@ -326,6 +331,7 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // POST /api/admin/prilozi/:lekcijaId/embed — dodaj embed vježbu (LearningApps,
@@ -478,6 +484,7 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
     console.error("[POST /prilozi/:lekcijaId/embed] failed:", e?.message);
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // PUT /api/admin/prilozi/:id — uredi embed prilog (samo admin).
@@ -537,6 +544,7 @@ router.put("/prilozi/:id", async (req, res) => {
     console.error("[PUT /prilozi/:id] failed:", e?.message);
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 router.get("/prilozi/:lekcijaId", async (req, res) => {
@@ -586,6 +594,7 @@ router.get("/prilozi/download/:id", async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // GET /api/admin/pending-prilozi — lista fajlova koji čekaju odobrenje (samo admin)
@@ -618,6 +627,7 @@ router.get("/pending-prilozi", async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // PUT /api/admin/prilozi/:id/approve — odobri ili odbij prilog
@@ -646,6 +656,7 @@ router.put("/prilozi/:id/approve", async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // H5P upload: prima .h5p (zip) fajl, otpakira u uploads/h5p/<id>/.
@@ -838,6 +849,7 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
       }
       res.status(400).json({ error: e.message || "Greška pri obradi H5P arhive" });
     }
+    return;
   });
 });
 
@@ -869,6 +881,7 @@ router.delete("/prilozi/:id", async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 router.get("/uploads", (_req, res) => {
@@ -885,6 +898,7 @@ router.get("/uploads", (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // GET /api/admin/uploads-audio — već uploadovani audio fajlovi (za ponovnu
@@ -903,6 +917,7 @@ router.get("/uploads-audio", (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // GET /api/admin/orphan-uploads — slike koje postoje na disku ali NE postoje
@@ -957,6 +972,7 @@ router.get("/orphan-uploads", async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // Per-lekcija in-memory mutex da se izbjegnu izgubljeni insert-i pri paralelnim zahtjevima
@@ -1053,7 +1069,9 @@ router.post("/lekcije/:id/insert-image", async (req, res) => {
       }
 
       const altText = (lekcija.naslov || "").replace(/"/g, "&quot;");
-      let newHtml: string;
+      // Init na currentHtml samo radi TS control-flow analize (flag `replaced`
+      // je van njenog dometa); svaka grana ispod ionako dodjeljuje vrijednost.
+      let newHtml: string = currentHtml;
 
       if (mode === "hero") {
         // Replace existing .hero-box img src, or insert a new .hero-box at the
@@ -1122,6 +1140,7 @@ router.post("/lekcije/:id/insert-image", async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+  return;
 });
 
 // GET /api/admin/korisnici
@@ -1515,13 +1534,14 @@ router.post("/ilmihal", async (req, res) => {
     const kviz = kvizPitanja ? (typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja)) : null;
     const [row] = await db.insert(ilmihalLekcijeTable).values({
       naslov, slug, nivo: nivo || 2, redoslijed: redoslijed || 0,
-      contentHtml: contentHtml || "", kvizPitanja: kviz,
+      contentHtml: contentHtml || "", kvizPitanja: kviz as any,
     }).returning({ id: ilmihalLekcijeTable.id });
     res.json({ success: true, id: row.id });
   } catch (err) {
     console.error("POST /ilmihal error:", err);
     res.status(500).json({ error: "Greška pri kreiranju lekcije" });
   }
+  return;
 });
 
 router.put("/ilmihal/:id", async (req, res) => {
@@ -1572,6 +1592,7 @@ router.put("/ilmihal/:id", async (req, res) => {
     console.error("PUT /ilmihal/:id error:", err?.message, err?.stack);
     res.status(500).json({ error: "Greška servera", detail: err?.message });
   }
+  return;
 });
 
 // POST /api/admin/ilmihal/:id/lock — zaključaj lekciju (zaštita od auto-skripti)
@@ -1588,6 +1609,7 @@ router.post("/ilmihal/:id/lock", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška pri zaključavanju" });
   }
+  return;
 });
 
 // POST /api/admin/ilmihal/:id/unlock — otključaj lekciju
@@ -1603,6 +1625,7 @@ router.post("/ilmihal/:id/unlock", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška pri otključavanju" });
   }
+  return;
 });
 
 // POST /api/admin/ilmihal/lock-by-slug — zaključaj po slug-u (za bulk i CLI)
@@ -1619,6 +1642,7 @@ router.post("/ilmihal/lock-by-slug", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška pri bulk zaključavanju" });
   }
+  return;
 });
 
 // UKLONJENO: restore-from-prod-seed endpoint je obrisan.
@@ -1665,6 +1689,7 @@ router.post("/ilmihal/delete-batch", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
+  return;
 });
 
 // PUT /api/admin/kvizovi/:id — Update quiz questions/title
@@ -2370,9 +2395,9 @@ function normalizePitanjeBody(body: any) {
     correctIndex = 0;
   } else if (vrsta === "multiple") {
     if (Array.isArray(body?.correctIndexes) && body.correctIndexes.length > 0) {
-      correctIndexes = Array.from(new Set(body.correctIndexes.map((n: any) => parseInt(n) || 0)))
+      correctIndexes = Array.from(new Set<number>(body.correctIndexes.map((n: any) => parseInt(n) || 0)))
         .filter((n) => n >= 0 && n < opcije.length)
-        .sort((a, b) => a - b) as number[];
+        .sort((a, b) => a - b);
     }
     correctIndex = correctIndexes && correctIndexes.length > 0 ? correctIndexes[0]! : 0;
   } else if (vrsta === "dragDrop") {
@@ -3151,6 +3176,7 @@ router.post("/rjecnik", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška pri dodavanju riječi" });
   }
+  return;
 });
 
 router.put("/rjecnik/:id", async (req, res) => {
@@ -3167,6 +3193,7 @@ router.put("/rjecnik/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška pri ažuriranju riječi" });
   }
+  return;
 });
 
 router.delete("/rjecnik/:id", async (req, res) => {
@@ -3593,6 +3620,7 @@ router.post("/igra-pitanja/import", (req, res) => {
       console.error("[admin/igra-pitanja/import] greška:", e);
       res.status(500).json({ error: "Greška pri obradi CSV-a", detail: e?.message ?? String(e) });
     }
+    return;
   });
 });
 
@@ -3725,6 +3753,7 @@ router.get("/etape/nivo/:n", async (req, res) => {
     console.error("[admin/etape/nivo] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // GET /api/admin/etape/:medaljonId/banka — pitanja iz banke filtrirana po
@@ -3769,6 +3798,7 @@ router.get("/etape/:medaljonId/banka", async (req, res) => {
     console.error("[admin/etape/banka] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // GET /api/admin/krunisanja/:id/banka — pitanja iz banke za sve lekcije nivoa
@@ -3800,6 +3830,7 @@ router.get("/krunisanja/:id/banka", async (req, res) => {
     console.error("[admin/krunisanja/banka] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // PUT /api/admin/etape/:medaljonId — ažuriraj konfiguraciju kviza za etapu
@@ -3831,6 +3862,7 @@ router.put("/etape/:medaljonId", async (req, res) => {
     console.error("[admin/etape/put] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // GET /api/admin/krunisanja/nivo/:n — vrati krunisanje + krunske lekcije za nivo
@@ -3856,6 +3888,7 @@ router.get("/krunisanja/nivo/:n", async (req, res) => {
     console.error("[admin/krunisanja/nivo] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // PUT /api/admin/krunisanja/:id — update konfiguracije krunisanja
@@ -3886,6 +3919,7 @@ router.put("/krunisanja/:id", async (req, res) => {
     console.error("[admin/krunisanja/put] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // POST /api/admin/krunisanja/:id/lekcije — kreiraj krunsku lekciju
@@ -3923,6 +3957,7 @@ router.post("/krunisanja/:id/lekcije", async (req, res) => {
     console.error("[admin/krunisanja/lekcije/post] error", err);
     res.status(500).json({ error: msg.includes("unique") ? "Slug već postoji" : "Greška pri kreiranju" });
   }
+  return;
 });
 
 // PUT /api/admin/krunisanja/lekcije/:lekcijaId
@@ -3946,6 +3981,7 @@ router.put("/krunisanja/lekcije/:lekcijaId", async (req, res) => {
     console.error("[admin/krunisanja/lekcije/put] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // DELETE /api/admin/krunisanja/lekcije/:lekcijaId
@@ -3959,6 +3995,7 @@ router.delete("/krunisanja/lekcije/:lekcijaId", async (req, res) => {
     console.error("[admin/krunisanja/lekcije/delete] error", err);
     res.status(500).json({ error: "Greška" });
   }
+  return;
 });
 
 // Suppressors za nove tabele importovane ali korištene samo u join statistici (kasnije)
@@ -4018,6 +4055,7 @@ router.post("/prijevodi/ui", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
   }
+  return;
 });
 
 // Ukloni override → UI se vraća na bundlani locale prijevod.
@@ -4031,6 +4069,7 @@ router.delete("/prijevodi/ui", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
   }
+  return;
 });
 
 // --- Sadržaj (content_prijevodi) ---
@@ -4091,6 +4130,7 @@ router.get("/prijevodi/content", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
   }
+  return;
 });
 
 // Pun red (prijevod + izvor) za uređivanje.
@@ -4115,6 +4155,7 @@ router.get("/prijevodi/content/:id", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
   }
+  return;
 });
 
 router.put("/prijevodi/content/:id", async (req, res) => {
@@ -4131,6 +4172,7 @@ router.put("/prijevodi/content/:id", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
   }
+  return;
 });
 
 // ── ZVJEZDICE KATEGORIJE ─────────────────────────────────────────────────────
@@ -4162,6 +4204,7 @@ router.post("/zvjezdice-kategorije", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
   }
+  return;
 });
 
 router.delete("/zvjezdice-kategorije/:id", async (req, res) => {

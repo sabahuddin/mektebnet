@@ -2957,7 +2957,7 @@ router.put("/profil/password", async (req, res) => {
 async function getGrupaFullStats(grupaId: number) {
   const profili = await db.select().from(ucenikProfiliTable)
     .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
-  if (profili.length === 0) return { ucenici: [], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[], zvjezdicePozitivne: 0, zvjezdiceNegativne: 0 };
+  if (profili.length === 0) return { ucenici: [] as any[], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[], zvjezdicePozitivne: 0, zvjezdiceNegativne: 0 };
 
   const ucenikIds = profili.map(p => p.userId);
   const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
@@ -3905,11 +3905,11 @@ router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
       for (const d of stats.prisustvoPoDatumu) {
         totalRow.push(`${d.prisutan}/${d.ukupno}`);
       }
-      const tp = stats.ucenici.reduce((a, u) => a + u.prisutanCount, 0);
-      const to = stats.ucenici.reduce((a, u) => a + u.odsutanCount, 0);
-      const tz = stats.ucenici.reduce((a, u) => a + u.zakasnioCount, 0);
-      const top = stats.ucenici.reduce((a, u) => a + u.opravdanCount, 0);
-      const tt = stats.ucenici.reduce((a, u) => a + u.ukupnoPrisustvo, 0);
+      const tp = (stats.ucenici as any[]).reduce((a, u) => a + u.prisutanCount, 0);
+      const to = (stats.ucenici as any[]).reduce((a, u) => a + u.odsutanCount, 0);
+      const tz = (stats.ucenici as any[]).reduce((a, u) => a + u.zakasnioCount, 0);
+      const top = (stats.ucenici as any[]).reduce((a, u) => a + u.opravdanCount, 0);
+      const tt = (stats.ucenici as any[]).reduce((a, u) => a + u.ukupnoPrisustvo, 0);
       totalRow.push(tp, to, tz, top, tt, stats.grupaPrisustvoPct !== null ? `${stats.grupaPrisustvoPct}%` : "—");
       prisustvoRows.push(totalRow);
     }
@@ -5310,7 +5310,7 @@ router.post("/roditelj/:id/reset-password", async (req, res) => {
     // učenikom čiji je muallim ovaj korisnik (osim za admina).
     // Glavni muallim može resetirati šifru roditelja bilo kojeg učenika u mektebu.
     if (req.user!.role !== "admin") {
-      const ctx = await getMuallimCtx(req.user!.userId);
+      const ctx = await getMektebCtx(req.user!.userId);
       const veze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
         .from(roditeljUcenikTable)
         .where(eq(roditeljUcenikTable.roditeljId, roditeljId));

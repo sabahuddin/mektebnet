@@ -19,7 +19,7 @@ const router = Router();
 // uopće položena).
 router.get("/medaljon/:slug", async (req, res) => {
   try {
-    const slug = req.params.slug;
+    const slug = String(req.params.slug);
     // Opcionalno parsiranje JWT-a (ova ruta nema requireAuth middleware,
     // a `req.user` se postavlja samo tamo gdje requireAuth radi). Bez ovoga
     // bi `polozeno`/`brojPokusaja` uvijek bili null/0 za normalne bearer
@@ -119,13 +119,14 @@ router.get("/medaljon/:slug", async (req, res) => {
     console.error("[etape/medaljon] error", err);
     res.status(500).json({ error: "Greška pri učitavanju etape" });
   }
+  return;
 });
 
 // POST /api/etape/medaljon/:slug/start
 // Servira pitanja za polaganje. BEZ tačnih odgovora — server scoring na predaj.
 router.post("/medaljon/:slug/start", requireAuth, requireRole("ucenik"), async (req, res) => {
   try {
-    const slug = req.params.slug;
+    const slug = String(req.params.slug);
     const userId = String(req.user?.userId ?? "");
     const [medaljon] = await db
       .select()
@@ -169,6 +170,7 @@ router.post("/medaljon/:slug/start", requireAuth, requireRole("ucenik"), async (
     console.error("[etape/start] error", err);
     res.status(500).json({ error: "Greška pri pokretanju polaganja" });
   }
+  return;
 });
 
 // POST /api/etape/medaljon/:slug/predaj
@@ -176,7 +178,7 @@ router.post("/medaljon/:slug/start", requireAuth, requireRole("ucenik"), async (
 // Server-side scoring. Ako prošao i etapa gating → claim medaljon automatski.
 router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async (req, res) => {
   try {
-    const slug = req.params.slug;
+    const slug = String(req.params.slug);
     const userId = String(req.user?.userId ?? "");
     const odgovori: { pitanjeId: number; optionIndex: number }[] = Array.isArray(req.body?.odgovori)
       ? req.body.odgovori
@@ -265,6 +267,7 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
     console.error("[etape/predaj] error", err);
     res.status(500).json({ error: "Greška pri predaji ispita" });
   }
+  return;
 });
 
 // Server-side provjera gating-a za pristup završnom ispitu etape.
