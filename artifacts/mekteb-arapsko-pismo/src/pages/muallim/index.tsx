@@ -3731,7 +3731,7 @@ export default function MuallimPanel() {
               <RoditeljiTab
                 grupe={grupe}
                 filterGrupaId={selectedGrupaId}
-                muallimId={selectedMuallimId}
+                muallimId={scopedMuallimId}
                 readOnly={isMuallimPreview}
               />
             )}
