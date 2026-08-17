@@ -68,7 +68,7 @@ function fmtDate(s: string) {
 export default function MuallimIzvjestajPage() {
   const { token } = useAuth();
   const { t } = useLanguage();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [matchUcenik, paramsUcenik] = useRoute<{ id: string }>("/muallim/izvjestaj/ucenik/:id");
   const [matchGrupa, paramsGrupa] = useRoute<{ id: string }>("/muallim/izvjestaj/grupa/:id");
   const [matchSvi] = useRoute("/muallim/izvjestaj/svi");
@@ -86,7 +86,10 @@ export default function MuallimIzvjestajPage() {
     let url = "";
     if (matchUcenik && paramsUcenik?.id) url = `/muallim/izvjestaj/ucenik/${paramsUcenik.id}`;
     else if (matchGrupa && paramsGrupa?.id) url = `/muallim/izvjestaj/grupa/${paramsGrupa.id}`;
-    else if (matchSvi) url = `/muallim/izvjestaj/svi`;
+    else if (matchSvi) {
+      const muallimId = new URLSearchParams(window.location.search).get("muallimId");
+      url = muallimId ? `/muallim/izvjestaj/svi?muallimId=${encodeURIComponent(muallimId)}` : `/muallim/izvjestaj/svi`;
+    }
     else { setError(t("Nepoznat tip izvještaja")); setIsLoading(false); return; }
 
     setIsLoading(true);
@@ -104,7 +107,7 @@ export default function MuallimIzvjestajPage() {
       })
       .catch((e: any) => setError(e?.message || t("Greška pri učitavanju")))
       .finally(() => setIsLoading(false));
-  }, [token, matchUcenik, paramsUcenik?.id, matchGrupa, paramsGrupa?.id, matchSvi]);
+  }, [token, location, matchUcenik, paramsUcenik?.id, matchGrupa, paramsGrupa?.id, matchSvi]);
 
   const filteredUcenici = data ? data.ucenici.filter(u => selectedIds.has(u.ucenik.id)) : [];
   const showPicker = !!data && data.tip !== "ucenik";

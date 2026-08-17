@@ -47,9 +47,13 @@ interface RoditeljEntry {
 export default function RoditeljiTab({
   grupe,
   filterGrupaId = null,
+  muallimId = null,
+  readOnly = false,
 }: {
   grupe: Grupa[];
   filterGrupaId?: number | null;
+  muallimId?: number | null;
+  readOnly?: boolean;
 }) {
   const { token } = useAuth();
   const { toast } = useToast();
@@ -58,7 +62,7 @@ export default function RoditeljiTab({
   const [obavjestenja, setObavjestenja] = useState<Obavjestenje[]>([]);
   const [roditelji, setRoditelji] = useState<RoditeljEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"obavjestenja" | "roditelji">("obavjestenja");
+  const [view, setView] = useState<"obavjestenja" | "roditelji">(readOnly ? "roditelji" : "obavjestenja");
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -91,14 +95,21 @@ export default function RoditeljiTab({
   useEffect(() => {
     if (!token) return;
     setLoading(true);
+    const query = muallimId ? `?muallimId=${encodeURIComponent(String(muallimId))}` : "";
+    const roditeljiRequest = apiRequest<RoditeljEntry[]>("GET", `/muallim/roditelji-lista${query}`, undefined, token);
+    if (readOnly) {
+      roditeljiRequest.then(r => setRoditelji(r)).catch(() => {}).finally(() => setLoading(false));
+      setView("roditelji");
+      return;
+    }
     Promise.all([
       apiRequest<Obavjestenje[]>("GET", "/muallim/obavjestenja", undefined, token),
-      apiRequest<RoditeljEntry[]>("GET", "/muallim/roditelji-lista", undefined, token),
+      roditeljiRequest,
     ]).then(([o, r]) => {
       setObavjestenja(o);
       setRoditelji(r);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [token]);
+  }, [token, muallimId, readOnly]);
 
   function resetForm() {
     setShowForm(false);
@@ -199,12 +210,14 @@ export default function RoditeljiTab({
         </div>
       )}
       <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setView("obavjestenja")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${view === "obavjestenja" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}
-        >
-          <Megaphone className="w-4 h-4" /> {t("Obavještenja ({n})", { n: String(filteredObavjestenja.length) })}
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setView("obavjestenja")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${view === "obavjestenja" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}
+          >
+            <Megaphone className="w-4 h-4" /> {t("Obavještenja ({n})", { n: String(filteredObavjestenja.length) })}
+          </button>
+        )}
         <button
           onClick={() => setView("roditelji")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${view === "roditelji" ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}

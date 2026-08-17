@@ -222,6 +222,28 @@ async function getMektebCtx(userId: number) {
   return { mektebId: profil.mektebId ?? null, isGlavni: profil.isGlavni ?? false, licenceCount: profil.licenceCount };
 }
 
+// Read-only pregled drugog muallima. Samo glavni muallim može dodati
+// ?muallimId=...; sva prava izmjene i dalje koriste stvarnog prijavljenog
+// korisnika i ne prolaze kroz ovaj helper.
+async function resolveViewMuallimId(req: any): Promise<number | null> {
+  const requesterId = req.user!.userId as number;
+  const raw = Array.isArray(req.query.muallimId) ? req.query.muallimId[0] : req.query.muallimId;
+  if (!raw) return requesterId;
+  const requestedId = Number(raw);
+  if (!Number.isInteger(requestedId) || requestedId <= 0) return null;
+  if (requestedId === requesterId) return requesterId;
+
+  const requesterCtx = await getMektebCtx(requesterId);
+  if (!requesterCtx?.isGlavni || !requesterCtx.mektebId) return null;
+  const [target] = await db.select({ userId: muallimProfiliTable.userId })
+    .from(muallimProfiliTable)
+    .where(and(
+      eq(muallimProfiliTable.userId, requestedId),
+      eq(muallimProfiliTable.mektebId, requesterCtx.mektebId),
+    ));
+  return target?.userId ?? null;
+}
+
 // Vrati profil učenika ako muallim smije upravljati njime.
 // Obični muallim vidi samo vlastite učenike, a glavni sve učenike svog mekteba.
 // Provjera pripadnosti mektebu ide preko vlasničkog muallim profila, jer
@@ -791,10 +813,12 @@ async function validateTargetGrupa(
 // Glavni muallim vidi SVE grupe svog džemata (sa muallimDisplayName poljem).
 router.get("/grupe", async (req, res) => {
   try {
-    const userId = req.user!.userId;
+    const userId = await resolveViewMuallimId(req);
+    if (!userId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
     const ctx = await getMektebCtx(userId);
+    const scopedView = Boolean(req.query.muallimId);
 
-    if (ctx?.isGlavni && ctx.mektebId) {
+    if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
       // Svi muallimi džemata → njihove grupe.
       // Koristimo subquery umjesto JOIN-a s boolen ORDER BY
       // da izbjegnemo moguće greške na starijim PG verzijama.
@@ -1266,10 +1290,12 @@ router.delete("/grupe/:id", async (req, res) => {
 // Glavni muallim vidi SVE učenike svog džemata (sa muallimId + muallimDisplayName).
 router.get("/ucenici", async (req, res) => {
   try {
-    const userId = req.user!.userId;
+    const userId = await resolveViewMuallimId(req);
+    if (!userId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
     const ctx = await getMektebCtx(userId);
+    const scopedView = Boolean(req.query.muallimId);
 
-    if (ctx?.isGlavni && ctx.mektebId) {
+    if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
       // Svi učenici džemata — join kroz muallim_profili (siguran i za starije zapise
       // gdje ucenik_profili.mekteb_id može biti NULL).
       const rows = await db.execute(sql`
@@ -2929,10 +2955,12 @@ router.get("/grupa/:id/statistika", async (req, res) => {
 // Ako nije navedena, vraća sve (backward compat).
 router.get("/dashboard-stats", async (req, res) => {
   try {
-    const muallimId = req.user!.userId;
+    const muallimId = await resolveViewMuallimId(req);
+    if (!muallimId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
     const filterYear = (req.query.skolskaGodina as string) || null;
-    const userRole = req.user!.role;
+    const userRole = req.query.muallimId ? "muallim" : req.user!.role;
     const ctx = await getMektebCtx(muallimId);
+    const scopedView = Boolean(req.query.muallimId);
 
     // Dashboard mora koristiti iste grupe koje muallim vidi u GET /grupe:
     // glavni vidi cijeli mekteb, sekundarni vidi dodijeljene grupe, a obični
@@ -2946,7 +2974,7 @@ router.get("/dashboard-stats", async (req, res) => {
         ORDER BY id
       `);
       dostupneGrupeRows = rows.rows as typeof dostupneGrupeRows;
-    } else if (ctx?.isGlavni && ctx.mektebId) {
+    } else if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
       const rows = await db.execute(sql`
         SELECT g.id, g.skolska_godina AS "skolskaGodina"
         FROM grupe g
@@ -3054,9 +3082,11 @@ router.get("/dashboard-stats", async (req, res) => {
 // GET /api/muallim/statistika-mekteb — agregat statistike kroz sve grupe muallima
 router.get("/statistika-mekteb", async (req, res) => {
   try {
-    const muallimId = req.user!.userId;
-    const userRole = req.user!.role;
+    const muallimId = await resolveViewMuallimId(req);
+    if (!muallimId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
+    const userRole = req.query.muallimId ? "muallim" : req.user!.role;
     const ctx = await getMektebCtx(muallimId);
+    const scopedView = Boolean(req.query.muallimId);
 
     // Isti skup grupe kao u dashboard-stats i GET /grupe:
     // admin → sve, glavni → cijeli mekteb, ostali → vlastite + sekundarne
@@ -3064,7 +3094,7 @@ router.get("/statistika-mekteb", async (req, res) => {
     if (userRole === "admin") {
       const rows = await db.execute(sql`SELECT id FROM grupe ORDER BY id`);
       grupeRows = rows.rows as typeof grupeRows;
-    } else if (ctx?.isGlavni && ctx.mektebId) {
+    } else if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
       const rows = await db.execute(sql`
         SELECT g.id FROM grupe g
         JOIN muallim_profili mp ON mp.user_id = g.muallim_id
@@ -3166,7 +3196,9 @@ router.get("/statistika-mekteb", async (req, res) => {
 // grupaNaziv labelom za prikaz badgeova.
 router.get("/kalendar/sve", async (req, res) => {
   try {
-    const muallimId = req.user!.userId;
+    const muallimId = await resolveViewMuallimId(req);
+    if (!muallimId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
+    const scopedView = Boolean(req.query.muallimId);
     const grupe = await db.select().from(grupeTable).where(eq(grupeTable.muallimId, muallimId));
     const grupeIds = grupe.map(g => g.id);
     const grupaMap = new Map(grupe.map(g => [g.id, g.naziv]));
@@ -4661,13 +4693,15 @@ router.get("/izvjestaj/grupa/:id", async (req, res) => {
 // GET /api/muallim/izvjestaj/svi
 router.get("/izvjestaj/svi", async (req, res) => {
   try {
+    const muallimId = await resolveViewMuallimId(req);
+    if (!muallimId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
     const profili = await db.select().from(ucenikProfiliTable)
-      .where(eq(ucenikProfiliTable.muallimId, req.user!.userId));
+      .where(eq(ucenikProfiliTable.muallimId, muallimId));
     // Filtriraj ocjene/prisustvo samo na ovog muallima.
-    const izvjestaji = (await Promise.all(profili.map(p => buildUcenikIzvjestaj(p.userId, req.user!.userId))))
+    const izvjestaji = (await Promise.all(profili.map(p => buildUcenikIzvjestaj(p.userId, muallimId))))
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
-    const header = await buildMektebHeader(req.user!.userId);
+    const header = await buildMektebHeader(muallimId);
     res.json({
       ...header,
       tip: "svi" as const,
@@ -4811,14 +4845,16 @@ router.delete("/obavjestenja/:id", async (req, res) => {
 
 router.get("/roditelji-lista", async (req, res) => {
   try {
-    const userId = req.user!.userId;
+    const userId = await resolveViewMuallimId(req);
+    if (!userId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
     const ctx = await getMektebCtx(userId);
+    const scopedView = Boolean(req.query.muallimId);
 
     let profili: any[];
     let grupeAll: any[];
     let muallimUserMap: Record<number, string> = {};
 
-    if (ctx?.isGlavni && ctx.mektebId) {
+    if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
       // Glavni muallim — svi učenici džemata
       const rows = await db.execute(sql`
         SELECT up.*, mu.display_name AS muallim_display_name

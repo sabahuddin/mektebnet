@@ -15,6 +15,7 @@ import { getApiBase } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
+import { SelamSetting } from "@/components/selam-setting";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 
@@ -1886,10 +1887,22 @@ export default function AdminPage() {
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md">
             <LayoutDashboard className="w-6 h-6 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl font-extrabold text-foreground">{t("Admin panel")}</h1>
             <p className="text-muted-foreground text-sm">{t("Pregled platforme i upravljanje korisnicima")}</p>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl inline-flex items-center gap-2"
+            onClick={() => setLocation("/muallim/h5p-uputstvo")}
+          >
+            <BookOpen className="w-4 h-4" /> {t("H5P uputstvo")}
+          </Button>
+        </div>
+
+        <div className="bg-white border border-border/50 rounded-2xl px-5 py-1 mb-6 max-w-xl">
+          <SelamSetting />
         </div>
 
         {isLoading ? (

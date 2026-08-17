@@ -9,7 +9,7 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw, Bell
+  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw, Bell, MessageSquare
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
 import { useLanguage } from "@/context/language";
 import { PushToggle } from "@/components/push-toggle";
+import { SelamSetting } from "@/components/selam-setting";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -349,8 +350,10 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "h5p-vodic" | "profil";
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "profil";
   const [activeTab, setActiveTab] = useState<TabId>("pregled");
+  const [panelContext, setPanelContext] = useState<"moje" | "mekteb">("moje");
+  const [selectedMuallimId, setSelectedMuallimId] = useState<number | null>(null);
 
   // Otvara odgovarajući tab kad URL sadrži ?tab=… (npr. iz Panel dropdown
   // linka "Profil" → /muallim?tab=profil). Pokreće se na svakoj promjeni
@@ -359,9 +362,14 @@ export default function MuallimPanel() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab");
-    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","h5p","h5p-vodic","profil"].includes(t)) {
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","h5p","profil"].includes(t)) {
       setActiveTab(t as TabId);
+      if (["ucenici", "muallimi", "mekteb"].includes(t)) setPanelContext("mekteb");
+      else setPanelContext("moje");
     }
+    const mid = params.get("muallimId");
+    setSelectedMuallimId(mid && Number.isInteger(Number(mid)) && Number(mid) > 0 ? Number(mid) : null);
+    if (mid) setPanelContext("mekteb");
     // Pre-selektuj grupu kad link iz Grupa stranice prosijedi ?grupaId=…
     // (npr. iz kartica "Plan lekcija", "Statistika", "Kalendar", "Zadaća").
     const gid = params.get("grupaId");
@@ -445,7 +453,12 @@ export default function MuallimPanel() {
   const [downloadingIzvjestaj, setDownloadingIzvjestaj] = useState(false);
   const [uceniciSearch, setUceniciSearch] = useState("");
   const [uceniciMuallimFilter, setUceniciMuallimFilter] = useState<number | "sve">("sve");
+  const [uceniciGrupaFilter, setUceniciGrupaFilter] = useState<number | "sve">("sve");
   const [uceniciStatusFilter, setUceniciStatusFilter] = useState<"aktivni" | "svi">("aktivni");
+  const scopedMuallimId = selectedMuallimId ?? (
+    panelContext === "moje" && mektebMeta.isGlavni ? (user?.id ?? null) : null
+  );
+  const muallimScopeQuery = scopedMuallimId ? `?muallimId=${encodeURIComponent(String(scopedMuallimId))}` : "";
 
   const [pendingRoditelji, setPendingRoditelji] = useState<PendingRoditelj[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
@@ -503,14 +516,14 @@ export default function MuallimPanel() {
   useEffect(() => {
     if (!token) return;
     Promise.all([
-      apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
-      apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
+      apiRequest<Ucenik[]>("GET", `/muallim/ucenici${muallimScopeQuery}`, undefined, token),
+      apiRequest<Grupa[]>("GET", `/muallim/grupe${muallimScopeQuery}`, undefined, token),
     ]).then(([u, g]) => {
       setUcenici(u);
       setGrupe(g);
     }).catch(() => {}).finally(() => setIsLoading(false));
     loadPendingRoditelji();
-  }, [token]);
+  }, [token, selectedMuallimId, panelContext, mektebMeta.isGlavni, user?.id]);
 
   // Odvojeni fetch za dashboard-stats — re-fetcha kad se promijeni odabrana godina.
   // Auto-fallback: ako odabrana godina nema grupe ali baza ima podatke za druge
@@ -521,7 +534,7 @@ export default function MuallimPanel() {
     setDashboardStats(null);
     apiRequest<DashboardStats>(
       "GET",
-      `/muallim/dashboard-stats?skolskaGodina=${encodeURIComponent(selectedYear)}`,
+      `/muallim/dashboard-stats?skolskaGodina=${encodeURIComponent(selectedYear)}${scopedMuallimId ? `&muallimId=${encodeURIComponent(String(scopedMuallimId))}` : ""}`,
       undefined, token,
     ).then(ds => {
       const hasData = ds.ukupnoGrupa > 0;
@@ -537,25 +550,25 @@ export default function MuallimPanel() {
     })
       .catch(() => {})
       .finally(() => setDashboardStatsLoading(false));
-  }, [token, selectedYear]);
+  }, [token, selectedYear, scopedMuallimId]);
 
   useEffect(() => {
     if (!token || activeTab !== "statistika" || statMode !== "mekteb" || mektebStats) return;
     setMektebStatsLoading(true);
-    apiRequest<MektebStats>("GET", "/muallim/statistika-mekteb", undefined, token)
+    apiRequest<MektebStats>("GET", `/muallim/statistika-mekteb${muallimScopeQuery}`, undefined, token)
       .then(setMektebStats)
       .catch(() => {})
       .finally(() => setMektebStatsLoading(false));
-  }, [token, activeTab, statMode, mektebStats]);
+  }, [token, activeTab, statMode, mektebStats, scopedMuallimId]);
 
   useEffect(() => {
     if (!token || activeTab !== "kalendar" || kalendarMode !== "sve" || kalendarSve) return;
     setKalendarSveLoading(true);
-    apiRequest<KalendarSveData>("GET", "/muallim/kalendar/sve", undefined, token)
+    apiRequest<KalendarSveData>("GET", `/muallim/kalendar/sve${muallimScopeQuery}`, undefined, token)
       .then(setKalendarSve)
       .catch(() => {})
       .finally(() => setKalendarSveLoading(false));
-  }, [token, activeTab, kalendarMode, kalendarSve]);
+  }, [token, activeTab, kalendarMode, kalendarSve, scopedMuallimId]);
 
   // Učitaj mekteb dokumente:
   // - za glavnog muallima: kad otvori "Mekteb" tab (ima i upload/brisanje)
@@ -1265,6 +1278,27 @@ export default function MuallimPanel() {
     }
   };
 
+  const openMuallimPreview = (muallimId: number) => {
+    setSelectedMuallimId(muallimId);
+    setPanelContext("mekteb");
+    setActiveTab("pregled");
+    setMektebStats(null);
+    setKalendarSve(null);
+    setLocation(`/muallim?tab=pregled&muallimId=${muallimId}`);
+  };
+
+  const closeMuallimPreview = () => {
+    setSelectedMuallimId(null);
+    setPanelContext("mekteb");
+    setActiveTab("muallimi");
+    setMektebStats(null);
+    setKalendarSve(null);
+    setLocation("/muallim?tab=muallimi");
+  };
+
+  const isMuallimPreview = selectedMuallimId !== null;
+  const canManageMekteb = mektebMeta.isGlavni && !isMuallimPreview;
+
   // Glavni tabovi panela = pogled na cijeli mekteb. Tabovi vezani za jednu grupu
   // (Prisustvo, Plan lekcija, Zadaća, H5P statistika) preselili su se u Grupa
   // stranicu (kartice unutar grupe). Te blokove i dalje renderujemo niže — link
@@ -1276,15 +1310,19 @@ export default function MuallimPanel() {
     { id: "statistika", label: t("Statistika"), icon: TrendingUp },
     ...(mektebMeta.isGlavni ? [
       { id: "ucenici", label: t("Svi učenici"), icon: Users },
-      { id: "muallimi", label: t("Muallimi"), icon: Users },
-      { id: "mekteb", label: t("Mekteb"), icon: School },
+      ...(canManageMekteb ? [
+        { id: "muallimi", label: t("Muallimi"), icon: Users },
+        { id: "mekteb", label: t("Mekteb"), icon: School },
+      ] : []),
     ] : []),
     { id: "izvjestaji", label: t("Izvještaji"), icon: FileText },
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
     { id: "roditelji", label: t("Roditelji"), icon: Heart },
-    { id: "h5p-vodic", label: t("H5P uputstvo"), icon: BookOpen },
     { id: "profil", label: t("Profil"), icon: Settings },
   ];
+  const visibleTabs = panelContext === "moje" && mektebMeta.isGlavni && !isMuallimPreview
+    ? TABS.filter(tab => !["ucenici", "muallimi", "mekteb"].includes(tab.id))
+    : TABS;
 
   return (
     <Layout>
@@ -1297,19 +1335,53 @@ export default function MuallimPanel() {
             <h1 className="text-xl font-extrabold text-foreground">{t("Muallim panel")}</h1>
             {mektebMeta.mektebNaziv && (
               <p className="text-xs text-muted-foreground font-medium truncate">
-                {mektebMeta.mektebNaziv}{mektebMeta.isGlavni ? t(" — glavni muallim") : ""}
+                {isMuallimPreview
+                  ? `${mektebMeta.mektebNaziv} — ${mektebMuallimi?.find(m => m.userId === selectedMuallimId)?.displayName || t("pregled muallima")}`
+                  : `${mektebMeta.mektebNaziv}${mektebMeta.isGlavni ? t(" — glavni muallim") : ""}`}
               </p>
             )}
           </div>
           <MyScreentimeBadge />
         </div>
 
-        {/* H5P statistika, H5P uputstvo i Profil su sada tabovi (ne više
-            zasebne stranice/dugmad u headeru) — vidjeti TABS niže. */}
+        {mektebMeta.isGlavni && !isMuallimPreview && (
+          <div className="grid grid-cols-2 gap-2 p-1.5 mb-4 rounded-2xl bg-muted/60 border border-border/40">
+            <button
+              type="button"
+              onClick={() => { setPanelContext("moje"); setActiveTab("pregled"); setSelectedMuallimId(null); setLocation("/muallim?tab=pregled"); }}
+              className={`rounded-xl px-4 py-3 text-left transition-all ${panelContext === "moje" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <span className="block text-sm font-extrabold">{t("Moje grupe")}</span>
+              <span className="block text-xs mt-0.5 opacity-80">{t("Prisustvo, plan i učenici koje vodite")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPanelContext("mekteb"); setActiveTab("mekteb"); setSelectedMuallimId(null); setLocation("/muallim?tab=mekteb"); }}
+              className={`rounded-xl px-4 py-3 text-left transition-all ${panelContext === "mekteb" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <span className="block text-sm font-extrabold">{t("Mekteb")}</span>
+              <span className="block text-xs mt-0.5 opacity-80">{t("Svi učenici, muallimi i zbirni pregled")}</span>
+            </button>
+          </div>
+        )}
+
+        {isMuallimPreview && (
+          <div className="flex items-center justify-between gap-3 mb-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Users className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-sm font-bold truncate">
+                {t("Pregled muallima")}: {mektebMuallimi?.find(m => m.userId === selectedMuallimId)?.displayName || "—"}
+              </span>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={closeMuallimPreview} className="rounded-xl shrink-0">
+              {t("Nazad na muallime")}
+            </Button>
+          </div>
+        )}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {TABS.map(tab => {
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+          {visibleTabs.map(tab => {
             const badgeCount = tab.id === "pregled" ? pendingRoditelji.length : 0;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)}
@@ -1550,7 +1622,7 @@ export default function MuallimPanel() {
                     />
                   </div>
                   {/* Filter po muallimu */}
-                  {mektebMeta.isGlavni && (() => {
+                  {mektebMeta.isGlavni && !isMuallimPreview && (() => {
                     const muallimOptions = Array.from(
                       new Map(ucenici.filter(u => u.muallimId && u.muallimDisplayName).map(u => [u.muallimId, u.muallimDisplayName!]))
                     ).sort((a, b) => a[1].localeCompare(b[1]));
@@ -1568,6 +1640,17 @@ export default function MuallimPanel() {
                       </select>
                     );
                   })()}
+                  {grupe.length > 1 && (
+                    <select
+                      value={uceniciGrupaFilter === "sve" ? "sve" : String(uceniciGrupaFilter)}
+                      onChange={e => setUceniciGrupaFilter(e.target.value === "sve" ? "sve" : Number(e.target.value))}
+                      className="text-sm border border-border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      aria-label={t("Filter po grupi")}
+                    >
+                      <option value="sve">{t("Sve grupe")}</option>
+                      {grupe.map(g => <option key={g.id} value={String(g.id)}>{g.naziv}</option>)}
+                    </select>
+                  )}
                   {/* Filter aktivan/svi */}
                   <select
                     value={uceniciStatusFilter}
@@ -1577,12 +1660,21 @@ export default function MuallimPanel() {
                     <option value="aktivni">{t("Samo aktivni")}</option>
                     <option value="svi">{t("Aktivni + arhivirani")}</option>
                   </select>
-                  <div className="ml-auto">
-                    <Link href="/muallim/dodaj-ucenika">
-                      <Button className="rounded-xl font-bold flex items-center gap-2">
-                        <Plus className="w-4 h-4" /> {t("Dodaj učenika")}
-                      </Button>
-                    </Link>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="rounded-xl font-bold flex items-center gap-2"
+                      onClick={() => setLocation(`/muallim/izvjestaj/svi${muallimScopeQuery}`)}
+                    >
+                      <Printer className="w-4 h-4" /> {t("Izradi spisak")}
+                    </Button>
+                    {!isMuallimPreview && (
+                      <Link href="/muallim/dodaj-ucenika">
+                        <Button className="rounded-xl font-bold flex items-center gap-2">
+                          <Plus className="w-4 h-4" /> {t("Dodaj učenika")}
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
 
@@ -1593,7 +1685,8 @@ export default function MuallimPanel() {
                     // Status filter
                     if (uceniciStatusFilter === "aktivni") filtered = filtered.filter(u => u.aktivanStatus);
                     // Muallim filter
-                    if (uceniciMuallimFilter !== "sve") filtered = filtered.filter(u => u.muallimId === uceniciMuallimFilter);
+                    if (!isMuallimPreview && uceniciMuallimFilter !== "sve") filtered = filtered.filter(u => u.muallimId === uceniciMuallimFilter);
+                    if (uceniciGrupaFilter !== "sve") filtered = filtered.filter(u => u.grupaId === uceniciGrupaFilter);
                     // Tekst pretraga
                     if (uceniciSearch.trim()) {
                       const q = uceniciSearch.toLowerCase();
@@ -1663,15 +1756,32 @@ export default function MuallimPanel() {
                                     </span>
                                   </td>
                                   <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2">
+                                       {u.grupaId && (
+                                         <Link href={`/muallim/prisustvo/${u.grupaId}`}>
+                                           <button className="text-emerald-700 hover:underline font-bold text-sm flex items-center gap-1" title={t("Otvori prisustvo")}>
+                                             <CalendarCheck className="w-3.5 h-3.5" /> <span className="hidden lg:inline">{t("Prisustvo")}</span>
+                                           </button>
+                                         </Link>
+                                       )}
+                                       <button
+                                         type="button"
+                                         onClick={() => setLocation(`/poruke?primateljId=${u.id}`)}
+                                         className="text-blue-600 hover:underline font-bold text-sm flex items-center gap-1"
+                                         title={t("Pošalji poruku")}
+                                       >
+                                         <MessageSquare className="w-3.5 h-3.5" /> <span className="hidden lg:inline">{t("Poruka")}</span>
+                                       </button>
                                       <Link href={`/muallim/ucenik/${u.id}`}>
                                         <button className="text-primary hover:underline font-bold text-sm flex items-center gap-1">
                                           {t("Detalji")} <ChevronRight className="w-3 h-3" />
                                         </button>
                                       </Link>
-                                      <button onClick={() => deleteUcenik(u.id)} className="text-red-400 hover:text-red-600 p-1" title={t("Arhiviraj učenika")}>
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
+                                      {!isMuallimPreview && (
+                                        <button onClick={() => deleteUcenik(u.id)} className="text-red-400 hover:text-red-600 p-1" title={t("Arhiviraj učenika")}>
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
                                     </div>
                                   </td>
                                 </motion.tr>
@@ -2442,6 +2552,32 @@ export default function MuallimPanel() {
                     </p>
                   )}
                 </div>
+
+              <div className="bg-white rounded-2xl border border-border/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4 text-primary" />
+                  <h3 className="font-extrabold text-sm text-foreground">{t("Pregled po muallimu")}</h3>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {(mektebMuallimi || []).map(m => (
+                    <button
+                      key={m.userId}
+                      type="button"
+                      onClick={() => openMuallimPreview(m.userId)}
+                      className="min-w-[190px] text-left rounded-xl border border-border/60 px-3 py-3 hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                      data-testid={`tab-muallim-${m.userId}`}
+                    >
+                      <span className="block text-sm font-extrabold text-foreground truncate">{m.displayName}</span>
+                      <span className="block text-xs text-muted-foreground mt-1">
+                        {m.brojGrupa} {t("grupa")} · {m.brojUcenika} {t("učenika")}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-primary mt-2">
+                        <Eye className="w-3.5 h-3.5" /> {t("Otvori pregled")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
                 <div className="bg-white rounded-2xl border border-border/50 p-5 space-y-3">
                   <div className="flex items-center gap-2"><UserPlus className="w-4 h-4 text-primary" /><h3 className="font-bold text-sm text-foreground">{t("Dodaj muallima")}</h3></div>
@@ -3674,7 +3810,12 @@ export default function MuallimPanel() {
             )}
 
             {activeTab === "roditelji" && (
-              <RoditeljiTab grupe={grupe} filterGrupaId={selectedGrupaId} />
+              <RoditeljiTab
+                grupe={grupe}
+                filterGrupaId={selectedGrupaId}
+                muallimId={selectedMuallimId}
+                readOnly={isMuallimPreview}
+              />
             )}
 
             {activeTab === "h5p" && (
@@ -3690,26 +3831,6 @@ export default function MuallimPanel() {
                   <Link href="/muallim/h5p-statistika">
                     <Button className="rounded-xl font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2" data-testid="btn-otvori-h5p-statistiku">
                       <BarChart3 className="w-4 h-4" /> {t("Otvori H5P statistiku")}
-                    </Button>
-                  </Link>
-                </div>
-              </motion.div>
-            )}
-
-            {/* H5P UPUTSTVO */}
-            {activeTab === "h5p-vodic" && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <BookOpen className="w-6 h-6 text-amber-600" />
-                    <h3 className="font-extrabold text-lg text-foreground">{t("H5P uputstvo — kako napraviti vježbu")}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
-                    {t("Korak po korak vodič kroz instalaciju Lumi alata, izradu drag-words / multiple-choice / image-hotspots vježbi i ubacivanje u Mekteb lekcije.")}
-                  </p>
-                  <Link href="/muallim/h5p-uputstvo">
-                    <Button className="rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2" data-testid="btn-otvori-h5p-uputstvo">
-                      <Sparkles className="w-4 h-4" /> {t("Otvori H5P uputstvo")}
                     </Button>
                   </Link>
                 </div>
@@ -3797,6 +3918,7 @@ export default function MuallimPanel() {
                     <Bell className="w-5 h-5 text-primary" /> {t("Obavijesti")}
                   </h3>
                   <PushToggle />
+                      <SelamSetting />
                 </div>
 
                 {/* Bulk reset šifri — samo za glavnog muallima */}

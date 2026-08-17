@@ -21,6 +21,7 @@ import {
   playRewardSound,
 } from "@/lib/sound-prefs";
 import { PushToggle } from "@/components/push-toggle";
+import { SelamSetting } from "@/components/selam-setting";
 import { kategorijaOcjeneLabel } from "@/lib/utils";
 import { useLanguage } from "@/context/language";
 
@@ -1419,6 +1420,7 @@ export default function UcenikProfilPage() {
                   <div className="mt-3">
                     <PushToggle />
                   </div>
+                  <SelamSetting />
 
                   <div className="mt-3">
                     <ChangePasswordCard />

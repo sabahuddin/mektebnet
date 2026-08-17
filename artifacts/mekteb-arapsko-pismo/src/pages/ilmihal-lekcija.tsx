@@ -1843,14 +1843,6 @@ function PriloziSection({
                     </Button>
                   </div>
                   <p className="text-sm text-blue-400 mt-1">{t("PDF, DOCX, XLSX, PPTX, TXT (max 20MB), YouTube/web link, .h5p arhiva (max 50MB), ili embed (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")}</p>
-                  <Link
-                    href="/muallim/h5p-uputstvo"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-800 mt-1.5 underline-offset-2 hover:underline"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    {t("Nemaš još .h5p fajl? Pogledaj kako da napraviš svoju prvu vježbu")}
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
                   {showUrlForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-blue-200 flex flex-col gap-2">
                       <input

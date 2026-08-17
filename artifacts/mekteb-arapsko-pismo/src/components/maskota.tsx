@@ -280,9 +280,29 @@ const TRAJECTORIES: FlightTrajectory[] = [
 
 type SelamPhase = "flying-in" | "hovering" | "cloud" | "flying-out" | "done";
 
+export const SELAM_PREFERENCE_KEY = "mekteb-selam-enabled";
+export const SELAM_PREFERENCE_EVENT = "mekteb:selam-preference-changed";
+
+export function isSelamEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(SELAM_PREFERENCE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function setSelamEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(SELAM_PREFERENCE_KEY, enabled ? "true" : "false");
+    window.dispatchEvent(new Event(SELAM_PREFERENCE_EVENT));
+  } catch {}
+}
+
 export function SelamWelcome({ userName }: { userName?: string | null }) {
   const { t } = useLanguage();
   const [phase, setPhase] = useState<SelamPhase>("done");
+  const [enabled, setEnabled] = useState(false);
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
   const [vh, setVh] = useState(typeof window !== "undefined" ? window.innerHeight : 720);
 
@@ -293,7 +313,14 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
 
   useEffect(() => {
     if (reduce) return;
-    if (localStorage.getItem("mekteb-selam-disabled") === "true") return;
+    const syncPreference = () => setEnabled(isSelamEnabled());
+    syncPreference();
+    window.addEventListener(SELAM_PREFERENCE_EVENT, syncPreference);
+    return () => window.removeEventListener(SELAM_PREFERENCE_EVENT, syncPreference);
+  }, [reduce]);
+
+  useEffect(() => {
+    if (reduce || !enabled) return;
     const shown = sessionStorage.getItem("mekteb-selam-shown");
     if (shown) return;
     sessionStorage.setItem("mekteb-selam-shown", "1");
@@ -302,7 +329,7 @@ export function SelamWelcome({ userName }: { userName?: string | null }) {
     const onResize = () => { setVw(window.innerWidth); setVh(window.innerHeight); };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [reduce]);
+  }, [reduce, enabled]);
 
   useEffect(() => {
     if (phase === "done" || phase === "flying-in") return;

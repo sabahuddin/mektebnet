@@ -534,11 +534,6 @@ export default function MuallimH5pStatistikaPage() {
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
                   {t("Kad učenici iz ove grupe počnu rješavati H5P interaktivne vježbe, ovdje ćete vidjeti koje su najpopularnije, prosječnu tačnost i kome treba pomoć.")}
                 </p>
-                <Link href="/muallim/h5p-uputstvo">
-                  <Button variant="outline" className="mt-4 rounded-xl">
-                    <Sparkles className="w-4 h-4 mr-1" /> {t("Kako napraviti H5P vježbu")}
-                  </Button>
-                </Link>
               </div>
             ) : (
               <div className="space-y-3" data-testid="list-vjezbe">

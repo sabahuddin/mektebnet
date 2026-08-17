@@ -72,7 +72,7 @@ const ROLE_LABELS: Record<string, string> = { muallim: "Muallimi", admin: "Admin
 
 export default function PorukePage() {
   const { user, token } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { t } = useLanguage();
 
@@ -120,6 +120,15 @@ export default function PorukePage() {
     loadRazgovori(); loadKontakti();
     if ("clearAppBadge" in navigator) navigator.clearAppBadge?.().catch(() => {});
   }, [token]);
+
+  // Brza akcija iz spiska učenika može otvoriti direktno razgovor.
+  useEffect(() => {
+    const rawId = new URLSearchParams(window.location.search).get("primateljId");
+    const recipientId = rawId ? Number(rawId) : NaN;
+    if (!Number.isInteger(recipientId) || recipientId <= 0 || kontakti.length === 0) return;
+    const recipient = kontakti.find(k => k.id === recipientId);
+    if (recipient) openRazgovor(recipient);
+  }, [location, kontakti]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [poruke]);
 

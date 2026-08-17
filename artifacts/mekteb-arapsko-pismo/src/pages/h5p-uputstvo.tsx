@@ -338,12 +338,12 @@ export default function H5pUputstvoPage() {
   const allChecked = Object.values(statuses).every((s) => s !== "loading");
   const noneAvailable = allChecked && Object.values(statuses).every((s) => s !== "available");
 
-  if (!user || (user.role !== "admin" && user.role !== "muallim")) {
+  if (!user || user.role !== "admin") {
     return (
       <Layout>
         <div className="text-center py-20">
           <p className="text-muted-foreground font-medium">
-            {t("Pristup dozvoljen samo muallimima i adminima")}
+            {t("Pristup dozvoljen samo administratorima")}
           </p>
           <Button className="mt-4" onClick={() => setLocation("/")}>
             {t("Nazad")}
@@ -357,11 +357,11 @@ export default function H5pUputstvoPage() {
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 space-y-6">
         <button
-          onClick={() => setLocation("/muallim")}
+          onClick={() => setLocation("/admin")}
           className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700"
         >
           <ArrowLeft className="w-4 h-4" />
-          {t("Nazad na muallim panel")}
+          {t("Nazad na admin panel")}
         </button>
 
         {/* Hero */}

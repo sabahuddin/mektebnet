@@ -6,6 +6,7 @@ import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
 import { CalendarCheck, Star, Link2, Loader2, CheckCircle2, XCircle, AlertCircle, UserPlus, KeyRound, BookOpen, Flame, Award, Settings, Megaphone, MessageSquare, User as UserIcon, Calendar, ClipboardList, ChevronLeft, ChevronRight, Clock, FileText, Download } from "lucide-react";
 import { PushToggle } from "@/components/push-toggle";
+import { SelamSetting } from "@/components/selam-setting";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -846,10 +847,6 @@ export default function RoditeljPage() {
   const [isChangingPw, setIsChangingPw] = useState(false);
   const [obavjestenja, setObavjestenja] = useState<RoditeljObavjestenje[]>([]);
   const [activeTab, setActiveTab] = useState<TopTab>("obavjestenja");
-  const [selamEnabled, setSelamEnabled] = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem("mekteb-selam-disabled") !== "true" : true
-  );
-
   const loadDjeca = () => {
     if (!token) return;
     setIsLoading(true);
@@ -1165,22 +1162,7 @@ export default function RoditeljPage() {
                 <Settings className="w-5 h-5 text-primary" /> {t("Postavke")}
               </h3>
               <PushToggle />
-              <div className="mt-4 pt-4 border-t border-border/40">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selamEnabled}
-                    onChange={e => {
-                      const val = e.target.checked;
-                      setSelamEnabled(val);
-                      localStorage.setItem("mekteb-selam-disabled", val ? "false" : "true");
-                    }}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/40"
-                  />
-                  <span className="text-sm font-bold text-foreground">{t("Prikaži pozdrav pri ulasku na platformu")}</span>
-                </label>
-                <p className="text-xs text-muted-foreground mt-1 ml-7">{t("Pčela sa selamom pri svakom otvaranju stranice")}</p>
-              </div>
+              <SelamSetting />
             </div>
           </motion.div>
         )}
