@@ -4997,6 +4997,53 @@ router.get("/izvjestaj/svi", async (req, res) => {
 // OBAVJEŠTENJA (Story za roditelje)
 // ══════════════════════════════════════════════════════════════════════════════
 
+// Ciljane grupe obavještenja (join tabela obavjestenja_grupe iz residual
+// scheme). Stara jednogrupna obavještenja i dalje nose obavjestenja.grupa_id,
+// pa se oba izvora spajaju. Prazan skup = "svi roditelji".
+async function ucitajGrupeObavjestenja(ids: number[]): Promise<Map<number, number[]>> {
+  const map = new Map<number, number[]>();
+  if (ids.length === 0) return map;
+  const rows = await db.execute<{ obavjestenje_id: number; grupa_id: number }>(sql`
+    SELECT obavjestenje_id, grupa_id FROM obavjestenja_grupe
+    WHERE obavjestenje_id IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})
+    ORDER BY grupa_id
+  `);
+  for (const row of rows.rows) {
+    const arr = map.get(row.obavjestenje_id);
+    if (arr) arr.push(row.grupa_id);
+    else map.set(row.obavjestenje_id, [row.grupa_id]);
+  }
+  return map;
+}
+
+// Upisuje skup ciljanih grupa za jedno obavještenje (replace semantika).
+async function upisiGrupeObavjestenja(obavjestenjeId: number, grupaIds: number[]) {
+  await db.execute(sql`DELETE FROM obavjestenja_grupe WHERE obavjestenje_id = ${obavjestenjeId}`);
+  if (grupaIds.length === 0) return;
+  await db.execute(sql`
+    INSERT INTO obavjestenja_grupe (obavjestenje_id, grupa_id)
+    VALUES ${sql.join(grupaIds.map(gid => sql`(${obavjestenjeId}, ${gid})`), sql`, `)}
+    ON CONFLICT DO NOTHING
+  `);
+}
+
+// Normalizuje ulaz (grupaIds[] ili legacy grupaId) i provjerava da su sve
+// grupe zaista muallimove — bez toga bi se moglo objaviti u tuđu grupu.
+async function razrijesiCiljaneGrupe(
+  body: { grupaIds?: unknown; grupaId?: unknown },
+  muallimId: number,
+): Promise<{ ok: true; grupaIds: number[] } | { ok: false; error: string }> {
+  const raw = Array.isArray(body.grupaIds)
+    ? body.grupaIds
+    : (body.grupaId ? [body.grupaId] : []);
+  const ids = [...new Set(raw.map(v => Number(v)).filter(v => Number.isInteger(v) && v > 0))];
+  if (ids.length === 0) return { ok: true, grupaIds: [] };
+  const grupe = await db.select().from(grupeTable)
+    .where(and(inArray(grupeTable.id, ids), eq(grupeTable.muallimId, muallimId)));
+  if (grupe.length !== ids.length) return { ok: false, error: "Grupa nije pronađena" };
+  return { ok: true, grupaIds: ids };
+}
+
 router.get("/obavjestenja", async (req, res) => {
   try {
     const rows = await db.select().from(obavjestenjaTable)
@@ -5012,10 +5059,16 @@ router.get("/obavjestenja", async (req, res) => {
         sql`COALESCE(is_active, true) = true`,
       ));
     const grupaMap = Object.fromEntries(grupeAll.map(g => [g.id, g.naziv]));
-    res.json(rows.map(r => ({
-      ...r,
-      grupaNaziv: r.grupaId ? grupaMap[r.grupaId] || null : null,
-    })));
+    const grupeMap = await ucitajGrupeObavjestenja(rows.map(r => r.id));
+    res.json(rows.map(r => {
+      const grupaIds = grupeMap.get(r.id) ?? (r.grupaId ? [r.grupaId] : []);
+      return {
+        ...r,
+        grupaIds,
+        grupaNazivi: grupaIds.map(gid => grupaMap[gid]).filter(Boolean),
+        grupaNaziv: r.grupaId ? grupaMap[r.grupaId] || null : null,
+      };
+    }));
   } catch (err) {
     console.error("obavjestenja list error:", err);
     res.status(500).json({ error: "Greška servera" });
@@ -5024,32 +5077,30 @@ router.get("/obavjestenja", async (req, res) => {
 
 router.post("/obavjestenja", async (req, res) => {
   try {
-    const { naslov, sadrzaj, grupaId, slikaUrl } = req.body;
+    const { naslov, sadrzaj, slikaUrl } = req.body;
     if (!naslov?.trim() || !sadrzaj?.trim()) {
       res.status(400).json({ error: "Naslov i sadržaj su obavezni" });
       return;
     }
-    if (grupaId) {
-      const [g] = await db.select().from(grupeTable)
-        .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
-      if (!g) { res.status(400).json({ error: "Grupa nije pronađena" }); return; }
-    }
+    const ciljane = await razrijesiCiljaneGrupe(req.body, req.user!.userId);
+    if (!ciljane.ok) { res.status(400).json({ error: ciljane.error }); return; }
+    const grupaIds = ciljane.grupaIds;
     const [row] = await db.insert(obavjestenjaTable).values({
       muallimId: req.user!.userId,
-      grupaId: grupaId || null,
+      // Legacy kolona: puni se samo kad je tačno jedna grupa, da stari klijenti
+      // i dalje vide ispravan cilj. Puni skup živi u obavjestenja_grupe.
+      grupaId: grupaIds.length === 1 ? grupaIds[0] : null,
       naslov: naslov.trim(),
       sadrzaj: sadrzaj.trim(),
       slikaUrl: slikaUrl || null,
     }).returning();
+    await upisiGrupeObavjestenja(row.id, grupaIds);
 
     const profili = await db.select().from(ucenikProfiliTable)
       .where(eq(ucenikProfiliTable.muallimId, req.user!.userId));
-    let targetUcenikIds: number[];
-    if (grupaId) {
-      targetUcenikIds = profili.filter(p => p.grupaId === grupaId).map(p => p.userId);
-    } else {
-      targetUcenikIds = profili.map(p => p.userId);
-    }
+    const targetUcenikIds = grupaIds.length > 0
+      ? profili.filter(p => p.grupaId != null && grupaIds.includes(p.grupaId)).map(p => p.userId)
+      : profili.map(p => p.userId);
     if (targetUcenikIds.length > 0) {
       const links = await db.select().from(roditeljUcenikTable)
         .where(and(
@@ -5088,26 +5139,31 @@ router.post("/obavjestenja", async (req, res) => {
 router.put("/obavjestenja/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naslov, sadrzaj, grupaId, slikaUrl } = req.body;
+    const { naslov, sadrzaj, slikaUrl } = req.body;
     const [existing] = await db.select().from(obavjestenjaTable)
       .where(and(eq(obavjestenjaTable.id, id), eq(obavjestenjaTable.muallimId, req.user!.userId)));
     if (!existing) { res.status(404).json({ error: "Nije pronađeno" }); return; }
-    if (grupaId) {
-      const [g] = await db.select().from(grupeTable)
-        .where(and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, req.user!.userId)));
-      if (!g) { res.status(400).json({ error: "Grupa nije pronađena" }); return; }
+    // Skup grupa se dira samo ako ga klijent pošalje; inače ostaje kakav jest.
+    const mijenjaGrupe = req.body.grupaIds !== undefined || req.body.grupaId !== undefined;
+    let noveGrupe: number[] = [];
+    if (mijenjaGrupe) {
+      const ciljane = await razrijesiCiljaneGrupe(req.body, req.user!.userId);
+      if (!ciljane.ok) { res.status(400).json({ error: ciljane.error }); return; }
+      noveGrupe = ciljane.grupaIds;
     }
     const [updated] = await db.update(obavjestenjaTable)
       .set({
         naslov: naslov?.trim() || existing.naslov,
         sadrzaj: sadrzaj?.trim() || existing.sadrzaj,
-        grupaId: grupaId !== undefined ? (grupaId || null) : existing.grupaId,
+        grupaId: mijenjaGrupe ? (noveGrupe.length === 1 ? noveGrupe[0] : null) : existing.grupaId,
         slikaUrl: slikaUrl !== undefined ? (slikaUrl || null) : existing.slikaUrl,
         updatedAt: new Date(),
       })
       .where(eq(obavjestenjaTable.id, id))
       .returning();
-    res.json(updated);
+    if (mijenjaGrupe) await upisiGrupeObavjestenja(id, noveGrupe);
+    const grupeMap = await ucitajGrupeObavjestenja([id]);
+    res.json({ ...updated, grupaIds: grupeMap.get(id) ?? [] });
   } catch (err) {
     console.error("obavjestenja update error:", err);
     res.status(500).json({ error: "Greška servera" });
@@ -5120,6 +5176,8 @@ router.delete("/obavjestenja/:id", async (req, res) => {
     const [existing] = await db.select().from(obavjestenjaTable)
       .where(and(eq(obavjestenjaTable.id, id), eq(obavjestenjaTable.muallimId, req.user!.userId)));
     if (!existing) { res.status(404).json({ error: "Nije pronađeno" }); return; }
+    // Join tabela nema FK cascade (kreirana kroz residual SQL) — čisti ručno.
+    await db.execute(sql`DELETE FROM obavjestenja_grupe WHERE obavjestenje_id = ${id}`);
     await db.delete(obavjestenjaTable).where(eq(obavjestenjaTable.id, id));
     res.json({ success: true });
   } catch (err) {

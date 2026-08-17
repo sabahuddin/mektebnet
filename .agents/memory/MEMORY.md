@@ -38,3 +38,4 @@
 - [Sira kvizovi](sira-app.md) — zaseban statički sajt (sira.mekteb.net, van repoa, izvor u attached_assets zip); localStorage-only bez backenda, pa admin statistika nužno vidi samo naloge s vlastitog uređaja.
 - [Dev grupe su neaktivne](dev-grupe-neaktivne.md) — demo grupe imaju is_active=false pa agregatna statistika izgleda prazna; nije bug, privremeno aktiviraj za provjeru.
 - [Scoped pregled muallima](scoped-muallim-pregled.md) — glavni muallim otvara drugi muallimski panel preko read-only muallimId scope-a, bez imitacije login identiteta.
+- [Lažne tsc greške iz stale lib/db builda](stale-libdb-dist-tsc.md) — api-server čita lib/db/dist/*.d.ts; "Property does not exist" za postojeću kolonu = `tsc -b lib/db`, nije bug.

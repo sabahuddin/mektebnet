@@ -493,6 +493,9 @@ export default function MuallimPanel() {
   const [deletingGrupa, setDeletingGrupa] = useState(false);
   const [izvjestajSpasen, setIzvjestajSpasen] = useState(false);
   const [downloadingIzvjestaj, setDownloadingIzvjestaj] = useState(false);
+  // Izvještaji tab — opseg (jedna grupa / sve moje grupe / cijeli mekteb)
+  const [izvjestajOpseg, setIzvjestajOpseg] = useState<"grupa" | "moje" | "mekteb">("moje");
+  const [izvjestajGrupaId, setIzvjestajGrupaId] = useState<number | null>(null);
   const [uceniciSearch, setUceniciSearch] = useState("");
   const [uceniciMuallimFilter, setUceniciMuallimFilter] = useState<number | "sve">("sve");
   const [uceniciGrupaFilter, setUceniciGrupaFilter] = useState<number | "sve">("sve");
@@ -4182,27 +4185,93 @@ export default function MuallimPanel() {
                     <h3 className="font-extrabold text-base text-foreground">{t("Izvještaji za štampu / PDF")}</h3>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {t(`Sastavlja izvještaj sa zaglavljem MEKTEB platforme — prisustvo, ocjene, kvizovi i napredak. Iz pregleda kliknite "Štampaj / Sačuvaj kao PDF".`)}
+                    {t(`Sastavlja izvještaj sa zaglavljem MEKTEB platforme — prisustvo, ocjene, kvizovi i napredak. U pregledu birate učenike, period i sekcije, pa "Štampaj / Sačuvaj kao PDF" ili "Izvezi Excel".`)}
                   </p>
+
+                  {/* Opseg izvještaja — jedna grupa / sve moje grupe / cijeli mekteb */}
+                  <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Opseg izvještaja")}</label>
+                      <select
+                        value={izvjestajOpseg}
+                        onChange={e => setIzvjestajOpseg(e.target.value as "grupa" | "moje" | "mekteb")}
+                        className="text-sm border border-border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 w-full sm:w-auto"
+                        data-testid="select-izvjestaj-opseg"
+                      >
+                        <option value="grupa">{t("Jedna grupa")}</option>
+                        <option value="moje">{isMuallimPreview ? t("Sve grupe ovog muallima") : t("Sve moje grupe")}</option>
+                        {mektebMeta.isGlavni && !isMuallimPreview && (
+                          <option value="mekteb">{t("Cijeli mekteb")}</option>
+                        )}
+                      </select>
+                    </div>
+                    {izvjestajOpseg === "grupa" && (
+                      <div>
+                        <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Grupa")}</label>
+                        <select
+                          value={izvjestajGrupaId ?? ""}
+                          onChange={e => setIzvjestajGrupaId(e.target.value ? Number(e.target.value) : null)}
+                          className="text-sm border border-border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 w-full sm:w-auto"
+                          data-testid="select-izvjestaj-grupa"
+                        >
+                          <option value="">{t("— odaberi grupu —")}</option>
+                          {grupe.filter(g => !g.isArchived).map(g => (
+                            <option key={g.id} value={String(g.id)}>{g.naziv}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => {
+                        if (izvjestajOpseg === "grupa") {
+                          if (!izvjestajGrupaId) {
+                            toast({ title: t("Odaberite grupu"), variant: "destructive" });
+                            return;
+                          }
+                          setLocation(`/muallim/izvjestaj/grupa/${izvjestajGrupaId}`);
+                        } else if (izvjestajOpseg === "mekteb") {
+                          setLocation("/muallim/izvjestaj/svi");
+                        } else {
+                          setLocation(`/muallim/izvjestaj/svi${muallimScopeQuery}`);
+                        }
+                      }}
+                      className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
+                      data-testid="btn-izvjestaj-svi"
+                    >
+                      <Printer className="w-4 h-4" />
+                      {izvjestajOpseg === "grupa"
+                        ? t("Otvori izvještaj grupe")
+                        : izvjestajOpseg === "mekteb"
+                          ? t("Otvori izvještaj mekteba")
+                          : t("Svi učenici") + ` (${ucenici.length})`}
+                    </Button>
+                    {izvjestajOpseg === "grupa" && izvjestajGrupaId && (
+                      <Button
+                        onClick={() => exportExcel(izvjestajGrupaId)}
+                        disabled={exportingExcel}
+                        variant="outline"
+                        className="rounded-xl font-bold text-sm flex items-center gap-2"
+                        data-testid="btn-izvjestaj-grupa-excel"
+                      >
+                        {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+                        {t("Excel izvještaj grupe")}
+                      </Button>
+                    )}
                     {mektebMeta.isGlavni && (
                       <Button
                         onClick={handleExportMektebSpisak}
                         disabled={exportingSpisak}
-                        className="rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2"
+                        variant="outline"
+                        className="rounded-xl font-bold text-sm flex items-center gap-2"
                         data-testid="btn-export-spisak-mekteba"
                       >
                         {exportingSpisak ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
                         {t("Spisak cijelog mekteba (Excel)")}
                       </Button>
                     )}
-                    <Button
-                      onClick={() => setLocation(`/muallim/izvjestaj/svi${muallimScopeQuery}`)}
-                      className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
-                      data-testid="btn-izvjestaj-svi"
-                    >
-                      <Printer className="w-4 h-4" /> {t("Svi učenici")} ({ucenici.length})
-                    </Button>
                   </div>
                 </div>
               </motion.div>

@@ -715,9 +715,27 @@ router.get("/obavjestenja", async (req, res) => {
       .where(inArray(obavjestenjaTable.muallimId, muallimIds))
       .orderBy(desc(obavjestenjaTable.createdAt));
 
-    const visible = allObavjestenja.filter(o =>
-      !o.grupaId || grupaIds.includes(o.grupaId)
-    );
+    // Obavještenje može ciljati više grupa (join tabela obavjestenja_grupe,
+    // vidi residual schema u index.ts). Stara jednogrupna obavještenja i dalje
+    // nose grupa_id; ovdje se oba izvora spajaju u jedan skup ciljanih grupa.
+    const grupeZaObavjestenje = new Map<number, number[]>();
+    if (allObavjestenja.length > 0) {
+      const joinRows = await db.execute<{ obavjestenje_id: number; grupa_id: number }>(sql`
+        SELECT obavjestenje_id, grupa_id FROM obavjestenja_grupe
+        WHERE obavjestenje_id IN (${sql.join(allObavjestenja.map(o => sql`${o.id}`), sql`, `)})
+      `);
+      for (const row of joinRows.rows) {
+        const arr = grupeZaObavjestenje.get(row.obavjestenje_id);
+        if (arr) arr.push(row.grupa_id);
+        else grupeZaObavjestenje.set(row.obavjestenje_id, [row.grupa_id]);
+      }
+    }
+
+    const visible = allObavjestenja.filter(o => {
+      const ciljane = grupeZaObavjestenje.get(o.id) ?? (o.grupaId ? [o.grupaId] : []);
+      // Prazan skup = obavještenje za sve roditelje tog muallima.
+      return ciljane.length === 0 || ciljane.some(gid => grupaIds.includes(gid));
+    });
 
     const muallimUsers = muallimIds.length > 0
       ? await db.select().from(usersTable).where(inArray(usersTable.id, muallimIds))

@@ -308,6 +308,27 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS obavjestenja_grupa_idx ON obavjestenja (grupa_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS obavjestenja_created_idx ON obavjestenja (created_at);`);
 
+    // Više grupa po obavještenju. Postojeća kolona obavjestenja.grupa_id ostaje
+    // radi kompatibilnosti (jedna grupa = jedan red ovdje + grupa_id), a ova
+    // join tabela nosi puni skup ciljanih grupa. Prazan skup + grupa_id IS NULL
+    // i dalje znači "svi roditelji".
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS obavjestenja_grupe (
+        id serial PRIMARY KEY NOT NULL,
+        obavjestenje_id integer NOT NULL,
+        grupa_id integer NOT NULL
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS obavjestenja_grupe_uniq ON obavjestenja_grupe (obavjestenje_id, grupa_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS obavjestenja_grupe_grupa_idx ON obavjestenja_grupe (grupa_id);`);
+    // Backfill: stara obavještenja s jednom grupom dobijaju svoj join red.
+    await db.execute(sql`
+      INSERT INTO obavjestenja_grupe (obavjestenje_id, grupa_id)
+      SELECT o.id, o.grupa_id FROM obavjestenja o
+      WHERE o.grupa_id IS NOT NULL
+      ON CONFLICT DO NOTHING;
+    `);
+
     // kviz_pitanja join tabela (M:N kviz↔banka). Iz migracije 0006. Većina
     // produkcija je već imala — IF NOT EXISTS čuva netaknuto.
     await db.execute(sql`

@@ -1,13 +1,23 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { Layout } from "@/components/layout";
-import { apiRequest, getApiBase } from "@/lib/api";
+import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpen, CheckSquare, Square, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+
+type ReportSection = "summary" | "attendance" | "grades" | "quizzes" | "progress" | "stars";
+const REPORT_SECTIONS: { id: ReportSection; label: string }[] = [
+  { id: "summary", label: "Zbirni pregled" },
+  { id: "attendance", label: "Prisustvo" },
+  { id: "grades", label: "Ocjene" },
+  { id: "quizzes", label: "Kvizovi" },
+  { id: "progress", label: "Napredak lekcija" },
+  { id: "stars", label: "Zvjezdice" },
+];
 
 interface Prisustvo { id: number; datum: string; status: string; napomena?: string }
 interface Ocjena { id: number; kategorija: string; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string }
@@ -109,6 +119,11 @@ export default function MuallimIzvjestajPage() {
   const [pickerOpen, setPickerOpen] = useState(true);
   const [pickerSearch, setPickerSearch] = useState("");
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [selectedSections, setSelectedSections] = useState<Set<ReportSection>>(
+    () => new Set(REPORT_SECTIONS.map(section => section.id)),
+  );
+  const [periodFrom, setPeriodFrom] = useState("");
+  const [periodTo, setPeriodTo] = useState("");
 
   useEffect(() => {
     if (!token) return;
@@ -138,7 +153,17 @@ export default function MuallimIzvjestajPage() {
       .finally(() => setIsLoading(false));
   }, [token, location, matchUcenik, paramsUcenik?.id, matchGrupa, paramsGrupa?.id, matchSvi]);
 
-  const filteredUcenici = data ? data.ucenici.filter(u => selectedIds.has(u.ucenik.id)) : [];
+  const filteredUcenici = data ? data.ucenici
+    .filter(u => selectedIds.has(u.ucenik.id))
+    .map(u => ({
+      ...u,
+      prisustvo: u.prisustvo.filter(p => (!periodFrom || p.datum >= periodFrom) && (!periodTo || p.datum <= periodTo)),
+      ocjene: u.ocjene.filter(o => (!periodFrom || o.datum >= periodFrom) && (!periodTo || o.datum <= periodTo)),
+      kvizRezultati: u.kvizRezultati.filter(r => {
+        const day = r.completedAt.slice(0, 10);
+        return (!periodFrom || day >= periodFrom) && (!periodTo || day <= periodTo);
+      }),
+    })) : [];
   const showPicker = !!data && data.tip !== "ucenik";
 
   function toggleId(id: number) {
@@ -154,38 +179,46 @@ export default function MuallimIzvjestajPage() {
   function clearSelection() {
     setSelectedIds(new Set());
   }
+  function toggleSection(section: ReportSection) {
+    setSelectedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) next.delete(section); else next.add(section);
+      return next;
+    });
+  }
 
   function handlePrint() {
     window.print();
   }
 
-  // Excel izvoz je po grupi (3 lista: prisustvo, ocjene, zbirni izvještaj).
-  const excelGrupaId: number | null =
-    matchGrupa && paramsGrupa?.id ? parseInt(paramsGrupa.id)
-    : (data?.tip === "ucenik" ? (data.ucenici[0]?.grupaId ?? null) : null);
-
   async function handleExportExcel() {
-    if (excelGrupaId == null) return;
+    if (!data || filteredUcenici.length === 0) return;
     setExportingExcel(true);
     try {
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${getApiBase()}/muallim/grupa/${excelGrupaId}/izvjestaj-excel`, { headers });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: t("Greška pri izvozu") }));
-        throw new Error(err.error || t("Greška pri izvozu"));
-      }
-      const disp = res.headers.get("Content-Disposition") || "";
-      const mStar = disp.match(/filename\*=UTF-8''([^;]+)/i);
-      const mPlain = disp.match(/filename="?([^";]+)"?/i);
-      const filename = mStar ? decodeURIComponent(mStar[1])
-        : mPlain ? mPlain[1]
-        : `izvjestaj_${new Date().toISOString().split("T")[0]}.xlsx`;
-      const blob = await res.blob();
+      const esc = (value: unknown) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const rows = (headers: string[], values: unknown[][]) =>
+        `<table><tr>${headers.map(h => `<th>${esc(h)}</th>`).join("")}</tr>${values.map(row => `<tr>${row.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</table>`;
+      const summary = selectedSections.has("summary")
+        ? `<h2>${esc(data.naslov)}</h2>${rows(
+          ["Učenik", "Grupa", "Prisustvo", "Prosj. ocjena", "Kviz bodovi", "Lekcije", "Žute zvjezdice", "Crne zvjezdice"],
+          filteredUcenici.map(u => {
+            const s = statsForUcenik(u);
+            return [u.ucenik.displayName, u.grupaNaziv || "—", s.prisustvoPct === null ? "—" : `${s.prisustvoPct}%`, s.prosjecnaOcjena?.toFixed(2) || "—", s.ukupnoBodova, u.zavrseneLekcijeBroj, s.zvjezdicePozitivne, s.zvjezdiceNegativne];
+          }),
+        )}` : "";
+      const attendance = selectedSections.has("attendance")
+        ? `<h2>Prisustvo</h2>${rows(["Učenik", "Datum", "Status", "Napomena"], filteredUcenici.flatMap(u => u.prisustvo.map(p => [u.ucenik.displayName, p.datum, STATUS_LABELS[p.status] || p.status, p.napomena || ""])))}` : "";
+      const grades = selectedSections.has("grades")
+        ? `<h2>Ocjene</h2>${rows(["Učenik", "Datum", "Kategorija", "Ocjena", "Lekcija", "Napomena"], filteredUcenici.flatMap(u => u.ocjene.map(o => [u.ucenik.displayName, o.datum, KATEGORIJA_LABELS[o.kategorija] || o.kategorija, o.ocjena, o.lekcijaNaziv || "", o.napomena || ""])))}` : "";
+      const quizzes = selectedSections.has("quizzes")
+        ? `<h2>Kvizovi</h2>${rows(["Učenik", "Datum", "Kviz", "Tačno", "%", "Bodovi"], filteredUcenici.flatMap(u => u.kvizRezultati.map(r => [u.ucenik.displayName, r.completedAt, r.kvizNaslov, `${r.tacniOdgovori}/${r.ukupnoPitanja}`, r.procenat, r.bodovi])))}` : "";
+      const blob = new Blob([
+        `\ufeff<html><head><meta charset="UTF-8"></head><body><h1>MEKTEB — ${esc(data.naslov)}</h1><p>Izvještaj generisan: ${esc(today)}</p>${summary}${attendance}${grades}${quizzes}</body></html>`,
+      ], { type: "application/vnd.ms-excel;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = `izvjestaj_${new Date().toISOString().split("T")[0]}.xls`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -253,18 +286,16 @@ export default function MuallimIzvjestajPage() {
             <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
           <div className="flex items-center gap-2">
-            {excelGrupaId != null && (
-              <Button
-                onClick={handleExportExcel}
-                disabled={exportingExcel}
-                variant="outline"
-                className="rounded-xl font-bold text-sm flex items-center gap-2"
-                data-testid="btn-export-excel"
-              >
-                {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
-                {t("Izvezi Excel")}
-              </Button>
-            )}
+            <Button
+              onClick={handleExportExcel}
+              disabled={exportingExcel || filteredUcenici.length === 0}
+              variant="outline"
+              className="rounded-xl font-bold text-sm flex items-center gap-2"
+              data-testid="btn-export-excel"
+            >
+              {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+              {t("Izvezi Excel")}
+            </Button>
             <Button
               onClick={handlePrint}
               className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
@@ -388,8 +419,47 @@ export default function MuallimIzvjestajPage() {
               </div>
             )}
 
+            {/* Period + sekcije izvještaja */}
+            <div className="no-print bg-white border-2 border-primary/30 rounded-2xl p-5 mb-6 shadow-sm" data-testid="podesavanja-izvjestaja">
+              <h3 className="font-extrabold text-foreground text-base mb-3 flex items-center gap-2">
+                <CalendarCheck className="w-5 h-5 text-primary" /> {t("Period i sadržaj izvještaja")}
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-bold text-muted-foreground">{t("Od datuma")}</span>
+                  <Input type="date" value={periodFrom} onChange={e => setPeriodFrom(e.target.value)}
+                    className="h-10 rounded-xl" data-testid="input-period-od" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-bold text-muted-foreground">{t("Do datuma")}</span>
+                  <Input type="date" value={periodTo} onChange={e => setPeriodTo(e.target.value)}
+                    className="h-10 rounded-xl" data-testid="input-period-do" />
+                </label>
+              </div>
+              {(periodFrom || periodTo) && (
+                <button onClick={() => { setPeriodFrom(""); setPeriodTo(""); }}
+                  className="text-xs font-bold text-primary hover:underline mb-3"
+                  data-testid="btn-reset-period">
+                  {t("Poništi period (prikaži sve)")}
+                </button>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {REPORT_SECTIONS.map(section => {
+                  const active = selectedSections.has(section.id);
+                  return (
+                    <button key={section.id} onClick={() => toggleSection(section.id)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition ${active ? "bg-primary/10 border-primary/40 text-primary" : "bg-white border-border text-muted-foreground hover:bg-muted/40"}`}
+                      data-testid={`btn-sekcija-${section.id}`}>
+                      {active ? <CheckSquare className="w-3.5 h-3.5 inline mr-1" /> : <Square className="w-3.5 h-3.5 inline mr-1" />}
+                      {t(section.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Sumarni statistike za grupa/svi */}
-            {data.tip !== "ucenik" && filteredUcenici.length > 0 && (
+            {data.tip !== "ucenik" && selectedSections.has("summary") && filteredUcenici.length > 0 && (
               <div className="bg-white border border-border/50 rounded-2xl p-5 sm:p-6 mb-6 shadow-sm print-card">
                 <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" /> {t("Sumarni pregled")}
@@ -409,7 +479,7 @@ export default function MuallimIzvjestajPage() {
               </div>
             ) : (
               filteredUcenici.map((u, idx) => (
-                <UcenikSekcija key={u.ucenik.id} ucenik={u} firstOnPage={idx > 0} />
+                <UcenikSekcija key={u.ucenik.id} ucenik={u} firstOnPage={idx > 0} sections={selectedSections} />
               ))
             )}
           </>
@@ -571,9 +641,14 @@ function SumarniPregled({ ucenici, nivo }: { ucenici: UcenikIzvjestaj[]; nivo: "
   );
 }
 
-function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; firstOnPage: boolean }) {
+function UcenikSekcija({ ucenik, firstOnPage, sections }: { ucenik: UcenikIzvjestaj; firstOnPage: boolean; sections: Set<ReportSection> }) {
   const { t } = useLanguage();
   const s = statsForUcenik(ucenik);
+  const showAttendance = sections.has("attendance");
+  const showGrades = sections.has("grades");
+  const showQuizzes = sections.has("quizzes");
+  const showProgress = sections.has("progress");
+  const showStars = sections.has("stars");
 
   return (
     <div className={`bg-white border border-border/50 rounded-2xl p-5 sm:p-6 mb-6 shadow-sm print-card ${firstOnPage ? "print-page-break" : ""}`} data-testid={`sekcija-ucenik-${ucenik.ucenik.id}`}>
@@ -591,6 +666,7 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {showAttendance && (
         <div className={`border border-border/50 rounded-xl p-3 ${s.prisustvoPct !== null && s.prisustvoPct >= 80 ? "bg-emerald-50 print-bg-emerald" : s.prisustvoPct !== null && s.prisustvoPct >= 50 ? "bg-amber-50 print-bg-amber" : "bg-red-50 print-bg-red"}`}>
           <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Prisustvo")}</div>
           <div className={`text-xl font-extrabold ${s.prisustvoPct !== null && s.prisustvoPct >= 80 ? "text-emerald-600" : s.prisustvoPct !== null && s.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
@@ -598,24 +674,39 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
           </div>
           <div className="text-xs text-muted-foreground">{s.prisutnih}/{ucenik.prisustvo.length} {t("časova")}</div>
         </div>
+        )}
+        {showGrades && (
         <div className="bg-violet-50 print-bg-violet border border-border/50 rounded-xl p-3">
           <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Prosj. ocjena")}</div>
           <div className="text-xl font-extrabold text-violet-600">{s.prosjecnaOcjena !== null ? s.prosjecnaOcjena.toFixed(2) : "—"}</div>
           <div className="text-xs text-muted-foreground">{ucenik.ocjene.length} {t("ocjena")}</div>
         </div>
+        )}
+        {showQuizzes && (
         <div className="bg-blue-50 print-bg-blue border border-border/50 rounded-xl p-3">
           <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Kvizovi")}</div>
           <div className="text-xl font-extrabold text-blue-600">{s.kvizProsjek !== null ? `${s.kvizProsjek}%` : "—"}</div>
           <div className="text-xs text-muted-foreground">{s.ukupnoBodova} {t("bodova")}</div>
         </div>
+        )}
+        {showProgress && (
         <div className="bg-emerald-50 print-bg-emerald border border-border/50 rounded-xl p-3">
           <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Lekcije")}</div>
           <div className="text-xl font-extrabold text-emerald-600">{ucenik.zavrseneLekcijeBroj}</div>
           <div className="text-xs text-muted-foreground">{t("završeno")}</div>
         </div>
+        )}
+        {showStars && (
+        <div className="bg-amber-50 print-bg-amber border border-border/50 rounded-xl p-3">
+          <div className="text-xs text-muted-foreground font-medium mb-0.5">{t("Zvjezdice")}</div>
+          <div className="text-xl font-extrabold text-amber-600">★ {s.zvjezdicePozitivne}</div>
+          <div className="text-xs text-muted-foreground">★ {s.zvjezdiceNegativne} {t("crnih")}</div>
+        </div>
+        )}
       </div>
 
       {/* Prisustvo razbroj */}
+      {showAttendance && (
       <div className="mb-5">
         <h4 className="font-bold text-sm text-foreground mb-2 flex items-center gap-1.5">
           <CalendarCheck className="w-4 h-4 text-primary" /> {t("Prisustvo")}
@@ -654,8 +745,10 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
           </div>
         )}
       </div>
+      )}
 
       {/* Ocjene */}
+      {showGrades && (
       <div className="mb-5">
         <h4 className="font-bold text-sm text-foreground mb-2 flex items-center gap-1.5">
           <Star className="w-4 h-4 text-violet-600" /> {t("Ocjene")}
@@ -691,8 +784,10 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
           </div>
         )}
       </div>
+      )}
 
       {/* Kvizovi */}
+      {showQuizzes && (
       <div>
         <h4 className="font-bold text-sm text-foreground mb-2 flex items-center gap-1.5">
           <Award className="w-4 h-4 text-blue-600" /> {t("Rezultati kvizova")}
@@ -729,6 +824,7 @@ function UcenikSekcija({ ucenik, firstOnPage }: { ucenik: UcenikIzvjestaj; first
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

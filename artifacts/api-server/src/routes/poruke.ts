@@ -197,17 +197,16 @@ router.put("/:id/procitano", async (req, res) => {
   }
 });
 
-// GET /api/poruke/kontakti — lista korisnika s kojima možemo komunicirati
-router.get("/kontakti", async (req, res) => {
-  try {
-    const userId = req.user!.userId;
-    const role = req.user!.role;
+type Contact = {
+  id: number; displayName: string; role: string;
+  grupaId?: number; grupaNaziv?: string;
+  grupeNazivi?: string[]; // sve grupe — za roditelje = grupe njihove djece
+};
 
-    type Contact = {
-      id: number; displayName: string; role: string;
-      grupaId?: number; grupaNaziv?: string;
-      grupeNazivi?: string[]; // sve grupe — za roditelje = grupe njihove djece
-    };
+// Jedini izvor istine o tome s kim korisnik smije komunicirati. Koristi ga i
+// GET /kontakti (UI) i POST /bulk (server-side provjera opsega) — bez toga bi
+// bulk mogao gađati proizvoljne korisnike po ID-u.
+async function izracunajKontakte(userId: number, role: string): Promise<Contact[]> {
     let contacts: Contact[] = [];
 
     if (role === "admin") {
@@ -325,18 +324,30 @@ router.get("/kontakti", async (req, res) => {
       }
     }
 
-    res.json(contacts.filter(u => u.id !== userId));
+    return contacts.filter(u => u.id !== userId);
+}
+
+// GET /api/poruke/kontakti — lista korisnika s kojima možemo komunicirati
+router.get("/kontakti", async (req, res) => {
+  try {
+    res.json(await izracunajKontakte(req.user!.userId, req.user!.role));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
 });
 
-// POST /api/poruke/bulk — send message to multiple recipients (admin/muallim only)
+// POST /api/poruke/bulk — grupno slanje (admin/muallim).
+// Primatelji se mogu zadati kao eksplicitni primateljIds, kao skup grupa
+// (grupeNazivi) i/ili sviRoditelji=true. Sve se svodi na presjek sa
+// izracunajKontakte() — pošiljalac nikad ne može gađati korisnika van svog
+// opsega, čak ni slanjem tuđeg ID-a. Duplikati (roditelj s više djece ili u
+// više odabranih grupa) se uklanjaju.
 router.post("/bulk", async (req, res) => {
   try {
-    const { primateljIds, naslov, sadrzaj } = req.body;
-    if (!primateljIds?.length || !sadrzaj) {
-      res.status(400).json({ error: "primateljIds i sadrzaj su obavezni" });
+    const { primateljIds, naslov, sadrzaj, grupeNazivi, sviRoditelji } = req.body;
+    const ciljaGrupe = Array.isArray(grupeNazivi) && grupeNazivi.length > 0;
+    if ((!primateljIds?.length && !ciljaGrupe && !sviRoditelji) || !sadrzaj) {
+      res.status(400).json({ error: "Primatelji i sadrzaj su obavezni" });
       return;
     }
 
@@ -348,13 +359,39 @@ router.post("/bulk", async (req, res) => {
       return;
     }
 
+    const dozvoljeni = await izracunajKontakte(userId, role);
+    const dozvoljeniMap = new Map(dozvoljeni.map(k => [k.id, k]));
+
+    const trazeni = new Set<number>();
+    for (const raw of (primateljIds ?? [])) {
+      const id = parseInt(String(raw));
+      if (Number.isInteger(id)) trazeni.add(id);
+    }
+    if (sviRoditelji) {
+      for (const k of dozvoljeni) if (k.role === "roditelj") trazeni.add(k.id);
+    }
+    if (ciljaGrupe) {
+      const trazeneGrupe = new Set(grupeNazivi.map((g: unknown) => String(g)));
+      for (const k of dozvoljeni) {
+        const grupe = k.grupeNazivi?.length ? k.grupeNazivi : (k.grupaNaziv ? [k.grupaNaziv] : []);
+        if (grupe.some(g => trazeneGrupe.has(g))) trazeni.add(k.id);
+      }
+    }
+
+    // Presjek sa dozvoljenim opsegom — tiho odbacuje sve van opsega.
+    const uOpsegu = [...trazeni].filter(id => dozvoljeniMap.has(id) && id !== userId);
+    if (uOpsegu.length === 0) {
+      res.status(400).json({ error: "Nema validnih primatelja" });
+      return;
+    }
+
     const validRecipients = await db.select({ id: usersTable.id })
       .from(usersTable)
       .where(and(
-        inArray(usersTable.id, primateljIds.map((id: any) => parseInt(id))),
+        inArray(usersTable.id, uOpsegu),
         eq(usersTable.isActive, true)
       ));
-    const validIds = validRecipients.map(r => r.id).filter(id => id !== userId);
+    const validIds = [...new Set(validRecipients.map(r => r.id))].filter(id => id !== userId);
 
     if (validIds.length === 0) {
       res.status(400).json({ error: "Nema validnih primatelja" });
