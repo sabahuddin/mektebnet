@@ -497,8 +497,11 @@ export default function MuallimPanel() {
   const [uceniciMuallimFilter, setUceniciMuallimFilter] = useState<number | "sve">("sve");
   const [uceniciGrupaFilter, setUceniciGrupaFilter] = useState<number | "sve">("sve");
   const [uceniciStatusFilter, setUceniciStatusFilter] = useState<"aktivni" | "svi">("aktivni");
+  // Lični mod uvijek šalje eksplicitan muallim scope. Tako svi pod-tabovi,
+  // uključujući izvještaje, prikazuju samo njegove grupe; bez scope-a glavni
+  // muallim legitimno dobija cijeli mekteb.
   const scopedMuallimId = selectedMuallimId ?? (
-    panelContext === "moje" && mektebMeta.isGlavni ? (user?.id ?? null) : null
+    panelContext === "moje" ? (user?.id ?? null) : null
   );
   const muallimScopeQuery = scopedMuallimId ? `?muallimId=${encodeURIComponent(String(scopedMuallimId))}` : "";
 
@@ -4194,7 +4197,7 @@ export default function MuallimPanel() {
                       </Button>
                     )}
                     <Button
-                      onClick={() => setLocation("/muallim/izvjestaj/svi")}
+                      onClick={() => setLocation(`/muallim/izvjestaj/svi${muallimScopeQuery}`)}
                       className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
                       data-testid="btn-izvjestaj-svi"
                     >
