@@ -4,7 +4,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { Layout } from "@/components/layout";
 import { Maskota } from "@/components/maskota";
-import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, Star, Flame, ChevronRight, BookMarked, Scroll } from "lucide-react";
+import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, ChevronRight, BookMarked, Scroll } from "lucide-react";
 
 interface ModuleCard {
   href: string;
@@ -28,9 +28,7 @@ export default function Home() {
   const { user } = useAuth();
   const { t } = useLanguage();
 
-  // Sufara modul je u izradi — kartica se prikazuje SVIMA, ali sa "USKORO"
-  // badge-om i nije klikabilna (link je onemogućen). Klasična /arapsko-pismo
-  // ruta i dalje radi za adminstratore (i muallime, ako bude trebalo testirati).
+  // Razvojni moduli su namijenjeni samo adminu za interni pregled.
   const MODULES: ModuleCard[] = [
     {
       href: "/kuran",
@@ -176,25 +174,13 @@ export default function Home() {
             <p className="text-sm md:text-base text-muted-foreground font-medium mt-2">
               {t("Islamska edukativna platforma")}
             </p>
-            {user?.role === "ucenik" && (
-              <div className="flex items-center gap-3 flex-wrap mt-4 justify-center md:justify-start">
-                <div className="flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-bold shadow-sm border border-orange-200 text-sm">
-                  <Flame className="w-4 h-4 fill-orange-500" />
-                  {t("home.streakAktivan")}
-                </div>
-                <div className="flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full font-bold shadow-sm border border-yellow-200 text-sm">
-                  <Star className="w-4 h-4 fill-yellow-500" />
-                  {t("home.sakupljajHasanate")}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </motion.div>
 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10" data-testid="home-modules">
-        {MODULES.map((mod, i) => {
+        {MODULES.filter(mod => user?.role === "admin" || (mod.href !== "/kuran" && mod.href !== "/arapsko-pismo")).map((mod, i) => {
           // Sadržaj kartice — koristi se i u Link i u "div" varijanti
           // (za onemogućenu Sufara karticu sa USKORO badge-om).
           const cardInner = (

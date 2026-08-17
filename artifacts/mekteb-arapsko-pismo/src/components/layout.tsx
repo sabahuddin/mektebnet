@@ -174,13 +174,11 @@ export function Layout({ children }: LayoutProps) {
     setAudioMutedState(next);
   };
 
-  // Sufara modul je još u izradi — stavka u navigaciji se prikazuje SAMO
-  // adminu (interni pregled na /arapsko-pismo). Ostali korisnici i posjetioci
-  // je ne vide dok modul ne bude gotov.
+  // Razvojni moduli su dostupni samo adminu za interni pregled.
   const mainNavLinks: NavLink[] = [
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
-    { href: "/kuran", label: t("Kur'an"), icon: BookA },
+    ...(user?.role === "admin" ? [{ href: "/kuran", label: t("Kur'an"), icon: BookA } as NavLink] : []),
     { href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle },
     { href: "/citaonica", label: t("nav.citaonica"), icon: Library },
     { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
@@ -436,10 +434,10 @@ export function Layout({ children }: LayoutProps) {
                   className="w-7 h-7 md:w-8 md:h-8 object-contain opacity-90"
                   data-testid="footer-maskota"
                 />
-                <span className="font-bold text-base md:text-lg text-primary">mekteb<span className="text-secondary">.net</span></span>
+                <span className="font-bold text-sm md:text-lg text-primary">mekteb<span className="text-secondary">.net</span></span>
               </div>
-              <p className="text-[13px] md:text-sm text-muted-foreground leading-relaxed">
-                {t("Islamska edukativna platforma za djecu mektebske dobi, muallime i roditelje.")}
+              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-[230px]">
+                {t("Islamska edukativna platforma")}
               </p>
               <a href="https://buymeacoffee.com/mekteb" target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-700 font-medium text-[13px] md:text-sm transition-colors mt-3 md:mt-4">
@@ -455,7 +453,9 @@ export function Layout({ children }: LayoutProps) {
               <h4 className="font-bold text-xs md:text-sm text-foreground mb-2 md:mb-3 uppercase tracking-wide">{t("Platforma")}</h4>
               <ul className="space-y-1.5 md:space-y-2 text-[13px] md:text-sm">
                 <li><Link href="/ilmihal" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.ilmihal")}</Link></li>
-                <li><Link href="/kuran" className="text-muted-foreground hover:text-primary transition-colors">{t("Kur'an")}</Link></li>
+                {user?.role === "admin" && (
+                  <li><Link href="/kuran" className="text-muted-foreground hover:text-primary transition-colors">{t("Kur'an")}</Link></li>
+                )}
                 <li><Link href="/kvizovi" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.kvizovi")}</Link></li>
                 <li><Link href="/citaonica" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.citaonica")}</Link></li>
                 <li><Link href="/igrice" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.igrice")}</Link></li>

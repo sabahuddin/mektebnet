@@ -54,7 +54,6 @@ import CitaonicaKnjigaPage from "./pages/citaonica-knjiga";
 import KuranPage from "./pages/kuran";
 import KuranSuraPage from "./pages/kuran-sura";
 import KuranStranicaPage from "./pages/kuran-stranica";
-import KuranURazvojuPage from "./pages/kuran-u-razvoju";
 
 // Roditelj panel
 import RoditeljPage from "./pages/roditelj";
@@ -113,17 +112,22 @@ const queryClient = new QueryClient({
 
 function KuranAdminLandingRoute() {
   const { user } = useAuth();
-  return user?.role === "admin" ? <KuranPage /> : <KuranURazvojuPage />;
+  return user?.role === "admin" ? <KuranPage /> : <NotFound />;
 }
 
 function KuranAdminSuraRoute() {
   const { user } = useAuth();
-  return user?.role === "admin" ? <KuranSuraPage /> : <KuranURazvojuPage />;
+  return user?.role === "admin" ? <KuranSuraPage /> : <NotFound />;
 }
 
 function KuranAdminPageRoute() {
   const { user } = useAuth();
-  return user?.role === "admin" ? <KuranStranicaPage /> : <KuranURazvojuPage />;
+  return user?.role === "admin" ? <KuranStranicaPage /> : <NotFound />;
+}
+
+function SufaraAdminRoute() {
+  const { user } = useAuth();
+  return user?.role === "admin" ? <ArapskoPismoPage /> : <NotFound />;
 }
 
 function Router() {
@@ -147,7 +151,7 @@ function Router() {
       <Route path="/reset-sifra" component={ResetSifraPage} />
 
       {/* Arapsko pismo */}
-      <Route path="/arapsko-pismo" component={ArapskoPismoPage} />
+      <Route path="/arapsko-pismo" component={SufaraAdminRoute} />
       <Route path="/lesson/:id" component={LessonDetail} />
       <Route path="/lesson/:id/exercise/:type" component={Exercise} />
       <Route path="/karta-harfova" component={KartaHarfova} />
