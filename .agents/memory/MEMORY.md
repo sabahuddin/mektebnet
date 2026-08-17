@@ -6,6 +6,7 @@
 - [Unicode u HTTP headerima](http-header-unicode.md) — bošnjački znakovi (đ/ć/š) u Content-Disposition filename ruše setHeader (ERR_INVALID_CHAR); koristi RFC5987 filename*=UTF-8''.
 - [Glavni muallim invarijanta](glavni-muallim-invarijanta.md) — tačno jedan glavni po džematu; drži usklađeno is_glavni i mektebi.glavni_muallim_id (promocija u transakciji demotuje ostale).
 - [E2E testiranje zaštićenih ruta](e2e-jwt-testing.md) — dev DB nema aktivnog glavnog muallima; potpiši HS256 JWT ručno umjesto logina (sandbox nema process.env).
+- [API-server test harness](api-server-test-harness.md) — automatizovani testovi su node:test + tsx; importuj app, listen(0), signToken auth, seed/cleanup dev DB.
 - [Mekteb dokumenti — privatni fajlovi](mekteb-dokumenti-access.md) — "samo-za-mekteb" PDF ne ide na javni /uploads; blokirani poddirektorij + autorizovana ruta + openAuthorizedFile.
 - [API-server schema i dev reload](api-server-schema-i-reload.md) — nove kolone idu kao idempotentni ALTER IF NOT EXISTS u residual-schema u index.ts (NE drizzle-kit push); api-server dev treba restart_workflow nakon backend izmjena.
 - [Kur'an font i RTL nav](kuran-font-rtl.md) — koristi islam.ba "hafs" font (generički subset loše crta ۟); u Kur'anu Sljedeća=lijevo, Prethodna=desno.
