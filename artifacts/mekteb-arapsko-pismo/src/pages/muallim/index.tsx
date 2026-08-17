@@ -405,6 +405,10 @@ export default function MuallimPanel() {
 
   // Mekteb (škola) — glavni muallim kontekst i administracija
   const [mektebMeta, setMektebMeta] = useState<{ isGlavni: boolean; mektebNaziv: string | null }>({ isGlavni: false, mektebNaziv: null });
+  // Dok /muallim/info ne stigne, ne znamo da li je korisnik glavni muallim, pa
+  // ni koji scope statistika treba. Bez ovog flaga prvi fetch krene bez
+  // muallimId-a i keširani rezultat ostane "cijeli mekteb" i u "Moje grupe".
+  const [mektebMetaLoaded, setMektebMetaLoaded] = useState(false);
   const [mektebInfo, setMektebInfo] = useState<MektebInfo | null>(null);
   const [mektebMuallimi, setMektebMuallimi] = useState<MektebMuallim[] | null>(null);
   const [novMuallimIme, setNovMuallimIme] = useState("");
@@ -559,14 +563,20 @@ export default function MuallimPanel() {
       .finally(() => setDashboardStatsLoading(false));
   }, [token, selectedYear, scopedMuallimId]);
 
+  // Kad se scope promijeni (Moje grupe ↔ Mekteb, ili pregled drugog muallima),
+  // keširana statistika više ne odgovara — očisti je da se ponovo dohvati.
   useEffect(() => {
-    if (!token || activeTab !== "statistika" || statMode !== "mekteb" || mektebStats) return;
+    setMektebStats(null);
+  }, [scopedMuallimId, panelContext]);
+
+  useEffect(() => {
+    if (!token || !mektebMetaLoaded || activeTab !== "statistika" || statMode !== "mekteb" || mektebStats) return;
     setMektebStatsLoading(true);
     apiRequest<MektebStats>("GET", `/muallim/statistika-mekteb${muallimScopeQuery}`, undefined, token)
       .then(setMektebStats)
       .catch(() => {})
       .finally(() => setMektebStatsLoading(false));
-  }, [token, activeTab, statMode, mektebStats, scopedMuallimId]);
+  }, [token, mektebMetaLoaded, activeTab, statMode, mektebStats, scopedMuallimId]);
 
   useEffect(() => {
     if (!token || activeTab !== "kalendar" || kalendarMode !== "sve" || kalendarSve) return;
@@ -1193,7 +1203,8 @@ export default function MuallimPanel() {
     if (!token) return;
     apiRequest<{ isGlavni: boolean; mektebNaziv: string | null }>("GET", "/muallim/info", undefined, token)
       .then(d => setMektebMeta({ isGlavni: !!d.isGlavni, mektebNaziv: d.mektebNaziv ?? null }))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setMektebMetaLoaded(true));
   }, [token]);
 
   // Sigurnosni guard: tabovi "Muallimi" i "Mekteb" su isključivo za glavnog
@@ -2106,7 +2117,7 @@ export default function MuallimPanel() {
                       onClick={() => { setStatMode("mekteb"); setStatGrupaId(null); setStatData(null); }}
                       className={`rounded-xl px-4 py-2 text-sm font-bold border transition-all ${statMode === "mekteb" && !statGrupaId ? "bg-primary text-primary-foreground border-primary" : "bg-primary/5 text-primary border-primary/20 hover:bg-primary/10"}`}
                       data-testid="btn-stat-mekteb">
-                      {t("Cijeli mekteb")}
+                      {scopedMuallimId ? t("Sve moje grupe") : t("Cijeli mekteb")}
                     </button>
                     {grupe.filter(g => !g.isArchived).map(g => (
                       <button key={g.id}
@@ -2126,9 +2137,9 @@ export default function MuallimPanel() {
                       <div className="flex items-center justify-between flex-wrap gap-3">
                         <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
                           <TrendingUp className="w-5 h-5 text-primary" />
-                          {t("Cijeli mekteb — Agregatna statistika")}
+                          {scopedMuallimId ? t("Moje grupe — Agregatna statistika") : t("Cijeli mekteb — Agregatna statistika")}
                         </h3>
-                        <Button onClick={() => setLocation(`/muallim/izvjestaj/svi`)}
+                        <Button onClick={() => setLocation(`/muallim/izvjestaj/svi${muallimScopeQuery}`)}
                           className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2">
                           <Printer className="w-4 h-4" /> {t("Štampaj sve učenike")}
                         </Button>
