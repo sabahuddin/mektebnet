@@ -1761,7 +1761,7 @@ function PriloziSection({
   };
 
   return (
-    <div className="mb-6 rounded-2xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden shadow-sm">
+    <div className="mb-6 min-w-0 rounded-2xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden shadow-sm">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-blue-100/50 transition-colors"
@@ -1941,24 +1941,24 @@ function PriloziSection({
                         ? t("Klikni da otvoriš vježbu • do {reward} kapi meda 🍯", { reward: String(reward) })
                         : t("Klikni da otvoriš vježbu • bez kapi meda 🍯");
                       return (
-                        <div key={a.id} className="flex flex-col gap-1">
-                          <div className="flex items-stretch gap-2">
+                        <div key={a.id} className="flex flex-col gap-1 min-w-0 max-w-full">
+                          <div className="flex items-stretch gap-2 min-w-0 max-w-full">
                           <button
                             onClick={() => setOpenEmbed(a)}
-                            className="flex-1 flex items-center gap-3 px-4 py-4 rounded-xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 hover:border-amber-400 transition-all shadow-sm hover:shadow-md text-left"
+                            className="flex-1 min-w-0 flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 sm:px-4 sm:py-4 rounded-xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 hover:border-amber-400 transition-all shadow-sm hover:shadow-md text-left"
                             data-testid={`embed-open-${a.id}`}
                           >
                             <span className="text-3xl flex-shrink-0">🎯</span>
                             <div className="flex-1 min-w-0">
-                              <p className="font-bold text-base text-amber-900 truncate">{a.originalName}</p>
-                              <p className="text-xs text-amber-700">{subtitle}</p>
+                              <p className="font-bold text-base text-amber-900 break-words">{a.originalName}</p>
+                              <p className="text-xs text-amber-700 break-words">{subtitle}</p>
                             </div>
                             {isAdmin && a.approved === false && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-800 border border-amber-400 flex-shrink-0">
                                 {t("Čeka odobrenje")}
                               </span>
                             )}
-                            <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                            <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0 self-end sm:self-auto" />
                           </button>
                           {canDelete && (
                             <button
@@ -1996,14 +1996,14 @@ function PriloziSection({
                     const nextMult = att?.nextMultiplier ?? 1;
                     const maxNext = Math.round(50 * nextMult);
                     return (
-                      <div key={a.id} className="flex flex-col gap-2 bg-white rounded-xl border border-blue-100 p-3 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
+                      <div key={a.id} className="flex flex-col gap-2 min-w-0 max-w-full bg-white rounded-xl border border-blue-100 p-3 hover:shadow-md transition-shadow">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 min-w-0">
                           <span className="text-2xl flex-shrink-0">
                             {isH5p ? "🧩" : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-base text-gray-800 truncate">{a.originalName}</p>
+                              <p className="font-semibold text-base text-gray-800 break-words">{a.originalName}</p>
                               {isAdmin && a.approved === false && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 flex-shrink-0">
                                   {t("Čeka odobrenje")}
@@ -2018,7 +2018,7 @@ function PriloziSection({
                                 : isEmbed ? t("Embed vježba (bez kapi meda)") : isUrl ? targetUrl : formatFileSize(a.fileSize)}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
                             {isH5p ? (
                               <button
                                 onClick={() => {

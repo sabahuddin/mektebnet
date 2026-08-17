@@ -2,7 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/context/auth";
+import { AuthProvider, useAuth } from "@/context/auth";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { LanguageProvider, useLanguage } from "@/context/language";
 import { OfflineIndicator } from "@/components/offline-indicator";
@@ -50,8 +50,10 @@ import KvizPage from "./pages/kviz";
 import CitaonicaPage from "./pages/citaonica";
 import CitaonicaKnjigaPage from "./pages/citaonica-knjiga";
 
-// Kur'an (Task #133: privremeno u razvoju — sve rute vode na placeholder;
-// originalne stranice kuran*.tsx ostaju u kodu za kasnije aktiviranje)
+// Kur'an — admin može pregledati aktivni modul dok je javni pristup u razvoju.
+import KuranPage from "./pages/kuran";
+import KuranSuraPage from "./pages/kuran-sura";
+import KuranStranicaPage from "./pages/kuran-stranica";
 import KuranURazvojuPage from "./pages/kuran-u-razvoju";
 
 // Roditelj panel
@@ -109,6 +111,21 @@ const queryClient = new QueryClient({
   },
 });
 
+function KuranAdminLandingRoute() {
+  const { user } = useAuth();
+  return user?.role === "admin" ? <KuranPage /> : <KuranURazvojuPage />;
+}
+
+function KuranAdminSuraRoute() {
+  const { user } = useAuth();
+  return user?.role === "admin" ? <KuranSuraPage /> : <KuranURazvojuPage />;
+}
+
+function KuranAdminPageRoute() {
+  const { user } = useAuth();
+  return user?.role === "admin" ? <KuranStranicaPage /> : <KuranURazvojuPage />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -157,10 +174,10 @@ function Router() {
       <Route path="/citaonica" component={CitaonicaPage} />
       <Route path="/citaonica/:slug" component={CitaonicaKnjigaPage} />
 
-      {/* Kur'an — privremeno u razvoju (Task #133) */}
-      <Route path="/kuran" component={KuranURazvojuPage} />
-      <Route path="/kuran/stranica/:p" component={KuranURazvojuPage} />
-      <Route path="/kuran/:n" component={KuranURazvojuPage} />
+      {/* Kur'an — aktivan za admina, razvojna poruka za ostale korisnike */}
+      <Route path="/kuran" component={KuranAdminLandingRoute} />
+      <Route path="/kuran/stranica/:p" component={KuranAdminPageRoute} />
+      <Route path="/kuran/:n" component={KuranAdminSuraRoute} />
 
       {/* Roditelj panel */}
       <Route path="/roditelj/kalendar" component={RoditeljKalendarPage} />

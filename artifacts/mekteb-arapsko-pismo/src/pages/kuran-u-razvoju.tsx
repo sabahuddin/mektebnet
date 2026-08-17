@@ -3,9 +3,7 @@ import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
 import { BookOpen, ChevronLeft, Wrench } from "lucide-react";
 
-// Task #133: Kur'an je privremeno zatvoren za SVE korisnike dok se modul ne
-// dovrši. Sve rute (/kuran, /kuran/:n, /kuran/stranica/:p) vode ovdje. Stranice
-// kuran.tsx / kuran-sura.tsx / kuran-stranica.tsx ostaju u kodu za kasnije.
+// Razvojna poruka za korisnike kojima aktivni Kur'an modul još nije dostupan.
 export default function KuranURazvojuPage() {
   const { t } = useLanguage();
   return (
@@ -22,7 +20,7 @@ export default function KuranURazvojuPage() {
               {t("U razvoju")}
             </div>
             <p className="text-white/90 font-medium max-w-md">
-              {t("Kur'an je u razvoju jer još nije sve podešeno.")}
+              {t("Modul Kur'an je u razvoju jer još nije sve podešeno.")}
             </p>
           </div>
           <div

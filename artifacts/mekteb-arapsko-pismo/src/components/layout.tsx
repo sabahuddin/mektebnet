@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/language";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA, Mail, Phone } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -424,25 +424,25 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       <footer className="border-t border-border/30 bg-muted/20 mt-8">
-        <div className="max-w-7xl mx-auto px-4 py-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-5 md:gap-8">
             {/* Brend */}
             <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2 md:mb-3">
                 <img
                   src={`${import.meta.env.BASE_URL}images/maskota/pcela.png`}
                   alt=""
                   aria-hidden="true"
-                  className="w-8 h-8 object-contain opacity-90"
+                  className="w-7 h-7 md:w-8 md:h-8 object-contain opacity-90"
                   data-testid="footer-maskota"
                 />
-                <span className="font-bold text-lg text-primary">mekteb<span className="text-secondary">.net</span></span>
+                <span className="font-bold text-base md:text-lg text-primary">mekteb<span className="text-secondary">.net</span></span>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-[13px] md:text-sm text-muted-foreground leading-relaxed">
                 {t("Islamska edukativna platforma za djecu mektebske dobi, muallime i roditelje.")}
               </p>
               <a href="https://buymeacoffee.com/mekteb" target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-700 font-medium text-sm transition-colors mt-4">
+                className="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-700 font-medium text-[13px] md:text-sm transition-colors mt-3 md:mt-4">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                   <path d="M20.216 6.415l-.132-.666c-.119-.598-.388-1.163-1.001-1.379-.197-.069-.42-.098-.57-.241-.152-.143-.196-.366-.231-.572-.065-.378-.125-.756-.192-1.133-.057-.325-.102-.69-.25-.987-.195-.4-.597-.634-.996-.788a5.723 5.723 0 00-.626-.194c-1-.263-2.05-.36-3.077-.416a25.834 25.834 0 00-3.7.062c-.915.083-1.88.184-2.75.5-.318.116-.646.256-.888.501-.297.302-.393.77-.177 1.146.154.267.415.456.692.58.36.162.737.284 1.123.366 1.075.238 2.189.331 3.287.37 1.218.05 2.437.01 3.65-.118.299-.033.598-.073.896-.119.352-.054.578-.513.474-.834-.124-.383-.457-.531-.834-.473-.466.074-.96.108-1.382.146-1.177.08-2.358.082-3.536.006a22.228 22.228 0 01-1.157-.107c-.086-.01-.18-.025-.258-.036-.243-.036-.484-.08-.724-.13-.111-.027-.111-.185 0-.212h.005c.277-.06.557-.108.838-.147h.002c.131-.009.263-.032.394-.048a25.076 25.076 0 013.426-.12c.674.019 1.347.067 2.017.144l.228.031c.267.04.533.088.798.145.392.085.895.113 1.07.542.055.137.08.288.111.431l.319 1.484a.237.237 0 01-.199.284h-.003c-.037.006-.075.01-.112.015a36.704 36.704 0 01-4.743.295 37.059 37.059 0 01-4.699-.304c-.14-.017-.293-.042-.417-.06-.326-.048-.649-.108-.973-.161-.393-.065-.768-.032-1.123.161-.29.16-.502.451-.399.801.064.217.206.399.374.54.19.159.417.254.67.286.344.043.684.114 1.034.152.48.052.964.088 1.45.116.573.034 1.148.05 1.724.05a39.64 39.64 0 003.488-.213c.398-.045.794-.097 1.19-.156.025-.004.05-.007.074-.012a.652.652 0 01.119-.006c.222.016.472.085.583.28.073.128.067.284.048.427a33.466 33.466 0 01-1.856 7.963c-.162.4-.395.97-.895.97h-.004c-.423 0-.692-.443-.859-.822a24.272 24.272 0 01-1.153-3.322 62.625 62.625 0 01-.57-2.14c-.073-.304-.122-.757-.474-.893-.249-.096-.553-.066-.753.117-.144.131-.217.331-.185.529.08.476.162.95.263 1.422.27 1.26.607 2.503 1.006 3.727.258.79.549 1.63 1.065 2.291.481.617 1.236.877 1.987.72.768-.16 1.337-.78 1.676-1.467a32.87 32.87 0 002.053-8.573l.027-.236c.007-.053.007-.109.007-.164z"/>
                 </svg>
@@ -452,8 +452,8 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Platforma */}
             <div>
-              <h4 className="font-bold text-sm text-foreground mb-3 uppercase tracking-wide">{t("Platforma")}</h4>
-              <ul className="space-y-2 text-sm">
+              <h4 className="font-bold text-xs md:text-sm text-foreground mb-2 md:mb-3 uppercase tracking-wide">{t("Platforma")}</h4>
+              <ul className="space-y-1.5 md:space-y-2 text-[13px] md:text-sm">
                 <li><Link href="/ilmihal" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.ilmihal")}</Link></li>
                 <li><Link href="/kuran" className="text-muted-foreground hover:text-primary transition-colors">{t("Kur'an")}</Link></li>
                 <li><Link href="/kvizovi" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.kvizovi")}</Link></li>
@@ -465,8 +465,8 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Informacije */}
             <div>
-              <h4 className="font-bold text-sm text-foreground mb-3 uppercase tracking-wide">{t("Informacije")}</h4>
-              <ul className="space-y-2 text-sm">
+              <h4 className="font-bold text-xs md:text-sm text-foreground mb-2 md:mb-3 uppercase tracking-wide">{t("Informacije")}</h4>
+              <ul className="space-y-1.5 md:space-y-2 text-[13px] md:text-sm">
                 <li><Link href="/impressum" className="text-muted-foreground hover:text-primary transition-colors">{t("Impressum")}</Link></li>
                 <li><Link href="/uvjeti" className="text-muted-foreground hover:text-primary transition-colors">{t("Uvjeti korištenja")}</Link></li>
                 <li><Link href="/privatnost" className="text-muted-foreground hover:text-primary transition-colors">{t("Pravila privatnosti")}</Link></li>
@@ -474,26 +474,9 @@ export function Layout({ children }: LayoutProps) {
               </ul>
             </div>
 
-            {/* Podrška */}
-            <div>
-              <h4 className="font-bold text-sm text-foreground mb-3 uppercase tracking-wide">{t("Podrška")}</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/kontakt" className="text-muted-foreground hover:text-primary transition-colors">{t("Kontakt")}</Link></li>
-                <li>
-                  <a href="mailto:info@mekteb.net" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
-                    <Mail className="w-3.5 h-3.5" /> info@mekteb.net
-                  </a>
-                </li>
-                <li>
-                  <a href="https://wa.me/387603202010" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
-                    <Phone className="w-3.5 h-3.5" /> +387 60 320 20 10
-                  </a>
-                </li>
-              </ul>
-            </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="mt-5 md:mt-8 pt-4 md:pt-6 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-3 text-[12px] md:text-sm text-muted-foreground">
             <div>© {new Date().getFullYear()} · mekteb.net · {t("footer.platforma")}</div>
             <div>{t("Sva prava zadržana.")}</div>
           </div>
