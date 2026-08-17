@@ -10,7 +10,9 @@ Remote `github` ima hardkodiran personal access token u URL-u koji je istekao i 
 timeout 60 git push "https://x-access-token:${GITHUB_TOKEN}@github.com/sabahuddin/mektebnet.git" main 2>&1 | sed "s/${GITHUB_TOKEN}/***/g"
 ```
 
-**Why:** Korisnik je potvrdio da `GITHUB_TOKEN` radi a token u remote URL-u ne. Ne troši vrijeme na askpass. Ne mijenjaj remote config (korisnik ga drži tako namjerno). Uvijek piped kroz `sed` da token ne procuri u log.
+**Why:** Korisnik je potvrdio da `GITHUB_TOKEN` radi a token u remote URL-u ne. Ne mijenjaj remote config (korisnik ga drži tako namjerno). Uvijek pazi da token ne procuri u log.
+
+Ako `http.extraheader` vrati `invalid credentials`, push radi kroz privremeni `GIT_ASKPASS` helper koji vraća `x-access-token` kao username i čita `GITHUB_TOKEN` samo za password; poslije obriši helper.
 
 ## Git blokada u glavnom agentu (build mode)
 Okruženje sada odbija SVE destruktivne git komande u glavnom agentu — uključujući `git commit` (čak i u lancu `git add && git commit && git push <url>`, blokada pukne na commitu). NIKAD ne pokušavaj ručni `git commit`; lokalni commit se radi automatski kao Replit checkpoint na kraju turna.
