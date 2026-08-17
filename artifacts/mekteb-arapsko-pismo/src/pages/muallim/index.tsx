@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
-  Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
+  User, Users, GraduationCap, CalendarCheck, BookMarked, ChevronRight, Plus,
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
@@ -514,6 +514,7 @@ export default function MuallimPanel() {
   const [kalendarMode, setKalendarMode] = useState<"sve" | "grupa">("sve");
 
   const [statGrupaId, setStatGrupaId] = useState<number | null>(null);
+  const [statUcenikId, setStatUcenikId] = useState<number | null>(null);
   // Drill-down u statistici: Mekteb → Muallim → Grupa → Učenik.
   // statMuallimId je postavljen samo kad glavni muallim s mektebskog nivoa
   // otvori pojedinog muallima; za vlastite grupe nivo muallima je korijen.
@@ -1383,8 +1384,8 @@ export default function MuallimPanel() {
   // Mektebski nivo postoji samo glavnom muallimu kad NIJE sužen na jednog
   // muallima ("Moje grupe" i pregled drugog muallima počinju od nivoa muallima).
   const statMektebNivoDostupan = mektebMeta.isGlavni && !scopedMuallimId;
-  const statNivo: "mekteb" | "muallim" | "grupa" =
-    statGrupaId ? "grupa" : (statMektebNivoDostupan && !statMuallimId ? "mekteb" : "muallim");
+  const statNivo: "mekteb" | "muallim" | "grupa" | "ucenik" =
+    statUcenikId ? "ucenik" : statGrupaId ? "grupa" : (statMektebNivoDostupan && !statMuallimId ? "mekteb" : "muallim");
   // Podaci nivoa muallima: kad je glavni ušao u tuđeg muallima, dolaze iz
   // mektebskog agregata; inače iz vlastitog (scoped) agregata.
   const statMuallimRed = statMuallimId != null
@@ -1442,18 +1443,28 @@ export default function MuallimPanel() {
     setStatMuallimId(muallimId);
     setStatGrupaId(null);
     setStatData(null);
+    setStatUcenikId(null);
   };
   const otvoriStatGrupu = (grupaId: number) => {
     setStatGrupaId(grupaId);
+    setStatUcenikId(null);
+  };
+  const otvoriStatUcenika = (ucenikId: number) => {
+    setStatUcenikId(ucenikId);
   };
   const nazadNaStatMekteb = () => {
     setStatMuallimId(null);
     setStatGrupaId(null);
     setStatData(null);
+    setStatUcenikId(null);
   };
   const nazadNaStatMuallima = () => {
     setStatGrupaId(null);
     setStatData(null);
+    setStatUcenikId(null);
+  };
+  const nazadNaStatGrupu = () => {
+    setStatUcenikId(null);
   };
 
   return (
@@ -2245,22 +2256,38 @@ export default function MuallimPanel() {
                           data-testid="btn-stat-muallim">
                           {statMuallimNaziv}
                         </button>
-                        {statNivo === "grupa" && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                        {(statNivo === "grupa" || statNivo === "ucenik") && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                       </>
                     )}
-                    {statNivo === "grupa" && (
-                      <span className="rounded-xl px-3 py-1.5 font-bold border bg-primary text-primary-foreground border-primary"
-                        data-testid="btn-stat-grupa">
-                        {statGrupaNaziv}
-                      </span>
+                    {(statNivo === "grupa" || statNivo === "ucenik") && (
+                      <>
+                        <button
+                          onClick={nazadNaStatGrupu}
+                          className={`rounded-xl px-3 py-1.5 font-bold border transition-all ${statNivo === "grupa" ? "bg-primary text-primary-foreground border-primary" : "bg-primary/5 text-primary border-primary/20 hover:bg-primary/10"}`}
+                          data-testid="btn-stat-grupa">
+                          {statGrupaNaziv}
+                        </button>
+                        {statNivo === "ucenik" && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                      </>
                     )}
+                    {statNivo === "ucenik" && (() => {
+                      const u = statData?.ucenici.find(u => u.id === statUcenikId);
+                      return u ? (
+                        <span className="rounded-xl px-3 py-1.5 font-bold border bg-primary text-primary-foreground border-primary"
+                          data-testid="btn-stat-ucenik">
+                          {u.ime}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     {statNivo === "mekteb"
                       ? t("Klikni na muallima da vidiš njegove grupe.")
                       : statNivo === "muallim"
                         ? t("Klikni na grupu da vidiš učenike.")
-                        : t("Klikni na učenika za detaljan profil.")}
+                        : statNivo === "grupa"
+                          ? t("Klikni na učenika za detaljan profil.")
+                          : t("Detaljan pregled učenika.")}
                   </p>
                 </div>
 
@@ -2484,7 +2511,157 @@ export default function MuallimPanel() {
                       <p className="font-bold text-foreground">{t("Nema podataka za prikaz")}</p>
                     </div>
                   )
-                ) : statLoading ? (
+                ) : statNivo === "ucenik" && statData ? (() => {
+                  const u = statData.ucenici.find(u => u.id === statUcenikId);
+                  if (!u) return (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-border/50">
+                      <p className="font-bold text-foreground">{t("Učenik nije pronađen")}</p>
+                    </div>
+                  );
+                  return (
+                    <div className="space-y-6">
+                      {/* Zaglavlje */}
+                      <div className="flex items-center justify-between flex-wrap gap-3">
+                        <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
+                          <User className="w-5 h-5 text-primary" />
+                          {u.ime}
+                        </h3>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Button
+                            onClick={() => setLocation(`/muallim/ucenik/${u.id}`)}
+                            className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2">
+                            <Eye className="w-4 h-4" /> {t("Puni profil")}
+                          </Button>
+                          <button onClick={nazadNaStatGrupu}
+                            className="text-sm text-muted-foreground hover:text-foreground font-medium">
+                            {t("← Nazad na grupu")}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Karte — ključni pokazatelji */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className={`border border-border/50 rounded-2xl p-5 ${u.prisustvoPct !== null && u.prisustvoPct >= 80 ? "bg-emerald-50" : u.prisustvoPct !== null && u.prisustvoPct >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
+                          <CalendarCheck className={`w-5 h-5 mb-2 ${u.prisustvoPct !== null && u.prisustvoPct >= 80 ? "text-emerald-600" : u.prisustvoPct !== null && u.prisustvoPct >= 50 ? "text-amber-600" : "text-red-500"}`} />
+                          <div className={`text-2xl font-extrabold ${u.prisustvoPct !== null && u.prisustvoPct >= 80 ? "text-emerald-600" : u.prisustvoPct !== null && u.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                            {u.prisustvoPct !== null ? `${u.prisustvoPct}%` : "—"}
+                          </div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Prisustvo")}</div>
+                          <div className="text-xs text-muted-foreground/70 mt-1">
+                            {u.prisutanCount}P · {u.odsutanCount}O · {u.zakasnioCount}Z · {u.opravdanCount}OP
+                          </div>
+                        </div>
+                        <div className="bg-violet-50 border border-border/50 rounded-2xl p-5">
+                          <Star className="w-5 h-5 text-violet-600 mb-2" />
+                          <div className="text-2xl font-extrabold text-violet-600">
+                            {u.ukupnaProsjecna !== null ? u.ukupnaProsjecna : "—"}
+                          </div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Prosj. ocjena")}</div>
+                          {u.brojOcjena > 0 && <div className="text-xs text-muted-foreground/70 mt-1">{u.brojOcjena} {t("ocjena")}</div>}
+                        </div>
+                        <div className="bg-amber-50 border border-border/50 rounded-2xl p-5">
+                          <Award className="w-5 h-5 text-amber-600 mb-2" />
+                          <div className="text-2xl font-extrabold text-amber-600">{u.ukupnoBodova || 0}</div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Bodova")}</div>
+                          {u.kvizCount > 0 && (
+                            <div className="text-xs text-muted-foreground/70 mt-1">
+                              {u.kvizCount} {t("kvizova")}
+                              {u.kvizProsjecniProcenat !== null && ` · ${u.kvizProsjecniProcenat}%`}
+                            </div>
+                          )}
+                        </div>
+                        <div className="bg-amber-50 border border-border/50 rounded-2xl p-5">
+                          <Sparkles className="w-5 h-5 text-amber-500 mb-2" />
+                          <div className="flex items-baseline gap-3">
+                            <span className="text-2xl font-extrabold text-amber-600">★ {u.zvjezdicePozitivne ?? 0}</span>
+                            <span className="text-2xl font-extrabold text-slate-800">★ {u.zvjezdiceNegativne ?? 0}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground font-medium">{t("Žute / crne zvjezdice")}</div>
+                        </div>
+                      </div>
+
+                      {/* Prisustvo po datumima */}
+                      {Object.keys(u.prisustvoPoDatumu).length > 0 && (
+                        <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+                          <div className="px-4 py-3 bg-muted/30 border-b border-border/30">
+                            <h4 className="font-extrabold text-foreground flex items-center gap-2">
+                              <CalendarCheck className="w-4 h-4 text-primary" /> {t("Prisustvo po datumima")}
+                            </h4>
+                            <p className="text-xs text-muted-foreground mt-1">{t("P = Prisutan, O = Odsutan, Z = Zakasnio, OP = Opravdan")}</p>
+                          </div>
+                          <div className="p-4 flex flex-wrap gap-2">
+                            {statData.svaDatumi.map(d => {
+                              const st = u.prisustvoPoDatumu[d];
+                              if (!st) return null;
+                              const cls = st === "prisutan" ? "bg-emerald-500 text-white" : st === "odsutan" ? "bg-red-500 text-white" : st === "zakasnio" ? "bg-amber-400 text-white" : "bg-blue-400 text-white";
+                              const label = st === "prisutan" ? "P" : st === "odsutan" ? "O" : st === "zakasnio" ? "Z" : "OP";
+                              const parts = d.split("-");
+                              return (
+                                <div key={d} className="flex flex-col items-center gap-0.5">
+                                  <span className={`inline-block w-8 h-8 leading-8 rounded-md text-xs font-bold text-center ${cls}`}>{label}</span>
+                                  <span className="text-[10px] text-muted-foreground font-medium">{parts[2]}.{parts[1]}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Ocjene po kategorijama */}
+                      {Object.keys(u.prosjecneOcjene).length > 0 && (
+                        <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+                          <div className="px-4 py-3 bg-muted/30 border-b border-border/30">
+                            <h4 className="font-extrabold text-foreground flex items-center gap-2">
+                              <Star className="w-4 h-4 text-violet-600" /> {t("Ocjene po kategorijama")}
+                            </h4>
+                          </div>
+                          <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {Object.entries(u.prosjecneOcjene).map(([kat, ocj]) => (
+                              <div key={kat} className="bg-muted/20 rounded-xl p-3">
+                                <div className="text-xs text-muted-foreground font-medium mb-1">{kat}</div>
+                                <div className={`text-xl font-extrabold ${ocj >= 4 ? "text-emerald-600" : ocj >= 2.5 ? "text-amber-600" : "text-red-600"}`}>{ocj}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Prisustvo po mjesecima */}
+                      {u.mjesecnoStats.length > 0 && (
+                        <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+                          <div className="px-4 py-3 bg-muted/30 border-b border-border/30">
+                            <h4 className="font-extrabold text-foreground flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-primary" /> {t("Prisustvo po mjesecima")}
+                            </h4>
+                          </div>
+                          <div className="p-4 space-y-3">
+                            {u.mjesecnoStats.map(m => {
+                              const parts = m.mjesec.split("-");
+                              const naziv = `${MJESEC_NAZIVI[parts[1]] || parts[1]} ${parts[0]}`;
+                              return (
+                                <div key={m.mjesec} className="flex items-center gap-4">
+                                  <span className="w-24 text-sm font-bold text-foreground">{naziv}</span>
+                                  <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                                    {m.pct !== null && (
+                                      <div className={`h-full rounded-full ${m.pct >= 80 ? "bg-emerald-500" : m.pct >= 50 ? "bg-amber-500" : "bg-red-500"}`}
+                                        style={{ width: `${m.pct}%` }} />
+                                    )}
+                                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground/70">
+                                      {m.prisutan}/{m.ukupno}
+                                    </span>
+                                  </div>
+                                  <span className={`w-12 text-right font-extrabold text-sm ${m.pct !== null && m.pct >= 80 ? "text-emerald-600" : m.pct !== null && m.pct >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                                    {m.pct !== null ? `${m.pct}%` : "—"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })() : statLoading ? (
                   <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
                 ) : statData ? (
                   <div className="space-y-6">
@@ -2576,7 +2753,8 @@ export default function MuallimPanel() {
                                 {statData.ucenici.map((u, i) => (
                                   <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
                                     className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
-                                    onClick={() => window.location.href = `${import.meta.env.BASE_URL}muallim/ucenik/${u.id}`}>
+                                    onClick={() => otvoriStatUcenika(u.id)}
+                                    data-testid={`row-stat-ucenik-${u.id}`}>
                                     <td className="px-3 py-3 font-bold text-foreground whitespace-nowrap">
                                       <div className="flex items-center gap-2">
                                         {u.ime}
