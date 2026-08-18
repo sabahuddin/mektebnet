@@ -381,10 +381,10 @@ export default function MuallimTutorijalPage() {
             icon={Users}
             accent="bg-[#3d8a73]"
             click={<><strong>Otvori svaku grupu → Dodaj učenike.</strong> Za veći broj djece koristi masovni unos. Za pojedinačno dijete možeš koristiti postojeći obrazac.</>}
-            action={<>U tekstualno polje upiši svako dijete u novi red. Za roditeljski nalog dodaj znak <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">|</code> pa ime roditelja.</>}
-            why={<>Masovni unos štedi vrijeme, a roditeljska veza odmah otvara praćenje napretka kod kuće. Svako dijete dobija svoj nalog, pa evidencija ostaje vezana za pravu osobu.</>}
+            action={<>U tekstualno polje upiši svako dijete u novi red. Kada roditelj ima više djece, prvi put ga unesi uz samo jedno dijete pomoću znaka <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">|</code>, a kod njegove braće i sestara kasnije pronađi postojeći roditeljski nalog i poveži ga.</>}
+            why={<>Masovni unos štedi vrijeme, a jedna roditeljska veza omogućava roditelju da prati svu svoju djecu iz jednog naloga. Ako istog roditelja kreiraš ponovo uz svako dijete, nastaju duplikati i porodica dobija nepregledne pristupe.</>}
             next={<>Nakon kreiranja vidiš korisnička imena i šifre, možeš štampati pristupne kartice i nastaviti s pregledom sastava grupe.</>}
-            important={<>Za oko 100 djece praktičan raspored je 16–17 učenika po grupi. Pristupne podatke uruči sigurno, pojedinačno i bez javnog dijeljenja.</>}
+            important={<>Za oko 100 djece praktičan raspored je 16–17 učenika po grupi. <strong>Najbolje je da glavni muallim prvi unese svu djecu i roditelje:</strong> tako može odmah prepoznati porodice sa više djece, napraviti roditelja samo jednom i povezati ga sa svakim narednim djetetom. Pristupne podatke uruči sigurno, pojedinačno i bez javnog dijeljenja.</>}
           >
             <p>
               Otvori prvu grupu i izaberi <strong>Dodaj učenike</strong>. U polje za masovni unos ne upisuješ sve u jednu rečenicu: <strong>svako ime ide u novi red</strong>. Za naš džemat možemo krenuti sa šest blokova od približno 16 ili 17 imena, pa po potrebi prebaciti postojeće učenike ako se grupe kasnije ujednačavaju.
@@ -397,6 +397,17 @@ export default function MuallimTutorijalPage() {
             <p>
               Ako dijete već postoji u mektebu, ne pravi novi nalog. Izaberi <strong>Dodaj postojećeg</strong> i poveži ga s ovom grupom. Kada je grupa popunjena, koristi <strong>Printaj kartice</strong> za čuvanje i štampanje pristupnih podataka.
             </p>
+            <div className="mt-5 rounded-2xl border border-[#e8c98d] bg-[#fff8e9] p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <UserCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#b46d38]" />
+                <div>
+                  <p className="text-sm font-black text-[#7b4b27]">Jedna porodica, jedan roditeljski nalog</p>
+                  <p className="mt-1 text-sm leading-6 text-[#6f5136]">
+                    Na primjer, ako Senad Hasić ima Aminu i Ahmeda, roditelja <strong>Senad Hasić</strong> kreiraš samo uz prvo dijete. Kod drugog djeteta ga pronađeš među postojećim roditeljima i samo povežeš — ne upisuješ ga ponovo kao novog korisnika.
+                  </p>
+                </div>
+              </div>
+            </div>
           </StepFrame>
 
           <StepFrame
