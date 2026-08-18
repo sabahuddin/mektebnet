@@ -46,6 +46,39 @@ if (Number.isNaN(port) || port <= 0) {
 // below (a separate concern) will remain.
 async function runResidualSchema() {
   try {
+    // Interaktivni blokovi u lekciji: pokušaji se čuvaju odvojeno od nagrada i
+    // zvjezdica, da muallim dobije pedagoški pregled bez rangiranja učenika.
+    // Tabela je u Drizzle schemi, ali postojeće instalacije dobijaju je ovim
+    // idempotentnim korakom dok se historijska baseline migracija ne proširi.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS interaktivni_blok_pokusaji (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        lekcija_id INTEGER NOT NULL,
+        blok_id VARCHAR(100) NOT NULL,
+        pitanje_index INTEGER NOT NULL,
+        pitanje_tekst TEXT NOT NULL,
+        attempt_no INTEGER NOT NULL,
+        tacno BOOLEAN NOT NULL,
+        vrijeme_sekundi INTEGER NOT NULL DEFAULT 0,
+        pomoc_koristena BOOLEAN NOT NULL DEFAULT FALSE,
+        ponovo_procitao BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS interaktivni_blok_user_lesson_idx
+      ON interaktivni_blok_pokusaji (user_id, lekcija_id, blok_id, created_at);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS interaktivni_blok_lesson_question_idx
+      ON interaktivni_blok_pokusaji (lekcija_id, blok_id, pitanje_index, created_at);
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS interaktivni_blok_user_question_attempt_unique_idx
+      ON interaktivni_blok_pokusaji (user_id, lekcija_id, blok_id, pitanje_index, attempt_no);
+    `);
+
     // 4. uslov anti-cheat gate-a (mini-kviz "Provjeri znanje"): timestamp
     // kada je učenik tačno odgovorio na sva pitanja iz `kvizPitanja` polja
     // lekcije. Kolona je dodata u Drizzle schemu (`korisnikNapredakTable.quizPassedAt`)

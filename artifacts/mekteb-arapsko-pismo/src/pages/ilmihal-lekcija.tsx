@@ -743,6 +743,9 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
   const [done, setDone] = useState(false);
   const [open, setOpen] = useState(!!defaultOpen);
   const [editOpen, setEditOpen] = useState(false);
+  const [pomocKoristena, setPomocKoristena] = useState(false);
+  const [ponovoProcitao, setPonovoProcitao] = useState(false);
+  const questionStartedAtRef = useRef(Date.now());
   // Brojač koji se inkrementira na "Ponovi" — koristi se kao dependency u
   // useMemo da re-shuffle-ujemo pitanja i opcije pri svakom novom pokušaju.
   const [shuffleSeed, setShuffleSeed] = useState(0);
@@ -752,6 +755,7 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
 
   const reset = () => {
     setCurrent(0); setSelected(null); setScore(0); setDone(false);
+    setPomocKoristena(false); setPonovoProcitao(false);
     setShuffleSeed(s => s + 1);
   };
 
@@ -759,11 +763,12 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
   // useMemo je nužan da se opcije ne re-shuffle-uju na svaki render (inače bi
   // se redoslijed mijenjao usred odgovaranja). Re-shuffle dolazi samo kad se
   // promijeni `pitanja` prop ili kad učenik klikne "Ponovi" (shuffleSeed++).
-  const safePitanja: LekcijaKvizPitanje[] = React.useMemo(() => (pitanja || [])
-    .map(p => ({
+  const safePitanja: Array<LekcijaKvizPitanje & { questionIndex: number }> = React.useMemo(() => (pitanja || [])
+    .map((p, questionIndex) => ({
       question: typeof p?.question === "string" ? p.question : "",
       options: Array.isArray(p?.options) ? p.options.filter(o => typeof o === "string" && o.trim().length > 0) : [],
       answer: typeof p?.answer === "string" ? p.answer : "",
+      questionIndex,
     }))
     .filter(p => p.question.trim().length > 0 && p.options.length >= 2)
     .map(p => ({ ...p, options: [...p.options].sort(() => Math.random() - 0.5) })),
@@ -774,6 +779,32 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
   const q = safePitanja[safeIdx];
   const canEdit = !!(isAdmin && token && lekcijaId);
   const isPerfect = done && safePitanja.length > 0 && score === safePitanja.length;
+
+  useEffect(() => {
+    questionStartedAtRef.current = Date.now();
+    setPomocKoristena(false);
+    setPonovoProcitao(false);
+  }, [safeIdx, shuffleSeed]);
+
+  const evidentirajOdgovor = (odabraniOdgovor: string) => {
+    if (!token || !lekcijaId) return;
+    apiRequest("POST", "/content/ilmihal-blok-pokusaj", {
+      lekcijaId,
+      blokId: "provjeri-znanje",
+      pitanjeIndex: q.questionIndex,
+      odabraniOdgovor,
+      vrijemeSekundi: Math.round((Date.now() - questionStartedAtRef.current) / 1000),
+      pomocKoristena,
+      ponovoProcitao,
+    }, token).catch(() => {
+      // Pedagoška evidencija ne prekida učenje ako je mreža privremeno nedostupna.
+    });
+  };
+
+  const procitajPonovo = () => {
+    setPonovoProcitao(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Fire onPassed TAČNO jednom kad učenik završi kviz sa svim tačnim odgovorima.
   // Roditelj koristi ovo da: (a) POST-uje quizPassed u backend, (b) lokalno
@@ -883,12 +914,30 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
                 <div>
                   <p className="text-xs text-muted-foreground font-bold mb-3">{t("Pitanje")} {safeIdx + 1}/{safePitanja.length}</p>
                   <p className="font-bold text-foreground mb-4 leading-relaxed">{q.question}</p>
+                  {!selected && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Button type="button" size="sm" variant="outline" onClick={() => setPomocKoristena(true)}
+                        className="rounded-xl text-xs" data-testid="button-kviz-pomoc">
+                        {pomocKoristena ? t("Pomoć je otvorena") : t("Treba ti pomoć?")}
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={procitajPonovo}
+                        className="rounded-xl text-xs text-teal-800" data-testid="button-kviz-procitaj-ponovo">
+                        {t("Pročitaj lekciju ponovo")}
+                      </Button>
+                    </div>
+                  )}
+                  {pomocKoristena && !selected && (
+                    <p className="mb-4 rounded-xl bg-teal-100/70 px-3 py-2 text-xs font-medium text-teal-900">
+                      {t("Vrati se na dio lekcije iznad, pronađi objašnjenje i onda odgovori svojim riječima.")}
+                    </p>
+                  )}
                   <div className="flex flex-col gap-2">
                     {q.options.map((opt) => (
                       <button key={opt} disabled={!!selected}
                         onClick={() => {
                           setSelected(opt);
                           if (opt === q.answer) setScore(s => s + 1);
+                          evidentirajOdgovor(opt);
                         }}
                         className={`text-left px-4 py-3 rounded-xl border font-medium text-sm transition-all ${
                           !selected

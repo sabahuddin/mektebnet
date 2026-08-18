@@ -32,6 +32,34 @@ export const pogresniOdgovoriTable = pgTable("pogresni_odgovori", {
 
 export type PogresniOdgovor = typeof pogresniOdgovoriTable.$inferSelect;
 
+// === INTERAKTIVNI BLOKOVI U LEKCIJAMA ==========================================
+// Pedagoška evidencija za "Provjeri znanje" i buduće ugrađene blokove. Svaki
+// odgovor je zaseban zapis: muallim iz njega vidi obrazac učenja, a ne rang
+// djece. Nema bodova, hasanata ni zvjezdica u ovoj tabeli.
+export const interaktivniBlokPokusajiTable = pgTable("interaktivni_blok_pokusaji", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  lekcijaId: integer("lekcija_id").notNull(),
+  blokId: varchar("blok_id", { length: 100 }).notNull(),
+  pitanjeIndex: integer("pitanje_index").notNull(),
+  pitanjeTekst: text("pitanje_tekst").notNull(),
+  attemptNo: integer("attempt_no").notNull(),
+  tacno: boolean("tacno").notNull(),
+  vrijemeSekundi: integer("vrijeme_sekundi").notNull().default(0),
+  pomocKoristena: boolean("pomoc_koristena").notNull().default(false),
+  ponovoProcitao: boolean("ponovo_procitao").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userLessonBlockIdx: index("interaktivni_blok_user_lesson_idx")
+    .on(t.userId, t.lekcijaId, t.blokId, t.createdAt),
+  lessonQuestionIdx: index("interaktivni_blok_lesson_question_idx")
+    .on(t.lekcijaId, t.blokId, t.pitanjeIndex, t.createdAt),
+  userQuestionAttemptUnique: uniqueIndex("interaktivni_blok_user_question_attempt_unique_idx")
+    .on(t.userId, t.lekcijaId, t.blokId, t.pitanjeIndex, t.attemptNo),
+}));
+
+export type InteraktivniBlokPokusaj = typeof interaktivniBlokPokusajiTable.$inferSelect;
+
 // === MISIJE ====================================================================
 // Definicija misije (dnevna ili sedmična). Evaluator čita postojeće podatke
 // (lekcije, kvizovi, H5P, popravi-saće) i računa progress on-the-fly za
@@ -161,11 +189,13 @@ export const medenaVidjenaPitanjaTable = pgTable("medena_vidjena_pitanja", {
 export type MedenaVidjenoPitanje = typeof medenaVidjenaPitanjaTable.$inferSelect;
 
 export const insertPogresniOdgovorSchema = createInsertSchema(pogresniOdgovoriTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertInteraktivniBlokPokusajSchema = createInsertSchema(interaktivniBlokPokusajiTable).omit({ id: true, createdAt: true });
 export const insertMisijaDefinicijaSchema = createInsertSchema(misijaDefinicijaTable).omit({ id: true, createdAt: true });
 export const insertMisijaProgressSchema = createInsertSchema(misijaProgressTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertIgraPitanjeSchema = createInsertSchema(igraPitanjaTable).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertPogresniOdgovor = z.infer<typeof insertPogresniOdgovorSchema>;
+export type InsertInteraktivniBlokPokusaj = z.infer<typeof insertInteraktivniBlokPokusajSchema>;
 export type InsertMisijaDefinicija = z.infer<typeof insertMisijaDefinicijaSchema>;
 export type InsertMisijaProgress = z.infer<typeof insertMisijaProgressSchema>;
 export type InsertIgraPitanje = z.infer<typeof insertIgraPitanjeSchema>;

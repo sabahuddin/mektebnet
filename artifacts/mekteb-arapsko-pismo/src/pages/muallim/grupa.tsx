@@ -95,6 +95,32 @@ interface RoditeljVeza {
   status: string;
 }
 
+interface InteraktivniPregledGrupe {
+  ukupnoUcenika: number;
+  ukupnoPokusaja: number;
+  prosjekTacnosti: number | null;
+  pitanja: Array<{
+    lekcijaId: number;
+    lekcijaNaslov: string;
+    pitanjeIndex: number;
+    pitanjeTekst: string;
+    brojPokusaja: number;
+    netacniPokusaji: number;
+    procenatTacnih: number;
+    pomocBroj: number;
+    tacnoNakonPonovnogCitanja: number;
+    prosjekVrijemeSekundi: number;
+  }>;
+  ucenici: Array<{
+    id: number;
+    displayName: string;
+    brojPokusaja: number;
+    procenatTacnih: number | null;
+    pomocBroj: number;
+    tacnoNakonPonovnogCitanja: number;
+  }>;
+}
+
 export default function GrupaPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -110,6 +136,7 @@ export default function GrupaPage() {
   const [sviStudenti, setSviStudenti] = useState<Ucenik[]>([]);
   const [sveGrupe, setSveGrupe] = useState<Grupa[]>([]);
   const [lekcijeStatus, setLekcijeStatus] = useState<Map<number, LekcijaStatus>>(new Map());
+  const [interaktivniPregled, setInteraktivniPregled] = useState<InteraktivniPregledGrupe | null>(null);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -192,10 +219,11 @@ export default function GrupaPage() {
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
       apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
       apiRequest<LekcijaStatus[]>("GET", `/muallim/grupa/${grupaId}/lekcije-status`, undefined, token).catch(() => []),
+      apiRequest<InteraktivniPregledGrupe>("GET", `/muallim/grupa/${grupaId}/interaktivni-blokovi`, undefined, token).catch(() => null),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<any[]>("GET", `/muallim/grupa/${grupaId}/zvjezdice-summary`, undefined, token).catch(() => []),
       apiRequest<{id:number;tip:string;naziv:string}[]>("GET", "/muallim/zvjezdice-kategorije", undefined, token).catch(() => []),
-    ]).then(([grupe, ucenici, status, lekcije, zvData, kategorije]) => {
+    ]).then(([grupe, ucenici, status, interaktivni, lekcije, zvData, kategorije]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
       setSekundarniMuallimi(g?.sekundarniMuallimi ?? []);
@@ -207,6 +235,7 @@ export default function GrupaPage() {
       setSviStudenti(ucenici);
       setStudentiGrupe(ucenici.filter(u => (u.profil as any)?.grupaId === grupaId || (u as any).grupaId === grupaId));
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
+      setInteraktivniPregled(interaktivni);
       setIlmihalLekcije(lekcije);
       setZvjezdiceSummary(new Map((zvData as any[]).map((r: any) => [
         r.ucenik_id, { pozitivne: parseInt(r.pozitivne ?? 0) || 0, negativne: parseInt(r.negativne ?? 0) || 0 },
@@ -756,6 +785,52 @@ export default function GrupaPage() {
           )}
         </div>
 
+        <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-grupe">
+          <div className="px-5 py-4 bg-teal-50/70 border-b border-teal-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-extrabold text-teal-950 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-teal-700" /> {t("Gdje učenici zapinju u lekcijama")}
+              </h2>
+              <p className="text-xs text-teal-800 mt-1">
+                {t("Ovo je privatni pregled učenja, odvojen od ocjena i zvjezdica.")}
+              </p>
+            </div>
+            {interaktivniPregled?.ukupnoPokusaja ? (
+              <div className="flex gap-3 text-xs font-bold text-teal-900">
+                <span>{interaktivniPregled.ukupnoPokusaja} {t("pokušaja")}</span>
+                <span>{interaktivniPregled.prosjekTacnosti}% {t("tačno")}</span>
+              </div>
+            ) : null}
+          </div>
+          {!interaktivniPregled?.ukupnoPokusaja ? (
+            <p className="px-5 py-6 text-sm text-muted-foreground">
+              {t("Kad učenici odgovore na pitanja „Provjeri znanje“ u lekciji, ovdje ćeš vidjeti gdje im treba dodatno objašnjenje.")}
+            </p>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {interaktivniPregled.pitanja.slice(0, 5).map(p => (
+                <div key={`${p.lekcijaId}-${p.pitanjeIndex}`} className="px-5 py-4">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-bold text-teal-700 mb-1">{p.lekcijaNaslov}</p>
+                      <p className="font-bold text-foreground">{p.pitanjeTekst}</p>
+                    </div>
+                    <span className={`h-fit rounded-full px-2.5 py-1 text-xs font-extrabold ${p.procenatTacnih >= 80 ? "bg-emerald-100 text-emerald-800" : p.procenatTacnih >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>
+                      {p.procenatTacnih}% {t("tačno")}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("{n} pogrešnih od {ukupno} pokušaja", { n: String(p.netacniPokusaji), ukupno: String(p.brojPokusaja) })}
+                    {` · ${t("prosječno: {n} s", { n: String(p.prosjekVrijemeSekundi) })}`}
+                    {p.pomocBroj > 0 ? ` · ${t("pomoć: {n}", { n: String(p.pomocBroj) })}` : ""}
+                    {p.tacnoNakonPonovnogCitanja > 0 ? ` · ${t("tačno nakon ponovnog čitanja: {n}", { n: String(p.tacnoNakonPonovnogCitanja) })}` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         {showBulkAdd && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             className="bg-white border border-border/50 rounded-2xl p-6 mb-6">
@@ -892,6 +967,7 @@ export default function GrupaPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-b-2xl">
               {studentiGrupe.map((u, i) => {
                 const settingsOpen = settingsOpenId === u.id;
+                const ucenje = interaktivniPregled?.ucenici.find(x => x.id === u.id);
                 return (
                   <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                     className="relative bg-white border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all">
@@ -965,6 +1041,18 @@ export default function GrupaPage() {
                         )}
                       </div>
                     </div>
+
+                    {ucenje?.brojPokusaja ? (
+                      <Link href={`/muallim/ucenik/${u.id}`} className="mb-3 block rounded-xl border border-teal-100 bg-teal-50/60 px-3 py-2 hover:bg-teal-50 transition-colors">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wide text-teal-800">{t("Učenje u lekcijama")}</p>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-teal-950">
+                          <span><strong>{ucenje.procenatTacnih}%</strong> {t("tačno")}</span>
+                          <span>{ucenje.brojPokusaja} {t("pokušaja")}</span>
+                          {ucenje.pomocBroj > 0 && <span>{t("pomoć: {n}", { n: String(ucenje.pomocBroj) })}</span>}
+                          {ucenje.tacnoNakonPonovnogCitanja > 0 && <span>{t("nakon čitanja: {n}", { n: String(ucenje.tacnoNakonPonovnogCitanja) })}</span>}
+                        </div>
+                      </Link>
+                    ) : null}
 
                     {/* Akcije: Ocjene, Zadaća, Zvjezdice */}
                     <div className="grid grid-cols-3 gap-1">

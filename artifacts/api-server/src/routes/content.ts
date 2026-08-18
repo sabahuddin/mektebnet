@@ -17,8 +17,9 @@ import {
   etapaPolaganjaTable,
   krunisanjaTable,
   studentKrunisanjaTable,
+  interaktivniBlokPokusajiTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, gte, lte, lt, sql, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte, lt, sql, inArray, count } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { sendEmail } from "../lib/email.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
@@ -40,6 +41,76 @@ import {
 const router = Router();
 
 const SVI_JEZICI = ["bs", "sq", "de", "en", "tr", "ar"];
+
+type LekcijaKvizPitanje = { question?: unknown; options?: unknown; answer?: unknown };
+
+// POST /api/content/ilmihal-blok-pokusaj
+// Evidencija odgovora u ugrađenom bloku "Provjeri znanje". Tačnost i tekst
+// pitanja potvrđuje server iz lekcije; klijent šalje samo izbor i UX signale.
+// Ovo namjerno ne utiče na hasanate, bedževe niti zvjezdice.
+router.post("/ilmihal-blok-pokusaj", requireAuth, async (req, res) => {
+  try {
+    if (req.user?.role !== "ucenik") {
+      res.status(403).json({ error: "Samo učenik može evidentirati pokušaj" }); return;
+    }
+    const lekcijaId = Number(req.body?.lekcijaId);
+    const pitanjeIndex = Number(req.body?.pitanjeIndex);
+    const blokId = typeof req.body?.blokId === "string" ? req.body.blokId : "";
+    const odabraniOdgovor = typeof req.body?.odabraniOdgovor === "string" ? req.body.odabraniOdgovor : "";
+    const vrijemeSekundi = Math.max(0, Math.min(60 * 60, Math.round(Number(req.body?.vrijemeSekundi) || 0)));
+    const pomocKoristena = req.body?.pomocKoristena === true;
+    const ponovoProcitao = req.body?.ponovoProcitao === true;
+
+    if (!Number.isInteger(lekcijaId) || lekcijaId <= 0 || !Number.isInteger(pitanjeIndex) || pitanjeIndex < 0 ||
+      blokId !== "provjeri-znanje" || !odabraniOdgovor.trim()) {
+      res.status(400).json({ error: "Neispravan pokušaj interaktivnog bloka" }); return;
+    }
+
+    const [lekcija] = await db.select({
+      kvizPitanja: ilmihalLekcijeTable.kvizPitanja,
+    }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
+    const pitanja = Array.isArray(lekcija?.kvizPitanja) ? lekcija.kvizPitanja as LekcijaKvizPitanje[] : [];
+    const pitanje = pitanja[pitanjeIndex];
+    if (!pitanje || typeof pitanje.question !== "string" || typeof pitanje.answer !== "string" ||
+      !Array.isArray(pitanje.options) || !pitanje.options.includes(odabraniOdgovor)) {
+      res.status(400).json({ error: "Pitanje više nije dostupno" }); return;
+    }
+    const pitanjeTekst = pitanje.question;
+    const tacanOdgovor = pitanje.answer;
+
+    const tacno = odabraniOdgovor === tacanOdgovor;
+    // Serijalizuje brojač pokušaja za baš ovo pitanje. Bez advisory lock-a dva
+    // paralelna taba bi oba mogla pročitati isti COUNT i dobiti isti broj.
+    const lockKey = `${req.user.userId}:${lekcijaId}:${blokId}:${pitanjeIndex}`;
+    const pokusaj = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
+      const broj = await tx.select({ value: count() }).from(interaktivniBlokPokusajiTable)
+        .where(and(
+          eq(interaktivniBlokPokusajiTable.userId, req.user!.userId),
+          eq(interaktivniBlokPokusajiTable.lekcijaId, lekcijaId),
+          eq(interaktivniBlokPokusajiTable.blokId, blokId),
+          eq(interaktivniBlokPokusajiTable.pitanjeIndex, pitanjeIndex),
+        ));
+      const [inserted] = await tx.insert(interaktivniBlokPokusajiTable).values({
+        userId: req.user!.userId,
+        lekcijaId,
+        blokId,
+        pitanjeIndex,
+        pitanjeTekst,
+        attemptNo: Number(broj[0]?.value ?? 0) + 1,
+        tacno,
+        vrijemeSekundi,
+        pomocKoristena,
+        ponovoProcitao,
+      }).returning({ id: interaktivniBlokPokusajiTable.id, tacno: interaktivniBlokPokusajiTable.tacno });
+      return inserted;
+    });
+    res.status(201).json(pokusaj);
+  } catch (err) {
+    req.log.error({ err }, "POST /content/ilmihal-blok-pokusaj failed");
+    res.status(500).json({ error: "Greška pri čuvanju pokušaja" });
+  }
+});
 
 // GET /api/content/dozvoljeni-jezici — koje jezike prijavljeni korisnik smije
 // koristiti. Muallim i njegovi učenici prate muallim_profili.dozvoljeni_jezici;

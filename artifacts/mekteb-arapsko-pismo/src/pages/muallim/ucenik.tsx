@@ -94,6 +94,17 @@ interface H5PPrilogInfo {
   lekcijaNivo: number | null;
 }
 
+interface InteraktivniPitanjePregled {
+  lekcijaNaslov: string;
+  pitanjeTekst: string;
+  brojPokusaja: number;
+  netacniPokusaji: number;
+  procenatTacnih: number;
+  pomocBroj: number;
+  tacnoNakonPonovnogCitanja: number;
+  prosjekVrijemeSekundi: number;
+}
+
 interface RoditeljVeza {
   id: number;
   displayName: string;
@@ -148,6 +159,7 @@ export default function UcenikPage() {
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [h5pPokusaji, setH5pPokusaji] = useState<H5PPokusaj[]>([]);
+  const [interaktivnaPitanja, setInteraktivnaPitanja] = useState<InteraktivniPitanjePregled[]>([]);
   const [h5pPrilozi, setH5pPrilozi] = useState<H5PPrilogInfo[]>([]);
   const [h5pFilterPrilogId, setH5pFilterPrilogId] = useState<number | null>(() => {
     if (typeof window === "undefined") return null;
@@ -201,9 +213,10 @@ export default function UcenikPage() {
       apiRequest<{ rezultati: KvizRezultat[] }>("GET", `/muallim/ucenik-rezultati/${ucenikId}`, undefined, token).catch(() => ({ rezultati: [] })),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<{ pokusaji: H5PPokusaj[]; prilozi: H5PPrilogInfo[] }>("GET", `/muallim/ucenik/${ucenikId}/h5p-pokusaji`, undefined, token).catch(() => ({ pokusaji: [], prilozi: [] })),
+      apiRequest<{ pitanja: InteraktivniPitanjePregled[] }>("GET", `/muallim/ucenik/${ucenikId}/interaktivni-blokovi`, undefined, token).catch(() => ({ pitanja: [] })),
       apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
       apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, rod, zad]) => {
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad]) => {
       setRoditelji((rod as RoditeljVeza[]) || []);
       setZadace((zad as ZadacaPregled[]) || []);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
@@ -215,6 +228,7 @@ export default function UcenikPage() {
       setIlmihalLekcije(lekcije as IlmihalLekcija[]);
       setH5pPokusaji((h5pData as any).pokusaji || []);
       setH5pPrilozi((h5pData as any).prilozi || []);
+      setInteraktivnaPitanja((interaktivniData as any).pitanja || []);
       const gId = found?.profil?.grupaId || found?.grupaId;
       if (gId) {
         apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
@@ -1158,6 +1172,42 @@ export default function UcenikPage() {
                 </>
               )}
             </div>
+
+            <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-ucenik">
+              <div className="px-5 py-4 bg-teal-50/70 border-b border-teal-100">
+                <h2 className="font-extrabold text-teal-950 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-teal-700" /> {t("Učenje u lekcijama")}
+                </h2>
+                <p className="text-xs text-teal-800 mt-1">
+                  {t("Privatni trag pokušaja, pomoći i ponovnog čitanja — nije ocjena ni zvjezdica.")}
+                </p>
+              </div>
+              {interaktivnaPitanja.length === 0 ? (
+                <p className="px-5 py-6 text-sm text-muted-foreground">{t("Još nema odgovora iz ugrađenih pitanja lekcija.")}</p>
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {interaktivnaPitanja.map((p, index) => (
+                    <div key={`${p.lekcijaNaslov}-${index}`} className="px-5 py-4">
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-bold text-teal-700 mb-1">{p.lekcijaNaslov}</p>
+                          <p className="font-bold text-foreground">{p.pitanjeTekst}</p>
+                        </div>
+                        <span className={`h-fit rounded-full px-2.5 py-1 text-xs font-extrabold ${p.procenatTacnih >= 80 ? "bg-emerald-100 text-emerald-800" : p.procenatTacnih >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>
+                          {p.procenatTacnih}% {t("tačno")}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {t("{n} pogrešnih od {ukupno} pokušaja", { n: String(p.netacniPokusaji), ukupno: String(p.brojPokusaja) })}
+                        {` · ${t("prosječno: {n} s", { n: String(p.prosjekVrijemeSekundi) })}`}
+                        {p.pomocBroj > 0 ? ` · ${t("pomoć: {n}", { n: String(p.pomocBroj) })}` : ""}
+                        {p.tacnoNakonPonovnogCitanja > 0 ? ` · ${t("tačno nakon ponovnog čitanja: {n}", { n: String(p.tacnoNakonPonovnogCitanja) })}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Kviz rezultati */}

@@ -370,6 +370,21 @@ interface MektebDokument {
   createdAt: string | null;
 }
 
+interface InteraktivniPregledGrupe {
+  ukupnoPokusaja: number;
+  prosjekTacnosti: number | null;
+  pitanja: Array<{
+    lekcijaNaslov: string;
+    pitanjeTekst: string;
+    brojPokusaja: number;
+    netacniPokusaji: number;
+    procenatTacnih: number;
+    pomocBroj: number;
+    tacnoNakonPonovnogCitanja: number;
+    prosjekVrijemeSekundi: number;
+  }>;
+}
+
 function formatScreentime(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -526,6 +541,7 @@ export default function MuallimPanel() {
   // otvori pojedinog muallima; za vlastite grupe nivo muallima je korijen.
   const [statMuallimId, setStatMuallimId] = useState<number | null>(null);
   const [statData, setStatData] = useState<StatData | null>(null);
+  const [interaktivniStatPregled, setInteraktivniStatPregled] = useState<InteraktivniPregledGrupe | null>(null);
   const [statLoading, setStatLoading] = useState(false);
   const [statView, setStatView] = useState<"pregled" | "prisustvo" | "mjesecno">("pregled");
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -865,8 +881,11 @@ export default function MuallimPanel() {
   useEffect(() => {
     if (!token || !statGrupaId) return;
     setStatLoading(true);
-    apiRequest<StatData>("GET", `/muallim/grupa/${statGrupaId}/statistika`, undefined, token)
-      .then(data => { setStatData(data); setStatView("pregled"); })
+    Promise.all([
+      apiRequest<StatData>("GET", `/muallim/grupa/${statGrupaId}/statistika`, undefined, token),
+      apiRequest<InteraktivniPregledGrupe>("GET", `/muallim/grupa/${statGrupaId}/interaktivni-blokovi`, undefined, token).catch(() => null),
+    ])
+      .then(([data, interaktivni]) => { setStatData(data); setInteraktivniStatPregled(interaktivni); setStatView("pregled"); })
       .catch(() => toast({ title: t("Greška pri učitavanju statistike"), variant: "destructive" }))
       .finally(() => setStatLoading(false));
   }, [token, statGrupaId]);
@@ -2795,6 +2814,40 @@ export default function MuallimPanel() {
                           className="text-sm text-muted-foreground hover:text-foreground font-medium">{t("← Nazad na grupe")}</button>
                       </div>
                     </div>
+
+                    <section className="bg-teal-50/60 border border-teal-200 rounded-2xl p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h4 className="font-extrabold text-teal-950 flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-teal-700" /> {t("Gdje učenici zapinju u lekcijama")}
+                          </h4>
+                          <p className="text-xs text-teal-800 mt-1">{t("Privatni pedagoški pregled — odvojen od ocjena, bodova i zvjezdica.")}</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setLocation(`/muallim/grupa/${statGrupaId}`)}
+                          className="rounded-xl border-teal-300 bg-white text-teal-900">
+                          {t("Otvori grupu")}
+                        </Button>
+                      </div>
+                      {!interaktivniStatPregled?.ukupnoPokusaja ? (
+                        <p className="text-sm text-teal-900/70 mt-4">{t("Još nema zabilježenih odgovora iz ugrađenih pitanja lekcija.")}</p>
+                      ) : (
+                        <div className="mt-4 space-y-2">
+                          <p className="text-xs font-bold text-teal-900">
+                            {interaktivniStatPregled.ukupnoPokusaja} {t("pokušaja")} · {interaktivniStatPregled.prosjekTacnosti}% {t("tačno")}
+                          </p>
+                          {interaktivniStatPregled.pitanja.slice(0, 3).map((p, index) => (
+                            <div key={`${p.lekcijaNaslov}-${index}`} className="rounded-xl bg-white/80 px-3 py-2 text-sm">
+                              <span className="font-bold text-foreground">{p.pitanjeTekst}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {t("{n} pogrešnih od {ukupno}", { n: String(p.netacniPokusaji), ukupno: String(p.brojPokusaja) })}
+                                {` · ${t("prosječno: {n} s", { n: String(p.prosjekVrijemeSekundi) })}`}
+                                {p.tacnoNakonPonovnogCitanja ? ` · ${t("nakon čitanja: {n}", { n: String(p.tacnoNakonPonovnogCitanja) })}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="bg-primary/5 border border-border/50 rounded-2xl p-5">

@@ -28,6 +28,7 @@ import {
   mektebDokumentiTable,
   h5pPokusajiTable,
   prilozi,
+  interaktivniBlokPokusajiTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -5574,6 +5575,137 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
   } catch (err) {
     console.error("zvjezdice get error:", err);
     res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+type InteraktivniPitanjePregled = {
+  lekcijaId: number;
+  lekcijaNaslov: string;
+  blokId: string;
+  pitanjeIndex: number;
+  pitanjeTekst: string;
+  brojPokusaja: number;
+  netacniPokusaji: number;
+  procenatTacnih: number;
+  pomocBroj: number;
+  tacnoNakonPonovnogCitanja: number;
+  prosjekVrijemeSekundi: number;
+};
+
+function aggregateInteraktivnePokusaje(rows: Array<typeof interaktivniBlokPokusajiTable.$inferSelect>) {
+  const pitanja = new Map<string, InteraktivniPitanjePregled & { ukupnoVrijemeSekundi: number }>();
+  for (const row of rows) {
+    const key = `${row.lekcijaId}:${row.blokId}:${row.pitanjeIndex}`;
+    const current = pitanja.get(key) ?? {
+      lekcijaId: row.lekcijaId,
+      lekcijaNaslov: "",
+      blokId: row.blokId,
+      pitanjeIndex: row.pitanjeIndex,
+      pitanjeTekst: row.pitanjeTekst,
+      brojPokusaja: 0,
+      netacniPokusaji: 0,
+      procenatTacnih: 0,
+      pomocBroj: 0,
+      tacnoNakonPonovnogCitanja: 0,
+      prosjekVrijemeSekundi: 0,
+      ukupnoVrijemeSekundi: 0,
+    };
+    current.brojPokusaja += 1;
+    if (!row.tacno) current.netacniPokusaji += 1;
+    if (row.pomocKoristena) current.pomocBroj += 1;
+    if (row.tacno && row.ponovoProcitao) current.tacnoNakonPonovnogCitanja += 1;
+    current.ukupnoVrijemeSekundi += row.vrijemeSekundi;
+    pitanja.set(key, current);
+  }
+  return [...pitanja.values()].map(({ ukupnoVrijemeSekundi, ...p }) => ({
+    ...p,
+    procenatTacnih: Math.round(((p.brojPokusaja - p.netacniPokusaji) / p.brojPokusaja) * 100),
+    prosjekVrijemeSekundi: Math.round(ukupnoVrijemeSekundi / p.brojPokusaja),
+  }));
+}
+
+// GET /api/muallim/grupa/:id/interaktivni-blokovi
+// Privatni pedagoški pregled: pitanja koja zaslužuju dodatno objašnjenje i
+// zbir po svakom učeniku. Ne vraća bodove, zvjezdice ni javnu rang-listu.
+router.get("/grupa/:id/interaktivni-blokovi", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const profili = await db.select({ userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    const ucenikIds = profili.map(p => p.userId);
+    if (ucenikIds.length === 0) {
+      res.json({ ukupnoUcenika: 0, ukupnoPokusaja: 0, prosjekTacnosti: null, pitanja: [], ucenici: [] }); return;
+    }
+
+    const [pokusaji, ucenici] = await Promise.all([
+      db.select().from(interaktivniBlokPokusajiTable)
+        .where(inArray(interaktivniBlokPokusajiTable.userId, ucenikIds)),
+      db.select({ id: usersTable.id, displayName: usersTable.displayName })
+        .from(usersTable).where(inArray(usersTable.id, ucenikIds)),
+    ]);
+    const lekcijaIds = [...new Set(pokusaji.map(p => p.lekcijaId))];
+    const lekcije = lekcijaIds.length ? await db.select({ id: ilmihalLekcijeTable.id, naslov: ilmihalLekcijeTable.naslov })
+      .from(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.id, lekcijaIds)) : [];
+    const naslovMap = new Map(lekcije.map(l => [l.id, l.naslov]));
+    const pitanja = aggregateInteraktivnePokusaje(pokusaji).map(p => ({
+      ...p,
+      lekcijaNaslov: naslovMap.get(p.lekcijaId) || "Lekcija",
+    })).sort((a, b) => b.netacniPokusaji - a.netacniPokusaji || b.brojPokusaja - a.brojPokusaja);
+
+    const uceniciPregled = ucenici.map(u => {
+      const njegovi = pokusaji.filter(p => p.userId === u.id);
+      const tacni = njegovi.filter(p => p.tacno).length;
+      return {
+        id: u.id,
+        displayName: u.displayName,
+        brojPokusaja: njegovi.length,
+        procenatTacnih: njegovi.length ? Math.round((tacni / njegovi.length) * 100) : null,
+        pomocBroj: njegovi.filter(p => p.pomocKoristena).length,
+        tacnoNakonPonovnogCitanja: njegovi.filter(p => p.tacno && p.ponovoProcitao).length,
+      };
+    }).sort((a, b) => a.displayName.localeCompare(b.displayName, "bs"));
+
+    res.json({
+      ukupnoUcenika: ucenikIds.length,
+      ukupnoPokusaja: pokusaji.length,
+      prosjekTacnosti: pokusaji.length ? Math.round((pokusaji.filter(p => p.tacno).length / pokusaji.length) * 100) : null,
+      pitanja,
+      ucenici: uceniciPregled,
+    });
+  } catch (err) {
+    req.log.error({ err }, "GET /muallim/grupa/:id/interaktivni-blokovi failed");
+    res.status(500).json({ error: "Greška pri učitavanju pregleda učenja" });
+  }
+});
+
+// GET /api/muallim/ucenik/:id/interaktivni-blokovi
+// Detalj jednog učenika za privatni razgovor i planiranje dodatnog objašnjenja.
+router.get("/ucenik/:id/interaktivni-blokovi", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    const [profil] = await db.select({ grupaId: ucenikProfiliTable.grupaId })
+      .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+    if (!profil?.grupaId || !await verifyGrupaAccess(profil.grupaId, req.user!.userId, req.user!.role)) {
+      res.status(403).json({ error: "Nije vaš učenik" }); return;
+    }
+    const pokusaji = await db.select().from(interaktivniBlokPokusajiTable)
+      .where(eq(interaktivniBlokPokusajiTable.userId, ucenikId));
+    const lekcijaIds = [...new Set(pokusaji.map(p => p.lekcijaId))];
+    const lekcije = lekcijaIds.length ? await db.select({ id: ilmihalLekcijeTable.id, naslov: ilmihalLekcijeTable.naslov })
+      .from(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.id, lekcijaIds)) : [];
+    const naslovMap = new Map(lekcije.map(l => [l.id, l.naslov]));
+    const pitanja = aggregateInteraktivnePokusaje(pokusaji).map(p => ({
+      ...p,
+      lekcijaNaslov: naslovMap.get(p.lekcijaId) || "Lekcija",
+    })).sort((a, b) => b.netacniPokusaji - a.netacniPokusaji || b.brojPokusaja - a.brojPokusaja);
+    res.json({ ukupnoPokusaja: pokusaji.length, pitanja });
+  } catch (err) {
+    req.log.error({ err }, "GET /muallim/ucenik/:id/interaktivni-blokovi failed");
+    res.status(500).json({ error: "Greška pri učitavanju učenikovog pregleda" });
   }
 });
 
