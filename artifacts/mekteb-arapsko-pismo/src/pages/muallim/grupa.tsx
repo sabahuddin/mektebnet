@@ -162,7 +162,7 @@ export default function GrupaPage() {
 
   // Zvjezdice summary po učeniku (za prikaz na kartici)
   const [zvjezdiceSummary, setZvjezdiceSummary] = useState<Map<number, { pozitivne: number; negativne: number }>>(new Map());
-  // Inline Ponašanje panel — otvoren za kojeg učenika
+  // Inline Zvjezdice panel — otvoren za kojeg učenika
   const [ponasanjeOpenId, setPonasanjeOpenId] = useState<number | null>(null);
   const [pozDropOpen, setPozDropOpen] = useState<number | null>(null);
   const [negDropOpen, setNegDropOpen] = useState<number | null>(null);
@@ -966,7 +966,7 @@ export default function GrupaPage() {
                       </div>
                     </div>
 
-                    {/* Akcije: Ocjene, Zadaća, Ponašanje */}
+                    {/* Akcije: Ocjene, Zadaća, Zvjezdice */}
                     <div className="grid grid-cols-3 gap-1">
                       <button onClick={() => { openOcjena(u); }}
                         className="flex flex-col items-center gap-0.5 py-2 rounded-xl hover:bg-amber-50 text-amber-600 transition-colors"
@@ -985,11 +985,11 @@ export default function GrupaPage() {
                         className={`flex flex-col items-center gap-0.5 py-2 rounded-xl transition-colors ${ponasanjeOpenId === u.id ? "bg-amber-100 text-amber-700" : "hover:bg-amber-50 text-amber-600"}`}
                       >
                         <span className="text-base leading-none">⭐</span>
-                        <span className="text-[10px] font-bold leading-tight">{t("Ponašanje")}</span>
+                        <span className="text-[10px] font-bold leading-tight">{t("Zvjezdice")}</span>
                       </button>
                     </div>
 
-                    {/* Inline Ponašanje panel — dva dugmeta s dropdown-om po kategorijama */}
+                    {/* Inline Zvjezdice panel — pozitivne i negativne zvjezdice po kategorijama */}
                     {ponasanjeOpenId === u.id && (() => {
                       const pozKat = zvjezdiceKategorije.filter(k => k.tip === "pozitivna");
                       const negKat = zvjezdiceKategorije.filter(k => k.tip === "negativna");
@@ -1111,7 +1111,8 @@ export default function GrupaPage() {
                       <option value="usmeno">{t("Usmeno")}</option>
                       <option value="ucenje">{t("Učenje")}</option>
                       <option value="prakticno">{t("Praktično")}</option>
-                      <option value="ponasanje">{t("Ponašanje")}</option>
+                       <option value="test">{t("Test")}</option>
+                       <option value="ponasanje">{t("Napamet")}</option>
                     </select>
                   </div>
                   <div>

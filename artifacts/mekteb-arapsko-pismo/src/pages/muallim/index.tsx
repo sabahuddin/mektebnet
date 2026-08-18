@@ -551,6 +551,7 @@ export default function MuallimPanel() {
   const [zadLekcija, setZadLekcija] = useState("");
   const [zadUcenikIds, setZadUcenikIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
+  const [editingZadaca, setEditingZadaca] = useState<Zadaca | null>(null);
   // Pregled (review) panel za cijelu grupu
   const [pregledZadaca, setPregledZadaca] = useState<Zadaca | null>(null);
   const [pregledUcenici, setPregledUcenici] = useState<ZadacaStatusRed[]>([]);
@@ -931,21 +932,40 @@ export default function MuallimPanel() {
     }
     setSavingZadaca(true);
     try {
-      const nova = await apiRequest<Zadaca>("POST", "/muallim/zadace", {
+      const payload = {
         grupaId: zadGrupaId,
         naslov: zadLekcija.trim() || zadOpis.trim().slice(0, 80),
         opis: zadOpis.trim() || null,
         rokDo: zadRok || null,
         lekcijaNaslov: zadLekcija || null,
         ucenikIds: zadUcenikIds.size > 0 ? Array.from(zadUcenikIds) : undefined,
-      }, token);
-      setZadace(prev => [nova, ...prev]);
+      };
+      const saved = await apiRequest<Zadaca>(
+        editingZadaca ? "PUT" : "POST",
+        editingZadaca ? `/muallim/zadace/${editingZadaca.id}` : "/muallim/zadace",
+        payload,
+        token,
+      );
+      setZadace(prev => editingZadaca
+        ? prev.map(z => z.id === saved.id ? saved : z)
+        : [saved, ...prev]);
       setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadUcenikIds(new Set());
+      setEditingZadaca(null);
       setShowZadForm(false);
       setZadSubTab("utoku");
-      toast({ title: t("Zadaća dodana!") });
+      toast({ title: editingZadaca ? t("Zadaća ažurirana") : t("Zadaća dodana!") });
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
     finally { setSavingZadaca(false); }
+  }
+
+  function openEditZadaca(zadaca: Zadaca) {
+    setEditingZadaca(zadaca);
+    setZadLekcija(zadaca.lekcijaNaslov || "");
+    setZadOpis(zadaca.opis || "");
+    setZadRok(zadaca.rokDo ? zadaca.rokDo.slice(0, 10) : "");
+    setZadUcenikIds(new Set(zadaca.ucenikIds || []));
+    setZadSubTab("nova");
+    setShowZadForm(true);
   }
 
   async function deleteZadaca(id: number) {
@@ -3406,8 +3426,14 @@ export default function MuallimPanel() {
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                         className="bg-white border border-border/50 rounded-2xl p-5">
                         <h4 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
-                          <Plus className="w-4 h-4 text-primary" /> {t("Nova zadaća")}
+                          {editingZadaca ? <Pencil className="w-4 h-4 text-primary" /> : <Plus className="w-4 h-4 text-primary" />}
+                          {editingZadaca ? t("Uredi zadaću") : t("Nova zadaća")}
                         </h4>
+                        {editingZadaca && (
+                          <p className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
+                            {t("Promjena roka ovdje važi za sve učenike kojima je zadaća dodijeljena. Individualni rok mijenjaj samo kroz pregled učenika kada za to postoji stvaran razlog.")}
+                          </p>
+                        )}
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
@@ -3488,11 +3514,11 @@ export default function MuallimPanel() {
                           </div>
                         </div>
                         <div className="flex gap-3 mt-4 justify-end">
-                          <button onClick={() => { setShowZadForm(false); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
+                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
                             {t("Otkaži")}
                           </button>
                           <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim())} className="rounded-xl font-bold">
-                            {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> {t("Sačuvaj")}</>}
+                            {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> {editingZadaca ? t("Sačuvaj izmjene") : t("Sačuvaj")}</>}
                           </Button>
                         </div>
                       </motion.div>
@@ -3561,6 +3587,10 @@ export default function MuallimPanel() {
                                     className="rounded-xl font-bold flex items-center gap-1.5">
                                     <Eye className="w-4 h-4" /> {t("Pregled")}
                                   </Button>
+                                   <Button onClick={() => openEditZadaca(z)} variant="outline" size="sm"
+                                     className="rounded-xl font-bold flex items-center gap-1.5" title={t("Uredi zadaću")}>
+                                     <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">{t("Uredi")}</span>
+                                   </Button>
                                   <button onClick={() => deleteZadaca(z.id)}
                                     className="text-red-400 hover:text-red-600 p-2">
                                     <Trash2 className="w-4 h-4" />

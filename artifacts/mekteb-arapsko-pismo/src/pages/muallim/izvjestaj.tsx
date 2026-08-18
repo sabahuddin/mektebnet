@@ -62,7 +62,9 @@ const KATEGORIJA_LABELS: Record<string, string> = {
   usmeno: "Usmeno",
   pismeno: "Pismeno",
   zadaca: "Zadaća",
-  vladanje: "Vladanje",
+  test: "Test",
+  ponasanje: "Napamet",
+  vladanje: "Napamet",
   aktivnost: "Aktivnost",
 };
 

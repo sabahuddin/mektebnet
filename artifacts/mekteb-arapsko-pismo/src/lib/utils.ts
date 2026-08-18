@@ -38,7 +38,9 @@ export const KATEGORIJA_OCJENE_LABELS: Record<string, string> = {
   pismeno: "Pismeno",
   prakticno: "Praktično",
   "zadaća": "Zadaća",
-  vladanje: "Ponašanje",
+  test: "Test",
+  ponasanje: "Napamet",
+  vladanje: "Napamet",
   "domaći": "Domaći",
   aktivnost: "Aktivnost",
 };

@@ -132,7 +132,8 @@ const OCJENA_KATEGORIJE: { value: string; label: string }[] = [
   { value: "pismeno", label: "Pismeno" },
   { value: "prakticno", label: "Praktično" },
   { value: "zadaća", label: "Zadaća" },
-  { value: "vladanje", label: "Ponašanje" },
+  { value: "test", label: "Test" },
+  { value: "vladanje", label: "Napamet" },
 ];
 
 export default function UcenikPage() {

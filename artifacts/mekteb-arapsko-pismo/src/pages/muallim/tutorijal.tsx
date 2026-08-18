@@ -381,13 +381,13 @@ export default function MuallimTutorijalPage() {
             icon={Users}
             accent="bg-[#3d8a73]"
             click={<><strong>Otvori svaku grupu → Dodaj učenike.</strong> Za veći broj djece koristi masovni unos. Za pojedinačno dijete možeš koristiti postojeći obrazac.</>}
-            action={<>U tekstualno polje upiši svako dijete u novi red. Kada roditelj ima više djece, prvi put ga unesi uz samo jedno dijete pomoću znaka <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">|</code>, a kod njegove braće i sestara kasnije pronađi postojeći roditeljski nalog i poveži ga.</>}
-            why={<>Masovni unos štedi vrijeme, a jedna roditeljska veza omogućava roditelju da prati svu svoju djecu iz jednog naloga. Ako istog roditelja kreiraš ponovo uz svako dijete, nastaju duplikati i porodica dobija nepregledne pristupe.</>}
-            next={<>Nakon kreiranja vidiš korisnička imena i šifre, možeš štampati pristupne kartice i nastaviti s pregledom sastava grupe.</>}
-            important={<>Za oko 100 djece praktičan raspored je 16–17 učenika po grupi. <strong>Najbolje je da glavni muallim prvi unese svu djecu i roditelje:</strong> tako može odmah prepoznati porodice sa više djece, napraviti roditelja samo jednom i povezati ga sa svakim narednim djetetom. Pristupne podatke uruči sigurno, pojedinačno i bez javnog dijeljenja.</>}
+            action={<>Glavni muallim u tekstualno polje upiše svako dijete u novi red. Roditelja prvi put unese uz jedno dijete pomoću znaka <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">|</code>, a zatim sam pronađe tog roditelja i poveže ga sa svom ostalom djecom iz iste porodice.</>}
+            why={<>Masovni unos štedi vrijeme, a jedan roditeljski nalog omogućava roditelju da prati svu svoju djecu. Glavni muallim ovim redom rada sprečava duplikate i osigurava da svako dijete bude povezano s pravim roditeljem i svojim muallimom.</>}
+            next={<>Tek kada su djeca, roditelji, grupe i muallimi povezani, glavni muallim štampa pristupne kartice sa korisničkim imenima i šiframa.</>}
+            important={<>Glavni muallim treba prvi unijeti djecu i roditelje za cijeli mekteb. <strong>Roditelj ne treba naknadno slati zahtjev za drugo dijete:</strong> glavni muallim sam povezuje svu djecu sa roditeljem i sa odgovarajućim muallimom prije štampanja kartica. Pristupne podatke uruči sigurno, pojedinačno i bez javnog dijeljenja.</>}
           >
             <p>
-              Otvori prvu grupu i izaberi <strong>Dodaj učenike</strong>. U polje za masovni unos ne upisuješ sve u jednu rečenicu: <strong>svako ime ide u novi red</strong>. Za naš džemat možemo krenuti sa šest blokova od približno 16 ili 17 imena, pa po potrebi prebaciti postojeće učenike ako se grupe kasnije ujednačavaju.
+              Otvori prvu grupu i izaberi <strong>Dodaj učenike</strong>. U polje za masovni unos ne upisuješ sve u jednu rečenicu: <strong>svako ime ide u novi red</strong>. Glavni muallim zatim ponovi unos za sve grupe i sam odlučuje kako će rasporediti djecu prema stvarnim potrebama džemata.
             </p>
             <div className="my-5 rounded-2xl border border-[#d5e3dc] bg-[#f5faf6] p-4 sm:p-5">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#237a6d]">Obrazac za unos</p>
@@ -403,7 +403,7 @@ export default function MuallimTutorijalPage() {
                 <div>
                   <p className="text-sm font-black text-[#7b4b27]">Jedna porodica, jedan roditeljski nalog</p>
                   <p className="mt-1 text-sm leading-6 text-[#6f5136]">
-                    Na primjer, ako Senad Hasić ima Aminu i Ahmeda, roditelja <strong>Senad Hasić</strong> kreiraš samo uz prvo dijete. Kod drugog djeteta ga pronađeš među postojećim roditeljima i samo povežeš — ne upisuješ ga ponovo kao novog korisnika.
+                    Na primjer, ako Senad Hasić ima Aminu i Ahmeda, roditelja <strong>Senad Hasić</strong> glavni muallim kreira samo uz prvo dijete. Kod drugog djeteta ga sam pronađe među postojećim roditeljima i poveže — roditelj ne treba ponovo slati zahtjev niti dobiti duplikat naloga.
                   </p>
                 </div>
               </div>
@@ -417,20 +417,20 @@ export default function MuallimTutorijalPage() {
             icon={UserCheck}
             accent="bg-[#5b7b91]"
             click={<><strong>Panel → Grupe</strong>, zatim otvori svaku grupu. Na karticama učenika provjeri sastav i oznaku povezivanja roditelja.</>}
-            action={<>Uporedi broj djece s planom 16–17 po grupi, provjeri ko pripada kojoj grupi i potvrdi da su roditeljske veze odobrene gdje treba.</>}
+            action={<>Provjeri ko pripada kojoj grupi, da li je svako dijete povezano sa pravim roditeljem i muallimom, te da li će se na karticama prikazati tačni pristupni podaci.</>}
             why={<>Ova kratka provjera sprečava pogrešne izvještaje: dijete ne smije biti u pogrešnoj grupi, a roditelj ne smije pratiti tuđe podatke.</>}
             next={<>Glavni muallim može otvoriti pregled drugog muallima bez prijavljivanja kao on. Tako se provjerava saradnja, a da se ne remeti tuđi nalog.</>}
-            important={<>Pregled drugog muallima je pregled, ne zamjena za njegovo prijavljivanje. Svako i dalje radi u svom nalogu i svom kontekstu.</>}
+            important={<>Kartice štampaj tek kada su sve veze provjerene. Glavni muallim po potrebi može resetirati sve šifre učenika i roditelja odjednom, ali to ne treba koristiti bez stvarne potrebe jer se tada mijenjaju pristupni podaci za cijeli mekteb.</>}
           >
             <p>
-              Kada su djeca unesena, nemoj odmah preći na plan lekcija. Prvo napravi krug kroz šest grupa. Na grupnoj kartici provjeri broj članova, imena i oznake roditeljskih veza. Ako je roditelj naknadno poslao zahtjev za povezivanje, odobri ga u dijelu za roditelje prije nego što očekuješ da vidi podatke.
+              Kada su djeca unesena, nemoj odmah preći na plan lekcija. Prvo napravi krug kroz sve grupe. Na grupnoj kartici provjeri imena, roditeljske veze i muallima grupe. Ovaj pregled je posljednja provjera prije štampanja kartica.
             </p>
             <p className="mt-4">
               Glavni muallim ima još jednu važnu mogućnost: u panelu može otvoriti <strong>pregled drugog muallima</strong> bez prijavljivanja kao on. To je korisno kada se provjerava da li su grupe pravilno raspoređene, da li se bilješke redovno unose i gdje treba ponuditi pomoć.
             </p>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               <MiniLabel icon={Users}>Sastav grupa</MiniLabel>
-              <MiniLabel icon={HeartHandshake}>Roditeljske veze</MiniLabel>
+              <MiniLabel icon={HeartHandshake}>Roditelji i djeca</MiniLabel>
               <MiniLabel icon={Search}>Saradnja muallima</MiniLabel>
             </div>
           </StepFrame>
@@ -456,46 +456,46 @@ export default function MuallimTutorijalPage() {
 
           <StepFrame
             number="06"
-            eyebrow="Prije prvog časa · napravi put"
-            title="Plan lekcija govori šta radite, raspored govori kako učenik otključava"
+            eyebrow="Opcija za planiranje · napravi put"
+            title="Plan lekcija pomaže muallimu, ali ne mora zaključati učenika"
             icon={BookOpen}
             accent="bg-[#765aa8]"
-            click={<><strong>Otvori grupu → Plan lekcija</strong> za datume i sadržaj. Za redoslijed otključavanja otvori <strong>Raspored lekcija</strong>.</>}
-            action={<>U planu dodijeli lekciju konkretnom datumu. U rasporedu složi redoslijed kojim učenici otključavaju lekcije.</>}
-            why={<>Razdvajanje plana i rasporeda rješava dvije različite potrebe: muallim planira čas u kalendaru, a učenik dobija stabilan put kroz sadržaj.</>}
-            next={<>Svake sedmice znaš šta je bilo planirano, šta dolazi i da li učenici otključavaju sadržaj pravim redoslijedom.</>}
-            important={<>Plan lekcija i Raspored lekcija nisu ista stvar. Plan je „šta obrađujemo kojeg datuma“, a raspored je „kojim redoslijedom učenik otključava lekcije“.</>}
+            click={<><strong>Otvori grupu → Plan lekcija</strong> ako želiš planirati naredni mjesec ili cijelu godinu. Klik na lekciju vodi odmah na tu lekciju u jednom od tri nivoa. Za redoslijed otključavanja otvori <strong>Raspored lekcija</strong>.</>}
+            action={<>U planu opcionalno dodijeli lekciju konkretnom datumu. U rasporedu možeš složiti redoslijed lekcija i time uticati na put kojim ih učenici otključavaju.</>}
+            why={<>Plan je pomoć muallimu da zna šta je predviđeno za određeni čas, mjesec ili godinu. Učenici i dalje mogu raditi lekcije svojim tempom i izabrati šta žele, osim lekcija koje su zaključane dok ne ispune potrebni uslov.</>}
+            next={<>Muallim dobija pregled planiranog rada, a učenici slobodu da vježbaju prema svom napretku. Raspored lekcija ipak daje muallimu način da usmjeri redoslijed kada je to pedagoški korisno.</>}
+            important={<>Plan lekcija je opcija, nije obavezna prepreka. Zaključane lekcije se otključavaju tek nakon ispunjenog uslova, dok ostale učenik može raditi po želji. Raspored lekcija može uticati na redoslijed, ali trenutno ne mora prisiliti svakog učenika da ide istim tempom.</>}
           >
             <p>
-              Za svaku grupu napravi <strong>Plan lekcija</strong>. To je vaš nastavni dnevnik: na određeni datum vežeš lekciju ili temu koju želite obraditi. Ako je čas 12. oktobra posvećen određenoj lekciji, plan to jasno pokazuje.
+              Za svaku grupu, ako ti je korisno, napravi <strong>Plan lekcija</strong>. To je vaš nastavni dnevnik: na određeni datum vežeš lekciju ili temu koju želite obraditi. Možeš ga pripremiti za naredni mjesec ili cijelu godinu, a klik na naziv lekcije vodi direktno na lekciju u jednom od tri nivoa.
             </p>
             <p className="mt-4">
-              Zatim otvori <strong>Raspored lekcija</strong>. On ne govori koji je datum časa, nego određuje redoslijed kojim učenici otključavaju lekcije. Jedan učenik može napredovati svojim tempom, ali mu redoslijed sadržaja ostaje smislen. Kada muallim kasnije gleda statistiku, ove dvije informacije daju potpuniju sliku.
+              Zatim, po potrebi, otvori <strong>Raspored lekcija</strong>. On ne govori koji je datum časa, nego može uticati na redoslijed kojim učenici otključavaju lekcije. Učenik može raditi lekcije koje su mu dostupne kako želi; samo zaključane lekcije čekaju ispunjenje svog uslova. Tako muallim ima putanju koju može preporučiti, bez nepotrebnog zaustavljanja učenika koji je spreman za drugi sadržaj.
             </p>
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-              <div className="flex-1 rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900"><strong>Plan lekcija</strong><br />Datum i tema časa</div>
+              <div className="flex-1 rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900"><strong>Plan lekcija</strong><br />Opcionalni plan za mjesec ili godinu</div>
               <ArrowRight className="my-auto hidden h-5 w-5 text-violet-400 sm:block" />
-              <div className="flex-1 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-900"><strong>Raspored lekcija</strong><br />Redoslijed otključavanja</div>
+              <div className="flex-1 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-900"><strong>Raspored lekcija</strong><br />Usmjerava redoslijed, ali ne prisiljava tempo</div>
             </div>
           </StepFrame>
 
           <StepFrame
             number="07"
-            eyebrow="Svake sedmice · zabilježi susret"
-            title="Prisustvo se radi odmah, dok je čas još svjež"
+            eyebrow="Na početku časa · zabilježi susret"
+            title="Prisustvo se radi na početku časa, a kasnije se može ažurirati"
             icon={ClipboardCheck}
             accent="bg-[#2e8290]"
-            click={<><strong>Otvori grupu → Prisustvo.</strong> Izaberi datum časa i prođi redom kroz svakog učenika.</>}
-            action={<>Označi <strong>prisutan, odsutan, zakasnio</strong> ili <strong>opravdano</strong>. Dodaj napomenu kada je potrebna.</>}
-            why={<>Evidencija odmah poslije časa je preciznija od sjećanja na kraju mjeseca. Podaci kasnije ulaze u preglede i izvještaje, pa prisustvo postaje osnova za razgovor i pomoć.</>}
+            click={<><strong>Otvori grupu → Prisustvo</strong> na početku časa. Izaberi datum časa i prođi redom kroz svakog učenika.</>}
+            action={<>Označi <strong>prisutan, odsutan, zakasnio</strong> ili <strong>opravdano</strong>. Ako se situacija promijeni ili nešto saznaš naknadno, isti unos možeš kasnije ažurirati.</>}
+            why={<>Unos na početku časa odmah daje stvarnu sliku ko je prisutan. Kasnije ažuriranje ostavlja prostor za opravdanje, ispravku ili dopunu bez brisanja cijele evidencije.</>}
             next={<>Na pregledu vidiš obrazac izostanaka, možeš povezati ga sa ocjenama i javiti roditelju kada je potrebno.</>}
-            important={<>Nemoj ostavljati prisustvo za kraj sedmice. Jedan red odmah nakon časa je mala obaveza; šest grupa i više sedmica kasnije postaju velika rupa u podacima.</>}
+            important={<>Prisustvo uradi na početku časa, ali ga ne moraš smatrati konačnim u tom trenutku. Po potrebi ga ažuriraj kasnije.</>}
           >
             <p>
-              Nakon svakog časa uđi u <strong>Prisustvo</strong> na grupnoj kartici. Izaberi datum i prođi kroz listu. Četiri statusa nisu ista poruka: <strong>prisutan</strong> govori da je dijete bilo tu, <strong>odsutan</strong> da nije došlo, <strong>zakasnio</strong> da je stiglo nakon početka, a <strong>opravdano</strong> daje važan kontekst odsustvu.
+              Na početku časa uđi u <strong>Prisustvo</strong> na grupnoj kartici. Izaberi datum i prođi kroz listu. Četiri statusa nisu ista poruka: <strong>prisutan</strong> govori da je dijete bilo tu, <strong>odsutan</strong> da nije došlo, <strong>zakasnio</strong> da je stiglo nakon početka, a <strong>opravdano</strong> daje važan kontekst odsustvu.
             </p>
             <p className="mt-4">
-              Ako treba, dopiši napomenu: kratko i činjenično, bez etiketa. Evidenciju radi odmah, dok se sjećaš ko je došao i šta se desilo. Kasnije će se isti podaci pojaviti u pregledima i izvještajima, gdje mogu pokazati da li učeniku treba razgovor, podrška ili drugačiji tempo.
+              Ako treba, dopiši napomenu: kratko i činjenično, bez etiketa. Ako se roditelj javi naknadno ili muallim uoči grešku, ažuriraj postojeći unos. Kasnije će se isti podaci pojaviti u pregledima i izvještajima, gdje mogu pokazati da li učeniku treba razgovor, podrška ili drugačiji tempo.
             </p>
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {["Prisutan", "Odsutan", "Zakasnio", "Opravdano"].map((status) => (
@@ -507,20 +507,20 @@ export default function MuallimTutorijalPage() {
           <StepFrame
             number="08"
             eyebrow="Na grupnoj kartici · prati napredak"
-            title="Ocjena je trag učenja, zvjezdica je poruka ponašanja"
+            title="Ocjena je trag učenja, Napamet je procjena pamćenja"
             icon={Star}
             accent="bg-[#c38a30]"
-            click={<><strong>Na kartici učenika izaberi Ocjene</strong> za ocjenu, <strong>Zvjezdice</strong> za ponašanje, a <strong>Zadaće</strong> za rad koji treba uraditi.</>}
-            action={<>Odaberi kategoriju ocjene, po potrebi veži je za lekciju, dodaj kratku konstruktivnu povratnu informaciju i evidentiraj zvjezdicu u odgovarajućoj kategoriji.</>}
-            why={<>Učenik i roditelj ne dobijaju samo broj. Dobijaju objašnjenje šta je dobro, šta treba vježbati i zašto je određena lekcija važna.</>}
+            click={<><strong>Na kartici učenika izaberi Ocjene</strong> za procjenu, <strong>Zvjezdice</strong> za pozitivne i negativne bilješke, a <strong>Zadaće</strong> za rad koji treba uraditi.</>}
+            action={<>Odaberi kategoriju <strong>Usmeno, Učenje, Praktično, Test</strong> ili <strong>Napamet</strong>, po potrebi veži je za lekciju i dodaj kratku konstruktivnu povratnu informaciju.</>}
+            why={<>Učenik i roditelj ne dobijaju samo broj. Dobijaju objašnjenje šta je dobro, šta treba vježbati i zašto je određena lekcija važna. Pozitivne i negativne zvjezdice sada rješavaju praćenje ponašanja.</>}
             next={<>Iz ocjena, zvjezdica i zadaća dobijaš materijal za individualni razgovor i kasniji izvještaj, umjesto da se oslanjaš na utisak.</>}
-            important={<>Kapi meda u zadaći predstavljaju znanje i hasanat. One nisu valuta igrica niti razlog da se učenik poredi kao da se takmiči za novac.</>}
+            important={<>Kapi meda u zadaći predstavljaju znanje. One nisu valuta igrica niti razlog da se učenik poredi kao da se takmiči za novac.</>}
           >
             <p>
-              Na grupnoj kartici svaki učenik ima svoje brze akcije. U <strong>Ocjene</strong> odaberi kategoriju koja odgovara onome što procjenjuješ: <strong>Usmeno, Učenje, Praktično</strong> ili <strong>Ponašanje</strong>. Ocjenu možeš vezati za konkretnu lekciju, pa kasnije znaš da li je teškoća bila u jednoj temi ili u kontinuitetu.
+              Na grupnoj kartici svaki učenik ima svoje brze akcije. U <strong>Ocjene</strong> odaberi kategoriju koja odgovara onome što procjenjuješ: <strong>Usmeno, Učenje, Praktično, Test</strong> ili <strong>Napamet</strong>. Ocjenu možeš vezati za konkretnu lekciju, pa kasnije znaš da li je teškoća bila u jednoj temi ili u kontinuitetu.
             </p>
             <p className="mt-4">
-              Povratna informacija neka bude konstruktivna: napiši šta je učenik uradio dobro i koji je sljedeći mali korak. U <strong>Zvjezdice</strong> koristi pozitivne ili negativne kategorije kada želiš zabilježiti ponašanje i napredak tokom časa. Zvjezdica treba pomoći razgovoru, ne zamijeniti razgovor.
+              Povratna informacija neka bude konstruktivna: napiši šta je učenik uradio dobro i koji je sljedeći mali korak. Za pamćenje koristi <strong>Napamet</strong>, a za ponašanje koristi pozitivne ili negativne kategorije u <strong>Zvjezdicama</strong>. Zvjezdica treba pomoći razgovoru, ne zamijeniti razgovor.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <MiniLabel icon={Star}>Ocjene</MiniLabel>
@@ -537,16 +537,16 @@ export default function MuallimTutorijalPage() {
             icon={ClipboardList}
             accent="bg-[#a55f8c]"
             click={<><strong>Grupa → Zadaća</strong> ili na kartici učenika izaberi <strong>Zadaća</strong>. Odredi da li je zadaća za grupu ili pojedinca.</>}
-            action={<>Postavi lekciju, opis i rok. U pregledu prati urađeno, ocjenu i kapi meda; po potrebi produži rok ili označi zadaću završenom.</>}
+            action={<>Postavi lekciju, opis i rok. U pregledu prati urađeno, ocjenu i kapi meda. Kroz <strong>Uredi</strong> možeš promijeniti rok svima u zadaći, a kroz pregled po učeniku sačuvati individualni status.</>}
             why={<>Zadaća dobija vlasnika, sadržaj i rok. Muallim zna šta prati, a učenik i roditelj dobijaju jasnu sljedeću obavezu umjesto neodređenog „vježbaj kod kuće“.</>}
             next={<>Iz pregleda možeš prepoznati ko redovno radi, kome treba podsjetnik i gdje treba produžiti rok zbog stvarne situacije.</>}
-            important={<>Roditelj vidi zadaću, opis, rok i status djeteta. Učenik vidi šta treba uraditi i može pratiti vlastiti napredak. Kapi meda objašnjavaj kao trag znanja i hasanata.</>}
+            important={<>Roditelj vidi zadaću, opis, rok i status djeteta. Učenik vidi šta treba uraditi i može pratiti vlastiti napredak. Ako svima treba produžiti rok, promijeni ga kroz <strong>Uredi</strong> na zadaći; nemoj zbog toga svakom djetetu upisivati „Prolongirano“. Ta oznaka treba ostati za stvarnu individualnu situaciju.</>}
           >
             <p>
               Kada znaš šta je grupa radila, zadaća je prirodan sljedeći korak. U grupi otvori <strong>Zadaća</strong> i izaberi dodjelu za cijelu grupu, ili na kartici učenika otvori zadaću za pojedinca. Postavi lekciju, napiši opis koji dijete može razumjeti i dodaj rok.
             </p>
             <p className="mt-4">
-              Ne završava se sve klikom na „Dodaj“. U pregledu se vraćaš na zadaću: vidiš ko je uradio, upisuješ ocjenu, dodjeljuješ kapi meda kao znak znanja i hasanata, produžavaš rok kada za to postoji razlog ili završavaš zadaću kada je ciklus gotov. To je mali pedagoški razgovor koji traje kroz sedmicu.
+              Ne završava se sve klikom na „Dodaj“. U pregledu se vraćaš na zadaću: vidiš ko je uradio, upisuješ ocjenu, dodjeljuješ kapi meda kao znak znanja, a kroz <strong>Uredi</strong> možeš promijeniti opis, lekciju ili rok svima. Individualni rok koristi samo kada stvarno postoji razlog za jedno dijete; grupni rok mijenjaj na samoj zadaći.
             </p>
             <div className="mt-5 grid gap-2 sm:grid-cols-4">
               {[
@@ -596,14 +596,14 @@ export default function MuallimTutorijalPage() {
             title="Roditelj je partner, a poruka treba imati pravi dom"
             icon={MessageSquare}
             accent="bg-[#b85f63]"
-            click={<><strong>Panel → Roditelji</strong> za pregled po grupama, odobravanje povezivanja i slanje poruka ili obavještenja.</>}
-            action={<>Odobri povezivanje djeteta i roditelja. Za informaciju cijeloj grupi pošalji obavještenje; za osjetljiv ili individualan razgovor koristi privatnu poruku.</>}
+            click={<><strong>Panel → Roditelji</strong> za pregled roditelja po grupama i slanje poruka ili obavještenja.</>}
+            action={<>Provjeri da porodica vidi samo svoju djecu. Za informaciju cijeloj grupi pošalji obavještenje; za osjetljiv ili individualan razgovor koristi privatnu poruku.</>}
             why={<>Razlika između grupne informacije i privatne poruke štiti dostojanstvo djeteta i čuva pažnju roditelja. Svi dobiju ono što se tiče njih, a ne tuđe detalje.</>}
             next={<>Roditelji vide relevantne obavijesti i napredak svog djeteta, a muallim može riješiti pitanje prije nego postane problem na času.</>}
             important={<>Ne šalji individualnu ocjenu, izostanak ili osjetljivu napomenu cijeloj grupi. Grupni kanal je za zajedničke datume i upute; privatna poruka je za jednu porodicu.</>}
           >
             <p>
-              U tabu <strong>Roditelji</strong> pregledaj roditelje po grupama. Ako je roditelj poslao zahtjev za povezivanje, odobri ga tek nakon što provjeriš da se veza odnosi na pravo dijete. Nakon toga može pratiti podatke koji mu pripadaju.
+              U tabu <strong>Roditelji</strong> pregledaj roditelje po grupama i provjeri da je glavni muallim ranije povezao roditelja sa svom njegovom djecom. Roditelj tada u svom nalogu vidi samo podatke koji mu pripadaju.
             </p>
             <p className="mt-4">
               Kada šalješ poruku, prvo odluči da li govoriš svima ili jednoj porodici. Informacija cijeloj grupi odgovara za promjenu termina, podsjetnik na ferije ili zajedničku uputu. Privatna poruka odgovara za izostanak, ocjenu, napredak ili dogovor koji se tiče samo jednog učenika.
@@ -659,10 +659,10 @@ export default function MuallimTutorijalPage() {
               "Tri muallimska naloga su kreirana, a šifre sigurno proslijeđene.",
               "Kreirano je šest grupa sa tačnom mektebskom godinom, datumima, danima i vremenom.",
               "Svaki od tri muallima vodi po dvije grupe.",
-              "Oko 16–17 djece raspoređeno je u svaku grupu; postojeći učenici nisu duplirani.",
-              "Roditeljske veze su provjerene i odobrene gdje treba.",
+              "Djeca su raspoređena prema stvarnim potrebama džemata; postojeći učenici nisu duplirani.",
+              "Glavni muallim je povezao svu djecu sa roditeljima i muallimima prije štampanja kartica.",
               "Kalendar, ferije, Ramazan i važni datumi su postavljeni ili kopirani.",
-              "Plan lekcija i Raspored lekcija su popunjeni za svaku grupu.",
+              "Plan lekcija je postavljen po potrebi, a Raspored lekcija podešen ako muallim želi usmjeriti redoslijed.",
               "Prisustvo je uneseno odmah nakon svakog časa.",
               "Ocjene, zvjezdice i zadaće imaju smislen kontekst i povratnu informaciju.",
               "Na kraju mjeseca pregledani su mekteb, muallimi, grupe i učenici kojima treba pomoć.",
