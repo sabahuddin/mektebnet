@@ -101,6 +101,7 @@ import MuallimUcenikPage from "./pages/muallim/ucenik";
 import MuallimGrupaPage from "./pages/muallim/grupa";
 import MuallimRasporedPage from "./pages/muallim/raspored";
 import MuallimIzvjestajPage from "./pages/muallim/izvjestaj";
+import MuallimTutorijalPage from "./pages/muallim/tutorijal";
 import H5pUputstvoPage from "./pages/h5p-uputstvo";
 import MuallimH5pStatistikaPage from "./pages/muallim/h5p-statistika";
 
@@ -224,6 +225,7 @@ function Router() {
       {/* Muallim panel */}
       <Route path="/muallim/izvjestaj/svi" component={MuallimIzvjestajPage} />
       <Route path="/muallim/izvjestaj/:tip/:id" component={MuallimIzvjestajPage} />
+      <Route path="/muallim/tutorijal" component={MuallimTutorijalPage} />
       <Route path="/muallim/h5p-uputstvo" component={H5pUputstvoPage} />
       <Route path="/muallim/h5p-statistika" component={MuallimH5pStatistikaPage} />
       <Route path="/muallim" component={MuallimPanel} />

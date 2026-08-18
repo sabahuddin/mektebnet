@@ -1499,6 +1499,15 @@ export default function MuallimPanel() {
               </p>
             )}
           </div>
+           <Link
+             href="/muallim/tutorijal"
+             className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-extrabold text-primary transition-colors hover:bg-primary/10 sm:text-sm"
+             title={t("Detaljni tutorijal za muallime")}
+             data-testid="link-muallim-tutorijal"
+           >
+             <BookOpen className="h-4 w-4 shrink-0" />
+             <span className="hidden sm:inline">{t("Muallim tutorijal")}</span>
+           </Link>
           <MyScreentimeBadge />
         </div>
 
