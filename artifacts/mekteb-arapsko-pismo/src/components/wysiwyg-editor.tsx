@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 // StarterKit u v3 vec ukljucuje Underline — eksplicitan import bi pravio duplikat
 // koji moze tiho slomiti druge komande (setImage, setLink, itd.)
 import StarterKit from "@tiptap/starter-kit";
@@ -12,6 +12,7 @@ import { Node, mergeAttributes } from "@tiptap/core";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { getApiBase } from "@/lib/api";
 import { buildAudioPlayer } from "@/lib/audio-player";
+import { correctOptionAfterRemoval } from "./lesson-pause-editor-utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
@@ -23,7 +24,7 @@ import {
   Plus, ChevronUp, ChevronDown, Trash2, Pencil,
   Maximize, RectangleHorizontal, Square, Loader2,
   FolderOpen, X, Copy, Check, FileText, Minus, Music, Youtube as YoutubeIcon,
-  Puzzle
+  Puzzle, PauseCircle
 } from "lucide-react";
 import { parsePripremaContent, renderPripremaContent, type PripremaStruct } from "@/lib/priprema-design";
 import { useLanguage } from "@/context/language";
@@ -202,6 +203,580 @@ const EmbedExercise = Node.create({
   },
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LESSON PAUSE — Ilmihal interaktivna pauza u lekciji
+// Canonical persisted schema (must match backend/runtime exactly)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type LessonPauseType =
+  | "yes-no"           // DA / NE pitanje
+  | "multiple-choice"  // Višestruki izbor (jedan tačan)
+  | "fact-question"    // Zanimljivost sa pitanjem (fact + više opcija)
+  | "matching"         // Povezivanje parova
+  | "ordering";        // Rasporedi u tačan redoslijed
+
+export interface LessonPauseConfig {
+  id: string;
+  type: LessonPauseType;
+  question: string;
+  correctExplanation: string;
+  wrongExplanation: string;
+  // yes-no
+  correctAnswer?: boolean;
+  // multiple-choice / fact-question
+  fact?: string;           // fact-question: kratka zanimljiva činjenica prikazana prije pitanja
+  options?: string[];      // opcije (niz tekstova)
+  correctOption?: number;  // indeks tačnog odgovora (multiple-choice / fact-question)
+  // matching
+  pairs?: Array<{ left: string; right: string }>;
+  // ordering
+  items?: string[];        // elementi u TAČNOM redoslijedu
+}
+
+const PAUSE_TYPE_LABELS: Record<LessonPauseType, string> = {
+  "yes-no": "DA / NE",
+  "multiple-choice": "Višestruki izbor",
+  "fact-question": "Zanimljivost sa pitanjem",
+  "matching": "Povezivanje",
+  "ordering": "Redoslijed",
+};
+
+const PAUSE_TYPE_ICONS: Record<LessonPauseType, string> = {
+  "yes-no": "✅",
+  "multiple-choice": "🔘",
+  "fact-question": "💡",
+  "matching": "🔗",
+  "ordering": "📋",
+};
+
+function generatePauseId(): string {
+  // Stable, unique ID combining timestamp + random suffix
+  return `pause-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Node View component rendered inside the editor for each lesson pause node
+function LessonPauseNodeView({
+  node,
+  deleteNode,
+}: {
+  node: { attrs: { "data-pause-config": string } };
+  deleteNode: () => void;
+}) {
+  let config: LessonPauseConfig | null = null;
+  try {
+    const raw = node.attrs["data-pause-config"];
+    if (raw) config = JSON.parse(decodeURIComponent(raw));
+  } catch { /* ignore parse errors */ }
+
+  const type = config?.type ?? "yes-no";
+  const label = PAUSE_TYPE_LABELS[type] ?? type;
+  const icon = PAUSE_TYPE_ICONS[type] ?? "⏸️";
+
+  return (
+    <NodeViewWrapper
+      as="div"
+      data-drag-handle
+      className="lesson-pause-node-view my-3 rounded-xl border-2 border-indigo-300 bg-indigo-50 p-3 select-none"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 flex-1 min-w-0">
+          <span className="text-xl flex-shrink-0" aria-hidden="true">{icon}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded">
+                Pauza · {label}
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-gray-800 truncate">
+              {config?.question || <em className="text-gray-400">Bez pitanja</em>}
+            </p>
+            {config?.fact && (
+              <p className="text-xs text-gray-500 mt-0.5 truncate">💡 {config.fact}</p>
+            )}
+            {type === "yes-no" && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                Tačan odgovor: <strong>{config?.correctAnswer ? "DA" : "NE"}</strong>
+              </p>
+            )}
+            {(type === "multiple-choice" || type === "fact-question") && config?.options && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                {config.options.length} opcija · tačna: #{(config.correctOption ?? 0) + 1}
+              </p>
+            )}
+            {type === "matching" && config?.pairs && (
+              <p className="text-xs text-gray-500 mt-0.5">{config.pairs.length} para</p>
+            )}
+            {type === "ordering" && config?.items && (
+              <p className="text-xs text-gray-500 mt-0.5">{config.items.length} stavki</p>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={deleteNode}
+          title="Obriši pauzu"
+          aria-label="Obriši pauzu"
+          className="flex-shrink-0 p-1.5 rounded-lg text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+const LessonPause = Node.create({
+  name: "lessonPause",
+  group: "block",
+  atom: true,
+  draggable: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      "data-lesson-pause": { default: "1" },
+      "data-pause-config": { default: null },
+    };
+  },
+  parseHTML() {
+    return [{
+      tag: "div[data-lesson-pause]",
+      getAttrs: (el) => {
+        const node = el as HTMLElement;
+        return {
+          "data-lesson-pause": node.getAttribute("data-lesson-pause") || "1",
+          "data-pause-config": node.getAttribute("data-pause-config") || null,
+        };
+      },
+    }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes({
+      "data-lesson-pause": HTMLAttributes["data-lesson-pause"] || "1",
+      "data-pause-config": HTMLAttributes["data-pause-config"] || "",
+    })];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(LessonPauseNodeView as any);
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LESSON PAUSE EDITOR MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface LessonPauseModalProps {
+  onClose: () => void;
+  onInsert: (config: LessonPauseConfig) => void;
+}
+
+function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
+  const [type, setType] = useState<LessonPauseType>("yes-no");
+  const [question, setQuestion] = useState("");
+  const [correctExplanation, setCorrectExplanation] = useState("");
+  const [wrongExplanation, setWrongExplanation] = useState("");
+  // yes-no — boolean: true = DA, false = NE
+  const [correctAnswer, setCorrectAnswer] = useState<boolean>(true);
+  // multiple-choice / fact-question
+  const [fact, setFact] = useState("");
+  const [options, setOptions] = useState<string[]>(["", ""]);
+  const [correctOption, setCorrectOption] = useState(0);
+  // matching
+  const [pairs, setPairs] = useState<Array<{ left: string; right: string }>>([ { left: "", right: "" }, { left: "", right: "" }]);
+  // ordering
+  const [items, setItems] = useState<string[]>(["", "", ""]);
+
+  const [errors, setErrors] = useState<string[]>([]);
+
+  const validate = (): LessonPauseConfig | null => {
+    const errs: string[] = [];
+    if (!question.trim()) errs.push("Pitanje je obavezno.");
+    if (!correctExplanation.trim()) errs.push("Objašnjenje za tačan odgovor je obavezno.");
+    if (!wrongExplanation.trim()) errs.push("Objašnjenje za netačan odgovor je obavezno.");
+
+    if (type === "multiple-choice" || type === "fact-question") {
+      if (type === "fact-question" && !fact.trim()) errs.push("Zanimljivost (činjenica) je obavezna.");
+      const filled = options.filter(o => o.trim());
+      if (filled.length < 2) errs.push("Potrebne su najmanje 2 opcije.");
+      if (filled.length > 10) errs.push("Maksimalno 10 opcija.");
+      if (!options[correctOption]?.trim()) errs.push("Odaberi tačnu opciju.");
+    }
+    if (type === "matching") {
+      const filledPairs = pairs.filter(p => p.left.trim() && p.right.trim());
+      if (filledPairs.length < 2) errs.push("Potrebna su najmanje 2 para.");
+      if (filledPairs.length > 10) errs.push("Maksimalno 10 parova.");
+    }
+    if (type === "ordering") {
+      const filled = items.filter(i => i.trim());
+      if (filled.length < 2) errs.push("Potrebne su najmanje 2 stavke.");
+      if (filled.length > 10) errs.push("Maksimalno 10 stavki.");
+    }
+
+    if (errs.length > 0) { setErrors(errs); return null; }
+    setErrors([]);
+
+    const config: LessonPauseConfig = {
+      id: generatePauseId(),
+      type,
+      question: question.trim(),
+      correctExplanation: correctExplanation.trim(),
+      wrongExplanation: wrongExplanation.trim(),
+    };
+
+    if (type === "yes-no") {
+      config.correctAnswer = correctAnswer;
+    } else if (type === "multiple-choice") {
+      config.options = options.map(o => o.trim()).filter(Boolean);
+      config.correctOption = correctOption;
+    } else if (type === "fact-question") {
+      config.fact = fact.trim();
+      config.options = options.map(o => o.trim()).filter(Boolean);
+      config.correctOption = correctOption;
+    } else if (type === "matching") {
+      config.pairs = pairs.filter(p => p.left.trim() && p.right.trim()).map(p => ({ left: p.left.trim(), right: p.right.trim() }));
+    } else if (type === "ordering") {
+      config.items = items.map(i => i.trim()).filter(Boolean);
+    }
+
+    return config;
+  };
+
+  const handleInsert = () => {
+    const cfg = validate();
+    if (cfg) onInsert(cfg);
+  };
+
+  const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none text-sm";
+  const labelCls = "block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Dodaj ilmihal pauzu"
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-xl max-h-[90vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <PauseCircle className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-base font-bold text-gray-800">Dodaj Ilmihal pauzu</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Zatvori"
+            className="p-1.5 rounded-lg hover:bg-gray-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Type selector */}
+          <div>
+            <label className={labelCls}>Tip pauze</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {(Object.keys(PAUSE_TYPE_LABELS) as LessonPauseType[]).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => { setType(t); setErrors([]); }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${
+                    type === t
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                      : "border-gray-200 bg-gray-50 text-gray-600 hover:border-indigo-200 hover:bg-indigo-50/40"
+                  }`}
+                  data-testid={`pause-type-${t}`}
+                >
+                  <span>{PAUSE_TYPE_ICONS[t]}</span>
+                  {PAUSE_TYPE_LABELS[t]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* fact-question fact */}
+          {type === "fact-question" && (
+            <div>
+              <label className={labelCls}>Zanimljiva činjenica (prikazuje se učeniku)</label>
+              <textarea
+                value={fact}
+                onChange={e => setFact(e.target.value)}
+                rows={2}
+                className={inputCls}
+                placeholder="Npr. Poslanik ﷺ je rekao..."
+                data-testid="pause-fact"
+              />
+            </div>
+          )}
+
+          {/* Question */}
+          <div>
+            <label className={labelCls}>Pitanje *</label>
+            <textarea
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              rows={2}
+              className={inputCls}
+              placeholder="Upiši pitanje..."
+              data-testid="pause-question"
+            />
+          </div>
+
+          {/* yes-no */}
+          {type === "yes-no" && (
+            <div>
+              <label className={labelCls}>Tačan odgovor *</label>
+              <div className="flex gap-3">
+                {([true, false] as const).map(val => (
+                  <label key={String(val)} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="correctAnswer"
+                      checked={correctAnswer === val}
+                      onChange={() => setCorrectAnswer(val)}
+                      className="accent-indigo-600"
+                      data-testid={`pause-correct-${val ? "da" : "ne"}`}
+                    />
+                    <span className={`font-bold text-sm ${val ? "text-green-700" : "text-red-700"}`}>
+                      {val ? "DA" : "NE"}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* multiple-choice / fact-question opcije */}
+          {(type === "multiple-choice" || type === "fact-question") && (
+            <div>
+              <label className={labelCls}>Opcije (odaberi tačnu) *</label>
+              <div className="space-y-2">
+                {options.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="correctOpt"
+                      checked={correctOption === i}
+                      onChange={() => setCorrectOption(i)}
+                      className="accent-indigo-600 flex-shrink-0"
+                      aria-label={`Opcija ${i + 1} je tačna`}
+                      data-testid={`pause-opt-radio-${i}`}
+                    />
+                    <input
+                      type="text"
+                      value={opt}
+                      onChange={e => {
+                        const next = [...options];
+                        next[i] = e.target.value;
+                        setOptions(next);
+                      }}
+                      placeholder={`Opcija ${i + 1}`}
+                      className={`${inputCls} flex-1`}
+                      data-testid={`pause-opt-text-${i}`}
+                    />
+                    {options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = options.filter((_, j) => j !== i);
+                          setOptions(next);
+                           setCorrectOption(correctOptionAfterRemoval(
+                             correctOption,
+                             i,
+                             next.length,
+                           ));
+                        }}
+                        className="p-1.5 rounded-lg text-red-400 hover:bg-red-50"
+                        aria-label="Ukloni opciju"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {options.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => setOptions([...options, ""])}
+                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1"
+                    data-testid="pause-add-option"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Dodaj opciju
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* matching */}
+          {type === "matching" && (
+            <div>
+              <label className={labelCls}>Parovi (lijevo ↔ desno) *</label>
+              <div className="space-y-2">
+                {pairs.map((pair, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={pair.left}
+                      onChange={e => {
+                        const next = [...pairs];
+                        next[i] = { ...next[i], left: e.target.value };
+                        setPairs(next);
+                      }}
+                      placeholder={`Lijevo ${i + 1}`}
+                      className={`${inputCls} flex-1`}
+                      data-testid={`pause-pair-left-${i}`}
+                    />
+                    <span className="text-gray-400 text-sm flex-shrink-0">↔</span>
+                    <input
+                      type="text"
+                      value={pair.right}
+                      onChange={e => {
+                        const next = [...pairs];
+                        next[i] = { ...next[i], right: e.target.value };
+                        setPairs(next);
+                      }}
+                      placeholder={`Desno ${i + 1}`}
+                      className={`${inputCls} flex-1`}
+                      data-testid={`pause-pair-right-${i}`}
+                    />
+                    {pairs.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => setPairs(pairs.filter((_, j) => j !== i))}
+                        className="p-1.5 rounded-lg text-red-400 hover:bg-red-50"
+                        aria-label="Ukloni par"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {pairs.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => setPairs([...pairs, { left: "", right: "" }])}
+                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1"
+                    data-testid="pause-add-pair"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Dodaj par
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ordering */}
+          {type === "ordering" && (
+            <div>
+              <label className={labelCls}>Stavke u tačnom redoslijedu *</label>
+              <div className="space-y-2">
+                {items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-400 w-5 text-right flex-shrink-0">{i + 1}.</span>
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={e => {
+                        const next = [...items];
+                        next[i] = e.target.value;
+                        setItems(next);
+                      }}
+                      placeholder={`Stavka ${i + 1}`}
+                      className={`${inputCls} flex-1`}
+                      data-testid={`pause-item-${i}`}
+                    />
+                    {items.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => setItems(items.filter((_, j) => j !== i))}
+                        className="p-1.5 rounded-lg text-red-400 hover:bg-red-50"
+                        aria-label="Ukloni stavku"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {items.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => setItems([...items, ""])}
+                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1"
+                    data-testid="pause-add-item"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Dodaj stavku
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Explanations */}
+          <div>
+            <label className={labelCls}>Objašnjenje za tačan odgovor *</label>
+            <textarea
+              value={correctExplanation}
+              onChange={e => setCorrectExplanation(e.target.value)}
+              rows={2}
+              className={inputCls}
+              placeholder="Npr. Tačno! Namaz je stub vjere..."
+              data-testid="pause-correct-explanation"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Objašnjenje za netačan odgovor *</label>
+            <textarea
+              value={wrongExplanation}
+              onChange={e => setWrongExplanation(e.target.value)}
+              rows={2}
+              className={inputCls}
+              placeholder="Npr. Nije tačno. Pogrešan odgovor jer..."
+              data-testid="pause-wrong-explanation"
+            />
+          </div>
+
+          {/* Validation errors */}
+          {errors.length > 0 && (
+            <div className="rounded-xl bg-red-50 border border-red-200 p-3 space-y-1" role="alert">
+              {errors.map((e, i) => (
+                <p key={i} className="text-xs text-red-700 font-semibold">• {e}</p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-5 py-3.5 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            Odustani
+          </button>
+          <button
+            type="button"
+            onClick={handleInsert}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors"
+            data-testid="pause-insert-btn"
+          >
+            <PauseCircle className="w-4 h-4" />
+            Umetni pauzu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ParsedSection {
   id: string;
   title: string;
@@ -375,6 +950,7 @@ const editorExtensions = [
   InfoCard,
   AudioBlock,
   EmbedExercise,
+  LessonPause,
   Youtube.configure({
     controls: true,
     nocookie: true,
@@ -457,6 +1033,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [audioFiles, setAudioFiles] = useState<{name:string;url:string;size:number;modified:string}[]>([]);
   const [audioGalleryLoading, setAudioGalleryLoading] = useState(false);
   const docInputRef = useRef<HTMLInputElement>(null);
+  const [showPauseModal, setShowPauseModal] = useState(false);
 
   const loadGallery = useCallback(async () => {
     setGalleryLoading(true);
@@ -880,6 +1457,20 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     }
   }, [editor]);
 
+  const insertLessonPause = useCallback((config: LessonPauseConfig) => {
+    if (!editor) return;
+    const encoded = encodeURIComponent(JSON.stringify(config));
+    editor.chain().focus().insertContent({
+      type: "lessonPause",
+      attrs: {
+        "data-lesson-pause": "1",
+        "data-pause-config": encoded,
+      },
+    }).run();
+    setShowPauseModal(false);
+    toast({ title: "Pauza dodana ✓", description: `Tip: ${PAUSE_TYPE_LABELS[config.type]}` });
+  }, [editor, toast]);
+
   const [showTablePicker, setShowTablePicker] = useState(false);
   const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
 
@@ -1026,6 +1617,13 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           </div>
         </div>
       )}
+      {showPauseModal && (
+        <LessonPauseModal
+          onClose={() => setShowPauseModal(false)}
+          onInsert={insertLessonPause}
+        />
+      )}
+
       {parsed.hasAccordions && (
         <div className="px-3 py-2 border-b border-gray-200 bg-gray-50/80">
           <div className="flex flex-wrap gap-1.5 items-center">
@@ -1228,6 +1826,13 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
         >
           <Puzzle className="w-4 h-4 text-purple-600" />
         </MenuButton>
+        <MenuButton
+          onClick={() => setShowPauseModal(true)}
+          title={t("Umetni Ilmihal pauzu (interaktivno pitanje)")}
+          data-testid="toolbar-insert-pause"
+        >
+          <PauseCircle className="w-4 h-4 text-indigo-600" />
+        </MenuButton>
         <ToolSeparator />
         <MenuButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title={t("Poništi")}>
           <Undo2 className="w-4 h-4" />
@@ -1331,6 +1936,13 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           .wysiwyg-editor-content .ProseMirror th {
             background: #f0fdf4;
             font-weight: 700;
+          }
+          .wysiwyg-editor-content .ProseMirror .lesson-pause-node-view {
+            user-select: none;
+          }
+          .wysiwyg-editor-content .ProseMirror .lesson-pause-node-view.ProseMirror-selectednode {
+            outline: 3px solid #6366f1;
+            outline-offset: 2px;
           }
         `}</style>
         {parsed.sections[activeIdx]?.isPriprema ? (

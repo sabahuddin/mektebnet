@@ -48,8 +48,8 @@ async function runResidualSchema() {
   try {
     // Interaktivni blokovi u lekciji: pokušaji se čuvaju odvojeno od nagrada i
     // zvjezdica, da muallim dobije pedagoški pregled bez rangiranja učenika.
-    // Tabela je u Drizzle schemi, ali postojeće instalacije dobijaju je ovim
-    // idempotentnim korakom dok se historijska baseline migracija ne proširi.
+    // Verziona Drizzle migracija je primarni put; ovaj idempotentni korak
+    // ostaje samo kao kompatibilnosni fallback za ranije parcijalne instalacije.
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS interaktivni_blok_pokusaji (
         id SERIAL PRIMARY KEY,

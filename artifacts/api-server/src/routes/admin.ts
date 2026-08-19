@@ -50,23 +50,23 @@ import {
 import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES } from "../lib/content-translatable.js";
+import { canAccessAdminRoute } from "../lib/admin-route-access.js";
+import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
+import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 
 const router = Router();
 router.use(requireAuth);
 
-// Prilozi (materijali za nastavu) — i muallim i admin smiju upravljati;
-// sve ostale admin rute ostaju strogo admin-only.
+// Prilozi, upload i content-only izmjena postojeće Ilmihal lekcije dostupni su
+// i muallimu; sve ostale admin rute ostaju strogo admin-only.
 router.use((req, res, next) => {
   const role = (req as unknown as { user?: { role?: string } }).user?.role;
-  // Boundary-safe prefix: tačno "/prilozi" ili podruta "/prilozi/...".
-  // Sprječava buduće slučajeve gdje bi nova ruta tipa "/priloziXYZ" slučajno
-  // postala dostupna i muallim-u zbog naivnog startsWith-a.
-  const isPriloziRoute = req.path === "/prilozi" || req.path.startsWith("/prilozi/");
-  const isUploadRoute = req.path === "/upload";
-  const allowed = (isPriloziRoute || isUploadRoute)
-    ? role === "admin" || role === "muallim"
-    : role === "admin";
-  if (!allowed) {
+  if (!canAccessAdminRoute({
+    role,
+    method: req.method,
+    path: req.path,
+    body: req.body,
+  })) {
     return res.status(403).json({ error: "Nemaš dozvolu za ovu radnju" });
   }
   next();
@@ -1531,6 +1531,26 @@ router.post("/ilmihal", async (req, res) => {
   try {
     const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja } = req.body;
     if (!naslov || !slug) return res.status(400).json({ error: "naslov and slug required" });
+    // Sigurnost + validacija contentHtml (isti uvjeti kao PUT)
+    if (contentHtml) {
+      const html = typeof contentHtml === "string" ? contentHtml : "";
+      // Odbij iframe sa nedozvoljenog izvora (zatvara HTML-mode bypass)
+      const badEmbeds = findDisallowedIframeSrcs(html);
+      if (badEmbeds.length > 0) {
+        return res.status(400).json({
+          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
+          detail: badEmbeds.slice(0, 3),
+        });
+      }
+      // Validacija lekcijskih pauza ugrađenih u contentHtml
+      const pauseResult = validateLessonPauses(html);
+      if (!pauseResult.ok) {
+        return res.status(400).json({
+          error: "Sadržaj sadrži neispravne lekcijske pauze.",
+          detail: pauseResult.errors.map((e) => e.message),
+        });
+      }
+    }
     const kviz = kvizPitanja ? (typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja)) : null;
     const [row] = await db.insert(ilmihalLekcijeTable).values({
       naslov, slug, nivo: nivo || 2, redoslijed: redoslijed || 0,
@@ -1538,7 +1558,7 @@ router.post("/ilmihal", async (req, res) => {
     }).returning({ id: ilmihalLekcijeTable.id });
     res.json({ success: true, id: row.id });
   } catch (err) {
-    console.error("POST /ilmihal error:", err);
+    req.log.error({ err }, "POST /ilmihal error");
     res.status(500).json({ error: "Greška pri kreiranju lekcije" });
   }
   return;
@@ -1548,22 +1568,38 @@ router.put("/ilmihal/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds } = req.body;
+    const editorRole = req.user?.role;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) {
+      const submittedHtml = typeof contentHtml === "string" ? contentHtml : "";
       // Sigurnost: odbij snimanje ako sadržaj ima iframe sa nedozvoljenog izvora
       // (zatvara HTML-mode bypass — vidi findDisallowedIframeSrcs).
-      const badEmbeds = findDisallowedIframeSrcs(typeof contentHtml === "string" ? contentHtml : "");
+      const badEmbeds = findDisallowedIframeSrcs(submittedHtml);
       if (badEmbeds.length > 0) {
         return res.status(400).json({
           error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
           detail: badEmbeds.slice(0, 3),
         });
       }
+      // Muallim smije uređivati samo sadržaj i taj HTML prolazi kroz strogi
+      // allowlist prije validacije i upisa. Time event handleri, script tagovi,
+      // javascript URL-ovi i drugi izvršivi markup ne dolaze do učenika.
+      const safeHtml = editorRole === "muallim"
+        ? sanitizeMuallimLessonHtml(submittedHtml, CONTENT_IFRAME_WHITELIST)
+        : submittedHtml;
+      // Validacija lekcijskih pauza ugrađenih u contentHtml
+      const pauseResult = validateLessonPauses(safeHtml);
+      if (!pauseResult.ok) {
+        return res.status(400).json({
+          error: "Sadržaj sadrži neispravne lekcijske pauze.",
+          detail: pauseResult.errors.map((e) => e.message),
+        });
+      }
       // Auto-clean before save: remove duplicate priprema accordions, upgrade old design.
       const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
-      updates.contentHtml = regeneratePripremaInHtml(contentHtml);
+      updates.contentHtml = regeneratePripremaInHtml(safeHtml);
     }
     if (naslov !== undefined) updates.naslov = naslov;
     if (redoslijed !== undefined) updates.redoslijed = redoslijed;
@@ -1589,7 +1625,7 @@ router.put("/ilmihal/:id", async (req, res) => {
     await db.update(ilmihalLekcijeTable).set(updates).where(eq(ilmihalLekcijeTable.id, id));
     res.json({ success: true });
   } catch (err: any) {
-    console.error("PUT /ilmihal/:id error:", err?.message, err?.stack);
+    req.log.error({ err }, "PUT /ilmihal/:id error");
     res.status(500).json({ error: "Greška servera", detail: err?.message });
   }
   return;

@@ -18,6 +18,10 @@ import {
   interaktivniBlokPokusajiTable,
 } from "@workspace/db/schema";
 import app from "../app.js";
+import {
+  bootstrapDrizzleMigrations,
+  runDrizzleMigrate,
+} from "../lib/drizzle-migrate.js";
 import { signToken } from "../middlewares/auth.js";
 
 const SUFFIX = `t${Date.now()}`;
@@ -56,6 +60,11 @@ function tokenFor(userId: number, role: "muallim" | "ucenik", label: string) {
 }
 
 before(async () => {
+  // Route testovi importuju `app` bez pokretanja izvršnog server entry pointa,
+  // pa test baza mora proći isti verzionisani migration put kao aplikacija.
+  await bootstrapDrizzleMigrations();
+  await runDrizzleMigrate();
+
   muallimId = await createUser("muallim", "muallim");
   drugiMuallimId = await createUser("muallim", "drugi-muallim");
   ucenikId = await createUser("ucenik", "ucenik");

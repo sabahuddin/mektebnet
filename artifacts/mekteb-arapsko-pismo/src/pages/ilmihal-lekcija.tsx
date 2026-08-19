@@ -3016,9 +3016,11 @@ export default function IlmihalLekcijaPage() {
     </AnimatePresence>
     <Layout>
       <div className="max-w-3xl mx-auto">
-        {/* Admin toolbar (samo admin) */}
-        {user?.role === "admin" && (
+        {/* Upravljanje sadržajem: admin ima sve kontrole, muallim samo editor sadržaja. */}
+        {(user?.role === "admin" || user?.role === "muallim") && (
           <div className="flex items-center gap-2 mb-4 justify-end flex-wrap">
+            {user?.role === "admin" && (
+              <>
             <button onClick={async () => {
               if (!lekcija || !token) return;
               const isLocked = lekcija.locked;
@@ -3052,6 +3054,8 @@ export default function IlmihalLekcijaPage() {
               {savingUvjeti ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
               {t("Preduvjeti:")} {(lekcija.uvjetiIds ?? []).length > 0 ? (lekcija.uvjetiIds ?? []).length : "—"}
             </button>
+              </>
+            )}
             <button onClick={() => setShowEditor(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
               <FilePen className="w-3.5 h-3.5" /> {t("Uredi sadržaj")}
