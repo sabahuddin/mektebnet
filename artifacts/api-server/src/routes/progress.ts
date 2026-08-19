@@ -7,9 +7,14 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router: IRouter = Router();
 
+// Sav napredak pripada isključivo prijavljenom učeniku. Nikada ne prihvatamo
+// studentId iz query-ja ili body-ja: to bi svakom prijavljenom korisniku dalo
+// mogućnost da čita ili mijenja tuđi napredak.
+router.use(requireAuth, requireRole("ucenik"));
+
 router.get("/progress", async (req, res) => {
   try {
-    const studentId = (req.query.studentId as string) || "anonymous";
+    const studentId = String(req.user!.userId);
     let [progress] = await db
       .select()
       .from(studentProgressTable)
@@ -47,26 +52,25 @@ router.get("/progress", async (req, res) => {
 
 router.post("/progress/lesson", async (req, res) => {
   try {
-    const { studentId, lessonId, score, maxScore, timeSpentSeconds } = req.body;
-    if (!studentId || !lessonId) {
-      res.status(400).json({ error: "bad_request", message: "studentId and lessonId required" });
+    const lessonId = Number(req.body?.lessonId);
+    if (!Number.isInteger(lessonId) || lessonId <= 0) {
+      res.status(400).json({ error: "bad_request", message: "lessonId required" });
       return;
     }
-
-    let [progress] = await db
-      .select()
-      .from(studentProgressTable)
-      .where(eq(studentProgressTable.studentId, studentId))
-      .limit(1);
 
     // Med (DB kolona total_hasanat — UI je relabelovao u "Kapi meda") za
     // završenu lekciju: 30 po lekciji. Ranije 10/20 — povećano po zahtjevu
     // korisnika ("med za znanje, više nagrade za učenje nego za igricu").
     const hasanatEarned = 30;
     const today = new Date().toISOString().split("T")[0];
+    const studentId = String(req.user!.userId);
 
-    if (!progress) {
-      const [created] = await db
+    // Prvi INSERT je atomski. Ako je red već kreirao paralelni zahtjev,
+    // ON CONFLICT čeka da se taj zahtjev završi; zatim FOR UPDATE serijalizira
+    // provjeru i promjenu completedLessons. Time jedna lekcija može nagraditi
+    // učenika samo jednom, čak i kada klik ili mreža pošalju više zahtjeva.
+    let { progress, newCompletion } = await db.transaction(async (tx) => {
+      const [created] = await tx
         .insert(studentProgressTable)
         .values({
           studentId,
@@ -76,42 +80,62 @@ router.post("/progress/lesson", async (req, res) => {
           streakDays: 1,
           lastActivityDate: today,
         })
+        .onConflictDoNothing()
         .returning();
-      progress = created;
-    } else {
-      const completedLessons = progress.completedLessons as number[];
-      if (!completedLessons.includes(lessonId)) {
-        completedLessons.push(lessonId);
+
+      if (created) return { progress: created, newCompletion: true };
+
+      await tx.execute(sql`
+        SELECT id
+        FROM student_progress
+        WHERE student_id = ${studentId}
+        FOR UPDATE
+      `);
+
+      const [current] = await tx
+        .select()
+        .from(studentProgressTable)
+        .where(eq(studentProgressTable.studentId, studentId))
+        .limit(1);
+      if (!current) throw new Error("Student progress row was not found after conflict");
+
+      const completedLessons = Array.isArray(current.completedLessons)
+        ? [...current.completedLessons]
+        : [];
+      if (completedLessons.includes(lessonId)) {
+        return { progress: current, newCompletion: false };
       }
-      const lastActivity = progress.lastActivityDate;
+
+      completedLessons.push(lessonId);
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split("T")[0];
-      let streakDays = progress.streakDays;
-      if (lastActivity === yesterdayStr) {
-        streakDays += 1;
-      } else if (lastActivity !== today) {
-        streakDays = 1;
-      }
+      const streakDays = current.lastActivityDate === yesterdayStr
+        ? current.streakDays + 1
+        : current.lastActivityDate === today
+          ? current.streakDays
+          : 1;
 
-      const [updated] = await db
+      const [updated] = await tx
         .update(studentProgressTable)
         .set({
-          totalHasanat: progress.totalHasanat + hasanatEarned,
+          totalHasanat: current.totalHasanat + hasanatEarned,
           completedLessons,
           streakDays,
           lastActivityDate: today,
           updatedAt: new Date(),
         })
-        .where(eq(studentProgressTable.studentId, studentId))
+        .where(eq(studentProgressTable.id, current.id))
         .returning();
-      progress = updated;
-    }
+      if (!updated) throw new Error("Student progress row was not updated");
+
+      return { progress: updated, newCompletion: true };
+    });
 
     // Evaluate and persist any newly-earned badges
     let novelyEarned: Awaited<ReturnType<typeof evaluateAndPersistBadges>> = [];
     const userIdNum = Number(progress.studentId);
-    if (Number.isFinite(userIdNum)) {
+    if (newCompletion && Number.isFinite(userIdNum)) {
       try {
         novelyEarned = await evaluateAndPersistBadges(userIdNum);
         if (novelyEarned.length > 0) {
@@ -135,6 +159,7 @@ router.post("/progress/lesson", async (req, res) => {
       streakDays: progress.streakDays,
       lastActivityDate: progress.lastActivityDate || null,
       newBadges: novelyEarned,
+      newCompletion,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to save lesson progress");
@@ -144,23 +169,40 @@ router.post("/progress/lesson", async (req, res) => {
 
 router.post("/exercises/session", async (req, res) => {
   try {
-    const { studentId, lessonId, exerciseType, correctAnswers, totalQuestions, timeSpentSeconds } = req.body;
-    if (!studentId || !lessonId || !exerciseType) {
-      res.status(400).json({ error: "bad_request", message: "studentId, lessonId, exerciseType required" });
+    const studentId = String(req.user!.userId);
+    const { lessonId, exerciseType, correctAnswers, totalQuestions, timeSpentSeconds } = req.body ?? {};
+    if (!Number.isInteger(Number(lessonId)) || Number(lessonId) <= 0 || typeof exerciseType !== "string" || !exerciseType) {
+      res.status(400).json({ error: "bad_request", message: "lessonId and exerciseType required" });
       return;
     }
 
-    const accuracy = totalQuestions > 0 ? correctAnswers / totalQuestions : 0;
+    const safeCorrectAnswers = Number(correctAnswers);
+    const safeTotalQuestions = Number(totalQuestions);
+    const safeTimeSpentSeconds = Number(timeSpentSeconds);
+    if (
+      !Number.isInteger(safeCorrectAnswers) ||
+      !Number.isInteger(safeTotalQuestions) ||
+      !Number.isFinite(safeTimeSpentSeconds) ||
+      safeCorrectAnswers < 0 ||
+      safeTotalQuestions <= 0 ||
+      safeCorrectAnswers > safeTotalQuestions ||
+      safeTimeSpentSeconds < 0
+    ) {
+      res.status(400).json({ error: "bad_request", message: "Invalid exercise result" });
+      return;
+    }
+
+    const accuracy = safeCorrectAnswers / safeTotalQuestions;
     let hasanatEarned = Math.round(accuracy * 10);
     if (accuracy === 1) hasanatEarned += 5;
 
     await db.insert(exerciseSessionsTable).values({
       studentId,
-      lessonId,
+      lessonId: Number(lessonId),
       exerciseType,
-      correctAnswers,
-      totalQuestions,
-      timeSpentSeconds,
+      correctAnswers: safeCorrectAnswers,
+      totalQuestions: safeTotalQuestions,
+      timeSpentSeconds: safeTimeSpentSeconds,
       hasanatEarned,
     });
 

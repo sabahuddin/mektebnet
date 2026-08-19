@@ -2806,7 +2806,7 @@ export default function IlmihalLekcijaPage() {
     }
     apiRequest<{ completedLessons?: number[] }>(
       "GET",
-      `/progress?studentId=${encodeURIComponent(String(user.id))}`,
+      "/progress",
       undefined,
       token || undefined,
     )
@@ -2864,11 +2864,7 @@ export default function IlmihalLekcijaPage() {
           "POST",
           "/progress/lesson",
           {
-            studentId: String(user.id),
             lessonId: lekcija.id,
-            score: 10,
-            maxScore: 10,
-            timeSpentSeconds: timeSpentRef.current,
           },
           token,
         );

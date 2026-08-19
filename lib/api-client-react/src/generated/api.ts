@@ -20,7 +20,6 @@ import type {
   ErrorResponse,
   ExerciseSessionRequest,
   ExerciseSessionResult,
-  GetProgressParams,
   H5pAttemptsResponse,
   H5pResultRequest,
   H5pResultResponse,
@@ -278,59 +277,43 @@ export function useGetLessonById<
 }
 
 /**
- * @summary Get student progress
+ * @summary Get the authenticated student's progress
  */
-export const getGetProgressUrl = (params?: GetProgressParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? "null" : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0
-    ? `/api/progress?${stringifiedParams}`
-    : `/api/progress`;
+export const getGetProgressUrl = () => {
+  return `/api/progress`;
 };
 
 export const getProgress = async (
-  params?: GetProgressParams,
   options?: RequestInit,
 ): Promise<StudentProgress> => {
-  return customFetch<StudentProgress>(getGetProgressUrl(params), {
+  return customFetch<StudentProgress>(getGetProgressUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetProgressQueryKey = (params?: GetProgressParams) => {
-  return [`/api/progress`, ...(params ? [params] : [])] as const;
+export const getGetProgressQueryKey = () => {
+  return [`/api/progress`] as const;
 };
 
 export const getGetProgressQueryOptions = <
   TData = Awaited<ReturnType<typeof getProgress>>,
   TError = ErrorType<unknown>,
->(
-  params?: GetProgressParams,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof getProgress>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-) => {
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProgress>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetProgressQueryKey(params);
+  const queryKey = queryOptions?.queryKey ?? getGetProgressQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProgress>>> = ({
     signal,
-  }) => getProgress(params, { signal, ...requestOptions });
+  }) => getProgress({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getProgress>>,
@@ -345,24 +328,21 @@ export type GetProgressQueryResult = NonNullable<
 export type GetProgressQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get student progress
+ * @summary Get the authenticated student's progress
  */
 
 export function useGetProgress<
   TData = Awaited<ReturnType<typeof getProgress>>,
   TError = ErrorType<unknown>,
->(
-  params?: GetProgressParams,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof getProgress>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetProgressQueryOptions(params, options);
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProgress>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProgressQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

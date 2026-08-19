@@ -78,13 +78,7 @@ paths:
     get:
       operationId: getProgress
       tags: [progress]
-      summary: Get student progress
-      parameters:
-        - name: studentId
-          in: query
-          required: false
-          schema:
-            type: string
+      summary: Get the authenticated student's progress
       responses:
         "200":
           description: Student progress
@@ -423,28 +417,14 @@ components:
     SaveLessonProgressRequest:
       type: object
       properties:
-        studentId:
-          type: string
         lessonId:
           type: integer
-        score:
-          type: integer
-        maxScore:
-          type: integer
-        timeSpentSeconds:
-          type: integer
       required:
-        - studentId
         - lessonId
-        - score
-        - maxScore
-        - timeSpentSeconds
 
     ExerciseSessionRequest:
       type: object
       properties:
-        studentId:
-          type: string
         lessonId:
           type: integer
         exerciseType:
@@ -456,7 +436,6 @@ components:
         timeSpentSeconds:
           type: integer
       required:
-        - studentId
         - lessonId
         - exerciseType
         - correctAnswers

@@ -12,7 +12,6 @@ export * from "./exerciseConfig";
 export * from "./exerciseConfigType";
 export * from "./exerciseSessionRequest";
 export * from "./exerciseSessionResult";
-export * from "./getProgressParams";
 export * from "./h5pAttempt";
 export * from "./h5pAttemptsResponse";
 export * from "./h5pResultRequest";

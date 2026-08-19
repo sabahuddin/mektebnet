@@ -371,8 +371,8 @@ export default function UcenikProfilPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!user) return;
-    apiRequest<StudentProgress>("GET", `/progress?studentId=${encodeURIComponent(String(user.id))}`)
+    if (!user || !token) return;
+    apiRequest<StudentProgress>("GET", "/progress", undefined, token)
       .then(setProgress)
       .catch(() => setProgress(null));
     apiRequest<IlmihalLekcija[]>("GET", "/content/ilmihal")

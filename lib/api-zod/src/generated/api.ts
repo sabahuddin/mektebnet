@@ -114,12 +114,8 @@ export const GetLessonByIdResponse = zod
   );
 
 /**
- * @summary Get student progress
+ * @summary Get the authenticated student's progress
  */
-export const GetProgressQueryParams = zod.object({
-  studentId: zod.coerce.string().optional(),
-});
-
 export const GetProgressResponse = zod.object({
   studentId: zod.string(),
   totalHasanat: zod.number(),
@@ -141,11 +137,7 @@ export const GetProgressResponse = zod.object({
  * @summary Save lesson completion
  */
 export const SaveLessonProgressBody = zod.object({
-  studentId: zod.string(),
   lessonId: zod.number(),
-  score: zod.number(),
-  maxScore: zod.number(),
-  timeSpentSeconds: zod.number(),
 });
 
 export const SaveLessonProgressResponse = zod.object({
@@ -169,7 +161,6 @@ export const SaveLessonProgressResponse = zod.object({
  * @summary Save exercise session results
  */
 export const SaveExerciseSessionBody = zod.object({
-  studentId: zod.string(),
   lessonId: zod.number(),
   exerciseType: zod.string(),
   correctAnswers: zod.number(),

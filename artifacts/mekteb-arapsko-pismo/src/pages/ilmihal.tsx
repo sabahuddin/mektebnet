@@ -53,7 +53,7 @@ export default function IlmihalPage() {
           try {
             const p = await apiRequest<{ completedLessons?: number[] }>(
               "GET",
-              `/progress?studentId=${encodeURIComponent(String(user.id))}`,
+              "/progress",
               undefined,
               token || undefined,
             );

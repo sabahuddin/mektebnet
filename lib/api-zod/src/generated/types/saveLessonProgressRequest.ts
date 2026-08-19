@@ -7,9 +7,5 @@
  */
 
 export interface SaveLessonProgressRequest {
-  studentId: string;
   lessonId: number;
-  score: number;
-  maxScore: number;
-  timeSpentSeconds: number;
 }

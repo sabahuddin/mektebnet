@@ -3,12 +3,12 @@ import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { useGetLessonById, useSaveExerciseSession } from "@workspace/api-client-react";
-import { getStudentId } from "@/lib/student";
 import { X, Star, Timer, AlertCircle, CheckCircle2, Volume2, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Maskota } from "@/components/maskota";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
 import { useLanguage } from "@/context/language";
+import { useAuth } from "@/context/auth";
 
 // Utilities for generating game data
 const ALL_LETTERS = ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش"];
@@ -16,13 +16,17 @@ const DOT_COUNTS: Record<string, number> = { "ا":0, "ب":1, "ت":2, "ث":3, "ج
 
 export default function Exercise() {
   const { t } = useLanguage();
+  const { token } = useAuth();
   const { id, type } = useParams();
   const [, setLocation] = useLocation();
   const lessonId = parseInt(id || "1", 10);
-  const studentId = getStudentId();
   
   const { data: lesson } = useGetLessonById(lessonId);
-  const { mutateAsync: saveSession, isPending: isSaving } = useSaveExerciseSession();
+  const { mutateAsync: saveSession, isPending: isSaving } = useSaveExerciseSession({
+    request: {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    },
+  });
 
   const [gameState, setGameState] = useState<'intro' | 'playing' | 'completed'>('intro');
   const [round, setRound] = useState(0);
@@ -35,6 +39,7 @@ export default function Exercise() {
   const roundsAnsweredRef = useRef(0);
   const timeLeftRef = useRef(60);
   const gameStateRef = useRef<'intro' | 'playing' | 'completed'>('intro');
+  const authTokenRef = useRef(token);
 
   // Dynamic config based on type
   const config = lesson?.exercises.find(e => e.type === type) || { rounds: 5, hasanatReward: 10, title: t("Vježba"), timeLimit: 60 };
@@ -43,7 +48,6 @@ export default function Exercise() {
   // Snapshot of values needed by the unmount/unload save handler. Refs let us
   // avoid stale closures when the user navigates away mid-game.
   const sessionPayloadRef = useRef({
-    studentId,
     lessonId,
     exerciseType: type || "unknown",
     totalRounds,
@@ -51,17 +55,17 @@ export default function Exercise() {
   });
   useEffect(() => {
     sessionPayloadRef.current = {
-      studentId,
       lessonId,
       exerciseType: type || "unknown",
       totalRounds,
       timeLimit: config.timeLimit ?? 0,
     };
-  }, [studentId, lessonId, type, totalRounds, config.timeLimit]);
+  }, [lessonId, type, totalRounds, config.timeLimit]);
 
   // Mirror state into refs so the unload handler always sees the latest values.
   useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  useEffect(() => { authTokenRef.current = token; }, [token]);
 
   // Timer logic
   useEffect(() => {
@@ -112,7 +116,6 @@ export default function Exercise() {
     try {
       const resp = await saveSession({
         data: {
-          studentId,
           lessonId,
           exerciseType: type || "unknown",
           correctAnswers: finalScore,
@@ -147,8 +150,9 @@ export default function Exercise() {
 
       endedRef.current = true;
       const cfg = sessionPayloadRef.current;
+      const activeToken = authTokenRef.current;
+      if (!activeToken) return;
       const payload = {
-        studentId: cfg.studentId,
         lessonId: cfg.lessonId,
         exerciseType: cfg.exerciseType,
         correctAnswers: scoreRef.current,
@@ -160,17 +164,18 @@ export default function Exercise() {
 
       try {
         const apiBase = import.meta.env.VITE_API_BASE_URL || "/api";
-        const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-        const ok = navigator.sendBeacon?.(`${apiBase}/exercises/session`, blob);
-        // Fallback if sendBeacon is unavailable or rejected (size limits, etc.)
-        if (!ok) {
-          fetch(`${apiBase}/exercises/session`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            keepalive: true,
-          }).catch(() => {});
-        }
+        // sendBeacon ne podržava Authorization header, zato zaštićeni API
+        // koristimo kao best-effort fetch sa keepalive. Browser ga može završiti
+        // i nakon zatvaranja taba, a server identitet uzima iz JWT-a.
+        fetch(`${apiBase}/exercises/session`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        }).catch(() => {});
       } catch {
         // Best-effort; don't block unload
       }

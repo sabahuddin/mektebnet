@@ -120,15 +120,10 @@ export interface StudentProgress {
 }
 
 export interface SaveLessonProgressRequest {
-  studentId: string;
   lessonId: number;
-  score: number;
-  maxScore: number;
-  timeSpentSeconds: number;
 }
 
 export interface ExerciseSessionRequest {
-  studentId: string;
   lessonId: number;
   exerciseType: string;
   correctAnswers: number;
@@ -204,7 +199,3 @@ export interface H5pAttemptsResponse {
   /** Anti-cheat multiplier koji se primjenjuje na sljedeći pokušaj (1.0 / 0.5 / 0) */
   nextMultiplier: number;
 }
-
-export type GetProgressParams = {
-  studentId?: string;
-};

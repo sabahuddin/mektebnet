@@ -7,7 +7,6 @@
  */
 
 export interface ExerciseSessionRequest {
-  studentId: string;
   lessonId: number;
   exerciseType: string;
   correctAnswers: number;
