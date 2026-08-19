@@ -99,6 +99,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   next();
 }
 
+// Javne read rute mogu prepoznati administratora bez zahtijevanja prijave od
+// ostalih korisnika. Ako je Authorization header poslan, validira se jednako
+// strogo kao na zaštićenim rutama.
+export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.headers.authorization?.startsWith("Bearer ")) {
+    next();
+    return;
+  }
+  await requireAuth(req, res, next);
+}
+
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {

@@ -5,10 +5,12 @@ import {
   kvizPitanjaTable,
   pitanjaBankaTable,
   type DidaktickiTip,
+  type KvizKategorija,
+  type LekcijaKvizPitanje,
   type PitanjeMeta,
   type PitanjeVrsta,
 } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
 export interface IlmihalPilotQuestion {
   key: string;
@@ -30,7 +32,7 @@ export interface IlmihalPilotLesson {
   lessonSlug: string;
   quizSlug: string;
   quizTitle: string;
-  kategorija: "akaid" | "ibadet" | "ahlak";
+  kategorija: KvizKategorija;
   tagovi: string[];
   questions: IlmihalPilotQuestion[];
 }
@@ -291,12 +293,211 @@ export const ILMIHAL_LEARNING_PILOTS: IlmihalPilotLesson[] = [
   },
 ];
 
+const INTRO_SOURCE_QUESTIONS: Record<string, LekcijaKvizPitanje[]> = {
+  "uvodna-rijec-nivo-2": [
+    {
+      question: "Šta učenici upoznaju u drugom nivou Ilmihala?",
+      options: ["Allahove poslanike i osnove vjerovanja", "Samo sportska pravila", "Samo historijske datume", "Samo arapsku gramatiku"],
+      answer: "Allahove poslanike i osnove vjerovanja",
+    },
+    {
+      question: "Šta je potrebno za uspješno učenje prema uvodnoj riječi?",
+      options: ["Dobra namjera, strpljenje i lijepo druženje s knjigom", "Samo brzo čitanje", "Učenje bez pitanja", "Preskakanje teških lekcija"],
+      answer: "Dobra namjera, strpljenje i lijepo druženje s knjigom",
+    },
+    {
+      question: "Kako roditelji mogu podržati dijete u učenju?",
+      options: ["Pitati ga šta je naučilo i slušati ga", "Nikada ne razgovarati o lekcijama", "Tražiti samo ocjenu", "Učiti umjesto djeteta"],
+      answer: "Pitati ga šta je naučilo i slušati ga",
+    },
+    {
+      question: "Šta Allah olakšava onome ko krene putem traženja znanja?",
+      options: ["Put u Džennet", "Put bez ikakvog truda", "Samo školski odmor", "Put do imetka"],
+      answer: "Put u Džennet",
+    },
+  ],
+  "uvodna-rijec-nivo-3": [
+    {
+      question: "Po čemu se učenje u trećem nivou razlikuje od samog pamćenja?",
+      options: ["Učenici žele vjeru bolje razumjeti", "Učenici više ne čitaju", "Učenici uče samo naslove", "Učenici preskaču pitanja"],
+      answer: "Učenici žele vjeru bolje razumjeti",
+    },
+    {
+      question: "Šta učenici dublje upoznaju u trećem nivou?",
+      options: ["Značenje imanskih šartova i kratkih sura", "Samo sportske vještine", "Samo geografiju", "Samo kalendar"],
+      answer: "Značenje imanskih šartova i kratkih sura",
+    },
+    {
+      question: "Šta postaje dio naše odgovornosti kada nešto naučimo?",
+      options: ["Da korisno znanje prenosimo drugima", "Da znanje zadržimo samo za sebe", "Da prestanemo postavljati pitanja", "Da zaboravimo prethodne lekcije"],
+      answer: "Da korisno znanje prenosimo drugima",
+    },
+    {
+      question: "Kako roditelji mogu pomoći učeniku da vidi vjeru kao način života?",
+      options: ["Razgovorom i primjerima iz vlastitog života", "Izbjegavanjem svih pitanja", "Samo provjerom ocjena", "Učenjem odgovora napamet umjesto djeteta"],
+      answer: "Razgovorom i primjerima iz vlastitog života",
+    },
+  ],
+};
+
+interface SourceLesson {
+  nivo: number;
+  slug: string;
+  naslov: string;
+  predmet: string | null;
+  kvizPitanja: unknown;
+}
+
+function normalizeSourceQuestions(value: unknown): LekcijaKvizPitanje[] {
+  if (!Array.isArray(value)) return [];
+  const normalized: LekcijaKvizPitanje[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object") continue;
+    const source = raw as Record<string, unknown>;
+    if (typeof source["question"] === "string"
+      && Array.isArray(source["options"])
+      && source["options"].every((option) => typeof option === "string")
+      && typeof source["answer"] === "string") {
+      normalized.push({
+        question: source["question"],
+        options: source["options"] as string[],
+        answer: source["answer"],
+      });
+      continue;
+    }
+    if (typeof source["pitanje"] === "string"
+      && Array.isArray(source["odgovori"])
+      && source["odgovori"].every((option) => typeof option === "string")
+      && Number.isInteger(source["tacanOdgovor"])) {
+      const options = source["odgovori"] as string[];
+      const answer = options[source["tacanOdgovor"] as number];
+      if (answer !== undefined) {
+        normalized.push({ question: source["pitanje"], options, answer });
+      }
+    }
+  }
+  return normalized;
+}
+
+function categoryForLesson(predmet: string | null): { kategorija: KvizKategorija; tagovi: string[] } {
+  if (predmet === "Vjerovanje") return { kategorija: "akaid", tagovi: ["allah"] };
+  if (predmet === "Kiraet") return { kategorija: "akaid", tagovi: ["kuran"] };
+  if (predmet === "Ibadet i praksa") return { kategorija: "ibadet", tagovi: [] };
+  if (predmet === "Historija islama") return { kategorija: "historija", tagovi: [] };
+  return { kategorija: "ahlak", tagovi: ["ponasanje"] };
+}
+
+function inferDidaktickiTip(question: string): DidaktickiTip {
+  const normalized = question.toLocaleLowerCase("bs");
+  if (/(poredaj|redoslijed|šta dolazi prvo|sta dolazi prvo)/.test(normalized)) return "redoslijed";
+  if (/(kako|zašto|zasto|u kojoj situaciji|kada trebamo|šta treba|sta treba)/.test(normalized)) return "primjena";
+  if (/(koji|koja|koje|prepoznaj|razlik)/.test(normalized)) return "razlikovanje";
+  return "prisjecanje";
+}
+
+function buildQuestionVersion(
+  lesson: SourceLesson,
+  source: LekcijaKvizPitanje,
+  index: number,
+): IlmihalPilotQuestion {
+  // Prvo pitanje u svakoj lekciji namjerno je sidro za prisjećanje; ostala
+  // dobijaju precizniji tip prema formulaciji izvornog pitanja.
+  const didaktickiTip = index === 0 ? "prisjecanje" : inferDidaktickiTip(source.question);
+  const prefix: Record<DidaktickiTip, string> = {
+    prisjecanje: `Prisjeti se lekcije „${lesson.naslov}”`,
+    razlikovanje: `Prepoznaj tačan odgovor iz lekcije „${lesson.naslov}”`,
+    primjena: `Primijeni ono što si naučio/la u lekciji „${lesson.naslov}”`,
+    redoslijed: `Prisjeti se pravilnog redoslijeda iz lekcije „${lesson.naslov}”`,
+  };
+  return {
+    key: `${lesson.slug}-q${index + 1}`,
+    sourceQuestion: source.question.trim(),
+    didaktickiTip,
+    vrsta: "single",
+    pitanje: `${prefix[didaktickiTip]}: ${source.question.trim()}`,
+    opcije: source.options.map((option) => option.trim()),
+    correctIndex: source.options.findIndex((option) => option.trim() === source.answer.trim()),
+    objasnjenje: `Tačan odgovor je „${source.answer.trim()}”. Obrazloženje i kontekst nalaze se u lekciji „${lesson.naslov}”.`,
+    retryPrompt: `Ponovo se prisjeti sadržaja lekcije „${lesson.naslov}” i potraži odgovor koji direktno odgovara na izvorno pitanje.`,
+    tezina: didaktickiTip === "prisjecanje" ? 1 : 2,
+  };
+}
+
+export function buildExpandedIlmihalPilots(lessons: SourceLesson[]): IlmihalPilotLesson[] {
+  const manuallyAuthoredSlugs = new Set(ILMIHAL_LEARNING_PILOTS.map((pilot) => pilot.lessonSlug));
+  const expanded = lessons
+    .filter((lesson) => !manuallyAuthoredSlugs.has(lesson.slug))
+    .map((lesson) => {
+      const normalizedSources = normalizeSourceQuestions(lesson.kvizPitanja);
+      const sources = normalizedSources.length > 0
+        ? normalizedSources
+        : INTRO_SOURCE_QUESTIONS[lesson.slug] ?? [];
+      const { kategorija, tagovi } = categoryForLesson(lesson.predmet);
+      return {
+        nivo: lesson.nivo as 1 | 2 | 3,
+        lessonSlug: lesson.slug,
+        quizSlug: `ucimo-${lesson.slug}`.slice(0, 100),
+        quizTitle: `Učimo kroz pitanja: ${lesson.naslov}`,
+        kategorija,
+        tagovi,
+        questions: sources.map((source, index) => buildQuestionVersion(lesson, source, index)),
+      };
+    })
+    .filter((pilot) => pilot.questions.length > 0);
+  const coveredSlugs = new Set([...manuallyAuthoredSlugs, ...expanded.map((pilot) => pilot.lessonSlug)]);
+  const missing = lessons.filter((lesson) => !coveredSlugs.has(lesson.slug)).map((lesson) => lesson.slug);
+  if (missing.length > 0) {
+    throw new Error(`Objavljene Ilmihal lekcije bez valjanih izvornih pitanja: ${missing.join(", ")}`);
+  }
+  return expanded;
+}
+
+export function validateIlmihalPilots(pilots: IlmihalPilotLesson[]): void {
+  const lessonSlugs = new Set<string>();
+  const quizSlugs = new Set<string>();
+  const questionKeys = new Set<string>();
+  for (const pilot of pilots) {
+    if (lessonSlugs.has(pilot.lessonSlug)) throw new Error(`Dupla lekcija: ${pilot.lessonSlug}`);
+    if (quizSlugs.has(pilot.quizSlug)) throw new Error(`Dupli kviz: ${pilot.quizSlug}`);
+    lessonSlugs.add(pilot.lessonSlug);
+    quizSlugs.add(pilot.quizSlug);
+    if (pilot.questions.length === 0) throw new Error(`Lekcija bez pitanja: ${pilot.lessonSlug}`);
+    for (const question of pilot.questions) {
+      if (questionKeys.has(question.key)) throw new Error(`Dupli ključ pitanja: ${question.key}`);
+      questionKeys.add(question.key);
+      if (!question.sourceQuestion.trim() || !question.objasnjenje.trim() || !question.retryPrompt.trim()) {
+        throw new Error(`Nepotpuni pedagoški podaci: ${question.key}`);
+      }
+      if (question.opcije.length < 2 || question.opcije.some((option) => !option.trim())) {
+        throw new Error(`Neispravne opcije: ${question.key}`);
+      }
+      if (question.vrsta === "multiple") {
+        if (!question.correctIndexes || question.correctIndexes.length < 2
+          || question.correctIndexes.some((index) => index < 0 || index >= question.opcije.length)) {
+          throw new Error(`Neispravni višestruki odgovori: ${question.key}`);
+        }
+      } else if (question.vrsta === "reorder") {
+        const order = question.correctOrder ?? [];
+        const sorted = [...order].sort((a, b) => a - b);
+        if (order.length !== question.opcije.length || sorted.some((value, index) => value !== index + 1)) {
+          throw new Error(`Neispravan redoslijed: ${question.key}`);
+        }
+      } else if (question.correctIndex == null
+        || question.correctIndex < 0
+        || question.correctIndex >= question.opcije.length) {
+        throw new Error(`Neispravan tačan odgovor: ${question.key}`);
+      }
+    }
+  }
+}
+
 function questionMeta(question: IlmihalPilotQuestion): PitanjeMeta {
   return {
     didaktickiTip: question.didaktickiTip,
     retryMode: "immediate",
     retryPrompt: question.retryPrompt,
     sourceQuestion: question.sourceQuestion,
+    pilotKey: question.key,
   };
 }
 
@@ -305,7 +506,19 @@ export async function seedIlmihalLearningPilot(opts: { silent?: boolean } = {}) 
   let lessonsSeeded = 0;
   let questionsUpserted = 0;
 
-  for (const pilot of ILMIHAL_LEARNING_PILOTS) {
+  const sourceLessons = await db.select({
+    nivo: ilmihalLekcijeTable.nivo,
+    slug: ilmihalLekcijeTable.slug,
+    naslov: ilmihalLekcijeTable.naslov,
+    predmet: ilmihalLekcijeTable.predmet,
+    kvizPitanja: ilmihalLekcijeTable.kvizPitanja,
+  }).from(ilmihalLekcijeTable)
+    .where(eq(ilmihalLekcijeTable.isPublished, true))
+    .orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed), asc(ilmihalLekcijeTable.id));
+  const pilots = [...ILMIHAL_LEARNING_PILOTS, ...buildExpandedIlmihalPilots(sourceLessons)];
+  validateIlmihalPilots(pilots);
+
+  for (const pilot of pilots) {
     const [lesson] = await db
       .select({ id: ilmihalLekcijeTable.id, nivo: ilmihalLekcijeTable.nivo })
       .from(ilmihalLekcijeTable)
@@ -332,7 +545,6 @@ export async function seedIlmihalLearningPilot(opts: { silent?: boolean } = {}) 
         `)
         .limit(1);
       let quiz = existingQuiz;
-      let quizCreated = false;
       if (!quiz) {
         [quiz] = await tx.insert(kvizoviTable).values({
           seedKey: quizSeedKey,
@@ -347,10 +559,11 @@ export async function seedIlmihalLearningPilot(opts: { silent?: boolean } = {}) 
           lekcijaId: lesson.id,
           opis: "Pitanja za prisjećanje, razlikovanje, primjenu i redoslijed, uz objašnjen ponovni pokušaj.",
           pitanjaPoSesiji: pilot.questions.length,
-          isPublished: true,
+          // Objavljivanje je zasebna urednička odluka. Sva nova pitanja prvo
+          // moraju biti odobrena, a zatim admin može objaviti kviz.
+          isPublished: false,
         })
         .returning({ id: kvizoviTable.id, seedKey: kvizoviTable.seedKey });
-        quizCreated = true;
       } else if (!quiz.seedKey) {
         await tx.update(kvizoviTable)
           .set({ seedKey: quizSeedKey })
@@ -363,7 +576,7 @@ export async function seedIlmihalLearningPilot(opts: { silent?: boolean } = {}) 
         const meta = questionMeta(question);
         const seedKey = `ilmihal-learning:${question.key}`;
         const [existing] = await tx
-        .select({ id: pitanjaBankaTable.id, seedKey: pitanjaBankaTable.seedKey })
+        .select({ id: pitanjaBankaTable.id, seedKey: pitanjaBankaTable.seedKey, meta: pitanjaBankaTable.meta })
         .from(pitanjaBankaTable)
         .where(sql`
           ${pitanjaBankaTable.seedKey} = ${seedKey}
@@ -388,6 +601,7 @@ export async function seedIlmihalLearningPilot(opts: { silent?: boolean } = {}) 
           kategorija: pilot.kategorija,
           tagovi: pilot.tagovi,
           lekcijaId: lesson.id,
+          urednickiStatus: "na_cekanju" as const,
           tezina: question.tezina,
           updatedAt: new Date(),
         };
@@ -395,9 +609,13 @@ export async function seedIlmihalLearningPilot(opts: { silent?: boolean } = {}) 
         if (existing) {
           // Jednokratni prijelaz sa prve verzije pilota (ključ je bio u meta
           // JSON-u) na seed_key. Ostala polja ostaju pod kontrolom admina.
-          if (!existing.seedKey) {
+          const existingMeta = (existing.meta ?? {}) as PitanjeMeta;
+          if (!existing.seedKey || !existingMeta.pilotKey) {
             await tx.update(pitanjaBankaTable)
-              .set({ seedKey })
+              .set({
+                ...(!existing.seedKey ? { seedKey } : {}),
+                ...(!existingMeta.pilotKey ? { meta: { ...existingMeta, pilotKey: question.key } } : {}),
+              })
               .where(eq(pitanjaBankaTable.id, existing.id));
           }
           questionIds.push(existing.id);
@@ -410,11 +628,9 @@ export async function seedIlmihalLearningPilot(opts: { silent?: boolean } = {}) 
         }
       }
 
-      if (quizCreated) {
-        await tx.insert(kvizPitanjaTable).values(
-          questionIds.map((pitanjeId, redoslijed) => ({ kvizId: quiz.id, pitanjeId, redoslijed })),
-        );
-      }
+      await tx.insert(kvizPitanjaTable).values(
+        questionIds.map((pitanjeId, redoslijed) => ({ kvizId: quiz.id, pitanjeId, redoslijed })),
+      ).onConflictDoNothing();
       return questionIds.length;
     });
     questionsUpserted += questionsInPilot;

@@ -20,7 +20,7 @@ import {
   interaktivniBlokPokusajiTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte, lt, sql, inArray, count } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { optionalAuth, requireAuth } from "../middlewares/auth.js";
 import { sendEmail } from "../lib/email.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
@@ -460,7 +460,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
 // ── KVIZOVI ───────────────────────────────────────────────────────────────────
 
 // GET /api/content/kvizovi?nivo=1&modul=ilmihal
-router.get("/kvizovi", async (req, res) => {
+router.get("/kvizovi", optionalAuth, async (req, res) => {
   try {
     const { nivo, modul, lekcijaId } = req.query;
     const lekcijaIdNum = lekcijaId !== undefined ? parseInt(lekcijaId as string, 10) : undefined;
@@ -487,18 +487,28 @@ router.get("/kvizovi", async (req, res) => {
       opis: kvizoviTable.opis,
       pitanjaPoSesiji: kvizoviTable.pitanjaPoSesiji,
       isPublished: kvizoviTable.isPublished,
+      neodobrenaPitanja: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM "kviz_pitanja" kp
+        INNER JOIN "pitanja_banka" pb ON pb."id" = kp."pitanje_id"
+        WHERE kp."kviz_id" = "kvizovi"."id"
+          AND pb."urednicki_status" <> 'odobreno'
+      )`,
       pitanjaCount: sql<number>`GREATEST(
         (SELECT COUNT(*)::int FROM "kviz_pitanja" WHERE "kviz_pitanja"."kviz_id" = "kvizovi"."id"),
         CASE WHEN jsonb_typeof("kvizovi"."pitanja") = 'array' THEN jsonb_array_length("kvizovi"."pitanja") ELSE 0 END
       )`,
     }).from(kvizoviTable).orderBy(asc(kvizoviTable.nivo), asc(kvizoviTable.id));
 
+    const isAdmin = req.user?.role === "admin";
     const filtered = result.filter(k => {
+      if (!isAdmin && !k.isPublished) return false;
+      if (!isAdmin && k.neodobrenaPitanja > 0) return false;
       if (nivo && k.nivo !== parseInt(nivo as string)) return false;
       if (modul && k.modul !== modul) return false;
       if (lekcijaIdNum !== undefined && Number.isFinite(lekcijaIdNum) && k.lekcijaId !== lekcijaIdNum) return false;
       return true;
-    }).map(k => ({
+    }).map(({ neodobrenaPitanja: _neodobrenaPitanja, ...k }) => ({
       ...k,
       pitanjaCount: (k.pitanjaCount ?? 0) > 0
         ? k.pitanjaCount
@@ -519,10 +529,16 @@ router.get("/kvizovi", async (req, res) => {
 //   2) inače pada na `kvizovi.pitanja` JSONB (legacy fallback dok admin
 //      ne potvrdi da je sve OK i dok ne ugasimo kolonu).
 // Frontend dobija ISTI shape u oba slučaja: { question, options, answer, explanation, image }.
-router.get("/kvizovi/:slug", async (req, res) => {
+router.get("/kvizovi/:slug", optionalAuth, async (req, res) => {
   try {
-    const [kviz] = await db.select().from(kvizoviTable).where(eq(kvizoviTable.slug, req.params.slug));
+    const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
+    const [kviz] = await db.select().from(kvizoviTable).where(eq(kvizoviTable.slug, slug));
     if (!kviz) { res.status(404).json({ error: "Kviz nije pronađen" }); return; }
+    const isAdmin = req.user?.role === "admin";
+    if (!isAdmin && !kviz.isPublished) {
+      res.status(404).json({ error: "Kviz nije pronađen" });
+      return;
+    }
     const lang = getLang(req);
     await overlayOne(kviz, "kvizovi", lang);
 
@@ -546,11 +562,16 @@ router.get("/kvizovi/:slug", async (req, res) => {
         vrsta: pitanjaBankaTable.vrsta,
         objasnjenje: pitanjaBankaTable.objasnjenje,
         slika: pitanjaBankaTable.slika,
+        urednickiStatus: pitanjaBankaTable.urednickiStatus,
       })
       .from(kvizPitanjaTable)
       .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
       .where(eq(kvizPitanjaTable.kvizId, kviz.id))
       .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
+    if (!isAdmin && linked.some((question) => question.urednickiStatus !== "odobreno")) {
+      res.status(404).json({ error: "Kviz još nije urednički odobren" });
+      return;
+    }
 
     const norm = (s: string) => s.trim().replace(/\s+/g, " ");
     // KRITIČNO: mapa se gradi po ORIGINALNOM (bosanskom) tekstu pitanja PRIJE

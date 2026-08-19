@@ -250,6 +250,20 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS meta jsonb;`);
     await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS seed_key varchar(160);`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS pitanja_banka_seed_key_unique_idx ON pitanja_banka (seed_key);`);
+    await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS urednicki_status varchar(24) NOT NULL DEFAULT 'odobreno';`);
+    await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS reviewed_by integer;`);
+    await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS reviewed_at timestamp;`);
+    await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS review_note text;`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS pitanja_banka_urednicki_status_idx ON pitanja_banka (urednicki_status);`);
+    // Prva verzija learning pilota je nastala prije uredničkog statusa. Samo
+    // redovi koji nikada nisu pregledani prelaze na čekanje; kasnija odluka
+    // urednika (reviewed_at nije NULL) više se ne dira na narednim startovima.
+    await db.execute(sql`
+      UPDATE pitanja_banka
+      SET urednicki_status = 'na_cekanju'
+      WHERE seed_key LIKE 'ilmihal-learning:%'
+        AND reviewed_at IS NULL
+    `);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS seed_key varchar(160);`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS kvizovi_seed_key_unique_idx ON kvizovi (seed_key);`);
 

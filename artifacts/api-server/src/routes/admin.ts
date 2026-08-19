@@ -1737,7 +1737,24 @@ router.put("/kvizovi/:id", async (req, res) => {
       updates.pitanja = typeof pitanja === "string" ? pitanja : JSON.stringify(pitanja);
     }
     if (naslov !== undefined) updates.naslov = naslov;
-    if (isPublished !== undefined) updates.isPublished = isPublished;
+    if (isPublished !== undefined) {
+      if (isPublished === true) {
+        const quizId = parseInt(req.params.id);
+        const [{ count: unapprovedCount }] = await db.select({
+          count: sql<number>`count(*)::int`,
+        }).from(kvizPitanjaTable)
+          .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
+          .where(and(
+            eq(kvizPitanjaTable.kvizId, quizId),
+            sql`${pitanjaBankaTable.urednickiStatus} <> 'odobreno'`,
+          ));
+        if (unapprovedCount > 0) {
+          res.status(409).json({ error: `Kviz nije moguće objaviti: ${unapprovedCount} pitanja čeka uredničko odobrenje` });
+          return;
+        }
+      }
+      updates.isPublished = isPublished;
+    }
     if (kategorija !== undefined) updates.kategorija = kategorija || null;
     if (tagovi !== undefined) updates.tagovi = Array.isArray(tagovi) ? tagovi : (tagovi ? [tagovi] : []);
     if (lekcijaId !== undefined) updates.lekcijaId = lekcijaId || null;
@@ -2087,6 +2104,7 @@ router.get("/banka-pitanja", async (req, res) => {
     const search = (req.query["search"] as string | undefined)?.trim() || "";
     const kategorija = (req.query["kategorija"] as string | undefined) || "";
     const tag = (req.query["tag"] as string | undefined) || "";
+    const urednickiStatus = (req.query["urednickiStatus"] as string | undefined) || "";
     const lekcijaIdRaw = req.query["lekcijaId"] as string | undefined;
     const lekcijaId = lekcijaIdRaw ? parseInt(lekcijaIdRaw) : undefined;
     const page = Math.max(1, parseInt((req.query["page"] as string) || "1") || 1);
@@ -2096,6 +2114,9 @@ router.get("/banka-pitanja", async (req, res) => {
     if (search) filters.push(sql`${pitanjaBankaTable.pitanje} ILIKE ${"%" + search + "%"}`);
     if (kategorija) filters.push(eq(pitanjaBankaTable.kategorija, kategorija));
     if (tag) filters.push(sql`${pitanjaBankaTable.tagovi} ? ${tag}`);
+    if (["na_cekanju", "odobreno", "vraceno_na_doradu"].includes(urednickiStatus)) {
+      filters.push(eq(pitanjaBankaTable.urednickiStatus, urednickiStatus as "na_cekanju" | "odobreno" | "vraceno_na_doradu"));
+    }
     if (lekcijaId) filters.push(eq(pitanjaBankaTable.lekcijaId, lekcijaId));
     const whereClause = filters.length ? and(...filters) : undefined;
 
@@ -2542,16 +2563,33 @@ function validatePitanjeData(d: ReturnType<typeof normalizePitanjeBody>): string
   return null;
 }
 
+function validateLearningReviewData(d: ReturnType<typeof normalizePitanjeBody>): string | null {
+  if (!d.meta?.pilotKey) return null;
+  if (!d.meta.didaktickiTip || !d.meta.sourceQuestion || !d.meta.retryPrompt || d.meta.retryMode !== "immediate") {
+    return "Pitanje koje uči mora imati didaktički tip, izvorno pitanje i uputu za neposredni pokušaj";
+  }
+  if (!d.objasnjenje) return "Pitanje koje uči mora imati objašnjenje";
+  return null;
+}
+
 // POST /api/admin/banka-pitanja — kreira novo pitanje
 router.post("/banka-pitanja", async (req, res) => {
   try {
     const data = normalizePitanjeBody(req.body);
     const err = validatePitanjeData(data);
     if (err) { res.status(400).json({ error: err }); return; }
+    const learningErr = validateLearningReviewData(data);
+    if (learningErr) { res.status(400).json({ error: learningErr }); return; }
     const userId = (req as any).user?.id;
     const [created] = await db.insert(pitanjaBankaTable).values({
       ...data,
       createdBy: userId || null,
+      ...(data.meta?.pilotKey ? {
+        urednickiStatus: "na_cekanju" as const,
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewNote: null,
+      } : {}),
     }).returning();
     res.status(201).json(created);
   } catch (err: any) {
@@ -2570,8 +2608,17 @@ router.put("/banka-pitanja/:id", async (req, res) => {
     const data = normalizePitanjeBody(req.body);
     const err = validatePitanjeData(data);
     if (err) { res.status(400).json({ error: err }); return; }
+    const learningErr = validateLearningReviewData(data);
+    if (learningErr) { res.status(400).json({ error: learningErr }); return; }
+    const [existing] = await db.select({
+      meta: pitanjaBankaTable.meta,
+      urednickiStatus: pitanjaBankaTable.urednickiStatus,
+    }).from(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, parseInt(req.params.id)));
+    if (!existing) { res.status(404).json({ error: "Pitanje nije pronađeno" }); return; }
+    const isLearning = Boolean((existing.meta as { pilotKey?: string } | null)?.pilotKey || data.meta?.pilotKey);
     await db.update(pitanjaBankaTable).set({
       ...data,
+      ...(isLearning ? { urednickiStatus: "na_cekanju", reviewedBy: null, reviewedAt: null, reviewNote: null } : {}),
       updatedAt: new Date(),
     }).where(eq(pitanjaBankaTable.id, parseInt(req.params.id)));
     res.json({ success: true });
@@ -2583,6 +2630,31 @@ router.put("/banka-pitanja/:id", async (req, res) => {
     console.error("[PUT /banka-pitanja/:id]", err);
     res.status(500).json({ error: "Greška servera" });
   }
+});
+
+// POST /api/admin/banka-pitanja/:id/urednicki-pregled
+// Admin koji vrši stručni pregled eksplicitno odobrava ili vraća pitanje.
+router.post("/banka-pitanja/:id/urednicki-pregled", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const status = req.body?.status;
+  if (!Number.isFinite(id) || !["odobreno", "vraceno_na_doradu"].includes(status)) {
+    res.status(400).json({ error: "Neispravan zahtjev za urednički pregled" });
+    return;
+  }
+  const [question] = await db.select().from(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, id));
+  if (!question) { res.status(404).json({ error: "Pitanje nije pronađeno" }); return; }
+  const data = normalizePitanjeBody(question);
+  const validationError = validatePitanjeData(data) || validateLearningReviewData(data);
+  if (validationError) { res.status(400).json({ error: validationError }); return; }
+  const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 2000) || null : null;
+  const [updated] = await db.update(pitanjaBankaTable).set({
+    urednickiStatus: status,
+    reviewedBy: req.user?.userId ?? null,
+    reviewedAt: new Date(),
+    reviewNote: note,
+    updatedAt: new Date(),
+  }).where(eq(pitanjaBankaTable.id, id)).returning();
+  res.json(updated);
 });
 
 // DELETE /api/admin/banka-pitanja/:id — CASCADE briše iz svih kvizova.

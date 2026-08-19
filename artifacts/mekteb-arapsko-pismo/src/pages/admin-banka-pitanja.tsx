@@ -8,7 +8,7 @@ import { useLanguage } from "@/context/language";
 import {
   ArrowLeft, Plus, Search, Pencil, Trash2, Loader2, X, Save,
   Database, AlertTriangle, ChevronLeft, ChevronRight, Filter, BookOpenCheck,
-  Settings, Tag,
+  Settings, Tag, CheckCircle2, RotateCcw,
 } from "lucide-react";
 
 // Banka pitanja — centralni admin UI za sva kviz pitanja.
@@ -50,6 +50,10 @@ interface PitanjeBanka {
   kategorija: string | null;
   tagovi: string[];
   lekcijaId: number | null;
+  urednickiStatus: UrednickiStatus;
+  reviewedBy: number | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
   tezina: number;
   createdAt: string;
   updatedAt: string;
@@ -67,12 +71,19 @@ const VRSTA_LABELS: Record<string, string> = {
 type Vrsta = "single" | "multiple" | "truefalse" | "reorder" | "dragDrop" | "markWords";
 const ALL_VRSTE: Vrsta[] = ["single", "multiple", "truefalse", "reorder", "dragDrop", "markWords"];
 type DidaktickiTip = "prisjecanje" | "razlikovanje" | "primjena" | "redoslijed";
+type UrednickiStatus = "na_cekanju" | "odobreno" | "vraceno_na_doradu";
 
 const DIDAKTICKI_TIP_LABELS: Record<DidaktickiTip, string> = {
   prisjecanje: "Prisjećanje",
   razlikovanje: "Razlikovanje",
   primjena: "Primjena",
   redoslijed: "Redoslijed",
+};
+
+const UREDNICKI_STATUS_META: Record<UrednickiStatus, { label: string; classes: string }> = {
+  na_cekanju: { label: "Čeka urednički pregled", classes: "bg-amber-100 text-amber-800" },
+  odobreno: { label: "Urednički odobreno", classes: "bg-emerald-100 text-emerald-800" },
+  vraceno_na_doradu: { label: "Vraćeno na doradu", classes: "bg-red-100 text-red-700" },
 };
 
 interface PitanjeListResp {
@@ -161,6 +172,7 @@ export default function AdminBankaPitanjaPage() {
   const [search, setSearch] = useState("");
   const [filterKategorija, setFilterKategorija] = useState("");
   const [filterTag, setFilterTag] = useState("");
+  const [filterUrednickiStatus, setFilterUrednickiStatus] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [lekcije, setLekcije] = useState<IlmihalLekcija[]>([]);
@@ -252,7 +264,7 @@ export default function AdminBankaPitanjaPage() {
     if (!token) return;
     void loadList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page, debouncedSearch, filterKategorija, filterTag]);
+  }, [token, page, debouncedSearch, filterKategorija, filterTag, filterUrednickiStatus]);
 
   useEffect(() => {
     if (!token) return;
@@ -303,6 +315,7 @@ export default function AdminBankaPitanjaPage() {
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(filterKategorija ? { kategorija: filterKategorija } : {}),
         ...(filterTag ? { tag: filterTag } : {}),
+        ...(filterUrednickiStatus ? { urednickiStatus: filterUrednickiStatus } : {}),
       }).toString();
       const data = await apiRequest<PitanjeListResp>("GET", `/admin/banka-pitanja?${qs}`, undefined, token);
       setRows(data.rows);
@@ -540,6 +553,27 @@ export default function AdminBankaPitanjaPage() {
     }
   };
 
+  const reviewQuestion = async (pitanje: PitanjeBanka, status: Exclude<UrednickiStatus, "na_cekanju">) => {
+    if (!token) return;
+    try {
+      await apiRequest(
+        "POST",
+        `/admin/banka-pitanja/${pitanje.id}/urednicki-pregled`,
+        { status },
+        token,
+      );
+      toast({
+        title: status === "odobreno" ? t("Pitanje je odobreno") : t("Pitanje je vraćeno na doradu"),
+        description: status === "odobreno"
+          ? t("Može biti objavljeno kada sva pitanja u kvizu budu odobrena.")
+          : t("Nakon dorade pitanje će ponovo čekati pregled."),
+      });
+      void loadList();
+    } catch (err: any) {
+      toast({ title: t("Pregled nije sačuvan"), description: err?.message || t("Pokušaj ponovo"), variant: "destructive" });
+    }
+  };
+
   const lekcijeMap = useMemo(() => {
     const m = new Map<number, IlmihalLekcija>();
     lekcije.forEach(l => m.set(l.id, l));
@@ -585,6 +619,19 @@ export default function AdminBankaPitanjaPage() {
               <option value="">{t("Sve kategorije")}</option>
               {Object.entries(kategorijeLabels).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <BookOpenCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <select
+              value={filterUrednickiStatus}
+              onChange={e => { setFilterUrednickiStatus(e.target.value); setPage(1); }}
+              className="pl-10 pr-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-[210px]"
+            >
+              <option value="">{t("Svi urednički statusi")}</option>
+              {Object.entries(UREDNICKI_STATUS_META).map(([value, meta]) => (
+                <option key={value} value={value}>{t(meta.label)}</option>
               ))}
             </select>
           </div>
@@ -677,8 +724,18 @@ export default function AdminBankaPitanjaPage() {
                               {t(DIDAKTICKI_TIP_LABELS[p.meta.didaktickiTip])}
                             </span>
                           )}
+                          {p.meta?.pilotKey && (
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${UREDNICKI_STATUS_META[p.urednickiStatus]?.classes || "bg-slate-100 text-slate-700"}`}>
+                              {t(UREDNICKI_STATUS_META[p.urednickiStatus]?.label || p.urednickiStatus)}
+                            </span>
+                          )}
                         </div>
                         <p className="text-base font-semibold text-foreground leading-snug">{p.pitanje}</p>
+                        {p.meta?.sourceQuestion && (
+                          <p className="mt-1 text-sm text-blue-800">
+                            <span className="font-bold">{t("Izvorno pitanje")}:</span> {p.meta.sourceQuestion}
+                          </p>
+                        )}
                         <div className="text-sm text-muted-foreground mt-1">
                           <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold mr-2">
                             {VRSTA_LABELS[p.vrsta] || p.vrsta}
@@ -720,6 +777,26 @@ export default function AdminBankaPitanjaPage() {
                         </div>
                       </div>
                       <div className={`flex items-center gap-1 shrink-0 ${isEditingThis ? "" : "sm:opacity-0 sm:group-hover:opacity-100"} transition-opacity`}>
+                        {p.meta?.pilotKey && p.urednickiStatus !== "odobreno" && (
+                          <button
+                            onClick={() => void reviewQuestion(p, "odobreno")}
+                            className="p-2 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-600 transition"
+                            title={t("Stručno pregledano — odobri")}
+                            data-testid={`approve-question-${p.id}`}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {p.meta?.pilotKey && p.urednickiStatus !== "vraceno_na_doradu" && (
+                          <button
+                            onClick={() => void reviewQuestion(p, "vraceno_na_doradu")}
+                            className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition"
+                            title={t("Vrati na doradu")}
+                            data-testid={`reject-question-${p.id}`}
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => isEditingThis ? cancelForm() : startEdit(p)}
                           className={`p-2 rounded-lg transition ${isEditingThis ? "bg-amber-100 text-amber-700" : "hover:bg-amber-50 text-muted-foreground hover:text-amber-600"}`}

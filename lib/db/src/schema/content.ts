@@ -113,6 +113,9 @@ export interface PitanjeMeta {
   pilotKey?: string;
 }
 
+export const UREDNICKI_STATUSI = ["na_cekanju", "odobreno", "vraceno_na_doradu"] as const;
+export type UrednickiStatus = (typeof UREDNICKI_STATUSI)[number];
+
 // Ilmihal lessons (3 nivoa)
 export interface LekcijaKvizPitanje {
   question: string;
@@ -234,6 +237,15 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   // Stabilan vlasnički ključ za seed sadržaj. NULL za admin-kreirana pitanja.
   // Seed koristi samo ovaj ključ i nakon prvog kreiranja ne prepisuje sadržaj.
   seedKey: varchar("seed_key", { length: 160 }),
+  // Pitanja koja su nastala iz Ilmihal lekcije moraju proći stručni pregled
+  // prije nego što se mogu prikazati učenicima kroz learning kviz.
+  urednickiStatus: varchar("urednicki_status", { length: 24 })
+    .$type<UrednickiStatus>()
+    .notNull()
+    .default("odobreno"),
+  reviewedBy: integer("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNote: text("review_note"),
   tezina: integer("tezina").notNull().default(1), // 1=lako, 2=srednje, 3=teško
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
