@@ -223,7 +223,7 @@ export function isPushOptedIn(): boolean {
 
 export function isPushEnabledLocally(): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(SETTINGS_KEY) !== "false"; // default true
+  return localStorage.getItem(SETTINGS_KEY) === "true";
 }
 
 export function setPushEnabledLocally(value: boolean): void {

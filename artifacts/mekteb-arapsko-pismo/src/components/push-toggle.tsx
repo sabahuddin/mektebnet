@@ -5,11 +5,14 @@ import {
   requestPushPermission,
   disablePush,
   isAppIdResolved,
+  isCapacitorNative,
+  isPushEnabledLocally,
 } from "@/lib/push";
 import { useLanguage } from "@/context/language";
 
 function isPushSupportedClient(): boolean {
   if (typeof window === "undefined") return false;
+  if (isCapacitorNative()) return true;
   return (
     "serviceWorker" in navigator &&
     "PushManager" in window &&
@@ -19,6 +22,7 @@ function isPushSupportedClient(): boolean {
 
 function isAllowedOrigin(): boolean {
   if (typeof window === "undefined") return false;
+  if (isCapacitorNative()) return true;
   const host = window.location.hostname;
   return host === "mekteb.net" || host.endsWith(".mekteb.net");
 }
@@ -35,8 +39,13 @@ export function PushToggle() {
   const [enabled, setEnabled] = useState<boolean>(false);
   const [busy, setBusy] = useState<boolean>(false);
   const [attemptError, setAttemptError] = useState<string | null>(null);
+  const native = isCapacitorNative();
   const [perm, setPerm] = useState<PermState>(
-    !supported ? "unsupported" : (Notification.permission as PermState),
+    !supported
+      ? "unsupported"
+      : native
+        ? "default"
+        : (Notification.permission as PermState),
   );
   const intervalRef = useRef<number | null>(null);
 
@@ -58,8 +67,8 @@ export function PushToggle() {
     // dozvoli/odbije permission van app-a).
     const sync = () => {
       try {
-        setEnabled(isPushOptedIn());
-        if (typeof Notification !== "undefined") {
+        setEnabled(isPushOptedIn() || (native && isPushEnabledLocally()));
+        if (!native && typeof Notification !== "undefined") {
           setPerm(Notification.permission as PermState);
         }
       } catch {}
@@ -72,7 +81,7 @@ export function PushToggle() {
         intervalRef.current = null;
       }
     };
-  }, [supported]);
+  }, [native, supported]);
 
   const disabledReason: string | null = !supported
     ? t("Tvoj preglednik ne podržava push obavijesti.")
@@ -112,7 +121,7 @@ export function PushToggle() {
     }
   };
 
-  const isOn = enabled && perm === "granted" && disabledReason === null;
+  const isOn = enabled && (native || perm === "granted") && disabledReason === null;
 
   return (
     <div className="flex items-start gap-4 p-4 rounded-2xl border border-border/60 bg-muted/20">
