@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { requestPushPermission, hasBeenPrompted, markPrompted, isCapacitorNative } from "@/lib/push";
+import {
+  requestPushPermission,
+  hasBeenPrompted,
+  markPrompted,
+  isCapacitorNative,
+  isAppIdResolved,
+} from "@/lib/push";
 
 const DISMISS_KEY = "mekteb-push-dismissed";
 
@@ -36,10 +42,15 @@ export function PushPrompt() {
   const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [appIdReady, setAppIdReady] = useState(false);
+  const [appIdReady, setAppIdReady] = useState(isAppIdResolved);
 
-  // Dohvati App ID s backenda ako build-time vrijednost nije bila dostupna
+  // Build-time App ID je obavezan za native bundle. Fallback na backend ostaje
+  // samo za web build kojem Coolify nije dostavio varijablu pri kompiliranju.
   useEffect(() => {
+    if (isAppIdResolved()) {
+      setAppIdReady(true);
+      return;
+    }
     fetch("/api/push/config")
       .then(r => r.ok ? r.json() : null)
       .then((data: { appId?: string } | null) => {

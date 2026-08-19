@@ -8,8 +8,9 @@
 #   - VITE_ONESIGNAL_APP_ID se ugrađuje u native bundle za iOS/Android push
 #   - BASE_PATH=/                                (mobile app live na svom origin-u)
 #
-# Nakon ove skripte, pokreni `npx cap sync` da se dist/public kopira u
-# ios/App/App/public i android/app/src/main/assets/public.
+# Nakon ove skripte, pokreni `npx cap sync android` da se dist/public kopira u
+# android/app/src/main/assets/public. iOS sync čeka CocoaPods migraciju
+# (detalji su u MOBILE-BUILD.md).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -30,6 +31,7 @@ echo ""
 echo "==> Build complete. Bundle u dist/public/"
 echo ""
 echo "Sljedeći korak (na iMac-u):"
-echo "  pnpm exec cap sync"
-echo "  pnpm exec cap open ios       # otvara Xcode"
-echo "  pnpm exec cap open android   # otvara Android Studio"
+echo "  pnpm run cap:sync             # siguran Android sync"
+echo "  pnpm exec cap open android    # otvara Android Studio"
+echo ""
+echo "iOS: prije 'cap sync ios' uradi CocoaPods migraciju opisanu u MOBILE-BUILD.md."
