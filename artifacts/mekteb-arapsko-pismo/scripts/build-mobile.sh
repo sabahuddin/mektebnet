@@ -5,6 +5,7 @@
 #
 # Razlika od običnog `pnpm build`:
 #   - VITE_API_BASE_URL=https://mekteb.net/api  (mobile app ne smije relativni /api)
+#   - VITE_ONESIGNAL_APP_ID se ugrađuje u native bundle za iOS/Android push
 #   - BASE_PATH=/                                (mobile app live na svom origin-u)
 #
 # Nakon ove skripte, pokreni `npx cap sync` da se dist/public kopira u
@@ -21,6 +22,7 @@ echo "==> Building web bundle for mobile (production API)..."
 # pri buildu vrijednost se ignorira, ali config crashuje bez nje.
 PORT="${PORT:-8000}" \
   VITE_API_BASE_URL="${VITE_API_BASE_URL:-https://mekteb.net/api}" \
+  VITE_ONESIGNAL_APP_ID="${VITE_ONESIGNAL_APP_ID:-${ONESIGNAL_APP_ID:-}}" \
   BASE_PATH="/" \
   pnpm exec vite build --config vite.config.ts
 

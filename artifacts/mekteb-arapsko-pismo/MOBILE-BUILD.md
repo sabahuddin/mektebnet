@@ -27,6 +27,8 @@ Web app je upakovan kao native mobile app preko **Capacitor**. Bundle ID:
   (ne primaju "samo wrapper za mekteb.net").
 - **API pozivi idu uvijek na produkciju** (`VITE_API_BASE_URL=https://mekteb.net/api`),
   baked-in pri buildu. Ne ovisi o relativnoj putanji.
+- **Native OneSignal App ID ide u bundle pri buildu** preko
+  `VITE_ONESIGNAL_APP_ID` (ili `ONESIGNAL_APP_ID`). Sama vrijednost ne ide u Git.
 - **PWA Service Worker** unutar webview-a je drugi sloj offline-a — runtime
   cache za public sadržaj (ilmihal, kvizovi, knjige, rječnik).
 
@@ -123,7 +125,7 @@ defaultConfig {
 ✅ Native Android projekt (`android/`) — Android Studio-ready  
 ✅ App + Network + StatusBar + SplashScreen plugin-i  
 ✅ Backend CORS dozvoljava `capacitor://localhost` + `https://localhost`  
-✅ Mobile build skripta sa `VITE_API_BASE_URL=https://mekteb.net/api`  
+✅ Mobile build skripta sa `VITE_API_BASE_URL=https://mekteb.net/api` i native OneSignal App ID prosljeđivanjem  
 
 ✅ Push notifikacije (web) — radi na produkciji  
 ✅ Push notifikacije (native iOS/Android) — kod + plugin instalirani; treba još APNs/FCM ključeve uploadovati u OneSignal dashboard (vidi sekciju "Push notifikacije" niže)  
