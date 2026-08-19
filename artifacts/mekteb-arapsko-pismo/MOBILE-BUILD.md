@@ -61,7 +61,10 @@ Iz root-a monorepoa:
 # 1. Build web bundle sa produkcijskim API URL-om
 pnpm --filter @workspace/mekteb-arapsko-pismo run build:mobile
 
-# 2. Android sync — kopira dist/public i ažurira OneSignal plugin
+# 2. Provjeri native konfiguraciju i bundle bez ispisa ključeva
+pnpm --filter @workspace/mekteb-arapsko-pismo run mobile:verify
+
+# 3. Android sync — kopira dist/public i ažurira OneSignal plugin
 pnpm --filter @workspace/mekteb-arapsko-pismo exec cap sync android
 
 # iOS sync radi nakon CocoaPods migracije opisane niže.
