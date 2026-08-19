@@ -43,6 +43,7 @@ let grupaAId: number;
 let grupaBId: number;
 let ucenikAId: number;
 let ucenikBId: number;
+let ucenikCId: number;
 let tudjiUcenikId: number;
 // Roditelj sa dvoje djece (po jedno u svakoj grupi) — provjera deduplikacije.
 let roditeljDvojeId: number;
@@ -74,6 +75,7 @@ before(async () => {
   tudjiMuallimId = await createUser("muallim", "mtudji");
   ucenikAId = await createUser("ucenik", "ua");
   ucenikBId = await createUser("ucenik", "ub");
+  ucenikCId = await createUser("ucenik", "uc");
   tudjiUcenikId = await createUser("ucenik", "utudji");
   roditeljDvojeId = await createUser("roditelj", "rdvoje");
   roditeljBId = await createUser("roditelj", "rb");
@@ -93,6 +95,7 @@ before(async () => {
 
   await db.insert(ucenikProfiliTable).values({ userId: ucenikAId, muallimId, grupaId: grupaAId });
   await db.insert(ucenikProfiliTable).values({ userId: ucenikBId, muallimId, grupaId: grupaBId });
+  await db.insert(ucenikProfiliTable).values({ userId: ucenikCId, muallimId, grupaId: grupaBId });
   await db.insert(ucenikProfiliTable).values({ userId: tudjiUcenikId, muallimId: tudjiMuallimId });
 
   await db.insert(roditeljProfiliTable).values({ userId: roditeljDvojeId });
@@ -109,7 +112,7 @@ before(async () => {
     status: "approved", approvedAt: new Date(), approvedBy: muallimId,
   });
   await db.insert(roditeljUcenikTable).values({
-    roditeljId: roditeljBId, ucenikId: ucenikBId,
+    roditeljId: roditeljBId, ucenikId: ucenikCId,
     status: "approved", approvedAt: new Date(), approvedBy: muallimId,
   });
   await db.insert(roditeljUcenikTable).values({
@@ -143,7 +146,7 @@ after(async () => {
   }
 
   const userIds = [
-    muallimId, tudjiMuallimId, ucenikAId, ucenikBId, tudjiUcenikId,
+    muallimId, tudjiMuallimId, ucenikAId, ucenikBId, ucenikCId, tudjiUcenikId,
     roditeljDvojeId, roditeljBId, tudjiRoditeljId,
   ].filter(Boolean);
   if (userIds.length) {

@@ -1,7 +1,7 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import type { Server } from "node:http";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   ilmihalLekcijeTable,
@@ -11,17 +11,20 @@ import {
   usersTable,
 } from "@workspace/db/schema";
 import app from "../app.js";
+import {
+  bootstrapDrizzleMigrations,
+  runDrizzleMigrate,
+} from "../lib/drizzle-migrate.js";
 import { signToken } from "../middlewares/auth.js";
 
 const suffix = `review-${Date.now()}`;
-let server: Server;
+let server: Server | undefined;
 let baseUrl: string;
 let adminId: number;
 let adminToken: string;
 let lessonId: number;
 let quizId: number;
 let questionId: number;
-const extraQuestionIds: number[] = [];
 
 function adminRequest(path: string, method = "GET", body?: unknown) {
   return fetch(`${baseUrl}${path}`, {
@@ -34,7 +37,62 @@ function adminRequest(path: string, method = "GET", body?: unknown) {
   });
 }
 
+async function cleanupTestData(): Promise<void> {
+  const errors: Error[] = [];
+  const cleanupStep = async (label: string, operation: () => Promise<unknown>) => {
+    try {
+      await operation();
+    } catch (error) {
+      errors.push(new Error(`Cleanup nije uspio za ${label}`, { cause: error }));
+    }
+  };
+
+  // Stabilne testne oznake pokrivaju i redove koje je prekinuto pokretanje
+  // upisalo prije nego što je test stigao sačuvati njihove ID-jeve.
+  await cleanupStep("veze kviz-pitanje", () => db.execute(sql`
+    DELETE FROM kviz_pitanja
+    WHERE kviz_id IN (
+      SELECT id FROM kvizovi WHERE slug LIKE 'ucimo-review-%'
+    )
+    OR pitanje_id IN (
+      SELECT id
+      FROM pitanja_banka
+      WHERE seed_key LIKE 'ilmihal-learning:review-%'
+        OR meta ->> 'pilotKey' LIKE 'review-%'
+        OR meta ->> 'pilotKey' LIKE 'manual-review-%'
+    )
+  `));
+  await cleanupStep("testna pitanja", () => db.execute(sql`
+    DELETE FROM pitanja_banka
+    WHERE seed_key LIKE 'ilmihal-learning:review-%'
+      OR meta ->> 'pilotKey' LIKE 'review-%'
+      OR meta ->> 'pilotKey' LIKE 'manual-review-%'
+  `));
+  await cleanupStep("testne kvizove", () => db.execute(sql`
+    DELETE FROM kvizovi WHERE slug LIKE 'ucimo-review-%'
+  `));
+  await cleanupStep("testne lekcije", () => db.execute(sql`
+    DELETE FROM ilmihal_lekcije WHERE slug LIKE 'test-learning-review-%'
+  `));
+  await cleanupStep("testne administratore", () => db.execute(sql`
+    DELETE FROM users WHERE username LIKE 'admin.review-%'
+  `));
+
+  if (errors.length > 0) {
+    throw new AggregateError(
+      errors,
+      "Čišćenje Ilmihal learning review testnih podataka nije uspjelo",
+    );
+  }
+}
+
 before(async () => {
+  // Route testovi ne pokreću executable index.ts, pa migracija mora završiti
+  // prije prvog fixture upisa. Neuspjeh tako prekida setup bez testne lekcije.
+  await bootstrapDrizzleMigrations();
+  await runDrizzleMigrate();
+  await cleanupTestData();
+
   const [admin] = await db.insert(usersTable).values({
     username: `admin.${suffix}`,
     displayName: `Urednik ${suffix}`,
@@ -91,7 +149,7 @@ before(async () => {
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
-      const address = server.address();
+      const address = server?.address();
       const port = typeof address === "object" && address ? address.port : 0;
       baseUrl = `http://127.0.0.1:${port}`;
       resolve();
@@ -100,15 +158,23 @@ before(async () => {
 });
 
 after(async () => {
-  await new Promise<void>((resolve) => server?.close(() => resolve()));
-  if (quizId) await db.delete(kvizPitanjaTable).where(eq(kvizPitanjaTable.kvizId, quizId));
-  for (const id of extraQuestionIds) {
-    await db.delete(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, id));
+  let closeError: Error | undefined;
+  if (server) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server?.close((error) => error ? reject(error) : resolve());
+      });
+    } catch (error) {
+      closeError = new Error(
+        "Gašenje testnog API servera nije uspjelo",
+        { cause: error },
+      );
+    }
   }
-  if (questionId) await db.delete(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, questionId));
-  if (quizId) await db.delete(kvizoviTable).where(eq(kvizoviTable.id, quizId));
-  if (lessonId) await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lessonId));
-  if (adminId) await db.delete(usersTable).where(eq(usersTable.id, adminId));
+
+  // Čišćenje baze mora se izvršiti čak i ako gašenje servera prijavi grešku.
+  await cleanupTestData();
+  if (closeError) throw closeError;
 });
 
 test("learning kviz se ne može objaviti prije uredničkog odobrenja", async () => {
@@ -212,7 +278,6 @@ test("ručno kreirano pilot pitanje uvijek počinje na uredničkom čekanju", as
     reviewedBy: number | null;
     reviewedAt: string | null;
   };
-  extraQuestionIds.push(created.id);
   assert.equal(created.urednickiStatus, "na_cekanju");
   assert.equal(created.reviewedBy, null);
   assert.equal(created.reviewedAt, null);
