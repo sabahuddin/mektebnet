@@ -125,7 +125,7 @@ defaultConfig {
 ✅ Native Android projekt (`android/`) — Android Studio-ready  
 ✅ App + Network + StatusBar + SplashScreen plugin-i  
 ✅ Backend CORS dozvoljava `capacitor://localhost` + `https://localhost`  
-✅ Mobile build skripta sa `VITE_API_BASE_URL=https://mekteb.net/api` i native OneSignal App ID prosljeđivanjem  
+✅ Mobile build skripta sa `VITE_API_BASE_URL=https://mekteb.net/api` i native OneSignal App ID prosljeđivanjem
 
 ✅ Push notifikacije (web) — radi na produkciji  
 ✅ Push notifikacije (native iOS/Android) — kod + plugin instalirani; treba još APNs/FCM ključeve uploadovati u OneSignal dashboard (vidi sekciju "Push notifikacije" niže)  
