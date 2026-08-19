@@ -237,18 +237,6 @@ export default function LoginPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => doDemoLogin("demo-uspjeh", "/ilmihal/halal-haram")}
-                  disabled={demoBusy !== null}
-                  className="w-full h-auto min-h-14 rounded-xl font-bold bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center gap-2 py-3"
-                >
-                  <BookOpen className="w-5 h-5 shrink-0" />
-                  <span className="text-left">
-                    <span className="block">Pogledaj primjer interaktivne lekcije</span>
-                    <span className="block text-[11px] font-medium opacity-85">Halal i haram — sve lekcije su otključane</span>
-                  </span>
-                </Button>
-                <Button
-                  type="button"
                   variant="outline"
                   onClick={() => doDemoLogin("demo.tarik.avdic")}
                   disabled={demoBusy !== null}

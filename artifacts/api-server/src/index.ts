@@ -1316,6 +1316,13 @@ async function startup() {
   }
 
   await runDataBootstrap();
+  try {
+    const { seedHalalHaramLesson } = await import("./routes/halal-haram-seed.js");
+    await seedHalalHaramLesson();
+    logger.info("Lekcija 'Pojam i smisao halala i harama' postavljena na kraj nivoa 3");
+  } catch (e) {
+    logger.error({ err: e }, "Urednička migracija lekcije halal-haram nije uspjela");
+  }
   await seedDemoUspjeh();
 
   // Misije seed: ubaci default dnevne/sedmične misije ako tabela prazna.
