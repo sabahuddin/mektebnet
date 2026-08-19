@@ -11,8 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
 import { useLanguage } from "@/context/language";
+import { reconcileRetryRemediation } from "@/lib/quiz-learning";
 
 interface Pitanje {
+  id?: number;
   type?: "radio" | "checkbox" | "truefalse" | "reorder" | "markWords" | "dragDrop";
   question: string;
   options?: string[];
@@ -29,6 +31,10 @@ interface Pitanje {
   incorrect?: string[];
   // dragDrop
   template?: string[];
+  learningType?: "prisjecanje" | "razlikovanje" | "primjena" | "redoslijed";
+  retryMode?: "immediate";
+  retryPrompt?: string;
+  sourceQuestion?: string;
 }
 
 interface Kviz {
@@ -47,6 +53,13 @@ const QUESTION_TYPES = [
   { value: "reorder",   label: "Poredaj redom" },
   { value: "dragDrop",  label: "Dopuni (drag & drop)" },
 ];
+
+const LEARNING_TYPE_LABELS: Record<string, string> = {
+  prisjecanje: "Prisjeti se",
+  razlikovanje: "Razlikuj",
+  primjena: "Primijeni",
+  redoslijed: "Poredaj",
+};
 
 function AdminEditModal({ kviz, token, onClose, onSaved }: {
   kviz: Kviz; token: string; onClose: () => void; onSaved: (updated: Kviz) => void;
@@ -553,6 +566,7 @@ export default function KvizPage() {
   const [droppedWords, setDroppedWords] = useState<(string | null)[]>([]);
   const [wordBank, setWordBank] = useState<string[]>([]);
   const [answered, setAnswered] = useState(false);
+  const [currentCorrect, setCurrentCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
   // Greške koje će se na kraju kviza poslati u "Popravi saće" sistem.
   // Trakiramo SAMO single-correct tipove (radio/truefalse) jer schema
@@ -725,6 +739,16 @@ export default function KvizPage() {
       setWordBank(shuffle([...p.words]));
     }
     setAnswered(false);
+    setCurrentCorrect(null);
+  };
+
+  const canRetryCurrentQuestion =
+    answered &&
+    currentCorrect === false &&
+    pitanje.retryMode === "immediate";
+
+  const retryCurrentQuestion = () => {
+    initQuestion(pitanje);
   };
 
   const handleSelect = (opt: string) => {
@@ -734,7 +758,18 @@ export default function KvizPage() {
     } else {
       setSelected(opt);
       setAnswered(true);
-      if (opt === pitanje.answer) {
+      const ok = opt === pitanje.answer;
+      setCurrentCorrect(ok);
+      if (ok) {
+        const stableIndex = kviz.pitanja.findIndex(p => p.question === pitanje.question);
+        if (stableIndex >= 0) {
+          setWrongAnswers(prev => reconcileRetryRemediation(
+            prev,
+            stableIndex,
+            true,
+            pitanje.retryMode,
+          ));
+        }
         setScore(s => s + 1);
       } else if (qType === "radio" || qType === "truefalse") {
         // Track grešku za "Popravi saće". Samo single-correct tipovi
@@ -779,6 +814,7 @@ export default function KvizPage() {
     setAnswered(true);
     const correctArr = getCorrectArr(pitanje);
     const ok = selectedMulti.length === correctArr.length && correctArr.every(c => selectedMulti.includes(c));
+    setCurrentCorrect(ok);
     if (ok) setScore(s => s + 1);
   };
 
@@ -786,7 +822,9 @@ export default function KvizPage() {
     if (answered) return;
     setAnswered(true);
     const correctOrder = [...(pitanje.items || [])].sort((a, b) => a.order - b.order).map(i => i.text);
-    if (JSON.stringify(orderedItems) === JSON.stringify(correctOrder)) setScore(s => s + 1);
+    const ok = JSON.stringify(orderedItems) === JSON.stringify(correctOrder);
+    setCurrentCorrect(ok);
+    if (ok) setScore(s => s + 1);
   };
 
   const confirmMarkWords = () => {
@@ -794,6 +832,7 @@ export default function KvizPage() {
     setAnswered(true);
     const incorrect = pitanje.incorrect || [];
     const ok = markedWords.length === incorrect.length && incorrect.every(w => markedWords.includes(w));
+    setCurrentCorrect(ok);
     if (ok) setScore(s => s + 1);
   };
 
@@ -823,6 +862,7 @@ export default function KvizPage() {
     setAnswered(true);
     const correct = pitanje.correct || [];
     const ok = droppedWords.every((w, i) => w === correct[i]);
+    setCurrentCorrect(ok);
     if (ok) setScore(s => s + 1);
   };
 
@@ -1069,6 +1109,13 @@ export default function KvizPage() {
               );
             })()}
 
+            {pitanje.learningType && (
+              <div className="mb-3">
+                <span className="inline-flex items-center rounded-full bg-teal-100 px-3 py-1 text-xs font-extrabold text-teal-800">
+                  {t(LEARNING_TYPE_LABELS[pitanje.learningType] || pitanje.learningType)}
+                </span>
+              </div>
+            )}
             <p className="text-lg font-bold text-foreground mb-2 leading-relaxed">{pitanje.question}</p>
 
             {/* ── TRUE/FALSE (Da/Ne) ── */}
@@ -1325,7 +1372,22 @@ export default function KvizPage() {
               </motion.div>
             )}
 
-            {answered && (
+            {canRetryCurrentQuestion && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6"
+              >
+                <p className="text-sm font-bold text-amber-900 mb-3">
+                  {pitanje.retryPrompt || t("Pročitaj objašnjenje i pokušaj još jednom.")}
+                </p>
+                <Button onClick={retryCurrentQuestion} variant="outline" className="rounded-xl border-amber-300 text-amber-900 hover:bg-amber-100">
+                  <RotateCcw className="w-4 h-4 mr-2" /> {t("Pokušaj ponovo")}
+                </Button>
+              </motion.div>
+            )}
+
+            {answered && !canRetryCurrentQuestion && (
               <div className="flex justify-end">
                 <Button onClick={next} className="rounded-2xl px-8 font-bold">
                   {isLast ? t("Završi") : t("Sljedeće pitanje")}

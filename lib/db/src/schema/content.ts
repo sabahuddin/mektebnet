@@ -94,14 +94,23 @@ export const KVIZ_TAGOVI_META: Record<KvizTag, string> = {
 export const PITANJE_VRSTE = ["single", "multiple", "truefalse", "reorder", "dragDrop", "markWords"] as const;
 export type PitanjeVrsta = (typeof PITANJE_VRSTE)[number];
 
-// Tip-specifični meta podaci za dragDrop / markWords pitanja.
-// Stari (single/multiple/truefalse/reorder) tipovi imaju `meta = null`.
+export const DIDAKTICKI_TIPOVI = ["prisjecanje", "razlikovanje", "primjena", "redoslijed"] as const;
+export type DidaktickiTip = (typeof DIDAKTICKI_TIPOVI)[number];
+
+// Tip-specifični meta podaci za interaktivna pitanja i pedagoški podaci koji
+// vrijede za sve vrste pitanja. Standardna pitanja mogu imati `meta` samo zbog
+// didaktičkog tipa, objašnjenog ponovnog pokušaja i veze sa izvornim pitanjem.
 export interface PitanjeMeta {
   template?: string[];   // dragDrop
   words?: string[];      // dragDrop + markWords
   correct?: string[];    // dragDrop
   text?: string;         // markWords
   incorrect?: string[];  // markWords
+  didaktickiTip?: DidaktickiTip;
+  retryMode?: "immediate";
+  retryPrompt?: string;
+  sourceQuestion?: string;
+  pilotKey?: string;
 }
 
 // Ilmihal lessons (3 nivoa)
@@ -146,6 +155,7 @@ export interface QuizQuestion {
 
 export const kvizoviTable = pgTable("kvizovi", {
   id: serial("id").primaryKey(),
+  seedKey: varchar("seed_key", { length: 160 }),
   nivo: integer("nivo"),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   naslov: text("naslov").notNull(),
@@ -173,7 +183,9 @@ export const kvizoviTable = pgTable("kvizovi", {
   pitanjaPoSesiji: integer("pitanja_po_sesiji"),
   isPublished: boolean("is_published").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  seedKeyUnique: uniqueIndex("kvizovi_seed_key_unique_idx").on(t.seedKey),
+}));
 
 // === BANKA PITANJA — centralizovana baza svih pitanja za kvizove ================
 // Sva pitanja koja se mogu pojaviti u bilo kojem kvizu žive u ovoj tabeli.
@@ -219,6 +231,9 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   // Veza za konkretnu Ilmihal lekciju (opciono). Kasnije se može koristiti
   // za "predloži pitanje za ovu lekciju" UX.
   lekcijaId: integer("lekcija_id"),
+  // Stabilan vlasnički ključ za seed sadržaj. NULL za admin-kreirana pitanja.
+  // Seed koristi samo ovaj ključ i nakon prvog kreiranja ne prepisuje sadržaj.
+  seedKey: varchar("seed_key", { length: 160 }),
   tezina: integer("tezina").notNull().default(1), // 1=lako, 2=srednje, 3=teško
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -237,6 +252,7 @@ export const pitanjaBankaTable = pgTable("pitanja_banka", {
   //   interaktivne) i raw SQL u inicijalnom migration step-u (vidi DB ALTER).
   kategorijaIdx: index("pitanja_banka_kategorija_idx").on(t.kategorija),
   lekcijaIdx: index("pitanja_banka_lekcija_idx").on(t.lekcijaId),
+  seedKeyUnique: uniqueIndex("pitanja_banka_seed_key_unique_idx").on(t.seedKey),
 }));
 
 export type PitanjeBanka = typeof pitanjaBankaTable.$inferSelect;

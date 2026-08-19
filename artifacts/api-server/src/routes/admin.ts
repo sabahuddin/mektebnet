@@ -2381,6 +2381,11 @@ function normalizePitanjeBody(body: any) {
   let meta: {
     template?: string[]; words?: string[]; correct?: string[];
     text?: string; incorrect?: string[];
+    didaktickiTip?: "prisjecanje" | "razlikovanje" | "primjena" | "redoslijed";
+    retryMode?: "immediate";
+    retryPrompt?: string;
+    sourceQuestion?: string;
+    pilotKey?: string;
   } | null = null;
 
   if (vrsta === "truefalse") {
@@ -2420,6 +2425,32 @@ function normalizePitanjeBody(body: any) {
     };
   } else {
     correctIndex = Math.max(0, Math.min(Math.max(0, opcije.length - 1), parseInt(body?.correctIndex ?? 0) || 0));
+  }
+
+  const rawMeta = body?.meta && typeof body.meta === "object" ? body.meta : {};
+  const didaktickiTipovi = ["prisjecanje", "razlikovanje", "primjena", "redoslijed"] as const;
+  const didaktickiTip = didaktickiTipovi.includes(rawMeta.didaktickiTip)
+    ? rawMeta.didaktickiTip as typeof didaktickiTipovi[number]
+    : undefined;
+  const retryMode = rawMeta.retryMode === "immediate" ? "immediate" as const : undefined;
+  const retryPrompt = typeof rawMeta.retryPrompt === "string"
+    ? rawMeta.retryPrompt.trim().slice(0, 500) || undefined
+    : undefined;
+  const sourceQuestion = typeof rawMeta.sourceQuestion === "string"
+    ? rawMeta.sourceQuestion.trim().slice(0, 1000) || undefined
+    : undefined;
+  const pilotKey = typeof rawMeta.pilotKey === "string"
+    ? rawMeta.pilotKey.trim().slice(0, 120) || undefined
+    : undefined;
+  if (meta || didaktickiTip || retryMode || retryPrompt || sourceQuestion || pilotKey) {
+    meta = {
+      ...(meta ?? {}),
+      ...(didaktickiTip ? { didaktickiTip } : {}),
+      ...(retryMode ? { retryMode } : {}),
+      ...(retryPrompt ? { retryPrompt } : {}),
+      ...(sourceQuestion ? { sourceQuestion } : {}),
+      ...(pilotKey ? { pilotKey } : {}),
+    };
   }
 
   const objasnjenje = String(body?.objasnjenje || "").trim();

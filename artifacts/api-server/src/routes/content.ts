@@ -549,7 +549,8 @@ router.get("/kvizovi/:slug", async (req, res) => {
       })
       .from(kvizPitanjaTable)
       .innerJoin(pitanjaBankaTable, eq(pitanjaBankaTable.id, kvizPitanjaTable.pitanjeId))
-      .where(eq(kvizPitanjaTable.kvizId, kviz.id));
+      .where(eq(kvizPitanjaTable.kvizId, kviz.id))
+      .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
 
     const norm = (s: string) => s.trim().replace(/\s+/g, " ");
     // KRITIČNO: mapa se gradi po ORIGINALNOM (bosanskom) tekstu pitanja PRIJE
@@ -564,10 +565,26 @@ router.get("/kvizovi/:slug", async (req, res) => {
     // options=["Da","Ne"]+answer, reorder = items=[{text, order}].
     const fromBank = (p: typeof linked[number]) => {
       const opcije = Array.isArray(p.opcije) ? (p.opcije as string[]) : [];
+      const meta = (p.meta ?? {}) as {
+        template?: string[];
+        words?: string[];
+        correct?: string[];
+        text?: string;
+        incorrect?: string[];
+        didaktickiTip?: "prisjecanje" | "razlikovanje" | "primjena" | "redoslijed";
+        retryMode?: "immediate";
+        retryPrompt?: string;
+        sourceQuestion?: string;
+      };
       const base = {
+        id: p.id,
         question: p.pitanje,
         explanation: p.objasnjenje || undefined,
         image: p.slika || undefined,
+        learningType: meta.didaktickiTip,
+        retryMode: meta.retryMode,
+        retryPrompt: meta.retryPrompt,
+        sourceQuestion: meta.sourceQuestion,
       };
 
       if (p.vrsta === "reorder") {
@@ -583,24 +600,22 @@ router.get("/kvizovi/:slug", async (req, res) => {
       }
 
       if (p.vrsta === "dragDrop") {
-        const m = (p.meta ?? {}) as { template?: string[]; words?: string[]; correct?: string[] };
         return {
           ...base,
           type: "dragDrop",
-          template: Array.isArray(m.template) ? m.template : [],
-          words: Array.isArray(m.words) ? m.words : [],
-          correct: Array.isArray(m.correct) ? m.correct : [],
+          template: Array.isArray(meta.template) ? meta.template : [],
+          words: Array.isArray(meta.words) ? meta.words : [],
+          correct: Array.isArray(meta.correct) ? meta.correct : [],
         };
       }
 
       if (p.vrsta === "markWords") {
-        const m = (p.meta ?? {}) as { text?: string; words?: string[]; incorrect?: string[] };
         return {
           ...base,
           type: "markWords",
-          text: typeof m.text === "string" ? m.text : "",
-          words: Array.isArray(m.words) ? m.words : [],
-          incorrect: Array.isArray(m.incorrect) ? m.incorrect : [],
+          text: typeof meta.text === "string" ? meta.text : "",
+          words: Array.isArray(meta.words) ? meta.words : [],
+          incorrect: Array.isArray(meta.incorrect) ? meta.incorrect : [],
         };
       }
 

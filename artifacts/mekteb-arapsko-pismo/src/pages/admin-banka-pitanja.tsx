@@ -29,6 +29,11 @@ interface PitanjeMeta {
   correct?: string[];
   text?: string;
   incorrect?: string[];
+  didaktickiTip?: DidaktickiTip;
+  retryMode?: "immediate";
+  retryPrompt?: string;
+  sourceQuestion?: string;
+  pilotKey?: string;
 }
 
 interface PitanjeBanka {
@@ -61,6 +66,14 @@ const VRSTA_LABELS: Record<string, string> = {
 
 type Vrsta = "single" | "multiple" | "truefalse" | "reorder" | "dragDrop" | "markWords";
 const ALL_VRSTE: Vrsta[] = ["single", "multiple", "truefalse", "reorder", "dragDrop", "markWords"];
+type DidaktickiTip = "prisjecanje" | "razlikovanje" | "primjena" | "redoslijed";
+
+const DIDAKTICKI_TIP_LABELS: Record<DidaktickiTip, string> = {
+  prisjecanje: "Prisjećanje",
+  razlikovanje: "Razlikovanje",
+  primjena: "Primjena",
+  redoslijed: "Redoslijed",
+};
 
 interface PitanjeListResp {
   total: number;
@@ -120,6 +133,11 @@ function emptyForm() {
     // markWords
     text: "",                     // pun tekst (auto-split u words)
     incorrect: [] as string[],    // riječi koje treba kliknuti
+    didaktickiTip: "" as "" | DidaktickiTip,
+    retryMode: "" as "" | "immediate",
+    retryPrompt: "",
+    sourceQuestion: "",
+    pilotKey: "",
     objasnjenje: "",
     slika: "",
     vrsta: "single" as Vrsta,
@@ -337,6 +355,11 @@ export default function AdminBankaPitanjaPage() {
       correct: Array.isArray(m.correct) ? [...m.correct] : [],
       text: typeof m.text === "string" ? m.text : "",
       incorrect: Array.isArray(m.incorrect) ? [...m.incorrect] : [],
+      didaktickiTip: m.didaktickiTip || "",
+      retryMode: m.retryMode || "",
+      retryPrompt: m.retryPrompt || "",
+      sourceQuestion: m.sourceQuestion || "",
+      pilotKey: m.pilotKey || "",
       objasnjenje: p.objasnjenje,
       slika: p.slika || "",
       vrsta,
@@ -447,6 +470,17 @@ export default function AdminBankaPitanjaPage() {
         return;
       }
       correctIndexOut = form.correctIndex;
+    }
+
+    const pedagogicalMeta: PitanjeMeta = {
+      ...(form.didaktickiTip ? { didaktickiTip: form.didaktickiTip } : {}),
+      ...(form.retryMode ? { retryMode: form.retryMode } : {}),
+      ...(form.retryPrompt.trim() ? { retryPrompt: form.retryPrompt.trim() } : {}),
+      ...(form.sourceQuestion.trim() ? { sourceQuestion: form.sourceQuestion.trim() } : {}),
+      ...(form.pilotKey ? { pilotKey: form.pilotKey } : {}),
+    };
+    if (Object.keys(pedagogicalMeta).length > 0) {
+      metaOut = { ...(metaOut ?? {}), ...pedagogicalMeta };
     }
 
     setSaving(true);
@@ -638,6 +672,11 @@ export default function AdminBankaPitanjaPage() {
                             </span>
                           )}
                           <span className="text-xs text-muted-foreground">#{p.id}</span>
+                          {p.meta?.didaktickiTip && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                              {t(DIDAKTICKI_TIP_LABELS[p.meta.didaktickiTip])}
+                            </span>
+                          )}
                         </div>
                         <p className="text-base font-semibold text-foreground leading-snug">{p.pitanje}</p>
                         <div className="text-sm text-muted-foreground mt-1">
@@ -1442,6 +1481,50 @@ function PitanjeForm({ form, setForm, lekcije, kategorijeLabels, kategorijaTagov
             <option value="markWords">{t("Pronađi grešku")}</option>
           </select>
         </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">{t("Šta pitanje vježba")}</label>
+            <select
+              value={form.didaktickiTip}
+              onChange={e => setForm(prev => ({ ...prev, didaktickiTip: e.target.value as "" | DidaktickiTip }))}
+              className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="">{t("Nije označeno")}</option>
+              {Object.entries(DIDAKTICKI_TIP_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{t(label)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">{t("Ponovni pokušaj")}</label>
+            <select
+              value={form.retryMode}
+              onChange={e => setForm(prev => ({ ...prev, retryMode: e.target.value as "" | "immediate" }))}
+              className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="">{t("Bez posebnog pokušaja")}</option>
+              <option value="immediate">{t("Odmah ponovi isto pitanje")}</option>
+            </select>
+          </div>
+        </div>
+        {form.retryMode === "immediate" && (
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">{t("Uputa prije ponovnog pokušaja")}</label>
+            <textarea
+              value={form.retryPrompt}
+              onChange={e => setForm(prev => ({ ...prev, retryPrompt: e.target.value }))}
+              rows={2}
+              placeholder={t("Npr. Prisjeti se koji događaj dolazi prvi.")}
+              className="w-full px-3 py-2 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 resize-y"
+            />
+          </div>
+        )}
+        {form.sourceQuestion && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-xs font-extrabold uppercase tracking-wide text-blue-700 mb-1">{t("Izvorno pitanje")}</p>
+            <p className="text-sm text-blue-900">{form.sourceQuestion}</p>
+          </div>
+        )}
 
         {form.vrsta === "truefalse" ? (
           <div>

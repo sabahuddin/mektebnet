@@ -44,6 +44,9 @@ interface PitanjeMeta {
   correct?: string[];
   text?: string;
   incorrect?: string[];
+  didaktickiTip?: "prisjecanje" | "razlikovanje" | "primjena" | "redoslijed";
+  retryMode?: "immediate";
+  retryPrompt?: string;
 }
 
 interface KvizPitanjeRow {
@@ -77,6 +80,13 @@ const VRSTA_LABELS: Record<string, string> = {
   reorder: "Poredaj",
   dragDrop: "Dopuni",
   markWords: "Pronađi grešku",
+};
+
+const DIDAKTICKI_TIP_LABELS: Record<string, string> = {
+  prisjecanje: "Prisjećanje",
+  razlikovanje: "Razlikovanje",
+  primjena: "Primjena",
+  redoslijed: "Redoslijed",
 };
 
 function PitanjeAnswerPreview({ p }: { p: { vrsta?: string; meta: PitanjeMeta | null; opcije: string[]; correctIndex: number } }) {
@@ -462,6 +472,11 @@ export default function AdminKvizEditorPage() {
                         {p.vrsta && p.vrsta !== "single" && (
                           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700">{VRSTA_LABELS[p.vrsta] || p.vrsta}</span>
                         )}
+                        {p.meta?.didaktickiTip && (
+                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                            {t(DIDAKTICKI_TIP_LABELS[p.meta.didaktickiTip] || p.meta.didaktickiTip)}
+                          </span>
+                        )}
                         <span className="text-xs text-muted-foreground">#{p.id}</span>
                       </div>
                       <p className="text-sm font-semibold text-foreground line-clamp-2">{p.pitanje}</p>
@@ -612,6 +627,11 @@ function DodajIzBankeModal({
                       {p.kategorija && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 mr-1">{KATEGORIJE_LABELS[p.kategorija] || p.kategorija}</span>}
                       {p.vrsta && p.vrsta !== "single" && (
                         <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 mr-1">{VRSTA_LABELS[p.vrsta] || p.vrsta}</span>
+                      )}
+                      {p.meta?.didaktickiTip && (
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 mr-1">
+                          {t(DIDAKTICKI_TIP_LABELS[p.meta.didaktickiTip] || p.meta.didaktickiTip)}
+                        </span>
                       )}
                       <span className="text-xs text-muted-foreground">#{p.id}</span>
                       {exists && <span className="text-xs text-muted-foreground italic ml-2">{t("(već u kvizu)")}</span>}

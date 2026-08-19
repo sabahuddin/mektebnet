@@ -248,6 +248,10 @@ async function runResidualSchema() {
     // file (banka tabela nije u Drizzle baseline-u — kreirana ranije van Drizzle-a).
     // Stoga ovdje idempotentno dodajemo kolonu da se produkcija auto-update-a.
     await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS meta jsonb;`);
+    await db.execute(sql`ALTER TABLE pitanja_banka ADD COLUMN IF NOT EXISTS seed_key varchar(160);`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS pitanja_banka_seed_key_unique_idx ON pitanja_banka (seed_key);`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS seed_key varchar(160);`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS kvizovi_seed_key_unique_idx ON kvizovi (seed_key);`);
 
     // ilmihal_lekcije.predmet — kolona za pedagošku oblast (Akaid, Ahlak,
     // Ibadat, ...). Koristi se za dropdown filter na "Sve lekcije". Vrijednosti
@@ -772,6 +776,14 @@ async function runDataBootstrap() {
     );
   } catch (bankaErr) {
     logger.error({ err: bankaErr }, "Banka pitanja: migracija iz JSONB-a neuspjela (non-fatal)");
+  }
+
+  try {
+    const { seedIlmihalLearningPilot } = await import("@workspace/scripts/seed-ilmihal-learning-pilot");
+    const result = await seedIlmihalLearningPilot({ silent: true });
+    logger.info(result, "Ilmihal pilot pitanja spremna");
+  } catch (pilotErr) {
+    logger.error({ err: pilotErr }, "Ilmihal pilot pitanja nisu pripremljena (non-fatal)");
   }
 
   // ČITAONICA CLEANUP (idempotentno) — eksplicitno odobreno od strane user-a:
