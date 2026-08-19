@@ -447,16 +447,29 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS embed_completions_student_prilozi_uidx ON embed_completions (student_id, prilozi_id);`);
 
-    // Dozvoljeni su max 2 odobrena roditelja po učeniku (razvedeni roditelji).
-    // Stari unique indeks (roditelj_ucenik_one_approved_per_ucenik_idx) je
-    // uklonjen jer blokira drugi roditeljski profil. Dropujemo ga idempotentno.
-    try {
-      await db.execute(sql`
-        DROP INDEX IF EXISTS roditelj_ucenik_one_approved_per_ucenik_idx;
-      `);
-    } catch (err) {
-      logger.warn({ err }, "[residual-schema] roditelj_ucenik drop old unique idx failed");
-    }
+    // Model 1 učenik = 1 roditelj: parcijalni unique indeks je atomska zaštita
+    // od dva istovremena odobravanja. Prije kreiranja uskladimo eventualne stare
+    // duplikate tako da zadržimo najranije odobrenu vezu, a ostale odbijemo.
+    await db.execute(sql`
+      WITH rangirane_veze AS (
+        SELECT id,
+          ROW_NUMBER() OVER (
+            PARTITION BY ucenik_id
+            ORDER BY approved_at ASC NULLS LAST, id ASC
+          ) AS redni_broj
+        FROM roditelj_ucenik
+        WHERE status = 'approved'
+      )
+      UPDATE roditelj_ucenik
+      SET status = 'rejected', approved_at = NULL, approved_by = NULL
+      WHERE id IN (
+        SELECT id FROM rangirane_veze WHERE redni_broj > 1
+      );
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS roditelj_ucenik_one_approved_per_ucenik_idx
+      ON roditelj_ucenik (ucenik_id) WHERE status = 'approved';
+    `);
 
         // Ocjene sadržaja (5 pčelica) — jedna aktivna ocjena po (user, tip, id).
     await db.execute(sql`
@@ -763,7 +776,7 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS grupa_muallimi_uidx ON grupa_muallimi (grupa_id, muallim_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupa_muallimi_muallim_idx ON grupa_muallimi (muallim_id);`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + partial unique idx + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi) ready");
+    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

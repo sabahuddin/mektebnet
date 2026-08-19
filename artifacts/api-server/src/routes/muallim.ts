@@ -139,6 +139,19 @@ function isUniqueViolation(e: any) {
   return e?.code === "23505" || /unique|duplicate/i.test(e?.message || "");
 }
 
+const oneApprovedRoditeljIndex = "roditelj_ucenik_one_approved_per_ucenik_idx";
+const oneApprovedRoditeljError = "Učenik već ima povezanog roditelja. Jedan učenik može imati samo jednog roditelja.";
+
+function isOneApprovedRoditeljViolation(e: any) {
+  return [e, e?.cause].some((candidate) =>
+    candidate?.code === "23505"
+    && (
+      candidate?.constraint === oneApprovedRoditeljIndex
+      || candidate?.message?.includes(oneApprovedRoditeljIndex)
+    ),
+  );
+}
+
 // Strict varijanta — pokušava tačno jednom sa zadatim sufiksom. Baca na
 // koliziji. Koristi se u retry petljama gdje suffix mora biti tačan (par).
 async function tryInsertUser(
@@ -1830,12 +1843,12 @@ router.post("/ucenici/:id/povezi-roditelja", async (req, res) => {
       return;
     }
 
-    // Dozvoljeni su max 2 odobrena roditelja po učeniku — provjeri limit.
+    // Pravilo je 1 učenik = 1 odobren roditelj — provjeri prije povezivanja.
     const approvedVeze1 = await db.select({ roditeljId: roditeljUcenikTable.roditeljId })
       .from(roditeljUcenikTable)
       .where(and(eq(roditeljUcenikTable.ucenikId, ucenikId), eq(roditeljUcenikTable.status, "approved")));
-    if (approvedVeze1.length >= 2) {
-      res.status(409).json({ error: "Učenik već ima 2 povezana roditelja — maksimalni broj." });
+    if (approvedVeze1.length >= 1) {
+      res.status(409).json({ error: oneApprovedRoditeljError });
       return;
     }
 
@@ -1888,6 +1901,10 @@ router.post("/ucenici/:id/povezi-roditelja", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[POST /muallim/ucenici/:id/poveži-roditelja]", err);
+    if (isOneApprovedRoditeljViolation(err)) {
+      res.status(409).json({ error: oneApprovedRoditeljError });
+      return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -1909,12 +1926,13 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
     const profil = await getManageableUcenikProfile(muallimId, ucenikId);
     if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
 
-    // Dozvoljeni su max 2 odobrena roditelja po učeniku — provjeri limit.
+    // Pravilo je 1 učenik = 1 odobren roditelj — provjeri prije kreiranja
+    // korisnika, da ne ostane siroče roditeljski nalog/profil.
     const approvedVeze2 = await db.select({ id: roditeljUcenikTable.id })
       .from(roditeljUcenikTable)
       .where(and(eq(roditeljUcenikTable.ucenikId, ucenikId), eq(roditeljUcenikTable.status, "approved")));
-    if (approvedVeze2.length >= 2) {
-      res.status(409).json({ error: "Učenik već ima 2 povezana roditelja — maksimalni broj." });
+    if (approvedVeze2.length >= 1) {
+      res.status(409).json({ error: oneApprovedRoditeljError });
       return;
     }
 
@@ -1953,6 +1971,7 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
         break;
       } catch (err: any) {
         lastErr = err;
+        if (isOneApprovedRoditeljViolation(err)) throw err;
         if (!isUniqueViolation(err)) throw err;
       }
     }
@@ -1969,6 +1988,10 @@ router.post("/ucenici/:id/roditelj", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[POST /muallim/ucenici/:id/roditelj]", err);
+    if (isOneApprovedRoditeljViolation(err)) {
+      res.status(409).json({ error: oneApprovedRoditeljError });
+      return;
+    }
     if (err?.message === "USERNAME_COLLISION") {
       res.status(409).json({ error: "Nije moguće generisati jedinstveno korisničko ime — pokušajte ponovo" });
       return;
@@ -2255,7 +2278,7 @@ router.post("/approve-roditelj", async (req, res) => {
           eq(roditeljUcenikTable.status, "approved"),
         ));
       if (vecImaRoditelja && vecImaRoditelja.roditeljId !== request.roditeljId) {
-        res.status(409).json({ error: "Učenik već ima povezanog roditelja. Jedan učenik može imati samo jednog roditelja." });
+        res.status(409).json({ error: oneApprovedRoditeljError });
         return;
       }
     }
@@ -2307,6 +2330,10 @@ router.post("/approve-roditelj", async (req, res) => {
 
     res.json({ success: true, notificationDelivered });
   } catch (err) {
+    if (isOneApprovedRoditeljViolation(err)) {
+      res.status(409).json({ error: oneApprovedRoditeljError });
+      return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -5517,10 +5544,10 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
     try {
       const r = await db.execute(sql`
         SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
-               u.display_name AS muallim_ime,
+                u.display_name AS muallim_ime,
                k.naziv AS kategorija_naziv
         FROM zvjezdice_log zl
-        JOIN korisnici u ON u.id = zl.muallim_id
+        JOIN users u ON u.id = zl.muallim_id
         LEFT JOIN zvjezdice_kategorije k ON k.id = zl.kategorija_id
          WHERE zl.ucenik_id = ${ucenikId}
            AND zl.created_at >= ${currentSchoolYearResetDate()}
@@ -5535,8 +5562,8 @@ router.get("/ucenik/:id/zvjezdice", async (req, res) => {
           SELECT zl.id, zl.tip, zl.razlog, zl.created_at,
                  u.display_name AS muallim_ime,
                  null AS kategorija_naziv
-          FROM zvjezdice_log zl
-          JOIN korisnici u ON u.id = zl.muallim_id
+           FROM zvjezdice_log zl
+           JOIN users u ON u.id = zl.muallim_id
            WHERE zl.ucenik_id = ${ucenikId}
              AND zl.created_at >= ${currentSchoolYearResetDate()}
           ORDER BY zl.created_at DESC

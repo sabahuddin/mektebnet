@@ -1,7 +1,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import type { Server } from "node:http";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -34,6 +34,11 @@ let ucenikId: number;
 let roditelj1Id: number;
 let roditelj2Id: number;
 let pendingZahtjevId: number;
+let concurrentUcenikId: number;
+let concurrentRoditelj1Id: number;
+let concurrentRoditelj2Id: number;
+let concurrentZahtjev1Id: number;
+let concurrentZahtjev2Id: number;
 let muallimToken: string;
 let roditelj2Token: string;
 
@@ -81,6 +86,26 @@ before(async () => {
     .returning({ id: roditeljUcenikTable.id });
   pendingZahtjevId = pending.id;
 
+  // Dva različita zahtjeva za drugog učenika služe za provjeru da parcijalni
+  // unique indeks zatvara race kada oba odobrenja krenu istovremeno.
+  concurrentUcenikId = await createUser("ucenik", "ucenik-concurrent");
+  concurrentRoditelj1Id = await createUser("roditelj", "roditelj-concurrent-1");
+  concurrentRoditelj2Id = await createUser("roditelj", "roditelj-concurrent-2");
+  await db.insert(ucenikProfiliTable).values({ userId: concurrentUcenikId, muallimId });
+  await db.insert(roditeljProfiliTable).values([
+    { userId: concurrentRoditelj1Id },
+    { userId: concurrentRoditelj2Id },
+  ]);
+  const [concurrentZahtjev1, concurrentZahtjev2] = await db
+    .insert(roditeljUcenikTable)
+    .values([
+      { roditeljId: concurrentRoditelj1Id, ucenikId: concurrentUcenikId, status: "pending" },
+      { roditeljId: concurrentRoditelj2Id, ucenikId: concurrentUcenikId, status: "pending" },
+    ])
+    .returning({ id: roditeljUcenikTable.id });
+  concurrentZahtjev1Id = concurrentZahtjev1.id;
+  concurrentZahtjev2Id = concurrentZahtjev2.id;
+
   muallimToken = signToken({
     userId: muallimId,
     username: `muallim.${SUFFIX}`,
@@ -107,7 +132,15 @@ before(async () => {
 after(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
 
-  const userIds = [muallimId, ucenikId, roditelj1Id, roditelj2Id].filter(Boolean);
+  const userIds = [
+    muallimId,
+    ucenikId,
+    roditelj1Id,
+    roditelj2Id,
+    concurrentUcenikId,
+    concurrentRoditelj1Id,
+    concurrentRoditelj2Id,
+  ].filter(Boolean);
   if (userIds.length) {
     await db.delete(porukeTable).where(inArray(porukeTable.posiljateljId, userIds));
     await db.delete(porukeTable).where(inArray(porukeTable.primateljId, userIds));
@@ -146,6 +179,30 @@ test("approve drugog roditelja za zauzetog učenika vraća 409", async () => {
   assert.equal(zahtjev.status, "pending");
 });
 
+test("dva istovremena odobrenja ostavljaju samo jednog odobrenog roditelja", async () => {
+  const odgovori = await Promise.all([
+    muallimPost("/api/muallim/approve-roditelj", {
+      roditeljUcenikId: concurrentZahtjev1Id,
+      approved: true,
+    }),
+    muallimPost("/api/muallim/approve-roditelj", {
+      roditeljUcenikId: concurrentZahtjev2Id,
+      approved: true,
+    }),
+  ]);
+
+  assert.deepEqual(odgovori.map((res) => res.status).sort(), [200, 409]);
+
+  const odobreneVeze = await db
+    .select({ id: roditeljUcenikTable.id })
+    .from(roditeljUcenikTable)
+    .where(and(
+      eq(roditeljUcenikTable.ucenikId, concurrentUcenikId),
+      eq(roditeljUcenikTable.status, "approved"),
+    ));
+  assert.equal(odobreneVeze.length, 1);
+});
+
 test("reject (odbijanje) drugog zahtjeva i dalje prolazi (200)", async () => {
   const res = await muallimPost("/api/muallim/approve-roditelj", {
     roditeljUcenikId: pendingZahtjevId,
@@ -161,10 +218,26 @@ test("reject (odbijanje) drugog zahtjeva i dalje prolazi (200)", async () => {
 });
 
 test("muallim kreiranje novog roditelja za zauzetog učenika vraća 409", async () => {
+  const displayName = `Novi Roditelj ${SUFFIX}`;
   const res = await muallimPost(`/api/muallim/ucenici/${ucenikId}/roditelj`, {
-    displayName: `Novi Roditelj ${SUFFIX}`,
+    displayName,
   });
   assert.equal(res.status, 409);
+
+  // Provjera mora biti prije transakcije: 409 ne smije kreirati ni nalog ni profil.
+  const [noviKorisnici, noviProfili] = await Promise.all([
+    db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.displayName, displayName), eq(usersTable.role, "roditelj"))),
+    db
+      .select({ userId: roditeljProfiliTable.userId })
+      .from(roditeljProfiliTable)
+      .innerJoin(usersTable, eq(usersTable.id, roditeljProfiliTable.userId))
+      .where(and(eq(usersTable.displayName, displayName), eq(usersTable.role, "roditelj"))),
+  ]);
+  assert.equal(noviKorisnici.length, 0);
+  assert.equal(noviProfili.length, 0);
 });
 
 test("muallim povezivanje drugog roditelja za zauzetog učenika vraća 409", async () => {

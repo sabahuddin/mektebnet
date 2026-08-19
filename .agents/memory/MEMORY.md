@@ -9,6 +9,7 @@
 - [API-server test harness](api-server-test-harness.md) — automatizovani testovi su node:test + tsx; importuj app, listen(0), signToken auth, seed/cleanup dev DB.
 - [Mekteb dokumenti — privatni fajlovi](mekteb-dokumenti-access.md) — "samo-za-mekteb" PDF ne ide na javni /uploads; blokirani poddirektorij + autorizovana ruta + openAuthorizedFile.
 - [API-server schema i dev reload](api-server-schema-i-reload.md) — nove kolone idu kao idempotentni ALTER IF NOT EXISTS u residual-schema u index.ts (NE drizzle-kit push); api-server dev treba restart_workflow nakon backend izmjena.
+- [Jedan roditelj — atomska brava](jedan-roditelj-atomika.md) — app-level provjera nije dovoljna; invariant mora imati parcijalni unique indeks i 409 mapiranje.
 - [Kur'an font i RTL nav](kuran-font-rtl.md) — koristi islam.ba "hafs" font (generički subset loše crta ۟); u Kur'anu Sljedeća=lijevo, Prethodna=desno.
 - [Poređenje arapskog teksta](arabic-text-matching.md) — alquran.cloud Uthmani ima nekanonski redoslijed harakata; nikad ne poredi egzaktno, normalizuj pa odsijeci bismillu po tokenima.
 - [H5P runtime asseti u Vite buildu](h5p-standalone-assets.md) — h5p-standalone se servira iz public/, ne preko ?url; Vite hash je lomio frameJs put (prod-only "Unexpected token '<'").

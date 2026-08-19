@@ -249,6 +249,17 @@ function glavniGet(path: string) {
   });
 }
 
+function glavniPost(path: string, body: unknown) {
+  return fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${muallimToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 // ── Testovi ───────────────────────────────────────────────────────────────────
 
 test("mekteb/statistika — suma muallimi[] odgovara global vrijednostima", async () => {
@@ -339,4 +350,34 @@ test("grupa/statistika — učenik bez zvjezdica dobija eksplicitne nule (ne izo
   assert.ok(u1 !== undefined, `Ucenik ${ucenik1Id} mora biti u odgovoru`);
   assert.equal(u1!.zvjezdicePozitivne, 2, "Ucenik1 mora imati 2 pozitivne zvjezdice");
   assert.equal(u1!.zvjezdiceNegativne, 1, "Ucenik1 mora imati 1 negativnu zvjezdicu");
+});
+
+test("profil učenika prikazuje kategoriju zvjezdice ponašanja", async () => {
+  const nazivKategorije = `Odgovornost ${SUFFIX}`;
+  const categoryResult = await db.execute(sql`
+    INSERT INTO zvjezdice_kategorije (tip, naziv)
+    VALUES ('pozitivna', ${nazivKategorije})
+    RETURNING id
+  `);
+  const kategorijaId = Number((categoryResult.rows[0] as { id: number }).id);
+
+  try {
+    const addResponse = await glavniPost(`/api/muallim/ucenik/${ucenik2Id}/zvjezdice`, {
+      tip: "pozitivna",
+      razlog: "Samostalno je završio zadatak",
+      kategorija_id: kategorijaId,
+    });
+    assert.equal(addResponse.status, 201);
+
+    const profileResponse = await glavniGet(`/api/muallim/ucenik/${ucenik2Id}/zvjezdice`);
+    assert.equal(profileResponse.status, 200);
+    const body = (await profileResponse.json()) as {
+      entries: Array<{ kategorija_naziv?: string | null; razlog?: string | null }>;
+    };
+    assert.equal(body.entries[0]?.kategorija_naziv, nazivKategorije);
+    assert.equal(body.entries[0]?.razlog, "Samostalno je završio zadatak");
+  } finally {
+    await deleteZvjezdiceZaUcenike([ucenik2Id]);
+    await db.execute(sql`DELETE FROM zvjezdice_kategorije WHERE id = ${kategorijaId}`);
+  }
 });
