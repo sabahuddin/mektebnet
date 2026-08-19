@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
 import {
   ilmihalLekcijeTable,
@@ -18,6 +19,7 @@ import {
   krunisanjaTable,
   studentKrunisanjaTable,
   interaktivniBlokPokusajiTable,
+  lessonPauseAnswersTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte, lt, sql, inArray, count } from "drizzle-orm";
 import { optionalAuth, requireAuth } from "../middlewares/auth.js";
@@ -43,6 +45,146 @@ const router = Router();
 const SVI_JEZICI = ["bs", "sq", "de", "en", "tr", "ar"];
 
 type LekcijaKvizPitanje = { question?: unknown; options?: unknown; answer?: unknown };
+type PauseConfig = { id?: unknown; type?: unknown; correctAnswer?: unknown; correctOption?: unknown; pairs?: unknown; items?: unknown };
+
+function lessonPauseConfigs(contentHtml: string): PauseConfig[] {
+  const matches = contentHtml.matchAll(/data-pause-config\s*=\s*(?:"([^"]*)"|'([^']*)')/gi);
+  const configs: PauseConfig[] = [];
+  for (const match of matches) {
+    try {
+      const encoded = match[1] ?? match[2] ?? "";
+      const config = JSON.parse(decodeURIComponent(encoded)) as PauseConfig;
+      if (typeof config.id === "string") configs.push(config);
+    } catch {
+      // Content was already validated on edit; malformed legacy block is ignored.
+    }
+  }
+  return configs;
+}
+
+function pauseConfigFingerprint(config: PauseConfig): string {
+  return createHash("sha256").update(JSON.stringify(config)).digest("hex");
+}
+
+function pauseAnswerIsValid(config: PauseConfig, answer: unknown): boolean {
+  if (config.type === "yes-no") return typeof answer === "boolean";
+  if (config.type === "multiple-choice" || config.type === "fact-question") {
+    const options = (config as { options?: unknown }).options;
+    return Array.isArray(options) &&
+      Number.isInteger(answer) &&
+      (answer as number) >= 0 &&
+      (answer as number) < options.length;
+  }
+  if (config.type === "matching") {
+    if (!Array.isArray(config.pairs) || !answer || typeof answer !== "object" || Array.isArray(answer)) {
+      return false;
+    }
+    const rights = new Set(config.pairs.map((pair) =>
+      pair && typeof pair === "object" ? (pair as { right?: unknown }).right : undefined));
+    return Object.entries(answer).every(([key, value]) => {
+      const index = Number(key);
+      return Number.isInteger(index) &&
+        index >= 0 &&
+        index < (config.pairs as unknown[]).length &&
+        typeof value === "string" &&
+        rights.has(value);
+    });
+  }
+  if (config.type !== "ordering" || !Array.isArray(config.items) || !Array.isArray(answer) ||
+      answer.length !== config.items.length || !answer.every((item) => typeof item === "string")) {
+    return false;
+  }
+  const expected = [...config.items].sort();
+  const actual = [...answer].sort();
+  return expected.every((item, index) => item === actual[index]);
+}
+
+function pauseAnswerCorrect(config: PauseConfig, answer: unknown, submitted: boolean): boolean | null {
+  if (!submitted) return null;
+  if (config.type === "yes-no") return answer === config.correctAnswer;
+  if (config.type === "multiple-choice" || config.type === "fact-question") return answer === config.correctOption;
+  if (config.type === "matching" && Array.isArray(config.pairs) && answer && typeof answer === "object") {
+    if (Object.keys(answer).length !== config.pairs.length) return false;
+    return config.pairs.every((pair, index) =>
+      !!pair && typeof pair === "object" &&
+      (answer as Record<string, unknown>)[String(index)] === (pair as { right?: unknown }).right);
+  }
+  if (config.type === "ordering" && Array.isArray(config.items) && Array.isArray(answer)) {
+    return config.items.length === answer.length && config.items.every((item, index) => item === answer[index]);
+  }
+  return null;
+}
+
+// PUT /api/content/ilmihal/:lekcijaId/pauze/:pauseId — upsert trenutnog stanja
+// jedne stabilno identificirane pauze. Gost nikad ne dolazi do ove rute.
+router.put("/ilmihal/:lekcijaId/pauze/:pauseId", requireAuth, async (req, res): Promise<void> => {
+  if (req.user?.role !== "ucenik") {
+    res.status(403).json({ error: "Samo učenik može čuvati pauzu lekcije" }); return;
+  }
+  const lekcijaId = Number(req.params.lekcijaId);
+  const pauseId = typeof req.params.pauseId === "string" ? req.params.pauseId : "";
+  const submitted = req.body?.submitted === true;
+  const answer = req.body?.answer;
+  const expectedRevision = Number(req.body?.expectedRevision);
+  const renderedConfigFingerprint =
+    typeof req.body?.configFingerprint === "string" ? req.body.configFingerprint : "";
+  if (!Number.isInteger(lekcijaId) || lekcijaId <= 0 || !pauseId || pauseId.length > 100) {
+    res.status(400).json({ error: "Neispravno stanje pauze" }); return;
+  }
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+    res.status(400).json({ error: "Nedostaje verzija stanja pauze" }); return;
+  }
+  const [lesson] = await db.select({ contentHtml: ilmihalLekcijeTable.contentHtml })
+    .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
+  const config = lessonPauseConfigs(lesson?.contentHtml ?? "").find((item) => item.id === pauseId);
+  if (!config || !pauseAnswerIsValid(config, answer)) {
+    res.status(400).json({ error: "Pauza više nije dostupna ili odgovor nije ispravan" }); return;
+  }
+  const configFingerprint = pauseConfigFingerprint(config);
+  if (renderedConfigFingerprint !== configFingerprint) {
+    res.status(409).json({
+      error: "Pauza je u međuvremenu izmijenjena",
+      configurationChanged: true,
+    });
+    return;
+  }
+  const correct = pauseAnswerCorrect(config, answer, submitted);
+  const [saved] = await db.insert(lessonPauseAnswersTable).values({
+    userId: req.user.userId, lekcijaId, pauseId, configFingerprint, answer, submitted, correct,
+  }).onConflictDoUpdate({
+    target: [lessonPauseAnswersTable.userId, lessonPauseAnswersTable.lekcijaId, lessonPauseAnswersTable.pauseId],
+    set: {
+      configFingerprint,
+      answer,
+      submitted,
+      correct,
+      revision: sql`${lessonPauseAnswersTable.revision} + 1`,
+      updatedAt: new Date(),
+    },
+    setWhere: eq(lessonPauseAnswersTable.revision, expectedRevision),
+  }).returning({
+    pauseId: lessonPauseAnswersTable.pauseId,
+    answer: lessonPauseAnswersTable.answer,
+    submitted: lessonPauseAnswersTable.submitted,
+    correct: lessonPauseAnswersTable.correct,
+    revision: lessonPauseAnswersTable.revision,
+  });
+  if (!saved) {
+    const [current] = await db.select({
+      pauseId: lessonPauseAnswersTable.pauseId,
+      answer: lessonPauseAnswersTable.answer,
+      submitted: lessonPauseAnswersTable.submitted,
+      correct: lessonPauseAnswersTable.correct,
+      revision: lessonPauseAnswersTable.revision,
+    }).from(lessonPauseAnswersTable).where(and(
+      eq(lessonPauseAnswersTable.userId, req.user.userId),
+      eq(lessonPauseAnswersTable.lekcijaId, lekcijaId),
+      eq(lessonPauseAnswersTable.pauseId, pauseId),
+    ));
+    res.status(409).json({ error: "Stanje pauze je u međuvremenu promijenjeno", current }); return;
+  }
+  res.json(saved);
+});
 
 // POST /api/content/ilmihal-blok-pokusaj
 // Evidencija odgovora u ugrađenom bloku "Provjeri znanje". Tačnost i tekst
@@ -408,6 +550,32 @@ router.get("/ilmihal/:slug", async (req, res) => {
               quizPassedAt: napredak?.quizPassedAt ? napredak.quizPassedAt.toISOString() : null,
             };
           } catch {}
+        }
+
+        if (decoded.role === "ucenik" && typeof userId === "number") {
+          const currentPauseFingerprints = new Map(
+            lessonPauseConfigs(lekcija.contentHtml ?? "").map((config) => [
+              config.id as string,
+              pauseConfigFingerprint(config),
+            ]),
+          );
+          result.pauseConfigFingerprints = Object.fromEntries(currentPauseFingerprints);
+          const savedPauses = await db.select({
+            pauseId: lessonPauseAnswersTable.pauseId,
+            configFingerprint: lessonPauseAnswersTable.configFingerprint,
+            answer: lessonPauseAnswersTable.answer,
+            submitted: lessonPauseAnswersTable.submitted,
+            correct: lessonPauseAnswersTable.correct,
+            revision: lessonPauseAnswersTable.revision,
+          }).from(lessonPauseAnswersTable).where(and(
+            eq(lessonPauseAnswersTable.userId, userId),
+            eq(lessonPauseAnswersTable.lekcijaId, lekcija.id),
+          ));
+          result.pauseAnswers = Object.fromEntries(
+            savedPauses
+              .filter((row) => currentPauseFingerprints.get(row.pauseId) === row.configFingerprint)
+              .map(({ pauseId, configFingerprint: _fingerprint, ...progress }) => [pauseId, progress]),
+          );
         }
 
         const isAdmin = decoded.role === "admin";

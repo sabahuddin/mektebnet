@@ -57,6 +57,20 @@
       "when": 1787098926123,
       "tag": "0011_interaktivni_blok_pokusaji",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787098927123,
+      "tag": "0012_lesson_pause_answers",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787098928123,
+      "tag": "0013_lesson_pause_answer_revisions",
+      "breakpoints": true
     }
   ]
 }

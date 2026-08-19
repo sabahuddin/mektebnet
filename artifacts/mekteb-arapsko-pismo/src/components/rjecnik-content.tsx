@@ -17,11 +17,13 @@ import { createPortal } from "react-dom";
 import { processRjecnik, fetchRjecnik, getRjecnikSync } from "@/lib/rjecnik";
 import { enhanceAllAudioPlayers } from "@/lib/audio-player";
 import { X } from "lucide-react";
-import { LessonPause } from "@/components/lesson-pause";
+import { LessonPause, parsePauseConfig, type PauseProgress } from "@/components/lesson-pause";
 
 interface Props {
   html: string;
   className?: string;
+  pauseAnswers?: Record<string, PauseProgress>;
+  onPauseProgressChange?: (pauseId: string, progress: PauseProgress) => void;
 }
 
 interface Tooltip {
@@ -43,7 +45,7 @@ const VIEWPORT_PADDING = 8;
 // ─────────────────────────────────────────────
 
 type HtmlSegment = { kind: "html"; html: string };
-type PauseSegment = { kind: "pause"; encodedConfig: string };
+type PauseSegment = { kind: "pause"; encodedConfig: string; pauseId: string };
 type Segment = HtmlSegment | PauseSegment;
 
 /** Parse raw lesson HTML into alternating text/pause segments. */
@@ -82,7 +84,8 @@ function splitAtPauseBlocks(raw: string): Segment[] {
       flushHtml();
       const encodedConfig =
         (child as Element).getAttribute("data-pause-config") ?? "";
-      segments.push({ kind: "pause", encodedConfig });
+      const pauseId = parsePauseConfig(encodedConfig)?.id ?? "";
+      segments.push({ kind: "pause", encodedConfig, pauseId });
     } else {
       // Serialise child back to HTML
       const div = document.createElement("div");
@@ -150,7 +153,7 @@ function HtmlSegmentBlock({
 // Main component
 // ─────────────────────────────────────────────
 
-export function RjecnikContent({ html, className }: Props) {
+export function RjecnikContent({ html, className, pauseAnswers, onPauseProgressChange }: Props) {
   const outerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
   const [dict, setDict] = useState<Record<string, string>>(getRjecnikSync());
@@ -275,11 +278,14 @@ export function RjecnikContent({ html, className }: Props) {
         }
         // Pause block
         const precedingTextRef = getPrecedingTextRef(idx);
+        const progress = pauseAnswers?.[seg.pauseId];
         return (
           <LessonPause
-            key={idx}
+            key={`${idx}-${seg.encodedConfig}-${progress?.syncKey ?? 0}`}
             encodedConfig={seg.encodedConfig}
             precedingTextRef={precedingTextRef}
+            progress={progress}
+            onProgressChange={onPauseProgressChange}
           />
         );
       })}

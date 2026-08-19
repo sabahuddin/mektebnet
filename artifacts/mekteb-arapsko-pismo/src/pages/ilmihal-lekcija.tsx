@@ -7,6 +7,8 @@ import { isLekcijaUnlocked } from "@/lib/lekcija-unlock";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { RjecnikContent } from "@/components/rjecnik-content";
+import type { PauseProgress } from "@/components/lesson-pause";
+import { mergePauseProgress } from "@/components/lesson-pause-progress";
 import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
@@ -79,6 +81,8 @@ interface Lekcija {
      *  4. uslov gate-a za "Označi kao završeno". */
     quizPassedAt?: string | null;
   };
+  pauseAnswers?: Record<string, PauseProgress>;
+  pauseConfigFingerprints?: Record<string, string>;
 }
 
 // Minimum aktivnog vremena (sekundi) koje učenik mora provesti čitajući
@@ -1222,13 +1226,15 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
 // `timeSpent` ticka. Bez memo-a se motion.div (height:auto) re-mjeri svake
 // sekunde, što izaziva reflow YouTube iframe-a unutar dangerouslySetInnerHTML
 // — vizuelno "treperenje" i nemogućnost pokretanja video-a.
-const SectionAccordion = memo(function SectionAccordion({ section, slug, nivo, onOpened }: {
+const SectionAccordion = memo(function SectionAccordion({ section, slug, nivo, onOpened, pauseAnswers, onPauseProgressChange }: {
   section: AccordionSection;
   slug: string;
   nivo: number;
   /** Pozove se prvi put kad se sekcija otvori (uključujući i defaultOpen).
    *  Glavna stranica koristi za praćenje "sve sekcije pregledane" gate-a. */
   onOpened?: (sectionId: string) => void;
+  pauseAnswers?: Record<string, PauseProgress>;
+  onPauseProgressChange?: (pauseId: string, progress: PauseProgress) => void;
 }) {
   const [open, setOpen] = useState(section.defaultOpen);
   const cfg = SECTION_CONFIG[section.type];
@@ -1281,7 +1287,11 @@ const SectionAccordion = memo(function SectionAccordion({ section, slug, nivo, o
                   dangerouslySetInnerHTML={{ __html: section.html }}
                 />
               ) : (
-                <RjecnikContent html={section.html} />
+                <RjecnikContent
+                  html={section.html}
+                  pauseAnswers={pauseAnswers}
+                  onPauseProgressChange={onPauseProgressChange}
+                />
               )}
             </div>
           </motion.div>
@@ -2363,6 +2373,11 @@ export default function IlmihalLekcijaPage() {
   const [kategorijeOpcije, setKategorijeOpcije] = useState<{ slug: string; naziv: string }[]>([]);
   const [loadingKategorije, setLoadingKategorije] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  // Serijalizuj upise po pause ID-u. Matching/ordering mogu emitovati nekoliko
+  // brzih promjena; bez reda bi sporiji stariji request mogao pregaziti noviji.
+  const pauseSaveQueuesRef = useRef<Map<string, Promise<void>>>(new Map());
+  const pauseRevisionsRef = useRef<Map<string, number>>(new Map());
+  const pauseConflictSyncRef = useRef(0);
 
   // Bočne dekoracije (pčele/saće/cvijeće) na body-ju samo dok je lekcija otvorena.
   // Narandžasta podloga je uklonjena — body sad zadržava default boju.
@@ -2397,6 +2412,63 @@ export default function IlmihalLekcijaPage() {
       return next;
     });
   }, []);
+
+  const handlePauseProgressChange = useCallback((pauseId: string, progress: PauseProgress) => {
+    if (!lekcija) return;
+    const lekcijaId = lekcija.id;
+    setLekcija((prev) => prev ? {
+      ...prev,
+      pauseAnswers: mergePauseProgress(prev.pauseAnswers, pauseId, progress),
+    } : prev);
+    if (user?.role !== "ucenik" || !token) return;
+    const previous = pauseSaveQueuesRef.current.get(pauseId) ?? Promise.resolve();
+    const next = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const saved = await apiRequest<PauseProgress>(
+          "PUT",
+          `/content/ilmihal/${lekcijaId}/pauze/${encodeURIComponent(pauseId)}`,
+          {
+            answer: progress.answer,
+            submitted: progress.submitted,
+            expectedRevision: pauseRevisionsRef.current.get(pauseId) ?? 0,
+            configFingerprint: lekcija.pauseConfigFingerprints?.[pauseId] ?? "",
+          },
+          token,
+        );
+        if (typeof saved.revision === "number") {
+          pauseRevisionsRef.current.set(pauseId, saved.revision);
+          setLekcija((prev) => prev ? {
+            ...prev,
+            pauseAnswers: mergePauseProgress(prev.pauseAnswers, pauseId, saved),
+          } : prev);
+        }
+      })
+      .then(() => undefined);
+    pauseSaveQueuesRef.current.set(pauseId, next);
+    next.catch((error: {
+      status?: number;
+      data?: { current?: PauseProgress; configurationChanged?: boolean };
+    }) => {
+      const current = error?.status === 409 ? error.data?.current : undefined;
+      if (current && typeof current.revision === "number") {
+        pauseRevisionsRef.current.set(pauseId, current.revision);
+        pauseConflictSyncRef.current += 1;
+        setLekcija((prev) => prev ? {
+          ...prev,
+          pauseAnswers: mergePauseProgress(prev.pauseAnswers, pauseId, {
+            ...current,
+            syncKey: pauseConflictSyncRef.current,
+          }),
+        } : prev);
+      }
+      // Učenje ostaje funkcionalno i bez mreže; sljedeća promjena ponovo upisuje.
+    }).finally(() => {
+      if (pauseSaveQueuesRef.current.get(pauseId) === next) {
+        pauseSaveQueuesRef.current.delete(pauseId);
+      }
+    });
+  }, [lekcija?.id, lekcija?.pauseConfigFingerprints, user?.role, token]);
 
   // Pozove se kad učenik tačno odgovori na SVA pitanja u mini-kvizu
   // "Provjeri znanje". Lokalno odmah otključavamo gate (UX) i šaljemo
@@ -2544,6 +2616,8 @@ export default function IlmihalLekcijaPage() {
     setScrollPercent(0);
     setOpenedSectionIds(new Set());
     setQuizPassed(false);
+    pauseSaveQueuesRef.current.clear();
+    pauseRevisionsRef.current.clear();
     // Token je obavezan da bi backend uključio `prilozi` u response
     // (učenici vide H5P/URL prilozi, muallim/admin sve). Bez tokena
     // dobijemo lekciju ali bez priloga, što razbije H5P prikaz.
@@ -2610,6 +2684,12 @@ export default function IlmihalLekcijaPage() {
           }
         }
         setLekcija(data);
+        pauseRevisionsRef.current = new Map(
+          Object.entries(data.pauseAnswers ?? {})
+            .filter((entry): entry is [string, PauseProgress & { revision: number }] =>
+              typeof entry[1]?.revision === "number")
+            .map(([pauseId, progress]) => [pauseId, progress.revision]),
+        );
         setParsed(parseSections(data.contentHtml));
         // Učitaj akumulirano vrijeme iz ranijih sesija — server vraća
         // server-store time. Tako npr. povratak učenika ne počne od 0.
@@ -3410,6 +3490,8 @@ export default function IlmihalLekcijaPage() {
                     slug={slug!}
                     nivo={lekcija.nivo}
                     onOpened={handleSectionOpened}
+                    pauseAnswers={lekcija.pauseAnswers}
+                    onPauseProgressChange={handlePauseProgressChange}
                   />
                 );
                 if (!kvizInserted && section.type === "ilmihal") {
@@ -3430,7 +3512,11 @@ export default function IlmihalLekcijaPage() {
              Bez ovoga, učenik nikad ne vidi kviz pa "Završeno" ostaje zaključano. */
           <div className="flex flex-col gap-3 mb-6">
             <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-6">
-              <RjecnikContent html={lekcija.contentHtml} />
+              <RjecnikContent
+                html={lekcija.contentHtml}
+                pauseAnswers={lekcija.pauseAnswers}
+                onPauseProgressChange={handlePauseProgressChange}
+              />
             </div>
             {lekcija.kvizPitanja && lekcija.kvizPitanja.length > 0 && (
               <LekcijaKvizBox

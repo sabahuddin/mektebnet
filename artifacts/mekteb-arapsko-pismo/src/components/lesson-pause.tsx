@@ -50,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { normalizePauseProgress } from "@/components/lesson-pause-progress";
 
 // ─────────────────────────────────────────────
 // Canonical config types
@@ -109,6 +110,14 @@ export type PauseConfig =
   | FactQuestionConfig
   | MatchingConfig
   | OrderingConfig;
+
+export interface PauseProgress {
+  answer: unknown;
+  submitted: boolean;
+  correct?: boolean | null;
+  revision?: number;
+  syncKey?: number;
+}
 
 // ─────────────────────────────────────────────
 // Parser
@@ -289,16 +298,29 @@ function OptionButton({
 function YesNoBlock({
   config,
   textRef,
+  progress,
+  onProgressChange,
 }: {
   config: YesNoConfig;
   textRef: React.RefObject<HTMLDivElement | null>;
+  progress?: PauseProgress;
+  onProgressChange?: (progress: PauseProgress) => void;
 }) {
-  const [chosen, setChosen] = useState<boolean | null>(null);
+  const [chosen, setChosen] = useState<boolean | null>(
+    progress?.submitted === true && typeof progress.answer === "boolean" ? progress.answer : null,
+  );
 
   const submitted = chosen !== null;
   const correct = submitted && chosen === config.correctAnswer;
 
-  const retry = () => setChosen(null);
+  const choose = (value: boolean) => {
+    setChosen(value);
+    onProgressChange?.({ answer: value, submitted: true, correct: value === config.correctAnswer });
+  };
+  const retry = () => {
+    setChosen(null);
+    onProgressChange?.({ answer: false, submitted: false, correct: null });
+  };
 
   const optionClass = (opt: boolean) => {
     if (!submitted)
@@ -320,7 +342,7 @@ function YesNoBlock({
             key={String(opt)}
             type="button"
             disabled={submitted}
-            onClick={() => setChosen(opt)}
+            onClick={() => choose(opt)}
             className={cn(
               "flex-1 py-3 rounded-2xl border-2 font-bold text-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400",
               optionClass(opt),
@@ -350,16 +372,30 @@ function YesNoBlock({
 function MultipleChoiceBlock({
   config,
   textRef,
+  progress,
+  onProgressChange,
 }: {
   config: MultipleChoiceConfig;
   textRef: React.RefObject<HTMLDivElement | null>;
+  progress?: PauseProgress;
+  onProgressChange?: (progress: PauseProgress) => void;
 }) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(
+    progress?.submitted === true && typeof progress.answer === "number" && progress.answer >= 0 && progress.answer < config.options.length
+      ? progress.answer : null,
+  );
 
   const submitted = selected !== null;
   const correct = submitted && selected === config.correctOption;
 
-  const retry = () => setSelected(null);
+  const choose = (value: number) => {
+    setSelected(value);
+    onProgressChange?.({ answer: value, submitted: true, correct: value === config.correctOption });
+  };
+  const retry = () => {
+    setSelected(null);
+    onProgressChange?.({ answer: 0, submitted: false, correct: null });
+  };
 
   return (
     <div>
@@ -375,7 +411,7 @@ function MultipleChoiceBlock({
             selected={selected}
             correctOption={config.correctOption}
             submitted={submitted}
-            onClick={() => setSelected(idx)}
+            onClick={() => choose(idx)}
           />
         ))}
       </div>
@@ -398,16 +434,30 @@ function MultipleChoiceBlock({
 function FactQuestionBlock({
   config,
   textRef,
+  progress,
+  onProgressChange,
 }: {
   config: FactQuestionConfig;
   textRef: React.RefObject<HTMLDivElement | null>;
+  progress?: PauseProgress;
+  onProgressChange?: (progress: PauseProgress) => void;
 }) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(
+    progress?.submitted === true && typeof progress.answer === "number" && progress.answer >= 0 && progress.answer < config.options.length
+      ? progress.answer : null,
+  );
 
   const submitted = selected !== null;
   const correct = submitted && selected === config.correctOption;
 
-  const retry = () => setSelected(null);
+  const choose = (value: number) => {
+    setSelected(value);
+    onProgressChange?.({ answer: value, submitted: true, correct: value === config.correctOption });
+  };
+  const retry = () => {
+    setSelected(null);
+    onProgressChange?.({ answer: 0, submitted: false, correct: null });
+  };
 
   return (
     <div>
@@ -432,7 +482,7 @@ function FactQuestionBlock({
             selected={selected}
             correctOption={config.correctOption}
             submitted={submitted}
-            onClick={() => setSelected(idx)}
+            onClick={() => choose(idx)}
           />
         ))}
       </div>
@@ -456,9 +506,13 @@ function FactQuestionBlock({
 function MatchingBlock({
   config,
   textRef,
+  progress,
+  onProgressChange,
 }: {
   config: MatchingConfig;
   textRef: React.RefObject<HTMLDivElement | null>;
+  progress?: PauseProgress;
+  onProgressChange?: (progress: PauseProgress) => void;
 }) {
   const rights = config.pairs.map((p) => p.right);
 
@@ -467,8 +521,11 @@ function MatchingBlock({
     [...rights].sort(() => Math.random() - 0.5),
   );
 
-  const [selections, setSelections] = useState<Record<number, string>>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [selections, setSelections] = useState<Record<number, string>>(
+    progress?.answer && typeof progress.answer === "object" && !Array.isArray(progress.answer)
+      ? progress.answer as Record<number, string> : {},
+  );
+  const [submitted, setSubmitted] = useState(progress?.submitted === true);
 
   const allSelected = config.pairs.every((_, i) => selections[i] !== undefined && selections[i] !== "");
   const numCorrect = submitted
@@ -479,6 +536,7 @@ function MatchingBlock({
   const retry = () => {
     setSelections({});
     setSubmitted(false);
+    onProgressChange?.({ answer: {}, submitted: false, correct: null });
   };
 
   return (
@@ -511,7 +569,11 @@ function MatchingBlock({
                 disabled={submitted}
                 value={selections[i] ?? ""}
                 onValueChange={(val) =>
-                  setSelections((prev) => ({ ...prev, [i]: val }))
+                  setSelections((prev) => {
+                    const next = { ...prev, [i]: val };
+                    onProgressChange?.({ answer: next, submitted: false, correct: null });
+                    return next;
+                  })
                 }
               >
                 <SelectTrigger
@@ -542,7 +604,11 @@ function MatchingBlock({
           type="button"
           size="sm"
           disabled={!allSelected}
-          onClick={() => setSubmitted(true)}
+          onClick={() => {
+            setSubmitted(true);
+            const correct = config.pairs.every((pair, index) => selections[index] === pair.right);
+            onProgressChange?.({ answer: selections, submitted: true, correct });
+          }}
           className="mt-3 rounded-xl"
           data-testid="button-submit-matching"
         >
@@ -575,14 +641,21 @@ function MatchingBlock({
 function OrderingBlock({
   config,
   textRef,
+  progress,
+  onProgressChange,
 }: {
   config: OrderingConfig;
   textRef: React.RefObject<HTMLDivElement | null>;
+  progress?: PauseProgress;
+  onProgressChange?: (progress: PauseProgress) => void;
 }) {
   const [items, setItems] = useState<string[]>(() =>
-    [...config.items].sort(() => Math.random() - 0.5),
+    Array.isArray(progress?.answer) && progress.answer.length === config.items.length &&
+      progress.answer.every((item) => typeof item === "string")
+      ? progress.answer as string[]
+      : [...config.items].sort(() => Math.random() - 0.5),
   );
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(progress?.submitted === true);
 
   const allCorrect =
     submitted && items.every((it, i) => it === config.items[i]);
@@ -593,13 +666,16 @@ function OrderingBlock({
     setItems((prev) => {
       const next = [...prev];
       [next[from], next[to]] = [next[to], next[from]];
+      onProgressChange?.({ answer: next, submitted: false, correct: null });
       return next;
     });
   };
 
   const retry = () => {
-    setItems([...config.items].sort(() => Math.random() - 0.5));
+    const next = [...config.items].sort(() => Math.random() - 0.5);
+    setItems(next);
     setSubmitted(false);
+    onProgressChange?.({ answer: next, submitted: false, correct: null });
   };
 
   return (
@@ -671,7 +747,14 @@ function OrderingBlock({
         <Button
           type="button"
           size="sm"
-          onClick={() => setSubmitted(true)}
+          onClick={() => {
+            setSubmitted(true);
+            onProgressChange?.({
+              answer: items,
+              submitted: true,
+              correct: items.every((item, index) => item === config.items[index]),
+            });
+          }}
           className="mt-3 rounded-xl"
           data-testid="button-submit-ordering"
         >
@@ -712,11 +795,14 @@ export interface LessonPauseProps {
   encodedConfig: string;
   /** Ref to the immediately-preceding text segment DOM node */
   precedingTextRef: React.RefObject<HTMLDivElement | null>;
+  progress?: PauseProgress;
+  onProgressChange?: (pauseId: string, progress: PauseProgress) => void;
 }
 
-export function LessonPause({ encodedConfig, precedingTextRef }: LessonPauseProps) {
+export function LessonPause({ encodedConfig, precedingTextRef, progress, onProgressChange }: LessonPauseProps) {
   const config = parsePauseConfig(encodedConfig);
   if (!config) return null;
+  const restoredProgress = normalizePauseProgress(config, progress);
 
   return (
     <div
@@ -735,19 +821,19 @@ export function LessonPause({ encodedConfig, precedingTextRef }: LessonPauseProp
       {/* Body */}
       <div className="px-4 py-4">
         {config.type === "yes-no" && (
-          <YesNoBlock config={config} textRef={precedingTextRef} />
+          <YesNoBlock config={config} textRef={precedingTextRef} progress={restoredProgress} onProgressChange={(next) => onProgressChange?.(config.id, next)} />
         )}
         {config.type === "multiple-choice" && (
-          <MultipleChoiceBlock config={config} textRef={precedingTextRef} />
+          <MultipleChoiceBlock config={config} textRef={precedingTextRef} progress={restoredProgress} onProgressChange={(next) => onProgressChange?.(config.id, next)} />
         )}
         {config.type === "fact-question" && (
-          <FactQuestionBlock config={config} textRef={precedingTextRef} />
+          <FactQuestionBlock config={config} textRef={precedingTextRef} progress={restoredProgress} onProgressChange={(next) => onProgressChange?.(config.id, next)} />
         )}
         {config.type === "matching" && (
-          <MatchingBlock config={config} textRef={precedingTextRef} />
+          <MatchingBlock config={config} textRef={precedingTextRef} progress={restoredProgress} onProgressChange={(next) => onProgressChange?.(config.id, next)} />
         )}
         {config.type === "ordering" && (
-          <OrderingBlock config={config} textRef={precedingTextRef} />
+          <OrderingBlock config={config} textRef={precedingTextRef} progress={restoredProgress} onProgressChange={(next) => onProgressChange?.(config.id, next)} />
         )}
       </div>
     </div>

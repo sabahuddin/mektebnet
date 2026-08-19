@@ -78,6 +78,37 @@ async function runResidualSchema() {
       CREATE UNIQUE INDEX IF NOT EXISTS interaktivni_blok_user_question_attempt_unique_idx
       ON interaktivni_blok_pokusaji (user_id, lekcija_id, blok_id, pitanje_index, attempt_no);
     `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS lesson_pause_answers (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        lekcija_id INTEGER NOT NULL,
+        pause_id VARCHAR(100) NOT NULL,
+        config_fingerprint VARCHAR(64) NOT NULL,
+        answer JSONB NOT NULL,
+        submitted BOOLEAN NOT NULL DEFAULT FALSE,
+        correct BOOLEAN,
+        revision INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      ALTER TABLE lesson_pause_answers
+      ADD COLUMN IF NOT EXISTS config_fingerprint VARCHAR(64) NOT NULL DEFAULT '';
+    `);
+    await db.execute(sql`
+      ALTER TABLE lesson_pause_answers
+      ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 1;
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS lesson_pause_answers_user_lesson_pause_unique_idx
+      ON lesson_pause_answers (user_id, lekcija_id, pause_id);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS lesson_pause_answers_user_lesson_idx
+      ON lesson_pause_answers (user_id, lekcija_id);
+    `);
 
     // 4. uslov anti-cheat gate-a (mini-kviz "Provjeri znanje"): timestamp
     // kada je učenik tačno odgovorio na sva pitanja iz `kvizPitanja` polja
@@ -564,7 +595,7 @@ async function runResidualSchema() {
       `);
     }
 
-    // === Task #126 — Etape i krunisanje nivoa ==================================
+    // --- Task #126 — Etape i krunisanje nivoa ----------------------------------
     // Proširenja medaljona (završni ispit etape) + nove tabele za polaganja,
     // krunisanja, krunske lekcije i student passage. Vidi schema/lessons.ts.
     await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS kviz_pitanja_ids jsonb NOT NULL DEFAULT '[]'::jsonb;`);
@@ -697,7 +728,7 @@ async function runResidualSchema() {
     await db.execute(sql`UPDATE medaljoni SET boja='silver' WHERE nivo=2 AND boja <> 'silver';`);
     await db.execute(sql`UPDATE medaljoni SET boja='gold' WHERE nivo=3 AND boja <> 'gold';`);
 
-    // === Mekteb (škola) iznad muallima ========================================
+    // --- Mekteb (škola) iznad muallima ----------------------------------------
     // Glavni (admin) muallim, kreiranje muallimskih naloga, limit po paketu,
     // zbirna statistika mekteba. Idempotentne kolone (dosad ručno preko psql).
     await db.execute(sql`ALTER TABLE muallim_profili ADD COLUMN IF NOT EXISTS is_glavni boolean DEFAULT false NOT NULL;`);
@@ -776,7 +807,7 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS grupa_muallimi_uidx ON grupa_muallimi (grupa_id, muallim_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupa_muallimi_muallim_idx ON grupa_muallimi (muallim_id);`);
 
-    logger.info("Residual schema (game_sessions + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi) ready");
+    logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

@@ -60,6 +60,30 @@ export const interaktivniBlokPokusajiTable = pgTable("interaktivni_blok_pokusaji
 
 export type InteraktivniBlokPokusaj = typeof interaktivniBlokPokusajiTable.$inferSelect;
 
+// === STANJE PAUZA U LEKCIJI =====================================================
+// Jedan red je trenutno stanje jedne pauze za jednog učenika. Za razliku od
+// interaktivni_blok_pokusaji (pedagoški audit), ovo omogućava da dijete nastavi
+// istu pauzu nakon zatvaranja lekcije ili promjene uređaja.
+export const lessonPauseAnswersTable = pgTable("lesson_pause_answers", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  lekcijaId: integer("lekcija_id").notNull(),
+  pauseId: varchar("pause_id", { length: 100 }).notNull(),
+  configFingerprint: varchar("config_fingerprint", { length: 64 }).notNull(),
+  answer: jsonb("answer").notNull().$type<unknown>(),
+  submitted: boolean("submitted").notNull().default(false),
+  correct: boolean("correct"),
+  revision: integer("revision").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userLessonPauseUnique: uniqueIndex("lesson_pause_answers_user_lesson_pause_unique_idx")
+    .on(t.userId, t.lekcijaId, t.pauseId),
+  userLessonIdx: index("lesson_pause_answers_user_lesson_idx").on(t.userId, t.lekcijaId),
+}));
+
+export type LessonPauseAnswer = typeof lessonPauseAnswersTable.$inferSelect;
+
 // === MISIJE ====================================================================
 // Definicija misije (dnevna ili sedmična). Evaluator čita postojeće podatke
 // (lekcije, kvizovi, H5P, popravi-saće) i računa progress on-the-fly za
