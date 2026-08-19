@@ -36,6 +36,7 @@
 - [Gost-gating frontend-only](gost-gating-frontend-only.md) — lekcije(5)/kvizovi(1) gate je samo na frontu; backend gate-uje samo `ucenik`, pa "rola=gost" (npr. roditelj) ne traži backend izmjene.
 - [Seed vraća obrisane tagove](seed-vraca-obrisane-tagove.md) — admin-obrisan kviz tag/kategorija se vrati na svaki restart jer ga idempotentni seed re-ubaci; ukloni iz koda (content.ts + 2 frontend duplikata), pa tek onda iz baze.
 - [OneSignal env na Coolify](onesignal-coolify-env.md) — VITE_ var mora biti Build Variable; backend /api/push/config je runtime fallback; router.use(requireAuth) hvata i ranije rute.
+- [OneSignal iOS i SPM](onesignal-ios-spm.md) — Cordova plugin koristi CocoaPods; ne radi iOS `cap sync` dok se Capacitor projekt ne migrira sa SPM-a.
 - [Sira kvizovi](sira-app.md) — zaseban statički sajt (sira.mekteb.net, van repoa, izvor u attached_assets zip); localStorage-only bez backenda, pa admin statistika nužno vidi samo naloge s vlastitog uređaja.
 - [Dev grupe su neaktivne](dev-grupe-neaktivne.md) — demo grupe imaju is_active=false pa agregatna statistika izgleda prazna; nije bug, privremeno aktiviraj za provjeru.
 - [Scoped pregled muallima](scoped-muallim-pregled.md) — glavni muallim otvara drugi muallimski panel preko read-only muallimId scope-a, bez imitacije login identiteta.

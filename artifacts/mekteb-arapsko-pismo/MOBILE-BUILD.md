@@ -49,7 +49,9 @@ pnpm install
 ```
 
 Native projekti **već postoje** u repo-u (`artifacts/mekteb-arapsko-pismo/ios`
-i `.../android`) — ne treba `cap add` ponovo.
+i `.../android`) — ne treba `cap add` ponovo. Android se može odmah
+sinhronizirati. iOS OneSignal zahtijeva zasebnu migraciju na CocoaPods
+(objašnjenje u odjeljku za push) prije prvog native sync-a.
 
 ## Build cycle (svaki put kad praviš novu mobilnu verziju)
 
@@ -59,11 +61,10 @@ Iz root-a monorepoa:
 # 1. Build web bundle sa produkcijskim API URL-om
 pnpm --filter @workspace/mekteb-arapsko-pismo run build:mobile
 
-# 2. Sync — kopira dist/public u native projekte + ažurira plugin-e
-pnpm --filter @workspace/mekteb-arapsko-pismo exec cap sync
+# 2. Android sync — kopira dist/public i ažurira OneSignal plugin
+pnpm --filter @workspace/mekteb-arapsko-pismo exec cap sync android
 
-# Ili oboje u jednom koraku:
-pnpm --filter @workspace/mekteb-arapsko-pismo run cap:sync
+# iOS sync radi nakon CocoaPods migracije opisane niže.
 ```
 
 ### Otvori u Xcode (iOS)
@@ -153,16 +154,23 @@ Za rad u produkciji ostaje samo dashboard setup (APNs ključ za iOS, FCM Service
 
 ### 1. Instaliraj / sinhroniziraj plugin u native projekte
 
-Plugin je već u `dependencies` (`onesignal-cordova-plugin`). Nakon `pnpm install` na iMac-u, sinhroniziraj ga u native projekte:
+Plugin je već u `dependencies` (`onesignal-cordova-plugin`). Nakon `pnpm install`
+na iMac-u, Android možeš sinhronizirati ovako:
 
 ```bash
-pnpm --filter @workspace/mekteb-arapsko-pismo run cap:sync
+pnpm --filter @workspace/mekteb-arapsko-pismo exec cap sync android
 ```
 
-`cap sync` automatski:
-- Linka `OneSignal.framework` u Xcode workspace (kroz CocoaPods)
-- Dodaje OneSignal Gradle dependency u Android projekt
-- Kopira plugin metadata u `ios/App/App/capacitor.config.json` i `android/app/src/main/assets/capacitor.config.json`
+Android sync automatski dodaje OneSignal Gradle dependency i kopira plugin
+metadata u `android/app/src/main/assets/capacitor.config.json`.
+
+> **iOS — obavezna priprema prije sync-a:** postojeći iOS Capacitor projekat
+> koristi Swift Package Manager, a `onesignal-cordova-plugin` za iOS podržava
+> samo CocoaPods. Zato generički `cap sync` trenutno pokuša dodati nepostojeći
+> Swift paket. Prije iOS builda projekat treba jednokratno migrirati na
+> CocoaPods, zatim pokrenuti `pod install` i `cap sync ios`. Ne pokušavaj
+> zaobići grešku ručnim dodavanjem paketa u Xcode — time se ne linka OneSignal
+> SDK.
 
 ### 2. Native init — već implementirano
 
@@ -226,13 +234,14 @@ Nakon prvog build-a:
 
 - ✅ Web push (mekteb.net) — radi
 - ✅ Backend trigger-i (nova poruka, nova zadaća)
-- ✅ Native iOS/Android — plugin (`onesignal-cordova-plugin`) instaliran, kod (`src/lib/native-push.ts`) gotov, `push.ts` rutira po `Capacitor.isNativePlatform()`
+- ✅ Native Android — OneSignal plugin, build-time App ID i Gradle dependency su sinhronizirani
+- 🟡 Native iOS — kod i APNs konfiguracija su spremni, ali prije prvog device builda treba CocoaPods migracija zbog kompatibilnosti OneSignal Cordova plugina sa SPM-om
 - ✅ iOS native config — `Info.plist` (UIBackgroundModes), `App.entitlements` (aps-environment), `project.pbxproj` (CODE_SIGN_ENTITLEMENTS u Debug + Release)
 - ✅ Android native config — `AndroidManifest.xml` (POST_NOTIFICATIONS + WAKE_LOCK + VIBRATE + RECEIVE_BOOT_COMPLETED)
 - ⏸ **Preostalo TEBI** (na iMac-u i u browser-u, ne mogu ja iz Replita):
   1. Apple Developer portal → generiši APNs `.p8` ključ
   2. Firebase Console → kreiraj projekat za `net.mektebnet.app`, skini `google-services.json` u `android/app/`, generiši Service Account JSON
   3. OneSignal dashboard → upload APNs .p8 (iOS) + Service Account JSON (Android)
-  4. iMac: `pnpm install` (da povuče `onesignal-cordova-plugin@5.3.7`) → `pnpm run cap:sync` → `cap open ios` / `cap open android`
+   4. iMac: `pnpm install` → `pnpm exec cap sync android` → `cap open android`; iOS otvori tek nakon CocoaPods migracije
   5. Xcode → odaberi Apple Team u Signing & Capabilities (Push Notifications capability je već u entitlements-u)
   6. Build na fizički iPhone i Android telefon → testiraj push iz OneSignal dashboard "New Message → All Users"
