@@ -34,7 +34,7 @@ import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
-import { mektebDokumentiDir, streamDokument, deleteDokumentFajl } from "../lib/dokumenti.js";
+import { mektebDokumentiDir, streamDokument, deleteDokumentFajl, optimizePdfFile } from "../lib/dokumenti.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
@@ -823,6 +823,12 @@ router.post("/mekteb/dokumenti", (req, res) => {
         return res.status(403).json({ error: "Samo glavni muallim ima pristup" });
       }
       if (!req.file) return res.status(400).json({ error: "Nema fajla" });
+      const optimization = await optimizePdfFile(req.file.path);
+      const storedFileSize = fs.statSync(req.file.path).size;
+      console.log(
+        `[PDF] ${req.file.originalname}: ${(optimization.bytesBefore / 1024).toFixed(0)}KB -> ` +
+        `${(optimization.bytesAfter / 1024).toFixed(0)}KB${optimization.optimized ? "" : " (original)"}`,
+      );
       const naziv = String(req.body?.naziv || "").trim() || req.file.originalname.replace(/\.pdf$/i, "");
       const opis = String(req.body?.opis || "").trim() || null;
       const [created] = await db.insert(mektebDokumentiTable).values({
@@ -831,7 +837,7 @@ router.post("/mekteb/dokumenti", (req, res) => {
         opis,
         originalName: req.file.originalname,
         storedName: req.file.filename,
-        fileSize: req.file.size,
+        fileSize: storedFileSize,
         mimeType: req.file.mimetype || "application/pdf",
         uploadedByUserId: req.user!.userId,
       }).returning();
