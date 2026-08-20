@@ -32,7 +32,7 @@ RUN pnpm --filter @workspace/mekteb-arapsko-pismo run build
 # -------- Runtime image (smaller) --------
 FROM node:24-bookworm-slim AS runner
 RUN apt-get update \
- && apt-get install -y --no-install-recommends wget ca-certificates \
+ && apt-get install -y --no-install-recommends wget ca-certificates ghostscript \
  && rm -rf /var/lib/apt/lists/* \
  && npm install -g pnpm@10
 WORKDIR /app
