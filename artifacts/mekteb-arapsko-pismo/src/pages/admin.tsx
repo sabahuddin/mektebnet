@@ -83,7 +83,7 @@ interface Korisnik {
   trialUntil?: string | null;
 }
 
-type SortField = "displayName" | "createdAt" | "totalScreentimeSec";
+type SortField = "displayName" | "createdAt" | "lastLoginAt" | "totalScreentimeSec";
 type SortDir = "asc" | "desc";
 
 function formatScreentime(sec: number | undefined | null): string {
@@ -1874,9 +1874,10 @@ export default function AdminPage() {
       if (sortField === "totalScreentimeSec") {
         return ((a.totalScreentimeSec ?? 0) - (b.totalScreentimeSec ?? 0)) * dir;
       }
-      // createdAt
-      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const dateA = sortField === "lastLoginAt" ? a.lastLoginAt : a.createdAt;
+      const dateB = sortField === "lastLoginAt" ? b.lastLoginAt : b.createdAt;
+      const ta = dateA ? new Date(dateA).getTime() : 0;
+      const tb = dateB ? new Date(dateB).getTime() : 0;
       return (ta - tb) * dir;
     });
 
@@ -2738,6 +2739,7 @@ export default function AdminPage() {
                       { label: t("Uloga"), sort: null },
                       { label: t("Status"), sort: null },
                       { label: t("Registrovan"), sort: "createdAt" as SortField },
+                       { label: t("Zadnja prijava"), sort: "lastLoginAt" as SortField },
                       { label: t("Vrijeme na platformi"), sort: "totalScreentimeSec" as SortField },
                       { label: t("Akcije"), sort: null },
                     ]).map(h => (
@@ -2789,6 +2791,20 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         {new Date(k.createdAt).toLocaleDateString("bs-BA")}
                       </td>
+                       <td
+                         className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap"
+                         title={k.lastLoginAt ? new Date(k.lastLoginAt).toLocaleString("bs-BA") : t("Korisnik se još nije prijavio")}
+                       >
+                         {k.lastLoginAt
+                           ? new Date(k.lastLoginAt).toLocaleString("bs-BA", {
+                               day: "2-digit",
+                               month: "2-digit",
+                               year: "numeric",
+                               hour: "2-digit",
+                               minute: "2-digit",
+                             })
+                           : t("Nikad")}
+                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground" title={k.lastSeenAt ? `Posljednje viđen: ${new Date(k.lastSeenAt).toLocaleString("bs-BA")}` : "Nikad nije bio aktivan"}>
                         {formatScreentime(k.totalScreentimeSec)}
                       </td>
@@ -2834,7 +2850,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {filtrirani.length === 0 && (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
                   )}
                 </tbody>
               </table>
