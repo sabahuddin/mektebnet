@@ -53,6 +53,7 @@ import { CT_TABLES } from "../lib/content-translatable.js";
 import { canAccessAdminRoute } from "../lib/admin-route-access.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
+import { optimizePdfFile } from "../lib/dokumenti.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -271,13 +272,22 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
         ".rtf": "application/rtf",
       };
       const ext = path.extname(req.file.originalname).toLowerCase();
+      let storedFileSize = req.file.size;
+      if (ext === ".pdf") {
+        const optimization = await optimizePdfFile(req.file.path);
+        storedFileSize = fs.statSync(req.file.path).size;
+        console.log(
+          `[PDF prilog] ${req.file.originalname}: ${(optimization.bytesBefore / 1024).toFixed(0)}KB -> ` +
+          `${(optimization.bytesAfter / 1024).toFixed(0)}KB${optimization.optimized ? "" : " (original)"}`,
+        );
+      }
       const uploaderRole = req.user?.role ?? "muallim";
       const uploaderUserId = req.user?.userId ?? null;
       const [inserted] = await db.insert(prilozi).values({
         lekcijaId,
         originalName: req.file.originalname,
         storedName: req.file.filename,
-        fileSize: req.file.size,
+        fileSize: storedFileSize,
         mimeType: mimeMap[ext] || "application/octet-stream",
         approved: uploaderRole === "admin",
         uploadedByRole: uploaderRole,
