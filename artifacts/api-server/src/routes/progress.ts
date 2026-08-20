@@ -10,7 +10,12 @@ const router: IRouter = Router();
 // Sav napredak pripada isključivo prijavljenom učeniku. Nikada ne prihvatamo
 // studentId iz query-ja ili body-ja: to bi svakom prijavljenom korisniku dalo
 // mogućnost da čita ili mijenja tuđi napredak.
-router.use(requireAuth, requireRole("ucenik"));
+//
+// Ovaj router je montiran na API korijenu jer čuva i /progress i /exercises
+// rute. Zato guard mora biti vezan za ta dva prefiksa — globalni router.use()
+// bi presreo i /admin, /muallim i svaku narednu API rutu.
+router.use("/progress", requireAuth, requireRole("ucenik"));
+router.use("/exercises", requireAuth, requireRole("ucenik"));
 
 router.get("/progress", async (req, res) => {
   try {

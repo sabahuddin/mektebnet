@@ -23,11 +23,13 @@ let baseUrl: string;
 let prviUcenikId: number;
 let drugiUcenikId: number;
 let muallimId: number;
+let adminId: number;
 let prviToken: string;
 let drugiToken: string;
 let muallimToken: string;
+let adminToken: string;
 
-async function createUser(role: "ucenik" | "muallim", label: string) {
+async function createUser(role: "ucenik" | "muallim" | "admin", label: string) {
   const [user] = await db.insert(usersTable).values({
     username: `${label}.${SUFFIX}`,
     displayName: `${label} ${SUFFIX}`,
@@ -38,7 +40,7 @@ async function createUser(role: "ucenik" | "muallim", label: string) {
   return user.id;
 }
 
-function tokenFor(userId: number, role: "ucenik" | "muallim", label: string) {
+function tokenFor(userId: number, role: "ucenik" | "muallim" | "admin", label: string) {
   return signToken({
     userId,
     username: `${label}.${SUFFIX}`,
@@ -58,9 +60,11 @@ before(async () => {
   prviUcenikId = await createUser("ucenik", "prvi-ucenik");
   drugiUcenikId = await createUser("ucenik", "drugi-ucenik");
   muallimId = await createUser("muallim", "muallim");
+  adminId = await createUser("admin", "admin");
   prviToken = tokenFor(prviUcenikId, "ucenik", "prvi-ucenik");
   drugiToken = tokenFor(drugiUcenikId, "ucenik", "drugi-ucenik");
   muallimToken = tokenFor(muallimId, "muallim", "muallim");
+  adminToken = tokenFor(adminId, "admin", "admin");
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -73,7 +77,7 @@ before(async () => {
 
 after(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
-  const userIds = [prviUcenikId, drugiUcenikId, muallimId].filter(Boolean);
+  const userIds = [prviUcenikId, drugiUcenikId, muallimId, adminId].filter(Boolean);
   if (userIds.length) {
     const studentIds = userIds.map(String);
     await db.delete(exerciseSessionsTable).where(inArray(exerciseSessionsTable.studentId, studentIds));
@@ -86,6 +90,17 @@ test("progress routes require an authenticated student", async () => {
   assert.equal((await fetch(`${baseUrl}/api/progress`)).status, 401);
   assert.equal(
     (await fetch(`${baseUrl}/api/progress`, { headers: auth(muallimToken) })).status,
+    403,
+  );
+});
+
+test("student progress guard does not block admin or muallim routes", async () => {
+  assert.equal(
+    (await fetch(`${baseUrl}/api/admin/korisnici`, { headers: auth(adminToken) })).status,
+    200,
+  );
+  assert.notEqual(
+    (await fetch(`${baseUrl}/api/muallim/grupe`, { headers: auth(muallimToken) })).status,
     403,
   );
 });
