@@ -256,7 +256,7 @@ export default function RegisterRoditeljPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
               <Calendar className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
               <div className="text-sm">
-                <div className="font-bold text-amber-900">{t("7 dana besplatnog probnog perioda")}</div>
+                <div className="font-bold text-amber-900">{t("30 dana besplatnog probnog perioda")}</div>
                 <div className="text-amber-800 mt-0.5">
                   {t("Probni period traje do")} <strong>{trialDateStr}</strong>. {t("Da biste nastavili koristiti platformu i poslije, obavite uplatu pretplate.")}
                 </div>
@@ -424,7 +424,7 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="mekteb" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>{t("Registracija mekteba")}</strong> — {t("odmah dobijate muallimski račun.")} <strong>{t("7 dana besplatnog probnog perioda")}</strong>, {t("učenike dodajete nakon prijave.")}
+                      <strong>{t("Registracija mekteba")}</strong> — {t("odmah dobijate muallimski račun.")} <strong>{t("30 dana besplatnog probnog perioda")}</strong>, {t("učenike dodajete nakon prijave.")}
                     </p>
                   </div>
 
@@ -528,10 +528,10 @@ export default function RegisterRoditeljPage() {
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
                       <UserPlus className="w-4 h-4" />
-                      {isLoading ? t("Obrada...") : t("Otvori muallimski račun (7 dana besplatno)")}
+                      {isLoading ? t("Obrada...") : t("Otvori muallimski račun (30 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.")}
+                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 30 dana.")}
                     </p>
                   </form>
                 </motion.div>

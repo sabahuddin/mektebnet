@@ -476,7 +476,7 @@ router.post("/register-ucenik", async (req, res) => {
     const firstName = displayName.trim().split(/\s+/)[0];
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
-    const trialUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // Online grupa se kreira/dohvaća van transakcije — koristi vlastite
     // mini-transakcije i, ako učenikov insert padne, grupa ne treba rollback
