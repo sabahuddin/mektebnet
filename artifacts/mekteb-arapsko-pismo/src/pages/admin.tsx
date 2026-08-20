@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { SelamSetting } from "@/components/selam-setting";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 
 const SVI_JEZICI: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
 
@@ -25,17 +25,15 @@ interface AnalyticsData {
   period?: string;
   granularity?: "hour" | "day";
   kpi?: {
-    posjete: number; posjetePrev: number;
-    jedinstveni: number; jedinstveniPrev: number;
-    registracije: number; registracijePrev: number;
-    kvizovi: number; kvizoviPrev: number;
+    aktivniKorisnici: number;
+    uceniciUce: number;
+    zavrseneLekcije: number;
+    kvizovi: number;
   };
   registracijePoMjesecu: { datum: string; broj: number }[];
-  posjetePoDrzavi: { country: string; broj: number }[];
-  najposjecenijeStranice?: { path: string; broj: number }[];
-  uredjaji?: { tip: string; broj: number }[];
-  kvizRezultati: { kvizNaslov: string; pokusaji: number; prosjecniProcenat: number; prosjecniBodovi: number; najvisiBodovi: number }[];
-  aktivnostPosmjenama: { datum: string; broj: number }[];
+  kvizoviPoPeriodu: { datum: string; broj: number }[];
+  najaktivnijeLekcije: { id: number; naslov: string; nivo: number; ucenici: number; zavrseno: number; minuti: number }[];
+  najaktivnijiKvizovi: { id: number; naslov: string; pokusaji: number; ucenici: number; prosjecniProcenat: number }[];
   korisnikStats: { role: string; aktivni: number; neaktivni: number }[];
   nedavniRezultati: { id: number; userId: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string; username: string; displayName: string }[];
 }
@@ -2217,20 +2215,15 @@ export default function AdminPage() {
             ) : analytics ? (
               <>
                 {analytics.kpi && (() => {
-                  const promjena = (sad: number, prije: number) => {
-                    if (prije === 0) return sad > 0 ? 100 : 0;
-                    return Math.round(((sad - prije) / prije) * 100);
-                  };
                   const kartice = [
-                    { naslov: t("Posjete"), vrijednost: analytics.kpi.posjete, prev: analytics.kpi.posjetePrev, icon: TrendingUp, boja: "text-teal-600" },
-                    { naslov: t("Jedinstveni posjetioci"), vrijednost: analytics.kpi.jedinstveni, prev: analytics.kpi.jedinstveniPrev, icon: Users, boja: "text-blue-600" },
-                    { naslov: t("Nove registracije"), vrijednost: analytics.kpi.registracije, prev: analytics.kpi.registracijePrev, icon: UserCog, boja: "text-indigo-600" },
-                    { naslov: t("Završeni kvizovi"), vrijednost: analytics.kpi.kvizovi, prev: analytics.kpi.kvizoviPrev, icon: Award, boja: "text-amber-600" },
+                    { naslov: t("Prijavljeni korisnici"), vrijednost: analytics.kpi.aktivniKorisnici, icon: Users, boja: "text-teal-600" },
+                    { naslov: t("Učenici koji su učili"), vrijednost: analytics.kpi.uceniciUce, icon: BookOpen, boja: "text-blue-600" },
+                    { naslov: t("Završene lekcije"), vrijednost: analytics.kpi.zavrseneLekcije, icon: Award, boja: "text-indigo-600" },
+                    { naslov: t("Pokušaji kviza"), vrijednost: analytics.kpi.kvizovi, icon: ClipboardList, boja: "text-amber-600" },
                   ];
                   return (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                       {kartice.map(k => {
-                        const p = promjena(k.vrijednost, k.prev);
                         const Icon = k.icon;
                         return (
                           <div key={k.naslov} className="bg-white border border-border/50 rounded-2xl p-4">
@@ -2239,9 +2232,7 @@ export default function AdminPage() {
                               <Icon className={`w-4 h-4 ${k.boja}`} />
                             </div>
                             <div className="text-2xl font-extrabold text-foreground">{k.vrijednost.toLocaleString("bs")}</div>
-                            <div className={`text-xs font-bold mt-1 ${p > 0 ? "text-emerald-600" : p < 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                              {p > 0 ? "▲" : p < 0 ? "▼" : "■"} {Math.abs(p)}{t("% vs prethodni period")}
-                            </div>
+                            <div className="text-xs font-medium mt-1 text-muted-foreground">{t("u odabranom periodu")}</div>
                           </div>
                         );
                       })}
@@ -2252,11 +2243,11 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <TrendingUp className="w-5 h-5 text-teal-600" /> {t("Posjete ({period})", { period: t(PERIOD_LABELS[analyticsPeriod]).toLowerCase() })}
+                      <ClipboardList className="w-5 h-5 text-teal-600" /> {t("Pokušaji kviza ({period})", { period: t(PERIOD_LABELS[analyticsPeriod]).toLowerCase() })}
                     </h3>
-                    {analytics.aktivnostPosmjenama.length > 0 ? (
+                    {analytics.kvizoviPoPeriodu.length > 0 ? (
                       <ResponsiveContainer width="100%" height={220}>
-                        <LineChart data={analytics.aktivnostPosmjenama}>
+                        <LineChart data={analytics.kvizoviPoPeriodu}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis dataKey="datum" tick={{ fontSize: 10 }} tickFormatter={d => d.length > 5 ? d.slice(5) : d} />
                           <YAxis tick={{ fontSize: 11 }} />
@@ -2265,7 +2256,7 @@ export default function AdminPage() {
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o posjetama")}</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema pokušaja kviza u ovom periodu")}</p>
                     )}
                   </div>
 
@@ -2290,81 +2281,54 @@ export default function AdminPage() {
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <Globe className="w-5 h-5 text-purple-600" /> {t("Posjete po državama (top 10)")}
+                      <BookOpen className="w-5 h-5 text-rose-600" /> {t("Najaktivnije lekcije")}
                     </h3>
-                    {analytics.posjetePoDrzavi.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={260}>
-                        <BarChart
-                          data={[...analytics.posjetePoDrzavi]
-                            .sort((a, b) => b.broj - a.broj)
-                            .slice(0, 10)}
-                          layout="vertical"
-                          margin={{ left: 8, right: 24 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                          <YAxis dataKey="country" type="category" width={80} tick={{ fontSize: 11 }} />
-                          <Tooltip formatter={(value: number) => t("{value} posjeta", { value: String(value) })} />
-                          <Bar dataKey="broj" fill="#8b5cf6" radius={[0, 6, 6, 0]} name={t("Broj posjeta")} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o posjetama")}</p>
-                    )}
-                  </div>
-
-                  <div className="bg-white border border-border/50 rounded-2xl p-5">
-                    <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <FileText className="w-5 h-5 text-rose-600" /> {t("Najposjećenije stranice")}
-                    </h3>
-                    {analytics.najposjecenijeStranice && analytics.najposjecenijeStranice.length > 0 ? (
+                    {analytics.najaktivnijeLekcije.length > 0 ? (
                       <div className="space-y-2">
-                        {analytics.najposjecenijeStranice.map(s => {
-                          const max = analytics.najposjecenijeStranice![0].broj || 1;
+                        {analytics.najaktivnijeLekcije.map(lekcija => {
+                          const max = analytics.najaktivnijeLekcije[0].ucenici || 1;
                           return (
-                            <div key={s.path}>
+                            <div key={lekcija.id}>
                               <div className="flex items-center justify-between text-sm mb-1">
-                                <span className="font-medium text-foreground truncate mr-2" title={s.path}>{s.path}</span>
-                                <span className="font-extrabold text-foreground shrink-0">{s.broj.toLocaleString("bs")}</span>
+                                <span className="font-medium text-foreground truncate mr-2" title={lekcija.naslov}>
+                                  <span className="text-xs text-muted-foreground mr-1">N{lekcija.nivo}</span>{lekcija.naslov}
+                                </span>
+                                <span className="font-extrabold text-foreground shrink-0">{lekcija.ucenici} {t("učenika")}</span>
                               </div>
                               <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
-                                <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.max(4, (s.broj / max) * 100)}%` }} />
+                                <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.max(4, (lekcija.ucenici / max) * 100)}%` }} />
                               </div>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o stranicama")}</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema aktivnosti na lekcijama u ovom periodu")}</p>
                     )}
                   </div>
 
                   <div className="bg-white border border-border/50 rounded-2xl p-5">
                     <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                      <BarChart3 className="w-5 h-5 text-emerald-600" /> {t("Posjete po uređajima")}
+                      <Award className="w-5 h-5 text-emerald-600" /> {t("Najaktivniji kvizovi")}
                     </h3>
-                    {analytics.uredjaji && analytics.uredjaji.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={260}>
-                        <PieChart>
-                          <Pie
-                            data={analytics.uredjaji}
-                            dataKey="broj"
-                            nameKey="tip"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={90}
-                            label={(e: any) => `${e.tip} (${e.broj})`}
-                            labelLine={false}
-                          >
-                            {analytics.uredjaji.map((u, i) => (
-                              <Cell key={u.tip} fill={["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6"][i % 4]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => t("{value} posjeta", { value: String(value) })} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                    {analytics.najaktivnijiKvizovi.length > 0 ? (
+                      <div className="space-y-3">
+                        {analytics.najaktivnijiKvizovi.map(kviz => (
+                          <div key={kviz.id} className="flex items-center justify-between gap-3 border-b border-border/30 pb-3 last:border-0 last:pb-0">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm text-foreground truncate">{kviz.naslov}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {kviz.ucenici} {t("učenika")} · {kviz.pokusaji} {t("pokušaja")} · {kviz.prosjecniProcenat}% {t("prosječno")}
+                              </p>
+                            </div>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+                              {kviz.pokusaji}×
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema podataka o uređajima")}</p>
+                      <p className="text-muted-foreground text-sm text-center py-12">{t("Nema pokušaja kviza u ovom periodu")}</p>
                     )}
                   </div>
                 </div>
