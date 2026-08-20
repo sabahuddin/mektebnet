@@ -290,7 +290,15 @@ export default function RegisterRoditeljPage() {
         className="w-full max-w-md">
         <div className="text-center mb-6">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium">{t("login.podNaslov")}</p>
+          <h1 className="text-xl font-extrabold text-foreground">Otvorite svoj Mekteb račun</h1>
+          <p className="text-muted-foreground font-medium mt-1">30 dana besplatnog pristupa za učenike, roditelje i mektebe.</p>
+          <button
+            type="button"
+            onClick={() => setLocation("/login")}
+            className="mt-3 text-sm text-primary hover:underline font-bold"
+          >
+            Već imate račun? Prijava
+          </button>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl border border-border/50 overflow-hidden">

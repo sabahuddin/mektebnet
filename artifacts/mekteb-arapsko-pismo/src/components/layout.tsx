@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/language";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, LogIn, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -318,9 +318,14 @@ export function Layout({ children }: LayoutProps) {
                 <span>{t("nav.odjaviSe")}</span>
               </button>
             ) : (
-              <Link href="/login">
-                <Button className="rounded-full font-bold shadow-sm" size="sm">{t("nav.prijava")}</Button>
-              </Link>
+              <div className="hidden sm:flex items-center gap-2">
+                <Link href="/registracija">
+                  <Button className="rounded-full font-bold shadow-sm" size="sm">Registracija</Button>
+                </Link>
+                <Link href="/login">
+                  <Button variant="outline" className="rounded-full font-bold" size="sm">{t("nav.prijava")}</Button>
+                </Link>
+              </div>
             )}
 
             {/* Brza prečica na poruke — vidljiva na mobilnom kad ima nepročitanih */}
@@ -404,11 +409,18 @@ export function Layout({ children }: LayoutProps) {
                   <span className="flex-1">{t("nav.odjaviSe")}</span>
                 </button>
               ) : (
-                <Link href="/login" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl font-bold text-sm bg-primary text-primary-foreground">
-                  <User className="w-5 h-5 shrink-0" />
-                  {t("nav.prijaviSe")}
-                </Link>
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-border/30">
+                  <Link href="/registracija" onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm bg-primary text-primary-foreground">
+                    <User className="w-5 h-5 shrink-0" />
+                    Registracija
+                  </Link>
+                  <Link href="/login" onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm border border-primary/30 text-primary">
+                    <LogIn className="w-5 h-5 shrink-0" />
+                    {t("nav.prijaviSe")}
+                  </Link>
+                </div>
               )}
             </nav>
           </motion.div>

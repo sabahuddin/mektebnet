@@ -30,9 +30,9 @@ export default function LoginPage() {
   );
 
   // Kada se na login dođe sa ?tab=demo (npr. iz menija "Demo prijava"), otvori
-  // odmah Demo tab — i kada je komponenta već montirana (promjena query-ja).
+  // odmah demo sadržaj — i kada je komponenta već montirana (promjena query-ja).
   useEffect(() => {
-    if (search.includes("demo")) setActiveTab("demo");
+    setActiveTab(search.includes("demo") ? "demo" : "prijava");
   }, [search]);
   const [captcha, setCaptcha] = useState(generateCaptcha);
   const [captchaAnswer, setCaptchaAnswer] = useState("");
@@ -93,22 +93,33 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-3xl shadow-xl border border-border/50 overflow-hidden">
           <div className="flex border-b border-border/50">
-            {(
-              [
-                { key: "prijava", label: "Prijava", icon: <LogIn className="w-4 h-4" /> },
-                { key: "demo", label: "Demo prijava", icon: <KeyRound className="w-4 h-4" /> },
-              ] as const
-            ).map(tab => (
-              <button key={tab.key}
-                onClick={() => { setActiveTab(tab.key); setError(""); setUsername(""); setPassword(""); setCaptchaAnswer(""); setCaptcha(generateCaptcha()); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-bold transition-all ${
-                  activeTab === tab.key
-                    ? "text-primary border-b-2 border-primary bg-primary/5"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}>
-                {tab.icon} {tab.label}
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setLocation("/login");
+                setError("");
+                setUsername("");
+                setPassword("");
+                setCaptchaAnswer("");
+                setCaptcha(generateCaptcha());
+              }}
+              data-testid="auth-tab-login"
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-bold transition-all ${
+                activeTab === "prijava"
+                  ? "text-primary border-b-2 border-primary bg-primary/5"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              }`}
+            >
+              <LogIn className="w-4 h-4" /> Prijava
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocation("/registracija")}
+              data-testid="auth-tab-register"
+              className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-bold text-primary bg-primary/5 hover:bg-primary/10 transition-all"
+            >
+              <User className="w-4 h-4" /> Registracija
+            </button>
           </div>
 
           <div className="p-8">
@@ -214,22 +225,42 @@ export default function LoginPage() {
                   </button>
                 </div>
 
-                <div className="mt-2 pt-4 border-t border-border/50">
+                <div className="mt-2 pt-4 border-t border-border/50 space-y-3">
                   <p className="text-sm text-center text-muted-foreground">
-                    {t("login.nemateRacun")}{" "}
+                    Još nemate račun?{" "}
                     <button
+                      type="button"
                       onClick={() => setLocation("/registracija")}
                       className="text-primary font-bold hover:underline"
                     >
-                      {t("login.registrujte")}
+                      Registrujte se besplatno
                     </button>
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("demo")}
+                    data-testid="demo-login-link"
+                    className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary font-bold transition-colors"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    Isprobajte demo bez registracije
+                  </button>
                 </div>
               </div>
             )}
 
             {activeTab === "demo" && (
               <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("prijava");
+                    setLocation("/login");
+                  }}
+                  className="self-start text-sm text-primary hover:underline font-bold"
+                >
+                  ← Povratak na prijavu
+                </button>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-2">
                   <p className="text-sm text-foreground">
                     <strong>Demo prijava</strong> — isprobajte platformu bez registracije i pretplate. Odaberite ulogu:

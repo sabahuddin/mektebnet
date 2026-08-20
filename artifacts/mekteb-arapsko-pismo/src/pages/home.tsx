@@ -4,7 +4,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { Layout } from "@/components/layout";
 import { Maskota } from "@/components/maskota";
-import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, ChevronRight, BookMarked, Scroll } from "lucide-react";
+import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, ChevronRight, BookMarked, Scroll, LogIn, UserPlus } from "lucide-react";
 
 interface ModuleCard {
   href: string;
@@ -174,6 +174,29 @@ export default function Home() {
             <p className="text-sm md:text-base text-muted-foreground font-medium mt-2">
               {t("Islamska edukativna platforma")}
             </p>
+             {!user && (
+               <div className="mt-5 flex flex-col sm:flex-row items-center md:items-start gap-3">
+                 <Link href="/registracija">
+                   <button
+                     data-testid="home-register-button"
+                     className="bg-primary text-primary-foreground rounded-2xl px-5 py-3 font-bold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-md shadow-primary/20"
+                   >
+                     <UserPlus className="w-4 h-4" />
+                     Registracija
+                     <span className="text-xs font-extrabold bg-white/20 rounded-full px-2 py-0.5">30 dana besplatno</span>
+                   </button>
+                 </Link>
+                 <Link href="/login">
+                   <button
+                     data-testid="home-login-button"
+                     className="border-2 border-primary/30 text-primary bg-white/70 rounded-2xl px-5 py-3 font-bold hover:bg-primary/5 transition-colors flex items-center gap-2"
+                   >
+                     <LogIn className="w-4 h-4" />
+                     Prijava
+                   </button>
+                 </Link>
+               </div>
+             )}
           </div>
         </div>
       </motion.div>
@@ -275,13 +298,21 @@ export default function Home() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
           className="bg-white border-2 border-primary/20 rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h3 className="font-extrabold text-lg text-primary">{t("home.prijaviSe")}</h3>
+            <h3 className="font-extrabold text-lg text-primary">Otvorite svoj račun za 30 dana besplatnog korištenja</h3>
+            <p className="text-sm text-muted-foreground mt-1">Za učenike, roditelje i mektebe.</p>
           </div>
-          <Link href="/login">
-            <button className="bg-primary text-primary-foreground rounded-2xl px-6 py-3 font-bold hover:opacity-90 transition-opacity flex items-center gap-2 whitespace-nowrap shrink-0">
-              {t("nav.prijaviSe")} <ChevronRight className="w-4 h-4" />
-            </button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/registracija">
+              <button className="bg-primary text-primary-foreground rounded-2xl px-6 py-3 font-bold hover:opacity-90 transition-opacity flex items-center gap-2 whitespace-nowrap shrink-0">
+                Registracija <ChevronRight className="w-4 h-4" />
+              </button>
+            </Link>
+            <Link href="/login">
+              <button className="text-primary rounded-2xl px-4 py-3 font-bold hover:bg-primary/5 transition-colors whitespace-nowrap">
+                Već imate račun? Prijava
+              </button>
+            </Link>
+          </div>
         </motion.div>
       )}
     </Layout>
