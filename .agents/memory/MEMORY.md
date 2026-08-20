@@ -42,3 +42,4 @@
 - [Scoped pregled muallima](scoped-muallim-pregled.md) — glavni muallim otvara drugi muallimski panel preko read-only muallimId scope-a, bez imitacije login identiteta.
 - [Lažne tsc greške iz stale lib/db builda](stale-libdb-dist-tsc.md) — api-server čita lib/db/dist/*.d.ts; "Property does not exist" za postojeću kolonu = `tsc -b lib/db`, nije bug.
 - [Encoded HTML atributi i apostrof](encoded-html-attributes.md) — encodeURIComponent ne escapuje `'`; parser double-quoted atributa ne smije prekidati vrijednost na apostrofu.
+- [Scoped route guards](scoped-route-guards.md) — router montiran na API korijenu ne smije imati nezaograničen `router.use(requireRole(...))`, jer blokira sve kasnije rute.
