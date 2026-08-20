@@ -560,7 +560,7 @@ router.post("/register-roditelj-v2", async (req, res) => {
     const firstName = displayName.trim().split(/\s+/)[0];
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
-    const trialUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // Atomarno: user + roditelj_profili. Ako profil padne, rollback user-a.
     const parentUser = await db.transaction(async (tx) => {
@@ -636,7 +636,7 @@ router.post("/register-mekteb", async (req, res) => {
 
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
-    const trialUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const dozvoljenoMuallima = Math.max(1, parseInt(String(koliko_muallima), 10) || 1);
 

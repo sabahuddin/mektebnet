@@ -322,7 +322,7 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="ucenik" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>{t("Pojedinačna pretplata")}</strong> — {t("pristup svim sadržajima za jednu osobu.")} <strong>{t("7 dana besplatnog probnog perioda")}</strong>, {t("pa pretplata.")}
+                      <strong>{t("Pojedinačna pretplata")}</strong> — {t("pristup svim sadržajima za jednu osobu.")} <strong>{t("30 dana besplatnog probnog perioda")}</strong>, {t("pa pretplata.")}
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
                       {t("Pretplata:")} {isBiH === null ? "..." : ucenikPrice} / {t("godišnje")}
@@ -366,10 +366,10 @@ export default function RegisterRoditeljPage() {
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold mt-1 shadow-md shadow-primary/20 flex items-center justify-center gap-2">
                       <UserPlus className="w-4 h-4" />
-                      {isLoading ? t("Obrada...") : t("Otvori račun (7 dana besplatno)")}
+                      {isLoading ? t("Obrada...") : t("Otvori račun (30 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.")}
+                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 30 dana.")}
                     </p>
                   </form>
                 </motion.div>
@@ -379,7 +379,7 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="roditelj" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>{t("Porodična pretplata")}</strong> — {t("pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon prijave.")} <strong>{t("7 dana besplatnog probnog perioda")}</strong>.
+                      <strong>{t("Porodična pretplata")}</strong> — {t("pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon prijave.")} <strong>{t("30 dana besplatnog probnog perioda")}</strong>.
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
                       {t("Pretplata:")} {isBiH === null ? "..." : roditeljPrice} / {t("godišnje")}
@@ -411,10 +411,10 @@ export default function RegisterRoditeljPage() {
                     <Button type="submit" size="lg" disabled={isLoading}
                       className="w-full h-12 rounded-xl text-base font-bold shadow-md shadow-primary/20 flex items-center justify-center gap-2">
                       <UserPlus className="w-4 h-4" />
-                      {isLoading ? t("Obrada...") : t("Otvori račun (7 dana besplatno)")}
+                      {isLoading ? t("Obrada...") : t("Otvori račun (30 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 7 dana.")}
+                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 30 dana.")}
                     </p>
                   </form>
                 </motion.div>
