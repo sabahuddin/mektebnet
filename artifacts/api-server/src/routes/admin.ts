@@ -61,13 +61,14 @@ router.use(requireAuth);
 // i muallimu; sve ostale admin rute ostaju strogo admin-only.
 router.use((req, res, next) => {
   const role = (req as unknown as { user?: { role?: string } }).user?.role;
+  console.info("[admin-access-debug]", { role, path: req.path, method: req.method });
   if (!canAccessAdminRoute({
     role,
     method: req.method,
     path: req.path,
     body: req.body,
   })) {
-    return res.status(403).json({ error: "Nemaš dozvolu za ovu radnju" });
+    return res.status(403).json({ error: `Nemaš dozvolu za ovu radnju (debug role: ${role ?? "nema"})` });
   }
   next();
   return;
