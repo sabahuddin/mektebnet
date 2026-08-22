@@ -242,9 +242,9 @@ router.get("/napamet", async (req, res) => {
       .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
     const latest = new Map<string, typeof ocjene[number]>();
     for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
-    const [profil] = await db.select({ mektebId: ucenikProfiliTable.mektebId })
+    const [profil] = await db.select({ mektebId: ucenikProfiliTable.mektebId, grupaId: ucenikProfiliTable.grupaId })
       .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, req.user!.userId));
-    res.json({ katalog: profil?.mektebId ? await getNapametKatalog(profil.mektebId) : [], ocjene: [...latest.values()] });
+    res.json({ katalog: profil?.mektebId ? await getNapametKatalog({ mektebId: profil.mektebId, grupaId: profil.grupaId }) : [], ocjene: [...latest.values()] });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 

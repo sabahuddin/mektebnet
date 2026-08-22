@@ -46,6 +46,7 @@ import {
   krunisanjeLekcijeTable,
   etapaPolaganjaTable,
   studentKrunisanjaTable,
+  napametGlobalProgramTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
@@ -54,6 +55,7 @@ import { canAccessAdminRoute } from "../lib/admin-route-access.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 import { optimizePdfFile } from "../lib/dokumenti.js";
+import { getGlobalNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -4336,6 +4338,74 @@ router.delete("/zvjezdice-kategorije/:id", async (req, res) => {
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Greška" });
+  }
+});
+
+// ── GLOBALNI NAPAMET KATALOG ─────────────────────────────────────────────────
+// Administrator upravlja jedinim zajedničkim katalogom. Mektebi ga ne mogu
+// prepisivati; muallimi samo dodaju stavke u svoj lokalni opseg.
+router.get("/napamet-program", async (_req, res) => {
+  try {
+    res.json({ katalog: await getGlobalNapametKatalog(true) });
+  } catch {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.post("/napamet-program", async (req, res) => {
+  try {
+    const naziv = String(req.body.naziv || "").trim();
+    const nivo = Number(req.body.nivo);
+    if (!naziv || naziv.length > 200 || ![1, 2, 3, 4].includes(nivo)) {
+      res.status(400).json({ error: "Naziv i nivo nisu ispravni" });
+      return;
+    }
+    const stavkaId = `global-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const [row] = await db.insert(napametGlobalProgramTable).values({
+      stavkaId, nivo, naziv, redoslijed: Number(req.body.redoslijed) || 9999,
+      sourceLessonSlug: null,
+    }).returning();
+    res.status(201).json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "global" });
+  } catch {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.put("/napamet-program/:stavkaId", async (req, res) => {
+  try {
+    const values: Record<string, unknown> = { updatedAt: new Date() };
+    if (req.body.naziv !== undefined) {
+      const naziv = String(req.body.naziv).trim();
+      if (!naziv || naziv.length > 200) { res.status(400).json({ error: "Naziv nije ispravan" }); return; }
+      values.naziv = naziv;
+    }
+    if (req.body.nivo !== undefined) {
+      const nivo = Number(req.body.nivo);
+      if (![1, 2, 3, 4].includes(nivo)) { res.status(400).json({ error: "Nivo nije ispravan" }); return; }
+      values.nivo = nivo;
+    }
+    if (req.body.isVisible !== undefined) values.isVisible = Boolean(req.body.isVisible);
+    const [row] = await db.update(napametGlobalProgramTable).set(values)
+      .where(eq(napametGlobalProgramTable.stavkaId, req.params.stavkaId)).returning();
+    if (!row) { res.status(404).json({ error: "Stavka nije pronađena" }); return; }
+    res.json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, sourceLessonSlug: row.sourceLessonSlug, scope: "global" });
+  } catch {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.put("/napamet-program-redoslijed", async (req, res) => {
+  try {
+    const stavke = Array.isArray(req.body.stavke) ? req.body.stavke : [];
+    for (const item of stavke) {
+      const nivo = Number(item.nivo);
+      if (![1, 2, 3, 4].includes(nivo)) continue;
+      await db.update(napametGlobalProgramTable).set({ nivo, redoslijed: Number(item.redoslijed), updatedAt: new Date() })
+        .where(eq(napametGlobalProgramTable.stavkaId, String(item.id)));
+    }
+    res.json({ katalog: await getGlobalNapametKatalog(true) });
+  } catch {
+    res.status(500).json({ error: "Greška servera" });
   }
 });
 

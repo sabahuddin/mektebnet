@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { SelamSetting } from "@/components/selam-setting";
+import { NapametGlobalProgramEditor } from "@/components/NapametGlobalProgramEditor";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 
@@ -2828,6 +2829,7 @@ export default function AdminPage() {
 
         {activeMainTab === "sistemski" && (
           <div className="space-y-6">
+            <NapametGlobalProgramEditor />
             <KategorijeZvjezdica token={token!} />
             <PendingPrilozi token={token!} />
             <div className="flex flex-wrap gap-2">

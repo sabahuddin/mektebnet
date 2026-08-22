@@ -141,6 +141,42 @@ export const napametProgramTable = pgTable("napamet_program", {
   mektebOrderIdx: index("napamet_program_mekteb_order_idx").on(t.mektebId, t.nivo, t.redoslijed),
 }));
 
+// Globalni NAPAMET katalog uređuje administrator platforme. `stavkaId` je
+// namjerno stabilan — ocjene ga čuvaju kao historijski identitet stavke.
+export const napametGlobalProgramTable = pgTable("napamet_global_program", {
+  id: serial("id").primaryKey(),
+  stavkaId: varchar("stavka_id", { length: 80 }).notNull(),
+  nivo: integer("nivo").notNull(),
+  naziv: varchar("naziv", { length: 200 }).notNull(),
+  redoslijed: integer("redoslijed").notNull(),
+  sourceLessonSlug: varchar("source_lesson_slug", { length: 100 }),
+  isVisible: boolean("is_visible").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  stavkaIdx: uniqueIndex("napamet_global_program_stavka_unique_idx").on(t.stavkaId),
+  orderIdx: index("napamet_global_program_order_idx").on(t.nivo, t.redoslijed),
+}));
+
+// Lokalna stavka je privatna za muallima koji ju je dodao i njegovu grupu.
+// Time ručni dodatak ne ulazi u katalog drugih muallima.
+export const napametMuallimProgramTable = pgTable("napamet_muallim_program", {
+  id: serial("id").primaryKey(),
+  stavkaId: varchar("stavka_id", { length: 80 }).notNull(),
+  muallimId: integer("muallim_id").notNull(),
+  grupaId: integer("grupa_id").notNull(),
+  nivo: integer("nivo").notNull(),
+  naziv: varchar("naziv", { length: 200 }).notNull(),
+  redoslijed: integer("redoslijed").notNull(),
+  isVisible: boolean("is_visible").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  stavkaIdx: uniqueIndex("napamet_muallim_program_stavka_unique_idx").on(t.stavkaId),
+  ownerOrderIdx: index("napamet_muallim_program_owner_order_idx").on(t.muallimId, t.grupaId, t.nivo, t.redoslijed),
+  grupaOrderIdx: index("napamet_muallim_program_grupa_order_idx").on(t.grupaId, t.nivo, t.redoslijed),
+}));
+
 // Mekteb-nivo dokumenti (PDF): pravila, kućni red i sl. Uploaduje ih glavni
 // muallim; vidljivi su svim učenicima i roditeljima tog mekteba.
 export const mektebDokumentiTable = pgTable("mekteb_dokumenti", {

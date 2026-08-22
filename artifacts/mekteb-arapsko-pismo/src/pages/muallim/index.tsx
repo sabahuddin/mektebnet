@@ -19,7 +19,6 @@ import { LekcijaPicker } from "@/components/LekcijaPicker";
 import { useLanguage } from "@/context/language";
 import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
-import { NapametProgramEditor } from "@/components/NapametProgramEditor";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -4567,8 +4566,6 @@ export default function MuallimPanel() {
                     </Button>
                   </div>
                 </div>
-
-                {canManageMekteb && <NapametProgramEditor />}
 
                 <div className="bg-white border border-border/50 rounded-2xl p-5">
                   <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">

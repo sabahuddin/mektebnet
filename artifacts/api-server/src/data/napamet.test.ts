@@ -7,6 +7,8 @@ import {
   grupeTable,
   mektebiTable,
   muallimProfiliTable,
+  napametGlobalProgramTable,
+  napametMuallimProgramTable,
   napametProgramTable,
   ocjeneTable,
   roditeljProfiliTable,
@@ -36,11 +38,14 @@ let grupaId: number;
 let muallimId: number;
 let ucenikId: number;
 let roditeljId: number;
+let adminId: number;
 let muallimToken: string;
 let ucenikToken: string;
 let roditeljToken: string;
+let adminToken: string;
+let lokalnaStavkaId: string | null = null;
 
-async function createUser(role: "muallim" | "ucenik" | "roditelj", label: string) {
+async function createUser(role: "admin" | "muallim" | "ucenik" | "roditelj", label: string) {
   const [user] = await db.insert(usersTable).values({
     username: `${label}.${SUFFIX}`,
     displayName: `${label} ${SUFFIX}`,
@@ -51,7 +56,7 @@ async function createUser(role: "muallim" | "ucenik" | "roditelj", label: string
   return user.id;
 }
 
-function tokenFor(userId: number, role: "muallim" | "ucenik" | "roditelj", label: string) {
+function tokenFor(userId: number, role: "admin" | "muallim" | "ucenik" | "roditelj", label: string) {
   return signToken({
     userId,
     username: `${label}.${SUFFIX}`,
@@ -86,6 +91,24 @@ before(async () => {
   `);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_program_mekteb_stavka_unique_idx ON napamet_program (mekteb_id, stavka_id);`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_program_mekteb_order_idx ON napamet_program (mekteb_id, nivo, redoslijed);`);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS napamet_global_program (
+      id serial PRIMARY KEY, stavka_id varchar(80) NOT NULL, nivo integer NOT NULL,
+      naziv varchar(200) NOT NULL, redoslijed integer NOT NULL,
+      source_lesson_slug varchar(100), is_visible boolean NOT NULL DEFAULT true,
+      created_at timestamp DEFAULT now(), updated_at timestamp DEFAULT now()
+    )
+  `);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_global_program_stavka_unique_idx ON napamet_global_program (stavka_id);`);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS napamet_muallim_program (
+      id serial PRIMARY KEY, stavka_id varchar(80) NOT NULL, muallim_id integer NOT NULL,
+      grupa_id integer NOT NULL, nivo integer NOT NULL, naziv varchar(200) NOT NULL,
+      redoslijed integer NOT NULL, is_visible boolean NOT NULL DEFAULT true,
+      created_at timestamp DEFAULT now(), updated_at timestamp DEFAULT now()
+    )
+  `);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_muallim_program_stavka_unique_idx ON napamet_muallim_program (stavka_id);`);
 
   const [mekteb] = await db.insert(mektebiTable).values({
     naziv: `Test NAPAMET ${SUFFIX}`,
@@ -95,6 +118,7 @@ before(async () => {
   muallimId = await createUser("muallim", "muallim");
   ucenikId = await createUser("ucenik", "ucenik");
   roditeljId = await createUser("roditelj", "roditelj");
+  adminId = await createUser("admin", "admin");
 
   await db.insert(muallimProfiliTable).values({
     userId: muallimId,
@@ -125,6 +149,7 @@ before(async () => {
   muallimToken = tokenFor(muallimId, "muallim", "muallim");
   ucenikToken = tokenFor(ucenikId, "ucenik", "ucenik");
   roditeljToken = tokenFor(roditeljId, "roditelj", "roditelj");
+  adminToken = tokenFor(adminId, "admin", "admin");
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -145,12 +170,15 @@ after(async () => {
     ));
   }
   if (mektebId) await db.delete(napametProgramTable).where(eq(napametProgramTable.mektebId, mektebId));
+  if (lokalnaStavkaId) await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, lokalnaStavkaId));
+  await db.update(napametGlobalProgramTable).set({ naziv: "El-Fatiha", redoslijed: 1, nivo: 1, isVisible: true })
+    .where(eq(napametGlobalProgramTable.stavkaId, STAVKA_ID));
   if (ucenikId) await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
   if (roditeljId) await db.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, roditeljId));
   if (muallimId) await db.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
   if (grupaId) await db.delete(grupeTable).where(eq(grupeTable.id, grupaId));
   if (mektebId) await db.delete(mektebiTable).where(eq(mektebiTable.id, mektebId));
-  const userIds = [muallimId, ucenikId, roditeljId].filter(Boolean);
+  const userIds = [muallimId, ucenikId, roditeljId, adminId].filter(Boolean);
   if (userIds.length) await db.delete(usersTable).where(inArray(usersTable.id, userIds));
 });
 
@@ -171,13 +199,13 @@ test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i rodi
   assert.equal(grade.napametStavkaId, STAVKA_ID);
   assert.equal(grade.ocjena, 5);
 
-  const renameResponse = await authed(`/api/muallim/napamet-program/${STAVKA_ID}`, muallimToken, {
+  const renameResponse = await authed(`/api/admin/napamet-program/${STAVKA_ID}`, adminToken, {
     method: "PUT",
     body: JSON.stringify({ naziv: "El-Fatiha (izmijenjeni naziv)" }),
   });
   assert.equal(renameResponse.status, 200);
 
-  const reorderResponse = await authed("/api/muallim/napamet-program-reorder", muallimToken, {
+  const reorderResponse = await authed("/api/admin/napamet-program-redoslijed", adminToken, {
     method: "PUT",
     body: JSON.stringify({
       stavke: [
@@ -195,20 +223,58 @@ test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i rodi
     const response = await authed(path, token);
     assert.equal(response.status, 200, `${role} mora dobiti NAPAMET katalog`);
     const payload = await response.json() as {
-      katalog: Array<{ id: string; naziv: string; redoslijed: number }>;
+      katalog: Array<{ id: string; naziv: string; redoslijed: number; nivo: number; isVisible?: boolean }>;
       ocjene: Array<{ napametStavkaId: string; ocjena: number; id: number }>;
     };
     const item = payload.katalog.find((stavka) => stavka.id === STAVKA_ID);
-    assert.deepEqual(item, {
-      id: STAVKA_ID,
-      nivo: 1,
-      naziv: "El-Fatiha (izmijenjeni naziv)",
-      redoslijed: 2,
-      isVisible: true,
-    });
+    assert.equal(item?.id, STAVKA_ID);
+    assert.equal(item?.nivo, 1);
+    assert.equal(item?.naziv, "El-Fatiha (izmijenjeni naziv)");
+    assert.equal(item?.redoslijed, 2);
+    assert.equal(item?.isVisible, true);
     assert.deepEqual(
       payload.ocjene.find((ocjena) => ocjena.napametStavkaId === STAVKA_ID),
       { ...grade, napametStavkaId: STAVKA_ID, ocjena: 5 },
     );
+  }
+});
+
+test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i roditelj", async () => {
+  const create = await authed("/api/muallim/napamet-lokalno", muallimToken, {
+    method: "POST",
+    body: JSON.stringify({ grupaId, naziv: "Dova prije puta", nivo: 4 }),
+  });
+  assert.equal(create.status, 201);
+  const lokalna = await create.json() as { id: string; scope: string };
+  lokalnaStavkaId = lokalna.id;
+  assert.equal(lokalna.scope, "lokalno");
+
+  const ownList = await authed(`/api/muallim/napamet-lokalno?grupaId=${grupaId}`, muallimToken);
+  assert.equal(ownList.status, 200);
+  const ownPayload = await ownList.json() as { katalog: Array<{ id: string; naziv: string; scope: string }> };
+  assert.deepEqual(ownPayload.katalog.find((item) => item.id === lokalnaStavkaId), {
+    id: lokalnaStavkaId,
+    naziv: "Dova prije puta",
+    nivo: 4,
+    redoslijed: 9999,
+    isVisible: true,
+    scope: "lokalno",
+  });
+
+  for (const [token, path] of [
+    [ucenikToken, "/api/ucenik/napamet"],
+    [roditeljToken, `/api/roditelj/napamet/${ucenikId}`],
+  ] as const) {
+    const response = await authed(path, token);
+    assert.equal(response.status, 200);
+    const payload = await response.json() as { katalog: Array<{ id: string; naziv: string; scope?: string }> };
+    assert.deepEqual(payload.katalog.find((item) => item.id === lokalnaStavkaId), {
+      id: lokalnaStavkaId,
+      naziv: "Dova prije puta",
+      nivo: 4,
+      redoslijed: 9999,
+      isVisible: true,
+      scope: "lokalno",
+    });
   }
 });
