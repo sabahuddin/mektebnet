@@ -9,7 +9,15 @@ import type { NapametStavka } from "@/components/NapametPregled";
 
 type LokalnaStavka = NapametStavka & { isVisible?: boolean };
 
-export function NapametLokalniProgramEditor({ grupaId, onChanged }: { grupaId: number; onChanged?: () => void }) {
+export function NapametLokalniProgramEditor({
+  grupaId,
+  globalItems = [],
+  onChanged,
+}: {
+  grupaId: number;
+  globalItems?: NapametStavka[];
+  onChanged?: () => void;
+}) {
   const { token } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -81,8 +89,24 @@ export function NapametLokalniProgramEditor({ grupaId, onChanged }: { grupaId: n
   };
 
   return <section className="bg-white border border-emerald-200 rounded-2xl overflow-hidden mb-6" data-testid="napamet-lokalne-stavke">
-    <button type="button" className="w-full px-5 py-4 bg-emerald-50/70 flex items-center justify-between text-left" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-      <div><h2 className="font-extrabold text-emerald-950">{t("Lokalne NAPAMET stavke")}</h2><p className="text-xs text-emerald-800 mt-1">{t("Dodaj ručnu stavku samo za ovu grupu. Ne prikazuje se drugim muallimima.")}</p></div>
+    <div className="px-5 py-4 bg-emerald-50/70">
+      <h2 className="font-extrabold text-emerald-950">{t("NAPAMET program")}</h2>
+      <p className="text-xs text-emerald-800 mt-1">{t("Globalne stavke koje je dodao admin dostupne su svim muallimima.")}</p>
+    </div>
+    {globalItems.length > 0 && <div className="p-4 border-b border-emerald-100 space-y-3">
+      <h3 className="text-xs font-black uppercase text-emerald-800">{t("Globalne stavke")}</h3>
+      {[1, 2, 3, 4].map((sectionNivo) => {
+        const section = globalItems.filter((item) => item.nivo === sectionNivo).sort((a, b) => a.redoslijed - b.redoslijed);
+        return section.length ? <div key={sectionNivo} className="space-y-1.5">
+          <p className="text-[11px] font-bold text-muted-foreground">{sectionNivo === 4 ? t("Dodatak") : `NAPAMET ${sectionNivo}. ${t("nivo")}`}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {section.map((item) => <span key={item.id} className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-2.5 py-1.5 text-sm font-semibold text-emerald-950">{item.naziv}</span>)}
+          </div>
+        </div> : null;
+      })}
+    </div>}
+    <button type="button" className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-emerald-50/40 transition-colors" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+      <div><h3 className="font-extrabold text-emerald-950">{t("Lokalne stavke za ovu grupu")}</h3><p className="text-xs text-muted-foreground mt-1">{t("Dodaj ručnu stavku samo za ovu grupu. Ne prikazuje se drugim muallimima.")}</p></div>
       <ChevronDown className={`w-5 h-5 text-emerald-700 transition-transform ${open ? "rotate-180" : ""}`} />
     </button>
     {open && <div className="p-4 space-y-3">

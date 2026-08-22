@@ -124,6 +124,8 @@ interface InteraktivniPregledGrupe {
   }>;
 }
 
+type GrupaModul = "ucenici" | "napamet" | "greske";
+
 export default function GrupaPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -143,6 +145,7 @@ export default function GrupaPage() {
   const [interaktivniOpen, setInteraktivniOpen] = useState(false);
   const [interaktivniLoading, setInteraktivniLoading] = useState(false);
   const [interaktivniLoaded, setInteraktivniLoaded] = useState(false);
+  const [aktivniModul, setAktivniModul] = useState<GrupaModul>("ucenici");
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -663,16 +666,38 @@ export default function GrupaPage() {
         </div>
       </div>
 
-       <div className="max-w-6xl mx-auto">
+         <div className="max-w-6xl mx-auto">
          <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
-         {/* Modul navigacija — sekundarna je na mobilnom, a desna kolona na desktopu. */}
+          {/* Modul navigacija — sekundarna je na mobilnom, a desna kolona na desktopu. */}
          <aside className="order-1 lg:order-2 lg:sticky lg:top-24 bg-white/80 lg:border lg:border-border/50 lg:rounded-2xl lg:p-3">
            <p className="hidden lg:block px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
-         {/* Modul kartice za ovu grupu — vode na odgovarajuće stranice/tabove
-            sa pre-selektovanom grupom (preko ?grupaId=… za panel-tabove). */}
+          {/* Grupni moduli — učenici, NAPAMET i pregled grešaka su lokalni tabovi. */}
         {grupa && (
           <>
            <div className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-1.5 lg:overflow-visible lg:pb-0">
+             {[
+               { key: "ucenici" as const, label: t("Učenici"), icon: Users },
+               { key: "napamet" as const, label: t("NAPAMET"), icon: BookOpen },
+               { key: "greske" as const, label: t("Gdje učenici griješe"), icon: AlertTriangle },
+             ].map((tab) => (
+               <button
+                 key={tab.key}
+                 type="button"
+                 onClick={() => {
+                   setAktivniModul(tab.key);
+                   if (tab.key === "greske") void loadInteraktivniPregled();
+                 }}
+                 className={`relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-xs font-bold transition-colors lg:w-full lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm ${
+                   aktivniModul === tab.key
+                     ? "border-emerald-500 bg-emerald-100 text-emerald-900 shadow-sm"
+                     : "border-border/60 bg-white text-foreground hover:border-emerald-300 hover:bg-emerald-50"
+                 }`}
+               >
+                 <tab.icon className="w-3.5 h-3.5 shrink-0 text-emerald-700 lg:h-4 lg:w-4" />
+                 <span className="truncate">{tab.label}</span>
+               </button>
+             ))}
+             <div className="h-px bg-border/60 my-1 hidden lg:block" />
             {[
                { label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}` },
                { label: t("Plan lekcija"), icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}` },
@@ -748,9 +773,11 @@ export default function GrupaPage() {
           )}
         </div>
 
-        {!grupa.isArchived && <NapametLokalniProgramEditor grupaId={grupaId} onChanged={refreshNapametKatalog} />}
+         {aktivniModul === "napamet" && !grupa.isArchived && (
+           <NapametLokalniProgramEditor grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} />
+         )}
 
-        <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-grupe">
+         {aktivniModul === "greske" && <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-grupe">
           <button type="button" aria-expanded={interaktivniOpen} onClick={() => {
             const next = !interaktivniOpen;
             setInteraktivniOpen(next);
@@ -801,7 +828,7 @@ export default function GrupaPage() {
               ))}
             </div>
           ) : null}
-        </section>
+         </section>}
 
         {showBulkAdd && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
@@ -923,7 +950,7 @@ export default function GrupaPage() {
           <div className="fixed inset-0 z-10" onClick={() => setSettingsOpenId(null)} />
         )}
 
-        <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+         {aktivniModul === "ucenici" && <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border/30">
             <h3 className="font-extrabold text-foreground flex items-center gap-2">
               <Users className="w-5 h-5 text-secondary" /> {t("Učenici u grupi ({n})", { n: String(studentiGrupe.length) })}
@@ -1184,10 +1211,10 @@ export default function GrupaPage() {
               })}
             </div>
           )}
-        </div>
-
+        </div>}
          </div>
          </div>
+       </div>
 
         {showMoveModal && moveStudent && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
