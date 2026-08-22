@@ -272,6 +272,50 @@ test("ocjena povezane lekcije automatski upisuje i NAPAMET ocjenu", async () => 
   assert.ok(rows.every((row) => row.ocjena === 6));
 });
 
+test("ručni izbor iste povezane stavke ne pravi duplu NAPAMET ocjenu", async () => {
+  const povezano = (await getGlobalNapametKatalog()).find((item) => item.sourceLessonSlug);
+  assert.ok(povezano?.sourceLessonSlug);
+  const datum = "2026-08-24";
+  const response = await authed("/api/muallim/ocjene", muallimToken, {
+    method: "POST",
+    body: JSON.stringify({
+      ucenikId,
+      grupaId,
+      kategorija: "ucenje",
+      ocjena: 5,
+      lekcijaNaziv: povezano.naziv,
+      lekcijaSlug: povezano.sourceLessonSlug,
+      napametStavkaId: povezano.id,
+      datum,
+    }),
+  });
+  assert.equal(response.status, 201);
+  const rows = await db.select({ napametStavkaId: ocjeneTable.napametStavkaId })
+    .from(ocjeneTable).where(and(eq(ocjeneTable.ucenikId, ucenikId), eq(ocjeneTable.datum, datum)));
+  assert.equal(rows.length, 2);
+  assert.equal(rows.filter((row) => row.napametStavkaId === povezano.id).length, 1);
+});
+
+test("nepovezana lekcija ostaje jedna obična ocjena", async () => {
+  const datum = "2026-08-25";
+  const response = await authed("/api/muallim/ocjene", muallimToken, {
+    method: "POST",
+    body: JSON.stringify({
+      ucenikId,
+      grupaId,
+      kategorija: "test",
+      ocjena: 4,
+      lekcijaNaziv: "Nepovezana testna lekcija",
+      lekcijaSlug: `nepovezana-${SUFFIX}`,
+      datum,
+    }),
+  });
+  assert.equal(response.status, 201);
+  const rows = await db.select({ kategorija: ocjeneTable.kategorija, napametStavkaId: ocjeneTable.napametStavkaId })
+    .from(ocjeneTable).where(and(eq(ocjeneTable.ucenikId, ucenikId), eq(ocjeneTable.datum, datum)));
+  assert.deepEqual(rows, [{ kategorija: "test", napametStavkaId: null }]);
+});
+
 test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i roditelj", async () => {
   const create = await authed("/api/muallim/napamet-lokalno", muallimToken, {
     method: "POST",

@@ -2242,6 +2242,23 @@ router.post("/ocjene", async (req, res) => {
       }
     }
     const result = await db.transaction(async (tx) => {
+      // Stari ručni NAPAMET unos bez odabrane lekcije ostaje jedan NAPAMET
+      // zapis. Par nastaje samo kada konkretni slug lekcije aktivira vezu.
+      if (!lekcijaSlug && stavka) {
+        const [napametOcjena] = await tx.insert(ocjeneTable).values({
+          ucenikId,
+          muallimId: req.user!.userId,
+          grupaId,
+          kategorija: "napamet",
+          ocjena,
+          lekcijaNaziv: lekcijaNaziv || null,
+          napomena,
+          datum,
+          napametNivo: stavka.nivo,
+          napametStavkaId: stavka.id,
+        }).returning();
+        return napametOcjena;
+      }
       const [nova] = await tx.insert(ocjeneTable).values({
         ucenikId,
         muallimId: req.user!.userId,
@@ -2266,7 +2283,7 @@ router.post("/ocjene", async (req, res) => {
           datum,
           napametNivo: stavka.nivo,
           napametStavkaId: stavka.id,
-        }).returning();
+        });
       }
       return nova;
     });

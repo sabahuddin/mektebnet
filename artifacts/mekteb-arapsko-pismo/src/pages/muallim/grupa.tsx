@@ -372,7 +372,7 @@ export default function GrupaPage() {
     setOcjenaTarget(u);
     setNewOcjena({
       kategorija: "usmeno", ocjena: 6, lekcijaNaziv: "", napomena: "",
-      datum: new Date().toISOString().split("T")[0], napametStavkaId: "",
+      datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
     });
   }
 

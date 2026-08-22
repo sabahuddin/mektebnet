@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { NapametStavka } from "@/components/NapametPregled";
 
 type ProgramStavka = NapametStavka & { isVisible?: boolean; sourceLessonSlug?: string | null };
+type LessonOption = { id: number; slug: string; naslov: string; nivo: number; redoslijed: number };
 
 export function NapametGlobalProgramEditor() {
   const { token } = useAuth();
@@ -18,13 +19,19 @@ export function NapametGlobalProgramEditor() {
   const [saving, setSaving] = useState(false);
   const [naziv, setNaziv] = useState("");
   const [nivo, setNivo] = useState(1);
+  const [lekcije, setLekcije] = useState<LessonOption[]>([]);
+  const [sourceLessonSlug, setSourceLessonSlug] = useState("");
 
   const load = async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await apiRequest<{ katalog: ProgramStavka[] }>("GET", "/admin/napamet-program", undefined, token);
+      const [data, lessonData] = await Promise.all([
+        apiRequest<{ katalog: ProgramStavka[] }>("GET", "/admin/napamet-program", undefined, token),
+        apiRequest<LessonOption[]>("GET", "/admin/ilmihal/lista", undefined, token),
+      ]);
       setKatalog(data.katalog);
+      setLekcije(lessonData);
     } catch (error: any) {
       toast({ title: t("Greška"), description: error?.message || t("Nije moguće učitati globalni NAPAMET katalog"), variant: "destructive" });
     } finally {
@@ -67,11 +74,18 @@ export function NapametGlobalProgramEditor() {
   };
 
   const add = async () => {
-    if (!token || !naziv.trim()) return;
+    if (!token || (!naziv.trim() && !sourceLessonSlug)) return;
     setSaving(true);
     try {
-      await apiRequest("POST", "/admin/napamet-program", { naziv: naziv.trim(), nivo, redoslijed: 9999 }, token);
+      const selectedLesson = lekcije.find((lesson) => lesson.slug === sourceLessonSlug);
+      await apiRequest("POST", "/admin/napamet-program", {
+        naziv: naziv.trim() || selectedLesson?.naslov,
+        nivo: selectedLesson?.nivo ?? nivo,
+        sourceLessonSlug: sourceLessonSlug || undefined,
+        redoslijed: 9999,
+      }, token);
       setNaziv("");
+      setSourceLessonSlug("");
       await load();
     } catch (error: any) {
       toast({ title: t("Greška"), description: error?.message || t("Nije moguće dodati stavku"), variant: "destructive" });
@@ -115,7 +129,16 @@ export function NapametGlobalProgramEditor() {
         </div>;
       })}
       <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-border">
-        <input value={naziv} onChange={(event) => setNaziv(event.target.value)} placeholder={t("Nova globalna stavka")} className="flex-1 rounded-xl border border-border px-3 py-2 text-sm" />
+        <select value={sourceLessonSlug} onChange={(event) => {
+          const slug = event.target.value;
+          const lesson = lekcije.find((item) => item.slug === slug);
+          setSourceLessonSlug(slug);
+          if (lesson) { setNaziv(lesson.naslov); setNivo(lesson.nivo); }
+        }} className="flex-1 rounded-xl border border-border px-3 py-2 text-sm">
+          <option value="">{t("Odaberi postojeću Ilmihal lekciju (opciono)")}</option>
+          {lekcije.map((lesson) => <option key={lesson.id} value={lesson.slug}>{lesson.naslov} — {t("nivo")} {lesson.nivo}</option>)}
+        </select>
+        <input value={naziv} onChange={(event) => setNaziv(event.target.value)} placeholder={t("Ili upiši novu globalnu stavku")} className="flex-1 rounded-xl border border-border px-3 py-2 text-sm" />
         <select value={nivo} onChange={(event) => setNivo(Number(event.target.value))} className="rounded-xl border border-border px-3 py-2 text-sm">
           {[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value === 4 ? t("Dodatak") : `${t("Nivo")} ${value}`}</option>)}
         </select>

@@ -1527,6 +1527,7 @@ router.get("/ilmihal/lista", async (req, res) => {
     const lekcije = await db
       .select({
         id: ilmihalLekcijeTable.id,
+        slug: ilmihalLekcijeTable.slug,
         nivo: ilmihalLekcijeTable.nivo,
         naslov: ilmihalLekcijeTable.naslov,
         redoslijed: ilmihalLekcijeTable.redoslijed,
@@ -4354,8 +4355,17 @@ router.get("/napamet-program", async (_req, res) => {
 
 router.post("/napamet-program", async (req, res) => {
   try {
-    const naziv = String(req.body.naziv || "").trim();
-    const nivo = Number(req.body.nivo);
+    const sourceLessonSlug = req.body.sourceLessonSlug ? String(req.body.sourceLessonSlug) : null;
+    const [sourceLesson] = sourceLessonSlug
+      ? await db.select({ naslov: ilmihalLekcijeTable.naslov, nivo: ilmihalLekcijeTable.nivo })
+        .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, sourceLessonSlug))
+      : [];
+    if (sourceLessonSlug && !sourceLesson) {
+      res.status(400).json({ error: "Odabrana lekcija nije pronađena" });
+      return;
+    }
+    const naziv = String(req.body.naziv || sourceLesson?.naslov || "").trim();
+    const nivo = Number(req.body.nivo ?? sourceLesson?.nivo);
     if (!naziv || naziv.length > 200 || ![1, 2, 3, 4].includes(nivo)) {
       res.status(400).json({ error: "Naziv i nivo nisu ispravni" });
       return;
@@ -4363,7 +4373,7 @@ router.post("/napamet-program", async (req, res) => {
     const stavkaId = `global-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const [row] = await db.insert(napametGlobalProgramTable).values({
       stavkaId, nivo, naziv, redoslijed: Number(req.body.redoslijed) || 9999,
-      sourceLessonSlug: null,
+      sourceLessonSlug,
     }).returning();
     res.status(201).json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "global" });
   } catch {
