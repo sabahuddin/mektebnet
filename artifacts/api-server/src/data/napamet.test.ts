@@ -18,7 +18,7 @@ import {
 } from "@workspace/db/schema";
 import app from "../app.js";
 import { signToken } from "../middlewares/auth.js";
-import { NAPAMET_KATALOG, NAPAMET_KATALOG_MAP } from "./napamet.js";
+import { getGlobalNapametKatalog, NAPAMET_KATALOG, NAPAMET_KATALOG_MAP } from "./napamet.js";
 
 test("NAPAMET katalog ima četiri sekcije i jedinstvene stabilne stavke", () => {
   assert.deepEqual(
@@ -237,6 +237,39 @@ test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i rodi
       { ...grade, napametStavkaId: STAVKA_ID, ocjena: 5 },
     );
   }
+});
+
+test("ocjena povezane lekcije automatski upisuje i NAPAMET ocjenu", async () => {
+  const povezano = (await getGlobalNapametKatalog()).find((item) => item.sourceLessonSlug);
+  assert.ok(povezano?.sourceLessonSlug, "testna baza mora imati povezanu lekciju");
+  const datum = "2026-08-23";
+  const response = await authed("/api/muallim/ocjene", muallimToken, {
+    method: "POST",
+    body: JSON.stringify({
+      ucenikId,
+      grupaId,
+      kategorija: "usmeno",
+      ocjena: 6,
+      lekcijaNaziv: povezano.naziv,
+      lekcijaSlug: povezano.sourceLessonSlug,
+      napomena: "Automatsko povezivanje",
+      datum,
+    }),
+  });
+  assert.equal(response.status, 201);
+  const rows = await db.select({
+    kategorija: ocjeneTable.kategorija,
+    ocjena: ocjeneTable.ocjena,
+    napametStavkaId: ocjeneTable.napametStavkaId,
+    lekcijaNaziv: ocjeneTable.lekcijaNaziv,
+  }).from(ocjeneTable).where(and(
+    eq(ocjeneTable.ucenikId, ucenikId),
+    eq(ocjeneTable.datum, datum),
+  ));
+  assert.equal(rows.length, 2);
+  assert.ok(rows.some((row) => row.kategorija === "usmeno" && row.napametStavkaId === null));
+  assert.ok(rows.some((row) => row.kategorija === "napamet" && row.napametStavkaId === povezano.id));
+  assert.ok(rows.every((row) => row.ocjena === 6));
 });
 
 test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i roditelj", async () => {

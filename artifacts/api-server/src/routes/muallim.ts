@@ -36,7 +36,7 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
 import { mektebDokumentiDir, streamDokument, deleteDokumentFajl, optimizePdfFile } from "../lib/dokumenti.js";
-import { getNapametKatalog } from "../data/napamet.js";
+import { getGlobalNapametKatalog, getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
@@ -2205,8 +2205,14 @@ router.get("/prisustvo", async (req, res) => {
 // POST /api/muallim/ocjene - add grade
 router.post("/ocjene", async (req, res) => {
   try {
-    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, napomena, datum, napametStavkaId } = req.body;
-    const isNapamet = Boolean(napametStavkaId);
+    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, lekcijaSlug, napomena, datum, napametStavkaId } = req.body;
+    const automatskaStavka = lekcijaSlug
+      ? (await getGlobalNapametKatalog(false)).find((item) => item.sourceLessonSlug === String(lekcijaSlug))
+      : undefined;
+    // Ručni izbor ima prednost (npr. muallim želi ocijeniti drugu stavku uz
+    // lekciju), a bez njega povezani slug automatski aktivira NAPAMET.
+    const effectiveNapametStavkaId = napametStavkaId || automatskaStavka?.id;
+    const isNapamet = Boolean(effectiveNapametStavkaId);
     const ctx = await getMektebCtx(req.user!.userId);
     if (isNapamet && (!ucenikId || !grupaId)) {
       res.status(400).json({ error: "NAPAMET ocjena mora pripadati grupi" });
@@ -2222,7 +2228,7 @@ router.post("/ocjene", async (req, res) => {
       muallimId: req.user!.userId,
       includeHidden: true,
     }) : [];
-    const stavka = isNapamet ? program.find(item => item.id === String(napametStavkaId)) : undefined;
+    const stavka = isNapamet ? program.find(item => item.id === String(effectiveNapametStavkaId)) : undefined;
     if (isNapamet && (!stavka || stavka.isVisible === false)) {
       res.status(400).json({ error: "Neispravna NAPAMET stavka" });
       return;
@@ -2235,19 +2241,36 @@ router.post("/ocjene", async (req, res) => {
         return;
       }
     }
-    const [nova] = await db.insert(ocjeneTable).values({
-      ucenikId,
-      muallimId: req.user!.userId,
-      grupaId,
-      kategorija: stavka ? "napamet" : kategorija,
-      ocjena,
-      lekcijaNaziv: lekcijaNaziv || null,
-      napomena,
-      datum,
-      napametNivo: stavka?.nivo ?? null,
-      napametStavkaId: stavka?.id ?? null,
-    }).returning();
-    res.status(201).json(nova);
+    const result = await db.transaction(async (tx) => {
+      const [nova] = await tx.insert(ocjeneTable).values({
+        ucenikId,
+        muallimId: req.user!.userId,
+        grupaId,
+        kategorija,
+        ocjena,
+        lekcijaNaziv: lekcijaNaziv || null,
+        napomena,
+        datum,
+        napametNivo: null,
+        napametStavkaId: null,
+      }).returning();
+      if (stavka) {
+        await tx.insert(ocjeneTable).values({
+          ucenikId,
+          muallimId: req.user!.userId,
+          grupaId,
+          kategorija: "napamet",
+          ocjena,
+          lekcijaNaziv: null,
+          napomena,
+          datum,
+          napametNivo: stavka.nivo,
+          napametStavkaId: stavka.id,
+        }).returning();
+      }
+      return nova;
+    });
+    res.status(201).json(result);
 
     // Notifikacija roditeljima — ne blokira odgovor
     (async () => {

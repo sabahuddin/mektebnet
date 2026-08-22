@@ -162,7 +162,7 @@ export default function GrupaPage() {
   const [ocjenaTarget, setOcjenaTarget] = useState<Ucenik | null>(null);
   const [newOcjena, setNewOcjena] = useState({
     kategorija: "usmeno", ocjena: 6, lekcijaNaziv: "", napomena: "",
-    datum: new Date().toISOString().split("T")[0], napametStavkaId: "",
+    datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
   });
   const [napametKatalog, setNapametKatalog] = useState<NapametStavka[]>([]);
   const [savingOcjena, setSavingOcjena] = useState(false);
@@ -385,6 +385,7 @@ export default function GrupaPage() {
         kategorija: newOcjena.kategorija,
         ocjena: parseInt(String(newOcjena.ocjena)),
         lekcijaNaziv: newOcjena.lekcijaNaziv || null,
+        lekcijaSlug: newOcjena.lekcijaSlug || null,
         napomena: newOcjena.napomena,
         datum: newOcjena.datum,
         grupaId,
@@ -1273,7 +1274,11 @@ export default function GrupaPage() {
                       }
                       setNewOcjena(o => ({ ...o, napametStavkaId: katalog[0]?.id || "" }));
                     }} />
-                  <span className="text-sm font-bold text-emerald-900">{t("Dodaj u NAPAMET tab")}</span>
+                  <span className="text-sm font-bold text-emerald-900">
+                    {newOcjena.lekcijaSlug && napametKatalog.some(s => s.sourceLessonSlug === newOcjena.lekcijaSlug)
+                      ? t("Povezana lekcija će se automatski dodati u NAPAMET")
+                      : t("Dodaj u NAPAMET tab")}
+                  </span>
                 </label>
                 {!!newOcjena.napametStavkaId && (
                   <div>
@@ -1295,7 +1300,18 @@ export default function GrupaPage() {
                   <LekcijaPicker
                     lekcije={ilmihalLekcije}
                     value={newOcjena.lekcijaNaziv}
-                    onChange={v => setNewOcjena(o => ({ ...o, lekcijaNaziv: v }))}
+                    onChange={v => setNewOcjena(o => ({ ...o, lekcijaNaziv: v, lekcijaSlug: "" }))}
+                    onSelectLesson={lekcija => {
+                      const source = lekcija?.slug
+                        ? napametKatalog.find(s => s.sourceLessonSlug === lekcija.slug)
+                        : undefined;
+                      setNewOcjena(o => ({
+                        ...o,
+                        lekcijaNaziv: lekcija?.naslov || "",
+                        lekcijaSlug: lekcija?.slug || "",
+                        napametStavkaId: source?.id || "",
+                      }));
+                    }}
                     placeholder={t("Pretraži lekciju ili upiši broj…")}
                   />
                 </div>
