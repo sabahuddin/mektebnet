@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -1143,23 +1144,54 @@ export default function GrupaPage() {
                                 <span className="text-xl leading-none">⭐</span>
                                 <span className="text-[10px] font-extrabold">{t("Pozitivna")}</span>
                               </button>
-                              {pozDropOpen === u.id && (
-                                <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] bg-white border border-border rounded-xl shadow-lg overflow-hidden">
-                                  <button
-                                    onClick={() => { addZvjezdica(u.id, "pozitivna"); setPozDropOpen(null); }}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-700 font-medium border-b border-border/40"
-                                  >
-                                    ⭐ {t("Bez kategorije")}
-                                  </button>
-                                  {pozKat.map(k => (
-                                    <button key={k.id}
-                                      onClick={() => { addZvjezdica(u.id, "pozitivna", k.id); setPozDropOpen(null); }}
-                                      className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-amber-700"
-                                    >
-                                      ⭐ {k.naziv}
-                                    </button>
-                                  ))}
-                                </div>
+                              {pozDropOpen === u.id && typeof document !== "undefined" && createPortal(
+                                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
+                                  onClick={() => setPozDropOpen(null)}>
+                                  <div role="dialog" aria-modal="true" aria-labelledby={`pozitivna-zvjezdica-${u.id}`}
+                                    className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                                    onClick={e => e.stopPropagation()}>
+                                    <div className="shrink-0 border-b border-border/40 px-5 py-4">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                          <h3 id={`pozitivna-zvjezdica-${u.id}`} className="font-extrabold text-foreground">
+                                            ⭐ {t("Pozitivna zvjezdica")}
+                                          </h3>
+                                          <p className="mt-1 text-sm text-muted-foreground">{u.displayName}</p>
+                                        </div>
+                                        <button type="button" onClick={() => setPozDropOpen(null)}
+                                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted" aria-label={t("Zatvori")}>
+                                          <X className="h-5 w-5" />
+                                        </button>
+                                      </div>
+                                      <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700">
+                                        {t("Trenutno: {n}", { n: String(zvjezdiceSummary.get(u.id)?.pozitivne ?? 0) })}
+                                      </p>
+                                    </div>
+                                    <div className="min-h-0 overflow-y-auto p-3">
+                                      <button
+                                        onClick={() => { addZvjezdica(u.id, "pozitivna"); setPozDropOpen(null); }}
+                                        className="w-full rounded-xl border border-amber-200 px-3 py-3 text-left text-sm font-medium text-amber-700 hover:bg-amber-50"
+                                      >
+                                        ⭐ {t("Bez kategorije")}
+                                      </button>
+                                      {pozKat.map(k => (
+                                        <button key={k.id}
+                                          onClick={() => { addZvjezdica(u.id, "pozitivna", k.id); setPozDropOpen(null); }}
+                                          className="mt-2 w-full rounded-xl border border-border/50 px-3 py-3 text-left text-sm text-amber-700 hover:bg-amber-50"
+                                        >
+                                          ⭐ {k.naziv}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="shrink-0 border-t border-border/40 bg-muted/20 p-3">
+                                      <button type="button" onClick={() => setPozDropOpen(null)}
+                                        className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted">
+                                        {t("Otkaži")}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>,
+                                document.body
                               )}
                             </div>
 
@@ -1172,23 +1204,54 @@ export default function GrupaPage() {
                                 <span className="text-xl leading-none">★</span>
                                 <span className="text-[10px] font-extrabold">{t("Negativna")}</span>
                               </button>
-                              {negDropOpen === u.id && (
-                                <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] bg-white border border-border rounded-xl shadow-lg overflow-hidden">
-                                  <button
-                                    onClick={() => { addZvjezdica(u.id, "negativna"); setNegDropOpen(null); }}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-700 font-medium border-b border-border/40"
-                                  >
-                                    ★ {t("Bez kategorije")}
-                                  </button>
-                                  {negKat.map(k => (
-                                    <button key={k.id}
-                                      onClick={() => { addZvjezdica(u.id, "negativna", k.id); setNegDropOpen(null); }}
-                                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                                    >
-                                      ★ {k.naziv}
-                                    </button>
-                                  ))}
-                                </div>
+                              {negDropOpen === u.id && typeof document !== "undefined" && createPortal(
+                                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
+                                  onClick={() => setNegDropOpen(null)}>
+                                  <div role="dialog" aria-modal="true" aria-labelledby={`negativna-zvjezdica-${u.id}`}
+                                    className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                                    onClick={e => e.stopPropagation()}>
+                                    <div className="shrink-0 border-b border-border/40 px-5 py-4">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                          <h3 id={`negativna-zvjezdica-${u.id}`} className="font-extrabold text-foreground">
+                                            ★ {t("Negativna zvjezdica")}
+                                          </h3>
+                                          <p className="mt-1 text-sm text-muted-foreground">{u.displayName}</p>
+                                        </div>
+                                        <button type="button" onClick={() => setNegDropOpen(null)}
+                                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted" aria-label={t("Zatvori")}>
+                                          <X className="h-5 w-5" />
+                                        </button>
+                                      </div>
+                                      <p className="mt-3 rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700">
+                                        {t("Trenutno: {n}", { n: String(zvjezdiceSummary.get(u.id)?.negativne ?? 0) })}
+                                      </p>
+                                    </div>
+                                    <div className="min-h-0 overflow-y-auto p-3">
+                                      <button
+                                        onClick={() => { addZvjezdica(u.id, "negativna"); setNegDropOpen(null); }}
+                                        className="w-full rounded-xl border border-border/60 px-3 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                      >
+                                        ★ {t("Bez kategorije")}
+                                      </button>
+                                      {negKat.map(k => (
+                                        <button key={k.id}
+                                          onClick={() => { addZvjezdica(u.id, "negativna", k.id); setNegDropOpen(null); }}
+                                          className="mt-2 w-full rounded-xl border border-border/50 px-3 py-3 text-left text-sm text-gray-700 hover:bg-gray-50"
+                                        >
+                                          ★ {k.naziv}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="shrink-0 border-t border-border/40 bg-muted/20 p-3">
+                                      <button type="button" onClick={() => setNegDropOpen(null)}
+                                        className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted">
+                                        {t("Otkaži")}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>,
+                                document.body
                               )}
                             </div>
                           </div>
