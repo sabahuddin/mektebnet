@@ -1214,7 +1214,6 @@ export default function GrupaPage() {
         </div>}
          </div>
          </div>
-       </div>
 
         {showMoveModal && moveStudent && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

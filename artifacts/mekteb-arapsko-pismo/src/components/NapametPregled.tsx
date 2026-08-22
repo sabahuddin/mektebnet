@@ -6,6 +6,7 @@ export interface NapametStavka {
   naziv: string;
   redoslijed: number;
   sourceLessonSlug?: string | null;
+  scope?: "global" | "lokalno" | "legacy";
 }
 
 export interface NapametOcjena {
