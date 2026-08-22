@@ -96,9 +96,11 @@ before(async () => {
       id serial PRIMARY KEY, stavka_id varchar(80) NOT NULL, nivo integer NOT NULL,
       naziv varchar(200) NOT NULL, redoslijed integer NOT NULL,
       source_lesson_slug varchar(100), is_visible boolean NOT NULL DEFAULT true,
+      is_deleted boolean NOT NULL DEFAULT false,
       created_at timestamp DEFAULT now(), updated_at timestamp DEFAULT now()
     )
   `);
+  await db.execute(sql`ALTER TABLE napamet_global_program ADD COLUMN IF NOT EXISTS is_deleted boolean NOT NULL DEFAULT false;`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_global_program_stavka_unique_idx ON napamet_global_program (stavka_id);`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS napamet_muallim_program (
@@ -171,7 +173,7 @@ after(async () => {
   }
   if (mektebId) await db.delete(napametProgramTable).where(eq(napametProgramTable.mektebId, mektebId));
   if (lokalnaStavkaId) await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, lokalnaStavkaId));
-  await db.update(napametGlobalProgramTable).set({ naziv: "El-Fatiha", redoslijed: 1, nivo: 1, isVisible: true })
+  await db.update(napametGlobalProgramTable).set({ naziv: "El-Fatiha", redoslijed: 1, nivo: 1, isVisible: true, isDeleted: false })
     .where(eq(napametGlobalProgramTable.stavkaId, STAVKA_ID));
   if (ucenikId) await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
   if (roditeljId) await db.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, roditeljId));
@@ -180,6 +182,27 @@ after(async () => {
   if (mektebId) await db.delete(mektebiTable).where(eq(mektebiTable.id, mektebId));
   const userIds = [muallimId, ucenikId, roditeljId, adminId].filter(Boolean);
   if (userIds.length) await db.delete(usersTable).where(inArray(usersTable.id, userIds));
+});
+
+test("admin obrisana početna NAPAMET stavka se ne vraća kroz seed", async () => {
+  try {
+    const response = await authed(`/api/admin/napamet-program/${STAVKA_ID}`, adminToken, {
+      method: "DELETE",
+    });
+    assert.equal(response.status, 200);
+
+    const katalog = await getGlobalNapametKatalog(true);
+    assert.equal(katalog.some((item) => item.id === STAVKA_ID), false);
+
+    const [row] = await db.select({ isDeleted: napametGlobalProgramTable.isDeleted })
+      .from(napametGlobalProgramTable)
+      .where(eq(napametGlobalProgramTable.stavkaId, STAVKA_ID));
+    assert.equal(row?.isDeleted, true);
+  } finally {
+    await db.update(napametGlobalProgramTable)
+      .set({ isDeleted: false, isVisible: true, naziv: "El-Fatiha", redoslijed: 1, nivo: 1 })
+      .where(eq(napametGlobalProgramTable.stavkaId, STAVKA_ID));
+  }
 });
 
 test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i roditelja", async () => {
