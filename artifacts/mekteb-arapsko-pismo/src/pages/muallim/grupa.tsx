@@ -663,116 +663,33 @@ export default function GrupaPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-14 h-14 bg-gradient-to-br from-secondary to-emerald-600 rounded-2xl flex items-center justify-center shadow-md">
-            <GraduationCap className="w-7 h-7 text-white" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-extrabold text-foreground">{grupa.naziv}</h1>
-            <p className="text-muted-foreground text-sm">
-              {grupa.skolskaGodina}
-              {grupa.daniNastave?.length > 0 && ` · ${grupa.daniNastave.join(", ")}`}
-              {grupa.vrijemeNastave && ` · ${grupa.vrijemeNastave}`}
-            </p>
-            {(grupa.datumPocetka || grupa.datumKraja) && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {t("Mektebska godina: {od} – {do}", { od: fmtDatum(grupa.datumPocetka) || "—", do: fmtDatum(grupa.datumKraja) || "—" })}
-              </p>
-            )}
-            {/* Muallim(i) grupe */}
-            <div className="mt-1.5 space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-xs text-muted-foreground">
-                  {t("Muallim:")} <span className="font-semibold text-foreground">{grupa.muallimDisplayName || t("—")}</span>
-                </span>
-                {isGlavni && (
-                  <button
-                    onClick={() => { setChangeMuallimId(grupa.muallimId ?? null); setShowChangeMuallim(true); }}
-                    className="ml-1 flex items-center gap-0.5 text-xs text-emerald-600 hover:text-emerald-800 font-bold transition-colors"
-                    title={t("Promijeni muallima grupe")}
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              {/* Sekundarni muallimi */}
-              {sekundarniMuallimi.map(sm => (
-                <div key={sm.id} className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span className="text-xs text-blue-700 font-semibold">{sm.displayName}</span>
-                  {isGlavni && (
-                    <button
-                      onClick={() => removeSekundarniMuallim(sm.id)}
-                      className="ml-0.5 text-red-400 hover:text-red-600 transition-colors"
-                      title={t("Ukloni muallima iz grupe")}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {/* Dugme za dodavanje sekundarnog muallima */}
-              {isGlavni && !showAddSecMuallim && (
-                <button
-                  onClick={() => setShowAddSecMuallim(true)}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 transition-colors mt-0.5"
-                >
-                  <Plus className="w-3 h-3" /> {t("Dodaj muallima grupi")}
-                </button>
-              )}
-              {isGlavni && showAddSecMuallim && (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <select
-                    value={addSecMuallimId}
-                    onChange={e => setAddSecMuallimId(e.target.value ? Number(e.target.value) : "")}
-                    className="text-xs border border-border rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    <option value="">{t("— odaberi muallima —")}</option>
-                    {mektebMuallimi
-                      .filter(m => m.userId !== grupa.muallimId && !sekundarniMuallimi.find(s => s.id === m.userId))
-                      .map(m => <option key={m.userId} value={m.userId}>{m.displayName}</option>)
-                    }
-                  </select>
-                  <Button size="sm" className="h-7 px-2 text-xs rounded-lg" disabled={!addSecMuallimId || addingSecMuallim} onClick={addSekundarniMuallim}>
-                    {addingSecMuallim ? <Loader2 className="w-3 h-3 animate-spin" /> : t("Dodaj")}
-                  </Button>
-                  <button onClick={() => { setShowAddSecMuallim(false); setAddSecMuallimId(""); }} className="text-muted-foreground hover:text-foreground">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-3xl font-black text-secondary">{studentiGrupe.length}</div>
-            <div className="text-xs text-muted-foreground font-medium">{t("učenika")}</div>
-          </div>
-        </div>
-
-        {/* Modul kartice za ovu grupu — vode na odgovarajuće stranice/tabove
+       <div className="max-w-6xl mx-auto">
+         <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+         {/* Modul navigacija — sekundarna je na mobilnom, a desna kolona na desktopu. */}
+         <aside className="order-2 lg:order-2 lg:sticky lg:top-24 bg-white/80 lg:border lg:border-border/50 lg:rounded-2xl lg:p-3">
+           <p className="hidden lg:block px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
+         {/* Modul kartice za ovu grupu — vode na odgovarajuće stranice/tabove
             sa pre-selektovanom grupom (preko ?grupaId=… za panel-tabove). */}
         {grupa && (
           <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
+           <div className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-1.5 lg:overflow-visible lg:pb-0">
             {[
-              { label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}`, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" },
-              { label: t("Plan lekcija"), icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}`, color: "bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100" },
-              { label: t("Raspored lekcija"), icon: ListOrdered, href: `/muallim/raspored/${grupa.id}`, color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" },
-              { label: t("Kalendar"), icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}`, color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" },
-              { label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}`, color: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100" },
-              { label: t("Zadaća"), icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100", badge: zadacaBadge },
-              { label: t("Izvještaji"), icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}`, color: "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100" },
-              { label: t("Roditelji"), icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}`, color: "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100" },
-              { label: t("H5P statistika"), icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}`, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" },
+               { label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}` },
+               { label: t("Plan lekcija"), icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}` },
+               { label: t("Raspored lekcija"), icon: ListOrdered, href: `/muallim/raspored/${grupa.id}` },
+               { label: t("Kalendar"), icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}` },
+               { label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}` },
+               { label: t("Zadaća"), icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, badge: zadacaBadge },
+               { label: t("Izvještaji"), icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}` },
+               { label: t("Roditelji"), icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}` },
+               { label: t("H5P statistika"), icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}` },
             ].map(card => (
               <Link
                 key={card.label}
                 href={card.href}
-                className={`relative flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${card.color}`}
+                 className="relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border/60 bg-white px-2.5 py-2 text-xs font-bold text-foreground transition-colors hover:border-emerald-300 hover:bg-emerald-50 lg:w-full lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm"
               >
-                <card.icon className="w-4 h-4 shrink-0" />
+                 <card.icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground lg:h-4 lg:w-4" />
                 <span className="truncate">{card.label}</span>
                 {(card.badge ?? 0) > 0 && (
                   <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-red-600 text-white text-[11px] font-black shadow-md">
@@ -784,6 +701,9 @@ export default function GrupaPage() {
           </div>
           </>
         )}
+         </aside>
+
+         <div className="order-1 lg:order-1 min-w-0">
 
         {grupa.isArchived && (
           <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-6">
