@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronDown, ChevronUp, GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -24,6 +24,14 @@ export function NapametGlobalProgramEditor() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [draggingNivo, setDraggingNivo] = useState<number | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const katalogRef = useRef<ProgramStavka[]>([]);
+  const dragRef = useRef<{ id: string; nivo: number; pointerId: number; cleanup: () => void } | null>(null);
+
+  useEffect(() => {
+    katalogRef.current = katalog;
+  }, [katalog]);
+
+  useEffect(() => () => dragRef.current?.cleanup(), []);
 
   const load = async () => {
     if (!token) return;
@@ -81,15 +89,15 @@ export function NapametGlobalProgramEditor() {
     await saveOrder(next);
   };
 
-  const finishDrag = async (targetId: string | null) => {
-    if (!draggingId || draggingNivo === null || !targetId || targetId === draggingId) {
+  const finishDrag = async (sourceId: string, sourceNivo: number, targetId: string | null) => {
+    if (!targetId || targetId === sourceId) {
       setDraggingId(null);
       setDraggingNivo(null);
       setDragOverId(null);
       return;
     }
-    const section = katalog.filter((item) => item.nivo === draggingNivo).sort((a, b) => a.redoslijed - b.redoslijed);
-    const fromIndex = section.findIndex((item) => item.id === draggingId);
+    const section = katalogRef.current.filter((item) => item.nivo === sourceNivo).sort((a, b) => a.redoslijed - b.redoslijed);
+    const fromIndex = section.findIndex((item) => item.id === sourceId);
     const toIndex = section.findIndex((item) => item.id === targetId);
     if (fromIndex < 0 || toIndex < 0) {
       setDraggingId(null);
@@ -100,11 +108,49 @@ export function NapametGlobalProgramEditor() {
     const [moved] = section.splice(fromIndex, 1);
     section.splice(fromIndex < toIndex ? toIndex - 1 : toIndex, 0, moved);
     const orders = new Map(section.map((item, order) => [item.id, order + 1]));
-    const next = katalog.map((item) => orders.has(item.id) ? { ...item, redoslijed: orders.get(item.id)! } : item);
+    const next = katalogRef.current.map((item) => orders.has(item.id) ? { ...item, redoslijed: orders.get(item.id)! } : item);
     setDraggingId(null);
     setDraggingNivo(null);
     setDragOverId(null);
     await saveOrder(next);
+  };
+
+  const startDrag = (event: React.PointerEvent<HTMLButtonElement>, item: ProgramStavka, sectionNivo: number) => {
+    if (saving || !event.isPrimary) return;
+    event.preventDefault();
+    dragRef.current?.cleanup();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDraggingId(item.id);
+    setDraggingNivo(sectionNivo);
+    setDragOverId(item.id);
+
+    const findTargetId = (clientX: number, clientY: number) => {
+      const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>("[data-napamet-id]");
+      return target?.dataset.napametNivo === String(sectionNivo) ? target.dataset.napametId || null : null;
+    };
+    const onMove = (pointerEvent: PointerEvent) => {
+      if (pointerEvent.pointerId !== event.pointerId) return;
+      const targetId = findTargetId(pointerEvent.clientX, pointerEvent.clientY);
+      if (targetId) setDragOverId(targetId);
+    };
+    const complete = (pointerEvent: PointerEvent) => {
+      if (pointerEvent.pointerId !== event.pointerId) return;
+      const targetId = pointerEvent.type === "pointerup"
+        ? findTargetId(pointerEvent.clientX, pointerEvent.clientY)
+        : null;
+      cleanup();
+      void finishDrag(item.id, sectionNivo, targetId);
+    };
+    const cleanup = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", complete);
+      document.removeEventListener("pointercancel", complete);
+      if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+    };
+    dragRef.current = { id: item.id, nivo: sectionNivo, pointerId: event.pointerId, cleanup };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", complete);
+    document.addEventListener("pointercancel", complete);
   };
 
   const deleteItem = async (item: ProgramStavka) => {
@@ -158,31 +204,11 @@ export function NapametGlobalProgramEditor() {
           {items.map((item, index) => <div key={item.id}
             data-napamet-id={item.id}
             data-napamet-nivo={sectionNivo}
-            onPointerMove={(event) => {
-              if (!draggingId || draggingNivo !== sectionNivo) return;
-              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-napamet-id]");
-              if (target?.dataset.napametNivo === String(sectionNivo)) setDragOverId(target.dataset.napametId || null);
-            }}
             className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${dragOverId === item.id ? "border-emerald-500 ring-2 ring-emerald-200" : ""} ${draggingId === item.id ? "opacity-50" : ""} ${item.isVisible === false ? "bg-slate-100 opacity-60" : "bg-white"}`}>
             <div className="flex flex-col">
               <button type="button" disabled={saving} aria-label={t("Povuci za promjenu redoslijeda")}
-                onPointerDown={(event) => {
-                  if (saving) return;
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  setDraggingId(item.id);
-                  setDraggingNivo(sectionNivo);
-                }}
-                onPointerMove={(event) => {
-                  if (!draggingId) return;
-                  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-napamet-id]");
-                  if (target?.dataset.napametNivo === String(sectionNivo)) setDragOverId(target.dataset.napametId || null);
-                }}
-                onPointerUp={(event) => {
-                  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-napamet-id]");
-                  void finishDrag(target?.dataset.napametId || null);
-                }}
-                onPointerCancel={() => void finishDrag(null)}
-                className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-emerald-700 p-1">
+                onPointerDown={(event) => startDrag(event, item, sectionNivo)}
+                className="touch-none select-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-emerald-700 p-1">
                 <GripVertical className="w-4 h-4" />
               </button>
               <button type="button" disabled={saving || index === 0} aria-label={t("Pomjeri gore")} onClick={() => void reorder(sectionNivo, index, -1)} className="text-muted-foreground disabled:opacity-30"><ChevronUp className="w-3 h-3" /></button>
