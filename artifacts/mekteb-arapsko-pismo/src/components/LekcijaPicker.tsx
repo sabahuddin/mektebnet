@@ -13,6 +13,8 @@ interface Props {
   lekcije: LekcijaOption[];
   value: string;
   onChange: (naslov: string) => void;
+  /** Poziva se samo kad je konkretna lekcija odabrana ili izbor obrisan. */
+  onSelectLesson?: (lekcija: LekcijaOption | null) => void;
   placeholder?: string;
 }
 
@@ -28,7 +30,7 @@ function normalize(s: string): string {
     .replace(/ć/g, "c");
 }
 
-export function LekcijaPicker({ lekcije, value, onChange, placeholder }: Props) {
+export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeholder }: Props) {
   const { t } = useLanguage();
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
@@ -59,12 +61,14 @@ export function LekcijaPicker({ lekcije, value, onChange, placeholder }: Props) 
 
   const pick = (l: typeof numbered[number]) => {
     onChange(l.naslov);
+    onSelectLesson?.(l);
     setQuery(l.naslov);
     setOpen(false);
   };
 
   const clear = () => {
     onChange("");
+    onSelectLesson?.(null);
     setQuery("");
     setOpen(false);
   };
@@ -76,7 +80,12 @@ export function LekcijaPicker({ lekcije, value, onChange, placeholder }: Props) 
         <input
           type="text"
           value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true); onChange(e.target.value); }}
+          onChange={e => {
+            setQuery(e.target.value);
+            setOpen(true);
+            onChange(e.target.value);
+            onSelectLesson?.(null);
+          }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder ?? t("Pretraži lekciju…")}
           className="w-full border border-border rounded-xl pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"

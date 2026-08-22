@@ -2328,19 +2328,29 @@ router.put("/napamet-program-reorder", async (req, res) => {
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
-// GET /api/muallim/napamet/:ucenikId — catalogue + grades for the teacher's student
+// GET /api/muallim/napamet/:ucenikId — shared mekteb catalogue + this student's grades.
+// A teacher can only view students in a group they can already access.
 router.get("/napamet/:ucenikId", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.ucenikId);
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId) { res.status(403).json({ error: "Muallim nije vezan za mekteb" }); return; }
+    const [profilUcenika] = await db.select({
+      grupaId: ucenikProfiliTable.grupaId,
+      mektebId: ucenikProfiliTable.mektebId,
+    }).from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+    if (!profilUcenika || !profilUcenika.grupaId) {
+      res.status(403).json({ error: "Nemate pristup ovom učeniku" }); return;
+    }
+    const grupa = await verifyGrupaAccess(profilUcenika.grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return; }
     const ocjene = await db.select().from(ocjeneTable).where(and(
       eq(ocjeneTable.ucenikId, ucenikId),
-      eq(ocjeneTable.muallimId, req.user!.userId),
       sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
     )).orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
     const latest = new Map<string, typeof ocjene[number]>();
     for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
-    const ctx = await getMektebCtx(req.user!.userId);
-    res.json({ katalog: ctx?.mektebId ? await getNapametKatalog(ctx.mektebId) : [], ocjene: [...latest.values()] });
+    res.json({ katalog: await getNapametKatalog(ctx.mektebId), ocjene: [...latest.values()] });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
@@ -4371,7 +4381,7 @@ router.get("/zadace", async (req, res) => {
 
 router.post("/zadace", async (req, res) => {
   try {
-    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, ucenikIds } = req.body;
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds } = req.body;
     // naslov više nije obavezan — nova UX koristi lekciju kao naziv zadaće.
     if (!grupaId) { res.status(400).json({ error: "grupaId je obavezan" }); return; }
     const naslovFinal = (naslov && String(naslov).trim()) || (lekcijaNaslov && String(lekcijaNaslov).trim()) || null;
@@ -4379,6 +4389,16 @@ router.post("/zadace", async (req, res) => {
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    let canonicalSlug: string | null = null;
+    if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
+      const [lekcija] = await db.select({ slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
+        .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
+      if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
+        res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
+      }
+      canonicalSlug = lekcija.slug;
+    }
 
     let validUcenikIds: number[] = [];
     if (Array.isArray(ucenikIds) && ucenikIds.length > 0) {
@@ -4398,7 +4418,9 @@ router.post("/zadace", async (req, res) => {
       opis: opis || null,
       rokDo: rokDo || null,
       lekcijaNaslov: lekcijaNaslov || null,
-      lekcijaTip: lekcijaTip || null,
+      lekcijaSlug: canonicalSlug,
+      // Kanonski slug uvijek označava Ilmihal, nezavisno od klijentskog polja.
+      lekcijaTip: canonicalSlug ? "ilmihal" : (lekcijaTip || null),
     }).returning();
 
     if (validUcenikIds.length > 0) {
@@ -4457,14 +4479,34 @@ router.post("/zadace", async (req, res) => {
 router.put("/zadace/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, isActive, ucenikIds } = req.body;
+    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds } = req.body;
 
     const [existing] = await db.select().from(zadaceTable)
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
     if (!existing) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
 
+    let canonicalSlug: string | null = null;
+    if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
+      const [lekcija] = await db.select({ slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
+        .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
+      if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
+        res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
+      }
+      canonicalSlug = lekcija.slug;
+    } else if (lekcijaNaslov === undefined) {
+      canonicalSlug = existing.lekcijaSlug;
+    }
+
     const [updated] = await db.update(zadaceTable)
-      .set({ naslov, opis, rokDo, lekcijaNaslov, lekcijaTip, isActive })
+      .set({
+        naslov,
+        opis,
+        rokDo,
+        lekcijaNaslov,
+        lekcijaSlug: canonicalSlug,
+        lekcijaTip: canonicalSlug ? "ilmihal" : lekcijaTip,
+        isActive,
+      })
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)))
       .returning();
 

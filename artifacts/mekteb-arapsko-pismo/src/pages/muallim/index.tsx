@@ -19,6 +19,7 @@ import { LekcijaPicker } from "@/components/LekcijaPicker";
 import { useLanguage } from "@/context/language";
 import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
+import { NapametProgramEditor } from "@/components/NapametProgramEditor";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -261,6 +262,7 @@ interface Zadaca {
   opis?: string;
   rokDo?: string;
   lekcijaNaslov?: string;
+  lekcijaSlug?: string | null;
   lekcijaTip?: string;
   isActive: boolean;
   createdAt: string;
@@ -566,6 +568,7 @@ export default function MuallimPanel() {
   const [zadOpis, setZadOpis] = useState("");
   const [zadRok, setZadRok] = useState("");
   const [zadLekcija, setZadLekcija] = useState("");
+  const [zadLekcijaSlug, setZadLekcijaSlug] = useState("");
   const [zadUcenikIds, setZadUcenikIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
   const [editingZadaca, setEditingZadaca] = useState<Zadaca | null>(null);
@@ -960,6 +963,8 @@ export default function MuallimPanel() {
         opis: zadOpis.trim() || null,
         rokDo: zadRok || null,
         lekcijaNaslov: zadLekcija || null,
+        lekcijaSlug: zadLekcijaSlug || null,
+        lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
         ucenikIds: zadUcenikIds.size > 0 ? Array.from(zadUcenikIds) : undefined,
       };
       const saved = await apiRequest<Zadaca>(
@@ -971,7 +976,7 @@ export default function MuallimPanel() {
       setZadace(prev => editingZadaca
         ? prev.map(z => z.id === saved.id ? saved : z)
         : [saved, ...prev]);
-      setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadUcenikIds(new Set());
+      setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set());
       setEditingZadaca(null);
       setShowZadForm(false);
       setZadSubTab("utoku");
@@ -983,6 +988,7 @@ export default function MuallimPanel() {
   function openEditZadaca(zadaca: Zadaca) {
     setEditingZadaca(zadaca);
     setZadLekcija(zadaca.lekcijaNaslov || "");
+    setZadLekcijaSlug(zadaca.lekcijaSlug || "");
     setZadOpis(zadaca.opis || "");
     setZadRok(zadaca.rokDo ? zadaca.rokDo.slice(0, 10) : "");
     setZadUcenikIds(new Set(zadaca.ucenikIds || []));
@@ -3573,6 +3579,7 @@ export default function MuallimPanel() {
                               lekcije={dostupneLekcije}
                               value={zadLekcija}
                               onChange={setZadLekcija}
+                              onSelectLesson={lekcija => setZadLekcijaSlug(lekcija?.slug || "")}
                               placeholder={t("Pretraži i odaberi lekciju...")}
                             />
                           </div>
@@ -3646,7 +3653,7 @@ export default function MuallimPanel() {
                           </div>
                         </div>
                         <div className="flex gap-3 mt-4 justify-end">
-                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
+                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
                             {t("Otkaži")}
                           </button>
                           <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim())} className="rounded-xl font-bold">
@@ -4560,6 +4567,8 @@ export default function MuallimPanel() {
                     </Button>
                   </div>
                 </div>
+
+                {canManageMekteb && <NapametProgramEditor />}
 
                 <div className="bg-white border border-border/50 rounded-2xl p-5">
                   <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">

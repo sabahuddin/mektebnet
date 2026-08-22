@@ -162,16 +162,11 @@ export default function GrupaPage() {
   });
   const [napametKatalog, setNapametKatalog] = useState<NapametStavka[]>([]);
   const [savingOcjena, setSavingOcjena] = useState(false);
-  const [napametProgram, setNapametProgram] = useState<(NapametStavka & { isVisible?: boolean })[]>([]);
-  const [napametEditorOpen, setNapametEditorOpen] = useState(false);
-  const [napametNewName, setNapametNewName] = useState("");
-  const [napametNewLevel, setNapametNewLevel] = useState(1);
-  const [napametSaving, setNapametSaving] = useState(false);
 
   // Zadaća modal — ako zadacaTarget=null → zadaća za cijelu grupu
   const [showZadacaModal, setShowZadacaModal] = useState(false);
   const [zadacaTarget, setZadacaTarget] = useState<Ucenik | null>(null);
-  const [newZadaca, setNewZadaca] = useState({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" });
+  const [newZadaca, setNewZadaca] = useState({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
   const [savingZadaca, setSavingZadaca] = useState(false);
 
   // Brisanje učenika (hard delete)
@@ -223,7 +218,7 @@ export default function GrupaPage() {
   useEffect(() => {
     if (!token || !grupaId) return;
     apiRequest<{ katalog: (NapametStavka & { isVisible?: boolean })[] }>("GET", "/muallim/napamet-program", undefined, token)
-      .then(data => { setNapametProgram(data.katalog); setNapametKatalog(data.katalog.filter(s => s.isVisible !== false)); })
+      .then(data => setNapametKatalog(data.katalog.filter(s => s.isVisible !== false)))
       .catch(() => {});
     Promise.all([
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
@@ -255,52 +250,6 @@ export default function GrupaPage() {
     apiRequest<{ count: number }>("GET", `/muallim/zadace-pregled-badge?grupaId=${grupaId}`, undefined, token)
       .then(r => setZadacaBadge(r?.count ?? 0)).catch(() => {});
   }, [token, grupaId]);
-
-  async function saveNapametProgram(next: (NapametStavka & { isVisible?: boolean })[]) {
-    if (!token) return;
-    setNapametSaving(true);
-    try {
-      const data = await apiRequest<{ katalog: (NapametStavka & { isVisible?: boolean })[] }>(
-        "PUT", "/muallim/napamet-program-reorder",
-        { stavke: next.map((s, i) => ({ id: s.id, nivo: s.nivo, redoslijed: i + 1 })) }, token,
-      );
-      setNapametProgram(data.katalog);
-      setNapametKatalog(data.katalog.filter(s => s.isVisible !== false));
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err?.message || t("Nije moguće sačuvati program"), variant: "destructive" });
-    } finally { setNapametSaving(false); }
-  }
-
-  async function addNapametItem() {
-    if (!token || !napametNewName.trim()) return;
-    setNapametSaving(true);
-    try {
-      const item = await apiRequest<NapametStavka>("POST", "/muallim/napamet-program", {
-        naziv: napametNewName, nivo: napametNewLevel, redoslijed: 9999,
-      }, token);
-      const next = [...napametProgram, item];
-      setNapametNewName("");
-      await saveNapametProgram(next);
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err?.message || t("Nije moguće dodati stavku"), variant: "destructive" });
-      setNapametSaving(false);
-    }
-  }
-
-  async function updateNapametItem(item: NapametStavka & { isVisible?: boolean }, patch: Record<string, unknown>) {
-    if (!token) return;
-    setNapametSaving(true);
-    try {
-      const updated = await apiRequest<NapametStavka & { isVisible?: boolean }>(
-        "PUT", `/muallim/napamet-program/${encodeURIComponent(item.id)}`, patch, token,
-      );
-      const next = napametProgram.map(s => s.id === item.id ? { ...s, ...updated } : s);
-      setNapametProgram(next);
-      setNapametKatalog(next.filter(s => s.isVisible !== false));
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err?.message || t("Nije moguće sačuvati stavku"), variant: "destructive" });
-    } finally { setNapametSaving(false); }
-  }
 
   function refreshStudents() {
     if (!token) return;
@@ -426,7 +375,7 @@ export default function GrupaPage() {
 
   function openZadacaForOne(u: Ucenik) {
     setZadacaTarget(u);
-    setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "" });
+    setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
     setShowZadacaModal(true);
   }
 
@@ -443,6 +392,8 @@ export default function GrupaPage() {
         opis: newZadaca.opis.trim() || null,
         rokDo: newZadaca.rokDo || null,
         lekcijaNaslov: newZadaca.lekcijaNaslov || null,
+        lekcijaSlug: newZadaca.lekcijaSlug || null,
+        lekcijaTip: newZadaca.lekcijaSlug ? "ilmihal" : null,
         ucenikIds: zadacaTarget ? [zadacaTarget.id] : [],
       }, token);
       toast({
@@ -776,66 +727,6 @@ export default function GrupaPage() {
             sa pre-selektovanom grupom (preko ?grupaId=… za panel-tabove). */}
         {grupa && (
           <>
-          {isGlavni && (
-            <div className="mb-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50/60 overflow-hidden">
-              <button onClick={() => setNapametEditorOpen(v => !v)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left">
-                <span className="flex items-center gap-2 font-extrabold text-emerald-900">
-                  <BookOpen className="w-5 h-5" /> {t("Prilagodi NAPAMET program")}
-                </span>
-                <ChevronDown className={`w-5 h-5 text-emerald-700 transition-transform ${napametEditorOpen ? "rotate-180" : ""}`} />
-              </button>
-              {napametEditorOpen && (
-                <div className="border-t border-emerald-200 bg-white p-4 space-y-4">
-                  <p className="text-sm text-muted-foreground">{t("Promjene važe za učenike i roditelje ovog mekteba. Ocjene ostaju vezane za stavku.")}</p>
-                  {[1, 2, 3, 4].map(nivo => (
-                    <div key={nivo} className="space-y-2">
-                      <h4 className="text-xs font-black uppercase tracking-wide text-emerald-800">{nivo === 4 ? t("Dodatak") : `${t("NAPAMET")} ${nivo}. ${t("nivo")}`}</h4>
-                      {napametProgram.filter(s => s.nivo === nivo).map((item, index, items) => (
-                        <div key={item.id} className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${item.isVisible === false ? "bg-slate-100 opacity-60" : "bg-white"}`}>
-                          <div className="flex flex-col">
-                            <button disabled={index === 0 || napametSaving} aria-label={t("Pomjeri gore")}
-                              onClick={() => {
-                                const ids = [...napametProgram]; const a = ids.indexOf(item), b = ids.indexOf(items[index - 1]);
-                                [ids[a], ids[b]] = [ids[b], ids[a]]; saveNapametProgram(ids);
-                              }} className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30">▲</button>
-                            <button disabled={index === items.length - 1 || napametSaving} aria-label={t("Pomjeri dolje")}
-                              onClick={() => {
-                                const ids = [...napametProgram]; const a = ids.indexOf(item), b = ids.indexOf(items[index + 1]);
-                                [ids[a], ids[b]] = [ids[b], ids[a]]; saveNapametProgram(ids);
-                              }} className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30">▼</button>
-                          </div>
-                          <input defaultValue={item.naziv} aria-label={t("Naziv stavke")}
-                            onBlur={e => { if (e.target.value.trim() && e.target.value.trim() !== item.naziv) updateNapametItem(item, { naziv: e.target.value }); }}
-                            className="min-w-0 flex-1 rounded-lg border border-border px-3 py-1.5 text-sm font-semibold" />
-                          <select value={item.nivo} disabled={napametSaving}
-                            onChange={e => updateNapametItem(item, { nivo: Number(e.target.value) })}
-                            className="rounded-lg border border-border px-2 py-1.5 text-sm">
-                            {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}
-                          </select>
-                          <button disabled={napametSaving} onClick={() => updateNapametItem(item, { isVisible: item.isVisible === false })}
-                            className={`rounded-lg px-2 py-1.5 text-xs font-bold ${item.isVisible === false ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
-                            {item.isVisible === false ? t("Prikaži") : t("Sakrij")}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                  <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border">
-                    <input value={napametNewName} onChange={e => setNapametNewName(e.target.value)}
-                      placeholder={t("Nova stavka programa")} className="flex-1 rounded-xl border border-border px-3 py-2 text-sm" />
-                    <select value={napametNewLevel} onChange={e => setNapametNewLevel(Number(e.target.value))}
-                      className="rounded-xl border border-border px-3 py-2 text-sm">
-                      {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n === 4 ? t("Dodatak") : `${t("Nivo")} ${n}`}</option>)}
-                    </select>
-                    <Button size="sm" onClick={addNapametItem} disabled={!napametNewName.trim() || napametSaving} className="rounded-xl">
-                      <Plus className="w-4 h-4 mr-1" /> {t("Dodaj")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
             {[
               { label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}`, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" },
@@ -1441,6 +1332,7 @@ export default function GrupaPage() {
                       lekcije={ilmihalLekcije}
                       value={newZadaca.lekcijaNaslov}
                       onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v }))}
+                      onSelectLesson={lekcija => setNewZadaca(z => ({ ...z, lekcijaSlug: lekcija?.slug || "" }))}
                       placeholder={t("Pretraži lekciju ili upiši broj…")}
                     />
                   </div>

@@ -283,6 +283,7 @@ interface Zadaca {
   opis?: string | null;
   rokDo?: string | null;
   lekcijaNaslov?: string | null;
+  lekcijaSlug?: string | null;
   lekcijaTip?: string | null;
   createdAt: string;
   efektivniRok?: string | null;
@@ -364,7 +365,7 @@ export default function UcenikProfilPage() {
     if (!token) return;
     apiRequest<{ pozitivne: number; negativne: number }>("GET", "/ucenik/moje-zvjezdice", undefined, token)
       .then(setMojeZvjezdice).catch(() => {});
-  }, [token]);
+  }, [token, activeTab]);
 
   useEffect(() => {
     if (!token) return;
@@ -438,7 +439,12 @@ export default function UcenikProfilPage() {
     { id: "ocjene", label: t("Ocjene"), icon: Star },
     { id: "napamet", label: t("NAPAMET"), icon: BookOpen },
     { id: "kvizovi", label: t("Kvizovi"), icon: ClipboardList },
-    { id: "zvjezdice", label: t("Zvjezdice"), icon: Star },
+    {
+      id: "zvjezdice",
+      label: t("Zvjezdice"),
+      icon: Star,
+      badge: mojeZvjezdice && mojeZvjezdice.pozitivne > 0 ? mojeZvjezdice.pozitivne : undefined,
+    },
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
     { id: "dokumenti", label: t("Dokumenti"), icon: FileText, badge: dokumenti?.length ?? 0 },
     { id: "profil", label: t("Profil"), icon: User },
@@ -529,7 +535,7 @@ export default function UcenikProfilPage() {
                     data-testid={`tab-${tab.id}`}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs sm:text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
                     <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {tab.label}
-                    {badge > 0 && (
+                    {(badge ?? 0) > 0 && (
                       <span className={`ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold ${activeTab === tab.id ? "bg-white text-primary" : "bg-orange-500 text-white"}`}>
                         {badge}
                       </span>
@@ -1261,9 +1267,9 @@ export default function UcenikProfilPage() {
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-extrabold text-foreground text-base leading-snug break-words">{z.naslov}</h3>
                                 {z.lekcijaNaslov && (() => {
-                                  const matchSlug = ilmihalLekcije.find(l => l.naslov === z.lekcijaNaslov)?.slug;
+                                  const matchSlug = z.lekcijaSlug || ilmihalLekcije.find(l => l.naslov === z.lekcijaNaslov)?.slug;
                                   return matchSlug ? (
-                                    <Link href={`/ilmihal/${matchSlug}`} className="text-xs text-primary hover:underline mt-0.5 inline-flex items-start gap-1 max-w-full">
+                                    <Link href={`/ilmihal/${matchSlug}`} data-testid={`zadaca-lekcija-${z.id}`} className="text-xs text-primary hover:underline mt-0.5 inline-flex items-start gap-1 max-w-full">
                                       <BookOpen className="w-3 h-3" />{z.lekcijaNaslov}
                                     </Link>
                                   ) : (

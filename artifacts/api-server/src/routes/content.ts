@@ -20,6 +20,9 @@ import {
   studentKrunisanjaTable,
   interaktivniBlokPokusajiTable,
   lessonPauseAnswersTable,
+  zadaceTable,
+  zadaceUceniciTable,
+  ucenikProfiliTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, gte, lte, lt, sql, inArray, count } from "drizzle-orm";
 import { optionalAuth, requireAuth } from "../middlewares/auth.js";
@@ -46,6 +49,49 @@ const SVI_JEZICI = ["bs", "sq", "de", "en", "tr", "ar"];
 
 type LekcijaKvizPitanje = { question?: unknown; options?: unknown; answer?: unknown };
 type PauseConfig = { id?: unknown; type?: unknown; correctAnswer?: unknown; correctOption?: unknown; pairs?: unknown; items?: unknown };
+
+/**
+ * Provjerava samo aktivne zadaće učenikove trenutne grupe. Zadaća bez redova u
+ * zadace_ucenici pripada cijeloj grupi, dok ciljane zadaće pripadaju samo
+ * upisanim učenicima. Ovo je uski izuzetak od progresijskog gate-a: omogućava
+ * čitanje zadate lekcije, ali ne utiče na uslove za označavanje završetka.
+ */
+async function hasAssignedLesson(studentId: number, lessonSlug: string): Promise<boolean> {
+  const [profil] = await db
+    .select({ grupaId: ucenikProfiliTable.grupaId })
+    .from(ucenikProfiliTable)
+    .where(eq(ucenikProfiliTable.userId, studentId))
+    .limit(1);
+  if (profil?.grupaId == null) return false;
+
+  const assignments = await db
+    .select({ id: zadaceTable.id })
+    .from(zadaceTable)
+    .where(and(
+      eq(zadaceTable.grupaId, profil.grupaId),
+      eq(zadaceTable.isActive, true),
+      eq(zadaceTable.lekcijaTip, "ilmihal"),
+      eq(zadaceTable.lekcijaSlug, lessonSlug),
+    ));
+  if (assignments.length === 0) return false;
+
+  const targets = await db
+    .select({ zadacaId: zadaceUceniciTable.zadacaId, ucenikId: zadaceUceniciTable.ucenikId })
+    .from(zadaceUceniciTable)
+    .where(inArray(zadaceUceniciTable.zadacaId, assignments.map((a) => a.id)));
+
+  const targetsByAssignment = new Map<number, Set<number>>();
+  for (const target of targets) {
+    const students = targetsByAssignment.get(target.zadacaId) ?? new Set<number>();
+    students.add(target.ucenikId);
+    targetsByAssignment.set(target.zadacaId, students);
+  }
+
+  return assignments.some((assignment) => {
+    const students = targetsByAssignment.get(assignment.id);
+    return !students || students.has(studentId);
+  });
+}
 
 function lessonPauseConfigs(contentHtml: string): PauseConfig[] {
   const matches = contentHtml.matchAll(/data-pause-config\s*=\s*(?:"([^"]*)"|'([^']*)')/gi);
@@ -385,6 +431,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
     // javnih lekcija) idu starim tokom — gating se primjenjuje samo na
     // role "ucenik".
     let lockedReason: string | null = null;
+    let assignedThroughHomework = false;
     const authHeaderEarly = req.headers.authorization;
     if (authHeaderEarly?.startsWith("Bearer ")) {
       try {
@@ -395,6 +442,10 @@ router.get("/ilmihal/:slug", async (req, res) => {
         ) as { userId: number; role?: string };
         if (decoded.role === "ucenik") {
           const studentId = String(decoded.userId);
+          // Domaća zadaća može tražiti lekciju prije redovnog redoslijeda.
+          // Preskačemo samo read-access gate; completion/anti-cheat gate ostaje.
+          assignedThroughHomework = await hasAssignedLesson(decoded.userId, lekcija.slug);
+          if (!assignedThroughHomework) {
           // Efektivni redoslijed za ovog studenta: ako njegova grupa ima
           // raspored za ovaj nivo → preslagane pozicije; inače globalni
           // redoslijed (identitet, nula promjena za postojeće grupe).
@@ -502,6 +553,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
               },
             });
           }
+          }
         }
       } catch {
         /* nevažeći token — nastavi kao gost */
@@ -513,6 +565,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
     const upgradedHtml = regeneratePripremaInHtml(lekcija.contentHtml || "");
 
     const result: Record<string, unknown> = { ...lekcija, contentHtml: upgradedHtml };
+    if (assignedThroughHomework) result.assignedThroughHomework = true;
 
     // Dohvat priloga za sve autentifikovane korisnike. Pravila vidljivosti:
     //   - admin/muallim: VIDE SVE priloge (file/url/h5p) — uključujući linkove

@@ -76,6 +76,8 @@ export const zadaceTable = pgTable("zadace", {
   opis: text("opis"),
   rokDo: varchar("rok_do", { length: 20 }),
   lekcijaNaslov: varchar("lekcija_naslov", { length: 300 }),
+  // Kanonski identitet Ilmihal lekcije za siguran deep-link iz zadaće.
+  lekcijaSlug: varchar("lekcija_slug", { length: 300 }),
   lekcijaTip: varchar("lekcija_tip", { length: 50 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),

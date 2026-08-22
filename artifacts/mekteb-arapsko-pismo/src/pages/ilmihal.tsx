@@ -27,7 +27,7 @@ interface KrunisanjeStatus {
 export default function IlmihalPage() {
   const [, setLocation] = useLocation();
   const { token, user } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [completedByNivo, setCompletedByNivo] = useState<Record<number, { done: number; total: number }>>({
     1: { done: 0, total: 0 },
     2: { done: 0, total: 0 },
@@ -77,7 +77,7 @@ export default function IlmihalPage() {
       rows.forEach((r) => { if (r) map[r.n] = { polozeno: r.polozeno, isGating: r.isGating, imaKviz: r.imaKviz }; });
       setKrunisanjaStatus(map);
     });
-  }, [token, user]);
+  }, [token, user, lang]);
 
   const nivoi: NivoCard[] = [
     { broj: 1, naslov: t("Mala Košnica"),     href: "/nivo1-mapa" },

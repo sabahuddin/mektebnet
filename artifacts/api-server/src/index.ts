@@ -227,6 +227,17 @@ async function runResidualSchema() {
     // zadace.naslov — sada opcionalan (nova UX koristi lekciju kao naziv).
     // Stare baze imaju NOT NULL; drop constraint idempotentno.
     await db.execute(sql`ALTER TABLE zadace ALTER COLUMN naslov DROP NOT NULL;`);
+    // Kanonski slug sprečava da zadaća otključa drugu lekciju sa istim naslovom.
+    await db.execute(sql`ALTER TABLE zadace ADD COLUMN IF NOT EXISTS lekcija_slug varchar(300);`);
+    await db.execute(sql`
+      UPDATE zadace z
+      SET lekcija_slug = l.slug
+      FROM ilmihal_lekcije l
+      WHERE z.lekcija_slug IS NULL
+        AND z.lekcija_tip = 'ilmihal'
+        AND z.lekcija_naslov = l.naslov
+        AND (SELECT COUNT(*) FROM ilmihal_lekcije same_title WHERE same_title.naslov = z.lekcija_naslov) = 1;
+    `);
 
     // zadace_status — status zadaće po učeniku (muallim pregleda iz jednog
     // panela za cijelu grupu). Jedan red po (zadaca, ucenik). Nepostojeći red

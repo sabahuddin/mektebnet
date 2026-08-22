@@ -26,7 +26,7 @@ const NIVO_INFO: Record<number, { naslov: string; podnaslov: string; bg: string;
 
 export default function IlmihalSvePage() {
   const { token, user } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [, setLocation] = useLocation();
   const isAdmin = user?.role === "admin";
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
@@ -61,7 +61,7 @@ export default function IlmihalSvePage() {
       .then((data) => setLekcije(Array.isArray(data) ? data : []))
       .catch(() => setLekcije([]))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, lang]);
 
   const groupedByNivo: Record<number, Lekcija[]> = useMemo(() => {
     const g: Record<number, Lekcija[]> = { 1: [], 2: [], 3: [] };

@@ -73,6 +73,8 @@ interface Lekcija {
   locked?: boolean;
   lockedNote?: string | null;
   lockedAt?: string | null;
+  /** Server odobrava čitanje ove tačne lekcije jer je aktivno zadana učeniku. */
+  assignedThroughHomework?: boolean;
   userProgress?: {
     timeSpentSeconds: number;
     zavrsen: boolean;
@@ -2350,7 +2352,7 @@ export default function IlmihalLekcijaPage() {
   const isGuestLike = !user || user.role === "roditelj";
   const promptRegister = useRegisterPrompt();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [lekcija, setLekcija] = useState<Lekcija | null>(null);
   const [parsed, setParsed] = useState<{ heroImage: string | null; sections: AccordionSection[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -2635,7 +2637,7 @@ export default function IlmihalLekcijaPage() {
         const isPrivileged =
           user?.role === "admin" || user?.role === "muallim";
         const isGuestLike = !user || user?.role === "roditelj";
-        if (!isPrivileged) {
+        if (!isPrivileged && !data.assignedThroughHomework) {
           let blocked = false;
           try {
             const mapa = await apiRequest<MapaUnlockData>(
@@ -2702,7 +2704,7 @@ export default function IlmihalLekcijaPage() {
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [slug, token]);
+  }, [slug, token, lang]);
 
   // Lokalni "vizuelni" tick — povećava prikaz `timeSpent` svake sekunde dok
   // je tab vidljiv. Ovo je SAMO za UX da brojač ne stoji između heartbeat-a
@@ -2796,7 +2798,7 @@ export default function IlmihalLekcijaPage() {
         setLekcijeStrip(same);
       })
       .catch(() => {});
-  }, [lekcija]);
+  }, [lekcija, lang]);
 
   // Učitaj listu završenih lekcija da pokažemo ✓ na strip-u i sinhronizujemo "completed" state
   useEffect(() => {
