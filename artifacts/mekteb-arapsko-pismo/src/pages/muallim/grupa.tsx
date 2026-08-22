@@ -660,7 +660,10 @@ export default function GrupaPage() {
       <div className="sticky top-16 z-30 -mx-4 px-4 py-2.5 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 border-b border-emerald-200/70 shadow-sm mb-6">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
           <button
-            onClick={() => setLocation("/muallim?tab=grupe")}
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+              else setLocation("/muallim?tab=grupe");
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold text-sm transition-colors shrink-0"
             data-testid="btn-nazad-na-panel"
           >

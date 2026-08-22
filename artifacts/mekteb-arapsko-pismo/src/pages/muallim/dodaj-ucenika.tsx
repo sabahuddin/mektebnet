@@ -197,7 +197,7 @@ export default function DodajUcenikaPage() {
               </Button>
             </div>
 
-            <button onClick={() => setLocation("/muallim")} className="w-full text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
+            <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="w-full text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
               {t("Nazad na panel")}
             </button>
           </div>
