@@ -25,6 +25,7 @@ import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../li
 import { computeGameStats } from "./games.js";
 import { streamDokument } from "../lib/dokumenti.js";
 import { getStudentGodine, razrijesiGodinu } from "../lib/mektebska-godina.js";
+import { getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
@@ -367,6 +368,26 @@ router.get("/ocjene/:ucenikId", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
+});
+
+router.get("/napamet/:ucenikId", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    const [veza] = await db.select().from(roditeljUcenikTable).where(and(
+      eq(roditeljUcenikTable.roditeljId, req.user!.userId),
+      eq(roditeljUcenikTable.ucenikId, ucenikId),
+      eq(roditeljUcenikTable.status, "approved"),
+    ));
+    if (!veza) { res.status(403).json({ error: "Nemate pristup" }); return; }
+    const ocjene = await db.select().from(ocjeneTable)
+      .where(and(eq(ocjeneTable.ucenikId, ucenikId), sql`${ocjeneTable.napametStavkaId} IS NOT NULL`))
+      .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
+    const latest = new Map<string, typeof ocjene[number]>();
+    for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
+    const [profil] = await db.select({ mektebId: ucenikProfiliTable.mektebId })
+      .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+    res.json({ katalog: profil?.mektebId ? await getNapametKatalog(profil.mektebId) : [], ocjene: [...latest.values()] });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
 // GET /api/roditelj/zadace/:ucenikId — zadaće jednog djeteta, filtrirano po

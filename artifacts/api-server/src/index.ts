@@ -46,6 +46,9 @@ if (Number.isNaN(port) || port <= 0) {
 // below (a separate concern) will remain.
 async function runResidualSchema() {
   try {
+    await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS napamet_nivo integer;`);
+    await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS napamet_stavka_id varchar(80);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS ocjene_napamet_ucenik_idx ON ocjene (ucenik_id, napamet_stavka_id) WHERE napamet_stavka_id IS NOT NULL;`);
     // Interaktivni blokovi u lekciji: pokušaji se čuvaju odvojeno od nagrada i
     // zvjezdica, da muallim dobije pedagoški pregled bez rangiranja učenika.
     // Verziona Drizzle migracija je primarni put; ovaj idempotentni korak
@@ -267,6 +270,16 @@ async function runResidualSchema() {
     // ne duplira red). Partial unique index važi samo za ocjene iz zadaće.
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS zadaca_id integer;`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS ocjene_zadaca_ucenik_uidx ON ocjene (zadaca_id, ucenik_id) WHERE zadaca_id IS NOT NULL;`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS napamet_program (
+        id serial PRIMARY KEY, mekteb_id integer NOT NULL, stavka_id varchar(80) NOT NULL,
+        nivo integer NOT NULL, naziv varchar(200) NOT NULL, redoslijed integer NOT NULL,
+        is_visible boolean NOT NULL DEFAULT true, created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_program_mekteb_stavka_unique_idx ON napamet_program (mekteb_id, stavka_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_program_mekteb_order_idx ON napamet_program (mekteb_id, nivo, redoslijed);`);
 
     // grupe.datum_pocetka / datum_kraja — datumi mektebske godine za grupu.
     // Definisani u Drizzle schema/mekteb.ts; idempotentno dodajemo na svaki

@@ -35,6 +35,8 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
 import { mektebDokumentiDir, streamDokument, deleteDokumentFajl, optimizePdfFile } from "../lib/dokumenti.js";
+import { getNapametKatalog } from "../data/napamet.js";
+import { napametProgramTable } from "@workspace/db/schema";
 
 const router = Router();
 router.use(requireAuth, requireRole("muallim", "admin"));
@@ -2203,16 +2205,42 @@ router.get("/prisustvo", async (req, res) => {
 // POST /api/muallim/ocjene - add grade
 router.post("/ocjene", async (req, res) => {
   try {
-    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, napomena, datum } = req.body;
+    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, napomena, datum, napametStavkaId } = req.body;
+    const isNapamet = Boolean(napametStavkaId);
+    const ctx = await getMektebCtx(req.user!.userId);
+    const program = isNapamet && ctx?.mektebId ? await getNapametKatalog(ctx.mektebId, true) : [];
+    const stavka = isNapamet ? program.find(item => item.id === String(napametStavkaId)) : undefined;
+    if (isNapamet && !stavka) {
+      res.status(400).json({ error: "Neispravna NAPAMET stavka" });
+      return;
+    }
+    if (isNapamet && (!ucenikId || !grupaId)) {
+      res.status(400).json({ error: "NAPAMET ocjena mora pripadati grupi" });
+      return;
+    }
+    if (grupaId) {
+      const grupa = await verifyGrupaAccess(Number(grupaId), req.user!.userId, req.user!.role);
+      if (!grupa) { res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return; }
+    }
+    if (isNapamet) {
+      const [profilUcenika] = await db.select({ grupaId: ucenikProfiliTable.grupaId })
+        .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, Number(ucenikId)));
+      if (!profilUcenika || profilUcenika.grupaId !== Number(grupaId)) {
+        res.status(403).json({ error: "Učenik ne pripada ovoj grupi" });
+        return;
+      }
+    }
     const [nova] = await db.insert(ocjeneTable).values({
       ucenikId,
       muallimId: req.user!.userId,
       grupaId,
-      kategorija,
+      kategorija: stavka ? "napamet" : kategorija,
       ocjena,
       lekcijaNaziv: lekcijaNaziv || null,
       napomena,
       datum,
+      napametNivo: stavka?.nivo ?? null,
+      napametStavkaId: stavka?.id ?? null,
     }).returning();
     res.status(201).json(nova);
 
@@ -2237,6 +2265,83 @@ router.post("/ocjene", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
+});
+
+// NAPAMET program is configured once per mekteb by its main teacher.
+router.get("/napamet-program", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId) { res.status(403).json({ error: "Muallim nije vezan za mekteb" }); return; }
+    res.json({ katalog: await getNapametKatalog(ctx.mektebId, true), isGlavni: ctx.isGlavni });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
+});
+
+router.post("/napamet-program", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.isGlavni || !ctx.mektebId) { res.status(403).json({ error: "Samo glavni muallim može uređivati program" }); return; }
+    const naziv = String(req.body.naziv || "").trim();
+    const nivo = Number(req.body.nivo);
+    if (!naziv || naziv.length > 200 || ![1, 2, 3, 4].includes(nivo)) { res.status(400).json({ error: "Naziv i nivo nisu ispravni" }); return; }
+    const stavkaId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const [row] = await db.insert(napametProgramTable).values({
+      mektebId: ctx.mektebId, stavkaId, nivo, naziv,
+      redoslijed: Number(req.body.redoslijed) || 9999,
+    }).returning();
+    res.status(201).json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
+});
+
+router.put("/napamet-program/:stavkaId", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.isGlavni || !ctx.mektebId) { res.status(403).json({ error: "Samo glavni muallim može uređivati program" }); return; }
+    const values: Record<string, unknown> = { updatedAt: new Date() };
+    if (req.body.naziv !== undefined) {
+      const naziv = String(req.body.naziv).trim();
+      if (!naziv || naziv.length > 200) { res.status(400).json({ error: "Naziv nije ispravan" }); return; }
+      values.naziv = naziv;
+    }
+    if (req.body.nivo !== undefined) {
+      const nivo = Number(req.body.nivo);
+      if (![1, 2, 3, 4].includes(nivo)) { res.status(400).json({ error: "Nivo nije ispravan" }); return; }
+      values.nivo = nivo;
+    }
+    if (req.body.isVisible !== undefined) values.isVisible = Boolean(req.body.isVisible);
+    const [row] = await db.update(napametProgramTable).set(values)
+      .where(and(eq(napametProgramTable.mektebId, ctx.mektebId), eq(napametProgramTable.stavkaId, req.params.stavkaId))).returning();
+    if (!row) { res.status(404).json({ error: "Stavka nije pronađena" }); return; }
+    res.json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
+});
+
+router.put("/napamet-program-reorder", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.isGlavni || !ctx.mektebId) { res.status(403).json({ error: "Samo glavni muallim može uređivati program" }); return; }
+    const stavke = Array.isArray(req.body.stavke) ? req.body.stavke : [];
+    for (const item of stavke) {
+      await db.update(napametProgramTable).set({ nivo: Number(item.nivo), redoslijed: Number(item.redoslijed), updatedAt: new Date() })
+        .where(and(eq(napametProgramTable.mektebId, ctx.mektebId), eq(napametProgramTable.stavkaId, String(item.id))));
+    }
+    res.json({ success: true, katalog: await getNapametKatalog(ctx.mektebId, true) });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
+});
+
+// GET /api/muallim/napamet/:ucenikId — catalogue + grades for the teacher's student
+router.get("/napamet/:ucenikId", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    const ocjene = await db.select().from(ocjeneTable).where(and(
+      eq(ocjeneTable.ucenikId, ucenikId),
+      eq(ocjeneTable.muallimId, req.user!.userId),
+      sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
+    )).orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
+    const latest = new Map<string, typeof ocjene[number]>();
+    for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
+    const ctx = await getMektebCtx(req.user!.userId);
+    res.json({ katalog: ctx?.mektebId ? await getNapametKatalog(ctx.mektebId) : [], ocjene: [...latest.values()] });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
 // GET /api/muallim/ocjene/:ucenikId

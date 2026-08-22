@@ -24,6 +24,7 @@ import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
 import { kategorijaOcjeneLabel } from "@/lib/utils";
 import { useLanguage } from "@/context/language";
+import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 
 interface StudentProgress {
   studentId: string;
@@ -234,7 +235,7 @@ interface ProfilData {
   profil: { grupaId: number; muallimId: number } | null;
   grupa: { id: number; naziv: string; skolskaGodina: string } | null;
   muallim: { id: number; displayName: string } | null;
-  ocjene: { id: number; kategorija: string; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string }[];
+  ocjene: { id: number; kategorija: string; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string; napametStavkaId?: string | null }[];
   prisustvo: { id: number; datum: string; status: string }[];
   kvizovi: { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }[];
   napredak?: {
@@ -249,6 +250,8 @@ interface ProfilData {
   };
   mektebskaGodina?: { odabrana: string | null; tekuca: string | null; godine: string[] };
 }
+
+interface NapametResponse { katalog: NapametStavka[]; ocjene: NapametOcjena[]; }
 
 interface MektebDokument {
   id: number;
@@ -327,7 +330,8 @@ export default function UcenikProfilPage() {
   const [isLoading, setIsLoading] = useState(true);
   // Odabrana mektebska godina (null = default/tekuća; server vraća odabranu).
   const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti" | "postavke">("zadace");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "napamet" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti" | "postavke">("zadace");
+  const [napamet, setNapamet] = useState<NapametResponse | null>(null);
   const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
   const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene">("aktivne");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
@@ -360,6 +364,12 @@ export default function UcenikProfilPage() {
     if (!token) return;
     apiRequest<{ pozitivne: number; negativne: number }>("GET", "/ucenik/moje-zvjezdice", undefined, token)
       .then(setMojeZvjezdice).catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<NapametResponse>("GET", "/ucenik/napamet", undefined, token)
+      .then(setNapamet).catch(() => setNapamet({ katalog: [], ocjene: [] }));
   }, [token]);
 
   // Mekteb dokumenti (pravila, kućni red...) — vidljivi učeniku.
@@ -426,6 +436,7 @@ export default function UcenikProfilPage() {
   const TABS = [
     { id: "zadace", label: t("Zadaće"), icon: FileText, badge: zadace.length },
     { id: "ocjene", label: t("Ocjene"), icon: Star },
+    { id: "napamet", label: t("NAPAMET"), icon: BookOpen },
     { id: "kvizovi", label: t("Kvizovi"), icon: ClipboardList },
     { id: "zvjezdice", label: t("Zvjezdice"), icon: Star },
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
@@ -1111,11 +1122,11 @@ export default function UcenikProfilPage() {
                     <Star className="w-5 h-5 text-amber-500" /> {t("Sve ocjene")}
                     <span className="ml-auto text-base font-medium text-muted-foreground">{t("Prosjek:")} <span className="font-bold text-amber-600">{prosjecnaOcjena}</span></span>
                   </h3>
-                  {profil.ocjene.length === 0 ? (
+                  {profil.ocjene.filter(o => !o.napametStavkaId).length === 0 ? (
                     <p className="text-center py-8 text-muted-foreground">{t("Nema unesenih ocjena")}</p>
                   ) : (
                     <div className="space-y-2">
-                      {profil.ocjene.map(o => (
+                      {profil.ocjene.filter(o => !o.napametStavkaId).map(o => (
                         <div key={o.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
                           <div>
                             <span className="font-bold text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
@@ -1131,6 +1142,18 @@ export default function UcenikProfilPage() {
                     </div>
                   )}
                 </div>
+              </motion.div>
+            )}
+
+            {activeTab === "napamet" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="mb-4">
+                  <h2 className="font-extrabold text-foreground flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-emerald-700" /> {t("NAPAMET")}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">{t("Program učenja napamet i tvoje ocjene.")}</p>
+                </div>
+                <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />
               </motion.div>
             )}
 

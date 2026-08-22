@@ -512,6 +512,7 @@ export default function MuallimPanel() {
   const [izvjestajOpseg, setIzvjestajOpseg] = useState<"grupa" | "moje" | "mekteb">("moje");
   const [izvjestajGrupaId, setIzvjestajGrupaId] = useState<number | null>(null);
   const [uceniciSearch, setUceniciSearch] = useState("");
+  const [brzaPretraga, setBrzaPretraga] = useState("");
   const [uceniciMuallimFilter, setUceniciMuallimFilter] = useState<number | "sve">("sve");
   const [uceniciGrupaFilter, setUceniciGrupaFilter] = useState<number | "sve">("sve");
   const [uceniciStatusFilter, setUceniciStatusFilter] = useState<"aktivni" | "svi">("aktivni");
@@ -587,9 +588,11 @@ export default function MuallimPanel() {
     Promise.all([
       apiRequest<Ucenik[]>("GET", `/muallim/ucenici${muallimScopeQuery}`, undefined, token),
       apiRequest<Grupa[]>("GET", `/muallim/grupe${muallimScopeQuery}`, undefined, token),
-    ]).then(([u, g]) => {
+      apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
+    ]).then(([u, g, l]) => {
       setUcenici(u);
       setGrupe(g);
+      setDostupneLekcije(l);
     }).catch(() => {}).finally(() => setIsLoading(false));
     if (!selectedMuallimId) {
       loadPendingRoditelji();
@@ -1434,6 +1437,16 @@ export default function MuallimPanel() {
       ? TABS.filter(tab => tab.id !== "profil")
     : TABS;
 
+  const brzaPretragaQ = brzaPretraga.trim().toLocaleLowerCase();
+  const rezultatiBrzePretrage = brzaPretragaQ.length < 2 ? { ucenici: [], lekcije: [] } : {
+    ucenici: ucenici.filter(u =>
+      `${u.displayName} ${u.username} ${u.grupaIme || ""}`.toLocaleLowerCase().includes(brzaPretragaQ),
+    ).slice(0, 8),
+    lekcije: dostupneLekcije.filter(l =>
+      `${l.naslov} ${l.slug || ""}`.toLocaleLowerCase().includes(brzaPretragaQ),
+    ).slice(0, 8),
+  };
+
   // ── Hijerarhija statistike: Mekteb → Muallim → Grupa → Učenik ──────────────
   // Mektebski nivo postoji samo glavnom muallimu kad NIJE sužen na jednog
   // muallima ("Moje grupe" i pregled drugog muallima počinju od nivoa muallima).
@@ -1549,6 +1562,72 @@ export default function MuallimPanel() {
            </Link>
           <MyScreentimeBadge />
         </div>
+
+         <div className="relative mb-5">
+           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+           <input
+             type="search"
+             value={brzaPretraga}
+             onChange={e => setBrzaPretraga(e.target.value)}
+             placeholder={t("Brza pretraga učenika ili lekcija...")}
+             aria-label={t("Pretraži učenike i lekcije")}
+             className="w-full rounded-2xl border border-primary/20 bg-white py-3 pl-12 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+             data-testid="muallim-brza-pretraga"
+           />
+           {brzaPretragaQ.length > 0 && brzaPretragaQ.length < 2 && (
+             <p className="mt-1 px-2 text-xs text-muted-foreground">{t("Unesite najmanje 2 znaka.")}</p>
+           )}
+           {brzaPretragaQ.length >= 2 && (
+             <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
+               {rezultatiBrzePretrage.ucenici.length === 0 && rezultatiBrzePretrage.lekcije.length === 0 ? (
+                 <p className="px-4 py-4 text-sm text-muted-foreground">{t("Nema rezultata.")}</p>
+               ) : (
+                 <div className="max-h-[min(60vh,28rem)] overflow-y-auto p-2">
+                   {rezultatiBrzePretrage.ucenici.length > 0 && (
+                     <>
+                       <p className="px-3 pb-1 pt-2 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{t("Učenici")}</p>
+                       {rezultatiBrzePretrage.ucenici.map(u => (
+                         <button
+                           key={`u-${u.id}`}
+                           type="button"
+                           onClick={() => { setBrzaPretraga(""); setLocation(`/muallim/ucenik/${u.id}`); }}
+                           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-primary/5"
+                         >
+                           <Users className="h-4 w-4 shrink-0 text-primary" />
+                           <span className="min-w-0 flex-1">
+                             <span className="block truncate text-sm font-bold">{u.displayName}</span>
+                             <span className="block truncate text-xs text-muted-foreground">@{u.username}{u.grupaIme ? ` · ${u.grupaIme}` : ""}</span>
+                           </span>
+                           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                         </button>
+                       ))}
+                     </>
+                   )}
+                   {rezultatiBrzePretrage.lekcije.length > 0 && (
+                     <>
+                       <p className="px-3 pb-1 pt-3 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{t("Lekcije")}</p>
+                       {rezultatiBrzePretrage.lekcije.map(l => (
+                         <button
+                           key={`l-${l.id}`}
+                           type="button"
+                           onClick={() => { setBrzaPretraga(""); if (l.slug) setLocation(`/ilmihal/${l.slug}`); }}
+                           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-primary/5"
+                         >
+                           <BookOpen className="h-4 w-4 shrink-0 text-emerald-600" />
+                           <span className="min-w-0 flex-1">
+                             <span className="block truncate text-sm font-bold">{l.naslov}</span>
+                             <span className="block text-xs text-muted-foreground">{t("Nivo")} {l.nivo}</span>
+                           </span>
+                           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                         </button>
+                       ))}
+                     </>
+                   )}
+                 </div>
+               )}
+             </div>
+           )}
+         </div>
 
         {mektebMeta.isGlavni && !isMuallimPreview && (
           <div className="grid grid-cols-2 gap-2 p-1.5 mb-4 rounded-2xl bg-muted/60 border border-border/40">

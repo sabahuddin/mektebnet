@@ -25,6 +25,7 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges, buildProgressSnapshot, computeBadgeProgress } from "../lib/badges.js";
 import { streamDokument } from "../lib/dokumenti.js";
 import { getStudentGodine, razrijesiGodinu } from "../lib/mektebska-godina.js";
+import { getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
@@ -232,6 +233,19 @@ router.get("/godine", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
+});
+
+router.get("/napamet", async (req, res) => {
+  try {
+    const ocjene = await db.select().from(ocjeneTable)
+      .where(and(eq(ocjeneTable.ucenikId, req.user!.userId), sql`${ocjeneTable.napametStavkaId} IS NOT NULL`))
+      .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
+    const latest = new Map<string, typeof ocjene[number]>();
+    for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
+    const [profil] = await db.select({ mektebId: ucenikProfiliTable.mektebId })
+      .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, req.user!.userId));
+    res.json({ katalog: profil?.mektebId ? await getNapametKatalog(profil.mektebId) : [], ocjene: [...latest.values()] });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
 // GET /api/ucenik/kalendar — student sees their group calendar

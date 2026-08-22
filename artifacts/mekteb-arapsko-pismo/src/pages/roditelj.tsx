@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MaskotaPrazanState } from "@/components/maskota";
 import { formatScreentime, isOnline, kategorijaOcjeneLabel } from "@/lib/utils";
 import { useLanguage } from "@/context/language";
+import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 
 function formatScreentimeShort(sec: number | null | undefined): string {
   const s = sec ?? 0;
@@ -70,6 +71,7 @@ interface Ocjena {
   datum: string;
   lekcijaNaziv?: string | null;
   zadacaId?: number | null;
+  napametStavkaId?: string | null;
 }
 
 interface RoditeljObavjestenje {
@@ -176,7 +178,8 @@ const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const MJESEC_NAZIVI = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
 
 type TopTab = "obavjestenja" | "poruke" | "profil" | number;
-type ChildSubTab = "kalendar" | "zadaca" | "ocjene" | "prisustvo" | "dokumenti";
+type ChildSubTab = "kalendar" | "zadaca" | "ocjene" | "napamet" | "prisustvo" | "dokumenti";
+interface NapametResponse { katalog: NapametStavka[]; ocjene: NapametOcjena[]; }
 
 interface MektebDokument {
   id: number;
@@ -215,6 +218,7 @@ function DijeteContent({
   const [isChangingPw, setIsChangingPw] = useState(false);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
+  const [napamet, setNapamet] = useState<NapametResponse | null>(null);
   const [godine, setGodine] = useState<string[]>([]);
   const [tekucaGodina, setTekucaGodina] = useState<string | null>(null);
   const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
@@ -251,6 +255,12 @@ function DijeteContent({
       .catch(() => {})
       .finally(() => setDetailLoading(false));
   }, [dijete.id, token, selectedGodina]);
+
+  useEffect(() => {
+    setNapamet(null);
+    apiRequest<NapametResponse>("GET", `/roditelj/napamet/${dijete.id}`, undefined, token)
+      .then(setNapamet).catch(() => setNapamet({ katalog: [], ocjene: [] }));
+  }, [dijete.id, token]);
 
   useEffect(() => {
     setKalendarLoading(true);
@@ -345,6 +355,7 @@ function DijeteContent({
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
     { id: "zadaca", label: t("Zadaća"), icon: ClipboardList },
     { id: "ocjene", label: t("Ocjene"), icon: Star },
+    { id: "napamet", label: t("NAPAMET"), icon: BookOpen },
     { id: "prisustvo", label: t("Prisustvo"), icon: CalendarCheck },
     { id: "dokumenti", label: t("Dokumenti"), icon: FileText },
   ];
@@ -627,7 +638,7 @@ function DijeteContent({
         <div className="bg-white border border-border/50 rounded-2xl p-4">
           {detailLoading ? (
             <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-xl" />)}</div>
-          ) : ocjene.length === 0 ? (
+          ) : ocjene.filter(o => !o.napametStavkaId).length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">{t("Nema unesenih ocjena")}</p>
           ) : (
             <div className="max-h-80 overflow-y-auto -mx-1">
@@ -641,7 +652,7 @@ function DijeteContent({
                   </tr>
                 </thead>
                 <tbody>
-                  {[...ocjene].sort((a, b) => b.datum.localeCompare(a.datum)).map(o => (
+                  {[...ocjene].filter(o => !o.napametStavkaId).sort((a, b) => b.datum.localeCompare(a.datum)).map(o => (
                     <tr
                       key={o.id}
                       className="border-b border-border/30 last:border-0"
@@ -661,6 +672,18 @@ function DijeteContent({
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {childSubTab === "napamet" && (
+        <div>
+          <div className="mb-4">
+            <h2 className="font-extrabold text-foreground flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-emerald-700" /> {t("NAPAMET")}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">{t("Program učenja napamet i ocjene djeteta.")}</p>
+          </div>
+          <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />
         </div>
       )}
 

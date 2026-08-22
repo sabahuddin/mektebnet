@@ -124,6 +124,23 @@ export const grupaRasporedTable = pgTable("grupa_raspored", {
   grupaNivoIdx: index("grupa_raspored_grupa_nivo_idx").on(t.grupaId, t.nivo, t.pozicija),
 }));
 
+// Mekteb-specific NAPAMET catalogue. The item id is deliberately stable so
+// grades remain attached when a teacher changes its title or position.
+export const napametProgramTable = pgTable("napamet_program", {
+  id: serial("id").primaryKey(),
+  mektebId: integer("mekteb_id").notNull(),
+  stavkaId: varchar("stavka_id", { length: 80 }).notNull(),
+  nivo: integer("nivo").notNull(),
+  naziv: varchar("naziv", { length: 200 }).notNull(),
+  redoslijed: integer("redoslijed").notNull(),
+  isVisible: boolean("is_visible").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  mektebStavkaIdx: uniqueIndex("napamet_program_mekteb_stavka_unique_idx").on(t.mektebId, t.stavkaId),
+  mektebOrderIdx: index("napamet_program_mekteb_order_idx").on(t.mektebId, t.nivo, t.redoslijed),
+}));
+
 // Mekteb-nivo dokumenti (PDF): pravila, kućni red i sl. Uploaduje ih glavni
 // muallim; vidljivi su svim učenicima i roditeljima tog mekteba.
 export const mektebDokumentiTable = pgTable("mekteb_dokumenti", {
