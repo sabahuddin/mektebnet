@@ -2881,16 +2881,16 @@ export default function AdminPage() {
         {activeMainTab === "sistemski" && (
           <Tabs defaultValue="sadrzaj" className="space-y-5">
             <TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-5 gap-1 p-1 bg-muted/60 rounded-2xl">
-              <TabsTrigger value="sadrzaj" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+              <TabsTrigger value="sadrzaj" data-testid="admin-system-tab-sadrzaj" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
                 <BookOpen className="w-4 h-4" /> Sadržaj
               </TabsTrigger>
-              <TabsTrigger value="moderacija" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+              <TabsTrigger value="moderacija" data-testid="admin-system-tab-moderacija" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
                 <ShieldCheck className="w-4 h-4" /> Moderacija
               </TabsTrigger>
-              <TabsTrigger value="igre" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+              <TabsTrigger value="igre" data-testid="admin-system-tab-igre" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
                 <Gamepad2 className="w-4 h-4" /> Igre
               </TabsTrigger>
-              <TabsTrigger value="odrzavanje" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+              <TabsTrigger value="odrzavanje" data-testid="admin-system-tab-odrzavanje" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
                 <Wrench className="w-4 h-4" /> Održavanje
               </TabsTrigger>
               <TabsTrigger value="napamet" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
@@ -2898,7 +2898,7 @@ export default function AdminPage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="sadrzaj" className="mt-0 space-y-5">
+            <TabsContent value="sadrzaj" data-testid="admin-system-content-sadrzaj" className="mt-0 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <AdminToolCard icon={<BookOpen />} label="Rječnik pojmova" tone="teal" onClick={() => setLocation("/admin/rjecnik")} />
                 <AdminToolCard icon={<ClipboardList />} label="Banka pitanja" tone="amber" onClick={() => setLocation("/admin/banka-pitanja")} />
@@ -2915,16 +2915,16 @@ export default function AdminPage() {
               <NapametGlobalProgramEditor />
             </TabsContent>
 
-            <TabsContent value="moderacija" className="mt-0 space-y-5">
+            <TabsContent value="moderacija" data-testid="admin-system-content-moderacija" className="mt-0 space-y-5">
               <KategorijeZvjezdica token={token!} />
               <PendingPrilozi token={token!} />
             </TabsContent>
 
-            <TabsContent value="igre" className="mt-0">
+            <TabsContent value="igre" data-testid="admin-system-content-igre" className="mt-0">
               <IgraPitanjaEditor token={token!} />
             </TabsContent>
 
-            <TabsContent value="odrzavanje" className="mt-0 space-y-5">
+            <TabsContent value="odrzavanje" data-testid="admin-system-content-odrzavanje" className="mt-0 space-y-5">
               <SistemAlati token={token!} />
               <div className="bg-white border border-border/50 rounded-2xl p-5 flex items-start gap-3">
                 <Database className="w-5 h-5 text-primary mt-0.5 shrink-0" />
