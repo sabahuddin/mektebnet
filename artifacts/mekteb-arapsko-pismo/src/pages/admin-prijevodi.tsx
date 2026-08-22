@@ -82,7 +82,7 @@ export default function AdminPrijevodiPage() {
     <Layout>
       <div className="max-w-5xl mx-auto px-4 py-6">
         <button
-          onClick={() => setLocation("/admin")}
+          onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Nazad")}

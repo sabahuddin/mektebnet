@@ -1575,7 +1575,11 @@ export default function AdminPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "statistika">("muallimi");
+  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "statistika">(() => {
+    if (typeof window === "undefined") return "muallimi";
+    const saved = window.sessionStorage.getItem("admin-active-tab");
+    return saved === "korisnici" || saved === "analitika" || saved === "rezultati" || saved === "statistika" ? saved : "muallimi";
+  });
   const [statSadrzaja, setStatSadrzaja] = useState<{ lekcije: any[]; prilozi: any[]; kvizovi: any[] }>({ lekcije: [], prilozi: [], kvizovi: [] });
   const [statLoading, setStatLoading] = useState(false);
   const [statSubTab, setStatSubTab] = useState<"lekcije" | "prilozi" | "kvizovi">("lekcije");
@@ -1652,7 +1656,10 @@ export default function AdminPage() {
       setStatLoading(false);
     }
   };
-  const [activeMainTab, setActiveMainTab] = useState<"korisnici" | "sistemski">("korisnici");
+  const [activeMainTab, setActiveMainTab] = useState<"korisnici" | "sistemski">(() => {
+    if (typeof window === "undefined") return "korisnici";
+    return window.sessionStorage.getItem("admin-main-tab") === "sistemski" ? "sistemski" : "korisnici";
+  });
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -1841,6 +1848,12 @@ export default function AdminPage() {
   };
 
   useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); loadMektebiOpcije(); }, [token]);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("admin-main-tab", activeMainTab);
+      window.sessionStorage.setItem("admin-active-tab", activeTab);
+    }
+  }, [activeMainTab, activeTab]);
   useEffect(() => { if (activeTab === "analitika") loadAnalytics(); }, [activeTab, analyticsPeriod]);
   useEffect(() => {
     if (activeMainTab !== "korisnici" || activeTab !== "analitika") return;

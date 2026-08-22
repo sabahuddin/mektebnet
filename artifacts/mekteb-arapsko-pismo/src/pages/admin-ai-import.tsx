@@ -72,7 +72,7 @@ export default function AdminAiImportPage() {
     <Layout>
       <div className="max-w-3xl mx-auto px-4 py-6">
         <button
-          onClick={() => setLocation("/admin")}
+          onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na admin")}

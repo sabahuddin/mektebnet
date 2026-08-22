@@ -145,7 +145,7 @@ export default function AdminOrphanUploadsPage() {
     <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center gap-3 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => setLocation("/admin")}>
+          <Button variant="ghost" size="sm" onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }}>
             <ArrowLeft className="w-4 h-4 mr-2" /> {t("Nazad")}
           </Button>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">

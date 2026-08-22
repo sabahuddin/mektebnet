@@ -306,7 +306,7 @@ export default function AdminEtapePage() {
     <Layout>
       <div className="max-w-5xl mx-auto px-4 pb-10">
         <div className="flex items-center gap-3 mb-5 pt-2">
-          <button onClick={() => setLocation("/admin")} className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-700">
+          <button onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }} className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-700">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-xl font-extrabold text-emerald-900 flex items-center gap-2">
