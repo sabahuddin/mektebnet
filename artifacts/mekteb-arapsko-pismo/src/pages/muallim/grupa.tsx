@@ -666,7 +666,7 @@ export default function GrupaPage() {
        <div className="max-w-6xl mx-auto">
          <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
          {/* Modul navigacija — sekundarna je na mobilnom, a desna kolona na desktopu. */}
-         <aside className="order-2 lg:order-2 lg:sticky lg:top-24 bg-white/80 lg:border lg:border-border/50 lg:rounded-2xl lg:p-3">
+         <aside className="order-1 lg:order-2 lg:sticky lg:top-24 bg-white/80 lg:border lg:border-border/50 lg:rounded-2xl lg:p-3">
            <p className="hidden lg:block px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
          {/* Modul kartice za ovu grupu — vode na odgovarajuće stranice/tabove
             sa pre-selektovanom grupom (preko ?grupaId=… za panel-tabove). */}
@@ -683,6 +683,7 @@ export default function GrupaPage() {
                { label: t("Izvještaji"), icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}` },
                { label: t("Roditelji"), icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}` },
                { label: t("H5P statistika"), icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}` },
+               { label: t("Podešavanja"), icon: Settings, href: `/muallim/grupa/${grupa.id}/uredi` },
             ].map(card => (
               <Link
                 key={card.label}
@@ -703,7 +704,7 @@ export default function GrupaPage() {
         )}
          </aside>
 
-         <div className="order-1 lg:order-1 min-w-0">
+         <div className="order-2 lg:order-1 min-w-0">
 
         {grupa.isArchived && (
           <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-6">
@@ -1184,6 +1185,9 @@ export default function GrupaPage() {
             </div>
           )}
         </div>
+
+         </div>
+         </div>
 
         {showMoveModal && moveStudent && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
