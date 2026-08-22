@@ -4791,10 +4791,15 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     const ocjenaVal = ocjena === null || ocjena === undefined || ocjena === ""
       ? null
       : Math.min(6, Math.max(1, Math.trunc(Number(ocjena))));
-    const uradjenoVal = typeof uradjeno === "boolean" ? uradjeno : (postojeci?.uradjeno ?? false);
     const statusVal = oznaciZavrseno === true ? "zavrseno"
       : oznaciZavrseno === false ? "na_cekanju"
       : (postojeci?.status ?? "na_cekanju");
+    // Završavanje je nezavisno od ocjene. Muallim može zadaću označiti
+    // završenom i bez dodijeljene ocjene, a učenik je odmah vidi u svom
+    // tabu "Završene".
+    const uradjenoVal = statusVal === "zavrseno"
+      ? true
+      : typeof uradjeno === "boolean" ? uradjeno : (postojeci?.uradjeno ?? false);
 
     const values = {
       zadacaId: id,

@@ -3847,7 +3847,7 @@ export default function MuallimPanel() {
                                   </Button>
                                   {!zavrseno ? (
                                     <Button size="sm" disabled={savingRedId === red.ucenikId}
-                                      onClick={() => saveStatusRed(red, true)}
+                                       onClick={() => saveStatusRed({ ...red, uradjeno: true }, true)}
                                       className="rounded-lg font-bold flex items-center gap-1.5">
                                       <CheckCircle2 className="w-4 h-4" /> {t("Završeno")}
                                     </Button>

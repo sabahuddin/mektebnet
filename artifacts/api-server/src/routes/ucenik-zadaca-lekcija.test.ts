@@ -31,6 +31,7 @@ let blockedSlug: string;
 let assignedHomeworkId: number;
 let emptyHomeworkId: number;
 let studentToken: string;
+let teacherToken: string;
 
 function studentGet(path: string, headers: Record<string, string> = {}) {
   return fetch(`${baseUrl}${path}`, {
@@ -38,6 +39,17 @@ function studentGet(path: string, headers: Record<string, string> = {}) {
       Authorization: `Bearer ${studentToken}`,
       ...headers,
     },
+  });
+}
+
+function teacherPut(path: string, body: unknown) {
+  return fetch(`${baseUrl}${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${teacherToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
   });
 }
 
@@ -208,6 +220,12 @@ before(async () => {
     displayName: "Učenik testa",
     role: "ucenik",
   });
+  teacherToken = signToken({
+    userId: teacherId,
+    username: `muallim.${suffix}`,
+    displayName: "Muallim testa",
+    role: "muallim",
+  });
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -252,6 +270,25 @@ test("aktivna zadaća otključava samo svoju lekciju i vraća njen slug učeniku
   assert.equal(blockedResponse.status, 403);
   const blocked = await blockedResponse.json() as { locked?: boolean };
   assert.equal(blocked.locked, true);
+});
+
+test("završena zadaća se učeniku prebaci među završene i bez ocjene", async () => {
+  const markResponse = await teacherPut(
+    `/api/muallim/zadace/${assignedHomeworkId}/status/${studentId}`,
+    { uradjeno: false, ocjena: null, kapiMeda: 0, noviRok: null, oznaciZavrseno: true },
+  );
+  assert.equal(markResponse.status, 200);
+  const saved = await markResponse.json() as { status: string; uradjeno: boolean; ocjena: number | null };
+  assert.equal(saved.status, "zavrseno");
+  assert.equal(saved.uradjeno, true);
+  assert.equal(saved.ocjena, null);
+
+  const studentResponse = await studentGet("/api/ucenik/zadace");
+  assert.equal(studentResponse.status, 200);
+  const homework = await studentResponse.json() as Array<{ id: number; kategorija: string; ocjena: number | null }>;
+  const assigned = homework.find((item) => item.id === assignedHomeworkId);
+  assert.equal(assigned?.kategorija, "zavrsene");
+  assert.equal(assigned?.ocjena, null);
 });
 
 test("detail lekcije preklapa naslov i HTML istim prijevodnim overlayem", async () => {

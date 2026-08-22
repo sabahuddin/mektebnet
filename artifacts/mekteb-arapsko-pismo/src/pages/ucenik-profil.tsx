@@ -1220,7 +1220,7 @@ export default function UcenikProfilPage() {
                       {zadSubTab === "zavrsene" ? t("Nema završenih zadaća") : t("Nema aktivnih zadaća")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {zadSubTab === "zavrsene" ? t("Završene i ocijenjene zadaće će se prikazati ovdje.") : t("Tvoj muallim ti trenutno nije zadao zadaću.")}
+                      {zadSubTab === "zavrsene" ? t("Zadaće koje je muallim označio završenim prikazat će se ovdje.") : t("Tvoj muallim ti trenutno nije zadao zadaću.")}
                     </p>
                   </div>
                 ) : (
