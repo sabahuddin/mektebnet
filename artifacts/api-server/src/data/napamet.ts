@@ -111,7 +111,9 @@ export async function getGlobalNapametKatalog(includeHidden = false): Promise<Na
     isVisible: napametGlobalProgramTable.isVisible,
     sourceLessonSlug: napametGlobalProgramTable.sourceLessonSlug,
   }).from(napametGlobalProgramTable).where(
-    includeHidden ? undefined : eq(napametGlobalProgramTable.isVisible, true),
+    includeHidden
+      ? eq(napametGlobalProgramTable.isDeleted, false)
+      : and(eq(napametGlobalProgramTable.isDeleted, false), eq(napametGlobalProgramTable.isVisible, true)),
   ).orderBy(asc(napametGlobalProgramTable.nivo), asc(napametGlobalProgramTable.redoslijed));
   return rows.map((row) => ({ ...row, nivo: asNivo(row.nivo), scope: "global" }));
 }

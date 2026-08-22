@@ -298,9 +298,11 @@ async function runResidualSchema() {
         id serial PRIMARY KEY, stavka_id varchar(80) NOT NULL, nivo integer NOT NULL,
         naziv varchar(200) NOT NULL, redoslijed integer NOT NULL,
         source_lesson_slug varchar(100), is_visible boolean NOT NULL DEFAULT true,
+        is_deleted boolean NOT NULL DEFAULT false,
         created_at timestamp DEFAULT now(), updated_at timestamp DEFAULT now()
       );
     `);
+    await db.execute(sql`ALTER TABLE napamet_global_program ADD COLUMN IF NOT EXISTS is_deleted boolean NOT NULL DEFAULT false;`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_global_program_stavka_unique_idx ON napamet_global_program (stavka_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_global_program_order_idx ON napamet_global_program (nivo, redoslijed);`);
     await db.execute(sql`

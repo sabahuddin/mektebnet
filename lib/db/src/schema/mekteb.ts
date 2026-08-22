@@ -151,6 +151,7 @@ export const napametGlobalProgramTable = pgTable("napamet_global_program", {
   redoslijed: integer("redoslijed").notNull(),
   sourceLessonSlug: varchar("source_lesson_slug", { length: 100 }),
   isVisible: boolean("is_visible").notNull().default(true),
+  isDeleted: boolean("is_deleted").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({

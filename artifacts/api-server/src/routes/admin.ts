@@ -4383,7 +4383,8 @@ router.post("/napamet-program", async (req, res) => {
 
 router.delete("/napamet-program/:stavkaId", async (req, res) => {
   try {
-    const [deleted] = await db.delete(napametGlobalProgramTable)
+    const [deleted] = await db.update(napametGlobalProgramTable)
+      .set({ isDeleted: true, isVisible: false, updatedAt: new Date() })
       .where(eq(napametGlobalProgramTable.stavkaId, req.params.stavkaId))
       .returning({ id: napametGlobalProgramTable.stavkaId });
     if (!deleted) {
