@@ -8,7 +8,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2, Languages, Lock, ExternalLink
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2, Languages, Lock, ExternalLink, Database, Wrench, Gamepad2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
@@ -19,6 +19,7 @@ import { SelamSetting } from "@/components/selam-setting";
 import { NapametGlobalProgramEditor } from "@/components/NapametGlobalProgramEditor";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SVI_JEZICI: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
 
@@ -169,6 +170,43 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
         <div className="text-xs text-muted-foreground font-medium">{label}</div>
       </div>
     </div>
+  );
+}
+
+function AdminToolCard({
+  icon,
+  label,
+  tone,
+  onClick,
+  testId,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  tone: "teal" | "amber" | "orange" | "violet" | "emerald" | "sky";
+  onClick: () => void;
+  testId?: string;
+}) {
+  const tones = {
+    teal: "bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100",
+    amber: "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100",
+    orange: "bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100",
+    violet: "bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100",
+    emerald: "bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100",
+    sky: "bg-sky-50 border-sky-200 text-sky-800 hover:bg-sky-100",
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      data-testid={testId}
+      className={`min-h-16 flex items-center gap-3 px-4 py-3 border rounded-xl font-semibold text-sm text-left transition-colors ${tones[tone]}`}
+    >
+      <span className="w-9 h-9 rounded-lg bg-white/70 flex items-center justify-center shrink-0 [&>svg]:w-4 [&>svg]:h-4">
+        {icon}
+      </span>
+      <span>{label}</span>
+      <ChevronRight className="w-4 h-4 ml-auto opacity-60 shrink-0" />
+    </button>
   );
 }
 
@@ -2828,39 +2866,56 @@ export default function AdminPage() {
         </>)}
 
         {activeMainTab === "sistemski" && (
-          <div className="space-y-6">
-            <NapametGlobalProgramEditor />
-            <KategorijeZvjezdica token={token!} />
-            <PendingPrilozi token={token!} />
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setLocation("/admin/rjecnik")} className="flex items-center gap-2 px-4 py-2.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl font-semibold hover:bg-teal-100 transition text-sm">
-                <BookOpen className="w-4 h-4" /> Rječnik pojmova
-              </button>
-              <button onClick={() => setLocation("/admin/banka-pitanja")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
-                <ClipboardList className="w-4 h-4" /> Banka pitanja
-              </button>
-              <button onClick={() => setLocation("/admin/citaonica")} data-testid="button-admin-citaonica" className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
-                <BookOpen className="w-4 h-4" /> Čitaonica — priče
-              </button>
-              <button onClick={() => setLocation("/admin/kviz-novi")} className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl font-semibold hover:bg-orange-100 transition text-sm">
-                <Plus className="w-4 h-4" /> Novi kviz
-              </button>
-              <button onClick={() => setLocation("/admin/ai-import")} className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border border-violet-200 text-violet-800 rounded-xl font-semibold hover:bg-violet-100 transition text-sm">
-                <Wand2 className="w-4 h-4" /> AI uvoz kviza
-              </button>
-              <button onClick={() => setLocation("/admin/orphan-uploads")} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
-                <BookOpen className="w-4 h-4" /> Slike bez lekcije
-              </button>
-              <button onClick={() => setLocation("/admin/etape")} data-testid="button-admin-etape" className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-semibold hover:bg-emerald-100 transition text-sm">
-                <Award className="w-4 h-4" /> Etape i krunisanja
-              </button>
-              <button onClick={() => setLocation("/admin/prijevodi")} data-testid="button-admin-prijevodi" className="flex items-center gap-2 px-4 py-2.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-xl font-semibold hover:bg-sky-100 transition text-sm">
-                <Languages className="w-4 h-4" /> Uređivanje prijevoda
-              </button>
-            </div>
-            <SistemAlati token={token!} />
-            <IgraPitanjaEditor token={token!} />
-          </div>
+          <Tabs defaultValue="sadrzaj" className="space-y-5">
+            <TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-muted/60 rounded-2xl">
+              <TabsTrigger value="sadrzaj" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+                <BookOpen className="w-4 h-4" /> Sadržaj
+              </TabsTrigger>
+              <TabsTrigger value="moderacija" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+                <ShieldCheck className="w-4 h-4" /> Moderacija
+              </TabsTrigger>
+              <TabsTrigger value="igre" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+                <Gamepad2 className="w-4 h-4" /> Igre
+              </TabsTrigger>
+              <TabsTrigger value="odrzavanje" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
+                <Wrench className="w-4 h-4" /> Održavanje
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sadrzaj" className="mt-0 space-y-5">
+              <NapametGlobalProgramEditor />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <AdminToolCard icon={<BookOpen />} label="Rječnik pojmova" tone="teal" onClick={() => setLocation("/admin/rjecnik")} />
+                <AdminToolCard icon={<ClipboardList />} label="Banka pitanja" tone="amber" onClick={() => setLocation("/admin/banka-pitanja")} />
+                <AdminToolCard icon={<BookOpen />} label="Čitaonica — priče" tone="amber" onClick={() => setLocation("/admin/citaonica")} testId="button-admin-citaonica" />
+                <AdminToolCard icon={<Plus />} label="Novi kviz" tone="orange" onClick={() => setLocation("/admin/kviz-novi")} />
+                <AdminToolCard icon={<Wand2 />} label="AI uvoz kviza" tone="violet" onClick={() => setLocation("/admin/ai-import")} />
+                <AdminToolCard icon={<BookOpen />} label="Slike bez lekcije" tone="amber" onClick={() => setLocation("/admin/orphan-uploads")} />
+                <AdminToolCard icon={<Award />} label="Etape i krunisanja" tone="emerald" onClick={() => setLocation("/admin/etape")} testId="button-admin-etape" />
+                <AdminToolCard icon={<Languages />} label="Uređivanje prijevoda" tone="sky" onClick={() => setLocation("/admin/prijevodi")} testId="button-admin-prijevodi" />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="moderacija" className="mt-0 space-y-5">
+              <KategorijeZvjezdica token={token!} />
+              <PendingPrilozi token={token!} />
+            </TabsContent>
+
+            <TabsContent value="igre" className="mt-0">
+              <IgraPitanjaEditor token={token!} />
+            </TabsContent>
+
+            <TabsContent value="odrzavanje" className="mt-0 space-y-5">
+              <SistemAlati token={token!} />
+              <div className="bg-white border border-border/50 rounded-2xl p-5 flex items-start gap-3">
+                <Database className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="font-bold text-foreground">Podaci i održavanje</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Demo podaci i administrativne radnje nad bazom nalaze se ovdje, odvojeno od sadržaja koji vide učenici.</p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 
