@@ -378,3 +378,29 @@ test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i rod
     });
   }
 });
+
+test("grupni NAPAMET brojač računa učenika samo jednom po stavci", async () => {
+  for (const [datum, ocjena] of [["2026-08-26", 4], ["2026-08-27", 6]] as const) {
+    const response = await authed("/api/muallim/ocjene", muallimToken, {
+      method: "POST",
+      body: JSON.stringify({
+        ucenikId,
+        grupaId,
+        kategorija: "napamet",
+        ocjena,
+        napametStavkaId: STAVKA_ID,
+        datum,
+      }),
+    });
+    assert.equal(response.status, 201);
+  }
+
+  const response = await authed(`/api/muallim/napamet-program?grupaId=${grupaId}`, muallimToken);
+  assert.equal(response.status, 200);
+  const payload = await response.json() as {
+    katalog: Array<{ id: string; assessedCount: number; totalCount: number }>;
+  };
+  const stavka = payload.katalog.find((item) => item.id === STAVKA_ID);
+  assert.equal(stavka?.assessedCount, 1);
+  assert.equal(stavka?.totalCount, 1);
+});

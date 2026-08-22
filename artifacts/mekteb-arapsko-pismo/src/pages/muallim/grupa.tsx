@@ -396,6 +396,7 @@ export default function GrupaPage() {
         napametStavkaId: newOcjena.napametStavkaId || undefined,
       }, token);
       toast({ title: t("Ocjena dodana!"), description: `${ocjenaTarget.displayName} — ${newOcjena.ocjena}` });
+      refreshNapametKatalog();
       setOcjenaTarget(null);
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće dodati ocjenu"), variant: "destructive" });
@@ -774,7 +775,12 @@ export default function GrupaPage() {
         </div>
 
          {aktivniModul === "napamet" && !grupa.isArchived && (
-           <NapametLokalniProgramEditor grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} />
+           <NapametLokalniProgramEditor
+             grupaId={grupaId}
+             globalItems={napametKatalog.filter((item) => item.scope === "global")}
+             itemCounts={Object.fromEntries(napametKatalog.map((item) => [item.id, { assessedCount: item.assessedCount, totalCount: item.totalCount }]))}
+             onChanged={refreshNapametKatalog}
+           />
          )}
 
          {aktivniModul === "greske" && <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-grupe">

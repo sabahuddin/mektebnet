@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { isOnline, formatScreentime, kategorijaOcjeneLabel } from "@/lib/utils";
+import { NapametPregled, type NapametOcjena, type NapametStavka } from "@/components/NapametPregled";
 
 interface Ucenik {
   id: number;
@@ -34,6 +35,11 @@ interface Ocjena {
   lekcijaNaziv?: string;
   napomena?: string;
   datum: string;
+}
+
+interface NapametResponse {
+  katalog: NapametStavka[];
+  ocjene: NapametOcjena[];
 }
 
 interface Grupa {
@@ -156,6 +162,7 @@ export default function UcenikPage() {
   const [ucenik, setUcenik] = useState<Ucenik | null>(null);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
+  const [napamet, setNapamet] = useState<NapametResponse | null>(null);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [h5pPokusaji, setH5pPokusaji] = useState<H5PPokusaj[]>([]);
@@ -216,9 +223,11 @@ export default function UcenikPage() {
       apiRequest<{ pitanja: InteraktivniPitanjePregled[] }>("GET", `/muallim/ucenik/${ucenikId}/interaktivni-blokovi`, undefined, token).catch(() => ({ pitanja: [] })),
       apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
       apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad]) => {
+      apiRequest<NapametResponse>("GET", `/muallim/napamet/${ucenikId}`, undefined, token).catch(() => ({ katalog: [], ocjene: [] })),
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad, napametData]) => {
       setRoditelji((rod as RoditeljVeza[]) || []);
       setZadace((zad as ZadacaPregled[]) || []);
+      setNapamet(napametData as NapametResponse);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
       setUcenik(found || null);
       setOcjene(oc);
@@ -1297,6 +1306,17 @@ export default function UcenikPage() {
                     </table>
                   </div>
                 )}
+              </div>
+
+              {/* NAPAMET */}
+              <div className="bg-white border border-emerald-200 rounded-2xl p-5 md:col-span-2">
+                <div className="mb-4">
+                  <h2 className="font-extrabold text-foreground flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-emerald-700" /> {t("NAPAMET pregled")}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">{t("Ocijenjene i još neocijenjene stavke ovog učenika.")}</p>
+                </div>
+                <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />
               </div>
 
               {/* Prisustvo — mjesečno + detalji */}

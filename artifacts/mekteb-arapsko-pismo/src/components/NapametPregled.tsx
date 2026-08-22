@@ -7,6 +7,8 @@ export interface NapametStavka {
   redoslijed: number;
   sourceLessonSlug?: string | null;
   scope?: "global" | "lokalno" | "legacy";
+  assessedCount?: number;
+  totalCount?: number;
 }
 
 export interface NapametOcjena {

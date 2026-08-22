@@ -2321,12 +2321,44 @@ router.get("/napamet-program", async (req, res) => {
     if (grupaId && !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
     }
-    res.json({ katalog: await getNapametKatalog({
+    const katalog = await getNapametKatalog({
       mektebId: ctx.mektebId,
       grupaId: grupaId || undefined,
       muallimId: grupaId ? req.user!.userId : undefined,
       includeHidden: true,
-    }) });
+    });
+
+    if (!grupaId) { res.json({ katalog }); return; }
+
+    const ucenici = await db.select({ id: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    const ucenikIds = ucenici.map((ucenik) => ucenik.id);
+    const ocijenjeniPoStavci = new Map<string, Set<number>>();
+
+    if (ucenikIds.length > 0) {
+      const ocjene = await db.select({
+        ucenikId: ocjeneTable.ucenikId,
+        napametStavkaId: ocjeneTable.napametStavkaId,
+      }).from(ocjeneTable).where(and(
+        inArray(ocjeneTable.ucenikId, ucenikIds),
+        sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
+      ));
+      for (const ocjena of ocjene) {
+        if (!ocjena.napametStavkaId) continue;
+        const ocijenjeni = ocijenjeniPoStavci.get(ocjena.napametStavkaId) || new Set<number>();
+        ocijenjeni.add(ocjena.ucenikId);
+        ocijenjeniPoStavci.set(ocjena.napametStavkaId, ocijenjeni);
+      }
+    }
+
+    res.json({
+      katalog: katalog.map((stavka) => ({
+        ...stavka,
+        assessedCount: ocijenjeniPoStavci.get(stavka.id)?.size ?? 0,
+        totalCount: ucenikIds.length,
+      })),
+    });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
