@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, ChevronDown, ChevronUp, Loader2, Plus } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -21,6 +21,9 @@ export function NapametGlobalProgramEditor() {
   const [nivo, setNivo] = useState(1);
   const [lekcije, setLekcije] = useState<LessonOption[]>([]);
   const [sourceLessonSlug, setSourceLessonSlug] = useState("");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [draggingNivo, setDraggingNivo] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const load = async () => {
     if (!token) return;
@@ -53,13 +56,8 @@ export function NapametGlobalProgramEditor() {
     }
   };
 
-  const reorder = async (targetNivo: number, index: number, delta: -1 | 1) => {
-    const section = katalog.filter((item) => item.nivo === targetNivo).sort((a, b) => a.redoslijed - b.redoslijed);
-    const nextIndex = index + delta;
-    if (!token || nextIndex < 0 || nextIndex >= section.length) return;
-    [section[index], section[nextIndex]] = [section[nextIndex], section[index]];
-    const orders = new Map(section.map((item, order) => [item.id, order + 1]));
-    const next = katalog.map((item) => orders.has(item.id) ? { ...item, redoslijed: orders.get(item.id)! } : item);
+  const saveOrder = async (next: ProgramStavka[]) => {
+    if (!token) return;
     setSaving(true);
     try {
       const data = await apiRequest<{ katalog: ProgramStavka[] }>("PUT", "/admin/napamet-program-redoslijed", {
@@ -68,6 +66,56 @@ export function NapametGlobalProgramEditor() {
       setKatalog(data.katalog);
     } catch (error: any) {
       toast({ title: t("Greška"), description: error?.message || t("Nije moguće sačuvati redoslijed"), variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reorder = async (targetNivo: number, index: number, delta: -1 | 1) => {
+    const section = katalog.filter((item) => item.nivo === targetNivo).sort((a, b) => a.redoslijed - b.redoslijed);
+    const nextIndex = index + delta;
+    if (nextIndex < 0 || nextIndex >= section.length) return;
+    [section[index], section[nextIndex]] = [section[nextIndex], section[index]];
+    const orders = new Map(section.map((item, order) => [item.id, order + 1]));
+    const next = katalog.map((item) => orders.has(item.id) ? { ...item, redoslijed: orders.get(item.id)! } : item);
+    await saveOrder(next);
+  };
+
+  const finishDrag = async (targetId: string | null) => {
+    if (!draggingId || draggingNivo === null || !targetId || targetId === draggingId) {
+      setDraggingId(null);
+      setDraggingNivo(null);
+      setDragOverId(null);
+      return;
+    }
+    const section = katalog.filter((item) => item.nivo === draggingNivo).sort((a, b) => a.redoslijed - b.redoslijed);
+    const fromIndex = section.findIndex((item) => item.id === draggingId);
+    const toIndex = section.findIndex((item) => item.id === targetId);
+    if (fromIndex < 0 || toIndex < 0) {
+      setDraggingId(null);
+      setDraggingNivo(null);
+      setDragOverId(null);
+      return;
+    }
+    const [moved] = section.splice(fromIndex, 1);
+    section.splice(fromIndex < toIndex ? toIndex - 1 : toIndex, 0, moved);
+    const orders = new Map(section.map((item, order) => [item.id, order + 1]));
+    const next = katalog.map((item) => orders.has(item.id) ? { ...item, redoslijed: orders.get(item.id)! } : item);
+    setDraggingId(null);
+    setDraggingNivo(null);
+    setDragOverId(null);
+    await saveOrder(next);
+  };
+
+  const deleteItem = async (item: ProgramStavka) => {
+    if (!token || !window.confirm(t('Obrisati NAPAMET stavku "{naziv}"?', { naziv: item.naziv }))) return;
+    setSaving(true);
+    try {
+      await apiRequest("DELETE", `/admin/napamet-program/${encodeURIComponent(item.id)}`, undefined, token);
+      setKatalog((items) => items.filter((current) => current.id !== item.id));
+      toast({ title: t("Stavka obrisana"), description: item.naziv });
+    } catch (error: any) {
+      toast({ title: t("Greška"), description: error?.message || t("Nije moguće obrisati stavku"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -107,8 +155,36 @@ export function NapametGlobalProgramEditor() {
         const items = katalog.filter((item) => item.nivo === sectionNivo).sort((a, b) => a.redoslijed - b.redoslijed);
         return <div key={sectionNivo} className="space-y-2">
           <h3 className="text-xs font-black uppercase tracking-wide text-emerald-800">{sectionNivo === 4 ? t("Dodatak") : `NAPAMET ${sectionNivo}. ${t("nivo")}`}</h3>
-          {items.map((item, index) => <div key={item.id} className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${item.isVisible === false ? "bg-slate-100 opacity-60" : "bg-white"}`}>
+          {items.map((item, index) => <div key={item.id}
+            data-napamet-id={item.id}
+            data-napamet-nivo={sectionNivo}
+            onPointerMove={(event) => {
+              if (!draggingId || draggingNivo !== sectionNivo) return;
+              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-napamet-id]");
+              if (target?.dataset.napametNivo === String(sectionNivo)) setDragOverId(target.dataset.napametId || null);
+            }}
+            className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${dragOverId === item.id ? "border-emerald-500 ring-2 ring-emerald-200" : ""} ${draggingId === item.id ? "opacity-50" : ""} ${item.isVisible === false ? "bg-slate-100 opacity-60" : "bg-white"}`}>
             <div className="flex flex-col">
+              <button type="button" disabled={saving} aria-label={t("Povuci za promjenu redoslijeda")}
+                onPointerDown={(event) => {
+                  if (saving) return;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setDraggingId(item.id);
+                  setDraggingNivo(sectionNivo);
+                }}
+                onPointerMove={(event) => {
+                  if (!draggingId) return;
+                  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-napamet-id]");
+                  if (target?.dataset.napametNivo === String(sectionNivo)) setDragOverId(target.dataset.napametId || null);
+                }}
+                onPointerUp={(event) => {
+                  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-napamet-id]");
+                  void finishDrag(target?.dataset.napametId || null);
+                }}
+                onPointerCancel={() => void finishDrag(null)}
+                className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-emerald-700 p-1">
+                <GripVertical className="w-4 h-4" />
+              </button>
               <button type="button" disabled={saving || index === 0} aria-label={t("Pomjeri gore")} onClick={() => void reorder(sectionNivo, index, -1)} className="text-muted-foreground disabled:opacity-30"><ChevronUp className="w-3 h-3" /></button>
               <button type="button" disabled={saving || index === items.length - 1} aria-label={t("Pomjeri dolje")} onClick={() => void reorder(sectionNivo, index, 1)} className="text-muted-foreground disabled:opacity-30"><ChevronDown className="w-3 h-3" /></button>
             </div>
@@ -124,6 +200,9 @@ export function NapametGlobalProgramEditor() {
             </select>
             <button type="button" disabled={saving} onClick={() => void update(item, { isVisible: item.isVisible === false })} className={`rounded-lg px-2 py-1.5 text-xs font-bold ${item.isVisible === false ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
               {item.isVisible === false ? t("Prikaži") : t("Sakrij")}
+            </button>
+            <button type="button" disabled={saving} onClick={() => void deleteItem(item)} aria-label={t("Obriši stavku")} className="rounded-lg p-2 text-red-500 hover:bg-red-50 hover:text-red-700">
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>)}
         </div>;

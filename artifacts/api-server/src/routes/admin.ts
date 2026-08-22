@@ -4381,6 +4381,21 @@ router.post("/napamet-program", async (req, res) => {
   }
 });
 
+router.delete("/napamet-program/:stavkaId", async (req, res) => {
+  try {
+    const [deleted] = await db.delete(napametGlobalProgramTable)
+      .where(eq(napametGlobalProgramTable.stavkaId, req.params.stavkaId))
+      .returning({ id: napametGlobalProgramTable.stavkaId });
+    if (!deleted) {
+      res.status(404).json({ error: "Stavka nije pronađena" });
+      return;
+    }
+    res.json({ ok: true, id: deleted.id });
+  } catch {
+    res.status(500).json({ error: "Greška pri brisanju stavke" });
+  }
+});
+
 router.put("/napamet-program/:stavkaId", async (req, res) => {
   try {
     const values: Record<string, unknown> = { updatedAt: new Date() };
