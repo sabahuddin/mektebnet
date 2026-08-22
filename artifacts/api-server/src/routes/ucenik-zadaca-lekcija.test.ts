@@ -1,0 +1,264 @@
+import { after, before, test } from "node:test";
+import assert from "node:assert/strict";
+import type { Server } from "node:http";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { db } from "@workspace/db";
+import {
+  grupeTable,
+  ilmihalLekcijeTable,
+  ucenikProfiliTable,
+  usersTable,
+  zadaceTable,
+} from "@workspace/db/schema";
+import app from "../app.js";
+import {
+  bootstrapDrizzleMigrations,
+  runDrizzleMigrate,
+} from "../lib/drizzle-migrate.js";
+import { signToken } from "../middlewares/auth.js";
+
+const suffix = `zadaca-lekcija-${Date.now()}`;
+let server: Server | undefined;
+let baseUrl: string;
+let studentId: number;
+let teacherId: number;
+let groupId: number;
+let prerequisiteId: number;
+let assignedLessonId: number;
+let blockedLessonId: number;
+let assignedSlug: string;
+let blockedSlug: string;
+let assignedHomeworkId: number;
+let emptyHomeworkId: number;
+let studentToken: string;
+
+function studentGet(path: string, headers: Record<string, string> = {}) {
+  return fetch(`${baseUrl}${path}`, {
+    headers: {
+      Authorization: `Bearer ${studentToken}`,
+      ...headers,
+    },
+  });
+}
+
+async function cleanup(): Promise<void> {
+  if (assignedHomeworkId || emptyHomeworkId) {
+    await db.execute(sql`
+      DELETE FROM zadace_status
+      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1})
+    `);
+    await db.execute(sql`
+      DELETE FROM zadace_ucenici
+      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1})
+    `);
+    await db.delete(zadaceTable).where(inArray(
+      zadaceTable.id,
+      [assignedHomeworkId, emptyHomeworkId].filter(Boolean),
+    ));
+  }
+  if (assignedLessonId || blockedLessonId || prerequisiteId) {
+    await db.execute(sql`
+      DELETE FROM content_prijevodi
+      WHERE tabela = 'ilmihal_lekcije'
+        AND red_id IN (${assignedLessonId || -1}, ${blockedLessonId || -1}, ${prerequisiteId || -1})
+    `);
+    await db.delete(ilmihalLekcijeTable).where(inArray(
+      ilmihalLekcijeTable.id,
+      [assignedLessonId, blockedLessonId, prerequisiteId].filter(Boolean),
+    ));
+  }
+  if (studentId) {
+    await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, studentId));
+    await db.delete(usersTable).where(eq(usersTable.id, studentId));
+  }
+  if (groupId) await db.delete(grupeTable).where(eq(grupeTable.id, groupId));
+  if (teacherId) await db.delete(usersTable).where(eq(usersTable.id, teacherId));
+}
+
+before(async () => {
+  await bootstrapDrizzleMigrations();
+  await runDrizzleMigrate();
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS content_prijevodi (
+      id serial PRIMARY KEY,
+      tabela varchar(60) NOT NULL,
+      red_id integer NOT NULL,
+      polje varchar(60) NOT NULL,
+      jezik varchar(5) NOT NULL,
+      prijevod text NOT NULL,
+      izvor_hash varchar(64) NOT NULL,
+      updated_at timestamp DEFAULT now() NOT NULL
+    )
+  `);
+  // API route testovi importuju app direktno (bez index.ts startupa), zato
+  // pripremi idempotentnu kolonu koju produkcijski residual-schema već dodaje.
+  await db.execute(sql`
+    ALTER TABLE zadace
+    ADD COLUMN IF NOT EXISTS lekcija_slug varchar(300)
+  `);
+  // Očisti samo pomoćne redove iz ranije prekinutog pokretanja ovog istog
+  // testa; produkcijski sadržaj nikada ne koristi ovaj rezervisani slug prefiks.
+  await db.execute(sql`
+    DELETE FROM content_prijevodi
+    WHERE tabela = 'ilmihal_lekcije'
+      AND red_id IN (
+        SELECT id FROM ilmihal_lekcije
+        WHERE slug LIKE 'test-%-zadaca-lekcija-%'
+      )
+  `);
+  await db.execute(sql`
+    DELETE FROM ilmihal_lekcije
+    WHERE slug LIKE 'test-%-zadaca-lekcija-%'
+  `);
+
+  const [teacher] = await db.insert(usersTable).values({
+    username: `muallim.${suffix}`,
+    displayName: "Muallim testa",
+    passwordHash: "x",
+    role: "muallim",
+    isActive: true,
+  }).returning({ id: usersTable.id });
+  teacherId = teacher.id;
+
+  const [group] = await db.insert(grupeTable).values({
+    muallimId: teacherId,
+    naziv: `Grupa ${suffix}`,
+    skolskaGodina: "2026/27",
+    isActive: true,
+  }).returning({ id: grupeTable.id });
+  groupId = group.id;
+
+  const [student] = await db.insert(usersTable).values({
+    username: `ucenik.${suffix}`,
+    displayName: "Učenik testa",
+    passwordHash: "x",
+    role: "ucenik",
+    isActive: true,
+  }).returning({ id: usersTable.id });
+  studentId = student.id;
+  await db.insert(ucenikProfiliTable).values({
+    userId: studentId,
+    muallimId: teacherId,
+    grupaId: groupId,
+  });
+
+  const [prerequisite] = await db.insert(ilmihalLekcijeTable).values({
+    nivo: 1,
+    slug: `test-preduvjet-${suffix}`,
+    naslov: `Preduvjet ${suffix}`,
+    contentHtml: "<p>Preduvjet</p>",
+    redoslijed: 1,
+  }).returning({ id: ilmihalLekcijeTable.id });
+  prerequisiteId = prerequisite.id;
+
+  assignedSlug = `test-zadana-${suffix}`;
+  blockedSlug = `test-zakljucana-${suffix}`;
+  const createdLessons = await db.insert(ilmihalLekcijeTable).values([
+    {
+      nivo: 1,
+      slug: assignedSlug,
+      naslov: `Zadata lekcija ${suffix}`,
+      contentHtml: "<p>Bosanski uvodni sadržaj</p>",
+      redoslijed: 2,
+      uvjetiIds: [prerequisiteId],
+    },
+    {
+      nivo: 1,
+      slug: blockedSlug,
+      naslov: `Zaključana lekcija ${suffix}`,
+      contentHtml: "<p>Zaključano</p>",
+      redoslijed: 3,
+      uvjetiIds: [prerequisiteId],
+    },
+  ]).returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug });
+  assignedLessonId = createdLessons.find((lesson) => lesson.slug === assignedSlug)!.id;
+  blockedLessonId = createdLessons.find((lesson) => lesson.slug === blockedSlug)!.id;
+
+  const homework = await db.insert(zadaceTable).values([
+    {
+      grupaId: groupId,
+      muallimId: teacherId,
+      naslov: "Vježba zadate lekcije",
+      lekcijaNaslov: `Zadata lekcija ${suffix}`,
+      lekcijaSlug: assignedSlug,
+      lekcijaTip: "ilmihal",
+      isActive: true,
+    },
+    {
+      grupaId: groupId,
+      muallimId: teacherId,
+      naslov: "Zadaća bez povezane lekcije",
+      lekcijaNaslov: null,
+      isActive: true,
+    },
+  ]).returning({ id: zadaceTable.id, lekcijaNaslov: zadaceTable.lekcijaNaslov });
+  assignedHomeworkId = homework.find((item) => item.lekcijaNaslov)?.id!;
+  emptyHomeworkId = homework.find((item) => !item.lekcijaNaslov)?.id!;
+
+  await db.execute(sql`
+    INSERT INTO content_prijevodi (tabela, red_id, polje, jezik, prijevod, izvor_hash)
+    VALUES
+      ('ilmihal_lekcije', ${assignedLessonId}, 'naslov', 'en', 'Assigned lesson', 'test'),
+      ('ilmihal_lekcije', ${assignedLessonId}, 'content_html', 'en', '<p>Translated introduction and content</p>', 'test')
+  `);
+
+  studentToken = signToken({
+    userId: studentId,
+    username: `ucenik.${suffix}`,
+    displayName: "Učenik testa",
+    role: "ucenik",
+  });
+
+  await new Promise<void>((resolve) => {
+    server = app.listen(0, () => {
+      const address = server?.address();
+      const port = typeof address === "object" && address ? address.port : 0;
+      baseUrl = `http://127.0.0.1:${port}`;
+      resolve();
+    });
+  });
+});
+
+after(async () => {
+  if (server) await new Promise<void>((resolve) => server?.close(() => resolve()));
+  await cleanup();
+});
+
+test("aktivna zadaća otključava samo svoju lekciju i vraća njen slug učeniku", async () => {
+  const [homeworkResponse, assignedResponse, blockedResponse] = await Promise.all([
+    studentGet("/api/ucenik/zadace"),
+    studentGet(`/api/content/ilmihal/${assignedSlug}`),
+    studentGet(`/api/content/ilmihal/${blockedSlug}`),
+  ]);
+
+  assert.equal(homeworkResponse.status, 200);
+  const homework = await homeworkResponse.json() as Array<{
+    id: number;
+    lekcijaSlug: string | null;
+  }>;
+  assert.equal(
+    homework.find((item) => item.id === assignedHomeworkId)?.lekcijaSlug,
+    assignedSlug,
+  );
+  assert.equal(
+    homework.find((item) => item.id === emptyHomeworkId)?.lekcijaSlug,
+    null,
+  );
+
+  assert.equal(assignedResponse.status, 200);
+  const assigned = await assignedResponse.json() as { assignedThroughHomework?: boolean };
+  assert.equal(assigned.assignedThroughHomework, true);
+
+  assert.equal(blockedResponse.status, 403);
+  const blocked = await blockedResponse.json() as { locked?: boolean };
+  assert.equal(blocked.locked, true);
+});
+
+test("detail lekcije preklapa naslov i HTML istim prijevodnim overlayem", async () => {
+  const response = await studentGet(`/api/content/ilmihal/${assignedSlug}`, { "X-Lang": "en" });
+  assert.equal(response.status, 200);
+  const lesson = await response.json() as { naslov: string; contentHtml: string };
+  assert.equal(lesson.naslov, "Assigned lesson");
+  assert.match(lesson.contentHtml, /Translated introduction and content/);
+  assert.doesNotMatch(lesson.contentHtml, /Bosanski uvodni sadržaj/);
+});

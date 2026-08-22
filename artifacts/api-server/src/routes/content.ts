@@ -561,10 +561,10 @@ router.get("/ilmihal/:slug", async (req, res) => {
     }
 
     // Auto-upgrade legacy priprema (table-based) to new gradient design on read.
+    // Overlay prvo zamijeni dostupni prijevod, pa se upravo taj HTML normalizuje
+    // prije slanja. Tako detail ne miješa prevedeni naslov sa bosanskim sadržajem.
     // No DB write — purely transforms HTML before serving.
-    const upgradedHtml = regeneratePripremaInHtml(lekcija.contentHtml || "");
-
-    const result: Record<string, unknown> = { ...lekcija, contentHtml: upgradedHtml };
+    const result: Record<string, unknown> = { ...lekcija };
     if (assignedThroughHomework) result.assignedThroughHomework = true;
 
     // Dohvat priloga za sve autentifikovane korisnike. Pravila vidljivosti:
@@ -671,6 +671,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
     }
 
     await overlayOne(result, "ilmihal_lekcije", getLang(req));
+    result.contentHtml = regeneratePripremaInHtml(String(result.contentHtml || ""));
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

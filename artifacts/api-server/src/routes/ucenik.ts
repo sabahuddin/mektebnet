@@ -296,6 +296,13 @@ router.get("/plan-lekcija", async (req, res) => {
   }
 });
 
+// Evidencija koja se resetuje na početku mektebske godine počinje 1. augusta.
+function currentSchoolYearResetDate(): string {
+  const now = new Date();
+  const year = now.getUTCMonth() >= 7 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+  return `${year}-08-01`;
+}
+
 // GET /api/ucenik/zadace — student sees active homework for their group.
 // Supports per-student targeting: if a zadaca has rows in zadace_ucenici,
 // it is visible only to the listed students. If no rows — visible to whole group.
@@ -351,6 +358,21 @@ router.get("/zadace", async (req, res) => {
     const statusMap = new Map(statusi.map(s => [s.zadacaId, s]));
     const today = new Date().toISOString().split("T")[0];
 
+    // Zadaće historijski čuvaju naziv lekcije, a ne ID. Vrati i slug kada
+    // postoji tačno podudaranje, da učenik može otvoriti zadatu lekciju i kad
+    // je naslov na listi već preklopljen na drugi jezik.
+    const lessonTitles = [...new Set(
+      visible.map(z => z.lekcijaNaslov).filter((title): title is string => Boolean(title?.trim())),
+    )];
+    const linkedLessons = lessonTitles.length > 0
+      ? await db.select({
+          id: ilmihalLekcijeTable.id,
+          naslov: ilmihalLekcijeTable.naslov,
+          slug: ilmihalLekcijeTable.slug,
+        }).from(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.naslov, lessonTitles))
+      : [];
+    const lessonSlugByTitle = new Map(linkedLessons.map(l => [l.naslov, l.slug]));
+
     const withStatus = visible.map(z => {
       const s = statusMap.get(z.id);
       const status = s?.status ?? "na_cekanju";
@@ -361,6 +383,11 @@ router.get("/zadace", async (req, res) => {
       const istekao = !!(efektivniRok && efektivniRok < today);
       return {
         ...z,
+        // Novi unosi imaju kanonski slug; naslov ostaje samo fallback za stare
+        // zadaće nastale prije uvođenja stabilne veze sa lekcijom.
+        lekcijaSlug: z.lekcijaSlug ?? (z.lekcijaNaslov
+          ? lessonSlugByTitle.get(z.lekcijaNaslov) ?? null
+          : null),
         efektivniRok,
         status,
         uradjeno: s?.uradjeno ?? false,
@@ -431,13 +458,15 @@ router.get("/dokumenti/:id/file", async (req, res) => {
 router.get("/moje-zvjezdice", async (req, res) => {
   try {
     const userId = req.user!.userId;
-    const rows = await db.execute(sql`
+    const result = await db.execute(sql`
       SELECT
         COUNT(*) FILTER (WHERE tip = 'pozitivna') AS pozitivne,
         COUNT(*) FILTER (WHERE tip = 'negativna') AS negativne
-      FROM zvjezdice_log WHERE ucenik_id = ${userId}
+      FROM zvjezdice_log
+      WHERE ucenik_id = ${userId}
+        AND created_at >= ${currentSchoolYearResetDate()}
     `);
-    const r = (rows as unknown as any[])[0] || {};
+    const r = (result.rows as Array<{ pozitivne?: string | number; negativne?: string | number }>)[0] || {};
     res.json({ pozitivne: parseInt(String(r.pozitivne ?? 0)) || 0, negativne: parseInt(String(r.negativne ?? 0)) || 0 });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });

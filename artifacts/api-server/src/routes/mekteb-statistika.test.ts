@@ -44,6 +44,7 @@ let grupaId: number;
 let ucenik1Id: number; // dobit će 2 pozitivne + 1 negativna zvjezdica, 50 bodova
 let ucenik2Id: number; // bez ijedne zvjezdice, 30 bodova
 let muallimToken: string;
+let ucenik1Token: string;
 
 // ── Zvjezdice — raw SQL (tabela nije u drizzle shemi) ───────────────────────
 
@@ -206,6 +207,12 @@ before(async () => {
     role: "muallim",
     displayName: `Muallim ${SUFFIX}`,
   });
+  ucenik1Token = signToken({
+    userId: ucenik1Id,
+    username: `ucenik1.${SUFFIX}`,
+    role: "ucenik",
+    displayName: `Ucenik1 ${SUFFIX}`,
+  });
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -257,6 +264,12 @@ function glavniPost(path: string, body: unknown) {
       Authorization: `Bearer ${muallimToken}`,
     },
     body: JSON.stringify(body),
+  });
+}
+
+function ucenikGet(path: string) {
+  return fetch(`${baseUrl}${path}`, {
+    headers: { Authorization: `Bearer ${ucenik1Token}` },
   });
 }
 
@@ -350,6 +363,21 @@ test("grupa/statistika — učenik bez zvjezdica dobija eksplicitne nule (ne izo
   assert.ok(u1 !== undefined, `Ucenik ${ucenik1Id} mora biti u odgovoru`);
   assert.equal(u1!.zvjezdicePozitivne, 2, "Ucenik1 mora imati 2 pozitivne zvjezdice");
   assert.equal(u1!.zvjezdiceNegativne, 1, "Ucenik1 mora imati 1 negativnu zvjezdicu");
+});
+
+test("učenik i muallim vide iste ukupne zvjezdice za tekuću školsku godinu", async () => {
+  const [studentResponse, teacherResponse] = await Promise.all([
+    ucenikGet("/api/ucenik/moje-zvjezdice"),
+    glavniGet(`/api/muallim/ucenik/${ucenik1Id}/zvjezdice`),
+  ]);
+  assert.equal(studentResponse.status, 200);
+  assert.equal(teacherResponse.status, 200);
+
+  const student = await studentResponse.json() as { pozitivne: number; negativne: number };
+  const teacher = await teacherResponse.json() as { pozitivne: number; negativne: number };
+  assert.deepEqual(student, { pozitivne: 2, negativne: 1 });
+  assert.equal(student.pozitivne, teacher.pozitivne);
+  assert.equal(student.negativne, teacher.negativne);
 });
 
 test("profil učenika prikazuje kategoriju zvjezdice ponašanja", async () => {
