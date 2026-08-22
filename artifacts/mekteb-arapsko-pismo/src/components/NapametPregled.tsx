@@ -35,7 +35,7 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
 }) {
   const gradeByItem = new Map(ocjene.filter((o) => o.napametStavkaId).map((o) => [o.napametStavkaId!, o]));
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start" data-testid="napamet-pregled">
+    <div className="grid grid-cols-1 gap-4 items-start" data-testid="napamet-pregled">
       {[1, 2, 3, 4].map((nivo) => {
         const stavke = katalog.filter((s) => s.nivo === nivo).sort((a, b) => a.redoslijed - b.redoslijed);
         if (!stavke.length && !loading) return null;
