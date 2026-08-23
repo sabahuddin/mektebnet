@@ -18,6 +18,7 @@
  *   DATABASE_URL="$PROD_DATABASE_URL" pnpm --filter @workspace/scripts exec \
  *     tsx src/translate-content.ts --langs sq,de,en,tr,ar --max-seconds 100
  *   ... --tables rjecnik,pitanja_banka   (ograniči tabele)
+ *   ... --tables ilmihal_lekcije --nivo 1 (samo jedan nivo Ilmihala)
  *   ... --types text                      (samo tekst, preskoči HTML)
  *   ... --dry                             (samo prebroji, bez OpenAI poziva)
  */
@@ -64,6 +65,7 @@ function argVal(name: string, def: string) {
 const LANGS = argVal("--langs", "sq,de,en,tr,ar").split(",").map((s) => s.trim()).filter((l) => l && l !== "bs");
 const ONLY_TABLES = argVal("--tables", "").split(",").map((s) => s.trim()).filter(Boolean);
 const ONLY_TYPES = argVal("--types", "").split(",").map((s) => s.trim()).filter(Boolean);
+const ONLY_NIVO = parseInt(argVal("--nivo", "0"), 10);
 const DRY = args.includes("--dry");
 const MODEL = argVal("--model", "gpt-5-nano");
 const CHUNK = parseInt(argVal("--chunk", "30"), 10);
@@ -121,6 +123,7 @@ const TEXT_SYS = (targetName: string) => `Ti si profesionalni prevodilac za isla
 Prevedi sa BOSANSKOG na ${targetName}.
 Pravila:
 - Zadrži islamske/arapske termine i vlastita imena prirodno za ciljni jezik (npr. Allah, Kur'an, sura, ajet, ezan, salavat, mekteb, muallim, ilmihal, abdest); nazive sura i dova NE prevodi (npr. El-Fatiha, El-Ihlas ostaju isti).
+- Za stručni islamski termin koji ima prirodan njemački ekvivalent, napiši njemački izraz pa bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ovo ne primjenjuj na nazive sura/dova, arapske transliteracije i vlastita imena.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Zadrži placeholdere u vitičastim zagradama {ovako} i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt oblika {"prijevodi": [...]} gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz. Bez objašnjenja.`;
@@ -171,6 +174,7 @@ Stroga pravila:
 - Prevedi SAMO ljudski čitljiv tekst između tagova i tekstualne atribute (alt, title, placeholder). NE diraj vrijednosti src, href, data-*, class, id, style.
 - Zadrži arapski tekst (ajeti, dove, kaligrafija) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Zadrži islamske/arapske termine i nazive sura/dova kako jesu (El-Fatiha itd.).
+- Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.
 - NE umotavaj odgovor u markdown (bez \`\`\`). Vrati ČISTO HTML, ništa drugo.`;
 
 async function translateHtml(html: string, targetName: string): Promise<string> {
@@ -225,7 +229,10 @@ async function run() {
 
   for (const t of tables) {
     const cols = t.fields.map((f) => f.col);
-    const r = (await db.execute(sql.raw(`SELECT id, ${cols.join(", ")} FROM ${t.tabela}`))) as unknown as { rows: any[] };
+    const nivoFilter = t.tabela === "ilmihal_lekcije" && ONLY_NIVO > 0
+      ? ` WHERE nivo = ${ONLY_NIVO}`
+      : "";
+    const r = (await db.execute(sql.raw(`SELECT id, ${cols.join(", ")} FROM ${t.tabela}${nivoFilter}`))) as unknown as { rows: any[] };
     for (const row of r.rows) {
       const redId = row.id as number;
       for (const f of t.fields) {
