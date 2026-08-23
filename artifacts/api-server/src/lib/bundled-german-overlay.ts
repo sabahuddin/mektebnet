@@ -23,6 +23,31 @@ function sha256(value: string) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
+function isAllCapsText(value: string) {
+  const letters = value.match(/\p{L}/gu) ?? [];
+  const hasCasedLetter = letters.some((letter) => letter.toLowerCase() !== letter.toUpperCase());
+  return hasCasedLetter && letters.every((letter) => letter.toUpperCase() === letter);
+}
+
+function preserveSourceCasing(source: string, translation: string, field: BundledGermanOverlay["field"]) {
+  if (field !== "content_html") {
+    return isAllCapsText(source) ? translation.toLocaleUpperCase("de-DE") : translation;
+  }
+
+  // The bundle preserves identical HTML structure. Reapply uppercase styling
+  // node-by-node so Arabic passages remain untouched while surrounding German
+  // lesson text follows the source typography.
+  const sourceParts = source.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
+  const translationParts = translation.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
+  if (sourceParts.length !== translationParts.length) return translation;
+
+  return translationParts.map((part, index) => (
+    !part.startsWith("<") && isAllCapsText(sourceParts[index])
+      ? part.toLocaleUpperCase("de-DE")
+      : part
+  )).join("");
+}
+
 /**
  * Applies the reviewed German content packaged with this release. Every write is
  * guarded by the Bosnian source hash, so changed lessons are skipped rather than
@@ -49,9 +74,14 @@ export async function applyBundledGermanOverlays() {
       skipped.push(`${overlay.slug}/${overlay.field}`);
       continue;
     }
+    const translation = preserveSourceCasing(
+      sourceForField(lesson, overlay.field),
+      overlay.translation,
+      overlay.field,
+    );
     await db.execute(sql`
       INSERT INTO content_prijevodi (tabela, red_id, polje, jezik, prijevod, izvor_hash, updated_at)
-      VALUES ('ilmihal_lekcije', ${lesson.id}, ${overlay.field}, 'de', ${overlay.translation}, ${overlay.sourceHash}, NOW())
+      VALUES ('ilmihal_lekcije', ${lesson.id}, ${overlay.field}, 'de', ${translation}, ${overlay.sourceHash}, NOW())
       ON CONFLICT (tabela, red_id, polje, jezik)
       DO UPDATE SET prijevod = EXCLUDED.prijevod, izvor_hash = EXCLUDED.izvor_hash, updated_at = NOW()
     `);
