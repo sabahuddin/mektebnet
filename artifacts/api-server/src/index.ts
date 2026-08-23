@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { bootstrapDrizzleMigrations, runDrizzleMigrate } from "./lib/drizzle-migrate";
+import { applyBundledGermanOverlays } from "./lib/bundled-german-overlay";
 
 interface DbExecResult<T = Record<string, unknown>> {
   rows: T[];
@@ -1364,6 +1365,7 @@ async function startup() {
     logger.error({ err: e }, "zvjezdice_kategorije schema failed");
   }
 
+  await applyBundledGermanOverlays();
   await runDataBootstrap();
   try {
     const { seedHalalHaramLesson } = await import("./routes/halal-haram-seed.js");
