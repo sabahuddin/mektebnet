@@ -88,7 +88,6 @@ const usage = { in: 0, out: 0 };
 
 // ---- OpenAI: batch kratkih tekstova → JSON original->prijevod ----
 async function callOpenAI(body: Record<string, unknown>): Promise<any> {
-  if (MODEL.startsWith("gpt-5")) body.reasoning_effort = "minimal";
   let res: Response | null = null;
   for (let attempt = 0; attempt < 6; attempt++) {
     const ac = new AbortController();
