@@ -331,3 +331,16 @@ test("grupni NAPAMET brojač računa učenika samo jednom po stavci", async () =
   assert.equal(stavka?.ocijenjenoUcenika, 1);
   assert.equal(stavka?.ukupnoUcenika, 1);
 });
+
+test("detalji NAPAMET stavke vraćaju posljednju ocjenu po učeniku", async () => {
+  const response = await authed(`/api/muallim/napamet-program/${STAVKA_ID}/detalji?grupaId=${grupaId}`, muallimToken);
+  assert.equal(response.status, 200);
+  const payload = await response.json() as {
+    ocijenjeni: Array<{ id: number; ocjena: number; datum: string }>;
+    nisuOcijenjeni: Array<{ id: number }>;
+  };
+  assert.equal(payload.ocijenjeni.filter((student) => student.id === ucenikId).length, 1);
+  assert.equal(payload.ocijenjeni.find((student) => student.id === ucenikId)?.ocjena, 6);
+  assert.equal(payload.ocijenjeni.find((student) => student.id === ucenikId)?.datum, "2026-08-27");
+  assert.equal(payload.nisuOcijenjeni.some((student) => student.id === ucenikId), false);
+});

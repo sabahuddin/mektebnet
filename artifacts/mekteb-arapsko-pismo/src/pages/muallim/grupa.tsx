@@ -124,6 +124,12 @@ interface InteraktivniPregledGrupe {
   }>;
 }
 
+interface NapametDetalji {
+  stavka: { id: string; naziv: string; nivo: number; scope?: string };
+  ocijenjeni: Array<{ id: number; displayName: string; ocjena: number; datum: string }>;
+  nisuOcijenjeni: Array<{ id: number; displayName: string }>;
+}
+
 type GrupaModul = "ucenici" | "napamet" | "greske";
 
 export default function GrupaPage() {
@@ -170,6 +176,10 @@ export default function GrupaPage() {
   });
   const [napametKatalog, setNapametKatalog] = useState<NapametStavka[]>([]);
   const [napametRefreshKey, setNapametRefreshKey] = useState(0);
+  const [napametOdabrana, setNapametOdabrana] = useState<NapametStavka | null>(null);
+  const [napametDetalji, setNapametDetalji] = useState<NapametDetalji | null>(null);
+  const [napametDetaljiLoading, setNapametDetaljiLoading] = useState(false);
+  const [napametDetaljiError, setNapametDetaljiError] = useState<string | null>(null);
   const [savingOcjena, setSavingOcjena] = useState(false);
 
   // Zadaća modal — ako zadacaTarget=null → zadaća za cijelu grupu
@@ -284,6 +294,29 @@ export default function GrupaPage() {
       })
       .catch(() => {});
   }
+
+  async function openNapametDetalji(item: NapametStavka) {
+    if (!token || !grupaId) return;
+    setNapametOdabrana(item);
+    setNapametDetalji(null);
+    setNapametDetaljiLoading(true);
+    setNapametDetaljiError(null);
+    try {
+      const data = await apiRequest<NapametDetalji>("GET", `/muallim/napamet-program/${encodeURIComponent(item.id)}/detalji?grupaId=${grupaId}`, undefined, token);
+      setNapametDetalji(data);
+    } catch (error: any) {
+      setNapametDetaljiError(error?.message || t("Nije moguće učitati ocjene"));
+    } finally {
+      setNapametDetaljiLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!napametDetalji) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setNapametDetalji(null); };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [napametDetalji]);
 
   function refreshStudents() {
     if (!token) return;
@@ -779,7 +812,7 @@ export default function GrupaPage() {
         </div>
 
          {aktivniModul === "napamet" && !grupa.isArchived && (
-           <NapametLokalniProgramEditor key={napametRefreshKey} grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} />
+           <NapametLokalniProgramEditor key={napametRefreshKey} grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} onItemClick={openNapametDetalji} />
          )}
 
          {aktivniModul === "greske" && <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-grupe">
@@ -1551,6 +1584,54 @@ export default function GrupaPage() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {napametOdabrana && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4"
+          onClick={() => { setNapametOdabrana(null); setNapametDetalji(null); setNapametDetaljiError(null); }}>
+          <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            role="dialog" aria-modal="true" aria-labelledby="napamet-detalji-title"
+            className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-emerald-100 bg-emerald-50 px-5 py-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                  {napametOdabrana.nivo === 4 ? t("Dodatak") : `${t("NAPAMET")} ${napametOdabrana.nivo}. ${t("nivo")}`}
+                </p>
+                <h2 id="napamet-detalji-title" className="mt-1 text-lg font-extrabold text-emerald-950">
+                  {napametDetalji?.stavka.naziv || napametOdabrana.naziv}
+                </h2>
+              </div>
+              <button type="button" aria-label={t("Zatvori")} onClick={() => { setNapametOdabrana(null); setNapametDetalji(null); }} className="rounded-lg p-1.5 text-emerald-700 hover:bg-emerald-100">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-5">
+              {napametDetaljiLoading && <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> {t("Učitavanje...")}</div>}
+              {napametDetaljiError && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{napametDetaljiError}</div>}
+              {napametDetalji && !napametDetaljiLoading && !napametDetaljiError && (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <div>
+                    <h3 className="mb-2 flex items-center gap-2 font-extrabold text-emerald-800"><Check className="h-4 w-4" /> {t("Ocijenjeni")} <span className="text-xs font-bold text-muted-foreground">({napametDetalji.ocijenjeni.length})</span></h3>
+                    {napametDetalji.ocijenjeni.length ? <div className="space-y-2">{napametDetalji.ocijenjeni.map((student) => (
+                      <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5">
+                        <span className="min-w-0 truncate text-sm font-bold">{student.displayName}</span>
+                        <span className="shrink-0 text-right"><strong className="rounded-full bg-emerald-100 px-2 py-1 text-sm text-emerald-800">{student.ocjena}</strong><small className="ml-2 text-xs text-muted-foreground">{fmtDatum(student.datum) || student.datum}</small></span>
+                      </div>
+                    ))}</div> : <p className="rounded-xl bg-slate-50 p-4 text-sm text-muted-foreground">{t("Niko još nije ocijenjen.")}</p>}
+                  </div>
+                  <div>
+                    <h3 className="mb-2 flex items-center gap-2 font-extrabold text-slate-600"><Users className="h-4 w-4" /> {t("Još nisu ocijenjeni")} <span className="text-xs font-bold text-muted-foreground">({napametDetalji.nisuOcijenjeni.length})</span></h3>
+                    {napametDetalji.nisuOcijenjeni.length ? <div className="space-y-2">{napametDetalji.nisuOcijenjeni.map((student) => (
+                      <div key={student.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-600">{student.displayName}</div>
+                    ))}</div> : <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{t("Svi učenici su ocijenjeni.")}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-border p-4"><Button variant="outline" onClick={() => { setNapametOdabrana(null); setNapametDetalji(null); }} className="w-full rounded-xl">{t("Zatvori")}</Button></div>
+          </motion.div>
         </div>
       )}
 
