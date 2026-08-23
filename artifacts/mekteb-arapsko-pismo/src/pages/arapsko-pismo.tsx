@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
 import { BookOpen, Search, Volume2, Lock, PlayCircle } from "lucide-react";
@@ -87,7 +88,7 @@ export default function ArapskoPismoPage() {
             Sufara još nije završena i trenutno nije dostupna.
           </p>
           <button
-            onClick={() => setLocation("/")}
+            onClick={() => goBackOr(() => setLocation("/"))}
             className="bg-primary text-primary-foreground rounded-2xl px-6 py-3 font-bold hover:opacity-90 transition-opacity"
           >
             Nazad na početnu

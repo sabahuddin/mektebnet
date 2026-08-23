@@ -1,5 +1,5 @@
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/back-link";
 import { Maskota } from "@/components/maskota";
 import { Home } from "lucide-react";
 import { useLanguage } from "@/context/language";
@@ -15,11 +15,11 @@ export default function NotFound() {
         <p className="mt-1 text-sm text-muted-foreground">
           {t("Mala pčela je tražila ali nije našla. Vrati se kući i nastavi učiti.")}
         </p>
-        <Link href="/">
-          <Button className="mt-6 rounded-xl flex items-center gap-2 mx-auto" data-testid="button-nazad-kuci">
+        <Button asChild className="mt-6 rounded-xl flex items-center gap-2 mx-auto" data-testid="button-nazad-kuci">
+          <BackLink fallback="/">
             <Home className="w-4 h-4" /> {t("Nazad na početnu")}
-          </Button>
-        </Link>
+          </BackLink>
+        </Button>
       </div>
     </div>
   );

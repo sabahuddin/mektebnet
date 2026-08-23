@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -190,7 +191,7 @@ export default function CitaonicaKnjigaPage() {
 
         {/* Nazad */}
         <button
-          onClick={() => setLocation("/citaonica")}
+          onClick={() => goBackOr(() => setLocation("/citaonica"))}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-base transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10 mb-6"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Čitaonica")}

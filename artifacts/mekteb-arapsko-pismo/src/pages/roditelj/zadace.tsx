@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -63,7 +64,7 @@ export default function RoditeljZadacePage() {
     <Layout>
       <div className="max-w-3xl mx-auto">
         <button
-          onClick={() => setLocation("/roditelj")}
+          onClick={() => goBackOr(() => setLocation("/roditelj"))}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors"
           data-testid="link-nazad"
         >

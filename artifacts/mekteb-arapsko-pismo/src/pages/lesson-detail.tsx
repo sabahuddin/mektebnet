@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
-import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { BackLink } from "@/components/back-link";
 import { ArrowLeft, Check, Download, Gamepad2, Info, Map, PlayCircle, RotateCcw, Search, Star, Trophy, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -610,7 +610,7 @@ export default function LessonDetail() {
       <Layout>
         <div className="text-center py-20">
           <h1 className="text-3xl font-black mb-4">{t("Lekcija nije pronađena")}</h1>
-          <Link href="/arapsko-pismo" className="text-primary font-bold underline">{t("← Nazad na lekcije")}</Link>
+          <BackLink fallback="/arapsko-pismo" className="text-primary font-bold underline">{t("← Nazad na lekcije")}</BackLink>
         </div>
       </Layout>
     );
@@ -771,10 +771,10 @@ export default function LessonDetail() {
 
       {/* Nazad */}
       <div className="mb-6">
-        <Link href="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
+        <BackLink fallback="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
           <ArrowLeft className="w-5 h-5" />
           {t("Nazad na lekcije")}
-        </Link>
+        </BackLink>
       </div>
 
       {/* Hero */}

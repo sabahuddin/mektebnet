@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
@@ -1336,7 +1337,7 @@ export default function MuallimPanel() {
       <Layout>
         <div className="text-center py-20">
           <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo muallimima")}</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
+          <Button className="mt-4" onClick={() => goBackOr(() => setLocation("/"))}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );

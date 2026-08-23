@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { ArrowLeft, GraduationCap, User } from "lucide-react";
@@ -167,7 +168,7 @@ export default function DodajGrupuPage() {
         ) : !loaded ? (
           <div className="bg-white border border-border/50 rounded-2xl p-8 text-center space-y-4">
             <p className="text-muted-foreground">{t("Nije moguće učitati podatke grupe.")}</p>
-            <Button onClick={() => setLocation("/muallim?tab=grupe")} variant="outline" className="rounded-xl font-bold">{t("Nazad na grupe")}</Button>
+            <Button onClick={() => goBackOr(() => setLocation("/muallim?tab=grupe"))} variant="outline" className="rounded-xl font-bold">{t("Nazad na grupe")}</Button>
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-6 space-y-5">

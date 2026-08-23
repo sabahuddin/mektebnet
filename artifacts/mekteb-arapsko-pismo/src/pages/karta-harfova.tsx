@@ -1,6 +1,7 @@
-import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import { Layout } from "@/components/layout";
+import { BackLink } from "@/components/back-link";
 import { useLanguage } from "@/context/language";
 import { ArrowLeft, Volume2 } from "lucide-react";
 import { LESSONS } from "@/data/lessons";
@@ -79,10 +80,10 @@ export default function KartaHarfova() {
   return (
     <Layout>
       <div className="mb-6">
-        <Link href="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
+        <BackLink fallback="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
           <ArrowLeft className="w-5 h-5" />
           {t("Nazad na lekcije")}
-        </Link>
+        </BackLink>
       </div>
 
       {/* Hero */}

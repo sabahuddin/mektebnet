@@ -7,6 +7,7 @@ import { X, Star, Timer, AlertCircle, CheckCircle2, Volume2, Gamepad2 } from "lu
 import { Button } from "@/components/ui/button";
 import { Maskota } from "@/components/maskota";
 import { CelebrationModal, type CelebrationData } from "@/components/celebration-modal";
+import { goBackOr } from "@/lib/back-navigation";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
 
@@ -441,7 +442,7 @@ export default function Exercise() {
                 size="lg" 
                 className="w-full text-xl py-6 rounded-xl"
                 disabled={isSaving}
-                onClick={() => setLocation(`/lesson/${lessonId}`)}
+                onClick={() => goBackOr(() => setLocation(`/lesson/${lessonId}`))}
               >
                 {isSaving ? t("Spremanje...") : t("Nazad na lekciju")}
               </Button>

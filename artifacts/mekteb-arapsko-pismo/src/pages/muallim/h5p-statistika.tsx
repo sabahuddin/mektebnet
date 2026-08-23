@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { BackLink } from "@/components/back-link";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
@@ -291,7 +293,7 @@ export default function MuallimH5pStatistikaPage() {
       <Layout>
         <div className="text-center py-20">
           <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo muallimima")}</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
+          <Button className="mt-4" onClick={() => goBackOr(() => setLocation("/"))}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );
@@ -301,11 +303,9 @@ export default function MuallimH5pStatistikaPage() {
     <Layout>
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/muallim">
-            <button className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
-            </button>
-          </Link>
+          <BackLink fallback="/muallim" className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
+          </BackLink>
         </div>
 
         <div className="flex items-center gap-4 mb-6">

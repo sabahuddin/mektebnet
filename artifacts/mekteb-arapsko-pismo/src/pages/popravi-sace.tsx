@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Wrench, CheckCircle2, XCircle, Sparkles, BookOpen, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
@@ -146,9 +147,9 @@ export default function PopraviSacePage() {
     <Layout>
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <Link href="/ucenik" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary text-sm font-medium mb-3">
+          <BackLink fallback="/ucenik" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary text-sm font-medium mb-3">
             <ArrowLeft className="w-4 h-4" /> {t("Nazad na profil")}
-          </Link>
+          </BackLink>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-md">
               <Wrench className="w-6 h-6 text-white" />

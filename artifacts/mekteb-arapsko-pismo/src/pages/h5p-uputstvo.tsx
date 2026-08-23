@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -345,7 +346,7 @@ export default function H5pUputstvoPage() {
           <p className="text-muted-foreground font-medium">
             {t("Pristup dozvoljen samo administratorima")}
           </p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>
+          <Button className="mt-4" onClick={() => goBackOr(() => setLocation("/"))}>
             {t("Nazad")}
           </Button>
         </div>

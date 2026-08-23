@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
+import { BackLink } from "@/components/back-link";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import {
@@ -234,7 +235,7 @@ export default function MuallimTutorijalPage() {
           <h1 className="mt-4 text-2xl font-black text-[#173f3d]">{t("Muallimski tutorijal")}</h1>
           <p className="mt-2 text-sm leading-6 text-[#65706d]">{t("Ovaj vodič je dostupan samo muallimima i administratorima.")}</p>
           <Button asChild className="mt-6 rounded-xl font-bold">
-            <Link href="/muallim" data-testid="link-tutorijal-back-denied">{t("Nazad na panel")}</Link>
+            <BackLink fallback="/muallim" data-testid="link-tutorijal-back-denied">{t("Nazad na panel")}</BackLink>
           </Button>
         </div>
       </Layout>
@@ -251,14 +252,14 @@ export default function MuallimTutorijalPage() {
     <Layout>
       <div className="mx-auto max-w-5xl">
         <div className="no-print mb-6 flex items-center justify-between gap-3">
-          <Link
-            href="/muallim"
+          <BackLink
+            fallback="/muallim"
             className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-extrabold text-[#55706a] transition-colors hover:bg-[#eaf2ed] hover:text-[#173f3d]"
             data-testid="link-tutorijal-back"
           >
             <ArrowLeft className="h-4 w-4" />
             {t("Nazad na Muallimski panel")}
-          </Link>
+          </BackLink>
           <Button
             onClick={handlePrint}
             variant="outline"

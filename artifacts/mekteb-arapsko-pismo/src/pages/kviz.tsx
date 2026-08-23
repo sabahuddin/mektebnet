@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen, GripVertical, Lock } from "lucide-react";
@@ -677,7 +678,7 @@ export default function KvizPage() {
           </p>
           <div className="flex gap-3 justify-center">
             <Button onClick={() => setLocation("/registracija")} className="rounded-2xl">{t("Registruj se")}</Button>
-            <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">{t("Nazad")}</Button>
+            <Button variant="outline" onClick={() => goBackOr(() => setLocation("/kvizovi"))} className="rounded-2xl">{t("Nazad")}</Button>
           </div>
         </div>
       </Layout>
@@ -693,7 +694,7 @@ export default function KvizPage() {
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-xl font-extrabold text-foreground mb-2">{kviz.naslov}</h2>
           <p className="text-muted-foreground mb-6">{t("Ovaj kviz je u pripremi — pitanja uskoro stižu!")}</p>
-          <button onClick={() => setLocation("/kvizovi")}
+          <button onClick={() => goBackOr(() => setLocation("/kvizovi"))}
             className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-primary font-bold transition-colors">
             <ArrowLeft className="w-4 h-4" /> {t("Nazad na kvizove")}
           </button>
@@ -1010,7 +1011,7 @@ export default function KvizPage() {
               </div>
             )}
             <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={() => setLocation("/kvizovi")} className="rounded-2xl">{t("Nazad")}</Button>
+              <Button variant="outline" onClick={() => goBackOr(() => setLocation("/kvizovi"))} className="rounded-2xl">{t("Nazad")}</Button>
               <Button onClick={() => {
                 const pool = shuffle(kviz.pitanja);
                 const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
@@ -1052,7 +1053,7 @@ export default function KvizPage() {
     <Layout>
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <button onClick={() => setLocation("/kvizovi")} className="flex items-center gap-2 text-muted-foreground hover:text-primary font-medium transition-colors">
+          <button onClick={() => goBackOr(() => setLocation("/kvizovi"))} className="flex items-center gap-2 text-muted-foreground hover:text-primary font-medium transition-colors">
             <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
           {user?.role === "admin" && (

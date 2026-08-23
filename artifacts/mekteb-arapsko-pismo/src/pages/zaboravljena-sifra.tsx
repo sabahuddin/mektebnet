@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { goBackOr } from "@/lib/back-navigation";
 import { Input } from "@/components/ui/input";
 import { Mail, ArrowLeft, CheckCircle2, AlertCircle, KeyRound } from "lucide-react";
 import { useLanguage } from "@/context/language";
@@ -72,7 +73,7 @@ export default function ZaboravljenaSifraPage() {
                   {t("Ako račun s tom adresom postoji, poslali smo link za postavljanje nove šifre. Link važi 1 sat.")}
                 </p>
               </div>
-              <Button onClick={() => setLocation("/login")} variant="outline" className="rounded-xl">
+              <Button onClick={() => goBackOr(() => setLocation("/login"))} variant="outline" className="rounded-xl">
                 <ArrowLeft className="w-4 h-4 mr-2" /> {t("Nazad na prijavu")}
               </Button>
             </div>
@@ -110,7 +111,7 @@ export default function ZaboravljenaSifraPage() {
               </form>
 
               <div className="mt-6 pt-6 border-t border-border/50 text-center">
-                <button onClick={() => setLocation("/login")} className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+                <button onClick={() => goBackOr(() => setLocation("/login"))} className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
                   <ArrowLeft className="w-3.5 h-3.5" /> {t("Nazad na prijavu")}
                 </button>
               </div>

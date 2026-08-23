@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, lazy, memo, Suspense }
 import { useParams, useLocation, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest } from "@/lib/api";
 import { isLekcijaUnlocked } from "@/lib/lekcija-unlock";
 import { useAuth } from "@/context/auth";
@@ -2998,9 +2999,8 @@ export default function IlmihalLekcijaPage() {
 
   const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 3: "Nivo 3" };
   const backNivo = lekcija ? displayNivo(lekcija.nivo) : null;
-  // Nazad vodi KORAK nazad — na snake-mapu lekcija tog nivoa (gdje učenik bira
-  // sljedeću lekciju), a NE na izbor košnica/nivoa (što djeluje kao izlazak).
-  const goBack = () => setLocation(backNivo ? `/nivo${backNivo}-mapa` : "/ilmihal");
+  // Za direktno otvorenu lekciju fallback je njena mapa; inače idemo jedan korak nazad.
+  const goBack = () => goBackOr(() => setLocation(backNivo ? `/nivo${backNivo}-mapa` : "/ilmihal"));
 
   if (isLoading) {
     return (
@@ -3065,7 +3065,7 @@ export default function IlmihalLekcijaPage() {
               </Button>
             </div>
           )}
-          <Button className="mt-4" variant="outline" onClick={() => setLocation("/ilmihal")}>{t("Nazad")}</Button>
+          <Button className="mt-4" variant="outline" onClick={() => goBackOr(() => setLocation("/ilmihal"))}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );

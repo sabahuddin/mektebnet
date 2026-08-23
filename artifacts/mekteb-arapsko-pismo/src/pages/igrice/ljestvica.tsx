@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
+import { BackLink } from "@/components/back-link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
@@ -119,7 +120,7 @@ export default function Ljestvica() {
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-ljestvica">
           <p className="font-bold text-foreground mb-2">{t("Tabela je dostupna samo učeničkim nalozima")}</p>
-          <Link href="/igrice" className="text-primary font-bold underline">{t("Nazad")}</Link>
+          <BackLink fallback="/igrice" className="text-primary font-bold underline">{t("Nazad")}</BackLink>
         </Card>
       </Layout>
     );
@@ -133,11 +134,11 @@ export default function Ljestvica() {
         onTouchEnd={onTouchEnd}
       >
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <Link href="/igrice">
-          <Button variant="ghost" size="sm" className="rounded-xl">
+        <Button asChild variant="ghost" size="sm" className="rounded-xl">
+          <BackLink fallback="/igrice">
             <ArrowLeft className="w-4 h-4 mr-1" /> {t("Natrag")}
-          </Button>
-        </Link>
+          </BackLink>
+        </Button>
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
           <Trophy className="w-7 h-7 text-amber-500" /> {t("Tabela")}
         </h1>

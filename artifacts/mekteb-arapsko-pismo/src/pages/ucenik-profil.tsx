@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -407,7 +408,7 @@ export default function UcenikProfilPage() {
       <Layout>
         <div className="text-center py-20">
           <p className="text-muted-foreground font-medium">{t("Pristup dozvoljen samo učenicima")}</p>
-          <Button className="mt-4" onClick={() => setLocation("/")}>{t("Nazad")}</Button>
+          <Button className="mt-4" onClick={() => goBackOr(() => setLocation("/"))}>{t("Nazad")}</Button>
         </div>
       </Layout>
     );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
+import { BackLink } from "@/components/back-link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GameTimer } from "@/components/game-timer";
@@ -186,7 +187,7 @@ export default function BrziKviz() {
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-brzi-kviz">
           <p className="font-bold text-foreground mb-2">{t("Igrice su dostupne samo učeničkim nalozima")}</p>
-          <Link href="/igrice" className="text-primary font-bold underline">{t("Nazad")}</Link>
+          <BackLink fallback="/igrice" className="text-primary font-bold underline">{t("Nazad")}</BackLink>
         </Card>
       </Layout>
     );
@@ -197,11 +198,11 @@ export default function BrziKviz() {
   return (
     <Layout>
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <Link href="/igrice">
-          <Button variant="ghost" size="sm" className="rounded-xl">
+        <Button asChild variant="ghost" size="sm" className="rounded-xl">
+          <BackLink fallback="/igrice">
             <ArrowLeft className="w-4 h-4 mr-1" /> {t("Natrag")}
-          </Button>
-        </Link>
+          </BackLink>
+        </Button>
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
           <Zap className="w-7 h-7 text-orange-500" /> {t("Brzi kviz")}
         </h1>
@@ -324,9 +325,9 @@ export default function BrziKviz() {
                 <Button variant="outline" onClick={() => setLocation("/igrice/ljestvica")} className="rounded-2xl">
                   {t("Tabela")}
                 </Button>
-                <Link href="/igrice">
-                  <Button variant="ghost" className="rounded-2xl">{t("Natrag na Igrice")}</Button>
-                </Link>
+                <Button asChild variant="ghost" className="rounded-2xl">
+                  <BackLink fallback="/igrice">{t("Natrag na Igrice")}</BackLink>
+                </Button>
               </div>
             </Card>
           </motion.div>
