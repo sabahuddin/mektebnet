@@ -21,6 +21,7 @@ const suffix = `zadaca-lekcija-${Date.now()}`;
 let server: Server | undefined;
 let baseUrl: string;
 let studentId: number;
+let otherStudentId: number;
 let teacherId: number;
 let groupId: number;
 let prerequisiteId: number;
@@ -31,12 +32,13 @@ let blockedSlug: string;
 let assignedHomeworkId: number;
 let emptyHomeworkId: number;
 let studentToken: string;
+let otherStudentToken: string;
 let teacherToken: string;
 
-function studentGet(path: string, headers: Record<string, string> = {}) {
+function studentGet(path: string, headers: Record<string, string> = {}, token = studentToken) {
   return fetch(`${baseUrl}${path}`, {
     headers: {
-      Authorization: `Bearer ${studentToken}`,
+      Authorization: `Bearer ${token}`,
       ...headers,
     },
   });
@@ -82,6 +84,10 @@ async function cleanup(): Promise<void> {
   if (studentId) {
     await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, studentId));
     await db.delete(usersTable).where(eq(usersTable.id, studentId));
+  }
+  if (otherStudentId) {
+    await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, otherStudentId));
+    await db.delete(usersTable).where(eq(usersTable.id, otherStudentId));
   }
   if (groupId) await db.delete(grupeTable).where(eq(grupeTable.id, groupId));
   if (teacherId) await db.delete(usersTable).where(eq(usersTable.id, teacherId));
@@ -153,6 +159,19 @@ before(async () => {
     muallimId: teacherId,
     grupaId: groupId,
   });
+  const [otherStudent] = await db.insert(usersTable).values({
+    username: `ucenik-drugi.${suffix}`,
+    displayName: "Drugi učenik testa",
+    passwordHash: "x",
+    role: "ucenik",
+    isActive: true,
+  }).returning({ id: usersTable.id });
+  otherStudentId = otherStudent.id;
+  await db.insert(ucenikProfiliTable).values({
+    userId: otherStudentId,
+    muallimId: teacherId,
+    grupaId: groupId,
+  });
 
   const [prerequisite] = await db.insert(ilmihalLekcijeTable).values({
     nivo: 1,
@@ -218,6 +237,12 @@ before(async () => {
     userId: studentId,
     username: `ucenik.${suffix}`,
     displayName: "Učenik testa",
+    role: "ucenik",
+  });
+  otherStudentToken = signToken({
+    userId: otherStudentId,
+    username: `ucenik-drugi.${suffix}`,
+    displayName: "Drugi učenik testa",
     role: "ucenik",
   });
   teacherToken = signToken({
@@ -289,6 +314,35 @@ test("završena zadaća se učeniku prebaci među završene i bez ocjene", async
   const assigned = homework.find((item) => item.id === assignedHomeworkId);
   assert.equal(assigned?.kategorija, "zavrsene");
   assert.equal(assigned?.ocjena, null);
+});
+
+test("ocjena završava grupnu zadaću samo ocijenjenom učeniku", async () => {
+  const gradeResponse = await teacherPut(
+    `/api/muallim/zadace/${emptyHomeworkId}/status/${studentId}`,
+    { uradjeno: false, ocjena: 5, kapiMeda: 0, noviRok: null },
+  );
+  assert.equal(gradeResponse.status, 200);
+  const saved = await gradeResponse.json() as { status: string; uradjeno: boolean; ocjena: number | null };
+  assert.equal(saved.status, "zavrseno");
+  assert.equal(saved.uradjeno, true);
+  assert.equal(saved.ocjena, 5);
+
+  const [gradedResponse, ungradedResponse] = await Promise.all([
+    studentGet("/api/ucenik/zadace"),
+    studentGet("/api/ucenik/zadace", {}, otherStudentToken),
+  ]);
+  assert.equal(gradedResponse.status, 200);
+  assert.equal(ungradedResponse.status, 200);
+
+  const gradedHomework = await gradedResponse.json() as Array<{ id: number; kategorija: string; ocjena: number | null }>;
+  const ungradedHomework = await ungradedResponse.json() as Array<{ id: number; kategorija: string; ocjena: number | null }>;
+  const graded = gradedHomework.find((item) => item.id === emptyHomeworkId);
+  const ungraded = ungradedHomework.find((item) => item.id === emptyHomeworkId);
+
+  assert.equal(graded?.kategorija, "zavrsene");
+  assert.equal(graded?.ocjena, 5);
+  assert.equal(ungraded?.kategorija, "aktivne");
+  assert.equal(ungraded?.ocjena, null);
 });
 
 test("detail lekcije preklapa naslov i HTML istim prijevodnim overlayem", async () => {
