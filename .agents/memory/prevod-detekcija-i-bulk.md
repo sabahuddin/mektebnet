@@ -17,9 +17,12 @@ Dodatni signal: `len_ratio` pravog prijevoda — de/sq/tr ~1.05–1.15 duži, ar
 
 # Bulk AI prijevod velikog HTML-a protiv PROD baze
 
-- **PROD_DATABASE_URL secret JE dostupan iz Replit dev** za direktan read/write na self-hosted prod
-  (psql i node `pg` rade). Sandbox (`code_execution`) STRIPA `process.env` secrete → DB+AI skripte
-  vozi kao **node skriptu preko bash** (tamo `process.env` ima secrete), ne u sandboxu.
+- **PROD_DATABASE_URL može biti dostupan iz Replit dev** za direktan read/write na self-hosted prod,
+  ali nije garantovan: kada TCP/5432 vrati `ECONNREFUSED`, ne pokušavati upise niti zaključivati iz
+  zastarjele dev baze. Za read-only reviziju koristi live `mekteb.net/api/content/ilmihal` sa
+  `X-Lang` zaglavljem; servisani odgovor je tada stvarni korisnički sadržaj. Sandbox
+  (`code_execution`) STRIPA `process.env` secrete → DB+AI skripte, kad je DB dostupan, vozi kao
+  **node skriptu preko bash** (tamo `process.env` ima secrete), ne u sandboxu.
 - AI: OpenAI integracija preko proxy-ja REST-om bez SDK-a: `POST ${AI_INTEGRATIONS_OPENAI_BASE_URL}/chat/completions`,
   header `Authorization: Bearer ${AI_INTEGRATIONS_OPENAI_API_KEY}`, model `gpt-5-mini`,
   **`reasoning_effort:"minimal"`** (bez toga 15KB HTML > 120s i timeout; sa minimal ~20–55s).
@@ -32,7 +35,8 @@ Dodatni signal: `len_ratio` pravog prijevoda — de/sq/tr ~1.05–1.15 duži, ar
 
 **Why:** Ranija Čitaonica imala 38/60 content_html redova "prevedeno" a zapravo bosanski (kopija izvora
 sa sitnim diffom); egzaktna detekcija ih je promašila. Overlay servira `prijevod` bez provjere izvor_hash
-→ ispravka reda u prod bazi je ODMAH live na mekteb.net, bez redeploya (podaci ≠ kod).
+→ ispravka reda u prod bazi je ODMAH live na mekteb.net, bez redeploya (podaci ≠ kod). Lokalni
+overlay brojevi mogu biti potpuno drugačiji od live API-ja, pa produkcijski audit mora biti zaseban.
 
 # Batch prijevod KRATKIH stringova (kviz/text) — mapiraj po INDEKSU, ne po echo-ključu
 
