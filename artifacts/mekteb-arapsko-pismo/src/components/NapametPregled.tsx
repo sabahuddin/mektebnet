@@ -9,6 +9,8 @@ export interface NapametStavka {
   scope?: "global" | "lokalno" | "legacy";
   assessedCount?: number;
   totalCount?: number;
+  ukupnoUcenika?: number;
+  ocijenjenoUcenika?: number;
 }
 
 export interface NapametOcjena {
@@ -48,23 +50,34 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
             <div className="divide-y divide-border/50">
               {loading ? Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="h-14 animate-pulse bg-muted/30" />
-              )) : stavke.map((stavka) => {
-                const ocjena = gradeByItem.get(stavka.id);
-                return (
-                  <div key={stavka.id} className={`flex items-center gap-3 px-4 py-3 ${ocjena ? "bg-white" : "bg-slate-50/70 text-slate-400"}`}>
-                    {ocjena ? <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" /> : <Circle className="w-5 h-5 text-slate-300 shrink-0" />}
-                    <div className="min-w-0 flex-1">
-                      <p className={`font-bold ${ocjena ? "text-foreground" : "text-slate-400"}`}>{stavka.naziv}</p>
-                      {ocjena ? (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {ocjena.datum}{ocjena.napomena ? ` · ${ocjena.napomena}` : ""}
-                        </p>
-                      ) : <p className="text-xs text-slate-400 mt-0.5">Još nije ocijenjeno</p>}
+              )) : (
+                <>
+                  {stavke.some((stavka) => gradeByItem.has(stavka.id)) && <p className="px-4 pt-3 text-[11px] font-black uppercase tracking-wide text-emerald-700">Ocijenjeno</p>}
+                  {stavke.filter((stavka) => gradeByItem.has(stavka.id)).map((stavka) => {
+                    const ocjena = gradeByItem.get(stavka.id)!;
+                    return (
+                      <div key={stavka.id} className="flex items-center gap-3 px-4 py-3 bg-white">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-foreground">{stavka.naziv}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{ocjena.datum}{ocjena.napomena ? ` · ${ocjena.napomena}` : ""}</p>
+                        </div>
+                        <span className={`font-extrabold rounded-full px-2.5 py-1 text-sm ${OCJENA_COLORS[ocjena.ocjena] || "bg-muted text-foreground"}`}>{ocjena.ocjena}</span>
+                      </div>
+                    );
+                  })}
+                  {stavke.some((stavka) => !gradeByItem.has(stavka.id)) && <p className="px-4 pt-3 text-[11px] font-black uppercase tracking-wide text-slate-500">Još nije ocijenjeno</p>}
+                  {stavke.filter((stavka) => !gradeByItem.has(stavka.id)).map((stavka) => (
+                    <div key={stavka.id} className="flex items-center gap-3 px-4 py-3 bg-slate-50/70 text-slate-400">
+                      <Circle className="w-5 h-5 text-slate-300 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-400">{stavka.naziv}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Još nije ocijenjeno</p>
+                      </div>
                     </div>
-                    {ocjena && <span className={`font-extrabold rounded-full px-2.5 py-1 text-sm ${OCJENA_COLORS[ocjena.ocjena] || "bg-muted text-foreground"}`}>{ocjena.ocjena}</span>}
-                  </div>
-                );
-              })}
+                  ))}
+                </>
+              )}
             </div>
           </section>
         );

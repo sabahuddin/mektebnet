@@ -2327,91 +2327,45 @@ router.get("/napamet-program", async (req, res) => {
       muallimId: grupaId ? req.user!.userId : undefined,
       includeHidden: true,
     });
-
-    if (!grupaId) { res.json({ katalog }); return; }
-
-    const ucenici = await db.select({ id: ucenikProfiliTable.userId })
-      .from(ucenikProfiliTable)
-      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
-    const ucenikIds = ucenici.map((ucenik) => ucenik.id);
-    const ocijenjeniPoStavci = new Map<string, Set<number>>();
-
-    if (ucenikIds.length > 0) {
-      const ocjene = await db.select({
-        ucenikId: ocjeneTable.ucenikId,
-        napametStavkaId: ocjeneTable.napametStavkaId,
-      }).from(ocjeneTable).where(and(
-        inArray(ocjeneTable.ucenikId, ucenikIds),
-        sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
-      ));
-      for (const ocjena of ocjene) {
-        if (!ocjena.napametStavkaId) continue;
-        const ocijenjeni = ocijenjeniPoStavci.get(ocjena.napametStavkaId) || new Set<number>();
-        ocijenjeni.add(ocjena.ucenikId);
-        ocijenjeniPoStavci.set(ocjena.napametStavkaId, ocijenjeni);
+    if (grupaId) {
+      const activeProfiles = await db.select({ userId: ucenikProfiliTable.userId })
+        .from(ucenikProfiliTable)
+        .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
+        .where(and(
+          eq(ucenikProfiliTable.grupaId, grupaId),
+          eq(ucenikProfiliTable.isArchived, false),
+          eq(usersTable.isActive, true),
+        ));
+      const studentIds = [...new Set(activeProfiles.map((profile) => profile.userId))];
+      const grades = studentIds.length
+        ? await db.select({
+            ucenikId: ocjeneTable.ucenikId,
+            napametStavkaId: ocjeneTable.napametStavkaId,
+            datum: ocjeneTable.datum,
+            id: ocjeneTable.id,
+          }).from(ocjeneTable).where(and(
+            inArray(ocjeneTable.ucenikId, studentIds),
+            sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
+          )).orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
+        : [];
+      const latestByStudentAndItem = new Set<string>();
+      const assessedByItem = new Map<string, number>();
+      for (const grade of grades) {
+        const key = `${grade.ucenikId}:${grade.napametStavkaId}`;
+        if (latestByStudentAndItem.has(key) || !grade.napametStavkaId) continue;
+        latestByStudentAndItem.add(key);
+        assessedByItem.set(grade.napametStavkaId, (assessedByItem.get(grade.napametStavkaId) ?? 0) + 1);
       }
+      res.json({
+        katalog: katalog.map((item) => ({
+          ...item,
+          ukupnoUcenika: studentIds.length,
+          ocijenjenoUcenika: assessedByItem.get(item.id) ?? 0,
+        })),
+      });
+      return;
     }
-
-    res.json({
-      katalog: katalog.map((stavka) => ({
-        ...stavka,
-        assessedCount: ocijenjeniPoStavci.get(stavka.id)?.size ?? 0,
-        totalCount: ucenikIds.length,
-      })),
-    });
-  } catch { res.status(500).json({ error: "Greška servera" }); }
-});
-
-router.get("/napamet-detalji/:stavkaId", async (req, res) => {
-  try {
-    const ctx = await getMektebCtx(req.user!.userId);
-    const grupaId = Number(req.query.grupaId);
-    const stavkaId = String(req.params.stavkaId || "").trim();
-    if (!ctx?.mektebId || !grupaId || !stavkaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
-      res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
-    }
-    const katalog = await getNapametKatalog({
-      mektebId: ctx.mektebId,
-      grupaId,
-      muallimId: req.user!.userId,
-      includeHidden: true,
-    });
-    const stavka = katalog.find((item) => item.id === stavkaId);
-    if (!stavka) { res.status(404).json({ error: "NAPAMET stavka nije pronađena" }); return; }
-
-    const ucenici = await db.select({
-      id: ucenikProfiliTable.userId,
-      displayName: usersTable.displayName,
-    }).from(ucenikProfiliTable)
-      .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
-      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
-    const ucenikIds = ucenici.map((ucenik) => ucenik.id);
-    const posljednjaOcjena = new Map<number, { ocjena: number; datum: string }>();
-    if (ucenikIds.length > 0) {
-      const ocjene = await db.select({
-        ucenikId: ocjeneTable.ucenikId,
-        ocjena: ocjeneTable.ocjena,
-        datum: ocjeneTable.datum,
-        createdAt: ocjeneTable.createdAt,
-      }).from(ocjeneTable).where(and(
-        inArray(ocjeneTable.ucenikId, ucenikIds),
-        eq(ocjeneTable.napametStavkaId, stavkaId),
-      )).orderBy(desc(ocjeneTable.createdAt), desc(ocjeneTable.id));
-      for (const ocjena of ocjene) {
-        if (!posljednjaOcjena.has(ocjena.ucenikId)) {
-          posljednjaOcjena.set(ocjena.ucenikId, { ocjena: ocjena.ocjena, datum: ocjena.datum });
-        }
-      }
-    }
-    res.json({
-      stavka: { id: stavka.id, naziv: stavka.naziv, nivo: stavka.nivo },
-      ucenici: ucenici.map((ucenik) => ({
-        id: ucenik.id,
-        displayName: ucenik.displayName,
-        ocjena: posljednjaOcjena.get(ucenik.id)?.ocjena ?? null,
-        datum: posljednjaOcjena.get(ucenik.id)?.datum ?? null,
-      })),
-    });
+    res.json({ katalog });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
@@ -2423,7 +2377,37 @@ router.get("/napamet-lokalno", async (req, res) => {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
     }
     const katalog = await getNapametKatalog({ grupaId, muallimId: req.user!.userId, includeHidden: true });
-    res.json({ katalog: katalog.filter((item) => item.scope === "lokalno") });
+    const activeProfiles = await db.select({ userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
+      .where(and(
+        eq(ucenikProfiliTable.grupaId, grupaId),
+        eq(ucenikProfiliTable.isArchived, false),
+        eq(usersTable.isActive, true),
+      ));
+    const studentIds = [...new Set(activeProfiles.map((profile) => profile.userId))];
+    const grades = studentIds.length
+      ? await db.select({
+          ucenikId: ocjeneTable.ucenikId,
+          napametStavkaId: ocjeneTable.napametStavkaId,
+          datum: ocjeneTable.datum,
+          id: ocjeneTable.id,
+        }).from(ocjeneTable).where(and(
+          inArray(ocjeneTable.ucenikId, studentIds),
+          sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
+        )).orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
+      : [];
+    const seen = new Set<string>();
+    const assessedByItem = new Map<string, number>();
+    for (const grade of grades) {
+      const key = `${grade.ucenikId}:${grade.napametStavkaId}`;
+      if (seen.has(key) || !grade.napametStavkaId) continue;
+      seen.add(key);
+      assessedByItem.set(grade.napametStavkaId, (assessedByItem.get(grade.napametStavkaId) ?? 0) + 1);
+    }
+    res.json({ katalog: katalog.filter((item) => item.scope === "lokalno").map((item) => ({
+      ...item, ukupnoUcenika: studentIds.length, ocijenjenoUcenika: assessedByItem.get(item.id) ?? 0,
+    })) });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
@@ -4876,13 +4860,12 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     const ocjenaVal = ocjena === null || ocjena === undefined || ocjena === ""
       ? null
       : Math.min(6, Math.max(1, Math.trunc(Number(ocjena))));
-    // Ocjena je završetak za tog konkretnog učenika. Grupna zadaća ima zaseban
-    // statusni red po učeniku, pa ocjenjivanje jednog ne utiče na ostale.
-    const statusVal = oznaciZavrseno === true || ocjenaVal !== null ? "zavrseno"
+    const statusVal = oznaciZavrseno === true ? "zavrseno"
       : oznaciZavrseno === false ? "na_cekanju"
       : (postojeci?.status ?? "na_cekanju");
-    // Muallim može i bez ocjene posebno označiti zadaću završenom. Brisanje
-    // postojeće ocjene ne vraća već završenu zadaću među aktivne.
+    // Završavanje je nezavisno od ocjene. Muallim može zadaću označiti
+    // završenom i bez dodijeljene ocjene, a učenik je odmah vidi u svom
+    // tabu "Završene".
     const uradjenoVal = statusVal === "zavrseno"
       ? true
       : typeof uradjeno === "boolean" ? uradjeno : (postojeci?.uradjeno ?? false);
@@ -4910,16 +4893,10 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     }
 
     // Ocjena iz zadaće se evidentira i u tabeli ocjene (kategorija "zadaća"),
-    // da se vidi među redovnim ocjenama učenika. Ako je zadaća vezana za
-    // NAPAMET lekciju, samo odlična ocjena (5 ili 6) označava tu stavku
-    // završenom za konkretnog učenika. Upsert preko zadaca_id — ponovna
-    // ocjena ažurira isti red; brisanje ocjene uklanja red.
+    // da se vidi među redovnim ocjenama učenika. Upsert preko zadaca_id —
+    // ponovna ocjena ažurira isti red; brisanje ocjene uklanja red.
     let ocjeneSyncOk = true;
     try {
-      const napametStavka = zadaca.lekcijaSlug && (ocjenaVal === 5 || ocjenaVal === 6)
-        ? (await getGlobalNapametKatalog(false))
-          .find((stavka) => stavka.sourceLessonSlug === zadaca.lekcijaSlug)
-        : undefined;
       const [postojecaOcjena] = await db.select({ id: ocjeneTable.id }).from(ocjeneTable)
         .where(and(eq(ocjeneTable.zadacaId, id), eq(ocjeneTable.ucenikId, ucenikId)));
       if (ocjenaVal === null) {
@@ -4935,8 +4912,6 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             lekcijaNaziv: ocjenaNaziv,
             grupaId: zadaca.grupaId,
             muallimId: req.user!.userId,
-            napametNivo: napametStavka?.nivo ?? null,
-            napametStavkaId: napametStavka?.id ?? null,
           }).where(eq(ocjeneTable.id, postojecaOcjena.id));
         } else {
           await db.insert(ocjeneTable).values({
@@ -4949,8 +4924,6 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             napomena: null,
             datum: ocjenaDatum,
             zadacaId: id,
-            napametNivo: napametStavka?.nivo ?? null,
-            napametStavkaId: napametStavka?.id ?? null,
           });
         }
       }

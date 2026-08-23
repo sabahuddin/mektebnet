@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { isOnline, formatScreentime, kategorijaOcjeneLabel } from "@/lib/utils";
-import { NapametPregled, type NapametOcjena, type NapametStavka } from "@/components/NapametPregled";
+import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 
 interface Ucenik {
   id: number;
@@ -35,11 +35,7 @@ interface Ocjena {
   lekcijaNaziv?: string;
   napomena?: string;
   datum: string;
-}
-
-interface NapametResponse {
-  katalog: NapametStavka[];
-  ocjene: NapametOcjena[];
+  napametStavkaId?: string | null;
 }
 
 interface Grupa {
@@ -162,7 +158,7 @@ export default function UcenikPage() {
   const [ucenik, setUcenik] = useState<Ucenik | null>(null);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
-  const [napamet, setNapamet] = useState<NapametResponse | null>(null);
+  const [napamet, setNapamet] = useState<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] } | null>(null);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [h5pPokusaji, setH5pPokusaji] = useState<H5PPokusaj[]>([]);
@@ -223,14 +219,14 @@ export default function UcenikPage() {
       apiRequest<{ pitanja: InteraktivniPitanjePregled[] }>("GET", `/muallim/ucenik/${ucenikId}/interaktivni-blokovi`, undefined, token).catch(() => ({ pitanja: [] })),
       apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
       apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
-      apiRequest<NapametResponse>("GET", `/muallim/napamet/${ucenikId}`, undefined, token).catch(() => ({ katalog: [], ocjene: [] })),
+      apiRequest<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] }>("GET", `/muallim/napamet/${ucenikId}`, undefined, token).catch(() => ({ katalog: [], ocjene: [] })),
     ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad, napametData]) => {
       setRoditelji((rod as RoditeljVeza[]) || []);
       setZadace((zad as ZadacaPregled[]) || []);
-      setNapamet(napametData as NapametResponse);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
       setUcenik(found || null);
       setOcjene(oc);
+      setNapamet(napametData as { katalog: NapametStavka[]; ocjene: NapametOcjena[] });
       setPrisustvo(prs);
       setGrupe(g);
       setKvizRezultati((kvizData as any).rezultati || []);
@@ -959,6 +955,16 @@ export default function UcenikPage() {
               )}
             </div>
 
+            {/* NAPAMET — katalog ove grupe i posljednje ocjene učenika */}
+            <div className="bg-white border border-emerald-200 rounded-2xl p-5 mb-6" data-testid="section-napamet-ucenik">
+              <div className="flex items-center gap-2 mb-1">
+                <BookOpen className="w-5 h-5 text-emerald-700" />
+                <h2 className="font-extrabold text-foreground">{t("NAPAMET")}</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">{t("Pregled stavki iz programa ove grupe i posljednjih ocjena učenika.")}</p>
+              <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />
+            </div>
+
             {/* Pregled zadaća učenika (read-only). Dodaje se iz Muallim → Zadaća. */}
             <div className="bg-white border border-border/50 rounded-2xl p-5 mb-6" data-testid="section-zadace-ucenik">
               {(() => {
@@ -1306,17 +1312,6 @@ export default function UcenikPage() {
                     </table>
                   </div>
                 )}
-              </div>
-
-              {/* NAPAMET */}
-              <div className="bg-white border border-emerald-200 rounded-2xl p-5 md:col-span-2">
-                <div className="mb-4">
-                  <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-emerald-700" /> {t("NAPAMET pregled")}
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">{t("Ocijenjene i još neocijenjene stavke ovog učenika.")}</p>
-                </div>
-                <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />
               </div>
 
               {/* Prisustvo — mjesečno + detalji */}

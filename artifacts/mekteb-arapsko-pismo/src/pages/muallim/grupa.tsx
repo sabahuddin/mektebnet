@@ -19,7 +19,6 @@ import { isOnline, formatScreentime } from "@/lib/utils";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
 import type { NapametStavka } from "@/components/NapametPregled";
 import { NapametLokalniProgramEditor } from "@/components/NapametLokalniProgramEditor";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Grupa {
   id: number;
@@ -58,11 +57,6 @@ interface Ucenik {
   lastSeenAt?: string | null;
   totalScreentimeSec?: number | null;
   roditeljPovezan?: boolean;
-}
-
-interface NapametDetalji {
-  stavka: { id: string; naziv: string; nivo: number };
-  ucenici: Array<{ id: number; displayName: string; ocjena: number | null; datum: string | null }>;
 }
 
 interface CreatedUcenik {
@@ -175,9 +169,7 @@ export default function GrupaPage() {
     datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
   });
   const [napametKatalog, setNapametKatalog] = useState<NapametStavka[]>([]);
-  const [napametDetalji, setNapametDetalji] = useState<NapametDetalji | null>(null);
-  const [napametDetaljiOpen, setNapametDetaljiOpen] = useState(false);
-  const [napametDetaljiLoading, setNapametDetaljiLoading] = useState(false);
+  const [napametRefreshKey, setNapametRefreshKey] = useState(0);
   const [savingOcjena, setSavingOcjena] = useState(false);
 
   // Zadaća modal — ako zadacaTarget=null → zadaća za cijelu grupu
@@ -286,23 +278,11 @@ export default function GrupaPage() {
   function refreshNapametKatalog() {
     if (!token || !grupaId) return;
     apiRequest<{ katalog: NapametStavka[] }>("GET", `/muallim/napamet-program?grupaId=${grupaId}`, undefined, token)
-      .then((data) => setNapametKatalog(data.katalog.filter((item: any) => item.isVisible !== false)))
+      .then((data) => {
+        setNapametKatalog(data.katalog.filter((item: any) => item.isVisible !== false));
+        setNapametRefreshKey((key) => key + 1);
+      })
       .catch(() => {});
-  }
-
-  async function openNapametDetalji(item: NapametStavka) {
-    if (!token || !grupaId) return;
-    setNapametDetaljiOpen(true);
-    setNapametDetalji(null);
-    setNapametDetaljiLoading(true);
-    try {
-      const data = await apiRequest<NapametDetalji>("GET", `/muallim/napamet-detalji/${encodeURIComponent(item.id)}?grupaId=${grupaId}`, undefined, token);
-      setNapametDetalji(data);
-    } catch {
-      toast({ title: t("Greška"), description: t("Nije moguće učitati učenike i ocjene."), variant: "destructive" });
-    } finally {
-      setNapametDetaljiLoading(false);
-    }
   }
 
   function refreshStudents() {
@@ -420,8 +400,8 @@ export default function GrupaPage() {
         napametStavkaId: newOcjena.napametStavkaId || undefined,
       }, token);
       toast({ title: t("Ocjena dodana!"), description: `${ocjenaTarget.displayName} — ${newOcjena.ocjena}` });
-      refreshNapametKatalog();
       setOcjenaTarget(null);
+      refreshNapametKatalog();
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće dodati ocjenu"), variant: "destructive" });
     } finally {
@@ -799,40 +779,7 @@ export default function GrupaPage() {
         </div>
 
          {aktivniModul === "napamet" && !grupa.isArchived && (
-           <>
-           <NapametLokalniProgramEditor
-             grupaId={grupaId}
-             globalItems={napametKatalog.filter((item) => item.scope === "global")}
-             itemCounts={Object.fromEntries(napametKatalog.map((item) => [item.id, { assessedCount: item.assessedCount, totalCount: item.totalCount }]))}
-             onItemClick={openNapametDetalji}
-             onChanged={refreshNapametKatalog}
-           />
-           <Dialog open={napametDetaljiOpen} onOpenChange={setNapametDetaljiOpen}>
-             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-               <DialogHeader>
-                 <DialogTitle className="pr-6">{napametDetalji?.stavka.naziv || t("NAPAMET stavka")}</DialogTitle>
-                 <DialogDescription>
-                   {napametDetalji?.stavka.nivo === 4 ? t("Dodatak") : t("NAPAMET {nivo}. nivo", { nivo: String(napametDetalji?.stavka.nivo || "") })}
-                 </DialogDescription>
-               </DialogHeader>
-               {napametDetaljiLoading ? (
-                 <div className="py-8 text-center text-sm text-muted-foreground">{t("Učitavanje učenika...")}</div>
-               ) : napametDetalji ? (
-                 <div className="grid gap-4 sm:grid-cols-2">
-                   {(["ocijenjeni", "neocijenjeni"] as const).map((status) => {
-                     const lista = napametDetalji.ucenici.filter((ucenik) => status === "ocijenjeni" ? ucenik.ocjena !== null : ucenik.ocjena === null);
-                     return <section key={status} className={`rounded-xl border p-3 ${status === "ocijenjeni" ? "border-emerald-200 bg-emerald-50/60" : "border-amber-200 bg-amber-50/60"}`}>
-                       <h3 className={`mb-2 text-sm font-extrabold ${status === "ocijenjeni" ? "text-emerald-900" : "text-amber-900"}`}>
-                         {status === "ocijenjeni" ? t("Ocijenjeni ({n})", { n: String(lista.length) }) : t("Još nisu ocijenjeni ({n})", { n: String(lista.length) })}
-                       </h3>
-                       {lista.length ? <div className="space-y-1.5">{lista.map((ucenik) => <div key={ucenik.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-3 py-2 text-sm"><span className="min-w-0 truncate font-semibold text-foreground">{ucenik.displayName}</span>{ucenik.ocjena !== null && <span className="shrink-0 font-extrabold text-emerald-800">{ucenik.ocjena}<span className="ml-1 text-xs font-medium text-muted-foreground">{ucenik.datum}</span></span>}</div>)}</div> : <p className="py-4 text-center text-xs text-muted-foreground">{status === "ocijenjeni" ? t("Još niko nije ocijenjen.") : t("Svi učenici su ocijenjeni.")}</p>}
-                     </section>;
-                   })}
-                 </div>
-               ) : <div className="py-8 text-center text-sm text-muted-foreground">{t("Nema podataka za prikaz.")}</div>}
-             </DialogContent>
-           </Dialog>
-           </>
+           <NapametLokalniProgramEditor key={napametRefreshKey} grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} />
          )}
 
          {aktivniModul === "greske" && <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-grupe">

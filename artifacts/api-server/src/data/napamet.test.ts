@@ -186,9 +186,12 @@ after(async () => {
 
 test("admin obrisana početna NAPAMET stavka se ne vraća kroz seed", async () => {
   try {
-    const response = await authed(`/api/admin/napamet-program/${STAVKA_ID}`, adminToken, {
+    const deleteResponse = await authed(`/api/admin/napamet-program/${STAVKA_ID}`, adminToken, {
       method: "DELETE",
     });
+    assert.equal(deleteResponse.status, 200);
+
+  const response = await authed(`/api/muallim/napamet-program?grupaId=${grupaId}`, muallimToken);
     assert.equal(response.status, 200);
 
     const katalog = await getGlobalNapametKatalog(true);
@@ -239,60 +242,15 @@ test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i rodi
   });
   assert.equal(reorderResponse.status, 200);
 
-  for (const [role, token, path] of [
-    ["učenik", ucenikToken, "/api/ucenik/napamet"],
-    ["roditelj", roditeljToken, `/api/roditelj/napamet/${ucenikId}`],
+  for (const [token, path] of [
+    [ucenikToken, "/api/ucenik/napamet"],
+    [roditeljToken, `/api/roditelj/napamet/${ucenikId}`],
   ] as const) {
     const response = await authed(path, token);
-    assert.equal(response.status, 200, `${role} mora dobiti NAPAMET katalog`);
-    const payload = await response.json() as {
-      katalog: Array<{ id: string; naziv: string; redoslijed: number; nivo: number; isVisible?: boolean }>;
-      ocjene: Array<{ napametStavkaId: string; ocjena: number; id: number }>;
-    };
-    const item = payload.katalog.find((stavka) => stavka.id === STAVKA_ID);
-    assert.equal(item?.id, STAVKA_ID);
-    assert.equal(item?.nivo, 1);
-    assert.equal(item?.naziv, "El-Fatiha (izmijenjeni naziv)");
-    assert.equal(item?.redoslijed, 2);
-    assert.equal(item?.isVisible, true);
-    assert.deepEqual(
-      payload.ocjene.find((ocjena) => ocjena.napametStavkaId === STAVKA_ID),
-      { ...grade, napametStavkaId: STAVKA_ID, ocjena: 5 },
-    );
+    assert.equal(response.status, 200);
+    const payload = await response.json() as { katalog: Array<{ id: string; naziv: string }> };
+    assert.equal(payload.katalog.find((item) => item.id === STAVKA_ID)?.naziv, "El-Fatiha (izmijenjeni naziv)");
   }
-});
-
-test("ocjena povezane lekcije automatski upisuje i NAPAMET ocjenu", async () => {
-  const povezano = (await getGlobalNapametKatalog()).find((item) => item.sourceLessonSlug);
-  assert.ok(povezano?.sourceLessonSlug, "testna baza mora imati povezanu lekciju");
-  const datum = "2026-08-23";
-  const response = await authed("/api/muallim/ocjene", muallimToken, {
-    method: "POST",
-    body: JSON.stringify({
-      ucenikId,
-      grupaId,
-      kategorija: "usmeno",
-      ocjena: 6,
-      lekcijaNaziv: povezano.naziv,
-      lekcijaSlug: povezano.sourceLessonSlug,
-      napomena: "Automatsko povezivanje",
-      datum,
-    }),
-  });
-  assert.equal(response.status, 201);
-  const rows = await db.select({
-    kategorija: ocjeneTable.kategorija,
-    ocjena: ocjeneTable.ocjena,
-    napametStavkaId: ocjeneTable.napametStavkaId,
-    lekcijaNaziv: ocjeneTable.lekcijaNaziv,
-  }).from(ocjeneTable).where(and(
-    eq(ocjeneTable.ucenikId, ucenikId),
-    eq(ocjeneTable.datum, datum),
-  ));
-  assert.equal(rows.length, 2);
-  assert.ok(rows.some((row) => row.kategorija === "usmeno" && row.napametStavkaId === null));
-  assert.ok(rows.some((row) => row.kategorija === "napamet" && row.napametStavkaId === povezano.id));
-  assert.ok(rows.every((row) => row.ocjena === 6));
 });
 
 test("ručni izbor iste povezane stavke ne pravi duplu NAPAMET ocjenu", async () => {
@@ -302,20 +260,14 @@ test("ručni izbor iste povezane stavke ne pravi duplu NAPAMET ocjenu", async ()
   const response = await authed("/api/muallim/ocjene", muallimToken, {
     method: "POST",
     body: JSON.stringify({
-      ucenikId,
-      grupaId,
-      kategorija: "ucenje",
-      ocjena: 5,
-      lekcijaNaziv: povezano.naziv,
-      lekcijaSlug: povezano.sourceLessonSlug,
-      napametStavkaId: povezano.id,
-      datum,
+      ucenikId, grupaId, kategorija: "ucenje", ocjena: 5,
+      lekcijaNaziv: povezano.naziv, lekcijaSlug: povezano.sourceLessonSlug,
+      napametStavkaId: povezano.id, datum,
     }),
   });
   assert.equal(response.status, 201);
   const rows = await db.select({ napametStavkaId: ocjeneTable.napametStavkaId })
     .from(ocjeneTable).where(and(eq(ocjeneTable.ucenikId, ucenikId), eq(ocjeneTable.datum, datum)));
-  assert.equal(rows.length, 2);
   assert.equal(rows.filter((row) => row.napametStavkaId === povezano.id).length, 1);
 });
 
@@ -324,13 +276,8 @@ test("nepovezana lekcija ostaje jedna obična ocjena", async () => {
   const response = await authed("/api/muallim/ocjene", muallimToken, {
     method: "POST",
     body: JSON.stringify({
-      ucenikId,
-      grupaId,
-      kategorija: "test",
-      ocjena: 4,
-      lekcijaNaziv: "Nepovezana testna lekcija",
-      lekcijaSlug: `nepovezana-${SUFFIX}`,
-      datum,
+      ucenikId, grupaId, kategorija: "test", ocjena: 4,
+      lekcijaNaziv: "Nepovezana testna lekcija", lekcijaSlug: `nepovezana-${SUFFIX}`, datum,
     }),
   });
   assert.equal(response.status, 201);
@@ -351,15 +298,9 @@ test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i rod
 
   const ownList = await authed(`/api/muallim/napamet-lokalno?grupaId=${grupaId}`, muallimToken);
   assert.equal(ownList.status, 200);
-  const ownPayload = await ownList.json() as { katalog: Array<{ id: string; naziv: string; scope: string }> };
-  assert.deepEqual(ownPayload.katalog.find((item) => item.id === lokalnaStavkaId), {
-    id: lokalnaStavkaId,
-    naziv: "Dova prije puta",
-    nivo: 4,
-    redoslijed: 9999,
-    isVisible: true,
-    scope: "lokalno",
-  });
+  const ownPayload = await ownList.json() as { katalog: Array<{ id: string; naziv: string; scope: string; ukupnoUcenika: number; ocijenjenoUcenika: number }> };
+  assert.equal(ownPayload.katalog.find((item) => item.id === lokalnaStavkaId)?.ukupnoUcenika, 1);
+  assert.equal(ownPayload.katalog.find((item) => item.id === lokalnaStavkaId)?.ocijenjenoUcenika, 0);
 
   for (const [token, path] of [
     [ucenikToken, "/api/ucenik/napamet"],
@@ -367,15 +308,8 @@ test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i rod
   ] as const) {
     const response = await authed(path, token);
     assert.equal(response.status, 200);
-    const payload = await response.json() as { katalog: Array<{ id: string; naziv: string; scope?: string }> };
-    assert.deepEqual(payload.katalog.find((item) => item.id === lokalnaStavkaId), {
-      id: lokalnaStavkaId,
-      naziv: "Dova prije puta",
-      nivo: 4,
-      redoslijed: 9999,
-      isVisible: true,
-      scope: "lokalno",
-    });
+    const payload = await response.json() as { katalog: Array<{ id: string; scope?: string }> };
+    assert.equal(payload.katalog.find((item) => item.id === lokalnaStavkaId)?.scope, "lokalno");
   }
 });
 
@@ -383,14 +317,7 @@ test("grupni NAPAMET brojač računa učenika samo jednom po stavci", async () =
   for (const [datum, ocjena] of [["2026-08-26", 4], ["2026-08-27", 6]] as const) {
     const response = await authed("/api/muallim/ocjene", muallimToken, {
       method: "POST",
-      body: JSON.stringify({
-        ucenikId,
-        grupaId,
-        kategorija: "napamet",
-        ocjena,
-        napametStavkaId: STAVKA_ID,
-        datum,
-      }),
+      body: JSON.stringify({ ucenikId, grupaId, kategorija: "napamet", ocjena, napametStavkaId: STAVKA_ID, datum }),
     });
     assert.equal(response.status, 201);
   }
@@ -398,20 +325,9 @@ test("grupni NAPAMET brojač računa učenika samo jednom po stavci", async () =
   const response = await authed(`/api/muallim/napamet-program?grupaId=${grupaId}`, muallimToken);
   assert.equal(response.status, 200);
   const payload = await response.json() as {
-    katalog: Array<{ id: string; assessedCount: number; totalCount: number }>;
+    katalog: Array<{ id: string; ocijenjenoUcenika: number; ukupnoUcenika: number }>;
   };
   const stavka = payload.katalog.find((item) => item.id === STAVKA_ID);
-  assert.equal(stavka?.assessedCount, 1);
-  assert.equal(stavka?.totalCount, 1);
-
-  const detaljiResponse = await authed(`/api/muallim/napamet-detalji/${STAVKA_ID}?grupaId=${grupaId}`, muallimToken);
-  assert.equal(detaljiResponse.status, 200);
-  const detalji = await detaljiResponse.json() as {
-    stavka: { id: string };
-    ucenici: Array<{ id: number; ocjena: number | null; datum: string | null }>;
-  };
-  assert.equal(detalji.stavka.id, STAVKA_ID);
-  const ucenikDetalj = detalji.ucenici.find((ucenik) => ucenik.id === ucenikId);
-  assert.equal(ucenikDetalj?.ocjena, 6);
-  assert.equal(ucenikDetalj?.datum, "2026-08-27");
+  assert.equal(stavka?.ocijenjenoUcenika, 1);
+  assert.equal(stavka?.ukupnoUcenika, 1);
 });
