@@ -70,7 +70,7 @@ const ONLY_NIVO = parseInt(argVal("--nivo", "0"), 10);
 const ONLY_IDS = argVal("--ids", "").split(",").map((s) => parseInt(s.trim(), 10)).filter(Number.isInteger);
 const FORCE = args.includes("--force");
 const DRY = args.includes("--dry");
-const MODEL = argVal("--model", "gpt-5-nano");
+const MODEL = argVal("--model", "gpt-5-mini");
 const CHUNK = parseInt(argVal("--chunk", "30"), 10);
 const CONCURRENCY = parseInt(argVal("--concurrency", "8"), 10);
 const MAX_SECONDS = parseInt(argVal("--max-seconds", "0"), 10); // 0 = bez limita
@@ -129,6 +129,8 @@ Pravila:
 - Za stručni islamski termin koji ima prirodan njemački ekvivalent, napiši njemački izraz pa bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ovo ne primjenjuj na nazive sura/dova, arapske transliteracije i vlastita imena.
 - Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuti ostaju samo arapsko pismo i arapska transliteracija.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
+- Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
+- Za njemački odgovor upotrijebi njemački za sav prevedivi tekst; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Zadrži placeholdere u vitičastim zagradama {ovako} i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt oblika {"prijevodi": [...]} gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz. Bez objašnjenja.`;
 
@@ -180,6 +182,8 @@ Stroga pravila:
 - Zadrži arapski tekst (ajeti, dove, kaligrafija) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Bosanski prijevod ajeta, dove ili citata MORAŠ prevesti na njemački, čak i kada je cijeli tekst pisan velikim slovima. Netaknuti ostaju samo arapsko pismo i arapska transliteracija.
 - Zadrži islamske/arapske termine i nazive sura/dova kako jesu (El-Fatiha itd.).
+- Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
+- Ako je ciljni jezik njemački, sav prevedivi tekst mora biti na njemačkom; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.
 - NE umotavaj odgovor u markdown (bez \`\`\`). Vrati ČISTO HTML, ništa drugo.`;
 
@@ -206,7 +210,9 @@ async function translateHtml(html: string, targetName: string): Promise<string> 
 
   const unique = Array.from(new Set(textIndexes.map((i) => parts[i])));
   const translations: Record<string, string> = {};
-  const batchSize = 20;
+  // Duga Ilmihal lekcija sadrži mnogo odjeljaka. Manji paket sprječava da
+  // prevodilac izostavi posljednje tekstualne čvorove iz odgovora.
+  const batchSize = 8;
   for (let i = 0; i < unique.length; i += batchSize) {
     const batch = unique.slice(i, i + batchSize);
     const translated = await translateTexts(batch, targetName);
@@ -249,9 +255,38 @@ function hasUntranslatedBosnianNode(source: string, translation: string) {
   );
 }
 
-function htmlTranslationIssue(source: string, translation: string) {
+function hasAddedArabicHonorific(source: string, translation: string) {
+  const honorifics = [
+    "ﷺ",
+    "عليه السلام",
+    "عليه السّلام",
+    "صلى الله عليه وسلم",
+    "صلّى الله عليه وسلّم",
+    "alejhis-selam",
+    "alejhi selam",
+    "sallallahu alejhi ve sellem",
+  ];
+  return honorifics.some((honorific) => translation.includes(honorific) && !source.includes(honorific));
+}
+
+function hasLikelyEnglishInGerman(text: string) {
+  const visible = text.replace(/<[^>]*>/g, " ").toLowerCase();
+  const english = visible.match(/\b(the|and|with|from|that|this|your|you|are|was|were|have|has|will|shall|for|into|about|because|when|where)\b/g)?.length ?? 0;
+  const german = visible.match(/\b(der|die|das|und|mit|von|dass|dies|ihr|sie|ist|war|haben|hat|wird|für|in|über|weil|wenn|wo)\b/g)?.length ?? 0;
+  return english >= 5 && english > german * 1.5;
+}
+
+function textTranslationIssue(source: string, translation: string, jezik: string) {
+  if (!translation?.trim()) return "prazan prijevod";
+  if (hasAddedArabicHonorific(source, translation)) return "dodan je počasni oblik koji nije u izvorniku";
+  if (jezik === "de" && hasLikelyEnglishInGerman(translation)) return "njemački prijevod sadrži previše engleskog teksta";
+  return null;
+}
+
+function htmlTranslationIssue(source: string, translation: string, jezik: string) {
   if (!translation || translation.length < Math.min(20, source.length / 4)) return "prekratak odgovor";
   if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
+  if (textTranslationIssue(source, translation, jezik)) return textTranslationIssue(source, translation, jezik);
   if (hasUntranslatedBosnianNode(source, translation)) return "ostao je nepreveden bosanski tekst";
   return null;
 }
@@ -382,7 +417,11 @@ async function run() {
             if (j.type === "kvizPitanja") {
               // Svi stringovi moraju biti prevedeni, inače preskoči (retry idući
               // pokret) — pola-prevedeni kviz bi razbio poklapanje odgovora.
-              if (j.strings.some((s) => typeof dict[s] !== "string" || dict[s] === "")) { failed++; continue; }
+              if (j.strings.some((s) => typeof dict[s] !== "string" || textTranslationIssue(s, dict[s], jezik))) {
+                failed++;
+                console.error(`  [${jezik}] ${j.tabela}#${j.redId}/${j.polje}: neispravan tekstualni prijevod — preskačem`);
+                continue;
+              }
               const rebuilt = (j.arr ?? []).map((item: any) => ({
                 ...item,
                 question: typeof item?.question === "string" ? (dict[item.question] ?? item.question) : item?.question,
@@ -394,7 +433,11 @@ async function run() {
               continue;
             }
             const parts = j.strings.map((s) => dict[s]);
-            if (parts.some((p) => typeof p !== "string" || p === "")) { failed++; continue; }
+            if (parts.some((p, index) => typeof p !== "string" || textTranslationIssue(j.strings[index], p, jezik))) {
+              failed++;
+              console.error(`  [${jezik}] ${j.tabela}#${j.redId}/${j.polje}: neispravan tekstualni prijevod — preskačem`);
+              continue;
+            }
             const prijevod = j.type === "jsonbArray" ? JSON.stringify(parts) : (parts[0] as string);
             await upsert(j.tabela, j.redId, j.polje, j.jezik, prijevod, j.hash);
             doneJobs++;
@@ -418,10 +461,10 @@ async function run() {
         const j = hjobs[hi++];
         try {
           let tr = await translateHtml(j.html, LANG_NAMES[j.jezik]);
-          let issue = htmlTranslationIssue(j.html, tr);
+          let issue = htmlTranslationIssue(j.html, tr, j.jezik);
           if (issue) {
             tr = await translateHtml(j.html, LANG_NAMES[j.jezik]);
-            issue = htmlTranslationIssue(j.html, tr);
+            issue = htmlTranslationIssue(j.html, tr, j.jezik);
           }
           if (issue) { failed++; console.error(`  [${j.jezik}] html ${j.tabela}#${j.redId} nije prošao provjeru: ${issue} — preskačem`); continue; }
           await upsert(j.tabela, j.redId, j.polje, j.jezik, tr, j.hash);
