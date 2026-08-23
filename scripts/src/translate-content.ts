@@ -341,11 +341,52 @@ function textTranslationIssue(source: string, translation: string, jezik: string
   return null;
 }
 
+function bosnianMarkerCount(value: string) {
+  return [...value].filter((character) => /[žđćČĆĐŽ]/u.test(character)).length;
+}
+
+function hasLikelyUntranslatedBosnian(source: string, translation: string) {
+  const sourceCount = bosnianMarkerCount(source);
+  return sourceCount >= 2 && bosnianMarkerCount(translation) > sourceCount * 0.30;
+}
+
+function existingTextNeedsRepair(source: string, translation: string, jezik: string) {
+  return Boolean(textTranslationIssue(source, translation, jezik))
+    || hasLikelyUntranslatedBosnian(source, translation);
+}
+
+function existingQuizNeedsRepair(sourceArr: any[], translation: string, jezik: string) {
+  let translatedArr: any;
+  try { translatedArr = JSON.parse(translation); } catch { return true; }
+  if (!Array.isArray(translatedArr) || translatedArr.length !== sourceArr.length) return true;
+  for (let i = 0; i < sourceArr.length; i++) {
+    const sourceItem = sourceArr[i];
+    const translatedItem = translatedArr[i];
+    if (!sourceItem || !translatedItem) continue;
+    const sourceStrings = [
+      sourceItem.question,
+      ...(Array.isArray(sourceItem.options) ? sourceItem.options : []),
+      sourceItem.answer,
+    ].filter((value): value is string => typeof value === "string" && value.trim() !== "");
+    const translatedStrings = [
+      translatedItem.question,
+      ...(Array.isArray(translatedItem.options) ? translatedItem.options : []),
+      translatedItem.answer,
+    ].filter((value): value is string => typeof value === "string" && value.trim() !== "");
+    if (sourceStrings.length !== translatedStrings.length) return true;
+    for (let j = 0; j < sourceStrings.length; j++) {
+      if (existingTextNeedsRepair(sourceStrings[j], translatedStrings[j], jezik)) return true;
+    }
+  }
+  return false;
+}
+
 function htmlTranslationIssue(source: string, translation: string, jezik: string) {
   if (!translation || translation.length < Math.min(20, source.length / 4)) return "prekratak odgovor";
   if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
   const textIssue = textTranslationIssue(source, translation, jezik);
   if (textIssue) return textIssue;
+  if (hasLikelyUntranslatedBosnian(source, translation)) return "prijevod zadržava previše bosanskih ortografskih markera";
   const untranslatedNode = findUntranslatedBosnianNode(source, translation);
   if (untranslatedNode) return `ostao je nepreveden bosanski tekst: ${untranslatedNode.slice(0, 120)}`;
   return null;
@@ -363,6 +404,7 @@ async function upsert(tabela: string, redId: number, polje: string, jezik: strin
 
 interface TextJob { tabela: string; redId: number; polje: string; jezik: string; type: "text" | "jsonbArray" | "kvizPitanja"; strings: string[]; hash: string; arr?: any[]; }
 interface HtmlJob { tabela: string; redId: number; polje: string; jezik: string; html: string; hash: string; }
+interface ExistingTranslation { hash: string; prijevod: string; }
 
 async function run() {
   if (!DRY && (!BASE_URL || !API_KEY)) {
@@ -372,16 +414,22 @@ async function run() {
   const tables = TABLES.filter((t) => ONLY_TABLES.length === 0 || ONLY_TABLES.includes(t.tabela));
   console.log(`Model: ${MODEL} | jezici: ${LANGS.join(",")} | tabele: ${tables.map((t) => t.tabela).join(",")} | chunk: ${CHUNK} | concurrency: ${CONCURRENCY}${MAX_SECONDS ? ` | max ${MAX_SECONDS}s` : ""}${DRY ? " | DRY" : ""}`);
 
-  // Postojeći prijevodi: ključ "tabela|red|polje|jezik" -> izvor_hash
-  const existing = new Map<string, string>();
+  // Postojeći prijevodi: ključ "tabela|red|polje|jezik" -> hash + sadržaj.
+  // Sadržaj je potreban jer isti hash može pratiti loš, ranije upisan prijevod.
+  const existing = new Map<string, ExistingTranslation>();
   {
     // Skupi samo prijevode za tabele iz --tables (kad je filter zadat) — inače
     // bi se na svakom pokretu učitavalo desetine hiljada redova preko mreže.
     const where = ONLY_TABLES.length
       ? ` WHERE tabela IN (${ONLY_TABLES.map((t) => `'${t.replace(/'/g, "''")}'`).join(", ")})`
       : "";
-    const r = (await db.execute(sql.raw(`SELECT tabela, red_id, polje, jezik, izvor_hash FROM content_prijevodi${where}`))) as unknown as { rows: any[] };
-    for (const row of r.rows) existing.set(`${row.tabela}|${row.red_id}|${row.polje}|${row.jezik}`, row.izvor_hash);
+    const r = (await db.execute(sql.raw(`SELECT tabela, red_id, polje, jezik, prijevod, izvor_hash FROM content_prijevodi${where}`))) as unknown as { rows: any[] };
+    for (const row of r.rows) {
+      existing.set(`${row.tabela}|${row.red_id}|${row.polje}|${row.jezik}`, {
+        hash: row.izvor_hash,
+        prijevod: String(row.prijevod ?? ""),
+      });
+    }
   }
 
   const textJobs: TextJob[] = [];
@@ -439,7 +487,28 @@ async function run() {
         const hash = sha(srcStr);
         for (const jezik of LANGS) {
           const key = `${t.tabela}|${redId}|${f.col}|${jezik}`;
-          if (!FORCE && existing.get(key) === hash) continue; // već prevedeno, izvor nepromijenjen
+          const prior = existing.get(key);
+          let needsRepair = false;
+          if (prior?.hash === hash && prior.prijevod) {
+            if (f.type === "html") {
+              needsRepair = Boolean(htmlTranslationIssue(srcStr, prior.prijevod, jezik));
+            } else if (f.type === "kvizPitanja") {
+              needsRepair = existingQuizNeedsRepair(objArr ?? [], prior.prijevod, jezik);
+            } else if (f.type === "jsonbArray") {
+              try {
+                const translatedArr = JSON.parse(prior.prijevod);
+                needsRepair = !Array.isArray(translatedArr)
+                  || translatedArr.length !== strings.length
+                  || strings.some((s, i) => typeof translatedArr[i] !== "string"
+                    || existingTextNeedsRepair(s, translatedArr[i], jezik));
+              } catch {
+                needsRepair = true;
+              }
+            } else {
+              needsRepair = existingTextNeedsRepair(srcStr, prior.prijevod, jezik);
+            }
+          }
+          if (!FORCE && prior?.hash === hash && !needsRepair) continue; // izvor nepromijenjen i prijevod je prošao QA
           if (f.type === "html") htmlJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, html: srcStr, hash });
           else textJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, type: f.type, strings, hash, arr: objArr });
         }
