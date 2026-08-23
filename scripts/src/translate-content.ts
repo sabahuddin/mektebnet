@@ -86,6 +86,15 @@ function sha(s: string) {
 
 const usage = { in: 0, out: 0 };
 
+function preserveSourceCasing(source: string, translation: string) {
+  // Ilmihal 1–20 intentionally use uppercase lesson typography. Preserve it
+  // after translating instead of asking the model to infer a CSS/editor choice.
+  const letters = source.match(/\p{L}/gu) ?? [];
+  const hasCasedLetter = letters.some((letter) => letter.toLowerCase() !== letter.toUpperCase());
+  const isUppercase = hasCasedLetter && letters.every((letter) => letter.toUpperCase() === letter);
+  return isUppercase ? translation.toLocaleUpperCase("de-DE") : translation;
+}
+
 // ---- OpenAI: batch kratkih tekstova → JSON original->prijevod ----
 async function callOpenAI(body: Record<string, unknown>): Promise<any> {
   let res: Response | null = null;
@@ -164,12 +173,18 @@ async function translateTexts(items: string[], targetName: string, forceTranslat
   const out: Record<string, string> = {};
   const arr: unknown = Array.isArray(parsed) ? parsed : (parsed?.prijevodi ?? parsed?.translations ?? parsed?.prevodi);
   if (Array.isArray(arr) && arr.length === items.length) {
-    items.forEach((s, i) => { if (typeof arr[i] === "string") out[s] = arr[i] as string; });
+    items.forEach((s, i) => {
+      if (typeof arr[i] === "string") {
+        out[s] = preserveSourceCasing(s, arr[i] as string);
+      }
+    });
     return out;
   }
   // Fallback: stari oblik {original: prijevod} (ako model ne ispoštuje niz).
   if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-    for (const s of items) if (typeof parsed[s] === "string") out[s] = parsed[s];
+    for (const s of items) {
+      if (typeof parsed[s] === "string") out[s] = preserveSourceCasing(s, parsed[s]);
+    }
   }
   return out;
 }
