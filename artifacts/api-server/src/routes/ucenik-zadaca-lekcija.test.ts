@@ -6,6 +6,8 @@ import { db } from "@workspace/db";
 import {
   grupeTable,
   ilmihalLekcijeTable,
+  napametGlobalProgramTable,
+  ocjeneTable,
   ucenikProfiliTable,
   usersTable,
   zadaceTable,
@@ -29,8 +31,11 @@ let assignedLessonId: number;
 let blockedLessonId: number;
 let assignedSlug: string;
 let blockedSlug: string;
+let napametLessonId: number;
+let napametSlug: string;
 let assignedHomeworkId: number;
 let emptyHomeworkId: number;
+let napametHomeworkId: number;
 let studentToken: string;
 let otherStudentToken: string;
 let teacherToken: string;
@@ -55,30 +60,55 @@ function teacherPut(path: string, body: unknown) {
   });
 }
 
+function teacherPost(path: string, body: unknown) {
+  return fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${teacherToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 async function cleanup(): Promise<void> {
-  if (assignedHomeworkId || emptyHomeworkId) {
+  if (assignedHomeworkId || emptyHomeworkId || napametHomeworkId) {
     await db.execute(sql`
       DELETE FROM zadace_status
-      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1})
+      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1})
     `);
     await db.execute(sql`
       DELETE FROM zadace_ucenici
-      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1})
+      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1})
     `);
+    await db.delete(ocjeneTable).where(inArray(
+      ocjeneTable.zadacaId,
+      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId].filter(Boolean),
+    ));
     await db.delete(zadaceTable).where(inArray(
       zadaceTable.id,
-      [assignedHomeworkId, emptyHomeworkId].filter(Boolean),
+      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId].filter(Boolean),
     ));
   }
-  if (assignedLessonId || blockedLessonId || prerequisiteId) {
+  if (studentId || otherStudentId) {
+    await db.delete(ocjeneTable).where(inArray(
+      ocjeneTable.ucenikId,
+      [studentId, otherStudentId].filter(Boolean),
+    ));
+  }
+  if (napametSlug) {
+    await db.delete(napametGlobalProgramTable)
+      .where(eq(napametGlobalProgramTable.sourceLessonSlug, napametSlug));
+  }
+  if (assignedLessonId || blockedLessonId || prerequisiteId || napametLessonId) {
     await db.execute(sql`
       DELETE FROM content_prijevodi
       WHERE tabela = 'ilmihal_lekcije'
-        AND red_id IN (${assignedLessonId || -1}, ${blockedLessonId || -1}, ${prerequisiteId || -1})
+        AND red_id IN (${assignedLessonId || -1}, ${blockedLessonId || -1}, ${prerequisiteId || -1}, ${napametLessonId || -1})
     `);
     await db.delete(ilmihalLekcijeTable).where(inArray(
       ilmihalLekcijeTable.id,
-      [assignedLessonId, blockedLessonId, prerequisiteId].filter(Boolean),
+      [assignedLessonId, blockedLessonId, prerequisiteId, napametLessonId].filter(Boolean),
     ));
   }
   if (studentId) {
@@ -184,6 +214,7 @@ before(async () => {
 
   assignedSlug = `test-zadana-${suffix}`;
   blockedSlug = `test-zakljucana-${suffix}`;
+  napametSlug = `sura-test-napamet-${suffix}`;
   const createdLessons = await db.insert(ilmihalLekcijeTable).values([
     {
       nivo: 1,
@@ -201,9 +232,18 @@ before(async () => {
       redoslijed: 3,
       uvjetiIds: [prerequisiteId],
     },
+    {
+      nivo: 1,
+      slug: napametSlug,
+      naslov: `NAPAMET lekcija ${suffix}`,
+      contentHtml: "<p>Učenje napamet</p>",
+      redoslijed: 4,
+      isPublished: true,
+    },
   ]).returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug });
   assignedLessonId = createdLessons.find((lesson) => lesson.slug === assignedSlug)!.id;
   blockedLessonId = createdLessons.find((lesson) => lesson.slug === blockedSlug)!.id;
+  napametLessonId = createdLessons.find((lesson) => lesson.slug === napametSlug)!.id;
 
   const homework = await db.insert(zadaceTable).values([
     {
@@ -222,9 +262,19 @@ before(async () => {
       lekcijaNaslov: null,
       isActive: true,
     },
+    {
+      grupaId: groupId,
+      muallimId: teacherId,
+      naslov: "NAPAMET zadaća",
+      lekcijaNaslov: `NAPAMET lekcija ${suffix}`,
+      lekcijaSlug: napametSlug,
+      lekcijaTip: "ilmihal",
+      isActive: true,
+    },
   ]).returning({ id: zadaceTable.id, lekcijaNaslov: zadaceTable.lekcijaNaslov });
   assignedHomeworkId = homework.find((item) => item.lekcijaNaslov)?.id!;
   emptyHomeworkId = homework.find((item) => !item.lekcijaNaslov)?.id!;
+  napametHomeworkId = homework.find((item) => item.lekcijaNaslov === `NAPAMET lekcija ${suffix}`)?.id!;
 
   await db.execute(sql`
     INSERT INTO content_prijevodi (tabela, red_id, polje, jezik, prijevod, izvor_hash)
@@ -343,6 +393,72 @@ test("ocjena završava grupnu zadaću samo ocijenjenom učeniku", async () => {
   assert.equal(graded?.ocjena, 5);
   assert.equal(ungraded?.kategorija, "aktivne");
   assert.equal(ungraded?.ocjena, null);
+});
+
+test("NAPAMET pamti direktne ocjene i samo ocjene 5/6 iz zadaće", async () => {
+  const directResponse = await teacherPost("/api/muallim/ocjene", {
+    ucenikId: studentId,
+    grupaId: groupId,
+    kategorija: "ilmihal",
+    ocjena: 5,
+    lekcijaNaziv: `NAPAMET lekcija ${suffix}`,
+    lekcijaSlug: napametSlug,
+    datum: "2026-08-23",
+  });
+  assert.equal(directResponse.status, 201);
+
+  const studentNapametResponse = await studentGet("/api/ucenik/napamet");
+  assert.equal(studentNapametResponse.status, 200);
+  const studentNapamet = await studentNapametResponse.json() as {
+    katalog: Array<{ id: string; sourceLessonSlug?: string | null }>;
+    ocjene: Array<{ napametStavkaId: string | null; ocjena: number }>;
+  };
+  const stavka = studentNapamet.katalog.find((item) => item.sourceLessonSlug === napametSlug);
+  assert.ok(stavka, "NAPAMET katalog mora biti vidljiv i bez mekteb_id na profilu");
+  const directNapametOcjena = studentNapamet.ocjene
+    .find((ocjena) => ocjena.napametStavkaId === stavka.id);
+  assert.equal(directNapametOcjena?.napametStavkaId, stavka.id);
+  assert.equal(directNapametOcjena?.ocjena, 5);
+
+  const sixResponse = await teacherPut(
+    `/api/muallim/zadace/${napametHomeworkId}/status/${otherStudentId}`,
+    { uradjeno: false, ocjena: 6, kapiMeda: 0, noviRok: null },
+  );
+  assert.equal(sixResponse.status, 200);
+
+  const otherNapametResponse = await studentGet("/api/ucenik/napamet", {}, otherStudentToken);
+  assert.equal(otherNapametResponse.status, 200);
+  const otherNapamet = await otherNapametResponse.json() as {
+    katalog: Array<{ id: string; sourceLessonSlug?: string | null }>;
+    ocjene: Array<{ napametStavkaId: string | null; ocjena: number }>;
+  };
+  const otherStavka = otherNapamet.katalog.find((item) => item.sourceLessonSlug === napametSlug);
+  assert.ok(otherStavka);
+  assert.equal(
+    otherNapamet.ocjene.find((ocjena) => ocjena.napametStavkaId === otherStavka.id)?.ocjena,
+    6,
+  );
+
+  const fourResponse = await teacherPut(
+    `/api/muallim/zadace/${napametHomeworkId}/status/${otherStudentId}`,
+    { uradjeno: false, ocjena: 4, kapiMeda: 0, noviRok: null },
+  );
+  assert.equal(fourResponse.status, 200);
+  const [homeworkGrade] = await db.select({
+    napametStavkaId: ocjeneTable.napametStavkaId,
+  }).from(ocjeneTable).where(and(
+    eq(ocjeneTable.zadacaId, napametHomeworkId),
+    eq(ocjeneTable.ucenikId, otherStudentId),
+  ));
+  assert.equal(homeworkGrade?.napametStavkaId, null);
+
+  const afterFourResponse = await studentGet("/api/ucenik/napamet", {}, otherStudentToken);
+  const afterFour = await afterFourResponse.json() as {
+    katalog: Array<{ sourceLessonSlug?: string | null }>;
+    ocjene: Array<{ napametStavkaId: string | null }>;
+  };
+  assert.ok(afterFour.katalog.some((item) => item.sourceLessonSlug === napametSlug));
+  assert.equal(afterFour.ocjene.some((ocjena) => ocjena.napametStavkaId === otherStavka.id), false);
 });
 
 test("detail lekcije preklapa naslov i HTML istim prijevodnim overlayem", async () => {

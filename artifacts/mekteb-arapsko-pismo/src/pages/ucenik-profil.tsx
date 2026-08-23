@@ -1129,11 +1129,11 @@ export default function UcenikProfilPage() {
                     <Star className="w-5 h-5 text-amber-500" /> {t("Sve ocjene")}
                     <span className="ml-auto text-base font-medium text-muted-foreground">{t("Prosjek:")} <span className="font-bold text-amber-600">{prosjecnaOcjena}</span></span>
                   </h3>
-                  {profil.ocjene.filter(o => !o.napametStavkaId).length === 0 ? (
+                  {profil.ocjene.filter(o => o.kategorija !== "napamet").length === 0 ? (
                     <p className="text-center py-8 text-muted-foreground">{t("Nema unesenih ocjena")}</p>
                   ) : (
                     <div className="space-y-2">
-                      {profil.ocjene.filter(o => !o.napametStavkaId).map(o => (
+                      {profil.ocjene.filter(o => o.kategorija !== "napamet").map(o => (
                         <div key={o.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
                           <div>
                             <span className="font-bold text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>

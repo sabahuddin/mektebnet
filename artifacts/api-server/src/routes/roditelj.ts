@@ -386,7 +386,10 @@ router.get("/napamet/:ucenikId", async (req, res) => {
     for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
     const [profil] = await db.select({ mektebId: ucenikProfiliTable.mektebId, grupaId: ucenikProfiliTable.grupaId })
       .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
-    res.json({ katalog: profil?.mektebId ? await getNapametKatalog({ mektebId: profil.mektebId, grupaId: profil.grupaId }) : [], ocjene: [...latest.values()] });
+    res.json({
+      katalog: profil ? await getNapametKatalog({ mektebId: profil.mektebId, grupaId: profil.grupaId }) : [],
+      ocjene: [...latest.values()],
+    });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 

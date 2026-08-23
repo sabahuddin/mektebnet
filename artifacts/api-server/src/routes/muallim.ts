@@ -4910,10 +4910,16 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     }
 
     // Ocjena iz zadaće se evidentira i u tabeli ocjene (kategorija "zadaća"),
-    // da se vidi među redovnim ocjenama učenika. Upsert preko zadaca_id —
-    // ponovna ocjena ažurira isti red; brisanje ocjene uklanja red.
+    // da se vidi među redovnim ocjenama učenika. Ako je zadaća vezana za
+    // NAPAMET lekciju, samo odlična ocjena (5 ili 6) označava tu stavku
+    // završenom za konkretnog učenika. Upsert preko zadaca_id — ponovna
+    // ocjena ažurira isti red; brisanje ocjene uklanja red.
     let ocjeneSyncOk = true;
     try {
+      const napametStavka = zadaca.lekcijaSlug && (ocjenaVal === 5 || ocjenaVal === 6)
+        ? (await getGlobalNapametKatalog(false))
+          .find((stavka) => stavka.sourceLessonSlug === zadaca.lekcijaSlug)
+        : undefined;
       const [postojecaOcjena] = await db.select({ id: ocjeneTable.id }).from(ocjeneTable)
         .where(and(eq(ocjeneTable.zadacaId, id), eq(ocjeneTable.ucenikId, ucenikId)));
       if (ocjenaVal === null) {
@@ -4929,6 +4935,8 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             lekcijaNaziv: ocjenaNaziv,
             grupaId: zadaca.grupaId,
             muallimId: req.user!.userId,
+            napametNivo: napametStavka?.nivo ?? null,
+            napametStavkaId: napametStavka?.id ?? null,
           }).where(eq(ocjeneTable.id, postojecaOcjena.id));
         } else {
           await db.insert(ocjeneTable).values({
@@ -4941,6 +4949,8 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             napomena: null,
             datum: ocjenaDatum,
             zadacaId: id,
+            napametNivo: napametStavka?.nivo ?? null,
+            napametStavkaId: napametStavka?.id ?? null,
           });
         }
       }

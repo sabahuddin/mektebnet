@@ -244,7 +244,13 @@ router.get("/napamet", async (req, res) => {
     for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
     const [profil] = await db.select({ mektebId: ucenikProfiliTable.mektebId, grupaId: ucenikProfiliTable.grupaId })
       .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, req.user!.userId));
-    res.json({ katalog: profil?.mektebId ? await getNapametKatalog({ mektebId: profil.mektebId, grupaId: profil.grupaId }) : [], ocjene: [...latest.values()] });
+    // Globalni NAPAMET program vrijedi i za starije profile bez mekteb_id.
+    // Zato katalog ne smije nestati samo zato što taj opcioni podatak nije
+    // popunjen; lokalne stavke se i dalje filtriraju po grupi.
+    res.json({
+      katalog: profil ? await getNapametKatalog({ mektebId: profil.mektebId, grupaId: profil.grupaId }) : [],
+      ocjene: [...latest.values()],
+    });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
