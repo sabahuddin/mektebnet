@@ -135,6 +135,7 @@ Prevedi sa BOSANSKOG na ${targetName}.
 Pravila:
 - Zadrži islamske/arapske termine i vlastita imena prirodno za ciljni jezik (npr. Allah, Kur'an, sura, ajet, ezan, salavat, mekteb, muallim, ilmihal, abdest); nazive sura i dova NE prevodi (npr. El-Fatiha, El-Ihlas ostaju isti).
 - Za stručni islamski termin koji ima prirodan njemački ekvivalent, napiši njemački izraz pa bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ovo ne primjenjuj na nazive sura/dova, arapske transliteracije i vlastita imena.
+- Generički izraz "dova/dove" NIJE naziv dove: na njemačkom piši "Bittgebet (dova)" ili gramatički odgovarajući oblik. "Odijevanje" je običan bosanski izraz: prevedi ga kao "Kleidung (odijevanje)" kada je potreban stručni kontekst, nikada ga ne ostavljaj samog.
 - Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuti ostaju samo arapsko pismo i arapska transliteracija.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
@@ -201,6 +202,7 @@ Stroga pravila:
 - Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
 - Ako je ciljni jezik njemački, sav prevedivi tekst mora biti na njemačkom; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.
+- Generički izraz "dova/dove" prevedi kao "Bittgebet (dova)" (ili odgovarajući njemački padež); to nije naziv pojedinačne dove. "Odijevanje" prevedi kao "Kleidung (odijevanje)" i ne ostavljaj ga samog na bosanskom.
 - NE umotavaj odgovor u markdown (bez \`\`\`). Vrati ČISTO HTML, ništa drugo.`;
 
 async function translateHtml(html: string, targetName: string): Promise<string> {
