@@ -134,7 +134,7 @@ Pravila:
 - Zadrži placeholdere u vitičastim zagradama {ovako} i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt oblika {"prijevodi": [...]} gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz. Bez objašnjenja.`;
 
-async function translateTexts(items: string[], targetName: string): Promise<Record<string, string>> {
+async function translateTexts(items: string[], targetName: string, forceTranslation = false): Promise<Record<string, string>> {
   const data = await callOpenAI({
     model: MODEL,
     max_completion_tokens: 16384,
@@ -149,7 +149,9 @@ async function translateTexts(items: string[], targetName: string): Promise<Reco
         // (dict[original]) promaši → cijeli posao bi se preskočio. Tražimo niz
         // prijevoda istog redoslijeda i dužine pa zip-ujemo s našim originalima.
         content:
-          `Prevedi svaki string iz ulaznog niza. Vrati JSON objekt oblika {"prijevodi": [...]} ` +
+          `${forceTranslation
+            ? "Prethodni pokušaj je pogrešno ostavio ovaj bosanski tekst nepreveden. Prevedi ga sada POTPUNO na ciljni jezik, čak i ako je pisan velikim slovima. Ne zadržavaj bosansku rečenicu. "
+            : ""}Prevedi svaki string iz ulaznog niza. Vrati JSON objekt oblika {"prijevodi": [...]} ` +
           `gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz ` +
           `(prijevodi[i] je prijevod od ulaz[i]). Prevedi po značenju i kad izvorni tekst sadrži ` +
           `pravopisne greške ili pomiješana pisma; NE izostavljaj nijedan element.\n` +
@@ -212,7 +214,7 @@ async function translateHtml(html: string, targetName: string): Promise<string> 
   const translations: Record<string, string> = {};
   // Duga Ilmihal lekcija sadrži mnogo odjeljaka. Manji paket sprječava da
   // prevodilac izostavi posljednje tekstualne čvorove iz odgovora.
-  const batchSize = 8;
+  const batchSize = 4;
   for (let i = 0; i < unique.length; i += batchSize) {
     const batch = unique.slice(i, i + batchSize);
     const translated = await translateTexts(batch, targetName);
@@ -220,6 +222,26 @@ async function translateHtml(html: string, targetName: string): Promise<string> 
       throw new Error("nepotpun prijevod tekstualnih čvorova");
     }
     Object.assign(translations, translated);
+  }
+
+  // Model povremeno pogrešno tretira bosansku rečenicu pisanu VELIKIM
+  // SLOVIMA kao naslov ili transliteraciju. Ponovi samo takve čvorove, s
+  // eksplicitnom naredbom da ih zaista prevede. Čista arapska transliteracija
+  // je izuzeta i ostaje identična izvorniku.
+  for (const source of unique) {
+    const translated = translations[source];
+    if (
+      source.trim().length > 8 &&
+      source.trim() === translated?.trim() &&
+      !isProtectedArabicContent(source) &&
+      containsBosnianProse(source)
+    ) {
+      const retry = await translateTexts([source], targetName, true);
+      if (!retry[source]?.trim()) throw new Error("nepotpun strogi prijevod tekstualnog čvora");
+      translations[source] = targetName === "Njemački (Deutsch)"
+        ? repairKnownGermanLabel(source, retry[source])
+        : retry[source];
+    }
   }
 
   for (const index of textIndexes) {
@@ -240,19 +262,29 @@ function htmlTagSequence(html: string) {
 }
 
 function containsBosnianProse(text: string) {
-  return /\b(je|su|se|i|u|na|za|od|do|da|ne|smo|sam|si|ste|ćemo|trebamo|kada|kako|koji|koja|ovo|ova|ovaj|gospodaru|slava|tebi|neka|blagoslov|mir|vjernici|roditeljima)\b/iu.test(text);
+  return /\b(je|su|se|smo|sam|si|ste|ćemo|trebamo|kada|kako|koji|koja|ovo|ova|ovaj|gospodaru|slava|tebi|neka|blagoslov|mir|vjernici|roditeljima|dova|hairli|početak|znanje|naučiti|pjesmicu|napamet|namaski|šart|tejem+umski|radost|ramazanskog|naučimo|glasi|nijet|učiniti|odlučiti|klanjati|priča|dragi|moji|učenici|čestitke|odgovaramo|pitanja|razgovor|vjeronauka|akšam|šta|će|pokvariti)\b/iu.test(text);
 }
 
-function hasUntranslatedBosnianNode(source: string, translation: string) {
+function isProtectedArabicContent(text: string) {
+  // Arapsko pismo je uvijek izvorni vjerski tekst i ne prevodi se. Latinična
+  // transliteracija smije ostati ista samo kad je cijeli čvor transliteracija;
+  // bosanski naslov uz nju (npr. "Dova za znanje – Rabbi zidni...") mora se
+  // ipak prevesti, zato ga ovdje ne tretiramo kao zaštićen sadržaj.
+  return /\p{Script=Arabic}/u.test(text);
+}
+
+function findUntranslatedBosnianNode(source: string, translation: string) {
   const sourceParts = source.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
   const translatedParts = translation.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
-  if (sourceParts.length !== translatedParts.length) return true;
-  return sourceParts.some((part, index) =>
+  if (sourceParts.length !== translatedParts.length) return "različit broj dijelova HTML-a";
+  const node = sourceParts.find((part, index) =>
     !part.startsWith("<") &&
     part.trim().length > 8 &&
     part.trim() === translatedParts[index].trim() &&
+    !isProtectedArabicContent(part) &&
     containsBosnianProse(part),
   );
+  return node?.trim() ?? null;
 }
 
 function hasAddedArabicHonorific(source: string, translation: string) {
@@ -276,6 +308,16 @@ function hasLikelyEnglishInGerman(text: string) {
   return english >= 5 && english > german * 1.5;
 }
 
+function repairKnownGermanLabel(source: string, translation: string) {
+  // Kod kratkih oznaka uz dovu model nekad zadrži cijeli čvor kao "naziv",
+  // iako je završna riječ običan bosanski glagol. Ovaj uski fallback čuva
+  // naziv/transliteraciju, a prevodi samo nedvosmisleni obrazac "... glasi:".
+  if (source.trim() === translation.trim() && /\bglasi\s*:\s*$/iu.test(source)) {
+    return source.replace(/\bglasi(\s*:)$/iu, "lautet$1");
+  }
+  return translation;
+}
+
 function textTranslationIssue(source: string, translation: string, jezik: string) {
   if (!translation?.trim()) return "prazan prijevod";
   if (hasAddedArabicHonorific(source, translation)) return "dodan je počasni oblik koji nije u izvorniku";
@@ -286,8 +328,10 @@ function textTranslationIssue(source: string, translation: string, jezik: string
 function htmlTranslationIssue(source: string, translation: string, jezik: string) {
   if (!translation || translation.length < Math.min(20, source.length / 4)) return "prekratak odgovor";
   if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
-  if (textTranslationIssue(source, translation, jezik)) return textTranslationIssue(source, translation, jezik);
-  if (hasUntranslatedBosnianNode(source, translation)) return "ostao je nepreveden bosanski tekst";
+  const textIssue = textTranslationIssue(source, translation, jezik);
+  if (textIssue) return textIssue;
+  const untranslatedNode = findUntranslatedBosnianNode(source, translation);
+  if (untranslatedNode) return `ostao je nepreveden bosanski tekst: ${untranslatedNode.slice(0, 120)}`;
   return null;
 }
 
