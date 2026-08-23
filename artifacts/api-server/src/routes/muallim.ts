@@ -2362,6 +2362,59 @@ router.get("/napamet-program", async (req, res) => {
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
+router.get("/napamet-detalji/:stavkaId", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    const grupaId = Number(req.query.grupaId);
+    const stavkaId = String(req.params.stavkaId || "").trim();
+    if (!ctx?.mektebId || !grupaId || !stavkaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
+      res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
+    }
+    const katalog = await getNapametKatalog({
+      mektebId: ctx.mektebId,
+      grupaId,
+      muallimId: req.user!.userId,
+      includeHidden: true,
+    });
+    const stavka = katalog.find((item) => item.id === stavkaId);
+    if (!stavka) { res.status(404).json({ error: "NAPAMET stavka nije pronađena" }); return; }
+
+    const ucenici = await db.select({
+      id: ucenikProfiliTable.userId,
+      displayName: usersTable.displayName,
+    }).from(ucenikProfiliTable)
+      .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
+      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    const ucenikIds = ucenici.map((ucenik) => ucenik.id);
+    const posljednjaOcjena = new Map<number, { ocjena: number; datum: string }>();
+    if (ucenikIds.length > 0) {
+      const ocjene = await db.select({
+        ucenikId: ocjeneTable.ucenikId,
+        ocjena: ocjeneTable.ocjena,
+        datum: ocjeneTable.datum,
+        createdAt: ocjeneTable.createdAt,
+      }).from(ocjeneTable).where(and(
+        inArray(ocjeneTable.ucenikId, ucenikIds),
+        eq(ocjeneTable.napametStavkaId, stavkaId),
+      )).orderBy(desc(ocjeneTable.createdAt), desc(ocjeneTable.id));
+      for (const ocjena of ocjene) {
+        if (!posljednjaOcjena.has(ocjena.ucenikId)) {
+          posljednjaOcjena.set(ocjena.ucenikId, { ocjena: ocjena.ocjena, datum: ocjena.datum });
+        }
+      }
+    }
+    res.json({
+      stavka: { id: stavka.id, naziv: stavka.naziv, nivo: stavka.nivo },
+      ucenici: ucenici.map((ucenik) => ({
+        id: ucenik.id,
+        displayName: ucenik.displayName,
+        ocjena: posljednjaOcjena.get(ucenik.id)?.ocjena ?? null,
+        datum: posljednjaOcjena.get(ucenik.id)?.datum ?? null,
+      })),
+    });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
+});
+
 router.get("/napamet-lokalno", async (req, res) => {
   try {
     const ctx = await getMektebCtx(req.user!.userId);
