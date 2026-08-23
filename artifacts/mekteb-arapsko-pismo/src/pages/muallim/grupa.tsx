@@ -799,6 +799,7 @@ export default function GrupaPage() {
         </div>
 
          {aktivniModul === "napamet" && !grupa.isArchived && (
+           <>
            <NapametLokalniProgramEditor
              grupaId={grupaId}
              globalItems={napametKatalog.filter((item) => item.scope === "global")}
@@ -831,6 +832,7 @@ export default function GrupaPage() {
                ) : <div className="py-8 text-center text-sm text-muted-foreground">{t("Nema podataka za prikaz.")}</div>}
              </DialogContent>
            </Dialog>
+           </>
          )}
 
          {aktivniModul === "greske" && <section className="bg-white border border-teal-200 rounded-2xl overflow-hidden mb-6" data-testid="interaktivni-pregled-grupe">

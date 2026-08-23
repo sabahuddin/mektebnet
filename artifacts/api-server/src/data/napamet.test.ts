@@ -403,4 +403,15 @@ test("grupni NAPAMET brojač računa učenika samo jednom po stavci", async () =
   const stavka = payload.katalog.find((item) => item.id === STAVKA_ID);
   assert.equal(stavka?.assessedCount, 1);
   assert.equal(stavka?.totalCount, 1);
+
+  const detaljiResponse = await authed(`/api/muallim/napamet-detalji/${STAVKA_ID}?grupaId=${grupaId}`, muallimToken);
+  assert.equal(detaljiResponse.status, 200);
+  const detalji = await detaljiResponse.json() as {
+    stavka: { id: string };
+    ucenici: Array<{ id: number; ocjena: number | null; datum: string | null }>;
+  };
+  assert.equal(detalji.stavka.id, STAVKA_ID);
+  const ucenikDetalj = detalji.ucenici.find((ucenik) => ucenik.id === ucenikId);
+  assert.equal(ucenikDetalj?.ocjena, 6);
+  assert.equal(ucenikDetalj?.datum, "2026-08-27");
 });
