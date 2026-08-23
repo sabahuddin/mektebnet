@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
-import { bundledGermanNivo1Overlays } from "../data/german-nivo1-overlay";
+import {
+  bundledGermanNivo1Overlays,
+  type BundledGermanOverlay,
+} from "../data/german-nivo1-overlay";
 import { logger } from "./logger";
 
 type Lesson = {

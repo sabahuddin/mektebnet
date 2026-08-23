@@ -89,7 +89,7 @@ const usage = { in: 0, out: 0 };
 function preserveSourceCasing(source: string, translation: string) {
   // Ilmihal 1–20 intentionally use uppercase lesson typography. Preserve it
   // after translating instead of asking the model to infer a CSS/editor choice.
-  const letters = source.match(/\p{L}/gu) ?? [];
+  const letters = [...source].filter((character) => /\p{L}/u.test(character));
   const hasCasedLetter = letters.some((letter) => letter.toLowerCase() !== letter.toUpperCase());
   const isUppercase = hasCasedLetter && letters.every((letter) => letter.toUpperCase() === letter);
   return isUppercase ? translation.toLocaleUpperCase("de-DE") : translation;
