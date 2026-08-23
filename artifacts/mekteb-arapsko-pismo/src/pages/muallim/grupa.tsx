@@ -246,11 +246,12 @@ export default function GrupaPage() {
     Promise.all([
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
       apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
+      apiRequest<Ucenik[]>("GET", `/muallim/grupa/${grupaId}/ucenici`, undefined, token),
       apiRequest<LekcijaStatus[]>("GET", `/muallim/grupa/${grupaId}/lekcije-status`, undefined, token).catch(() => []),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<any[]>("GET", `/muallim/grupa/${grupaId}/zvjezdice-summary`, undefined, token).catch(() => []),
       apiRequest<{id:number;tip:string;naziv:string}[]>("GET", "/muallim/zvjezdice-kategorije", undefined, token).catch(() => []),
-    ]).then(([grupe, ucenici, status, lekcije, zvData, kategorije]) => {
+    ]).then(([grupe, ucenici, grupaUcenici, status, lekcije, zvData, kategorije]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
       setSekundarniMuallimi(g?.sekundarniMuallimi ?? []);
@@ -260,7 +261,7 @@ export default function GrupaPage() {
       }
       setSveGrupe(grupe);
       setSviStudenti(ucenici);
-      setStudentiGrupe(ucenici.filter(u => (u.profil as any)?.grupaId === grupaId || (u as any).grupaId === grupaId));
+      setStudentiGrupe(grupaUcenici);
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
       setIlmihalLekcije(lekcije);
       setZvjezdiceSummary(new Map((zvData as any[]).map((r: any) => [
@@ -323,10 +324,11 @@ export default function GrupaPage() {
     if (!token) return;
     Promise.all([
       apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
+      apiRequest<Ucenik[]>("GET", `/muallim/grupa/${grupaId}/ucenici`, undefined, token),
       apiRequest<LekcijaStatus[]>("GET", `/muallim/grupa/${grupaId}/lekcije-status`, undefined, token).catch(() => []),
-    ]).then(([ucenici, status]) => {
+    ]).then(([ucenici, grupaUcenici, status]) => {
       setSviStudenti(ucenici);
-      setStudentiGrupe(ucenici.filter(u => (u.profil as any)?.grupaId === grupaId || (u as any).grupaId === grupaId));
+      setStudentiGrupe(grupaUcenici);
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
     }).catch(() => {});
   }

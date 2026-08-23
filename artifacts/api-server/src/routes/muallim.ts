@@ -1423,6 +1423,86 @@ router.delete("/grupe/:id", async (req, res) => {
   }
 });
 
+// GET /api/muallim/grupa/:id/ucenici
+// Članstvo je izvor istine za ekran pojedinačne grupe. Ne oslanjamo se na
+// široki /ucenici spisak i lokalno filtriranje, jer glavni muallim mora vidjeti
+// svakog aktivnog člana grupe bez obzira koji ga je muallim dodao.
+router.get("/grupa/:id/ucenici", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id, 10);
+    if (!grupaId) {
+      res.status(400).json({ error: "Neispravna grupa" });
+      return;
+    }
+
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) {
+      res.status(404).json({ error: "Grupa nije pronađena" });
+      return;
+    }
+
+    const rows = await db.execute(sql`
+      SELECT
+        up.user_id,
+        up.muallim_id,
+        up.grupa_id,
+        up.mekteb_id,
+        up.is_archived,
+        u.display_name,
+        u.username,
+        u.email,
+        u.role,
+        u.last_seen_at,
+        u.total_screentime_sec,
+        mu.display_name AS muallim_display_name,
+        EXISTS (
+          SELECT 1
+          FROM roditelj_ucenik ru
+          WHERE ru.ucenik_id = up.user_id
+            AND ru.status = 'approved'
+        ) AS roditelj_povezan
+      FROM ucenik_profili up
+      JOIN users u ON u.id = up.user_id
+      LEFT JOIN users mu ON mu.id = up.muallim_id
+      WHERE up.grupa_id = ${grupaId}
+        AND (up.is_archived = false OR up.is_archived IS NULL)
+      ORDER BY u.display_name ASC
+    `);
+
+    type Row = {
+      user_id: number; muallim_id: number | null; grupa_id: number; mekteb_id: number | null;
+      is_archived: boolean | null; display_name: string; username: string; email: string | null;
+      role: string; last_seen_at: string | null; total_screentime_sec: number | null;
+      muallim_display_name: string | null; roditelj_povezan: boolean;
+    };
+    res.json((rows.rows as Row[]).map((r) => ({
+      id: r.user_id,
+      displayName: r.display_name,
+      username: r.username,
+      email: r.email,
+      role: r.role,
+      lastSeenAt: r.last_seen_at,
+      totalScreentimeSec: r.total_screentime_sec,
+      grupaId: r.grupa_id,
+      grupaIme: grupa.naziv,
+      muallimId: r.muallim_id,
+      muallimDisplayName: r.muallim_display_name,
+      roditeljPovezan: r.roditelj_povezan,
+      aktivanStatus: true,
+      profil: {
+        userId: r.user_id,
+        muallimId: r.muallim_id,
+        grupaId: r.grupa_id,
+        mektebId: r.mekteb_id,
+        isArchived: r.is_archived ?? false,
+      },
+    })));
+  } catch (err) {
+    console.error("Grupa članovi error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // GET /api/muallim/ucenici
 // Obični muallim vidi samo vlastite učenike.
 // Glavni muallim vidi SVE učenike svog džemata (sa muallimId + muallimDisplayName).
@@ -6110,7 +6190,16 @@ router.get("/ucenik/:id/interaktivni-blokovi", async (req, res) => {
 // GET /api/muallim/grupa/:id/zvjezdice-summary — totali za sve učenike u grupi
 router.get("/grupa/:id/zvjezdice-summary", async (req, res) => {
   try {
-    const grupaId = parseInt(req.params.id);
+    const grupaId = parseInt(req.params.id, 10);
+    if (!grupaId) {
+      res.status(400).json({ error: "Neispravna grupa" });
+      return;
+    }
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) {
+      res.status(404).json({ error: "Grupa nije pronađena" });
+      return;
+    }
     const ucenici = await db.execute(sql`
        SELECT user_id FROM ucenik_profili
        WHERE grupa_id = ${grupaId}
