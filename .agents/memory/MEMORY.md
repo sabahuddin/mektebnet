@@ -46,3 +46,4 @@
 - [Admin analitika učenja](admin-analitika-ucenja.md) — koristi prijave, napredak i rezultate kvizova; anonimne web posjete su bot-noise, ne indikator rada korisnika.
 - [Dugi HTML prijevodi](html-content-translation-qa.md) — čuvaj markup lokalno; AI prevodi samo tekstualne čvorove uz provjeru pokrivenosti.
 - [Ilmihal uppercase format](ilmihal-uppercase-format.md) — lekcije 1–20 čuvaju velika slova po izvornim tekstualnim čvorovima i nakon prijevoda.
+- [Mektebska godina — prisustvo](mektebska-godina-prisustvo.md) — tekuće prisustvo se strogo računa od 1. augusta, nikad po kalendarskoj godini ili staroj grupi.
