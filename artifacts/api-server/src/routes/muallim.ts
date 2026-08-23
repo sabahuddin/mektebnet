@@ -2571,12 +2571,19 @@ router.get("/ocjene/:ucenikId", async (req, res) => {
   }
 });
 
-// GET /api/muallim/prisustvo-ucenik/:ucenikId - all attendance for one student
+// GET /api/muallim/prisustvo-ucenik/:ucenikId
+// Evidencija na profilu je uvijek samo iz tekuće mektebske godine. Granica je
+// 1. august, ne 1. januar i ne datum na kojem je učenik zadnji put prebačen u
+// grupu — zato stara evidencija nikad ne smije "procuriti" u novi pregled.
 router.get("/prisustvo-ucenik/:ucenikId", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.ucenikId);
     const records = await db.select().from(priustvoTable)
-      .where(and(eq(priustvoTable.ucenikId, ucenikId), eq(priustvoTable.muallimId, req.user!.userId)));
+      .where(and(
+        eq(priustvoTable.ucenikId, ucenikId),
+        eq(priustvoTable.muallimId, req.user!.userId),
+        gte(priustvoTable.datum, currentSchoolYearResetDate()),
+      ));
     res.json(records);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
