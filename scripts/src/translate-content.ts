@@ -19,6 +19,7 @@
  *     tsx src/translate-content.ts --langs sq,de,en,tr,ar --max-seconds 100
  *   ... --tables rjecnik,pitanja_banka   (ograniči tabele)
  *   ... --tables ilmihal_lekcije --nivo 1 (samo jedan nivo Ilmihala)
+ *   ... --tables ilmihal_lekcije --ids 191,192 --force (ponovi samo navedene redove)
  *   ... --types text                      (samo tekst, preskoči HTML)
  *   ... --dry                             (samo prebroji, bez OpenAI poziva)
  */
@@ -66,6 +67,8 @@ const LANGS = argVal("--langs", "sq,de,en,tr,ar").split(",").map((s) => s.trim()
 const ONLY_TABLES = argVal("--tables", "").split(",").map((s) => s.trim()).filter(Boolean);
 const ONLY_TYPES = argVal("--types", "").split(",").map((s) => s.trim()).filter(Boolean);
 const ONLY_NIVO = parseInt(argVal("--nivo", "0"), 10);
+const ONLY_IDS = argVal("--ids", "").split(",").map((s) => parseInt(s.trim(), 10)).filter(Number.isInteger);
+const FORCE = args.includes("--force");
 const DRY = args.includes("--dry");
 const MODEL = argVal("--model", "gpt-5-nano");
 const CHUNK = parseInt(argVal("--chunk", "30"), 10);
@@ -113,7 +116,7 @@ async function callOpenAI(body: Record<string, unknown>): Promise<any> {
     break;
   }
   if (!res || !res.ok) throw new Error(`OpenAI ${res?.status}: ${res ? (await res.text()).slice(0, 200) : "no response"}`);
-  const data = await res.json();
+  const data: any = await res.json();
   usage.in += data.usage?.prompt_tokens ?? 0;
   usage.out += data.usage?.completion_tokens ?? 0;
   return data;
@@ -124,6 +127,7 @@ Prevedi sa BOSANSKOG na ${targetName}.
 Pravila:
 - Zadrži islamske/arapske termine i vlastita imena prirodno za ciljni jezik (npr. Allah, Kur'an, sura, ajet, ezan, salavat, mekteb, muallim, ilmihal, abdest); nazive sura i dova NE prevodi (npr. El-Fatiha, El-Ihlas ostaju isti).
 - Za stručni islamski termin koji ima prirodan njemački ekvivalent, napiši njemački izraz pa bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ovo ne primjenjuj na nazive sura/dova, arapske transliteracije i vlastita imena.
+- Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuti ostaju samo arapsko pismo i arapska transliteracija.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Zadrži placeholdere u vitičastim zagradama {ovako} i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt oblika {"prijevodi": [...]} gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz. Bez objašnjenja.`;
@@ -172,23 +176,84 @@ Prevedi VIDLJIVI TEKST sa BOSANSKOG na ${targetName} unutar datog HTML fragmenta
 Stroga pravila:
 - Vrati ISTI HTML sa istom strukturom: ne mijenjaj, ne dodaji i ne uklanjaj tagove, atribute, klase, id-eve, stilove, niti redoslijed.
 - Prevedi SAMO ljudski čitljiv tekst između tagova i tekstualne atribute (alt, title, placeholder). NE diraj vrijednosti src, href, data-*, class, id, style.
+- Prevedi SVAKU običnu bosansku rečenicu; ne ostavljaj vidljivi bosanski tekst nepreveden. Prije slanja odgovora provjeri da cijeli rezultat sadrži isti broj i redoslijed HTML tagova kao ulaz.
 - Zadrži arapski tekst (ajeti, dove, kaligrafija) NETAKNUT — ne prevodi i ne transliteriraj ga.
+- Bosanski prijevod ajeta, dove ili citata MORAŠ prevesti na njemački, čak i kada je cijeli tekst pisan velikim slovima. Netaknuti ostaju samo arapsko pismo i arapska transliteracija.
 - Zadrži islamske/arapske termine i nazive sura/dova kako jesu (El-Fatiha itd.).
 - Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.
 - NE umotavaj odgovor u markdown (bez \`\`\`). Vrati ČISTO HTML, ništa drugo.`;
 
 async function translateHtml(html: string, targetName: string): Promise<string> {
-  const data = await callOpenAI({
-    model: MODEL,
-    max_completion_tokens: 32768,
-    messages: [
-      { role: "system", content: HTML_SYS(targetName) },
-      { role: "user", content: html },
-    ],
-  });
-  let out: string = data.choices?.[0]?.message?.content ?? "";
-  out = out.trim().replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/i, "").trim();
-  return out;
+  // HTML ne šaljemo kao cjelinu: kod dugih lekcija model ponekad vrati samo
+  // djelimično preveden sadržaj ili promijeni markup. Lokalno ga dijelimo na
+  // tagove i tekstualne čvorove, pa prevodimo samo čvorove i ponovo sastavimo
+  // potpuno istu strukturu.
+  const parts = html.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
+  const textIndexes: number[] = [];
+  let ignoredTag: "script" | "style" | null = null;
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.startsWith("<")) {
+      const closing = part.match(/^<\s*\/\s*(script|style)\b/i);
+      const opening = part.match(/^<\s*(script|style)\b/i);
+      if (closing) ignoredTag = null;
+      else if (opening && !/\/\s*>$/.test(part)) ignoredTag = opening[1].toLowerCase() as "script" | "style";
+      continue;
+    }
+    if (!ignoredTag && /[\p{L}]/u.test(part)) textIndexes.push(i);
+  }
+
+  const unique = Array.from(new Set(textIndexes.map((i) => parts[i])));
+  const translations: Record<string, string> = {};
+  const batchSize = 20;
+  for (let i = 0; i < unique.length; i += batchSize) {
+    const batch = unique.slice(i, i + batchSize);
+    const translated = await translateTexts(batch, targetName);
+    if (batch.some((source) => !translated[source]?.trim())) {
+      throw new Error("nepotpun prijevod tekstualnih čvorova");
+    }
+    Object.assign(translations, translated);
+  }
+
+  for (const index of textIndexes) {
+    const source = parts[index];
+    const leading = source.match(/^\s*/)?.[0] ?? "";
+    const trailing = source.match(/\s*$/)?.[0] ?? "";
+    const translated = translations[source].trim();
+    parts[index] = `${leading}${translated}${trailing}`;
+  }
+  return parts.join("");
+}
+
+function htmlTagSequence(html: string) {
+  return Array.from(
+    html.matchAll(/<\/?([a-zA-Z][\w-]*)\b[^>]*>/g),
+    (m) => `${m[0][1] === "/" ? "/" : ""}${m[1].toLowerCase()}`,
+  ).join("|");
+}
+
+function containsBosnianProse(text: string) {
+  return /\b(je|su|se|i|u|na|za|od|do|da|ne|smo|sam|si|ste|ćemo|trebamo|kada|kako|koji|koja|ovo|ova|ovaj|gospodaru|slava|tebi|neka|blagoslov|mir|vjernici|roditeljima)\b/iu.test(text);
+}
+
+function hasUntranslatedBosnianNode(source: string, translation: string) {
+  const sourceParts = source.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
+  const translatedParts = translation.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
+  if (sourceParts.length !== translatedParts.length) return true;
+  return sourceParts.some((part, index) =>
+    !part.startsWith("<") &&
+    part.trim().length > 8 &&
+    part.trim() === translatedParts[index].trim() &&
+    containsBosnianProse(part),
+  );
+}
+
+function htmlTranslationIssue(source: string, translation: string) {
+  if (!translation || translation.length < Math.min(20, source.length / 4)) return "prekratak odgovor";
+  if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
+  if (hasUntranslatedBosnianNode(source, translation)) return "ostao je nepreveden bosanski tekst";
+  return null;
 }
 
 // ---- UPSERT ----
@@ -229,10 +294,11 @@ async function run() {
 
   for (const t of tables) {
     const cols = t.fields.map((f) => f.col);
-    const nivoFilter = t.tabela === "ilmihal_lekcije" && ONLY_NIVO > 0
-      ? ` WHERE nivo = ${ONLY_NIVO}`
-      : "";
-    const r = (await db.execute(sql.raw(`SELECT id, ${cols.join(", ")} FROM ${t.tabela}${nivoFilter}`))) as unknown as { rows: any[] };
+    const filters: string[] = [];
+    if (t.tabela === "ilmihal_lekcije" && ONLY_NIVO > 0) filters.push(`nivo = ${ONLY_NIVO}`);
+    if (ONLY_IDS.length) filters.push(`id IN (${ONLY_IDS.join(", ")})`);
+    const where = filters.length ? ` WHERE ${filters.join(" AND ")}` : "";
+    const r = (await db.execute(sql.raw(`SELECT id, ${cols.join(", ")} FROM ${t.tabela}${where}`))) as unknown as { rows: any[] };
     for (const row of r.rows) {
       const redId = row.id as number;
       for (const f of t.fields) {
@@ -278,7 +344,7 @@ async function run() {
         const hash = sha(srcStr);
         for (const jezik of LANGS) {
           const key = `${t.tabela}|${redId}|${f.col}|${jezik}`;
-          if (existing.get(key) === hash) continue; // već prevedeno, izvor nepromijenjen
+          if (!FORCE && existing.get(key) === hash) continue; // već prevedeno, izvor nepromijenjen
           if (f.type === "html") htmlJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, html: srcStr, hash });
           else textJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, type: f.type, strings, hash, arr: objArr });
         }
@@ -351,8 +417,13 @@ async function run() {
       while (hi < hjobs.length && !timeUp()) {
         const j = hjobs[hi++];
         try {
-          const tr = await translateHtml(j.html, LANG_NAMES[j.jezik]);
-          if (!tr || tr.length < Math.min(20, j.html.length / 4)) { failed++; console.error(`  [${j.jezik}] html ${j.tabela}#${j.redId} sumnjivo kratko — preskačem`); continue; }
+          let tr = await translateHtml(j.html, LANG_NAMES[j.jezik]);
+          let issue = htmlTranslationIssue(j.html, tr);
+          if (issue) {
+            tr = await translateHtml(j.html, LANG_NAMES[j.jezik]);
+            issue = htmlTranslationIssue(j.html, tr);
+          }
+          if (issue) { failed++; console.error(`  [${j.jezik}] html ${j.tabela}#${j.redId} nije prošao provjeru: ${issue} — preskačem`); continue; }
           await upsert(j.tabela, j.redId, j.polje, j.jezik, tr, j.hash);
           doneJobs++;
           if (doneJobs % 10 === 0) console.log(`  napredak (html): ${doneJobs} upsertano | ${hi}/${hjobs.length}`);
