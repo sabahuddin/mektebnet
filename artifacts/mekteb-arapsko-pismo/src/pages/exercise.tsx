@@ -336,11 +336,9 @@ export default function Exercise() {
       {/* Top Bar */}
       <div className="relative z-10 p-4 md:p-6 flex justify-between items-center">
         <Button variant="ghost" size="icon" className="rounded-full bg-white/50 backdrop-blur" onClick={() => {
-          // Jedan korak nazad u history-ju (npr. nazad na nivo-mapu ili ilmihal lekciju,
-          // odakle god je korisnik došao). Fallback na /lesson/:id ako nema history-ja
-          // (direktan ulazak npr. iz dijeljenog linka).
-          if (window.history.length > 1) window.history.back();
-          else setLocation(`/lesson/${lessonId}`);
+          // Jedan korak nazad na prethodnu internu rutu. Direktan link se vraća
+          // na roditeljsku lekciju, nikada na vanjsku stranicu iz historije.
+          goBackOr(() => setLocation(`/lesson/${lessonId}`));
         }}>
           <X className="w-6 h-6" />
         </Button>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
+import { goBackOr } from "@/lib/back-navigation";
 
 type Status = "prisutan" | "odsutan" | "zakasnio" | "opravdan";
 
@@ -112,7 +113,7 @@ export default function PrisustvoPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
+        <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
 

@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useLanguage } from "@/context/language";
+import { goBackOr } from "@/lib/back-navigation";
 import { ArrowLeft, Upload, Loader2, CheckCircle, AlertTriangle, Wand2 } from "lucide-react";
 
 // Admin AI uvoz kviza — paste JSON od Anthropic/Claude i jednim klikom
@@ -72,7 +73,7 @@ export default function AdminAiImportPage() {
     <Layout>
       <div className="max-w-3xl mx-auto px-4 py-6">
         <button
-          onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }}
+          onClick={() => goBackOr(() => setLocation("/admin"))}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na admin")}

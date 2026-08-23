@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +10,10 @@ import { OfflineIndicator } from "@/components/offline-indicator";
 import { PushPrompt } from "@/components/push-prompt";
 import { InstallPrompt } from "@/components/install-prompt";
 import { CookieConsent } from "@/components/cookie-consent";
+import {
+  markCurrentAppHistoryEntry,
+  useMektebLocation,
+} from "@/lib/back-navigation";
 
 // Auth pages
 import LoginPage from "./pages/login";
@@ -260,8 +265,16 @@ function HeartbeatMount() {
  */
 function AppRoutes() {
   const { lang } = useLanguage();
+
+  useEffect(() => {
+    markCurrentAppHistoryEntry();
+  }, []);
+
   return (
-    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+    <WouterRouter
+      base={import.meta.env.BASE_URL.replace(/\/$/, "")}
+      hook={useMektebLocation}
+    >
       <Router key={lang} />
     </WouterRouter>
   );

@@ -7,6 +7,7 @@ import { ArrowLeft, UserPlus, Copy, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
+import { goBackOr } from "@/lib/back-navigation";
 
 interface Grupa {
   id: number;
@@ -117,7 +118,7 @@ export default function DodajUcenikaPage() {
   return (
     <Layout>
       <div className="max-w-lg mx-auto">
-        <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
+        <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
 
@@ -197,7 +198,7 @@ export default function DodajUcenikaPage() {
               </Button>
             </div>
 
-            <button onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) window.history.back(); else setLocation("/muallim"); }} className="w-full text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
+            <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="w-full text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
               {t("Nazad na panel")}
             </button>
           </div>

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
+import { goBackOr } from "@/lib/back-navigation";
 
 interface Grupa {
   id: number;
@@ -160,10 +161,7 @@ export default function MuallimRasporedPage() {
       <div className="sticky top-16 z-30 -mx-4 px-4 py-2.5 bg-gradient-to-r from-violet-50 via-white to-violet-50 border-b border-violet-200/70 shadow-sm mb-6">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <button
-            onClick={() => {
-              if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
-              else setLocation(`/muallim/grupa/${grupaId}`);
-            }}
+            onClick={() => goBackOr(() => setLocation(`/muallim/grupa/${grupaId}`))}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-violet-200 text-violet-700 hover:bg-violet-100 font-bold text-sm transition-colors shrink-0"
           >
             <ArrowLeft className="w-4 h-4" /> {t("Nazad")}

@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
+import { goBackOr } from "@/lib/back-navigation";
 import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpen, CheckSquare, Square, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -281,7 +282,7 @@ export default function MuallimIzvjestajPage() {
       <div className="print-worksheet max-w-4xl mx-auto print-root">
         <div className="no-print mb-6 flex items-center justify-between gap-3 flex-wrap">
           <button
-            onClick={() => window.history.length > 1 ? window.history.back() : setLocation("/muallim")}
+            onClick={() => goBackOr(() => setLocation("/muallim"))}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium text-sm transition-colors"
             data-testid="link-nazad"
           >

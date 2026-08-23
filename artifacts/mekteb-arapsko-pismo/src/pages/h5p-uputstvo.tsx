@@ -358,7 +358,7 @@ export default function H5pUputstvoPage() {
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 space-y-6">
         <button
-          onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }}
+          onClick={() => goBackOr(() => setLocation("/admin"))}
           className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700"
         >
           <ArrowLeft className="w-4 h-4" />

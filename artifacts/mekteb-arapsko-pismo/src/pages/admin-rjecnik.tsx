@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { invalidateRjecnikCache } from "@/lib/rjecnik";
 import { useLanguage } from "@/context/language";
+import { goBackOr } from "@/lib/back-navigation";
 import { ArrowLeft, Plus, Search, Pencil, Trash2, BookOpen, Loader2, X, Save, Download } from "lucide-react";
 
 interface RjecnikEntry {
@@ -120,7 +121,7 @@ export default function AdminRjecnikPage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <button onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }} className="flex items-center gap-2 text-teal-600 hover:text-teal-800 mb-6 font-semibold">
+        <button onClick={() => goBackOr(() => setLocation("/admin"))} className="flex items-center gap-2 text-teal-600 hover:text-teal-800 mb-6 font-semibold">
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na admin")}
         </button>
 

@@ -5,6 +5,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { goBackOr } from "@/lib/back-navigation";
 import {
   ArrowLeft, Plus, Pencil, Trash2, BookOpen, Loader2, X, Save,
   Image as ImageIcon, Eye, EyeOff, Upload, FolderOpen, ChevronDown,
@@ -340,7 +341,7 @@ export default function AdminCitaonicaPage() {
     <Layout>
       <div className="max-w-5xl mx-auto px-4 py-8">
         <button
-          onClick={() => { if (window.history.length > 1) window.history.back(); else setLocation("/admin"); }}
+          onClick={() => goBackOr(() => setLocation("/admin"))}
           className="flex items-center gap-2 text-teal-600 hover:text-teal-800 mb-6 font-semibold"
           data-testid="link-nazad"
         >
