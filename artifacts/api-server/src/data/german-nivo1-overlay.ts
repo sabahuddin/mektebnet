@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { brotliDecompressSync } from "node:zlib";
 
 export type BundledGermanOverlay = {
@@ -52,6 +54,12 @@ const compressed =
   "HcfE8hC9zkmuCQaaWhG5bEVygKo+VtNMg8vD1sZmZxGVsvl1BQavy/HKEP3dvssMJwIu7NxwG6fHLk3Eettb2XzpK11O3tne+rruwHe95U34cADncjdcuZY/" +
   "bEyQy3yurhss6viZxz7GnUNTiunuhLt6wy0OYrxenPhOgLE3qWWzN+tinpvosLO+Gyq7x81O8Qo=";
 
+const completeBundlePath = fileURLToPath(
+  new URL("./german-nivo1-overlays.b64", import.meta.url),
+);
+
 export const bundledGermanNivo1Overlays: BundledGermanOverlay[] = JSON.parse(
-  brotliDecompressSync(Buffer.from(compressed, "base64")).toString("utf8"),
+  brotliDecompressSync(
+    Buffer.from(readFileSync(completeBundlePath, "utf8").trim(), "base64"),
+  ).toString("utf8"),
 ) as BundledGermanOverlay[];

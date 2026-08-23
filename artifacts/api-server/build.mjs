@@ -121,6 +121,10 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+  await copyFile(
+    path.resolve(artifactDir, "src/data/german-nivo1-overlays.b64"),
+    path.resolve(distDir, "german-nivo1-overlays.b64"),
+  );
 
 }
 
