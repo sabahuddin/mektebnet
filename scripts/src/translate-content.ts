@@ -25,6 +25,7 @@
  *   ... --dry --list-jobs                 (ispiši tačne preostale redove)
  */
 import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -360,7 +361,7 @@ function hasLikelyUntranslatedBosnian(source: string, translation: string) {
   return sourceCount >= 2 && bosnianMarkerCount(translation) > sourceCount * 0.30;
 }
 
-function existingTextNeedsRepair(source: string, translation: string, jezik: string) {
+export function existingTextNeedsRepair(source: string, translation: string, jezik: string) {
   if (textTranslationIssue(source, translation, jezik)) return true;
 
   // Stručni termini se namjerno mogu zadržati na bosanskom u zagradi
@@ -387,7 +388,7 @@ function existingQuizTextNeedsRepair(source: string, translation: string, jezik:
     && containsBosnianProse(source);
 }
 
-function existingQuizNeedsRepair(sourceArr: any[], translation: string, jezik: string) {
+export function existingQuizNeedsRepair(sourceArr: any[], translation: string, jezik: string) {
   let translatedArr: any;
   try { translatedArr = JSON.parse(translation); } catch { return true; }
   if (!Array.isArray(translatedArr) || translatedArr.length !== sourceArr.length) return true;
@@ -655,6 +656,8 @@ async function run() {
   }
 }
 
-run()
-  .then(() => process.exit(process.exitCode ?? 0))
-  .catch((e) => { console.error(e); process.exit(1); });
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  run()
+    .then(() => process.exit(process.exitCode ?? 0))
+    .catch((e) => { console.error(e); process.exit(1); });
+}

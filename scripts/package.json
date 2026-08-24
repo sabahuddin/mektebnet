@@ -28,6 +28,7 @@
     "categorize-migrated-kvizovi": "tsx ./src/categorize-migrated-kvizovi.ts",
     "migrate-pitanja-u-banku": "tsx ./src/migrate-pitanja-u-banku.ts",
     "translate-content": "tsx ./src/translate-content.ts",
+    "test:translate-content": "tsx --test ./src/translate-content.test.ts",
     "transfer-content": "tsx ./src/transfer-content.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
