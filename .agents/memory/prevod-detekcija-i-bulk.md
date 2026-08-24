@@ -29,6 +29,19 @@ izuzmi arapsko pismo i eksplicitnu listu kanonskih naziva. Ponovni pokušaj za s
 nepreveden stručni termin mora tražiti ciljni izraz uz bosanski termin u zagradi. Koristi
 read-only listu poslova prije `--force`, da se ne prevode ponovo već ispravni redovi.
 
+## HTML QA: imena i URL-ovi nisu bosanska proza
+
+Kod dugog HTML-a grubi odnos bošnjačkih markera (`č/ć/đ/ž`) ne smije sam odbiti prijevod koji
+ima dovoljno njemačke proze: vlastita imena, mjesta i porodična imena legitimno zadržavaju te
+znakove. URL-ovi su također nepromjenjivi sadržaj, ne rečenice za prijevod.
+
+**Why:** Ispravni njemački prijevodi lekcija s mnogo bošnjačkih imena bili su pogrešno blokirani,
+a jedan nepromijenjeni YouTube URL bio je prijavljen kao bosanski tekst.
+
+**How to apply:** Zadrži grubu marker-provjeru kao fallback za tekst bez jasnih signala ciljnog
+jezika, ali glavni dokaz neka bude nepromijenjeni vidljivi tekstualni čvor. Preskoči čvor koji je
+samo `http(s)` ili `www` URL.
+
 # Bulk AI prijevod velikog HTML-a protiv PROD baze
 
 - **PROD_DATABASE_URL može biti dostupan iz Replit dev** za direktan read/write na self-hosted prod,
