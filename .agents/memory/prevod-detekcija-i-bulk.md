@@ -15,6 +15,20 @@ bosanski (npr. `len_ratio` 1.00 a tijelo bosansko). Egzaktna jednakost drastičn
 zbog honorifika `dž.š.` i imena). Razdvajanje je čisto: pravi ~0.00–0.07, bosanski ~1.00.
 Dodatni signal: `len_ratio` pravog prijevoda — de/sq/tr ~1.05–1.15 duži, ar ~0.8 kraći; ~1.00 = sumnjivo.
 
+## Iznimka: kratka pitanja i kanonski termini
+
+Za **kratke kviz-stringove** ne tretiraj samo prisustvo `ž/đ/ć` ili jednakost izvora i prijevoda
+kao grešku. Njemački smije imati stručni termin u zagradi (npr. `Bedingung (šart)`), a nazivi
+sura/dova, arapske transliteracije i ustaljeni nazivi namaza (npr. Fatiha, Kunut-dova,
+Subhaneke, Sabah namaz) smiju ostati isti.
+
+**Why:** Opći marker-prag vraća već valjane kratke prijevode u beskonačnu bulk obradu.
+
+**How to apply:** Za kratke tekstove popravljaj potpuno nepromijenjenu **bosansku prozu**, ali
+izuzmi arapsko pismo i eksplicitnu listu kanonskih naziva. Ponovni pokušaj za stvarno
+nepreveden stručni termin mora tražiti ciljni izraz uz bosanski termin u zagradi. Koristi
+read-only listu poslova prije `--force`, da se ne prevode ponovo već ispravni redovi.
+
 # Bulk AI prijevod velikog HTML-a protiv PROD baze
 
 - **PROD_DATABASE_URL može biti dostupan iz Replit dev** za direktan read/write na self-hosted prod,
