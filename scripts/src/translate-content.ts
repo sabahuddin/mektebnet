@@ -78,6 +78,7 @@ const CHUNK = parseInt(argVal("--chunk", "30"), 10);
 const CONCURRENCY = parseInt(argVal("--concurrency", "8"), 10);
 const MAX_SECONDS = parseInt(argVal("--max-seconds", "0"), 10); // 0 = bez limita
 const LIMIT = parseInt(argVal("--limit", "0"), 10); // max poslova ovog pokreta (0 = bez)
+const HTML_BATCH_SIZE = Math.max(1, Math.min(20, parseInt(argVal("--html-batch-size", "4"), 10) || 4));
 
 const startMs = Date.now();
 function timeUp() {
@@ -233,9 +234,8 @@ async function translateHtml(html: string, targetName: string): Promise<string> 
   const translations: Record<string, string> = {};
   // Duga Ilmihal lekcija sadrži mnogo odjeljaka. Manji paket sprječava da
   // prevodilac izostavi posljednje tekstualne čvorove iz odgovora.
-  const batchSize = 4;
-  for (let i = 0; i < unique.length; i += batchSize) {
-    const batch = unique.slice(i, i + batchSize);
+  for (let i = 0; i < unique.length; i += HTML_BATCH_SIZE) {
+    const batch = unique.slice(i, i + HTML_BATCH_SIZE);
     const translated = await translateTexts(batch, targetName);
     if (batch.some((source) => !translated[source]?.trim())) {
       throw new Error("nepotpun prijevod tekstualnih čvorova");
@@ -308,6 +308,7 @@ function findUntranslatedBosnianNode(source: string, translation: string) {
     !part.startsWith("<") &&
     part.trim().length > 8 &&
     part.trim() === translatedParts[index].trim() &&
+    !/^(?:https?:\/\/|www\.)\S+$/iu.test(part.trim()) &&
     !isProtectedArabicContent(part) &&
     containsBosnianProse(part),
   );
@@ -358,6 +359,14 @@ function bosnianMarkerCount(value: string) {
 
 function hasLikelyUntranslatedBosnian(source: string, translation: string) {
   const sourceCount = bosnianMarkerCount(source);
+  const germanWordCount = translation
+    .replace(/<[^>]*>/g, " ")
+    .match(/\b(der|die|das|den|dem|des|und|ist|sind|mit|von|für|auf|als|nicht|eine|einen|einem|dieser|diese|dieses|haben|wird|werden|zum|zur)\b/giu)?.length ?? 0;
+
+  // Imena bošnjačkih alima, mjesta i porodica prirodno zadržavaju č/ć/đ/ž i
+  // mogu preći grubi prag, iako je ostatak teksta ispravan njemački. Tada
+  // precizna provjera nepromijenjenih tekstualnih čvorova ispod ostaje zaštita.
+  if (germanWordCount >= 3) return false;
   return sourceCount >= 2 && bosnianMarkerCount(translation) > sourceCount * 0.30;
 }
 
@@ -414,7 +423,7 @@ export function existingQuizNeedsRepair(sourceArr: any[], translation: string, j
   return false;
 }
 
-function htmlTranslationIssue(source: string, translation: string, jezik: string) {
+export function htmlTranslationIssue(source: string, translation: string, jezik: string) {
   if (!translation || translation.length < Math.min(20, source.length / 4)) return "prekratak odgovor";
   if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
   const textIssue = textTranslationIssue(source, translation, jezik);

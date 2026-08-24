@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   existingQuizNeedsRepair,
   existingTextNeedsRepair,
+  htmlTranslationIssue,
 } from "./translate-content";
 
 test("ne šalje ponovo bankovno pitanje koje prevodi termin i čuva ga u zagradi", () => {
@@ -47,4 +48,17 @@ test("označava potpuno nepromijenjeno kviz_pitanje za popravku", () => {
   ];
 
   assert.equal(existingQuizNeedsRepair(source, JSON.stringify(source), "de"), true);
+});
+
+test("ne tretira nepromijenjeni URL u HTML-u kao neprevedenu rečenicu", () => {
+  const source = '<p>https://youtu.be/4-VR0vjjDi8?si=vY-7nPPQWh_K3VxD</p>';
+
+  assert.equal(htmlTranslationIssue(source, source, "de"), null);
+});
+
+test("ne odbacuje njemački HTML zbog bošnjačkih slova u vlastitim imenima", () => {
+  const source = "<p>Đuro Đurić je učitelj u Žepču.</p>";
+  const translation = "<p>Der Lehrer Đuro Đurić ist ein Lehrer aus Žepče und unterrichtet dort.</p>";
+
+  assert.equal(htmlTranslationIssue(source, translation, "de"), null);
 });
