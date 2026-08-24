@@ -42,6 +42,19 @@ a jedan nepromijenjeni YouTube URL bio je prijavljen kao bosanski tekst.
 jezika, ali glavni dokaz neka bude nepromijenjeni vidljivi tekstualni čvor. Preskoči čvor koji je
 samo `http(s)` ili `www` URL.
 
+## HTML QA: Unicode granice, transliteracija i veliki paketi
+
+Provjera riječi mora koristiti Unicode granice slova, ne JavaScript `\b`: ASCII granica može
+vidjeti `su` unutar imena „Sušić“ kao bosansku riječ. Dugi čvorovi arapske transliteracije ostaju
+identični, a nepotpun povrat većeg AI paketa treba ponoviti samo za prazne čvorove.
+
+**Why:** Ime autora i latinicom zapisana dova su pogrešno blokirali cijele lekcije; veliki paketi
+su povremeno izostavljali samo jedan od više tekstualnih čvorova.
+
+**How to apply:** Prepoznaj riječi preko `\p{L}` granica, dozvoli prepoznatljivu arapsku formulu
+kada je cijeli čvor transliteracija i napravi pojedinačni retry samo za izostavljeni čvor prije
+nego što odbaciš cijeli HTML prijevod.
+
 # Bulk AI prijevod velikog HTML-a protiv PROD baze
 
 - **PROD_DATABASE_URL može biti dostupan iz Replit dev** za direktan read/write na self-hosted prod,

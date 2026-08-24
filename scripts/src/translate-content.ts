@@ -237,10 +237,19 @@ async function translateHtml(html: string, targetName: string): Promise<string> 
   for (let i = 0; i < unique.length; i += HTML_BATCH_SIZE) {
     const batch = unique.slice(i, i + HTML_BATCH_SIZE);
     const translated = await translateTexts(batch, targetName);
-    if (batch.some((source) => !translated[source]?.trim())) {
-      throw new Error("nepotpun prijevod tekstualnih čvorova");
-    }
     Object.assign(translations, translated);
+
+    // Veći batch je mnogo brži, ali model povremeno izostavi jedan čvor pri
+    // povratku dugog JSON niza. Ne odbacuj cijelu lekciju: ponovi samo prazne
+    // čvorove pojedinačno i zadrži već potvrđene prijevode iz istog batcha.
+    for (const source of batch) {
+      if (translations[source]?.trim()) continue;
+      const retry = await translateTexts([source], targetName);
+      if (!retry[source]?.trim()) {
+        throw new Error("nepotpun prijevod tekstualnih čvorova");
+      }
+      translations[source] = retry[source];
+    }
   }
 
   // Model povremeno pogrešno tretira bosansku rečenicu pisanu VELIKIM
@@ -281,7 +290,15 @@ function htmlTagSequence(html: string) {
 }
 
 function containsBosnianProse(text: string) {
-  return /\b(je|su|se|smo|sam|si|ste|ćemo|trebamo|kada|kako|koji|koja|ovo|ova|ovaj|gospodaru|slava|tebi|neka|blagoslov|mir|vjernici|roditeljima|dova|hairli|početak|znanje|naučiti|pjesmicu|napamet|namaski|šart|tejem+umski|radost|ramazanskog|naučimo|glasi|nijet|učiniti|odlučiti|klanjati|priča|dragi|moji|učenici|čestitke|odgovaramo|pitanja|razgovor|vjeronauka|akšam|šta|će|pokvariti)\b/iu.test(text);
+  return /(?<!\p{L})(je|su|se|smo|sam|si|ste|ćemo|trebamo|kada|kako|koji|koja|ovo|ova|ovaj|gospodaru|slava|tebi|neka|blagoslov|mir|vjernici|roditeljima|dova|hairli|početak|znanje|naučiti|pjesmicu|napamet|namaski|šart|tejem+umski|radost|ramazanskog|naučimo|glasi|nijet|učiniti|odlučiti|klanjati|priča|dragi|moji|učenici|čestitke|odgovaramo|pitanja|razgovor|vjeronauka|akšam|šta|će|pokvariti)(?!\p{L})/iu.test(text);
+}
+
+function isLikelyPersonalName(text: string) {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  return words.length >= 2
+    && words.length <= 4
+    && words.every((word) => /^[\p{Lu}][\p{L}'’-]*$/u.test(word))
+    && !containsBosnianProse(text);
 }
 
 function isProtectedArabicContent(text: string) {
@@ -289,7 +306,12 @@ function isProtectedArabicContent(text: string) {
   // transliteracija smije ostati ista samo kad je cijeli čvor transliteracija;
   // bosanski naslov uz nju (npr. "Dova za znanje – Rabbi zidni...") mora se
   // ipak prevesti, zato ga ovdje ne tretiramo kao zaštićen sadržaj.
-  return /\p{Script=Arabic}/u.test(text);
+  if (/\p{Script=Arabic}/u.test(text)) return true;
+
+  const value = text.trim();
+  const isLatinOnly = /^[\p{L}\d\s'’‘.,;:!?()\-–—]+$/u.test(value);
+  const hasArabicFormula = /\b(?:allahu|bismillah|el-hamdu|la-ilahe|rabbi|subhane|kul|inna|ve-la|vve-la|fis-semavati|minellahi|sinetun)\b/iu.test(value);
+  return value.length > 15 && isLatinOnly && hasArabicFormula;
 }
 
 function isProtectedIslamicName(text: string) {
@@ -309,6 +331,7 @@ function findUntranslatedBosnianNode(source: string, translation: string) {
     part.trim().length > 8 &&
     part.trim() === translatedParts[index].trim() &&
     !/^(?:https?:\/\/|www\.)\S+$/iu.test(part.trim()) &&
+    !isLikelyPersonalName(part) &&
     !isProtectedArabicContent(part) &&
     containsBosnianProse(part),
   );
@@ -367,6 +390,7 @@ function hasLikelyUntranslatedBosnian(source: string, translation: string) {
   // mogu preći grubi prag, iako je ostatak teksta ispravan njemački. Tada
   // precizna provjera nepromijenjenih tekstualnih čvorova ispod ostaje zaštita.
   if (germanWordCount >= 3) return false;
+  if (source.trim() === translation.trim() && isLikelyPersonalName(source)) return false;
   return sourceCount >= 2 && bosnianMarkerCount(translation) > sourceCount * 0.30;
 }
 

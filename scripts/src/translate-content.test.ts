@@ -62,3 +62,15 @@ test("ne odbacuje njemački HTML zbog bošnjačkih slova u vlastitim imenima", (
 
   assert.equal(htmlTranslationIssue(source, translation, "de"), null);
 });
+
+test("ne tretira nepromijenjeno ime Derviš Sušić kao bosansku rečenicu", () => {
+  const source = "<p>DERVIŠ SUŠIĆ</p>";
+
+  assert.equal(htmlTranslationIssue(source, source, "de"), null);
+});
+
+test("čuva dugu arapsku transliteraciju u HTML-u", () => {
+  const source = "<p>ALLAHU LA-ILAHE ILLA-HU, EL-HAJJUL-KAJJUM. LA TE'HUZUHU SINETUN VVE-LA NEVM.</p>";
+
+  assert.equal(htmlTranslationIssue(source, source, "de"), null);
+});
