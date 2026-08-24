@@ -91,16 +91,15 @@ export default function AdminPrijevodiPage() {
 
         <div className="flex items-center gap-2 mb-1">
           <Languages className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-extrabold">Uređivanje prijevoda</h1>
+          <h1 className="text-2xl font-extrabold">{t("Uređivanje prijevoda")}</h1>
         </div>
         <p className="text-sm text-muted-foreground mb-5">
-          Ispravi bilo koji prijevod interfejsa ili sadržaja bez diranja koda. Izmjene
-          su odmah vidljive na platformi (interfejs odmah, sadržaj nakon osvježavanja stranice).
+          {t("Ispravi bilo koji prijevod interfejsa ili sadržaja bez diranja koda. Izmjene su odmah vidljive na platformi (interfejs odmah, sadržaj nakon osvježavanja stranice).")}
         </p>
 
         {/* Jezik */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-sm font-semibold text-muted-foreground">Jezik:</span>
+          <span className="text-sm font-semibold text-muted-foreground">{t("Jezik:")}</span>
           {EDIT_LANGS.map((l) => (
             <button
               key={l}
@@ -124,7 +123,7 @@ export default function AdminPrijevodiPage() {
               tab === "ui" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Languages className="w-4 h-4" /> Interfejs
+            <Languages className="w-4 h-4" /> {t("Interfejs")}
           </button>
           <button
             onClick={() => setTab("sadrzaj")}
@@ -132,7 +131,7 @@ export default function AdminPrijevodiPage() {
               tab === "sadrzaj" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <FileText className="w-4 h-4" /> Sadržaj
+            <FileText className="w-4 h-4" /> {t("Sadržaj")}
           </button>
         </div>
 
@@ -161,6 +160,7 @@ function UiTab({
   onSaved: () => Promise<void>;
 }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [q, setQ] = useState("");
   const [editKey, setEditKey] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -191,15 +191,15 @@ function UiTab({
 
   const save = async () => {
     if (!token || editKey == null) return;
-    if (!draft.trim()) { toast({ title: "Prijevod ne smije biti prazan", variant: "destructive" }); return; }
+    if (!draft.trim()) { toast({ title: t("Prijevod ne smije biti prazan"), variant: "destructive" }); return; }
     setBusy(true);
     try {
       await apiRequest("POST", "/admin/prijevodi/ui", { jezik: lang, kljuc: editKey, prijevod: draft }, token);
-      toast({ title: "Sačuvano", description: "Prijevod interfejsa ažuriran." });
+      toast({ title: t("Sačuvano"), description: t("Prijevod interfejsa ažuriran.") });
       setEditKey(null);
       await onSaved();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Spremanje neuspjelo", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Spremanje neuspjelo"), variant: "destructive" });
     } finally {
       setBusy(false);
     }
@@ -210,11 +210,11 @@ function UiTab({
     setBusy(true);
     try {
       await apiRequest("DELETE", "/admin/prijevodi/ui", { jezik: lang, kljuc }, token);
-      toast({ title: "Vraćeno", description: "Override uklonjen — koristi se originalni prijevod." });
+      toast({ title: t("Vraćeno"), description: t("Override uklonjen — koristi se originalni prijevod.") });
       if (editKey === kljuc) setEditKey(null);
       await onSaved();
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Vraćanje neuspjelo", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Vraćanje neuspjelo"), variant: "destructive" });
     } finally {
       setBusy(false);
     }
@@ -227,25 +227,25 @@ function UiTab({
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Upiši riječ koju vidiš na ekranu (npr. Ilmihan)…"
+          placeholder={t("Upiši riječ koju vidiš na ekranu (npr. Ilmihan)…")}
           className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
       </div>
 
       {q.trim().length < 2 ? (
         <p className="text-sm text-muted-foreground py-8 text-center">
-          Upiši najmanje 2 znaka za pretragu prijevoda interfejsa.
+          {t("Upiši najmanje 2 znaka za pretragu prijevoda interfejsa.")}
         </p>
       ) : results.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">Nema rezultata za "{q}".</p>
+        <p className="text-sm text-muted-foreground py-8 text-center">{t('Nema rezultata za "{query}".', { query: q })}</p>
       ) : (
         <div className="space-y-2">
           {results.map((r) => (
             <div key={r.kljuc} className="border border-border rounded-xl p-3 bg-white">
               <div className="text-xs text-muted-foreground mb-1">
-                Bosanski (izvor): <span className="text-foreground font-medium">{r.kljuc}</span>
+                {t("Bosanski (izvor):")} <span className="text-foreground font-medium">{r.kljuc}</span>
                 {r.overridden && (
-                  <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-semibold">izmijenjeno</span>
+                  <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-semibold">{t("izmijenjeno")}</span>
                 )}
               </div>
               {editKey === r.kljuc ? (
@@ -260,22 +260,22 @@ function UiTab({
                   <div className="flex gap-2 mt-2">
                     <button onClick={save} disabled={busy}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50">
-                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Sačuvaj
+                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Sačuvaj")}
                     </button>
                     <button onClick={() => setEditKey(null)} disabled={busy}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm font-semibold">
-                      <X className="w-4 h-4" /> Odustani
+                      <X className="w-4 h-4" /> {t("Odustani")}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-start justify-between gap-3">
-                  <div className="text-sm flex-1" dir={lang === "ar" ? "rtl" : "ltr"}>{r.current || <span className="text-muted-foreground italic">(prazno)</span>}</div>
+                  <div className="text-sm flex-1" dir={lang === "ar" ? "rtl" : "ltr"}>{r.current || <span className="text-muted-foreground italic">{t("(prazno)")}</span>}</div>
                   <div className="flex gap-1.5 shrink-0">
-                    <button onClick={() => startEdit(r.kljuc, r.current)} title="Uredi"
+                    <button onClick={() => startEdit(r.kljuc, r.current)} title={t("Uredi")}
                       className="p-1.5 rounded-lg hover:bg-muted text-primary"><Pencil className="w-4 h-4" /></button>
                     {r.overridden && (
-                      <button onClick={() => revert(r.kljuc)} disabled={busy} title="Vrati original"
+                      <button onClick={() => revert(r.kljuc)} disabled={busy} title={t("Vrati original")}
                         className="p-1.5 rounded-lg hover:bg-muted text-amber-600"><RotateCcw className="w-4 h-4" /></button>
                     )}
                   </div>
@@ -284,7 +284,7 @@ function UiTab({
             </div>
           ))}
           {results.length >= 200 && (
-            <p className="text-xs text-muted-foreground text-center pt-2">Prikazano prvih 200 — suzi pretragu.</p>
+            <p className="text-xs text-muted-foreground text-center pt-2">{t("Prikazano prvih 200 — suzi pretragu.")}</p>
           )}
         </div>
       )}
@@ -295,6 +295,7 @@ function UiTab({
 /* ------------------------------ Sadržaj tab ------------------------------ */
 function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<ContentHit[]>([]);
   const [searched, setSearched] = useState(false);
@@ -306,7 +307,7 @@ function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
   const search = async () => {
     if (!token) return;
     const term = q.trim();
-    if (term.length < 2) { toast({ title: "Upiši najmanje 2 znaka", variant: "destructive" }); return; }
+    if (term.length < 2) { toast({ title: t("Upiši najmanje 2 znaka"), variant: "destructive" }); return; }
     setLoading(true);
     try {
       const data = await apiRequest<{ rows: ContentHit[] }>(
@@ -318,7 +319,7 @@ function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
       setHits(data.rows);
       setSearched(true);
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Pretraga neuspjela", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Pretraga neuspjela"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -331,23 +332,23 @@ function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
       setEditing(full);
       setDraft(full.prijevod);
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Učitavanje neuspjelo", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Učitavanje neuspjelo"), variant: "destructive" });
     }
   };
 
   const save = async () => {
     if (!token || !editing) return;
-    if (!draft.trim()) { toast({ title: "Prijevod ne smije biti prazan", variant: "destructive" }); return; }
+    if (!draft.trim()) { toast({ title: t("Prijevod ne smije biti prazan"), variant: "destructive" }); return; }
     setBusy(true);
     try {
       await apiRequest("PUT", `/admin/prijevodi/content/${editing.id}`, { prijevod: draft }, token);
-      toast({ title: "Sačuvano", description: "Prijevod sadržaja ažuriran." });
+      toast({ title: t("Sačuvano"), description: t("Prijevod sadržaja ažuriran.") });
       setHits((prev) => prev.map((h) => (h.id === editing.id
         ? { ...h, snippet: draft.slice(0, 240), len: draft.length }
         : h)));
       setEditing(null);
     } catch (err: any) {
-      toast({ title: "Greška", description: err?.message || "Spremanje neuspjelo", variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Spremanje neuspjelo"), variant: "destructive" });
     } finally {
       setBusy(false);
     }
@@ -364,22 +365,22 @@ function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void search(); }}
-            placeholder="Upiši pogrešnu riječ iz lekcije/kviza/knjige…"
+            placeholder={t("Upiši pogrešnu riječ iz lekcije/kviza/knjige…")}
             className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <button onClick={search} disabled={loading}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Traži
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} {t("Traži")}
         </button>
       </div>
 
       {!searched ? (
         <p className="text-sm text-muted-foreground py-8 text-center">
-          Pretraži prevedeni sadržaj ({LANG_NAMES[lang]}) po tekstu koji vidiš na platformi.
+          {t("Pretraži prevedeni sadržaj ({jezik}) po tekstu koji vidiš na platformi.", { jezik: LANG_NAMES[lang] })}
         </p>
       ) : hits.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">Nema rezultata za "{q}".</p>
+        <p className="text-sm text-muted-foreground py-8 text-center">{t('Nema rezultata za "{query}".', { query: q })}</p>
       ) : (
         <div className="space-y-2">
           {hits.map((h) => (
@@ -387,12 +388,12 @@ function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
               className="w-full text-left border border-border rounded-xl p-3 bg-white hover:border-primary/50 transition">
               <div className="flex items-center gap-2 mb-1">
                 <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-semibold text-muted-foreground">
-                  {TABELA_LABELS[h.tabela] ?? h.tabela} · {h.polje}
+                   {TABELA_LABELS[h.tabela] ? t(TABELA_LABELS[h.tabela]) : h.tabela} · {h.polje}
                 </span>
-                {h.len > 240 && <span className="text-[10px] text-muted-foreground">(duži tekst)</span>}
+                 {h.len > 240 && <span className="text-[10px] text-muted-foreground">{t("(duži tekst)")}</span>}
               </div>
               {h.izvor && (
-                <div className="text-xs text-muted-foreground mb-0.5">BS: {h.izvor}</div>
+                 <div className="text-xs text-muted-foreground mb-0.5">{t("BS:")} {h.izvor}</div>
               )}
               <div className="text-sm" dir={lang === "ar" ? "rtl" : "ltr"}>{h.snippet}</div>
             </button>
@@ -404,17 +405,17 @@ function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setEditing(null)}>
           <div className="bg-white rounded-2xl p-5 w-full max-w-2xl max-h-[85vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold">{TABELA_LABELS[editing.tabela] ?? editing.tabela} · {editing.polje}</h3>
+               <h3 className="font-bold">{TABELA_LABELS[editing.tabela] ? t(TABELA_LABELS[editing.tabela]) : editing.tabela} · {editing.polje}</h3>
               <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
             </div>
             {editing.izvor && (
               <div className="mb-3">
-                <div className="text-xs font-semibold text-muted-foreground mb-1">Bosanski izvor</div>
+                 <div className="text-xs font-semibold text-muted-foreground mb-1">{t("Bosanski izvor")}</div>
                 <div className="text-sm bg-muted/50 rounded-lg p-2 max-h-32 overflow-auto whitespace-pre-wrap">{editing.izvor}</div>
               </div>
             )}
             <div className="text-xs font-semibold text-muted-foreground mb-1">
-              Prijevod ({LANG_NAMES[lang]}){isHtml && " — HTML, pazi na tagove"}
+               {t("Prijevod ({jezik})", { jezik: LANG_NAMES[lang] })}{isHtml && t(" — HTML, pazi na tagove")}
             </div>
             <textarea
               value={draft}
@@ -426,11 +427,11 @@ function SadrzajTab({ lang, token }: { lang: Lang; token: string | null }) {
             <div className="flex gap-2 mt-3">
               <button onClick={save} disabled={busy}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Sačuvaj
+                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Sačuvaj")}
               </button>
               <button onClick={() => setEditing(null)} disabled={busy}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm font-semibold">
-                <X className="w-4 h-4" /> Odustani
+                 <X className="w-4 h-4" /> {t("Odustani")}
               </button>
             </div>
           </div>

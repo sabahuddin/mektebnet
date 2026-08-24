@@ -244,10 +244,10 @@ export default function DodajUcenikaPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-bold text-foreground">Dodaj i nalog za roditelja</span>
+                    <span className="text-sm font-bold text-foreground">{t("Dodaj i nalog za roditelja")}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Roditelj dobije zaseban nalog i automatski se poveže s djetetom. Ne ulazi u kvotu licenci.
+                    {t("Roditelj dobije zaseban nalog i automatski se poveže s djetetom. Ne ulazi u kvotu licenci.")}
                   </p>
                 </div>
               </label>
@@ -255,7 +255,7 @@ export default function DodajUcenikaPage() {
               {dodajRoditelja && (
                 <div className="mt-4 ml-8">
                   <label className="text-sm font-bold text-foreground mb-1.5 block">
-                    Ime i prezime roditelja <span className="text-red-500">*</span>
+                    {t("Ime i prezime roditelja")} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"

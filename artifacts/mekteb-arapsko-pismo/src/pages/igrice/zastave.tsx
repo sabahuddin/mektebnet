@@ -292,7 +292,7 @@ export default function ZastaveSvijeta() {
                 // koristi se prvi kao fallback za Windows Chrome/Edge.
                 fontFamily: '"Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif',
               }}
-              aria-label="Zastava"
+              aria-label={t("Zastava")}
               data-testid="flag-emoji"
             >
               {currentQ.flagEmoji ?? "🏳️"}

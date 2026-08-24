@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Check, ChevronDown, Circle, Search, SlidersHorizontal } from "lucide-react";
+import { useLanguage } from "@/context/language";
 
 export interface NapametStavka {
   id: string;
@@ -22,13 +23,6 @@ export interface NapametOcjena {
   napomena?: string | null;
 }
 
-const NIVO_NAZIV: Record<number, string> = {
-  1: "NAPAMET 1. nivo",
-  2: "NAPAMET 2. nivo",
-  3: "NAPAMET 3. nivo",
-  4: "Dodatak",
-};
-
 const OCJENA_COLORS = ["", "bg-red-100 text-red-700", "bg-orange-100 text-orange-700", "bg-amber-100 text-amber-700", "bg-blue-100 text-blue-700", "bg-emerald-100 text-emerald-700", "bg-emerald-100 text-emerald-700"];
 const NIVO_COLORS: Record<number, { icon: string; text: string }> = {
   1: { icon: "bg-emerald-100 text-emerald-700", text: "text-emerald-800" },
@@ -42,6 +36,7 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
   ocjene: NapametOcjena[];
   loading?: boolean;
 }) {
+  const { t } = useLanguage();
   const [openNivo, setOpenNivo] = useState<number | null>(1);
   const [filter, setFilter] = useState<"all" | "graded" | "remaining">("all");
   const [search, setSearch] = useState("");
@@ -63,6 +58,9 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
   const totalCount = katalog.length;
   const gradedCount = katalog.filter((stavka) => gradeByItem.has(stavka.id)).length;
   const remainingCount = Math.max(0, totalCount - gradedCount);
+  const nazivNivoa = (nivo: number) => nivo === 4
+    ? t("Dodatak")
+    : t("NAPAMET {n}. nivo", { n: String(nivo) });
 
   const levelItems = (nivo: number) => katalog
     .filter((stavka) => {
@@ -83,19 +81,19 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
       {!loading && (
         <>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">Odaberite nivo da vidite stavke i ocjene.</p>
+            <p className="text-sm text-muted-foreground">{t("Odaberite nivo da vidite stavke i ocjene.")}</p>
             <div className="rounded-2xl bg-emerald-700 text-white px-3.5 py-2.5 text-right shrink-0">
-              <p className="text-[10px] font-bold text-emerald-100">UKUPNO</p>
+              <p className="text-[10px] font-bold text-emerald-100">{t("UKUPNO")}</p>
               <p className="text-xl font-black leading-none mt-1">{gradedCount}<span className="text-sm font-bold text-emerald-200"> / {totalCount}</span></p>
-              <p className="text-[10px] text-emerald-100 mt-1">ocijenjeno</p>
+              <p className="text-[10px] text-emerald-100 mt-1">{t("ocijenjeno")}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
             {([
-              ["all", "Sve", totalCount],
-              ["graded", "Ocijenjeno", gradedCount],
-              ["remaining", "Preostalo", remainingCount],
+              ["all", t("Sve"), totalCount],
+              ["graded", t("Ocijenjeno"), gradedCount],
+              ["remaining", t("Preostalo"), remainingCount],
             ] as const).map(([value, label, count]) => (
               <button
                 key={value}
@@ -116,20 +114,20 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
 
           <div className="flex gap-2">
             <label className="relative flex-1">
-              <span className="sr-only">Pretraži stavke Napamet</span>
+              <span className="sr-only">{t("Pretraži stavke Napamet")}</span>
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="w-full rounded-xl border border-border/70 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
-                placeholder="Pretraži stavke..."
+                placeholder={t("Pretraži stavke...")}
               />
             </label>
             <button
               type="button"
               onClick={() => setFilter("all")}
-              aria-label="Poništi filter"
-              title="Poništi filter"
+                aria-label={t("Poništi filter")}
+                title={t("Poništi filter")}
               className="rounded-xl border border-border/70 bg-white px-3 text-muted-foreground hover:border-emerald-200 hover:text-emerald-700"
             >
               <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
@@ -160,11 +158,13 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
                 <BookOpen className="w-4 h-4" aria-hidden="true" />
               </span>
               <span className="flex-1 min-w-0">
-                <span className={`block font-extrabold ${colors?.text || "text-emerald-800"}`}>{NIVO_NAZIV[nivo]}</span>
+                <span className={`block font-extrabold ${colors?.text || "text-emerald-800"}`}>{nazivNivoa(nivo)}</span>
                 {loading ? (
                   <span className="block h-3 w-32 mt-1.5 animate-pulse rounded bg-muted/60" />
                 ) : (
-                  <span className="block text-xs text-muted-foreground mt-0.5">{ocijenjeno} ocijenjeno <span className="text-slate-300">·</span> {sveStavke.length - ocijenjeno} čeka pregled</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">
+                    {t("{count} ocijenjeno", { count: String(ocijenjeno) })} <span className="text-slate-300">·</span> {t("{count} čeka pregled", { count: String(sveStavke.length - ocijenjeno) })}
+                  </span>
                 )}
               </span>
               {!loading && (
@@ -180,14 +180,14 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
                   {Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-14 animate-pulse bg-muted/30" />)}
                 </div>
               ) : stavke.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-muted-foreground">Nema stavki za izabrani filter.</p>
+                <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t("Nema stavki za izabrani filter.")}</p>
               ) : (
                 <div className="divide-y divide-border/50">
                   <div className="px-4 py-2.5 bg-slate-50/70 flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase tracking-wide text-muted-foreground">
-                      {filter === "graded" ? "Ocijenjeno" : filter === "remaining" ? "Čeka pregled" : "Sve stavke"}
+                      {filter === "graded" ? t("Ocijenjeno") : filter === "remaining" ? t("Čeka pregled") : t("Sve stavke")}
                     </span>
-                    <span className="text-xs text-muted-foreground">Nivo {nivo}</span>
+                    <span className="text-xs text-muted-foreground">{t("Nivo {n}", { n: String(nivo) })}</span>
                   </div>
                   {visibleStavke.map((stavka) => {
                     const ocjena = gradeByItem.get(stavka.id);
@@ -209,7 +209,7 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
                             {ocjena.ocjena}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400">Čeka pregled</span>
+                          <span className="text-xs text-slate-400">{t("Čeka pregled")}</span>
                         )}
                       </div>
                     );
@@ -220,7 +220,7 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
                       onClick={() => setShowAll((trenutno) => ({ ...trenutno, [nivo]: !trenutno[nivo] }))}
                       className="w-full py-3 text-sm font-extrabold text-emerald-700 hover:bg-emerald-50"
                     >
-                      {showAll[nivo] ? "Prikaži manje" : `Prikaži svih ${stavke.length} stavki`}
+                      {showAll[nivo] ? t("Prikaži manje") : t("Prikaži svih {count} stavki", { count: String(stavke.length) })}
                     </button>
                   )}
                 </div>

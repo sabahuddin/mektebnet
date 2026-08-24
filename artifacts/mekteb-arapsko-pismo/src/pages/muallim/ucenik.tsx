@@ -1402,10 +1402,10 @@ export default function UcenikPage() {
                             </table>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mt-4 text-xs">
-                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] font-extrabold">P</span> Prisutan</span>
-                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[9px] font-extrabold">OP</span> Opravdan</span>
-                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[9px] font-extrabold">O</span> Odsutan</span>
-                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-400 text-white text-[9px] font-extrabold">Z</span> Zakasnio</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] font-extrabold">P</span> {t("Prisutan")}</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[9px] font-extrabold">OP</span> {t("Opravdan")}</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[9px] font-extrabold">O</span> {t("Odsutan")}</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-400 text-white text-[9px] font-extrabold">Z</span> {t("Zakasnio")}</span>
                           </div>
                         </div>
                       );

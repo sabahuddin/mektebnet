@@ -201,22 +201,37 @@ export default function MuallimIzvjestajPage() {
       const esc = (value: unknown) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const rows = (headers: string[], values: unknown[][]) =>
         `<table><tr>${headers.map(h => `<th>${esc(h)}</th>`).join("")}</tr>${values.map(row => `<tr>${row.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</table>`;
+      const statusLabel = (status: string) => ({
+        prisutan: t("Prisutan"),
+        odsutan: t("Odsutan"),
+        zakasnio: t("Zakasnio"),
+        opravdan: t("Opravdan"),
+      })[status] || status;
+      const kategorijaLabel = (kategorija: string) => ({
+        usmeno: t("Usmeno"),
+        pismeno: t("Pismeno"),
+        zadaca: t("Zadaća"),
+        test: t("Test"),
+        ponasanje: t("Napamet"),
+        vladanje: t("Napamet"),
+        aktivnost: t("Aktivnost"),
+      })[kategorija] || kategorija;
       const summary = selectedSections.has("summary")
         ? `<h2>${esc(data.naslov)}</h2>${rows(
-          ["Učenik", "Grupa", "Prisustvo", "Prosj. ocjena", "Kviz bodovi", "Lekcije", "Žute zvjezdice", "Crne zvjezdice"],
+          [t("Učenik"), t("Grupa"), t("Prisustvo"), t("Prosj. ocjena"), t("Kviz bodovi"), t("Lekcije"), t("Žute zvjezdice"), t("Crne zvjezdice")],
           filteredUcenici.map(u => {
             const s = statsForUcenik(u);
             return [u.ucenik.displayName, u.grupaNaziv || "—", s.prisustvoPct === null ? "—" : `${s.prisustvoPct}%`, s.prosjecnaOcjena?.toFixed(2) || "—", s.ukupnoBodova, u.zavrseneLekcijeBroj, s.zvjezdicePozitivne, s.zvjezdiceNegativne];
           }),
         )}` : "";
       const attendance = selectedSections.has("attendance")
-        ? `<h2>Prisustvo</h2>${rows(["Učenik", "Datum", "Status", "Napomena"], filteredUcenici.flatMap(u => u.prisustvo.map(p => [u.ucenik.displayName, p.datum, STATUS_LABELS[p.status] || p.status, p.napomena || ""])))}` : "";
+        ? `<h2>${t("Prisustvo")}</h2>${rows([t("Učenik"), t("Datum"), t("Status"), t("Napomena")], filteredUcenici.flatMap(u => u.prisustvo.map(p => [u.ucenik.displayName, p.datum, statusLabel(p.status), p.napomena || ""])))}` : "";
       const grades = selectedSections.has("grades")
-        ? `<h2>Ocjene</h2>${rows(["Učenik", "Datum", "Kategorija", "Ocjena", "Lekcija", "Napomena"], filteredUcenici.flatMap(u => u.ocjene.map(o => [u.ucenik.displayName, o.datum, KATEGORIJA_LABELS[o.kategorija] || o.kategorija, o.ocjena, o.lekcijaNaziv || "", o.napomena || ""])))}` : "";
+        ? `<h2>${t("Ocjene")}</h2>${rows([t("Učenik"), t("Datum"), t("Kategorija"), t("Ocjena"), t("Lekcija"), t("Napomena")], filteredUcenici.flatMap(u => u.ocjene.map(o => [u.ucenik.displayName, o.datum, kategorijaLabel(o.kategorija), o.ocjena, o.lekcijaNaziv || "", o.napomena || ""])))}` : "";
       const quizzes = selectedSections.has("quizzes")
-        ? `<h2>Kvizovi</h2>${rows(["Učenik", "Datum", "Kviz", "Tačno", "%", "Bodovi"], filteredUcenici.flatMap(u => u.kvizRezultati.map(r => [u.ucenik.displayName, r.completedAt, r.kvizNaslov, `${r.tacniOdgovori}/${r.ukupnoPitanja}`, r.procenat, r.bodovi])))}` : "";
+        ? `<h2>${t("Kvizovi")}</h2>${rows([t("Učenik"), t("Datum"), t("Kviz"), t("Tačno"), "%", t("Bodovi")], filteredUcenici.flatMap(u => u.kvizRezultati.map(r => [u.ucenik.displayName, r.completedAt, r.kvizNaslov, `${r.tacniOdgovori}/${r.ukupnoPitanja}`, r.procenat, r.bodovi])))}` : "";
       const blob = new Blob([
-        `\ufeff<html><head><meta charset="UTF-8"></head><body><h1>MEKTEB — ${esc(data.naslov)}</h1><p>Izvještaj generisan: ${esc(today)}</p>${summary}${attendance}${grades}${quizzes}</body></html>`,
+        `\ufeff<html><head><meta charset="UTF-8"></head><body><h1>MEKTEB — ${esc(data.naslov)}</h1><p>${t("Izvještaj generisan")}: ${esc(today)}</p>${summary}${attendance}${grades}${quizzes}</body></html>`,
       ], { type: "application/vnd.ms-excel;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

@@ -262,6 +262,7 @@ function LessonPauseNodeView({
   node: { attrs: { "data-pause-config": string } };
   deleteNode: () => void;
 }) {
+  const { t } = useLanguage();
   let config: LessonPauseConfig | null = null;
   try {
     const raw = node.attrs["data-pause-config"];
@@ -269,7 +270,7 @@ function LessonPauseNodeView({
   } catch { /* ignore parse errors */ }
 
   const type = config?.type ?? "yes-no";
-  const label = PAUSE_TYPE_LABELS[type] ?? type;
+  const label = t(PAUSE_TYPE_LABELS[type] ?? type);
   const icon = PAUSE_TYPE_ICONS[type] ?? "⏸️";
 
   return (
@@ -284,38 +285,41 @@ function LessonPauseNodeView({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-0.5">
               <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded">
-                Pauza · {label}
+                {t("Pauza · {type}", { type: label })}
               </span>
             </div>
             <p className="text-sm font-semibold text-gray-800 truncate">
-              {config?.question || <em className="text-gray-400">Bez pitanja</em>}
+              {config?.question || <em className="text-gray-400">{t("Bez pitanja")}</em>}
             </p>
             {config?.fact && (
               <p className="text-xs text-gray-500 mt-0.5 truncate">💡 {config.fact}</p>
             )}
             {type === "yes-no" && (
               <p className="text-xs text-gray-500 mt-0.5">
-                Tačan odgovor: <strong>{config?.correctAnswer ? "DA" : "NE"}</strong>
+                {t("Tačan odgovor:")} <strong>{config?.correctAnswer ? t("DA") : t("NE")}</strong>
               </p>
             )}
             {(type === "multiple-choice" || type === "fact-question") && config?.options && (
               <p className="text-xs text-gray-500 mt-0.5">
-                {config.options.length} opcija · tačna: #{(config.correctOption ?? 0) + 1}
+                {t("{count} opcija · tačna: #{number}", {
+                  count: String(config.options.length),
+                  number: String((config.correctOption ?? 0) + 1),
+                })}
               </p>
             )}
             {type === "matching" && config?.pairs && (
-              <p className="text-xs text-gray-500 mt-0.5">{config.pairs.length} para</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t("{count} para", { count: String(config.pairs.length) })}</p>
             )}
             {type === "ordering" && config?.items && (
-              <p className="text-xs text-gray-500 mt-0.5">{config.items.length} stavki</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t("{count} stavki", { count: String(config.items.length) })}</p>
             )}
           </div>
         </div>
         <button
           type="button"
           onClick={deleteNode}
-          title="Obriši pauzu"
-          aria-label="Obriši pauzu"
+          title={t("Obriši pauzu")}
+          aria-label={t("Obriši pauzu")}
           className="flex-shrink-0 p-1.5 rounded-lg text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
@@ -370,6 +374,7 @@ interface LessonPauseModalProps {
 }
 
 function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
+  const { t } = useLanguage();
   const [type, setType] = useState<LessonPauseType>("yes-no");
   const [question, setQuestion] = useState("");
   const [correctExplanation, setCorrectExplanation] = useState("");
@@ -389,26 +394,26 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
 
   const validate = (): LessonPauseConfig | null => {
     const errs: string[] = [];
-    if (!question.trim()) errs.push("Pitanje je obavezno.");
-    if (!correctExplanation.trim()) errs.push("Objašnjenje za tačan odgovor je obavezno.");
-    if (!wrongExplanation.trim()) errs.push("Objašnjenje za netačan odgovor je obavezno.");
+    if (!question.trim()) errs.push(t("Pitanje je obavezno."));
+    if (!correctExplanation.trim()) errs.push(t("Objašnjenje za tačan odgovor je obavezno."));
+    if (!wrongExplanation.trim()) errs.push(t("Objašnjenje za netačan odgovor je obavezno."));
 
     if (type === "multiple-choice" || type === "fact-question") {
-      if (type === "fact-question" && !fact.trim()) errs.push("Zanimljivost (činjenica) je obavezna.");
+      if (type === "fact-question" && !fact.trim()) errs.push(t("Zanimljivost (činjenica) je obavezna."));
       const filled = options.filter(o => o.trim());
-      if (filled.length < 2) errs.push("Potrebne su najmanje 2 opcije.");
-      if (filled.length > 10) errs.push("Maksimalno 10 opcija.");
-      if (!options[correctOption]?.trim()) errs.push("Odaberi tačnu opciju.");
+      if (filled.length < 2) errs.push(t("Potrebne su najmanje 2 opcije."));
+      if (filled.length > 10) errs.push(t("Maksimalno 10 opcija."));
+      if (!options[correctOption]?.trim()) errs.push(t("Odaberi tačnu opciju."));
     }
     if (type === "matching") {
       const filledPairs = pairs.filter(p => p.left.trim() && p.right.trim());
-      if (filledPairs.length < 2) errs.push("Potrebna su najmanje 2 para.");
-      if (filledPairs.length > 10) errs.push("Maksimalno 10 parova.");
+      if (filledPairs.length < 2) errs.push(t("Potrebna su najmanje 2 para."));
+      if (filledPairs.length > 10) errs.push(t("Maksimalno 10 parova."));
     }
     if (type === "ordering") {
       const filled = items.filter(i => i.trim());
-      if (filled.length < 2) errs.push("Potrebne su najmanje 2 stavke.");
-      if (filled.length > 10) errs.push("Maksimalno 10 stavki.");
+      if (filled.length < 2) errs.push(t("Potrebne su najmanje 2 stavke."));
+      if (filled.length > 10) errs.push(t("Maksimalno 10 stavki."));
     }
 
     if (errs.length > 0) { setErrors(errs); return null; }
@@ -454,7 +459,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Dodaj ilmihal pauzu"
+      aria-label={t("Dodaj Ilmihal pauzu")}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-xl max-h-[90vh] flex flex-col"
@@ -464,12 +469,12 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <PauseCircle className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-base font-bold text-gray-800">Dodaj Ilmihal pauzu</h3>
+            <h3 className="text-base font-bold text-gray-800">{t("Dodaj Ilmihal pauzu")}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Zatvori"
+            aria-label={t("Zatvori")}
             className="p-1.5 rounded-lg hover:bg-gray-100"
           >
             <X className="w-5 h-5" />
@@ -480,22 +485,22 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* Type selector */}
           <div>
-            <label className={labelCls}>Tip pauze</label>
+            <label className={labelCls}>{t("Tip pauze")}</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {(Object.keys(PAUSE_TYPE_LABELS) as LessonPauseType[]).map(t => (
+              {(Object.keys(PAUSE_TYPE_LABELS) as LessonPauseType[]).map(pauseType => (
                 <button
-                  key={t}
+                  key={pauseType}
                   type="button"
-                  onClick={() => { setType(t); setErrors([]); }}
+                  onClick={() => { setType(pauseType); setErrors([]); }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${
-                    type === t
+                    type === pauseType
                       ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                       : "border-gray-200 bg-gray-50 text-gray-600 hover:border-indigo-200 hover:bg-indigo-50/40"
                   }`}
-                  data-testid={`pause-type-${t}`}
+                  data-testid={`pause-type-${pauseType}`}
                 >
-                  <span>{PAUSE_TYPE_ICONS[t]}</span>
-                  {PAUSE_TYPE_LABELS[t]}
+                  <span>{PAUSE_TYPE_ICONS[pauseType]}</span>
+                  {t(PAUSE_TYPE_LABELS[pauseType])}
                 </button>
               ))}
             </div>
@@ -504,13 +509,13 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
           {/* fact-question fact */}
           {type === "fact-question" && (
             <div>
-              <label className={labelCls}>Zanimljiva činjenica (prikazuje se učeniku)</label>
+              <label className={labelCls}>{t("Zanimljiva činjenica (prikazuje se učeniku)")}</label>
               <textarea
                 value={fact}
                 onChange={e => setFact(e.target.value)}
                 rows={2}
                 className={inputCls}
-                placeholder="Npr. Poslanik ﷺ je rekao..."
+                placeholder={t("Npr. Poslanik ﷺ je rekao...")}
                 data-testid="pause-fact"
               />
             </div>
@@ -518,13 +523,13 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
 
           {/* Question */}
           <div>
-            <label className={labelCls}>Pitanje *</label>
+            <label className={labelCls}>{t("Pitanje *")}</label>
             <textarea
               value={question}
               onChange={e => setQuestion(e.target.value)}
               rows={2}
               className={inputCls}
-              placeholder="Upiši pitanje..."
+              placeholder={t("Upiši pitanje...")}
               data-testid="pause-question"
             />
           </div>
@@ -532,7 +537,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
           {/* yes-no */}
           {type === "yes-no" && (
             <div>
-              <label className={labelCls}>Tačan odgovor *</label>
+              <label className={labelCls}>{t("Tačan odgovor *")}</label>
               <div className="flex gap-3">
                 {([true, false] as const).map(val => (
                   <label key={String(val)} className="flex items-center gap-2 cursor-pointer">
@@ -545,7 +550,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                       data-testid={`pause-correct-${val ? "da" : "ne"}`}
                     />
                     <span className={`font-bold text-sm ${val ? "text-green-700" : "text-red-700"}`}>
-                      {val ? "DA" : "NE"}
+                      {val ? t("DA") : t("NE")}
                     </span>
                   </label>
                 ))}
@@ -556,7 +561,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
           {/* multiple-choice / fact-question opcije */}
           {(type === "multiple-choice" || type === "fact-question") && (
             <div>
-              <label className={labelCls}>Opcije (odaberi tačnu) *</label>
+              <label className={labelCls}>{t("Opcije (odaberi tačnu) *")}</label>
               <div className="space-y-2">
                 {options.map((opt, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -566,7 +571,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                       checked={correctOption === i}
                       onChange={() => setCorrectOption(i)}
                       className="accent-indigo-600 flex-shrink-0"
-                      aria-label={`Opcija ${i + 1} je tačna`}
+                      aria-label={t("Opcija {number} je tačna", { number: String(i + 1) })}
                       data-testid={`pause-opt-radio-${i}`}
                     />
                     <input
@@ -577,7 +582,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                         next[i] = e.target.value;
                         setOptions(next);
                       }}
-                      placeholder={`Opcija ${i + 1}`}
+                      placeholder={t("Opcija {number}", { number: String(i + 1) })}
                       className={`${inputCls} flex-1`}
                       data-testid={`pause-opt-text-${i}`}
                     />
@@ -594,7 +599,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                            ));
                         }}
                         className="p-1.5 rounded-lg text-red-400 hover:bg-red-50"
-                        aria-label="Ukloni opciju"
+                        aria-label={t("Ukloni opciju")}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -608,7 +613,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                     className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1"
                     data-testid="pause-add-option"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Dodaj opciju
+                    <Plus className="w-3.5 h-3.5" /> {t("Dodaj opciju")}
                   </button>
                 )}
               </div>
@@ -618,7 +623,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
           {/* matching */}
           {type === "matching" && (
             <div>
-              <label className={labelCls}>Parovi (lijevo ↔ desno) *</label>
+              <label className={labelCls}>{t("Parovi (lijevo ↔ desno) *")}</label>
               <div className="space-y-2">
                 {pairs.map((pair, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -630,7 +635,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                         next[i] = { ...next[i], left: e.target.value };
                         setPairs(next);
                       }}
-                      placeholder={`Lijevo ${i + 1}`}
+                      placeholder={t("Lijevo {number}", { number: String(i + 1) })}
                       className={`${inputCls} flex-1`}
                       data-testid={`pause-pair-left-${i}`}
                     />
@@ -643,7 +648,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                         next[i] = { ...next[i], right: e.target.value };
                         setPairs(next);
                       }}
-                      placeholder={`Desno ${i + 1}`}
+                      placeholder={t("Desno {number}", { number: String(i + 1) })}
                       className={`${inputCls} flex-1`}
                       data-testid={`pause-pair-right-${i}`}
                     />
@@ -652,7 +657,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                         type="button"
                         onClick={() => setPairs(pairs.filter((_, j) => j !== i))}
                         className="p-1.5 rounded-lg text-red-400 hover:bg-red-50"
-                        aria-label="Ukloni par"
+                        aria-label={t("Ukloni par")}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -666,7 +671,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                     className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1"
                     data-testid="pause-add-pair"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Dodaj par
+                    <Plus className="w-3.5 h-3.5" /> {t("Dodaj par")}
                   </button>
                 )}
               </div>
@@ -676,7 +681,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
           {/* ordering */}
           {type === "ordering" && (
             <div>
-              <label className={labelCls}>Stavke u tačnom redoslijedu *</label>
+              <label className={labelCls}>{t("Stavke u tačnom redoslijedu *")}</label>
               <div className="space-y-2">
                 {items.map((item, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -689,7 +694,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                         next[i] = e.target.value;
                         setItems(next);
                       }}
-                      placeholder={`Stavka ${i + 1}`}
+                      placeholder={t("Stavka {number}", { number: String(i + 1) })}
                       className={`${inputCls} flex-1`}
                       data-testid={`pause-item-${i}`}
                     />
@@ -698,7 +703,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                         type="button"
                         onClick={() => setItems(items.filter((_, j) => j !== i))}
                         className="p-1.5 rounded-lg text-red-400 hover:bg-red-50"
-                        aria-label="Ukloni stavku"
+                        aria-label={t("Ukloni stavku")}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -712,7 +717,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
                     className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1"
                     data-testid="pause-add-item"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Dodaj stavku
+                    <Plus className="w-3.5 h-3.5" /> {t("Dodaj stavku")}
                   </button>
                 )}
               </div>
@@ -721,24 +726,24 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
 
           {/* Explanations */}
           <div>
-            <label className={labelCls}>Objašnjenje za tačan odgovor *</label>
+            <label className={labelCls}>{t("Objašnjenje za tačan odgovor *")}</label>
             <textarea
               value={correctExplanation}
               onChange={e => setCorrectExplanation(e.target.value)}
               rows={2}
               className={inputCls}
-              placeholder="Npr. Tačno! Namaz je stub vjere..."
+              placeholder={t("Npr. Tačno! Namaz je stub vjere...")}
               data-testid="pause-correct-explanation"
             />
           </div>
           <div>
-            <label className={labelCls}>Objašnjenje za netačan odgovor *</label>
+            <label className={labelCls}>{t("Objašnjenje za netačan odgovor *")}</label>
             <textarea
               value={wrongExplanation}
               onChange={e => setWrongExplanation(e.target.value)}
               rows={2}
               className={inputCls}
-              placeholder="Npr. Nije tačno. Pogrešan odgovor jer..."
+              placeholder={t("Npr. Nije tačno. Pogrešan odgovor jer...")}
               data-testid="pause-wrong-explanation"
             />
           </div>
@@ -760,7 +765,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
           >
-            Odustani
+            {t("Odustani")}
           </button>
           <button
             type="button"
@@ -769,7 +774,7 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
             data-testid="pause-insert-btn"
           >
             <PauseCircle className="w-4 h-4" />
-            Umetni pauzu
+            {t("Umetni pauzu")}
           </button>
         </div>
       </div>

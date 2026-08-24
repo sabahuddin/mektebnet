@@ -63,7 +63,6 @@ export type H5PErrorKind =
 
 export interface H5PErrorInfo {
   kind: H5PErrorKind;
-  message: string;
 }
 
 export interface H5PPlayerProps {
@@ -90,21 +89,21 @@ export interface H5PPlayerProps {
  *   - content-type: "tip pitanja nije podržan"
  * Sve ostalo padne u "unknown" sa generičkim "pokušajte osvježiti".
  */
-function describeError(kind: H5PErrorKind): string {
+function describeError(kind: H5PErrorKind, t: (key: string) => string): string {
   switch (kind) {
     case "auth":
-      return "Vaša prijava je istekla pa se vježba ne može učitati. Osvježite stranicu i prijavite se ponovo.";
+      return t("Vaša prijava je istekla pa se vježba ne može učitati. Osvježite stranicu i prijavite se ponovo.");
     case "not-found":
-      return "Vježba nije pronađena na serveru. Možda je obrisana — obratite se muallimu.";
+      return t("Vježba nije pronađena na serveru. Možda je obrisana — obratite se muallimu.");
     case "package":
-      return "Ova H5P vježba nije validna i ne može se pokrenuti.";
+      return t("Ova H5P vježba nije validna i ne može se pokrenuti.");
     case "content-type":
-      return "Vježba koristi tip pitanja koji ova verzija ne podržava.";
+      return t("Vježba koristi tip pitanja koji ova verzija ne podržava.");
     case "library":
-      return "H5P biblioteka se nije mogla učitati. Provjerite internet vezu i osvježite stranicu.";
+      return t("H5P biblioteka se nije mogla učitati. Provjerite internet vezu i osvježite stranicu.");
     case "unknown":
     default:
-      return "Vježba se trenutno ne može učitati. Osvježite stranicu i pokušajte ponovo.";
+      return t("Vježba se trenutno ne može učitati. Osvježite stranicu i pokušajte ponovo.");
   }
 }
 
@@ -112,17 +111,17 @@ function describeError(kind: H5PErrorKind): string {
  * Dodatni savjet za muallima koji je vježbu uploadovao. Skriven od učenika
  * (učenik ne može popraviti paket — može samo prijaviti muallimu).
  */
-function describeManagerHint(kind: H5PErrorKind): string | null {
+function describeManagerHint(kind: H5PErrorKind, t: (key: string) => string): string | null {
   switch (kind) {
     case "package":
-      return "Otvorite paket u Lumi-ju, provjerite da se vježba normalno reproducira, izvezite je kao .h5p i ponovo uploadujte.";
+      return t("Otvorite paket u Lumi-ju, provjerite da se vježba normalno reproducira, izvezite je kao .h5p i ponovo uploadujte.");
     case "content-type":
-      return "U Lumi-ju koristite osnovne tipove (Multiple Choice, Drag & Drop, Fill in the Blanks, Question Set, True/False). Egzotični eksperimentalni tipovi ovdje često ne rade.";
+      return t("U Lumi-ju koristite osnovne tipove (Multiple Choice, Drag & Drop, Fill in the Blanks, Question Set, True/False). Egzotični eksperimentalni tipovi ovdje često ne rade.");
     case "not-found":
-      return "Provjerite da prilog još uvijek postoji u listi materijala lekcije i da nije obrisan.";
+      return t("Provjerite da prilog još uvijek postoji u listi materijala lekcije i da nije obrisan.");
     case "library":
     case "unknown":
-      return "Ako se ovo ponavlja, pokušajte uploadovati paket ponovo ili javite tehničkoj podršci.";
+      return t("Ako se ovo ponavlja, pokušajte uploadovati paket ponovo ili javite tehničkoj podršci.");
     case "auth":
     default:
       return null;
@@ -309,7 +308,7 @@ function H5PPlayerImpl({
         // Sirovu grešku držimo u console-u za debug, ali korisniku NIKAD ne
         // pokazujemo (zadatak #67 — bez "Cannot read properties of undefined").
         console.error("[H5PPlayer] init error:", e, "→ kind:", kind);
-        setErrorInfo({ kind, message: describeError(kind) });
+        setErrorInfo({ kind });
         setLoading(false);
       }
     };
@@ -329,7 +328,7 @@ function H5PPlayerImpl({
     };
   }, [h5pPath, contentKey]);
 
-  const managerHint = errorInfo && isManager ? describeManagerHint(errorInfo.kind) : null;
+  const managerHint = errorInfo && isManager ? describeManagerHint(errorInfo.kind, t) : null;
 
   return (
     <div className={className}>
@@ -349,7 +348,7 @@ function H5PPlayerImpl({
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex flex-col gap-1.5">
             <p className="font-semibold">{t("Vježba se ne može pokrenuti")}</p>
-            <p>{errorInfo.message}</p>
+            <p>{describeError(errorInfo.kind, t)}</p>
             {managerHint && (
               <p className="mt-1 pt-2 border-t border-amber-200/70 text-amber-800">
                 <span className="font-semibold">{t("Savjet za muallima:")}</span>{" "}

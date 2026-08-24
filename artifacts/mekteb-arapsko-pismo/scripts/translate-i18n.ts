@@ -3,7 +3,8 @@
  *
  * Izvor je BOSANSKI. Skripta:
  *   1) Spljošti `translations.bs` u dotted ključeve (npr. "nav.pocetna" -> "Početna").
- *   2) Skenira src/ za t("...") / t('...') pozive i skupi IZVORNE tekstove
+ *   2) Skenira src/ za t("...") / t('...') pozive i tekst unutar
+ *      <TranslateContent> blokova, pa skupi IZVORNE tekstove
  *      (one koji nisu dotted ključevi).
  *   3) Za svaki ciljni jezik prevede SAMO ono što nedostaje (idempotentno)
  *      preko OpenAI proxyja i upiše u src/locales/<lang>.json.
@@ -16,6 +17,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { translations, LANG_NAMES, type Lang } from "../src/lib/i18n.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +37,7 @@ function argVal(name: string, def: string) {
 const LANGS = argVal("--langs", "sq,de,en").split(",").map((s) => s.trim()) as Lang[];
 const ONLY_STRUCTURED = args.includes("--only-structured");
 const DRY = args.includes("--dry");
+const SHOW_MISSING = args.includes("--show-missing");
 const MODEL = argVal("--model", "gpt-5-nano");
 const CHUNK = parseInt(argVal("--chunk", "40"), 10);
 const CONCURRENCY = parseInt(argVal("--concurrency", "10"), 10);
@@ -65,6 +68,28 @@ function walk(dir: string, acc: string[] = []): string[] {
 const DOTTED = /^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
 const T_CALL = /\bt\(\s*(["'`])((?:\\.|(?!\1).)*?)\1/g;
 const sourceStrings = new Set<string>();
+
+function normalizeJsxText(text: string) {
+  return text.replace(/\s+/g, " ");
+}
+
+function collectTranslateContentText(file: string, code: string) {
+  const sourceFile = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const visit = (node: ts.Node, isInsideTranslateContent = false) => {
+    const startsTranslateContent = ts.isJsxElement(node)
+      && node.openingElement.tagName.getText(sourceFile) === "TranslateContent";
+    const active = isInsideTranslateContent || startsTranslateContent;
+
+    if (active && ts.isJsxText(node)) {
+      const text = normalizeJsxText(node.getText(sourceFile));
+      if (/\p{L}/u.test(text)) sourceStrings.add(text);
+    }
+
+    ts.forEachChild(node, (child) => visit(child, active));
+  };
+  visit(sourceFile);
+}
+
 if (!ONLY_STRUCTURED) {
   for (const file of walk(SRC)) {
     const code = readFileSync(file, "utf8");
@@ -74,6 +99,7 @@ if (!ONLY_STRUCTURED) {
       if (!raw || DOTTED.test(raw)) continue; // dotted ključevi se rješavaju kroz strukturu
       sourceStrings.add(raw);
     }
+    collectTranslateContentText(file, code);
   }
 }
 
@@ -155,6 +181,7 @@ async function run() {
 
     const missing = Object.entries(wanted).filter(([k]) => !existing[k]);
     console.log(`[${lang}] već: ${Object.keys(existing).length} | nedostaje: ${missing.length}`);
+    if (DRY && SHOW_MISSING && missing.length) console.log(JSON.stringify({ lang, missing: missing.map(([key, source]) => ({ key, source })) }, null, 2));
     if (DRY || missing.length === 0) continue;
 
     for (let i = 0; i < missing.length; i += CHUNK) {

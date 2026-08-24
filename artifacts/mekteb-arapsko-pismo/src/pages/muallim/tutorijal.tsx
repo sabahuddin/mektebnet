@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { Children, cloneElement, isValidElement, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { BackLink } from "@/components/back-link";
@@ -43,6 +43,19 @@ import {
 import { Button } from "@/components/ui/button";
 
 type IconType = typeof School;
+
+function TranslateContent({ children }: { children: ReactNode }) {
+  const { t } = useLanguage();
+
+  const translate = (node: ReactNode): ReactNode => {
+    if (typeof node === "string") return t(node.replace(/\s+/g, " "));
+    if (!isValidElement(node)) return node;
+    const childNodes = (node.props as { children?: ReactNode }).children;
+    return cloneElement(node, undefined, Children.map(childNodes, translate));
+  };
+
+  return <>{Children.map(children, translate)}</>;
+}
 
 function GuideCallout({
   kind,
@@ -118,6 +131,7 @@ function StepFrame({
   next: ReactNode;
   important?: ReactNode;
 }) {
+  const { t } = useLanguage();
   return (
     <section id={`korak-${number}`} className="scroll-mt-24" data-testid={`guide-step-${number}`}>
       <div className="relative overflow-hidden rounded-[2rem] border border-[#dfd7c8] bg-[#fffdf8] shadow-[0_16px_50px_rgba(79,65,43,0.08)]">
@@ -131,35 +145,35 @@ function StepFrame({
               </span>
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b46d38]">{eyebrow}</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight text-[#173f3d] sm:text-3xl">{title}</h2>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b46d38]">{t(eyebrow)}</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-[#173f3d] sm:text-3xl">{t(title)}</h2>
             </div>
           </div>
 
-          <div className="guide-prose mt-7 max-w-4xl text-[1.02rem] leading-8 text-[#405052]">{children}</div>
+          <div className="guide-prose mt-7 max-w-4xl text-[1.02rem] leading-8 text-[#405052]"><TranslateContent>{children}</TranslateContent></div>
 
           <div className="mt-8 grid gap-3 lg:grid-cols-2">
             <div className="rounded-2xl border border-[#d9e5df] bg-[#f3f8f4] p-4 sm:p-5">
               <div className="mb-2 flex items-center gap-2 text-sm font-black text-[#174f47]">
                 <MousePointer2 className="h-4 w-4" />
-                Klikni ovdje
+                {t("Klikni ovdje")}
               </div>
-              <div className="text-sm leading-6 text-[#355953]">{click}</div>
+              <div className="text-sm leading-6 text-[#355953]"><TranslateContent>{click}</TranslateContent></div>
             </div>
             <div className="rounded-2xl border border-[#e9ddc9] bg-[#fcf6eb] p-4 sm:p-5">
               <div className="mb-2 flex items-center gap-2 text-sm font-black text-[#7b4b27]">
                 <NotebookPen className="h-4 w-4" />
-                Unesi i uradi
+                {t("Unesi i uradi")}
               </div>
-              <div className="text-sm leading-6 text-[#6f5136]">{action}</div>
+              <div className="text-sm leading-6 text-[#6f5136]"><TranslateContent>{action}</TranslateContent></div>
             </div>
           </div>
 
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <GuideCallout kind="why" title="Zašto">{why}</GuideCallout>
-            <GuideCallout kind="next" title="Šta sada možeš">{next}</GuideCallout>
+            <GuideCallout kind="why" title={t("Zašto")}><TranslateContent>{why}</TranslateContent></GuideCallout>
+            <GuideCallout kind="next" title={t("Šta sada možeš")}><TranslateContent>{next}</TranslateContent></GuideCallout>
           </div>
-          {important && <div className="mt-3"><GuideCallout kind="important" title="Važno">{important}</GuideCallout></div>}
+          {important && <div className="mt-3"><GuideCallout kind="important" title={t("Važno")}><TranslateContent>{important}</TranslateContent></GuideCallout></div>}
         </div>
       </div>
     </section>
@@ -176,6 +190,7 @@ function MiniLabel({ icon: Icon, children }: { icon: IconType; children: ReactNo
 }
 
 function NumberedRail({ items }: { items: { number: string; title: string; detail: string }[] }) {
+  const { t } = useLanguage();
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       {items.map((item) => (
@@ -187,7 +202,7 @@ function NumberedRail({ items }: { items: { number: string; title: string; detai
         >
           <span className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[#b46d38]">
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#173f3d] text-white">{item.number}</span>
-            Korak
+            {t("Korak")}
           </span>
           <span className="mt-2 block font-black text-[#173f3d] group-hover:text-[#20695e]">{item.title}</span>
           <span className="mt-1 block text-xs leading-5 text-[#6b6d68]">{item.detail}</span>
@@ -210,14 +225,15 @@ function RhythmCard({
   children: ReactNode;
   color: string;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-5">
       <div className="flex items-start justify-between gap-3">
         <span className={`flex h-11 w-11 items-center justify-center rounded-xl text-white ${color}`}><Icon className="h-5 w-5" /></span>
-        <span className="rounded-full bg-[#f4ecdf] px-2.5 py-1 text-xs font-black text-[#8a5a32]">{time}</span>
+        <span className="rounded-full bg-[#f4ecdf] px-2.5 py-1 text-xs font-black text-[#8a5a32]">{t(time)}</span>
       </div>
-      <h3 className="mt-4 text-lg font-black text-[#173f3d]">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[#5c6563]">{children}</p>
+      <h3 className="mt-4 text-lg font-black text-[#173f3d]">{t(title)}</h3>
+      <p className="mt-2 text-sm leading-6 text-[#5c6563]"><TranslateContent>{children}</TranslateContent></p>
     </div>
   );
 }
@@ -250,6 +266,7 @@ export default function MuallimTutorijalPage() {
 
   return (
     <Layout>
+      <TranslateContent>
       <div className="mx-auto max-w-5xl">
         <div className="no-print mb-6 flex items-center justify-between gap-3">
           <BackLink
@@ -278,21 +295,21 @@ export default function MuallimTutorijalPage() {
             <div className="mb-5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#d99a5b] px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em] text-[#392617]">
                 <School className="h-3.5 w-3.5" />
-                Mekteb.net za muallime
+                {t("Mekteb.net za muallime")}
               </span>
-              <span className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-bold text-[#dce9df]">Vodič kroz cijelu godinu</span>
+              <span className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-bold text-[#dce9df]">{t("Vodič kroz cijelu godinu")}</span>
             </div>
             <h1 className="max-w-3xl text-4xl font-black leading-[1.05] tracking-[-0.04em] sm:text-6xl">
-              Od prvog naloga do mirne sedmice u mektebu.
+              {t("Od prvog naloga do mirne sedmice u mektebu.")}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-[#dce9df] sm:text-lg">
-              Zamislimo jedan džemat: oko 100 djece, tri muallima i šest grupa. Ovaj tutorijal prati stvarni put glavnog muallima — od postavljanja mekteba do pregleda podataka koji otkriva kome treba dodatna pažnja.
+              {t("Zamislimo jedan džemat: oko 100 djece, tri muallima i šest grupa. Ovaj tutorijal prati stvarni put glavnog muallima — od postavljanja mekteba do pregleda podataka koji otkriva kome treba dodatna pažnja.")}
             </p>
             <div className="mt-7 flex flex-wrap gap-2">
-              <MiniLabel icon={Users}>100 djece</MiniLabel>
-              <MiniLabel icon={Network}>3 muallima</MiniLabel>
-              <MiniLabel icon={Layers3}>6 grupa</MiniLabel>
-              <MiniLabel icon={CalendarCheck}>Jedan zajednički ritam</MiniLabel>
+              <MiniLabel icon={Users}>{t("100 djece")}</MiniLabel>
+              <MiniLabel icon={Network}>{t("3 muallima")}</MiniLabel>
+              <MiniLabel icon={Layers3}>{t("6 grupa")}</MiniLabel>
+              <MiniLabel icon={CalendarCheck}>{t("Jedan zajednički ritam")}</MiniLabel>
             </div>
           </div>
         </header>
@@ -300,31 +317,31 @@ export default function MuallimTutorijalPage() {
         <section className="mt-6 rounded-3xl border border-[#e3d9ca] bg-[#f8f1e5] p-5 sm:p-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b46d38]">Prije nego počnemo</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-[#173f3d]">Čitaj kao putanju, ne kao spisak.</h2>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b46d38]">{t("Prije nego počnemo")}</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-[#173f3d]">{t("Čitaj kao putanju, ne kao spisak.")}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5c6563]">
-                Svaki korak ima četiri odgovora: gdje se klikne, šta se unosi, zašto je to važno i šta se time otvara za sljedeći čas.
+                {t("Svaki korak ima četiri odgovora: gdje se klikne, šta se unosi, zašto je to važno i šta se time otvara za sljedeći čas.")}
               </p>
             </div>
             <ArrowDown className="hidden h-8 w-8 shrink-0 text-[#b46d38] sm:block" />
           </div>
           <div className="mt-5">
             <NumberedRail items={[
-              { number: "01", title: "Postavi ljude", detail: "Profil, podešavanja i muallimski nalozi" },
-              { number: "02", title: "Složi grupe", detail: "Godina, termini i odgovornost muallima" },
-              { number: "03", title: "Uvedi djecu", detail: "Masovni unos, roditelji i kartice" },
-              { number: "04", title: "Provjeri mrežu", detail: "Sastav grupa i saradnja" },
-              { number: "05", title: "Označi godinu", detail: "Kalendar grupe i kopiranje" },
-              { number: "06", title: "Napravi put", detail: "Plan lekcija i redoslijed" },
-              { number: "07", title: "Bilježi susret", detail: "Prisustvo odmah poslije časa" },
-              { number: "08", title: "Daj povratnu informaciju", detail: "Ocjene, zvjezdice i zadaća" },
+              { number: "01", title: t("Postavi ljude"), detail: t("Profil, podešavanja i muallimski nalozi") },
+              { number: "02", title: t("Složi grupe"), detail: t("Godina, termini i odgovornost muallima") },
+              { number: "03", title: t("Uvedi djecu"), detail: t("Masovni unos, roditelji i kartice") },
+              { number: "04", title: t("Provjeri mrežu"), detail: t("Sastav grupa i saradnja") },
+              { number: "05", title: t("Označi godinu"), detail: t("Kalendar grupe i kopiranje") },
+              { number: "06", title: t("Napravi put"), detail: t("Plan lekcija i redoslijed") },
+              { number: "07", title: t("Bilježi susret"), detail: t("Prisustvo odmah poslije časa") },
+              { number: "08", title: t("Daj povratnu informaciju"), detail: t("Ocjene, zvjezdice i zadaća") },
             ]} />
           </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <a href="#korak-09" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-step-09">09 · Zadaća kroz pregled</a>
-            <a href="#korak-10" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-step-10">10 · Statistika i izvještaji</a>
-            <a href="#korak-11" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-step-11">11 · Roditelji i poruke</a>
-            <a href="#sedmicni-ritam" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-rhythm">Sedmični ritam rada</a>
+            <a href="#korak-09" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-step-09">{t("09 · Zadaća kroz pregled")}</a>
+            <a href="#korak-10" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-step-10">{t("10 · Statistika i izvještaji")}</a>
+            <a href="#korak-11" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-step-11">{t("11 · Roditelji i poruke")}</a>
+            <a href="#sedmicni-ritam" className="rounded-2xl border border-[#dfd7c8] bg-[#fffdf8] p-4 text-sm font-black text-[#173f3d] hover:border-[#78a69a]" data-testid="link-guide-rhythm">{t("Sedmični ritam rada")}</a>
           </div>
         </section>
 
@@ -701,6 +718,7 @@ export default function MuallimTutorijalPage() {
           </Link>
         </footer>
       </div>
+      </TranslateContent>
       <style>{`
         .guide-prose strong { color: #173f3d; font-weight: 800; }
         .guide-prose p + p { margin-top: 1rem; }

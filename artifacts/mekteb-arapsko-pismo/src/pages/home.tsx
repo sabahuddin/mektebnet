@@ -298,18 +298,18 @@ export default function Home() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
           className="bg-white border-2 border-primary/20 rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h3 className="font-extrabold text-lg text-primary">Otvorite svoj račun za 30 dana besplatnog korištenja</h3>
-            <p className="text-sm text-muted-foreground mt-1">Za učenike, roditelje i mektebe.</p>
+            <h3 className="font-extrabold text-lg text-primary">{t("Otvorite svoj račun za 30 dana besplatnog korištenja")}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{t("Za učenike, roditelje i mektebe.")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/registracija">
               <button className="bg-primary text-primary-foreground rounded-2xl px-6 py-3 font-bold hover:opacity-90 transition-opacity flex items-center gap-2 whitespace-nowrap shrink-0">
-                Registracija <ChevronRight className="w-4 h-4" />
+                {t("Registracija")} <ChevronRight className="w-4 h-4" />
               </button>
             </Link>
             <Link href="/login">
               <button className="text-primary rounded-2xl px-4 py-3 font-bold hover:bg-primary/5 transition-colors whitespace-nowrap">
-                Već imate račun? Prijava
+                {t("Već imate račun? Prijava")}
               </button>
             </Link>
           </div>

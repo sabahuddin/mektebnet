@@ -298,8 +298,8 @@ export function Layout({ children }: LayoutProps) {
               <button
                 onClick={toggleAudioMute}
                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all hover:bg-white ${audioMuted ? "text-red-500" : "text-muted-foreground hover:text-foreground"}`}
-                title={audioMuted ? "Uključi zvuk" : "Isključi zvuk"}
-                aria-label={audioMuted ? "Uključi zvuk" : "Isključi zvuk"}
+                title={audioMuted ? t("Uključi zvuk") : t("Isključi zvuk")}
+                aria-label={audioMuted ? t("Uključi zvuk") : t("Isključi zvuk")}
                 aria-pressed={audioMuted}
                 data-testid="nav-audio-toggle"
               >
@@ -320,7 +320,7 @@ export function Layout({ children }: LayoutProps) {
             ) : (
               <div className="hidden sm:flex items-center gap-2">
                 <Link href="/registracija">
-                  <Button className="rounded-full font-bold shadow-sm" size="sm">Registracija</Button>
+                  <Button className="rounded-full font-bold shadow-sm" size="sm">{t("Registracija")}</Button>
                 </Link>
                 <Link href="/login">
                   <Button variant="outline" className="rounded-full font-bold" size="sm">{t("nav.prijava")}</Button>
@@ -330,7 +330,7 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Brza prečica na poruke — vidljiva na mobilnom kad ima nepročitanih */}
             {user && unreadPoruke > 0 && (
-              <Link href="/poruke" className="lg:hidden relative p-2 rounded-xl hover:bg-muted transition-colors" aria-label={`${unreadPoruke} nepročitanih poruka`}>
+              <Link href="/poruke" className="lg:hidden relative p-2 rounded-xl hover:bg-muted transition-colors" aria-label={t("{count} nepročitanih poruka", { count: String(unreadPoruke) })}>
                 <MessageSquare className="w-6 h-6 text-primary" />
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm leading-none">
                   {unreadPoruke > 99 ? "99+" : unreadPoruke}
