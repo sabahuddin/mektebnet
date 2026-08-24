@@ -58,8 +58,34 @@ const completeBundlePath = fileURLToPath(
   new URL("./german-nivo1-overlays.b64", import.meta.url),
 );
 
-export const bundledGermanNivo1Overlays: BundledGermanOverlay[] = JSON.parse(
+const decodedOverlays: BundledGermanOverlay[] = JSON.parse(
   brotliDecompressSync(
     Buffer.from(readFileSync(completeBundlePath, "utf8").trim(), "base64"),
   ).toString("utf8"),
 ) as BundledGermanOverlay[];
+
+/**
+ * The Bosnian source of Nivo 1, Lekcija 5 was refreshed after the original
+ * reviewed German bundle was prepared. Keep its reviewed German wording, but
+ * use the current lesson wrapper and hero image so the source-hash guard can
+ * safely apply it instead of falling back to Bosnian.
+ */
+const CURRENT_LEKCIJA_FIVE_SOURCE_HASH =
+  "9ef52d5af3ec52f8136c510c2bd61fc888266a15573ab3fe36dcbbc3e389f547";
+
+function currentLekcijaFiveTranslation(translation: string) {
+  return translation
+    .replace(/^\s*<div class="lesson-container">\s*/, "")
+    .replace(/<img src="[^"]*mekteb_prvi_dan[^"]*"/, '<img src="/uploads/1778348120878-1ahn2f.webp"')
+    .replace(/\s*<\/div>\s*$/, "");
+}
+
+export const bundledGermanNivo1Overlays: BundledGermanOverlay[] = decodedOverlays.map((overlay) => (
+  overlay.slug === "ja-idem-u-mekteb" && overlay.field === "content_html"
+    ? {
+        ...overlay,
+        sourceHash: CURRENT_LEKCIJA_FIVE_SOURCE_HASH,
+        translation: currentLekcijaFiveTranslation(overlay.translation),
+      }
+    : overlay
+));
