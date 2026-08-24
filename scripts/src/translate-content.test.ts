@@ -63,6 +63,13 @@ test("ne odbacuje njemački HTML zbog bošnjačkih slova u vlastitim imenima", (
   assert.equal(htmlTranslationIssue(source, translation, "de"), null);
 });
 
+test("ne odbacuje albanski HTML zbog bošnjačkih slova u vlastitim imenima", () => {
+  const source = "<p>Đuro Đurić je učitelj u Žepču.</p>";
+  const translation = "<p>Mësuesi Đuro Đurić është një mësues nga Žepçe dhe jep mësim atje.</p>";
+
+  assert.equal(htmlTranslationIssue(source, translation, "sq"), null);
+});
+
 test("ne tretira nepromijenjeno ime Derviš Sušić kao bosansku rečenicu", () => {
   const source = "<p>DERVIŠ SUŠIĆ</p>";
 

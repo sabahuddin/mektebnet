@@ -150,6 +150,10 @@ Pravila:
 async function translateTexts(items: string[], targetName: string, forceTranslation = false): Promise<Record<string, string>> {
   const data = await callOpenAI({
     model: MODEL,
+    // Content batches contain many short, independent translation units. Minimal
+    // reasoning prevents the model from spending the response budget on hidden
+    // deliberation before returning the required JSON array.
+    reasoning_effort: "minimal",
     max_completion_tokens: 16384,
     response_format: { type: "json_object" },
     messages: [
@@ -380,16 +384,19 @@ function bosnianMarkerCount(value: string) {
   return [...value].filter((character) => /[žđćČĆĐŽ]/u.test(character)).length;
 }
 
-function hasLikelyUntranslatedBosnian(source: string, translation: string) {
+function hasLikelyUntranslatedBosnian(source: string, translation: string, jezik: string) {
   const sourceCount = bosnianMarkerCount(source);
-  const germanWordCount = translation
-    .replace(/<[^>]*>/g, " ")
-    .match(/\b(der|die|das|den|dem|des|und|ist|sind|mit|von|für|auf|als|nicht|eine|einen|einem|dieser|diese|dieses|haben|wird|werden|zum|zur)\b/giu)?.length ?? 0;
+  const visible = translation.replace(/<[^>]*>/g, " ").toLowerCase();
+  const targetLanguageWordCount = jezik === "sq"
+    ? visible.match(/\b(në|është|dhe|me|nga|që|kjo|këtë|një|nuk|do|të|si|për|janë|mësues|mësim|atje)\b/g)?.length ?? 0
+    : visible
+      .match(/\b(der|die|das|den|dem|des|und|ist|sind|mit|von|für|auf|als|nicht|eine|einen|einem|dieser|diese|dieses|haben|wird|werden|zum|zur)\b/g)?.length ?? 0;
 
   // Imena bošnjačkih alima, mjesta i porodica prirodno zadržavaju č/ć/đ/ž i
-  // mogu preći grubi prag, iako je ostatak teksta ispravan njemački. Tada
-  // precizna provjera nepromijenjenih tekstualnih čvorova ispod ostaje zaštita.
-  if (germanWordCount >= 3) return false;
+  // mogu preći grubi prag, iako je ostatak ispravan prijevod. Prepoznaj
+  // česte riječi ciljnog jezika; precizna provjera nepromijenjenih čvorova
+  // ispod i dalje hvata stvarno neprevedenu prozu.
+  if (targetLanguageWordCount >= 3) return false;
   if (source.trim() === translation.trim() && isLikelyPersonalName(source)) return false;
   return sourceCount >= 2 && bosnianMarkerCount(translation) > sourceCount * 0.30;
 }
@@ -452,7 +459,7 @@ export function htmlTranslationIssue(source: string, translation: string, jezik:
   if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
   const textIssue = textTranslationIssue(source, translation, jezik);
   if (textIssue) return textIssue;
-  if (hasLikelyUntranslatedBosnian(source, translation)) return "prijevod zadržava previše bosanskih ortografskih markera";
+  if (hasLikelyUntranslatedBosnian(source, translation, jezik)) return "prijevod zadržava previše bosanskih ortografskih markera";
   const untranslatedNode = findUntranslatedBosnianNode(source, translation);
   if (untranslatedNode) return `ostao je nepreveden bosanski tekst: ${untranslatedNode.slice(0, 120)}`;
   return null;
