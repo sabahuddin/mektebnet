@@ -22,6 +22,7 @@
  *   ... --tables ilmihal_lekcije --ids 191,192 --force (ponovi samo navedene redove)
  *   ... --types text                      (samo tekst, preskoči HTML)
  *   ... --dry                             (samo prebroji, bez OpenAI poziva)
+ *   ... --dry --list-jobs                 (ispiši tačne preostale redove)
  */
 import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
@@ -70,6 +71,7 @@ const ONLY_NIVO = parseInt(argVal("--nivo", "0"), 10);
 const ONLY_IDS = argVal("--ids", "").split(",").map((s) => parseInt(s.trim(), 10)).filter(Number.isInteger);
 const FORCE = args.includes("--force");
 const DRY = args.includes("--dry");
+const LIST_JOBS = args.includes("--list-jobs");
 const MODEL = argVal("--model", "gpt-5-mini");
 const CHUNK = parseInt(argVal("--chunk", "30"), 10);
 const CONCURRENCY = parseInt(argVal("--concurrency", "8"), 10);
@@ -159,7 +161,7 @@ async function translateTexts(items: string[], targetName: string, forceTranslat
         // prijevoda istog redoslijeda i dužine pa zip-ujemo s našim originalima.
         content:
           `${forceTranslation
-            ? "Prethodni pokušaj je pogrešno ostavio ovaj bosanski tekst nepreveden. Prevedi ga sada POTPUNO na ciljni jezik, čak i ako je pisan velikim slovima. Ne zadržavaj bosansku rečenicu. "
+            ? "Prethodni pokušaj je pogrešno ostavio ovaj bosanski tekst nepreveden. Prevedi ga sada POTPUNO na ciljni jezik, čak i ako je pisan velikim slovima. Ne zadržavaj bosansku rečenicu. Ako je to stručni islamski termin poput dove, šarta ili namaza, napiši prirodni termin na ciljnom jeziku i zadrži bosanski izraz samo u zagradi — ne vraćaj isti bosanski termin samostalno. Iznimke su samo arapsko pismo, doslovna arapska transliteracija i vlastita imena. "
             : ""}Prevedi svaki string iz ulaznog niza. Vrati JSON objekt oblika {"prijevodi": [...]} ` +
           `gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz ` +
           `(prijevodi[i] je prijevod od ulaz[i]). Prevedi po značenju i kad izvorni tekst sadrži ` +
@@ -289,6 +291,14 @@ function isProtectedArabicContent(text: string) {
   return /\p{Script=Arabic}/u.test(text);
 }
 
+function isProtectedIslamicName(text: string) {
+  // Nazivi sura/dova i pojedinačni obredni nazivi ostaju kao kanonska
+  // transliteracija. Ne smiju se tretirati kao neprevedena bosanska proza.
+  const value = text.trim();
+  return /^(?:fatiha|kunut-dova|subhaneke|tahijjat|mesh|gasli vudžud|abdest|nijet|selam|kadei-ehire|ezan|ruku'?|sedžda|kijam|salavati|dženaza-dova|bismillah?|sura|tekbir|etna)(?:\s*\(\d+\))?$/iu.test(value)
+    || /^(?:sabah|podne|ikindija|akšam|jacija)(?:\s+namaz|\s*\(\d+\))?$/iu.test(value);
+}
+
 function findUntranslatedBosnianNode(source: string, translation: string) {
   const sourceParts = source.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
   const translatedParts = translation.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
@@ -351,8 +361,30 @@ function hasLikelyUntranslatedBosnian(source: string, translation: string) {
 }
 
 function existingTextNeedsRepair(source: string, translation: string, jezik: string) {
-  return Boolean(textTranslationIssue(source, translation, jezik))
-    || hasLikelyUntranslatedBosnian(source, translation);
+  if (textTranslationIssue(source, translation, jezik)) return true;
+
+  // Stručni termini se namjerno mogu zadržati na bosanskom u zagradi
+  // (npr. "Bedingung (šart)"). Sam broj bošnjačkih slova nije pouzdan
+  // signal kvara za tekstualna pitanja; popravljamo samo kada je cijela
+  // prepoznatljiva bosanska proza ostala nepromijenjena.
+  return source.trim() === translation.trim()
+    && !isProtectedArabicContent(source)
+    && !isProtectedIslamicName(source)
+    && containsBosnianProse(source);
+}
+
+function existingQuizTextNeedsRepair(source: string, translation: string, jezik: string) {
+  if (textTranslationIssue(source, translation, jezik)) return true;
+
+  // U kvizovima je dopušteno da njemački prijevod sačuva stručni bosanski
+  // termin u zagradi, npr. "Bedingung (šart)". Opći prag po slovima
+  // ž/đ/ć zato pogrešno vraća takav potpuno ispravan prijevod u red za
+  // beskrajnu ponovnu obradu. Ipak, potpuno nepromijenjena bosanska proza
+  // ostaje signal da prijevod treba popraviti.
+  return source.trim() === translation.trim()
+    && !isProtectedArabicContent(source)
+    && !isProtectedIslamicName(source)
+    && containsBosnianProse(source);
 }
 
 function existingQuizNeedsRepair(sourceArr: any[], translation: string, jezik: string) {
@@ -375,7 +407,7 @@ function existingQuizNeedsRepair(sourceArr: any[], translation: string, jezik: s
     ].filter((value): value is string => typeof value === "string" && value.trim() !== "");
     if (sourceStrings.length !== translatedStrings.length) return true;
     for (let j = 0; j < sourceStrings.length; j++) {
-      if (existingTextNeedsRepair(sourceStrings[j], translatedStrings[j], jezik)) return true;
+      if (existingQuizTextNeedsRepair(sourceStrings[j], translatedStrings[j], jezik)) return true;
     }
   }
   return false;
@@ -517,6 +549,12 @@ async function run() {
   }
 
   console.log(`Poslova: tekst=${textJobs.length} | html=${htmlJobs.length}`);
+  if (LIST_JOBS) {
+    console.log(JSON.stringify({
+      text: textJobs.map(({ tabela, redId, polje, jezik, type }) => ({ tabela, redId, polje, jezik, type })),
+      html: htmlJobs.map(({ tabela, redId, polje, jezik }) => ({ tabela, redId, polje, jezik, type: "html" })),
+    }));
+  }
   if (DRY) {
     const totalChars = [...textJobs.flatMap((j) => j.strings), ...htmlJobs.map((j) => j.html)].reduce((a, s) => a + s.length, 0);
     console.log(`Procjena znakova za prijevod ovog pokreta: ~${totalChars.toLocaleString()} (≈${Math.round(totalChars / 4).toLocaleString()} tokena ulaza)`);
