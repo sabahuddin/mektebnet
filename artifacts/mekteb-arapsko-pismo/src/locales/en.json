@@ -585,6 +585,7 @@
   "Nema podataka o uređajima": "No device data",
   "Pregled korisnika po ulogama": "User overview by roles",
   "Uloga": "Role",
+  "Promjena uloge uklanja stare veze profila. Muallim s grupama ili učenicima ne može se promijeniti.": "Changing the role removes old profile links. A muallim with groups or students cannot be changed.",
   "Aktivni": "Active",
   "Neaktivni": "Inactive",
   "Nije moguće učitati analitiku": "Unable to load analytics",

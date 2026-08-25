@@ -707,6 +707,7 @@
   "Nema podataka o uređajima": "Keine Gerätdaten",
   "Pregled korisnika po ulogama": "Übersicht der Benutzer nach Rollen",
   "Uloga": "Rolle",
+  "Promjena uloge uklanja stare veze profila. Muallim s grupama ili učenicima ne može se promijeniti.": "Beim Ändern der Rolle werden alte Profilverknüpfungen entfernt. Ein Muallim mit Gruppen oder Schülern kann nicht umgewandelt werden.",
   "Aktivni": "Aktiv",
   "Neaktivni": "Inaktiv",
   "Nije moguće učitati analitiku": "Analytik nicht ladbar",

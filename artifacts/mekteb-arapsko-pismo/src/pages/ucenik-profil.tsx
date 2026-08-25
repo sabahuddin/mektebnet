@@ -528,6 +528,8 @@ export default function UcenikProfilPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(250px,1fr)] gap-6 items-start">
+            <main className="lg:order-1 min-w-0">
             <div className="flex gap-1.5 mb-5 flex-wrap max-w-full">
               {TABS.map(tab => {
                 const badge = "badge" in tab ? tab.badge : 0;
@@ -1560,6 +1562,30 @@ export default function UcenikProfilPage() {
                 </div>
               </motion.div>
             )}
+            </main>
+            <aside className="lg:order-2 lg:sticky lg:top-4">
+              <div className="rounded-2xl border border-border/50 bg-muted/30 p-2">
+                <p className="px-3 pt-2 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{t("Moduli")}</p>
+                <div className="flex flex-col gap-1">
+                  {TABS.map(tab => {
+                    const badge = "badge" in tab ? tab.badge : 0;
+                    return (
+                      <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+                        data-testid={`module-${tab.id}`}
+                        className={`flex w-full items-center gap-2 px-4 py-3 rounded-xl text-left font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                        <tab.icon className="w-4 h-4 shrink-0" /> <span className="min-w-0 flex-1">{tab.label}</span>
+                        {(badge ?? 0) > 0 && (
+                          <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-extrabold ${activeTab === tab.id ? "bg-white text-primary" : "bg-orange-500 text-white"}`}>
+                            {badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </aside>
+            </div>
           </>
         )}
 
