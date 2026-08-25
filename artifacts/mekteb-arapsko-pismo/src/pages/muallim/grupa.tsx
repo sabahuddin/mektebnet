@@ -85,6 +85,14 @@ interface IlmihalLekcija {
   slug?: string;
 }
 
+interface PlanLekcija {
+  id: number;
+  datum: string;
+  lekcijaNaslov: string;
+  lekcijaTip: string;
+  redoslijed: number;
+}
+
 interface LekcijaStatus {
   ucenikId: number;
   zavrsenoLekcija: number;
@@ -131,11 +139,11 @@ interface NapametDetalji {
   nisuOcijenjeni: Array<{ id: number; displayName: string }>;
 }
 
-type GrupaModul = "ucenici" | "napamet" | "greske";
+type GrupaModul = "ucenici" | "napamet" | "greske" | "plan";
 
 export default function GrupaPage() {
   const { id } = useParams<{ id: string }>();
-  const [, setLocation] = useLocation();
+  const [locationPath, setLocation] = useLocation();
   const { token } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -155,6 +163,13 @@ export default function GrupaPage() {
   const [aktivniModul, setAktivniModul] = useState<GrupaModul>("ucenici");
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [planLekcije, setPlanLekcije] = useState<PlanLekcija[]>([]);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [showPlanForm, setShowPlanForm] = useState(false);
+  const [planDatum, setPlanDatum] = useState(new Date().toISOString().split("T")[0]);
+  const [planLekcijaNaslov, setPlanLekcijaNaslov] = useState("");
+  const [planVrstaCasa, setPlanVrstaCasa] = useState("obrada");
+  const [savingPlan, setSavingPlan] = useState(false);
 
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [bulkNames, setBulkNames] = useState("");
@@ -227,6 +242,11 @@ export default function GrupaPage() {
 
   const grupaId = parseInt(id || "0");
 
+  useEffect(() => {
+    const modul = new URLSearchParams(window.location.search).get("modul");
+    if (modul === "plan") setAktivniModul("plan");
+  }, [locationPath]);
+
   // Učitaj muallime mekteba (403 = korisnik nije glavni → nema modal za promjenu)
   useEffect(() => {
     if (!token) return;
@@ -272,6 +292,47 @@ export default function GrupaPage() {
     apiRequest<{ count: number }>("GET", `/muallim/zadace-pregled-badge?grupaId=${grupaId}`, undefined, token)
       .then(r => setZadacaBadge(r?.count ?? 0)).catch(() => {});
   }, [token, grupaId]);
+
+  useEffect(() => {
+    if (!token || !grupaId || aktivniModul !== "plan") return;
+    setPlanLoading(true);
+    apiRequest<PlanLekcija[]>("GET", `/muallim/plan-lekcija?grupaId=${grupaId}`, undefined, token)
+      .then(setPlanLekcije)
+      .catch(() => toast({ title: t("Greška"), description: t("Plan lekcija nije moguće učitati"), variant: "destructive" }))
+      .finally(() => setPlanLoading(false));
+  }, [token, grupaId, aktivniModul, t, toast]);
+
+  async function savePlanLekcija() {
+    if (!token || !grupaId || !planLekcijaNaslov.trim()) return;
+    setSavingPlan(true);
+    try {
+      const nova = await apiRequest<PlanLekcija>("POST", "/muallim/plan-lekcija", {
+        grupaId,
+        datum: planDatum,
+        lekcijaNaslov: planLekcijaNaslov.trim(),
+        lekcijaTip: planVrstaCasa,
+        redoslijed: planLekcije.filter(lekcija => lekcija.datum === planDatum).length,
+      }, token);
+      setPlanLekcije(prev => [...prev, nova]);
+      setPlanLekcijaNaslov("");
+      setShowPlanForm(false);
+      toast({ title: t("Lekcija dodana u plan!") });
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    } finally {
+      setSavingPlan(false);
+    }
+  }
+
+  async function deletePlanLekcija(id: number) {
+    if (!token) return;
+    try {
+      await apiRequest("DELETE", `/muallim/plan-lekcija/${id}`, undefined, token);
+      setPlanLekcije(prev => prev.filter(lekcija => lekcija.id !== id));
+    } catch {
+      toast({ title: t("Greška"), variant: "destructive" });
+    }
+  }
 
   async function loadInteraktivniPregled() {
     if (!token || !grupaId || interaktivniLoading || interaktivniLoaded) return;
@@ -717,6 +778,7 @@ export default function GrupaPage() {
                { key: "ucenici" as const, label: t("Učenici"), icon: Users },
                { key: "napamet" as const, label: t("NAPAMET"), icon: BookOpen },
                { key: "greske" as const, label: t("Gdje učenici griješe"), icon: AlertTriangle },
+                { key: "plan" as const, label: t("Plan lekcija"), icon: BookOpen },
              ].map((tab) => (
                <button
                  key={tab.key}
@@ -738,7 +800,6 @@ export default function GrupaPage() {
              <div className="h-px bg-border/60 my-1 hidden lg:block" />
             {[
                { label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}` },
-               { label: t("Plan lekcija"), icon: BookOpen, href: `/muallim?tab=plan&grupaId=${grupa.id}` },
                { label: t("Raspored lekcija"), icon: ListOrdered, href: `/muallim/raspored/${grupa.id}` },
                { label: t("Kalendar"), icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}` },
                { label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}` },
@@ -810,6 +871,82 @@ export default function GrupaPage() {
             </Button>
           )}
         </div>
+
+         {aktivniModul === "plan" && (
+          <section className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-extrabold text-foreground">
+                  <BookOpen className="h-5 w-5 text-violet-600" />
+                  {t("Plan lekcija")}
+                </h2>
+                <p className="text-sm text-muted-foreground">{t("Plan za grupu")} {grupa.naziv}</p>
+              </div>
+              {!grupa.isArchived && (
+                <Button type="button" onClick={() => setShowPlanForm(open => !open)} className="rounded-xl">
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("Dodaj lekciju")}
+                </Button>
+              )}
+            </div>
+
+            {showPlanForm && !grupa.isArchived && (
+              <div className="space-y-3 rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-xs font-bold text-muted-foreground">
+                    {t("Datum")}
+                    <input type="date" value={planDatum} onChange={e => setPlanDatum(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground" />
+                  </label>
+                  <label className="text-xs font-bold text-muted-foreground">
+                    {t("Vrsta časa")}
+                    <select value={planVrstaCasa} onChange={e => setPlanVrstaCasa(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground">
+                      <option value="obrada">{t("Obrada")}</option>
+                      <option value="ponavljanje">{t("Ponavljanje")}</option>
+                      <option value="provjera">{t("Provjera")}</option>
+                    </select>
+                  </label>
+                </div>
+                <label className="block text-xs font-bold text-muted-foreground">
+                  {t("Lekcija")}
+                  <select value={planLekcijaNaslov} onChange={e => setPlanLekcijaNaslov(e.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground">
+                    <option value="">{t("Odaberi lekciju")}</option>
+                    {ilmihalLekcije.map(lekcija => <option key={lekcija.id} value={lekcija.naslov}>{lekcija.naslov}</option>)}
+                  </select>
+                </label>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowPlanForm(false)}>{t("Otkaži")}</Button>
+                  <Button type="button" onClick={savePlanLekcija} disabled={savingPlan || !planLekcijaNaslov.trim()}>
+                    {savingPlan && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}{t("Sačuvaj")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {planLoading ? (
+              <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />)}</div>
+            ) : planLekcije.length === 0 ? (
+              <div className="rounded-2xl border border-border/50 bg-white py-14 text-center text-sm text-muted-foreground">{t("Nema dodanih lekcija u planu")}</div>
+            ) : (
+              <div className="space-y-2">
+                {[...planLekcije].sort((a, b) => a.datum.localeCompare(b.datum) || a.redoslijed - b.redoslijed).map(lekcija => (
+                  <div key={lekcija.id} className="flex items-center gap-3 rounded-2xl border border-border/50 bg-white p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-foreground">{lekcija.lekcijaNaslov}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{new Date(`${lekcija.datum}T12:00:00`).toLocaleDateString("bs-BA")} · {lekcija.lekcijaTip}</p>
+                    </div>
+                    {!grupa.isArchived && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => deletePlanLekcija(lekcija.id)} title={t("Obriši")}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+         )}
 
          {aktivniModul === "napamet" && !grupa.isArchived && (
            <NapametLokalniProgramEditor key={napametRefreshKey} grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} onItemClick={openNapametDetalji} />
