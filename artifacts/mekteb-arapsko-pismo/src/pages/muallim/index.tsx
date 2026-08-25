@@ -4692,6 +4692,8 @@ export default function MuallimPanel() {
             )}
           </>
         )}
+        </main>
+        </div>
       </div>
 
       {/* Modal: potvrda brisanja grupe — korak 1: spasi izvještaj, korak 2: upiši naziv */}
@@ -4812,9 +4814,6 @@ export default function MuallimPanel() {
           </div>
         </div>
       )}
-
-        </main>
-        </div>
 
     </Layout>
   );
