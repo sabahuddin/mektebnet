@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
+import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -198,7 +199,10 @@ export default function MuallimH5pStatistikaPage() {
   const { t } = useLanguage();
 
   const [grupe, setGrupe] = useState<Grupa[]>([]);
-  const [grupaId, setGrupaId] = useState<number | null>(null);
+  const [grupaId, setGrupaId] = useState<number | null>(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("grupaId"));
+    return Number.isInteger(id) && id > 0 ? id : null;
+  });
   const [data, setData] = useState<StatsResponse | null>(null);
   const [loadingGrupe, setLoadingGrupe] = useState(true);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -234,7 +238,9 @@ export default function MuallimH5pStatistikaPage() {
     apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token)
       .then(g => {
         setGrupe(g);
-        if (g.length > 0) setGrupaId(g[0].id);
+        if (g.length > 0) {
+          setGrupaId(currentId => currentId && g.some(grupa => grupa.id === currentId) ? currentId : g[0].id);
+        }
       })
       .catch(() => toast({ title: t("Greška pri učitavanju grupa"), variant: "destructive" }))
       .finally(() => setLoadingGrupe(false));
@@ -301,7 +307,8 @@ export default function MuallimH5pStatistikaPage() {
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+        <main className="min-w-0">
         <div className="flex items-center gap-3 mb-6">
           <BackLink fallback="/muallim" className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
@@ -642,6 +649,12 @@ export default function MuallimH5pStatistikaPage() {
           <div className="flex items-center justify-center text-muted-foreground text-sm gap-2 mt-3">
             <Loader2 className="w-4 h-4 animate-spin" /> {t("Učitavam statistiku…")}
           </div>
+        )}
+        </main>
+        {grupaId && (
+          <aside className="lg:sticky lg:top-24">
+            <MuallimGroupSidebar grupaId={grupaId} activeModule="h5p" />
+          </aside>
         )}
       </div>
 

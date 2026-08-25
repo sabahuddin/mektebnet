@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
+import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 type Status = "prisutan" | "odsutan" | "zakasnio" | "opravdan";
 
@@ -208,34 +209,8 @@ export default function PrisustvoPage() {
           </div>
         )}
         </main>
-        <aside className="lg:sticky lg:top-24 rounded-2xl border border-border/50 bg-white/80 p-3">
-          <p className="px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli grupe")}</p>
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-bold text-primary">
-              <CalendarCheck className="h-4 w-4 shrink-0" />
-              {t("Prisustvo")}
-            </div>
-            {grupa && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setLocation(`/muallim?tab=plan&grupaId=${grupa.id}`)}
-                  className="flex w-full items-center gap-2 rounded-xl border border-border/60 bg-white px-3 py-2.5 text-left text-sm font-bold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <CalendarCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  {t("Plan lekcija")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLocation(`/muallim/grupa/${grupa.id}`)}
-                  className="flex w-full items-center gap-2 rounded-xl border border-border/60 bg-white px-3 py-2.5 text-left text-sm font-bold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <ArrowLeft className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  {t("Nazad u grupu")}
-                </button>
-              </>
-            )}
-          </div>
+        <aside className="lg:sticky lg:top-24">
+          <MuallimGroupSidebar grupaId={parseInt(grupaId)} activeModule="prisustvo" />
         </aside>
         </div>
       </div>

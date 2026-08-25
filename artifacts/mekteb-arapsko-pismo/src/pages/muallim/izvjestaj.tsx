@@ -9,6 +9,7 @@ import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpe
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 type ReportSection = "summary" | "attendance" | "grades" | "quizzes" | "progress" | "stars";
 const REPORT_SECTIONS: { id: ReportSection; label: string }[] = [
@@ -114,6 +115,7 @@ export default function MuallimIzvjestajPage() {
   const [matchUcenik, paramsUcenik] = useRoute<{ id: string }>("/muallim/izvjestaj/ucenik/:id");
   const [matchGrupa, paramsGrupa] = useRoute<{ id: string }>("/muallim/izvjestaj/grupa/:id");
   const [matchSvi] = useRoute("/muallim/izvjestaj/svi");
+  const grupaId = matchGrupa && paramsGrupa?.id ? Number(paramsGrupa.id) : null;
 
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -294,7 +296,8 @@ export default function MuallimIzvjestajPage() {
         modu (vidi index.css), ova klasa dodatno izoluje izvještaj od
         ostalih dijelova <main> kontejnera.
       */}
-      <div className="print-worksheet max-w-4xl mx-auto print-root">
+      <div className={grupaId ? "max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start" : ""}>
+      <div className="print-worksheet max-w-4xl mx-auto print-root min-w-0">
         <div className="no-print mb-6 flex items-center justify-between gap-3 flex-wrap">
           <button
             onClick={() => goBackOr(() => setLocation("/muallim"))}
@@ -502,6 +505,12 @@ export default function MuallimIzvjestajPage() {
             )}
           </>
         )}
+      </div>
+      {grupaId && (
+        <aside className="no-print lg:sticky lg:top-24">
+          <MuallimGroupSidebar grupaId={grupaId} activeModule="izvjestaji" />
+        </aside>
+      )}
       </div>
     </Layout>
   );

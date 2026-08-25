@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
+import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 interface Grupa {
   id: number;
@@ -159,7 +160,7 @@ export default function MuallimRasporedPage() {
   return (
     <Layout>
       <div className="sticky top-16 z-30 -mx-4 px-4 py-2.5 bg-gradient-to-r from-violet-50 via-white to-violet-50 border-b border-violet-200/70 shadow-sm mb-6">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
           <button
             onClick={() => goBackOr(() => setLocation(`/muallim/grupa/${grupaId}`))}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-violet-200 text-violet-700 hover:bg-violet-100 font-bold text-sm transition-colors shrink-0"
@@ -173,7 +174,8 @@ export default function MuallimRasporedPage() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+        <main className="min-w-0">
         <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-2xl p-4 mb-5">
           <Info className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
           <p className="text-sm text-violet-900/90 leading-relaxed">
@@ -307,6 +309,10 @@ export default function MuallimRasporedPage() {
             </Button>
           </div>
         )}
+        </main>
+        <aside className="lg:sticky lg:top-24">
+          <MuallimGroupSidebar grupaId={grupaId} activeModule="raspored" />
+        </aside>
       </div>
     </Layout>
   );

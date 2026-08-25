@@ -20,6 +20,7 @@ import { isOnline, formatScreentime } from "@/lib/utils";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
 import type { NapametStavka } from "@/components/NapametPregled";
 import { NapametLokalniProgramEditor } from "@/components/NapametLokalniProgramEditor";
+import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 interface Grupa {
   id: number;
@@ -244,7 +245,12 @@ export default function GrupaPage() {
 
   useEffect(() => {
     const modul = new URLSearchParams(window.location.search).get("modul");
-    if (modul === "plan") setAktivniModul("plan");
+    if (modul === "napamet" || modul === "greske" || modul === "plan") {
+      setAktivniModul(modul);
+      if (modul === "greske") void loadInteraktivniPregled();
+    } else {
+      setAktivniModul("ucenici");
+    }
   }, [locationPath]);
 
   // Učitaj muallime mekteba (403 = korisnik nije glavni → nema modal za promjenu)
@@ -767,66 +773,9 @@ export default function GrupaPage() {
 
          <div className="max-w-6xl mx-auto">
          <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
-          {/* Modul navigacija — sekundarna je na mobilnom, a desna kolona na desktopu. */}
-         <aside className="order-1 lg:order-2 lg:sticky lg:top-24 bg-white/80 lg:border lg:border-border/50 lg:rounded-2xl lg:p-3">
-           <p className="hidden lg:block px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
-          {/* Grupni moduli — učenici, NAPAMET i pregled grešaka su lokalni tabovi. */}
-        {grupa && (
-          <>
-           <div className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-1.5 lg:overflow-visible lg:pb-0">
-             {[
-               { key: "ucenici" as const, label: t("Učenici"), icon: Users },
-               { key: "napamet" as const, label: t("NAPAMET"), icon: BookOpen },
-               { key: "greske" as const, label: t("Gdje učenici griješe"), icon: AlertTriangle },
-                { key: "plan" as const, label: t("Plan lekcija"), icon: BookOpen },
-             ].map((tab) => (
-               <button
-                 key={tab.key}
-                 type="button"
-                 onClick={() => {
-                   setAktivniModul(tab.key);
-                   if (tab.key === "greske") void loadInteraktivniPregled();
-                 }}
-                 className={`relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-xs font-bold transition-colors lg:w-full lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm ${
-                   aktivniModul === tab.key
-                     ? "border-emerald-500 bg-emerald-100 text-emerald-900 shadow-sm"
-                     : "border-border/60 bg-white text-foreground hover:border-emerald-300 hover:bg-emerald-50"
-                 }`}
-               >
-                 <tab.icon className="w-3.5 h-3.5 shrink-0 text-emerald-700 lg:h-4 lg:w-4" />
-                 <span className="truncate">{tab.label}</span>
-               </button>
-             ))}
-             <div className="h-px bg-border/60 my-1 hidden lg:block" />
-            {[
-               { label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupa.id}` },
-               { label: t("Raspored lekcija"), icon: ListOrdered, href: `/muallim/raspored/${grupa.id}` },
-               { label: t("Kalendar"), icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupa.id}` },
-               { label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupa.id}` },
-               { label: t("Zadaća"), icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupa.id}`, badge: zadacaBadge },
-               { label: t("Izvještaji"), icon: FileText, href: `/muallim/izvjestaj/grupa/${grupa.id}` },
-               { label: t("Roditelji"), icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupa.id}` },
-               { label: t("H5P statistika"), icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupa.id}` },
-               { label: t("Podešavanja"), icon: Settings, href: `/muallim/grupa/${grupa.id}/uredi` },
-            ].map(card => (
-              <Link
-                key={card.label}
-                href={card.href}
-                 className="relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border/60 bg-white px-2.5 py-2 text-xs font-bold text-foreground transition-colors hover:border-emerald-300 hover:bg-emerald-50 lg:w-full lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm"
-              >
-                 <card.icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground lg:h-4 lg:w-4" />
-                <span className="truncate">{card.label}</span>
-                {(card.badge ?? 0) > 0 && (
-                  <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-red-600 text-white text-[11px] font-black shadow-md">
-                    {card.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
-          </>
-        )}
-         </aside>
+          <aside className="order-1 lg:order-2 lg:sticky lg:top-24">
+            <MuallimGroupSidebar grupaId={grupa.id} activeModule={aktivniModul} zadacaBadge={zadacaBadge} />
+          </aside>
 
          <div className="order-2 lg:order-1 min-w-0">
 

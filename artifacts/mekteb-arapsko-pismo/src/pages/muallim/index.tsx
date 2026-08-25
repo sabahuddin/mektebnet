@@ -20,6 +20,7 @@ import { LekcijaPicker } from "@/components/LekcijaPicker";
 import { useLanguage } from "@/context/language";
 import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
+import { MuallimGroupSidebar, type GroupModuleKey } from "@/components/muallim-group-sidebar";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -414,6 +415,10 @@ export default function MuallimPanel() {
   // linka "Profil" → /muallim?tab=profil). Pokreće se na svakoj promjeni
   // location-a da omogući in-app navigaciju iz header dropdown-a.
   const [locationPath] = useLocation();
+  const groupContextId = useMemo(() => {
+    const grupaId = Number(new URLSearchParams(window.location.search).get("grupaId"));
+    return Number.isInteger(grupaId) && grupaId > 0 ? grupaId : null;
+  }, [locationPath]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab");
@@ -1673,7 +1678,13 @@ export default function MuallimPanel() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(250px,1fr)] gap-6 items-start">
         {/* Moduli — na desktopu stalno dostupni desno */}
         <aside className="lg:order-2 lg:sticky lg:top-4">
-        <div className="rounded-2xl border border-border/50 bg-muted/30 p-2">
+         {groupContextId ? (
+           <MuallimGroupSidebar
+             grupaId={groupContextId}
+             activeModule={activeTab as GroupModuleKey}
+           />
+         ) : (
+         <div className="rounded-2xl border border-border/50 bg-muted/30 p-2">
           <p className="px-3 pt-2 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{t("Moduli")}</p>
         <div className="flex flex-col gap-1">
           {visibleTabs.map(tab => {
@@ -1696,6 +1707,7 @@ export default function MuallimPanel() {
           })}
         </div>
         </div>
+         )}
         </aside>
         <main className="lg:order-1 min-w-0">
         {isLoading ? (
