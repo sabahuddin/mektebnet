@@ -48,3 +48,4 @@
 - [Njemački overlayji i hash izvora](german-overlay-source-hashes.md) — bundlani prijevod se preskače kad se izmijeni bosanski HTML; osvježi hash i zadrži istu HTML strukturu.
 - [Ilmihal uppercase format](ilmihal-uppercase-format.md) — lekcije 1–20 čuvaju velika slova po izvornim tekstualnim čvorovima i nakon prijevoda.
 - [Mektebska godina — prisustvo](mektebska-godina-prisustvo.md) — tekuće prisustvo se strogo računa od 1. augusta, nikad po kalendarskoj godini ili staroj grupi.
+- [GitHub content API i JSX](github-content-api-jsx.md) — ne mijenjaj složeni JSX marker-zamjenama na udaljenom fajlu; validiraj tačan sadržaj prije Coolify redeploya.
