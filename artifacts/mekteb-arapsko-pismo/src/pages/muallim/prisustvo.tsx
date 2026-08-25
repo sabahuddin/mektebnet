@@ -112,7 +112,7 @@ export default function PrisustvoPage() {
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
@@ -129,6 +129,8 @@ export default function PrisustvoPage() {
           </div>
         </div>
 
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+        <main className="min-w-0">
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">{t("Datum")}</label>
@@ -205,6 +207,37 @@ export default function PrisustvoPage() {
             </div>
           </div>
         )}
+        </main>
+        <aside className="lg:sticky lg:top-24 rounded-2xl border border-border/50 bg-white/80 p-3">
+          <p className="px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli grupe")}</p>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-bold text-primary">
+              <CalendarCheck className="h-4 w-4 shrink-0" />
+              {t("Prisustvo")}
+            </div>
+            {grupa && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setLocation(`/muallim?tab=plan&grupaId=${grupa.id}`)}
+                  className="flex w-full items-center gap-2 rounded-xl border border-border/60 bg-white px-3 py-2.5 text-left text-sm font-bold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+                >
+                  <CalendarCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {t("Plan lekcija")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocation(`/muallim/grupa/${grupa.id}`)}
+                  className="flex w-full items-center gap-2 rounded-xl border border-border/60 bg-white px-3 py-2.5 text-left text-sm font-bold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+                >
+                  <ArrowLeft className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {t("Nazad u grupu")}
+                </button>
+              </>
+            )}
+          </div>
+        </aside>
+        </div>
       </div>
     </Layout>
   );
