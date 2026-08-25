@@ -1670,13 +1670,16 @@ export default function MuallimPanel() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(250px,1fr)] gap-6 items-start">
+          <aside className="lg:order-2 lg:sticky lg:top-4">
+            <div className="rounded-2xl border border-border/50 bg-muted/30 p-2">
+              <p className="px-3 pt-2 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{t("Moduli")}</p>
+        <div className="flex flex-col gap-1">
           {visibleTabs.map(tab => {
             const badgeCount = tab.id === "pregled" ? pendingRoditelji.length : 0;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                className={`relative flex w-full items-center gap-2 px-4 py-3 rounded-xl text-left font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
                 <tab.icon className="w-4 h-4" /> {tab.label}
                 {badgeCount > 0 && (
                   <span
@@ -1691,6 +1694,9 @@ export default function MuallimPanel() {
             );
           })}
         </div>
+            </div>
+          </aside>
+          <main className="lg:order-1 min-w-0">
 
         {isLoading ? (
           <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
