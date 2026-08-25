@@ -1610,6 +1610,7 @@ router.get("/ilmihal/lista", async (req, res) => {
       })
       .from(ilmihalLekcijeTable)
       .orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
+    await overlayRows(lekcije, "ilmihal_lekcije", getLang(req));
     res.json(lekcije);
   } catch (err) {
     res.status(500).json({ error: "Greška pri dohvatu liste lekcija" });
@@ -3002,6 +3003,7 @@ router.get("/analytics", async (req, res) => {
       .limit(8),
     [] as { id: number; naslov: string; nivo: number; ucenici: number; zavrseno: number; minuti: number }[],
   );
+  await overlayRows(najaktivnijeLekcije, "ilmihal_lekcije", getLang(req));
 
   const najaktivnijiKvizovi = await safe("najaktivnijiKvizovi", () =>
     db.select({
@@ -3827,7 +3829,7 @@ router.post("/igra-pitanja/import", (req, res) => {
 
 // GET /admin/statistika-sadrzaja — pregled završetaka i ocjena po lekciji i prilogu.
 // Vraća { lekcije: [...], prilozi: [...] } — admin tab "Statistika sadržaja".
-router.get("/statistika-sadrzaja", async (_req, res) => {
+router.get("/statistika-sadrzaja", async (req, res) => {
   try {
     const lekcijeRes: any = await db.execute(sql`
       SELECT
@@ -3903,10 +3905,26 @@ router.get("/statistika-sadrzaja", async (_req, res) => {
       ) o ON o.sadrzaj_id = k.id
       ORDER BY k.kategorija, k.id;
     `);
+    const lekcije = lekcijeRes.rows ?? [];
+    const priloziRows = priloziRes.rows ?? [];
+    const kvizovi = kvizoviRes.rows ?? [];
+    const lang = getLang(req);
+    await overlayRows(lekcije, "ilmihal_lekcije", lang);
+    await overlayRows(kvizovi, "kvizovi", lang);
+
+    // Prilozi se pridružuju na naslov lekcije u SQL-u, pa ga preklapamo iz već
+    // lokalizovanog reda lekcije. Naziv samog priloga ostaje original koji je
+    // unio muallim/admin.
+    const naslovPoLekciji = new Map(lekcije.map((l: { id: number; naslov: string }) => [l.id, l.naslov]));
+    for (const prilog of priloziRows) {
+      if (prilog.lekcija_id != null) {
+        prilog.lekcija_naslov = naslovPoLekciji.get(Number(prilog.lekcija_id)) ?? prilog.lekcija_naslov;
+      }
+    }
     res.json({
-      lekcije: lekcijeRes.rows ?? [],
-      prilozi: priloziRes.rows ?? [],
-      kvizovi: kvizoviRes.rows ?? [],
+      lekcije,
+      prilozi: priloziRows,
+      kvizovi,
     });
   } catch (err: any) {
     console.error("[admin/statistika-sadrzaja] greška:", err);

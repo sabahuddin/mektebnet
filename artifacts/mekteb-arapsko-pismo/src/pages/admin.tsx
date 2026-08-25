@@ -1206,6 +1206,7 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
   const { t } = useLanguage();
   const [displayName, setDisplayName] = useState(korisnik.displayName);
   const [email, setEmail] = useState(korisnik.email || "");
+  const [role, setRole] = useState(korisnik.role);
   const [licenceCount, setLicenceCount] = useState(muallimProfil?.licenceCount?.toString() || "30");
   const [jezici, setJezici] = useState<Lang[]>(() => {
     const init = Array.isArray(muallimProfil?.dozvoljeniJezici)
@@ -1227,9 +1228,10 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
       await apiRequest("PUT", `/admin/korisnici/${korisnik.id}`, {
         displayName: displayName.trim(),
         email: email || null,
+        ...(korisnik.role !== "admin" ? { role } : {}),
       }, token);
 
-      if (korisnik.role === "muallim" && muallimProfil) {
+      if (role === "muallim" && korisnik.role === "muallim" && muallimProfil) {
         await apiRequest("PUT", `/admin/muallim/${korisnik.id}/licence`, {
           licenceCount: parseInt(licenceCount) || 30,
         }, token);
@@ -1273,7 +1275,26 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t("opciono")}
               className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
-          {korisnik.role === "muallim" && muallimProfil && (
+          {korisnik.role !== "admin" && (
+            <div>
+              <label className="block text-xs font-bold text-muted-foreground mb-1">{t("Uloga")}</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <option value="ucenik">{t("Učenik")}</option>
+                <option value="roditelj">{t("Roditelj")}</option>
+                <option value="muallim">{t("Muallim")}</option>
+              </select>
+              {role !== korisnik.role && (
+                <p className="mt-2 text-xs leading-relaxed text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {t("Promjena uloge uklanja stare veze profila. Muallim s grupama ili učenicima ne može se promijeniti.")}
+                </p>
+              )}
+            </div>
+          )}
+          {role === "muallim" && korisnik.role === "muallim" && muallimProfil && (
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-3">
               <h4 className="font-bold text-sm text-teal-800">{t("Licence za učenike")}</h4>
               <div className="flex items-center gap-3">
@@ -1293,7 +1314,7 @@ function EditKorisnikModal({ token, korisnik, muallimProfil, onClose, onSaved }:
               </div>
             </div>
           )}
-          {korisnik.role === "muallim" && muallimProfil && (
+          {role === "muallim" && korisnik.role === "muallim" && muallimProfil && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
               <h4 className="font-bold text-sm text-indigo-800">{t("Dostupni jezici")}</h4>
               <p className="text-xs text-indigo-600">{t("Muallim i njegovi učenici mogu prebaciti aplikaciju samo na uključene jezike. Bosanski je uvijek uključen.")}</p>
