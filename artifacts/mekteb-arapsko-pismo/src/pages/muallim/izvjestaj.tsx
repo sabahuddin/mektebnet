@@ -296,7 +296,7 @@ export default function MuallimIzvjestajPage() {
         modu (vidi index.css), ova klasa dodatno izoluje izvještaj od
         ostalih dijelova <main> kontejnera.
       */}
-      <div className={grupaId ? "no-print max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start" : ""}>
+      <div className={grupaId ? "max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start" : ""}>
       <div className="print-worksheet max-w-4xl mx-auto print-root min-w-0">
         <div className="no-print mb-6 flex items-center justify-between gap-3 flex-wrap">
           <button
