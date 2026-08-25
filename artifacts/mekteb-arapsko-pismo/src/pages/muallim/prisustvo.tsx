@@ -219,7 +219,6 @@ export default function PrisustvoPage() {
           </div>
         </aside>
         </div>
-        )}
       </div>
     </Layout>
   );
