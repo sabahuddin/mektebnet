@@ -238,7 +238,9 @@ export default function MuallimH5pStatistikaPage() {
     apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token)
       .then(g => {
         setGrupe(g);
-        if (g.length > 0) setGrupaId(g[0].id);
+        if (g.length > 0) {
+          setGrupaId(currentId => currentId && g.some(grupa => grupa.id === currentId) ? currentId : g[0].id);
+        }
       })
       .catch(() => toast({ title: t("Greška pri učitavanju grupa"), variant: "destructive" }))
       .finally(() => setLoadingGrupe(false));
