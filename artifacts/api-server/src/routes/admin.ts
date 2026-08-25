@@ -50,7 +50,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
-import { CT_TABLES } from "../lib/content-translatable.js";
+import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
 import { canAccessAdminRoute } from "../lib/admin-route-access.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
@@ -1260,6 +1260,17 @@ router.put("/korisnici/:id", async (req, res) => {
     const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!existing) { res.status(404).json({ error: "Korisnik nije pronađen" }); return; }
 
+    const managedRoles = new Set(["muallim", "roditelj", "ucenik"]);
+    if (role !== undefined && (typeof role !== "string" || !managedRoles.has(role))) {
+      res.status(400).json({ error: "Nevažeća uloga" });
+      return;
+    }
+    if (role !== undefined && role !== existing.role && (existing.role === "admin" || role === "admin")) {
+      res.status(403).json({ error: "Admin uloga se ne može mijenjati kroz ovaj ekran" });
+      return;
+    }
+
+    const roleChanged = role !== undefined && role !== existing.role;
     const updates: Record<string, any> = {};
     if (displayName !== undefined) updates.displayName = displayName;
     if (email !== undefined) updates.email = email;
@@ -1269,12 +1280,76 @@ router.put("/korisnici/:id", async (req, res) => {
       // pristup ovisi isključivo o `isActive` flagu.
       if (isActive === true) updates.trialUntil = null;
     }
-    if (role !== undefined) updates.role = role;
+    if (roleChanged) updates.role = role;
 
-    const [updated] = await db.update(usersTable)
-      .set(updates)
-      .where(eq(usersTable.id, userId))
-      .returning();
+    const [updated] = await db.transaction(async (tx) => {
+      if (roleChanged) {
+        const targetRole = role as "muallim" | "roditelj" | "ucenik";
+
+        // Ne ostavljaj grupe, učenike ili glavnog muallima bez vlasnika.
+        if (existing.role === "muallim" && targetRole !== "muallim") {
+          const [profil] = await tx
+            .select({ isGlavni: muallimProfiliTable.isGlavni })
+            .from(muallimProfiliTable)
+            .where(eq(muallimProfiliTable.userId, userId));
+          const [glavniMekteb] = await tx
+            .select({ id: mektebiTable.id })
+            .from(mektebiTable)
+            .where(eq(mektebiTable.glavniMuallimId, userId))
+            .limit(1);
+          const [grupa] = await tx
+            .select({ id: grupeTable.id })
+            .from(grupeTable)
+            .where(eq(grupeTable.muallimId, userId))
+            .limit(1);
+          const [ucenik] = await tx
+            .select({ userId: ucenikProfiliTable.userId })
+            .from(ucenikProfiliTable)
+            .where(eq(ucenikProfiliTable.muallimId, userId))
+            .limit(1);
+          if (profil?.isGlavni || glavniMekteb || grupa || ucenik) {
+            const error = new Error("Muallim se ne može pretvoriti u drugu ulogu dok ima mekteb, grupe ili učenike.");
+            (error as Error & { status?: number }).status = 409;
+            throw error;
+          }
+        }
+
+        if (existing.role === "ucenik") {
+          const [profil] = await tx
+            .select({
+              muallimId: ucenikProfiliTable.muallimId,
+              isArchived: ucenikProfiliTable.isArchived,
+            })
+            .from(ucenikProfiliTable)
+            .where(eq(ucenikProfiliTable.userId, userId));
+          if (profil?.muallimId && !profil.isArchived) {
+            await tx.update(muallimProfiliTable)
+              .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
+              .where(eq(muallimProfiliTable.userId, profil.muallimId));
+          }
+          await tx.delete(roditeljUcenikTable).where(eq(roditeljUcenikTable.ucenikId, userId));
+          await tx.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
+        } else if (existing.role === "roditelj") {
+          await tx.delete(roditeljUcenikTable).where(eq(roditeljUcenikTable.roditeljId, userId));
+          await tx.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, userId));
+        } else if (existing.role === "muallim") {
+          await tx.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+        }
+
+        if (targetRole === "muallim") {
+          await tx.insert(muallimProfiliTable).values({ userId }).onConflictDoNothing();
+        } else if (targetRole === "roditelj") {
+          await tx.insert(roditeljProfiliTable).values({ userId }).onConflictDoNothing();
+        } else {
+          await tx.insert(ucenikProfiliTable).values({ userId }).onConflictDoNothing();
+        }
+      }
+
+      return tx.update(usersTable)
+        .set(updates)
+        .where(eq(usersTable.id, userId))
+        .returning();
+    });
 
     if (isActive !== undefined && existing.role === "muallim") {
       const ucenikProfili = await db.select({ userId: ucenikProfiliTable.userId })
@@ -1292,7 +1367,8 @@ router.put("/korisnici/:id", async (req, res) => {
 
     res.json({ ...updated, passwordHash: undefined });
   } catch (err) {
-    res.status(500).json({ error: "Greška servera" });
+    const status = (err as { status?: number })?.status;
+    res.status(status || 500).json({ error: err instanceof Error ? err.message : "Greška servera" });
   }
 });
 
