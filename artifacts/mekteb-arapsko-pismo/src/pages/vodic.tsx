@@ -427,7 +427,7 @@ export default function VodicPage() {
               </div>
               <h4 className="font-bold text-foreground mb-1">{t("Aferimi ⭐")}</h4>
               <p className="text-sm text-muted-foreground">
-                {t("Bodovi za tačne odgovore u kvizovima. Sakupi što više Aferima i takmiči se s drugima na tabeli.")}
+                {t("Bodovi za uspjeh u igricama. Sakupi što više Aferima igrajući igrice i takmiči se s drugima na tabeli.")}
               </p>
             </div>
             <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-200 p-6">
