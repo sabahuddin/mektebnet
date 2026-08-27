@@ -15,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const IMG = (name: string) => `${import.meta.env.BASE_URL}screenshots/vodic/${name}.jpg`;
-const MUALLIM_ATTENDANCE = `${import.meta.env.BASE_URL}screenshots/vodic/muallim-prisustvo.png`;
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle?: string }) {
   return (
@@ -159,6 +158,7 @@ function MuallimGuide() {
       intro: t("Plan lekcija čuva šta grupa treba obraditi, a Raspored lekcija pomaže da se odredi redoslijed rada."),
       action: t("Uđi u grupu, otvori Plan lekcija, dodaj ili ukloni lekcije i po potrebi koristi Raspored lekcija za usmjeravanje redoslijeda."),
       result: t("Muallim dobija jasan pravac kroz godinu, a učenici znaju šta je urađeno i šta slijedi."),
+      screenshot: { src: IMG("muallim-plan"), alt: t("Plan lekcija u muallimskoj grupi"), caption: t("Stvarni prikaz plana lekcija u grupi") },
     },
     {
       value: "prisustvo",
@@ -168,6 +168,7 @@ function MuallimGuide() {
       intro: t("Evidencija prisustva bilježi da li je učenik prisutan, odsutan, zakasnio ili opravdano odsutan."),
       action: t("Otvori Prisustvo iz menija grupe, izaberi datum i za svakog učenika označi status. Po potrebi dodaj napomenu i sačuvaj."),
       result: t("Redovna evidencija daje pouzdanu sliku dolazaka i omogućava da se izostanci povežu s napretkom učenika."),
+      screenshot: { src: IMG("muallim-prisustvo"), alt: t("Unos prisustva u muallimskoj grupi"), caption: t("Prisustvo se evidentira za odabrani datum, učenika po učenika") },
     },
     {
       value: "ocjene",
@@ -199,11 +200,12 @@ function MuallimGuide() {
     {
       value: "analiza",
       phase: t("PRAĆENJE"),
-      title: t("Greške, NAPAMET i H5P"),
+      title: t("Greške i NAPAMET"),
       icon: Wrench,
-      intro: t("Muallim može vidjeti gdje učenici griješe, pratiti NAPAMET gradivo i pregledati rezultate interaktivnih H5P vježbi."),
-      action: t("Iz menija grupe otvori Gdje učenici griješe, NAPAMET ili H5P statistiku i koristi rezultate za izbor narednih vježbi i objašnjenja."),
-      result: t("Ove informacije pokazuju šta učenik zaista treba ponoviti, pa se pomoć može usmjeriti precizno umjesto nasumično."),
+      intro: t("NAPAMET je trajno gradivo koje učenik treba usvojiti i ne zaboraviti. Muallim ga ispituje, ocjenjuje i na jednom mjestu vidi ko je koju stavku savladao."),
+      action: t("Iz menija grupe otvori Gdje učenici griješe da odabereš šta treba ponoviti. Zatim u NAPAMET pregledu izaberi gradivo za ispitivanje i prati ocjene cijele grupe."),
+      result: t("Centralni pregled daje jasnu sliku trajnog znanja svakog učenika, pa se ponavljanje i pomoć planiraju prema stvarnim potrebama."),
+      screenshot: { src: IMG("muallim-napamet"), alt: t("Centralni NAPAMET pregled grupe"), caption: t("NAPAMET pregled pokazuje trajno gradivo i napredak cijele grupe") },
     },
     {
       value: "izvjestaji",
@@ -287,31 +289,19 @@ function MuallimGuide() {
                         <Sparkles className={`mt-0.5 w-5 h-5 shrink-0 ${theme.arrow}`} />
                         <p className="text-sm leading-relaxed text-muted-foreground">{step.result}</p>
                       </div>
+                       {step.screenshot && (
+                         <Screenshot
+                           src={step.screenshot.src}
+                           alt={step.screenshot.alt}
+                           caption={step.screenshot.caption}
+                         />
+                       )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
               );
             })}
         </Accordion>
-          <div className="mt-8 overflow-hidden rounded-3xl border border-teal-200 bg-gradient-to-br from-teal-50 to-emerald-50">
-            <div className="p-6 md:p-8">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center">
-                  <CalendarCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-black uppercase tracking-wider text-teal-700">{t("Prisustvo po datumima")}</p>
-                  <h4 className="text-lg font-black text-foreground">{t("Matrica prisustva — svi datumi")}</h4>
-                </div>
-              </div>
-              <p className="mt-4 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
-                {t("Redovna evidencija daje pouzdanu sliku dolazaka i omogućava da se izostanci povežu s napretkom učenika.")}
-              </p>
-            </div>
-            <div className="bg-white px-3 pb-3 md:px-5 md:pb-5">
-              <Screenshot src={MUALLIM_ATTENDANCE} alt={t("Matrica prisustva — svi datumi")} caption={t("Prisustvo po datumima")} />
-            </div>
-          </div>
       </div>
     </div>
   );
@@ -512,10 +502,10 @@ export default function VodicPage() {
                   <h3 className="text-xl font-bold text-foreground">{t("Ilmihal")}</h3>
                 </div>
                 <p className="text-muted-foreground text-sm mb-4">
-                  {t("Tri digitalna udžbenika (Mala Košnica, Zlatna Košnica, Košnica Mudrosti) sa 231 interaktivnom lekcijom. Svaka lekcija kombinuje tekst, ilustracije, audio i H5P interaktivne elemente. Lekcije su organizirane u medaljone (teme), a učenik napreduje kroz mapu puta sa brojevima u kružićima.")}
+                  {t("Tri digitalna udžbenika (Mala Košnica, Zlatna Košnica, Košnica Mudrosti) sa 231 interaktivnom lekcijom. Svaka lekcija kombinuje tekst, ilustracije, audio i kvizove. Lekcije su organizirane u medaljone (teme), a učenik napreduje kroz mapu puta s cvjetićima.")}
                 </p>
                 <Screenshot src={IMG("ilmihal")} alt={t("Ilmihal — izbor košnice")} caption={t("Tri nivoa košnica prilagođena dobi i znanju")} />
-                <Screenshot src={IMG("nivo1-mapa")} alt={t("Mapa puta")} caption={t("Mapa puta — svaki kružić je jedna lekcija, a heksagoni su etape")} />
+                <Screenshot src={IMG("nivo1-mapa")} alt={t("Mapa puta")} caption={t("Mapa puta — svaki cvjetić je jedna lekcija, a heksagoni su etape")} />
               </div>
             </div>
 
@@ -529,7 +519,7 @@ export default function VodicPage() {
                   <h3 className="text-xl font-bold text-foreground">{t("Kvizovi")}</h3>
                 </div>
                 <p className="text-muted-foreground text-sm mb-4">
-                  {t(`43+ kvizova sa pitanjima iz banke pitanja. Kvizovi su grupirani po nivoima i oblastima (iman, ibadet, ahlak, siret, Kur'an). Svaki točan odgovor donosi Aferime. Pogrešni odgovori idu u "saće grešaka" za kasnije ponavljanje.`)}
+                  {t(`43+ kvizova sa pitanjima iz banke pitanja. Kvizovi su grupirani po nivoima i oblastima (iman, ibadet, ahlak, siret, Kur'an). Tačni odgovori donose kapi meda, a pogrešni odgovori idu u "saće grešaka" za kasnije ponavljanje.`)}
                 </p>
                 <Screenshot src={IMG("kvizovi")} alt={t("Kvizovi")} caption={t("Lista kvizova po nivoima sa brojem pitanja i statusom zaključavanja")} />
               </div>
@@ -630,12 +620,16 @@ export default function VodicPage() {
                 color="bg-emerald-50/50"
                 modules={[
                   { icon: BookOpen, title: t("Ilmihal lekcije"), desc: t("231 lekcija u 3 nivoa, interaktivna mapa puta, medaljoni i etape.") },
-                  { icon: HelpCircle, title: t("Kvizovi"), desc: t("43+ kvizova, Aferime za tačne odgovore, saće grešaka za ponavljanje.") },
+                  { icon: HelpCircle, title: t("Kvizovi"), desc: t("43+ kvizova, kapi meda za tačne odgovore i saće grešaka za ponavljanje.") },
                   { icon: Library, title: t("Čitaonica"), desc: t("Životne priče poslanika sa ilustracijama i audio zapisima.") },
                   { icon: Gamepad2, title: t("Igrice"), desc: t("8 edukativnih igrica otključanih vremenskim kreditom (kapi meda → vrijeme za igru).") },
                   { icon: Wrench, title: t("Popravi saće"), desc: t("Ponovi i popravi svaku grešku iz prethodnih kvizova.") },
                   { icon: Target, title: t("Misije"), desc: t("Dnevni i sedmični izazovi sa nagradama.") },
                   { icon: Trophy, title: t("Tabela"), desc: t("Takmiči se i uporedi svoj rezultat s drugim učenicima u grupi.") },
+                  { icon: ClipboardList, title: t("Moje zadaće"), desc: t("Vidi šta je muallim zadao, rok i status svake zadaće.") },
+                  { icon: Star, title: t("Moje ocjene"), desc: t("Pregledaj ocjene, komentar muallima i gradivo na koje se odnose.") },
+                  { icon: Sparkles, title: t("Moje zvjezdice"), desc: t("Prati pohvale i zvjezdice koje dobijaš za trud, znanje i ponašanje.") },
+                  { icon: MessageSquare, title: t("Poruke muallima"), desc: t("Pročitaj obavijesti i komuniciraj s muallimom kada ti treba pomoć.") },
                   { icon: Star, title: t("Moj profil"), desc: t("Pregled napretka, statistike, završenih lekcija i osvojenih nagrada.") },
                 ]}
                 screenshot={{ src: IMG("nivo1-mapa"), alt: t("Mapa puta učenika"), caption: t("Učenik kreće od lekcije 1 i napreduje kroz mapu puta") }}
@@ -651,6 +645,7 @@ export default function VodicPage() {
                 color="bg-blue-50/50"
                 modules={[
                   { icon: LayoutDashboard, title: t("Roditeljski panel"), desc: t("Pregled svih djece, njihovog napretka, prisustva i ocjena na jednom mjestu.") },
+                  { icon: Star, title: t("Ocjene djeteta"), desc: t("Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.") },
                   { icon: CalendarCheck, title: t("Kalendar"), desc: t("Pregled mektebskih događaja, dana nastave i važnih datuma.") },
                   { icon: ClipboardList, title: t("Zadaće"), desc: t("Pregled aktivnih zadaća za svako dijete sa rokovima i statusom.") },
                   { icon: Clock, title: t("Screen time"), desc: t("Praćenje vremena provedenog na platformi po djetetu.") },
