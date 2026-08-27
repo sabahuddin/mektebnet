@@ -11,6 +11,8 @@ import {
   Zap, Brain, MapPin, Flag, Clock, ArrowRight, Baby, MessageSquare, TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const IMG = (name: string) => `${import.meta.env.BASE_URL}screenshots/vodic/${name}.jpg`;
 
@@ -86,6 +88,198 @@ function RoleSection({
         </div>
       </div>
     </section>
+  );
+}
+
+function GuideInfo({
+  label,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  icon: any;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl bg-muted/30 border border-border/30 p-4">
+      <div className="flex items-center gap-2 text-sm font-black text-foreground mb-2">
+        <Icon className="w-4 h-4 text-primary" />
+        {label}
+      </div>
+      <p className="text-sm text-muted-foreground leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+function MuallimGuide() {
+  const { t } = useLanguage();
+  const steps = [
+    {
+      value: "registracija",
+      phase: t("POČETAK"),
+      title: t("Registracija mekteba"),
+      icon: Shield,
+      what: t("Otvaranjem mektebskog računa dobijaš vlastiti prostor za organizaciju nastave, muallima, grupa i učenika."),
+      why: t("Mekteb dobija jedno sigurno mjesto za rad i pregled podataka, umjesto vođenja evidencije u više nepovezanih bilježnica i tabela."),
+      how: t("Na stranici Registracija izaberi Mekteb, unesi podatke mekteba i odgovorne osobe, a zatim se prijavi u Muallimski panel."),
+    },
+    {
+      value: "grupa",
+      phase: t("ORGANIZACIJA"),
+      title: t("Otvaranje grupe"),
+      icon: Users,
+      what: t("Grupa je radni prostor jednog odjeljenja u kojem su objedinjeni učenici, plan, prisustvo, ocjene, zadaće i statistika."),
+      why: t("Kada je grupa jasno postavljena, sve informacije o njenom radu ostaju povezane i muallim ne mora tražiti podatke na više mjesta."),
+      how: t("U Muallimskom panelu otvori Grupe, izaberi Nova grupa, unesi naziv i osnovne podatke, pa otvori grupu da vidiš njen kompletan meni."),
+    },
+    {
+      value: "kalendar",
+      phase: t("ORGANIZACIJA"),
+      title: t("Kalendar"),
+      icon: CalendarCheck,
+      what: t("Kalendar prikazuje nastavne dane, događaje i važne datume povezane s mektebom i grupom."),
+      why: t("Pomaže da se nastava, izostanci i plan rada posmatraju u stvarnom vremenskom kontekstu i da se važne obaveze ne zaborave."),
+      how: t("Otvori Kalendar, dodaj nastavne dane i događaje, pa ih koristi kao zajednički pregled za planiranje i praćenje godine."),
+    },
+    {
+      value: "ucenici",
+      phase: t("ORGANIZACIJA"),
+      title: t("Dodavanje učenika"),
+      icon: GraduationCap,
+      what: t("Učenike možeš dodati u mekteb i rasporediti u odgovarajuće grupe, uz njihove pristupne podatke i profil napretka."),
+      why: t("Svaki učenik dobija svoj kontinuitet rada, a muallim može pratiti pojedinca bez ručnog spajanja podataka iz različitih evidencija."),
+      how: t("U panelu izaberi Dodaj učenika ili dodaj učenika iz grupe. Podijeli pristupne podatke i po potrebi ga premjesti u drugu grupu."),
+    },
+    {
+      value: "plan",
+      phase: t("PLANIRANJE"),
+      title: t("Plan i raspored lekcija"),
+      icon: BookOpen,
+      what: t("Plan lekcija čuva šta grupa treba obraditi, a Raspored lekcija pomaže da se odredi redoslijed rada."),
+      why: t("Muallim dobija jasan pravac kroz godinu, a učenici znaju šta je urađeno i šta slijedi."),
+      how: t("Uđi u grupu, otvori Plan lekcija, dodaj ili ukloni lekcije i po potrebi koristi Raspored lekcija za usmjeravanje redoslijeda."),
+    },
+    {
+      value: "prisustvo",
+      phase: t("TOK NASTAVE"),
+      title: t("Prisustvo"),
+      icon: CalendarCheck,
+      what: t("Evidencija prisustva bilježi da li je učenik prisutan, odsutan, zakasnio ili opravdano odsutan."),
+      why: t("Redovna evidencija daje pouzdanu sliku dolazaka i omogućava da se izostanci povežu s napretkom učenika."),
+      how: t("Otvori Prisustvo iz menija grupe, izaberi datum i za svakog učenika označi status. Po potrebi dodaj napomenu i sačuvaj."),
+    },
+    {
+      value: "ocjene",
+      phase: t("TOK NASTAVE"),
+      title: t("Ocjene"),
+      icon: Star,
+      what: t("Ocjene bilježe praktično znanje, teorijsko znanje i ponašanje učenika, a mogu se povezati i s lekcijom."),
+      why: t("Muallim više ne mora pamtiti ili naknadno prepisivati procjene — napredak i povratna informacija ostaju dostupni uz učenikov profil."),
+      how: t("U grupi otvori učenika ili tabelu ocjena, odaberi vrstu ocjene, unesi rezultat i po potrebi dodaj lekciju i komentar."),
+    },
+    {
+      value: "zadaca",
+      phase: t("TOK NASTAVE"),
+      title: t("Zadaća"),
+      icon: ClipboardList,
+      what: t("Zadaća je zadatak koji muallim može dodijeliti cijeloj grupi ili samo određenom učeniku, s rokom i opisom."),
+      why: t("Svi znaju šta treba uraditi i do kada, a muallim dobija pregled izvršenja bez dodatnih poruka i papirića."),
+      how: t("U grupi otvori Zadaća, izaberi cijelu grupu ili učenika, upiši zadatak i rok, pa prati status predaje."),
+    },
+    {
+      value: "zvjezdice",
+      phase: t("TOK NASTAVE"),
+      title: t("Zvjezdice"),
+      icon: Sparkles,
+      what: t("Zvjezdice su kratka i vidljiva povratna informacija za trud, znanje, ponašanje ili druge kategorije koje muallim prati."),
+      why: t("Pomažu djeci da vide napredak i daju muallimu brz način da pohvali trud ili zabilježi važan signal tokom nastave."),
+      how: t("Na profilu učenika ili u grupnoj tabeli odaberi kategoriju zvjezdice, dodijeli je uz kratku procjenu i prati promjene kroz vrijeme."),
+    },
+    {
+      value: "analiza",
+      phase: t("PRAĆENJE"),
+      title: t("Greške, NAPAMET i H5P"),
+      icon: Wrench,
+      what: t("Muallim može vidjeti gdje učenici griješe, pratiti NAPAMET gradivo i pregledati rezultate interaktivnih H5P vježbi."),
+      why: t("Ove informacije pokazuju šta učenik zaista treba ponoviti, pa se pomoć može usmjeriti precizno umjesto nasumično."),
+      how: t("Iz menija grupe otvori Gdje učenici griješe, NAPAMET ili H5P statistiku i koristi rezultate za izbor narednih vježbi i objašnjenja."),
+    },
+    {
+      value: "izvjestaji",
+      phase: t("PRAĆENJE"),
+      title: t("Statistika, izvještaji i roditelji"),
+      icon: FileText,
+      what: t("Statistika i izvještaji objedinjuju prisustvo, ocjene, kvizove, lekcije i aktivnost učenika u razumljiv pregled."),
+      why: t("Muallim dobija mnogo više informacija za odluke, a roditeljima može pokazati jasnu sliku rada i napretka djeteta."),
+      how: t("Redovno otvori Statistiku ili Izvještaje, filtriraj grupu ili učenika, pregledaj zaključke i podijeli relevantne informacije s roditeljima."),
+    },
+  ];
+
+  return (
+    <div id="muallim" className="scroll-mt-24">
+      <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-50 p-8 md:p-10">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500 text-white flex items-center justify-center">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-foreground">{t("Muallimski panel kao pomoć u svakodnevnom radu")}</h3>
+            <p className="text-muted-foreground font-medium mt-1">
+              {t("Mekteb značajno olakšava posao muallima: manje ručnog vođenja evidencije, više vremena za učenike i mnogo više korisnih informacija za svaku odluku.")}
+            </p>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="bg-white/80 rounded-2xl p-5 border border-white">
+            <Clock className="w-6 h-6 text-amber-600 mb-3" />
+            <h4 className="font-bold text-foreground mb-1">{t("Sve na jednom mjestu")}</h4>
+            <p className="text-sm text-muted-foreground">{t("Grupa, učenici, prisustvo, ocjene, zadaće i plan rada povezani su u jedan pregledan sistem.")}</p>
+          </div>
+          <div className="bg-white/80 rounded-2xl p-5 border border-white">
+            <TrendingUp className="w-6 h-6 text-amber-600 mb-3" />
+            <h4 className="font-bold text-foreground mb-1">{t("Informacije za bolju odluku")}</h4>
+            <p className="text-sm text-muted-foreground">{t("Odmah vidiš ko napreduje, ko izostaje, gdje učenici griješe i kome treba dodatna podrška.")}</p>
+          </div>
+          <div className="bg-white/80 rounded-2xl p-5 border border-white">
+            <Users className="w-6 h-6 text-amber-600 mb-3" />
+            <h4 className="font-bold text-foreground mb-1">{t("Više vremena za podučavanje")}</h4>
+            <p className="text-sm text-muted-foreground">{t("Kada je administracija jednostavnija, muallim može više pažnje posvetiti času i stvarnim potrebama učenika.")}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-3xl border border-border/40 bg-white p-6 md:p-8">
+        <div className="mb-5">
+          <p className="text-sm font-black uppercase tracking-wider text-primary">{t("Praktični vodič")}</p>
+          <h3 className="text-2xl font-black text-foreground mt-1">{t("Od registracije do svakodnevne nastave")}</h3>
+          <p className="text-muted-foreground font-medium mt-2">
+            {t("Otvori svaki korak da vidiš šta je, zašto je važan i kako se koristi u praksi.")}
+          </p>
+        </div>
+        <Accordion type="multiple" defaultValue={["registracija"]} className="border-t border-border/40">
+          {steps.map((step, index) => (
+            <AccordionItem key={step.value} value={step.value}>
+              <AccordionTrigger className="gap-4 py-5 hover:no-underline">
+                <span className="flex items-center gap-4 text-left">
+                  <span className="w-10 h-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">{index + 1}</span>
+                  <span>
+                    <span className="block text-[11px] font-black tracking-widest text-primary mb-1">{step.phase}</span>
+                    <span className="block text-base md:text-lg font-black text-foreground">{step.title}</span>
+                  </span>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-5">
+                <div className="grid md:grid-cols-3 gap-4 pl-0 md:pl-14">
+                  <GuideInfo label={t("Šta je?")} icon={HelpCircle}>{step.what}</GuideInfo>
+                  <GuideInfo label={t("Zašto je važno?")} icon={Target}>{step.why}</GuideInfo>
+                  <GuideInfo label={t("Kako se koristi?")} icon={Wrench}>{step.how}</GuideInfo>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    </div>
   );
 }
 
