@@ -60,7 +60,7 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
   const remainingCount = Math.max(0, totalCount - gradedCount);
   const nazivNivoa = (nivo: number) => nivo === 4
     ? t("Dodatak")
-    : t("NAPAMET {n}. nivo", { n: String(nivo) });
+    : t("Napamet {n}. nivo", { n: String(nivo) });
 
   const levelItems = (nivo: number) => katalog
     .filter((stavka) => {

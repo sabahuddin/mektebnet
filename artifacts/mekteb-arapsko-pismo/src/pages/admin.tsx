@@ -2916,7 +2916,7 @@ export default function AdminPage() {
                 <Wrench className="w-4 h-4" /> Održavanje
               </TabsTrigger>
               <TabsTrigger value="napamet" className="rounded-xl py-3 gap-2 text-xs sm:text-sm">
-                <BookOpen className="w-4 h-4" /> NAPAMET
+                <BookOpen className="w-4 h-4" /> Napamet
               </TabsTrigger>
             </TabsList>
 

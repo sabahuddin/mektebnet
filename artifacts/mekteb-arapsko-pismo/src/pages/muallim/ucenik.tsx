@@ -956,11 +956,11 @@ export default function UcenikPage() {
               )}
             </div>
 
-            {/* NAPAMET — katalog ove grupe i posljednje ocjene učenika */}
+            {/* Napamet — katalog ove grupe i posljednje ocjene učenika */}
             <div className="bg-white border border-emerald-200 rounded-2xl p-5 mb-6" data-testid="section-napamet-ucenik">
               <div className="flex items-center gap-2 mb-1">
                 <BookOpen className="w-5 h-5 text-emerald-700" />
-                <h2 className="font-extrabold text-foreground">{t("NAPAMET")}</h2>
+                <h2 className="font-extrabold text-foreground">{t("Napamet")}</h2>
               </div>
               <p className="text-sm text-muted-foreground mb-4">{t("Pregled stavki iz programa ove grupe i posljednjih ocjena učenika.")}</p>
               <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />

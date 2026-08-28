@@ -44,7 +44,7 @@ export function NapametGlobalProgramEditor() {
       setKatalog(data.katalog);
       setLekcije(lessonData);
     } catch (error: any) {
-      toast({ title: t("Greška"), description: error?.message || t("Nije moguće učitati globalni NAPAMET katalog"), variant: "destructive" });
+      toast({ title: t("Greška"), description: error?.message || t("Nije moguće učitati globalni Napamet katalog"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -154,7 +154,7 @@ export function NapametGlobalProgramEditor() {
   };
 
   const deleteItem = async (item: ProgramStavka) => {
-    if (!token || !window.confirm(t('Obrisati NAPAMET stavku "{naziv}"?', { naziv: item.naziv }))) return;
+    if (!token || !window.confirm(t('Obrisati Napamet stavku "{naziv}"?', { naziv: item.naziv }))) return;
     setSaving(true);
     try {
       await apiRequest("DELETE", `/admin/napamet-program/${encodeURIComponent(item.id)}`, undefined, token);
@@ -193,14 +193,14 @@ export function NapametGlobalProgramEditor() {
       <div className="flex items-start gap-3">
         <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700"><BookOpen className="w-5 h-5" /></div>
         <div>
-          <h2 className="font-extrabold text-foreground">{t("Globalni NAPAMET katalog")}</h2>
+          <h2 className="font-extrabold text-foreground">{t("Globalni Napamet katalog")}</h2>
           <p className="text-sm text-muted-foreground">{t("Admin priprema zajedničke sure i dove za sve mektebe. Muallimovi ručni dodaci ostaju lokalni njihovoj grupi.")}</p>
         </div>
       </div>
       {loading ? <div className="py-5 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> : [1, 2, 3, 4].map((sectionNivo) => {
         const items = katalog.filter((item) => item.nivo === sectionNivo).sort((a, b) => a.redoslijed - b.redoslijed);
         return <div key={sectionNivo} className="space-y-2">
-          <h3 className="text-xs font-black uppercase tracking-wide text-emerald-800">{sectionNivo === 4 ? t("Dodatak") : `NAPAMET ${sectionNivo}. ${t("nivo")}`}</h3>
+          <h3 className="text-xs font-black uppercase tracking-wide text-emerald-800">{sectionNivo === 4 ? t("Dodatak") : `${t("Napamet")} ${sectionNivo}. ${t("nivo")}`}</h3>
           {items.map((item, index) => <div key={item.id}
             data-napamet-id={item.id}
             data-napamet-nivo={sectionNivo}

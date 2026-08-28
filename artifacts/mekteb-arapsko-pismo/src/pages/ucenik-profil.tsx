@@ -438,7 +438,7 @@ export default function UcenikProfilPage() {
   const TABS = [
     { id: "zadace", label: t("Zadaće"), icon: FileText, badge: zadace.length },
     { id: "ocjene", label: t("Ocjene"), icon: Star },
-    { id: "napamet", label: t("NAPAMET"), icon: BookOpen },
+    { id: "napamet", label: t("Napamet"), icon: BookOpen },
     { id: "kvizovi", label: t("Kvizovi"), icon: ClipboardList },
     {
       id: "zvjezdice",
@@ -1141,7 +1141,7 @@ export default function UcenikProfilPage() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div className="mb-4">
                   <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-emerald-700" /> {t("NAPAMET")}
+                    <BookOpen className="w-5 h-5 text-emerald-700" /> {t("Napamet")}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">{t("Program učenja napamet i tvoje ocjene.")}</p>
                 </div>

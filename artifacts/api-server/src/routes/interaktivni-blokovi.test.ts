@@ -30,6 +30,7 @@ const BLOK_ID = "provjeri-znanje";
 let server: Server;
 let baseUrl: string;
 let grupaId: number;
+let praznaGrupaId: number;
 let lekcijaId: number;
 let muallimId: number;
 let drugiMuallimId: number;
@@ -77,6 +78,14 @@ before(async () => {
     isActive: true,
   }).returning({ id: grupeTable.id });
   grupaId = grupa.id;
+
+  const [praznaGrupa] = await db.insert(grupeTable).values({
+    muallimId,
+    naziv: `Prazna grupa ${SUFFIX}`,
+    skolskaGodina: "2025/26",
+    isActive: true,
+  }).returning({ id: grupeTable.id });
+  praznaGrupaId = praznaGrupa.id;
 
   await db.insert(ucenikProfiliTable).values([
     { userId: ucenikId, muallimId, grupaId },
@@ -133,6 +142,9 @@ after(async () => {
   }
   if (grupaId) {
     await db.delete(grupeTable).where(eq(grupeTable.id, grupaId));
+  }
+  if (praznaGrupaId) {
+    await db.delete(grupeTable).where(eq(grupeTable.id, praznaGrupaId));
   }
   const muallimIds = [muallimId, drugiMuallimId].filter(Boolean);
   if (muallimIds.length > 0) {
@@ -319,4 +331,19 @@ test("pedagoški pregled nije dostupan muallimu iz druge grupe", async () => {
     `/api/muallim/ucenik/${ucenikId}/interaktivni-blokovi`,
   );
   assert.equal(studentResponse.status, 403);
+});
+
+test("pedagoški pregled grupe bez pokušaja vraća eksplicitno prazno stanje", async () => {
+  const response = await muallimGet(
+    muallimToken,
+    `/api/muallim/grupa/${praznaGrupaId}/interaktivni-blokovi`,
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    ukupnoUcenika: 0,
+    ukupnoPokusaja: 0,
+    prosjekTacnosti: null,
+    pitanja: [],
+    ucenici: [],
+  });
 });

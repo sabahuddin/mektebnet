@@ -44,7 +44,7 @@ export function MuallimGroupSidebar({
   const { t } = useLanguage();
   const modules = [
     { key: "ucenici" as const, label: t("Učenici"), icon: Users, href: `/muallim/grupa/${grupaId}` },
-    { key: "napamet" as const, label: t("NAPAMET"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=napamet` },
+    { key: "napamet" as const, label: t("Napamet"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=napamet` },
     { key: "greske" as const, label: t("Gdje učenici griješe"), icon: AlertTriangle, href: `/muallim/grupa/${grupaId}?modul=greske` },
     { key: "plan" as const, label: t("Plan lekcija"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=plan` },
     { key: "prisustvo" as const, label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupaId}` },

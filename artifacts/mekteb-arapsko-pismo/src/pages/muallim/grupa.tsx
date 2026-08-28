@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useParams, useLocation, Link } from "wouter";
+import { useParams, useLocation, useSearch, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
@@ -21,6 +21,7 @@ import { LekcijaPicker } from "@/components/LekcijaPicker";
 import type { NapametStavka } from "@/components/NapametPregled";
 import { NapametLokalniProgramEditor } from "@/components/NapametLokalniProgramEditor";
 import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
+import { getGrupaModul, type GrupaModul } from "@/lib/muallim-group-navigation";
 
 interface Grupa {
   id: number;
@@ -140,11 +141,10 @@ interface NapametDetalji {
   nisuOcijenjeni: Array<{ id: number; displayName: string }>;
 }
 
-type GrupaModul = "ucenici" | "napamet" | "greske" | "plan";
-
 export default function GrupaPage() {
   const { id } = useParams<{ id: string }>();
-  const [locationPath, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const search = useSearch();
   const { token } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -160,8 +160,9 @@ export default function GrupaPage() {
   const [interaktivniPregled, setInteraktivniPregled] = useState<InteraktivniPregledGrupe | null>(null);
   const [interaktivniOpen, setInteraktivniOpen] = useState(false);
   const [interaktivniLoading, setInteraktivniLoading] = useState(false);
-  const [interaktivniLoaded, setInteraktivniLoaded] = useState(false);
-  const [aktivniModul, setAktivniModul] = useState<GrupaModul>("ucenici");
+  const [interaktivniError, setInteraktivniError] = useState<string | null>(null);
+  const interaktivniRequestRef = useRef(0);
+  const interaktivniInFlightRef = useRef(false);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [planLekcije, setPlanLekcije] = useState<PlanLekcija[]>([]);
@@ -242,16 +243,7 @@ export default function GrupaPage() {
   const [parentResetWorking, setParentResetWorking] = useState<number | null>(null);
 
   const grupaId = parseInt(id || "0");
-
-  useEffect(() => {
-    const modul = new URLSearchParams(window.location.search).get("modul");
-    if (modul === "napamet" || modul === "greske" || modul === "plan") {
-      setAktivniModul(modul);
-      if (modul === "greske") void loadInteraktivniPregled();
-    } else {
-      setAktivniModul("ucenici");
-    }
-  }, [locationPath]);
+  const aktivniModul: GrupaModul = getGrupaModul(search);
 
   // Učitaj muallime mekteba (403 = korisnik nije glavni → nema modal za promjenu)
   useEffect(() => {
@@ -263,9 +255,6 @@ export default function GrupaPage() {
 
   useEffect(() => {
     if (!token || !grupaId) return;
-    setInteraktivniPregled(null);
-    setInteraktivniOpen(false);
-    setInteraktivniLoaded(false);
     apiRequest<{ katalog: (NapametStavka & { isVisible?: boolean })[] }>("GET", `/muallim/napamet-program?grupaId=${grupaId}`, undefined, token)
       .then(data => setNapametKatalog(data.katalog.filter(s => s.isVisible !== false)))
       .catch(() => {});
@@ -298,6 +287,22 @@ export default function GrupaPage() {
     apiRequest<{ count: number }>("GET", `/muallim/zadace-pregled-badge?grupaId=${grupaId}`, undefined, token)
       .then(r => setZadacaBadge(r?.count ?? 0)).catch(() => {});
   }, [token, grupaId]);
+
+  useEffect(() => {
+    interaktivniRequestRef.current += 1;
+    interaktivniInFlightRef.current = false;
+    setInteraktivniPregled(null);
+    setInteraktivniError(null);
+    setInteraktivniLoading(false);
+
+    if (aktivniModul !== "greske") {
+      setInteraktivniOpen(false);
+      return;
+    }
+
+    setInteraktivniOpen(true);
+    void loadInteraktivniPregled();
+  }, [token, grupaId, aktivniModul]);
 
   useEffect(() => {
     if (!token || !grupaId || aktivniModul !== "plan") return;
@@ -341,16 +346,26 @@ export default function GrupaPage() {
   }
 
   async function loadInteraktivniPregled() {
-    if (!token || !grupaId || interaktivniLoading || interaktivniLoaded) return;
+    if (!token || !grupaId || interaktivniInFlightRef.current) return;
+    const requestId = ++interaktivniRequestRef.current;
+    interaktivniInFlightRef.current = true;
     setInteraktivniLoading(true);
+    setInteraktivniError(null);
+    setInteraktivniPregled(null);
     try {
       const data = await apiRequest<InteraktivniPregledGrupe>("GET", `/muallim/grupa/${grupaId}/interaktivni-blokovi`, undefined, token);
-      setInteraktivniPregled(data);
-    } catch {
-      setInteraktivniPregled(null);
+      if (requestId === interaktivniRequestRef.current) {
+        setInteraktivniPregled(data);
+      }
+    } catch (error: any) {
+      if (requestId === interaktivniRequestRef.current) {
+        setInteraktivniError(error?.message || t("Pregled grešaka nije moguće učitati"));
+      }
     } finally {
-      setInteraktivniLoaded(true);
-      setInteraktivniLoading(false);
+      if (requestId === interaktivniRequestRef.current) {
+        interaktivniInFlightRef.current = false;
+        setInteraktivniLoading(false);
+      }
     }
   }
 
@@ -897,7 +912,7 @@ export default function GrupaPage() {
           </section>
          )}
 
-         {aktivniModul === "napamet" && !grupa.isArchived && (
+          {aktivniModul === "napamet" && !grupa.isArchived && (
            <NapametLokalniProgramEditor key={napametRefreshKey} grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} onItemClick={openNapametDetalji} />
          )}
 
@@ -905,7 +920,7 @@ export default function GrupaPage() {
           <button type="button" aria-expanded={interaktivniOpen} onClick={() => {
             const next = !interaktivniOpen;
             setInteraktivniOpen(next);
-            if (next) void loadInteraktivniPregled();
+             if (next) void loadInteraktivniPregled();
           }} className="w-full px-5 py-4 bg-teal-50/70 flex flex-wrap items-center justify-between gap-3 text-left">
             <div>
               <h2 className="font-extrabold text-teal-950 flex items-center gap-2">
@@ -923,8 +938,15 @@ export default function GrupaPage() {
             ) : null}
             <ChevronDown className={`w-5 h-5 text-teal-700 transition-transform ${interaktivniOpen ? "rotate-180" : ""}`} />
           </button>
-          {interaktivniOpen && interaktivniLoading ? (
+           {interaktivniOpen && interaktivniLoading ? (
             <div className="px-5 py-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> {t("Učitavanje pregleda...")}</div>
+           ) : interaktivniOpen && interaktivniError ? (
+             <div className="px-5 py-6 space-y-3 text-sm text-red-700" role="alert">
+               <p>{interaktivniError}</p>
+               <Button type="button" variant="outline" size="sm" onClick={() => void loadInteraktivniPregled()} className="rounded-lg border-red-200 text-red-700 hover:bg-red-50">
+                 {t("Pokušaj ponovo")}
+               </Button>
+             </div>
           ) : interaktivniOpen && !interaktivniPregled?.ukupnoPokusaja ? (
             <p className="px-5 py-6 text-sm text-muted-foreground">
               {t("Kad učenici odgovore na pitanja „Provjeri znanje“ u lekciji, ovdje ćeš vidjeti gdje im treba dodatno objašnjenje.")}
@@ -1413,19 +1435,19 @@ export default function GrupaPage() {
                     }} />
                   <span className="text-sm font-bold text-emerald-900">
                     {newOcjena.lekcijaSlug && napametKatalog.some(s => s.sourceLessonSlug === newOcjena.lekcijaSlug)
-                      ? t("Povezana lekcija će se automatski dodati u NAPAMET")
-                      : t("Dodaj u NAPAMET tab")}
+                      ? t("Povezana lekcija će se automatski dodati u Napamet")
+                      : t("Dodaj u Napamet tab")}
                   </span>
                 </label>
                 {!!newOcjena.napametStavkaId && (
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("NAPAMET stavka")}</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Napamet stavka")}</label>
                     <select value={newOcjena.napametStavkaId}
                       onChange={e => setNewOcjena(o => ({ ...o, napametStavkaId: e.target.value }))}
                       className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-white">
                       <option value="select" disabled>{t("Odaberi stavku")}</option>
                       {[1, 2, 3, 4].map(nivo => (
-                        <optgroup key={nivo} label={nivo === 4 ? t("Dodatak") : `NAPAMET ${nivo}. nivo`}>
+                        <optgroup key={nivo} label={nivo === 4 ? t("Dodatak") : `${t("Napamet")} ${nivo}. nivo`}>
                           {napametKatalog.filter(s => s.nivo === nivo).map(s => <option key={s.id} value={s.id}>{s.naziv}</option>)}
                         </optgroup>
                       ))}
@@ -1683,7 +1705,7 @@ export default function GrupaPage() {
             <div className="flex items-start justify-between gap-4 border-b border-emerald-100 bg-emerald-50 px-5 py-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                  {napametOdabrana.nivo === 4 ? t("Dodatak") : `${t("NAPAMET")} ${napametOdabrana.nivo}. ${t("nivo")}`}
+                  {napametOdabrana.nivo === 4 ? t("Dodatak") : `${t("Napamet")} ${napametOdabrana.nivo}. ${t("nivo")}`}
                 </p>
                 <h2 id="napamet-detalji-title" className="mt-1 text-lg font-extrabold text-emerald-950">
                   {napametDetalji?.stavka.naziv || napametOdabrana.naziv}
