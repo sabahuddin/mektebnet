@@ -225,6 +225,7 @@ export default function GrupaPage() {
 
   // Settings dropdown po učeniku (zupčanik na kartici)
   const [settingsOpenId, setSettingsOpenId] = useState<number | null>(null);
+  const [settingsPlacement, setSettingsPlacement] = useState<"above" | "below">("above");
 
   // Zvjezdice summary po učeniku (za prikaz na kartici)
   const [zvjezdiceSummary, setZvjezdiceSummary] = useState<Map<number, { pozitivne: number; negativne: number }>>(new Map());
@@ -1142,14 +1143,28 @@ export default function GrupaPage() {
                       {/* Settings zupčanik */}
                       <div className="relative z-20 shrink-0">
                         <button
-                          onClick={e => { e.stopPropagation(); setSettingsOpenId(settingsOpen ? null : u.id); }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (settingsOpen) {
+                              setSettingsOpenId(null);
+                              return;
+                            }
+                            const buttonRect = e.currentTarget.getBoundingClientRect();
+                            const menuHeight = 220;
+                            const roomAbove = buttonRect.top;
+                            const roomBelow = window.innerHeight - buttonRect.bottom;
+                            setSettingsPlacement(roomAbove >= menuHeight || roomAbove >= roomBelow ? "above" : "below");
+                            setSettingsOpenId(u.id);
+                          }}
                           className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                           title={t("Upravljanje učenikom")}
                         >
                           <Settings className="w-4 h-4" />
                         </button>
                         {settingsOpen && (
-                          <div className="absolute right-0 top-8 z-30 bg-white border border-border/60 rounded-xl shadow-xl py-1 min-w-[170px]">
+                          <div className={`absolute right-0 z-30 bg-white border border-border/60 rounded-xl shadow-xl py-1 min-w-[170px] ${
+                            settingsPlacement === "above" ? "bottom-8" : "top-8"
+                          }`}>
                             <Link href={`/muallim/ucenik/${u.id}`}>
                               <button className="w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-muted flex items-center gap-2 text-foreground"
                                 onClick={() => setSettingsOpenId(null)}>
