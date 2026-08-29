@@ -97,6 +97,7 @@ interface PlanLekcija {
 interface LekcijaStatus {
   ucenikId: number;
   zavrsenoLekcija: number;
+  zavrsenoPoNivoima?: Array<{ nivo: number; broj: number }>;
   zadnjaLekcija: { id: number; naslov: string; slug: string; nivo: number } | null;
   zavrsenoAt: string | null;
 }
@@ -1109,6 +1110,7 @@ export default function GrupaPage() {
               {studentiGrupe.map((u, i) => {
                 const settingsOpen = settingsOpenId === u.id;
                 const ucenje = interaktivniPregled?.ucenici.find(x => x.id === u.id);
+                 const lekcije = lekcijeStatus.get(u.id);
                 return (
                   <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                     className="relative bg-white border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all">
@@ -1208,6 +1210,28 @@ export default function GrupaPage() {
                         </div>
                       </Link>
                     ) : null}
+
+                    {lekcije && (
+                      <div
+                        className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2"
+                        title={t("Završene Ilmihal lekcije po nivoima")}
+                      >
+                        <div className="flex items-center gap-1.5 text-violet-900">
+                          <BookOpen className="w-4 h-4 text-violet-600" />
+                          <span className="text-[10px] font-extrabold uppercase tracking-wide">{t("Ilmihal")}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-extrabold text-violet-950">
+                          {(lekcije.zavrsenoPoNivoima?.length ?? 0) > 0
+                            ? lekcije.zavrsenoPoNivoima!.map(({ nivo, broj }) => (
+                              <span key={nivo} className="rounded-md bg-white/80 px-1.5 py-0.5">{broj}/{nivo}</span>
+                            ))
+                            : <span className="rounded-md bg-white/80 px-1.5 py-0.5">0</span>}
+                          <span className="ml-1 text-[10px] font-bold text-violet-700/70">
+                            {t("ukupno {n}", { n: String(lekcije.zavrsenoLekcija) })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Akcije: Ocjene, Zadaća, Zvjezdice */}
                     <div className="grid grid-cols-3 gap-1">

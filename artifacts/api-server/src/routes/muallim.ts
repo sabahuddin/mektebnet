@@ -5946,9 +5946,18 @@ router.get("/grupa/:id/lekcije-status", async (req, res) => {
       const zavrseno = moj.length;
       const last = moj[0];
       const lekcija = last ? lekcijaMap.get(last.contentId) || null : null;
+      const poNivou = new Map<number, number>();
+      for (const napredakRed of moj) {
+        const nivo = lekcijaMap.get(napredakRed.contentId)?.nivo;
+        if (nivo == null) continue;
+        poNivou.set(nivo, (poNivou.get(nivo) || 0) + 1);
+      }
       return {
         ucenikId: uid,
         zavrsenoLekcija: zavrseno,
+        zavrsenoPoNivoima: Array.from(poNivou.entries())
+          .sort(([a], [b]) => a - b)
+          .map(([nivo, broj]) => ({ nivo, broj })),
         zadnjaLekcija: lekcija,
         zavrsenoAt: last?.completedAt || null,
       };
