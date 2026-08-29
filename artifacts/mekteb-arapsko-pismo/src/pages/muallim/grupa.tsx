@@ -21,7 +21,6 @@ import { LekcijaPicker } from "@/components/LekcijaPicker";
 import type { NapametStavka } from "@/components/NapametPregled";
 import { NapametLokalniProgramEditor } from "@/components/NapametLokalniProgramEditor";
 import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
-import { getGrupaModul, type GrupaModul } from "@/lib/muallim-group-navigation";
 
 interface Grupa {
   id: number;
@@ -141,10 +140,11 @@ interface NapametDetalji {
   nisuOcijenjeni: Array<{ id: number; displayName: string }>;
 }
 
+type GrupaModul = "ucenici" | "napamet" | "greske" | "plan";
+
 export default function GrupaPage() {
   const { id } = useParams<{ id: string }>();
-  const [, setLocation] = useLocation();
-  const search = useSearch();
+  const [locationPath, setLocation] = useLocation();
   const { token } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -245,6 +245,16 @@ export default function GrupaPage() {
   const grupaId = parseInt(id || "0");
   const aktivniModul: GrupaModul = getGrupaModul(search);
 
+  useEffect(() => {
+    const modul = new URLSearchParams(window.location.search).get("modul");
+    if (modul === "napamet" || modul === "greske" || modul === "plan") {
+      setAktivniModul(modul);
+      if (modul === "greske") void loadInteraktivniPregled();
+    } else {
+      setAktivniModul("ucenici");
+    }
+  }, [locationPath]);
+
   // Učitaj muallime mekteba (403 = korisnik nije glavni → nema modal za promjenu)
   useEffect(() => {
     if (!token) return;
@@ -287,22 +297,6 @@ export default function GrupaPage() {
     apiRequest<{ count: number }>("GET", `/muallim/zadace-pregled-badge?grupaId=${grupaId}`, undefined, token)
       .then(r => setZadacaBadge(r?.count ?? 0)).catch(() => {});
   }, [token, grupaId]);
-
-  useEffect(() => {
-    interaktivniRequestRef.current += 1;
-    interaktivniInFlightRef.current = false;
-    setInteraktivniPregled(null);
-    setInteraktivniError(null);
-    setInteraktivniLoading(false);
-
-    if (aktivniModul !== "greske") {
-      setInteraktivniOpen(false);
-      return;
-    }
-
-    setInteraktivniOpen(true);
-    void loadInteraktivniPregled();
-  }, [token, grupaId, aktivniModul]);
 
   useEffect(() => {
     if (!token || !grupaId || aktivniModul !== "plan") return;
@@ -912,7 +906,7 @@ export default function GrupaPage() {
           </section>
          )}
 
-          {aktivniModul === "napamet" && !grupa.isArchived && (
+         {aktivniModul === "napamet" && !grupa.isArchived && (
            <NapametLokalniProgramEditor key={napametRefreshKey} grupaId={grupaId} globalItems={napametKatalog.filter((item) => item.scope === "global")} onChanged={refreshNapametKatalog} onItemClick={openNapametDetalji} />
          )}
 
