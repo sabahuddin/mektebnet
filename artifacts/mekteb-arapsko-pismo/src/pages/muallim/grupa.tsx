@@ -144,7 +144,7 @@ type GrupaModul = "ucenici" | "napamet" | "greske" | "plan";
 
 export default function GrupaPage() {
   const { id } = useParams<{ id: string }>();
-  const [locationPath, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { token } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -247,14 +247,14 @@ export default function GrupaPage() {
   const [aktivniModul, setAktivniModul] = useState<GrupaModul>("ucenici");
 
   useEffect(() => {
-    const modul = new URLSearchParams(window.location.search).get("modul");
+    const modul = new URLSearchParams(search).get("modul");
     if (modul === "napamet" || modul === "greske" || modul === "plan") {
       setAktivniModul(modul);
       if (modul === "greske") void loadInteraktivniPregled();
     } else {
       setAktivniModul("ucenici");
     }
-  }, [locationPath]);
+  }, [search]);
 
   // Učitaj muallime mekteba (403 = korisnik nije glavni → nema modal za promjenu)
   useEffect(() => {
