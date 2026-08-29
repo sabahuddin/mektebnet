@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
@@ -415,12 +415,13 @@ export default function MuallimPanel() {
   // linka "Profil" → /muallim?tab=profil). Pokreće se na svakoj promjeni
   // location-a da omogući in-app navigaciju iz header dropdown-a.
   const [locationPath] = useLocation();
+  const locationSearch = useSearch();
   const groupContextId = useMemo(() => {
-    const grupaId = Number(new URLSearchParams(window.location.search).get("grupaId"));
+    const grupaId = Number(new URLSearchParams(locationSearch).get("grupaId"));
     return Number.isInteger(grupaId) && grupaId > 0 ? grupaId : null;
-  }, [locationPath]);
+  }, [locationSearch]);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(locationSearch);
     const t = params.get("tab");
     if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","h5p","profil"].includes(t)) {
       setActiveTab(t as TabId);
@@ -442,7 +443,7 @@ export default function MuallimPanel() {
         setZadGrupaId(n);
       }
     }
-  }, [locationPath]);
+  }, [locationPath, locationSearch]);
 
   // Inicijalizuj polje za uređivanje imena kad korisnik otvori Profil tab —
   // bez ovoga editDisplayName ostaje prazan, pa klik na "Sačuvaj" prije bilo
@@ -1644,7 +1645,16 @@ export default function MuallimPanel() {
           <div className="grid grid-cols-2 gap-2 p-1.5 mb-4 rounded-2xl bg-muted/60 border border-border/40">
             <button
               type="button"
-              onClick={() => { setPanelContext("moje"); setActiveTab("pregled"); setSelectedMuallimId(null); setLocation("/muallim?tab=pregled"); }}
+               onClick={() => {
+                 setPanelContext("moje");
+                 setActiveTab("pregled");
+                 setSelectedMuallimId(null);
+                 setSelectedGrupaId(null);
+                 setStatGrupaId(null);
+                 setPlanGrupaId(null);
+                 setZadGrupaId(null);
+                 setLocation("/muallim?tab=pregled");
+               }}
               className={`rounded-xl px-4 py-3 text-left transition-all ${panelContext === "moje" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
               <span className="block text-sm font-extrabold">{t("Moje grupe")}</span>
