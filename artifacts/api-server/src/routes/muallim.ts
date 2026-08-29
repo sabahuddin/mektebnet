@@ -4998,6 +4998,17 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     const ocjenaVal = ocjena === null || ocjena === undefined || ocjena === ""
       ? null
       : Math.min(6, Math.max(1, Math.trunc(Number(ocjena))));
+    // Zadaća povezana sa Ilmihal lekcijom može biti i Napamet stavka
+    // (npr. Subhaneke). Samo uspješna ocjena (5/6) završava tu stavku;
+    // niže ocjene ostaju obična ocjena zadaće.
+    const napametStavka = zadaca.lekcijaSlug
+      ? (await getGlobalNapametKatalog(false)).find(
+          (item) => item.sourceLessonSlug === zadaca.lekcijaSlug,
+        )
+      : undefined;
+    const napametGrade = napametStavka && ocjenaVal !== null && ocjenaVal >= 5
+      ? { napametNivo: napametStavka.nivo, napametStavkaId: napametStavka.id }
+      : { napametNivo: null, napametStavkaId: null };
     const statusVal = oznaciZavrseno === true ? "zavrseno"
       : oznaciZavrseno === false ? "na_cekanju"
       : (postojeci?.status ?? "na_cekanju");
@@ -5050,6 +5061,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             lekcijaNaziv: ocjenaNaziv,
             grupaId: zadaca.grupaId,
             muallimId: req.user!.userId,
+            ...napametGrade,
           }).where(eq(ocjeneTable.id, postojecaOcjena.id));
         } else {
           await db.insert(ocjeneTable).values({
@@ -5062,6 +5074,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             napomena: null,
             datum: ocjenaDatum,
             zadacaId: id,
+            ...napametGrade,
           });
         }
       }
