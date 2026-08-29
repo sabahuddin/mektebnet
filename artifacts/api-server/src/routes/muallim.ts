@@ -4691,6 +4691,12 @@ router.post("/zadace", async (req, res) => {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
       }
       canonicalSlug = lekcija.slug;
+    } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {
+      const lekcije = await db.select({ slug: ilmihalLekcijeTable.slug })
+        .from(ilmihalLekcijeTable)
+        .where(eq(ilmihalLekcijeTable.naslov, lekcijaNaslov.trim()))
+        .limit(2);
+      canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     }
 
     let validUcenikIds: number[] = [];
@@ -4786,6 +4792,12 @@ router.put("/zadace/:id", async (req, res) => {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
       }
       canonicalSlug = lekcija.slug;
+    } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {
+      const lekcije = await db.select({ slug: ilmihalLekcijeTable.slug })
+        .from(ilmihalLekcijeTable)
+        .where(eq(ilmihalLekcijeTable.naslov, lekcijaNaslov.trim()))
+        .limit(2);
+      canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     } else if (lekcijaNaslov === undefined) {
       canonicalSlug = existing.lekcijaSlug;
     }
@@ -5001,11 +5013,13 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     // Zadaća povezana sa Ilmihal lekcijom može biti i Napamet stavka
     // (npr. Subhaneke). Samo uspješna ocjena (5/6) završava tu stavku;
     // niže ocjene ostaju obična ocjena zadaće.
-    const napametStavka = zadaca.lekcijaSlug
-      ? (await getGlobalNapametKatalog(false)).find(
-          (item) => item.sourceLessonSlug === zadaca.lekcijaSlug,
-        )
-      : undefined;
+    const napametKatalog = await getGlobalNapametKatalog(false);
+    const zadacaNaslov = (zadaca.lekcijaNaslov || zadaca.naslov || "").trim().toLocaleLowerCase("bs");
+    const napametStavka = napametKatalog.find(
+      (item) => zadaca.lekcijaSlug && item.sourceLessonSlug === zadaca.lekcijaSlug,
+    ) ?? napametKatalog.find(
+      (item) => item.naziv.trim().toLocaleLowerCase("bs") === zadacaNaslov,
+    );
     const napametGrade = napametStavka && ocjenaVal !== null && ocjenaVal >= 5
       ? { napametNivo: napametStavka.nivo, napametStavkaId: napametStavka.id }
       : { napametNivo: null, napametStavkaId: null };

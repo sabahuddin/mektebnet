@@ -279,7 +279,9 @@ before(async () => {
       muallimId: teacherId,
       naslov: "NAPAMET zadaća",
       lekcijaNaslov: `NAPAMET lekcija ${suffix}`,
-      lekcijaSlug: napametSlug,
+      // Simulira staru zadaću nastalu prije čuvanja slug-a. Veza sa Napamet
+      // stavkom mora se moći pronaći po kanonskom naslovu.
+      lekcijaSlug: null,
       lekcijaTip: "ilmihal",
       isActive: true,
     },
