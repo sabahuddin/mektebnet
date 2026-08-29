@@ -5,10 +5,28 @@ import "./index.css";
 import { initPWA } from "./pwa";
 import { initOneSignal, setupPushListeners } from "./lib/push";
 
-// Windows (Chrome/Edge) ne renderira flag emoji nativno — fallback na
-// "Twemoji Country Flags" font koji injektira ovaj polyfill. Na ostalim
-// platformama (mac, iOS, Android, Linux sa Noto) ostaje native render.
-polyfillCountryFlagEmojis();
+// Windows Chromium ne renderira flag emoji nativno — fallback na
+// "Twemoji Country Flags" font koji injektira ovaj polyfill. Ne pokreći ga na
+// iOS/Safari: tamo je nepotreban, a neke verzije Safari-ja mogu vratiti null iz
+// canvas.getContext(), što bi srušilo aplikaciju prije nego što se React podigne.
+function initCountryFlagPolyfill(): void {
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isWindowsChromium =
+    /Windows NT/i.test(userAgent) &&
+    /Chrome|Chromium|Edg|OPR/i.test(userAgent) &&
+    !/Firefox/i.test(userAgent);
+
+  if (!isWindowsChromium) return;
+
+  try {
+    polyfillCountryFlagEmojis();
+  } catch (err) {
+    // Flagovi su samo dekoracija; njihov polyfill nikad ne smije blokirati app.
+    console.warn("[Flags] Polyfill nije učitan:", err);
+  }
+}
+
+initCountryFlagPolyfill();
 
 // Sigurnosna mreža za "bijeli ekran": ako se app sruši pri pokretanju,
 // prikaži tekst greške umjesto praznog ekrana da se problem može prijaviti.
