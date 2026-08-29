@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
-import { List, Lock, Crown } from "lucide-react";
+import { List, Crown } from "lucide-react";
 
 interface Lekcija {
   id: number;
@@ -167,34 +167,16 @@ export default function IlmihalPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
           {nivoi.map((n, idx) => {
             const stats = completedByNivo[n.broj] ?? { done: 0, total: 0 };
-            // Gating: Nivo 2 zaključan dok Nivo 1 krunisanje nije položeno (ako je gating aktivan i postoji ispit);
-            //         Nivo 3 dok Nivo 2 krunisanje nije položeno.
-            // Ne primjenjujemo na muallime/admine — oni uvijek imaju pristup.
-            const isElevated = !!user && user.role !== "ucenik";
-            let zakljucano = false;
-            let zakljucanRazlog = "";
-            if (!isElevated && n.broj > 1) {
-              const prevKrun = krunisanjaStatus[n.broj - 1];
-              if (prevKrun && prevKrun.isGating && prevKrun.imaKviz && !prevKrun.polozeno) {
-                zakljucano = true;
-                zakljucanRazlog = t("Položi krunisanje nivoa {nivo} da otključaš.", { nivo: String(n.broj - 1) });
-              }
-            }
             return (
               <motion.button
                 key={n.broj}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.12, duration: 0.4 }}
-                onClick={() => {
-                  if (zakljucano) return;
-                  setLocation(n.href);
-                }}
-                disabled={zakljucano}
-                className={`group relative flex flex-col items-center focus:outline-none ${zakljucano ? "opacity-60 cursor-not-allowed" : ""}`}
+                onClick={() => setLocation(n.href)}
+                className="group relative flex flex-col items-center focus:outline-none"
                 data-testid={`button-nivo-${n.broj}`}
-                aria-label={`${n.naslov} — ${t("Nivo")} ${n.broj}${zakljucano ? ` (${t("zaključano")})` : ""}`}
-                title={zakljucano ? zakljucanRazlog : undefined}
+                aria-label={`${n.naslov} — ${t("Nivo")} ${n.broj}`}
               >
                 <div className="relative w-full aspect-square max-w-xs mx-auto">
                   <img
@@ -217,7 +199,6 @@ export default function IlmihalPage() {
                 <div className="mt-3 text-center">
                   <div className="text-xl sm:text-2xl font-extrabold text-amber-900 flex items-center justify-center gap-2">
                     {n.naslov}
-                    {zakljucano && <Lock className="w-5 h-5 text-amber-700" />}
                   </div>
                   {user && stats.total > 0 && (
                     <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 shadow-sm text-xs font-bold text-amber-900">
@@ -228,9 +209,6 @@ export default function IlmihalPage() {
                     <div className="mt-1 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-bold shadow">
                       <Crown className="w-3 h-3" /> {t("Krunisanje")}
                     </div>
-                  )}
-                  {zakljucano && (
-                    <div className="mt-1 text-xs text-amber-700/80 italic px-2">{zakljucanRazlog}</div>
                   )}
                 </div>
               </motion.button>

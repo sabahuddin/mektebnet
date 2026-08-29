@@ -31,6 +31,8 @@ let assignedLessonId: number;
 let blockedLessonId: number;
 let assignedSlug: string;
 let blockedSlug: string;
+let freeNivo3LessonId: number;
+let freeNivo3Slug: string;
 let napametLessonId: number;
 let napametSlug: string;
 let assignedHomeworkId: number;
@@ -100,15 +102,15 @@ async function cleanup(): Promise<void> {
     await db.delete(napametGlobalProgramTable)
       .where(eq(napametGlobalProgramTable.sourceLessonSlug, napametSlug));
   }
-  if (assignedLessonId || blockedLessonId || prerequisiteId || napametLessonId) {
+  if (assignedLessonId || blockedLessonId || prerequisiteId || freeNivo3LessonId || napametLessonId) {
     await db.execute(sql`
       DELETE FROM content_prijevodi
       WHERE tabela = 'ilmihal_lekcije'
-        AND red_id IN (${assignedLessonId || -1}, ${blockedLessonId || -1}, ${prerequisiteId || -1}, ${napametLessonId || -1})
+        AND red_id IN (${assignedLessonId || -1}, ${blockedLessonId || -1}, ${prerequisiteId || -1}, ${freeNivo3LessonId || -1}, ${napametLessonId || -1})
     `);
     await db.delete(ilmihalLekcijeTable).where(inArray(
       ilmihalLekcijeTable.id,
-      [assignedLessonId, blockedLessonId, prerequisiteId, napametLessonId].filter(Boolean),
+      [assignedLessonId, blockedLessonId, prerequisiteId, freeNivo3LessonId, napametLessonId].filter(Boolean),
     ));
   }
   if (studentId) {
@@ -214,6 +216,7 @@ before(async () => {
 
   assignedSlug = `test-zadana-${suffix}`;
   blockedSlug = `test-zakljucana-${suffix}`;
+  freeNivo3Slug = `test-slobodna-nivo3-${suffix}`;
   napametSlug = `sura-test-napamet-${suffix}`;
   const createdLessons = await db.insert(ilmihalLekcijeTable).values([
     {
@@ -233,6 +236,14 @@ before(async () => {
       uvjetiIds: [prerequisiteId],
     },
     {
+      nivo: 3,
+      slug: freeNivo3Slug,
+      naslov: `Slobodna Nivo 3 lekcija ${suffix}`,
+      contentHtml: "<p>Dostupno bez uvjeta</p>",
+      redoslijed: 999,
+      uvjetiIds: [],
+    },
+    {
       nivo: 1,
       slug: napametSlug,
       naslov: `NAPAMET lekcija ${suffix}`,
@@ -243,6 +254,7 @@ before(async () => {
   ]).returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug });
   assignedLessonId = createdLessons.find((lesson) => lesson.slug === assignedSlug)!.id;
   blockedLessonId = createdLessons.find((lesson) => lesson.slug === blockedSlug)!.id;
+  freeNivo3LessonId = createdLessons.find((lesson) => lesson.slug === freeNivo3Slug)!.id;
   napametLessonId = createdLessons.find((lesson) => lesson.slug === napametSlug)!.id;
 
   const homework = await db.insert(zadaceTable).values([
@@ -345,6 +357,16 @@ test("aktivna zadaća otključava samo svoju lekciju i vraća njen slug učeniku
   assert.equal(blockedResponse.status, 403);
   const blocked = await blockedResponse.json() as { locked?: boolean };
   assert.equal(blocked.locked, true);
+});
+
+test("prijavljeni učenik može otvoriti slobodnu lekciju i mapu Nivoa 3", async () => {
+  const [lessonResponse, mapResponse] = await Promise.all([
+    studentGet(`/api/content/ilmihal/${freeNivo3Slug}`),
+    studentGet("/api/mapa/nivo/3"),
+  ]);
+
+  assert.equal(lessonResponse.status, 200);
+  assert.equal(mapResponse.status, 200);
 });
 
 test("završena zadaća se učeniku prebaci među završene i bez ocjene", async () => {

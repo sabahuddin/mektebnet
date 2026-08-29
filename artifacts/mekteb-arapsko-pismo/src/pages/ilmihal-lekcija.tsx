@@ -2659,13 +2659,15 @@ export default function IlmihalLekcijaPage() {
                 index: idx,
               });
             } else {
-              // Lekcija nije u mapi (npr. medaljon/dodatak van glavnog niza) →
-              // konzervativni fallback po redoslijedu.
-              blocked = (data.redoslijed ?? 0) > (isGuestLike ? 5 : 10);
+              // Lekcija nije u mapi (npr. medaljon/dodatak van glavnog niza).
+              // Backend je već provjerio njene uvjete. Prijavljenom učeniku
+              // ne uvodimo dodatni redoslijed-limit.
+              blocked = isGuestLike && (data.redoslijed ?? 0) > 5;
             }
           } catch {
-            // Mapa nedostupna → konzervativni fallback (stari limit).
-            blocked = (data.redoslijed ?? 0) > (isGuestLike ? 5 : 10);
+            // Mapa nedostupna: backend je već provjerio eksplicitne uvjete.
+            // Samo gost-like korisnici zadržavaju javni limit.
+            blocked = isGuestLike && (data.redoslijed ?? 0) > 5;
           }
           if (blocked) {
             toast({

@@ -1,38 +1,36 @@
 ---
 name: Otključavanje lekcija — dvije odvojene brave
-description: Zašto se "12. lekcija ne otvara" iako mapa pokaže otključano; mapa i stranica lekcije imaju nezavisne gate-ove koji moraju biti usklađeni.
+description: Pravilo pristupa lekcijama: prijavljeni učenik ima sva tri nivoa, a blokiraju samo eksplicitni preduvjeti; mapa i detail moraju ostati usklađeni.
 ---
 
 # Otključavanje lekcija ima DVIJE nezavisne brave
 
 Pristup ilmihal-lekciji kontrolišu DVA odvojena gate-a koja ne dijele logiku:
 
-1. **Mapa** (`nivo1-mapa.tsx`): otključava lekcije u blokovima po 10. Sljedećih 10 se
-   otvori kad je etapa-medaljon "položena" (`isEtapaPassed`). Pošto Nivo-1 medaljoni
-   imaju `imaKviz=false` + `isGating=true`, etapa se AUTO-prolazi čim
-   `completedCount >= posAfterRedoslijed`. Mapa ISPRAVNO prikaže sljedeću lekciju otključanom.
+1. **Mapa** (`nivo1-mapa.tsx`): za prijavljenog učenika svaka redovna lekcija je
+   otključana, osim ako ima eksplicitne `uvjetiIds` preduvjete koji nisu završeni.
+   Medaljoni ostaju zasebne etape sa svojim pravilima.
 2. **Stranica lekcije** (`ilmihal-lekcija.tsx`, gate u GET `/content/ilmihal/:slug` `.then`):
-   za ulogu `ucenik` TVRDO blokira svaku lekciju s `redoslijed > 10` (`limit = !user ? 5 : 10`),
-   BEZ provjere napretka ili osvojenih medaljona. Redirect uz "Završi prethodne lekcije".
+   mora koristiti isto pravilo kao mapa. Za redovne lekcije ne postoji sekvencijalni
+   limit po `redoslijed`; backend provjerava samo eksplicitne preduvjete.
 
-**Simptom "završi 11, ne otvara se 12":** uvodna lekcija je `redoslijed=0`, pa `r <= 10`
-obuhvata 11 lekcija (r=0..10) koje učenik može otvoriti. 12. lekcija je `redoslijed=11`
-(Nivo 1 = "selam") → `r=11 > 10` → stranica lekcije je vrati nazad iako je mapa pokazuje
-otključanom. Nekonzistentnost između dvije brave; gate na stranici je zaostali tvrdi limit.
+**Simptom "Nivo 2/3 ili kasnija lekcija je zaključana":** raniji tok je imao
+sekvencijalno otključavanje blokova i dodatni uslov prethodnog krunisanja. To više ne
+važi za prijavljenog učenika: sva tri nivoa su dostupna odmah, a samo eksplicitni
+preduvjeti lekcije mogu blokirati pristup.
 
-**Why:** Gate na stranici lekcije pisan je za zaštitu direktnog URL pristupa, ali nikad
-ne konsultuje medaljon-blok logiku mape. Komentar u kodu kaže "dalje otključavanje ide kroz
-mapu", ali gate to ne implementira — samo tvrdo reže `r > 10`.
+**Why:** Dogovoreni obrazovni tok dopušta učeniku da sam bira bilo koju lekciju iz
+sva tri nivoa; preduvjeti su namjerni izuzetak, dok krunisanje i medaljoni nisu
+globalna brava za redovne lekcije.
 
-**Riješeno:** Unlock logika je izdvojena u `src/lib/lekcija-unlock.ts`
-(`computeUnlockedCellCount` + `isEtapaPassed`) i koriste je OBA gate-a. Stranica lekcije
-sada dohvati `/mapa/nivo/:nivo`, nađe indeks lekcije u nizu i blokira samo ako je
-`idx >= unlockedCellCount` (umjesto starog tvrdog `redoslijed <= 10`). Ovo i poravnava
-gosta na prvih 5 i učenika na prvih 10 (kao mapa), uz konzervativni fallback na stari
-limit ako `/mapa` zahtjev padne.
+**Riješeno:** `isLekcijaUnlocked` u `src/lib/lekcija-unlock.ts` koristi se za
+per-lekcija provjeru na mapi i stranici. API mapa više ne blokira Nivo 2/3 preko
+prethodnog krunisanja, a lista svih lekcija više ne koristi "prva nezavršena" bravu.
+Gost/roditelj i dalje imaju javni limit od prvih 5 lekcija.
 
-**How to apply:** NE vraćaj tvrdi `redoslijed`-limit u stranicu lekcije. Sve promjene
-logike otključavanja idu u `src/lib/lekcija-unlock.ts` da oba gate-a ostanu identična.
+**How to apply:** NE vraćaj tvrdi `redoslijed`-limit, blok po medaljonima ili prethodno
+krunisanje kao globalnu bravu za redovne lekcije učenika. Nove posebne izuzetke dodaj
+kao eksplicitne preduvjete i drži mapu, listu i detail rutu usklađenim.
 
 **Sporedno (nije glavni uzrok 11/12):** lekcija se broji kao završena tek nakon strogog
 anti-cheat gate-a (≥300s aktivnog čitanja; 30s za intro slugove; ≥85% skrol; otvorene sve

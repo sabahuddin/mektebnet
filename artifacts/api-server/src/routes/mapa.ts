@@ -94,44 +94,6 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
         }
       : null;
 
-    // Task #126: server-side nivo gating. Ako je student "ucenik" i traži
-    // mapu nivoa > 1, prethodno krunisanje (ako postoji s ispitom i
-    // isGating) MORA biti položeno — inače 403 sa eksplicitnim razlogom.
-    if (nivo > 1) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        try {
-          const jwt = await import("jsonwebtoken");
-          const decoded = jwt.default.verify(
-            authHeader.slice(7),
-            process.env.JWT_SECRET || "mekteb-secret-change-in-production",
-          ) as { userId: number; role?: string };
-          if (decoded.role === "ucenik") {
-            const [prevKrun] = await db
-              .select()
-              .from(krunisanjaTable)
-              .where(eq(krunisanjaTable.nivo, nivo - 1))
-              .limit(1);
-            const prevIds = Array.isArray(prevKrun?.kvizPitanjaIds)
-              ? (prevKrun!.kvizPitanjaIds as number[])
-              : [];
-            if (prevKrun && prevKrun.isGating && prevIds.length > 0) {
-              const polozeni = await polozenaKrunisanja(String(decoded.userId));
-              if (!polozeni.has(prevKrun.id)) {
-                return res.status(403).json({
-                  error: `Položi krunisanje nivoa ${nivo - 1} da otključaš mapu.`,
-                  locked: true,
-                  zahtijevaKrunisanje: prevKrun.id,
-                });
-              }
-            }
-          }
-        } catch {
-          /* nevažeći token — pusti kao gost, dobija samo katalog */
-        }
-      }
-    }
-
     // Default: globalni redoslijed. Za prijavljenog studenta čija grupa ima
     // raspored za ovaj nivo → preslažemo lekcije na efektivne pozicije.
     let lekcijeOut = lekcije;

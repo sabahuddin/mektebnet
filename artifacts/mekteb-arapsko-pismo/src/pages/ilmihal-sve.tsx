@@ -14,6 +14,7 @@ interface Lekcija {
   redoslijed?: number;
   zavrseno?: boolean;
   predmet?: string | null;
+  uvjetiIds?: number[];
 }
 
 const BEZ_PREDMETA = "__bez__";
@@ -45,15 +46,11 @@ export default function IlmihalSvePage() {
   // muallim upiše novi predmet u pripremu lekcije.
   const [predmet, setPredmet] = useState<string>("");
 
-  // Gate: ucenik (i nelogovan posjetilac) moze otvoriti samo zavrsene
-  // lekcije + prvu sljedecu nezavrsenu. Muallim/admin vide sve kao otvoreno
-  // (oni pregledaju gradivo, ne uce).
+  // Prijavljeni učenik može otvoriti bilo koju lekciju u sva tri nivoa.
+  // Zaključane su samo lekcije s eksplicitnim, još nezavršenim preduvjetima.
   // Task #133: roditelj = gost → gost-gate (prvih 5 lekcija, po POZICIJI),
-  // identično mapi/stranici lekcije (computeUnlockedCellCount → min(total, 5)).
-  // Bitno: gost-like NE smije ići kroz progresijski (firstUndoneAll) put jer
-  // bi to bez napretka otključalo samo 1. lekciju umjesto prvih 5.
+  // identično mapi/stranici lekcije.
   const isGuestLike = !user || user.role === "roditelj";
-  const enforceProgress = !user || user.role === "ucenik" || user.role === "roditelj";
 
   useEffect(() => {
     setLoading(true);
@@ -74,6 +71,10 @@ export default function IlmihalSvePage() {
     }
     return g;
   }, [lekcije]);
+  const completedIds = useMemo(
+    () => new Set(lekcije.filter((l) => l.zavrseno).map((l) => l.id)),
+    [lekcije],
+  );
 
   // Lista jedinstvenih predmeta (sortirana po broju lekcija, najveći prvo).
   // Lekcije bez predmeta dobijaju zasebnu opciju "Bez predmeta" na dnu.
@@ -311,22 +312,18 @@ export default function IlmihalSvePage() {
                   >
                     <ol className="divide-y divide-amber-200/60">
                       {(() => {
-                        // Indeks prve nezavrsene lekcije u CIJELOM nivou (ne u
-                        // filtriranoj listi) — to je "sljedeca dozvoljena".
-                        // Sve poslije nje su locked (samo za ucenika/nelogovanog).
-                        // Bitno: pretraga ne smije otključati zaključanu lekciju.
-                        const firstUndoneAll = allItems.findIndex((x) => !x.zavrseno);
                         return items.map((l) => {
                           const realIdx = allItems.findIndex((x) => x.id === l.id);
                           const isDone = !!l.zavrseno;
-                          const isNext = enforceProgress && realIdx === firstUndoneAll;
                           const isDodatak = l.slug.startsWith("dodatak-nivo");
-                          // Gost-like (nelogovan / roditelj): prvih 5 lekcija po
-                          // poziciji (kao computeUnlockedCellCount → min(total, 5)),
-                          // ne progresijski. Ostali (učenik) → firstUndoneAll put.
+                          const nedostajeUvjet = (l.uvjetiIds ?? []).some(
+                            (id) => !completedIds.has(id),
+                          );
+                          // Gost-like (nelogovan / roditelj): prvih 5 lekcija.
+                          // Prijavljeni učenik: samo eksplicitni uvjeti zaključavaju.
                           const isLocked = isGuestLike
                             ? !isDodatak && realIdx >= 5
-                            : enforceProgress && !isDone && !isNext && !isDodatak;
+                            : user?.role === "ucenik" && nedostajeUvjet;
                           // Poruka za zaključanu lekciju ovisi o tipu korisnika:
                           // roditelj → registruj se kao poseban korisnik; gost →
                           // prijavi se; učenik → završi prethodnu.
@@ -335,7 +332,7 @@ export default function IlmihalSvePage() {
                               ? t("Registrujte se kao poseban korisnik da otključate sve lekcije.")
                               : !user
                                 ? t("Prijavi se da otključaš više lekcija.")
-                                : t("Zaključano — završi prethodnu lekciju");
+                                : t("Završi prethodne lekcije da otključaš ovu.");
                           const idx = realIdx;
 
                           const rowInner = (

@@ -16,8 +16,6 @@ import {
   medaljoniTable,
   studentMedaljoniTable,
   etapaPolaganjaTable,
-  krunisanjaTable,
-  studentKrunisanjaTable,
   interaktivniBlokPokusajiTable,
   lessonPauseAnswersTable,
   zadaceTable,
@@ -356,6 +354,7 @@ router.get("/ilmihal", async (req, res) => {
       audioSrc: ilmihalLekcijeTable.audioSrc,
       isPublished: ilmihalLekcijeTable.isPublished,
       predmet: ilmihalLekcijeTable.predmet,
+      uvjetiIds: ilmihalLekcijeTable.uvjetiIds,
     };
     let lekcije;
     if (nivo) {
@@ -497,31 +496,10 @@ router.get("/ilmihal/:slug", async (req, res) => {
               }
             }
           } else {
-          // 1) Prethodno krunisanje za nivoe > 1.
-          if (lekcija.nivo > 1) {
-            const [prevKrun] = await db
-              .select()
-              .from(krunisanjaTable)
-              .where(eq(krunisanjaTable.nivo, lekcija.nivo - 1))
-              .limit(1);
-            const prevIds = Array.isArray(prevKrun?.kvizPitanjaIds)
-              ? (prevKrun!.kvizPitanjaIds as number[])
-              : [];
-            if (prevKrun && prevKrun.isGating && prevIds.length > 0) {
-              const [pass] = await db
-                .select({ id: studentKrunisanjaTable.id })
-                .from(studentKrunisanjaTable)
-                .where(and(
-                  eq(studentKrunisanjaTable.studentId, studentId),
-                  eq(studentKrunisanjaTable.krunisanjeId, prevKrun.id),
-                ))
-                .limit(1);
-              if (!pass) {
-                lockedReason = `Položi krunisanje nivoa ${lekcija.nivo - 1} da otključaš ovu lekciju.`;
-              }
-            }
-          }
-          // 2) Preduvjeti (uvjetiIds) — lekcija je zaključana dok student ne završi
+          // Redovne lekcije u sva tri nivoa dostupne su svakom prijavljenom
+          // učeniku. Jedina per-lekcija brava su eksplicitni preduvjeti
+          // (uvjetiIds) koje admin postavi na konkretnoj lekciji.
+          // Preduvjeti — lekcija je zaključana dok student ne završi
           // sve lekcije navedene u listi preduvjeta. Prazna lista = uvijek otključano.
           // Identična logika je na frontendu (isLekcijaUnlocked u lekcija-unlock.ts).
           if (!lockedReason) {
