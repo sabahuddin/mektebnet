@@ -243,7 +243,8 @@ export default function GrupaPage() {
   const [parentResetWorking, setParentResetWorking] = useState<number | null>(null);
 
   const grupaId = parseInt(id || "0");
-  const aktivniModul: GrupaModul = getGrupaModul(search);
+  const search = useSearch();
+  const [aktivniModul, setAktivniModul] = useState<GrupaModul>("ucenici");
 
   useEffect(() => {
     const modul = new URLSearchParams(window.location.search).get("modul");
