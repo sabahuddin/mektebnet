@@ -21,7 +21,7 @@
 - [Admin editor prijevoda](prijevodi-override-editor.md) — ispravke prijevoda idu kroz /admin/prijevodi (ui_prijevodi override + content_prijevodi), NE editovanjem locales/*.json.
 - [content_prijevodi overlay pokrivenost](content-overlay-coverage.md) — overlay mora pokriti i list i detail rute za svaki modul; lako je prevesti listu a zaboraviti detalj (content_html ostaje bs).
 - [Jezik miješanje — remount](jezik-mijesanje-remount.md) — content ide preko apiRequest+useEffect (ne React Query); promjena jezika ne refetch-a → fix je `<Router key={lang}>` remount u App.tsx.
-- [URL query — remount](url-query-remount.md) — Wouter prati pathname odvojeno od queryja; globalni route key mora uključiti oba da izbori ne ostanu iz prethodnog konteksta.
+- [URL query — bez globalnog remounta](url-query-remount.md) — koristi `useSearch` i lokalni reset; query u globalnom route key-u izazvao je produkcijsko treperenje/skeleton petlju.
 - [Lekcije — dvije brave](lekcije-dvije-brave.md) — mapa otključa po medaljon-blokovima, ali stranica lekcije tvrdo reže ucenika na redoslijed<=10 → 12. lekcija nedostupna iako mapa pokaže otključano; drži oba gate-a usklađena.
 - [Cookie consent pristup](cookie-consent-pristup.md) — informativni banner ("Prihvatam"+link), BEZ granularnih toggle-a; samo neophodni+funkcionalni kolačići. Doda li se tracking → pravi opt-in.
 - [HMR locales → language.tsx](hmr-locales-language-context.md) — izmjena locales/*.json baca lažne "useLanguage must be used within LanguageProvider" tokom HMR; nestane na punom reloadu, nije bug.
