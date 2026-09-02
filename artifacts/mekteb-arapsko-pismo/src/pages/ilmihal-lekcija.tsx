@@ -2095,7 +2095,12 @@ function PriloziSection({
                             className="flex-1 min-w-0 flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 sm:px-4 sm:py-4 rounded-xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 hover:from-amber-100 hover:to-yellow-100 hover:border-amber-400 transition-all shadow-sm hover:shadow-md text-left"
                             data-testid={`embed-open-${a.id}`}
                           >
-                            <span className="text-3xl flex-shrink-0">🎯</span>
+                            <img
+                              src={`${LESSON_ICON_BASE}vjezba-kapi-meda.svg`}
+                              alt=""
+                              aria-hidden="true"
+                              className="w-12 h-12 object-contain flex-shrink-0"
+                            />
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-base text-amber-900 break-words">{a.originalName}</p>
                             </div>
@@ -2145,7 +2150,7 @@ function PriloziSection({
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 min-w-0">
                           <span className="text-2xl flex-shrink-0">
                             {isH5p ? (
-                              <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-12 h-12 object-contain" />
+                              <img src={`${LESSON_ICON_BASE}vjezba-kapi-meda.svg`} alt="" className="w-12 h-12 object-contain" />
                             ) : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
@@ -2191,7 +2196,7 @@ function PriloziSection({
                               >
                                 {isH5pLocked
                                   ? <><Clock className="w-4 h-4" /> {t("Zaključano 48 sati")}</>
-                                  : <><img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-5 h-5 object-contain" /> {t("Otvori vježbu")}</>}
+                                  : <><img src={`${LESSON_ICON_BASE}vjezba-kapi-meda.svg`} alt="" className="w-5 h-5 object-contain" /> {t("Otvori vježbu")}</>}
                               </button>
                             ) : isUrl ? (
                               <a
@@ -2259,7 +2264,12 @@ function PriloziSection({
                     return (
                       <>
                         <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200 flex-shrink-0">
-                          <span className="text-2xl flex-shrink-0">🎯</span>
+                          <img
+                            src={`${LESSON_ICON_BASE}vjezba-kapi-meda.svg`}
+                            alt=""
+                            aria-hidden="true"
+                            className="w-10 h-10 object-contain flex-shrink-0"
+                          />
                           <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-amber-900 truncate">
                             {openEmbed?.originalName}
                           </DialogTitle>
@@ -2327,7 +2337,7 @@ function PriloziSection({
                     return (
                       <>
                         <div className="px-4 py-3 bg-purple-50 border-b border-purple-200 flex items-center gap-2 flex-shrink-0">
-                          <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-12 h-12 object-contain flex-shrink-0" />
+                          <img src={`${LESSON_ICON_BASE}vjezba-kapi-meda.svg`} alt="" className="w-12 h-12 object-contain flex-shrink-0" />
                           <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-purple-900 truncate">
                             {displayH5pName(a.originalName)}
                           </DialogTitle>
@@ -2335,7 +2345,7 @@ function PriloziSection({
                         <div className="px-4 py-2 bg-purple-50/70 border-b border-purple-100 flex items-center gap-2 flex-shrink-0">
                           {aAtt?.isLocked
                             ? <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                            : <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                            : <img src={`${LESSON_ICON_BASE}vjezba-kapi-meda.svg`} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                           <p className="text-sm font-semibold text-purple-700">
                             {aAtt?.isLocked && aAtt.lockedUntil
                               ? t("Tačno riješeno. Novi pokušaj moguć nakon {date}.", { date: formatH5pLockUntil(aAtt.lockedUntil) })

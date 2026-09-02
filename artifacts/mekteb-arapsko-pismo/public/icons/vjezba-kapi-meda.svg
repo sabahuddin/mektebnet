@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 10 80 82" role="img" aria-labelledby="title desc">
+  <title id="title">Vježba donosi kapi meda</title>
+  <desc id="desc">Saće iz kojeg se cijedi med</desc>
+  <g stroke="#49320B" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M14 25 30 16l16 9v18l-16 9-16-9Z" fill="#FFB52E"/>
+    <path d="M46 25 62 16l16 9v18l-16 9-16-9Z" fill="#F7931E"/>
+    <path d="M30 52 46 43l16 9v18l-16 9-16-9Z" fill="#FFC83D"/>
+    <path d="M41 70h10v7c0 4 4 6 4 9 0 3-3 5-7 5s-7-2-7-5c0-3 4-5 4-9v-7Z" fill="#F6A817"/>
+    <path d="M45 72v10" stroke="#FFE7A0" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="57" cy="87" r="3" fill="#F6A817"/>
+  </g>
+</svg>
