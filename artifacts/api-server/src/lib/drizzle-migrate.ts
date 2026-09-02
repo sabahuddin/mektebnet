@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { readMigrationFiles } from "drizzle-orm/migrator";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { logger } from "./logger";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 // Postgres advisory lock id for serializing bootstrap across concurrent starts.
 // Arbitrary 64-bit-safe int chosen for "drizzle-bootstrap" namespace.
 const BOOTSTRAP_LOCK_ID = 4242420001;
+const MIGRATE_LOCK_ID = 4242420002;
 
 // "Existing prod DB" heuristic: a meaningful subset of the app's core tables
 // must be present. A truly fresh DB has none of these → migrate() runs the
@@ -153,11 +154,19 @@ export async function bootstrapDrizzleMigrations(): Promise<void> {
 
 export async function runDrizzleMigrate(): Promise<void> {
   const migrationsFolder = resolveMigrationsFolder();
+  const client = await pool.connect();
   try {
+    await client.query("SELECT pg_advisory_lock($1)", [MIGRATE_LOCK_ID]);
     await migrate(db, { migrationsFolder });
     logger.info({ migrationsFolder }, "Drizzle migrate() completed");
   } catch (e) {
     logger.error({ err: e, migrationsFolder }, "Drizzle migrate() failed");
     throw e;
+  } finally {
+    try {
+      await client.query("SELECT pg_advisory_unlock($1)", [MIGRATE_LOCK_ID]);
+    } finally {
+      client.release();
+    }
   }
 }

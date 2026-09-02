@@ -3,8 +3,7 @@ import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-
-const JWT_SECRET = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
+import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 export interface JwtPayload {
   userId: number;

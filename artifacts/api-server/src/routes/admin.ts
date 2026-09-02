@@ -56,6 +56,7 @@ import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 import { optimizePdfFile } from "../lib/dokumenti.js";
 import { getGlobalNapametKatalog } from "../data/napamet.js";
+import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -575,7 +576,6 @@ router.get("/prilozi/:lekcijaId", async (req, res) => {
 // GET /api/admin/prilozi/download/:id — zahtijeva Authorization: Bearer <token>
 router.get("/prilozi/download/:id", async (req, res) => {
   try {
-    const JWT_SECRET_DL = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ error: "Neautorizovan pristup" });
@@ -584,7 +584,7 @@ router.get("/prilozi/download/:id", async (req, res) => {
     const jwt = await import("jsonwebtoken");
     let decoded: any;
     try {
-      decoded = jwt.default.verify(rawToken, JWT_SECRET_DL);
+      decoded = jwt.default.verify(rawToken, JWT_SECRET);
     } catch {
       return res.status(401).json({ error: "Nevažeći token" });
     }

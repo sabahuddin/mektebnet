@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import path from "path";
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "./lib/jwt-secret";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { trackVisit } from "./middlewares/visitTracker.js";
@@ -75,7 +76,6 @@ console.log(`[Static] Serving /uploads from: ${uploadsDir}`);
 // Štitimo /uploads/h5p/* zahtjevom za auth (cookie ili Bearer header). Ostali
 // /uploads/* (PDF, slike, itd. korišteni iz contentHtml-a lekcije) ostaju javni
 // jer su dio renderirane lekcije i moraju biti dostupni i out-of-context.
-const JWT_SECRET = process.env["JWT_SECRET"] || "mekteb-secret-change-in-production";
 function parseCookie(header: string | undefined, name: string): string | null {
   if (!header) return null;
   for (const part of header.split(";")) {

@@ -4627,6 +4627,63 @@ router.get("/zadace", async (req, res) => {
       targetMap.set(t.zadacaId, arr);
     }
 
+    const grupaIds = Array.from(new Set(zadace.map(z => z.grupaId)));
+    const grupaUcenici = await db.select({ grupaId: ucenikProfiliTable.grupaId, userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(and(inArray(ucenikProfiliTable.grupaId, grupaIds), eq(ucenikProfiliTable.isArchived, false)));
+    const grupaUceniciMap = new Map<number, number[]>();
+    for (const g of grupaUcenici) {
+      if (g.grupaId == null) continue;
+      const arr = grupaUceniciMap.get(g.grupaId) || [];
+      arr.push(g.userId);
+      grupaUceniciMap.set(g.grupaId, arr);
+    }
+
+    // Aktivna završena lekcija se računa samo za kanonsku lekciju zadaće i
+    // samo za njene trenutne adresate. `contentType` ograničavamo na Ilmihal
+    // da napredak iz drugog modula ne može lažno završiti zadaću.
+    const lessonSlugs = Array.from(new Set(
+      zadace.map(z => z.lekcijaSlug).filter((slug): slug is string => Boolean(slug)),
+    ));
+    const linkedLessons = lessonSlugs.length > 0
+      ? await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug })
+          .from(ilmihalLekcijeTable)
+          .where(inArray(ilmihalLekcijeTable.slug, lessonSlugs))
+      : [];
+    const lessonIdBySlug = new Map(linkedLessons.map(lesson => [lesson.slug, lesson.id]));
+
+    const recipientsByHomework = new Map<number, number[]>();
+    for (const z of zadace) {
+      const explicitIds = targetMap.get(z.id) || [];
+      // Trenutni adresati: eksplicitni ciljani učenici, inače aktivna grupa.
+      recipientsByHomework.set(
+        z.id,
+        explicitIds.length > 0 ? explicitIds : (grupaUceniciMap.get(z.grupaId) || []),
+      );
+    }
+    const recipientIds = Array.from(new Set(Array.from(recipientsByHomework.values()).flat()));
+    const lessonIds = Array.from(lessonIdBySlug.values());
+    const lessonProgress = recipientIds.length > 0 && lessonIds.length > 0
+      ? await db.select({
+          userId: korisnikNapredakTable.userId,
+          contentId: korisnikNapredakTable.contentId,
+          completedAt: korisnikNapredakTable.completedAt,
+        }).from(korisnikNapredakTable).where(and(
+          inArray(korisnikNapredakTable.userId, recipientIds),
+          inArray(korisnikNapredakTable.contentId, lessonIds),
+          inArray(korisnikNapredakTable.contentType, ["ilmihal", "lekcija"]),
+          eq(korisnikNapredakTable.zavrsen, true),
+        ))
+      : [];
+    const lessonProgressMap = new Map<string, typeof lessonProgress[number]>();
+    for (const progress of lessonProgress) {
+      const key = `${progress.userId}:${progress.contentId}`;
+      const previous = lessonProgressMap.get(key);
+      if (!previous || (progress.completedAt && (!previous.completedAt || progress.completedAt > previous.completedAt))) {
+        lessonProgressMap.set(key, progress);
+      }
+    }
+
     // Završeni statusi po zadaći (status = 'zavrseno') — čuvamo i ucenikId
     // da bismo brojali SAMO trenutne adresate (stari statusi za nekadašnje
     // adresate / arhivirane učenike ne smiju lažno označiti zadaću završenom).
@@ -4643,29 +4700,26 @@ router.get("/zadace", async (req, res) => {
       doneMap.set(s.zadacaId, set);
     }
 
-    // Aktivni (ne-arhivirani) učenici po grupi — za zadaće namijenjene cijeloj
-    // grupi (bez eksplicitnih adresata).
-    const grupaIds = Array.from(new Set(zadace.map(z => z.grupaId)));
-    const grupaUcenici = await db.select({ grupaId: ucenikProfiliTable.grupaId, userId: ucenikProfiliTable.userId })
-      .from(ucenikProfiliTable)
-      .where(and(inArray(ucenikProfiliTable.grupaId, grupaIds), eq(ucenikProfiliTable.isArchived, false)));
-    const grupaUceniciMap = new Map<number, number[]>();
-    for (const g of grupaUcenici) {
-      if (g.grupaId == null) continue;
-      const arr = grupaUceniciMap.get(g.grupaId) || [];
-      arr.push(g.userId);
-      grupaUceniciMap.set(g.grupaId, arr);
-    }
-
     res.json(zadace.map(z => {
       const ucenikIds = targetMap.get(z.id) || [];
-      // Trenutni adresati: eksplicitni ciljani učenici, inače aktivna grupa.
-      const recipients = ucenikIds.length > 0 ? ucenikIds : (grupaUceniciMap.get(z.grupaId) || []);
+      const recipients = recipientsByHomework.get(z.id) || [];
       const ukupno = recipients.length;
       const doneSet = doneMap.get(z.id);
       const zavrsenih = doneSet ? recipients.filter(uid => doneSet.has(uid)).length : 0;
+      const lessonId = z.lekcijaSlug ? lessonIdBySlug.get(z.lekcijaSlug) : undefined;
+      const lekcijaZavrsenih = lessonId
+        ? recipients.filter(uid => lessonProgressMap.has(`${uid}:${lessonId}`)).length
+        : 0;
       const completed = ukupno > 0 && zavrsenih >= ukupno;
-      return { ...z, ucenikIds, zavrsenih, ukupno, completed };
+      return {
+        ...z,
+        ucenikIds,
+        zavrsenih,
+        ukupno,
+        completed,
+        lekcijaZavrsenih,
+        lekcijaUkupno: lessonId ? ukupno : null,
+      };
     }));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -4872,16 +4926,45 @@ router.get("/zadace/:id/pregled", async (req, res) => {
     if (!zadaca) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
 
     const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId);
-    if (recipientIds.length === 0) { res.json({ zadaca, ucenici: [] }); return; }
+    if (recipientIds.length === 0) {
+      res.json({ zadaca, lekcija: null, lekcijaZavrsenih: 0, lekcijaUkupno: null, ucenici: [] });
+      return;
+    }
 
     const korisnici = await db.select({ id: usersTable.id, displayName: usersTable.displayName, username: usersTable.username })
       .from(usersTable).where(inArray(usersTable.id, recipientIds));
     const statusi = await db.select().from(zadaceStatusTable).where(eq(zadaceStatusTable.zadacaId, id));
     const statusMap = new Map(statusi.map(s => [s.ucenikId, s]));
+    const [linkedLesson] = zadaca.lekcijaSlug
+      ? await db.select({
+          id: ilmihalLekcijeTable.id,
+          slug: ilmihalLekcijeTable.slug,
+          naslov: ilmihalLekcijeTable.naslov,
+        }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, zadaca.lekcijaSlug))
+      : [];
+    const lessonProgress = linkedLesson
+      ? await db.select({
+          userId: korisnikNapredakTable.userId,
+          completedAt: korisnikNapredakTable.completedAt,
+        }).from(korisnikNapredakTable).where(and(
+          inArray(korisnikNapredakTable.userId, recipientIds),
+          eq(korisnikNapredakTable.contentId, linkedLesson.id),
+          inArray(korisnikNapredakTable.contentType, ["ilmihal", "lekcija"]),
+          eq(korisnikNapredakTable.zavrsen, true),
+        ))
+      : [];
+    const lessonProgressMap = new Map<number, typeof lessonProgress[number]>();
+    for (const progress of lessonProgress) {
+      const previous = lessonProgressMap.get(progress.userId);
+      if (!previous || (progress.completedAt && (!previous.completedAt || progress.completedAt > previous.completedAt))) {
+        lessonProgressMap.set(progress.userId, progress);
+      }
+    }
 
     const ucenici = korisnici
       .map(u => {
         const s = statusMap.get(u.id);
+        const lesson = lessonProgressMap.get(u.id);
         return {
           ucenikId: u.id,
           displayName: u.displayName,
@@ -4892,11 +4975,19 @@ router.get("/zadace/:id/pregled", async (req, res) => {
           noviRok: s?.noviRok ?? null,
           prolongCount: s?.prolongCount ?? 0,
           status: s?.status ?? "na_cekanju",
+          lekcijaZavrsena: Boolean(lesson),
+          lekcijaZavrsenaAt: lesson?.completedAt ?? null,
         };
       })
       .sort((a, b) => (a.displayName || "").localeCompare(b.displayName || "", "bs"));
 
-    res.json({ zadaca, ucenici });
+    res.json({
+      zadaca,
+      lekcija: linkedLesson ?? null,
+      lekcijaZavrsenih: linkedLesson ? ucenici.filter(u => u.lekcijaZavrsena).length : 0,
+      lekcijaUkupno: linkedLesson ? ucenici.length : null,
+      ucenici,
+    });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -5025,10 +5116,10 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
       : { napametNivo: null, napametStavkaId: null };
     const statusVal = oznaciZavrseno === true ? "zavrseno"
       : oznaciZavrseno === false ? "na_cekanju"
+      : ocjenaVal !== null ? "zavrseno"
       : (postojeci?.status ?? "na_cekanju");
-    // Završavanje je nezavisno od ocjene. Muallim može zadaću označiti
-    // završenom i bez dodijeljene ocjene, a učenik je odmah vidi u svom
-    // tabu "Završene".
+    // Eksplicitna kontrola omogućava završavanje i bez ocjene ili vraćanje
+    // na čekanje. Bez eksplicitne kontrole, dodjela ocjene završava zadaću.
     const uradjenoVal = statusVal === "zavrseno"
       ? true
       : typeof uradjeno === "boolean" ? uradjeno : (postojeci?.uradjeno ?? false);
@@ -5095,6 +5186,53 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     } catch (ocErr) {
       ocjeneSyncOk = false;
       console.error("[zadaca ocjena->ocjene]", ocErr);
+    }
+
+    // Zadaća vezana za NAPAMET lekciju dijeli ocjenu sa NAPAMET zapisom.
+    // Samo prolazne ocjene 5/6 ulaze u NAPAMET; niža ili obrisana ocjena
+    // uklanja raniji NAPAMET rezultat. Zapis vežemo za zadaću da ponovni unos
+    // ne pravi duplikate i da se može sigurno ukloniti.
+    if (ocjeneSyncOk && zadaca.lekcijaSlug) {
+      try {
+        const napametStavka = (await getGlobalNapametKatalog(false))
+          .find(item => item.sourceLessonSlug === zadaca.lekcijaSlug);
+        if (napametStavka) {
+          const [napametOcjena] = await db.select({ id: ocjeneTable.id })
+            .from(ocjeneTable)
+            .where(and(
+              eq(ocjeneTable.ucenikId, ucenikId),
+              eq(ocjeneTable.napametStavkaId, napametStavka.id),
+              // NAPAMET prateći zapis je odvojen od glavne ocjene zadaće
+              // (ocjene ima unique (zadaca_id, ucenik_id)).
+              sql`(${ocjeneTable.zadacaId} IS NULL OR ${ocjeneTable.zadacaId} = ${id})`,
+            ));
+          if (ocjenaVal === 5 || ocjenaVal === 6) {
+            const napametValues = {
+              ocjena: ocjenaVal,
+              muallimId: req.user!.userId,
+              grupaId: zadaca.grupaId,
+              kategorija: "napamet",
+              lekcijaNaziv: zadaca.lekcijaNaslov || zadaca.naslov || null,
+              datum: new Date().toISOString().slice(0, 10),
+              napametNivo: napametStavka.nivo,
+              napametStavkaId: napametStavka.id,
+            };
+            if (napametOcjena) {
+              await db.update(ocjeneTable).set(napametValues)
+                .where(eq(ocjeneTable.id, napametOcjena.id));
+            } else {
+              await db.insert(ocjeneTable).values({
+                ucenikId,
+                ...napametValues,
+              });
+            }
+          } else if (napametOcjena) {
+            await db.delete(ocjeneTable).where(eq(ocjeneTable.id, napametOcjena.id));
+          }
+        }
+      } catch (napametErr) {
+        console.error("[zadaca napamet sync]", napametErr);
+      }
     }
 
     // Obavijesti roditelje kad zadaća dobije NOVU ili promijenjenu ocjenu.

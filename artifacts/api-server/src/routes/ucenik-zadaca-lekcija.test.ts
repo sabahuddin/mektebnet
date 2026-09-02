@@ -6,6 +6,7 @@ import { db } from "@workspace/db";
 import {
   grupeTable,
   ilmihalLekcijeTable,
+  korisnikNapredakTable,
   napametGlobalProgramTable,
   ocjeneTable,
   ucenikProfiliTable,
@@ -41,6 +42,12 @@ let napametHomeworkId: number;
 let studentToken: string;
 let otherStudentToken: string;
 let teacherToken: string;
+
+function teacherGet(path: string) {
+  return fetch(`${baseUrl}${path}`, {
+    headers: { Authorization: `Bearer ${teacherToken}` },
+  });
+}
 
 function studentGet(path: string, headers: Record<string, string> = {}, token = studentToken) {
   return fetch(`${baseUrl}${path}`, {
@@ -93,6 +100,10 @@ async function cleanup(): Promise<void> {
     ));
   }
   if (studentId || otherStudentId) {
+    await db.delete(korisnikNapredakTable).where(inArray(
+      korisnikNapredakTable.userId,
+      [studentId, otherStudentId].filter(Boolean),
+    ));
     await db.delete(ocjeneTable).where(inArray(
       ocjeneTable.ucenikId,
       [studentId, otherStudentId].filter(Boolean),
@@ -297,6 +308,14 @@ before(async () => {
       ('ilmihal_lekcije', ${assignedLessonId}, 'content_html', 'en', '<p>Translated introduction and content</p>', 'test')
   `);
 
+  await db.insert(korisnikNapredakTable).values({
+    userId: studentId,
+    contentType: "ilmihal",
+    contentId: assignedLessonId,
+    zavrsen: true,
+    completedAt: new Date("2026-08-28T10:15:00.000Z"),
+  });
+
   studentToken = signToken({
     userId: studentId,
     username: `ucenik.${suffix}`,
@@ -388,6 +407,58 @@ test("završena zadaća se učeniku prebaci među završene i bez ocjene", async
   const assigned = homework.find((item) => item.id === assignedHomeworkId);
   assert.equal(assigned?.kategorija, "zavrsene");
   assert.equal(assigned?.ocjena, null);
+});
+
+test("pregled zadaće razlikuje završenu povezanu lekciju od ručnog pregleda", async () => {
+  const listResponse = await teacherGet(`/api/muallim/zadace?grupaId=${groupId}`);
+  assert.equal(listResponse.status, 200);
+  const list = await listResponse.json() as Array<{
+    id: number;
+    lekcijaZavrsenih: number;
+    lekcijaUkupno: number | null;
+    zavrsenih: number;
+    ukupno: number;
+  }>;
+  const assigned = list.find((item) => item.id === assignedHomeworkId);
+  assert.equal(assigned?.lekcijaZavrsenih, 1);
+  assert.equal(assigned?.lekcijaUkupno, 2);
+  // Prethodni test je ručno završio ovu zadaću; automatski broj lekcija je
+  // nezavisan od tog ručnog statusa i ostaje 1/2.
+  assert.equal(assigned?.zavrsenih, 1);
+  assert.equal(assigned?.ukupno, 2);
+
+  const pregledResponse = await teacherGet(`/api/muallim/zadace/${assignedHomeworkId}/pregled`);
+  assert.equal(pregledResponse.status, 200);
+  const pregled = await pregledResponse.json() as {
+    lekcija: { id: number; slug: string } | null;
+    lekcijaZavrsenih: number;
+    lekcijaUkupno: number | null;
+    ucenici: Array<{
+      ucenikId: number;
+      status: string;
+      lekcijaZavrsena: boolean;
+      lekcijaZavrsenaAt: string | null;
+    }>;
+  };
+  assert.equal(pregled.lekcija?.slug, assignedSlug);
+  assert.equal(pregled.lekcijaZavrsenih, 1);
+  assert.equal(pregled.lekcijaUkupno, 2);
+  assert.equal(pregled.ucenici.find((u) => u.ucenikId === studentId)?.lekcijaZavrsena, true);
+  assert.equal(pregled.ucenici.find((u) => u.ucenikId === studentId)?.status, "zavrseno");
+  assert.equal(pregled.ucenici.find((u) => u.ucenikId === otherStudentId)?.lekcijaZavrsena, false);
+
+  const emptyResponse = await teacherGet(`/api/muallim/zadace/${emptyHomeworkId}/pregled`);
+  assert.equal(emptyResponse.status, 200);
+  const empty = await emptyResponse.json() as {
+    lekcija: unknown;
+    lekcijaZavrsenih: number;
+    lekcijaUkupno: number | null;
+    ucenici: Array<{ lekcijaZavrsena: boolean }>;
+  };
+  assert.equal(empty.lekcija, null);
+  assert.equal(empty.lekcijaZavrsenih, 0);
+  assert.equal(empty.lekcijaUkupno, null);
+  assert.equal(empty.ucenici.every((u) => !u.lekcijaZavrsena), true);
 });
 
 test("ocjena završava grupnu zadaću samo ocijenjenom učeniku", async () => {

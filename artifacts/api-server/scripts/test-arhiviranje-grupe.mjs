@@ -17,7 +17,11 @@ const { Pool } = requireDb("pg");
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) { console.error("DATABASE_URL nije postavljen"); process.exit(1); }
-const JWT_SECRET = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("JWT_SECRET nije postavljen");
+  process.exit(1);
+}
 const API = process.env.API_BASE || "http://localhost:80/api";
 const P = "__arhtest__";
 

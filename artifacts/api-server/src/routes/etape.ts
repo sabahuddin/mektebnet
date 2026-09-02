@@ -10,6 +10,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, lte, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 const router = Router();
 
@@ -29,7 +30,6 @@ router.get("/medaljon/:slug", async (req, res) => {
     if (authHeader?.startsWith("Bearer ")) {
       try {
         const jwt = await import("jsonwebtoken");
-        const JWT_SECRET = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
         const payload = jwt.default.verify(authHeader.slice(7), JWT_SECRET) as { userId: number };
         userId = String(payload.userId);
       } catch {

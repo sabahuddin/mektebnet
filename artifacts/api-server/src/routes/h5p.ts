@@ -1,8 +1,13 @@
 import { Router, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { prilozi, h5pPokusajiTable, studentProgressTable } from "@workspace/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import {
+  lockUntilForAttempt,
+  multiplierForAttempt,
+  rewardCapForAttempt,
+} from "../lib/h5p-rules.js";
 
 const router = Router();
 
@@ -11,18 +16,6 @@ interface DbExecResult<T = Record<string, unknown>> {
 }
 async function exec<T = Record<string, unknown>>(query: ReturnType<typeof sql>): Promise<DbExecResult<T>> {
   return (await db.execute(query)) as unknown as DbExecResult<T>;
-}
-
-// Maksimum hasanata po H5P vježbi pri 100% score-u na PRVOM pokušaju.
-const MAX_HASANATA_PER_H5P = 50;
-
-// Multiplier po broju pokušaja (anti-cheat: ne nagrađuj ponavljanje da bi
-// "farm-ao" hasanate). Treći+ pokušaj služi vježbi/učenju ali ne donosi nove
-// hasanate.
-function multiplierForAttempt(attemptNo: number): number {
-  if (attemptNo <= 1) return 1.0;
-  if (attemptNo === 2) return 0.5;
-  return 0.0;
 }
 
 // POST /api/h5p/result — "server-side" scoring + reward.
@@ -34,9 +27,9 @@ function multiplierForAttempt(attemptNo: number): number {
 // može tehnički POST-ati `score=maxScore` bez rješavanja vježbe.
 //
 // Mitigacije koje primjenjujemo (zato je farming neisplativ, a ne nemoguć):
-//   1) Multiplier po pokušaju: 1.=100%, 2.=50%, 3+=0% — nakon 2 pokušaja
+//   1) Nagrada po pokušaju: 1.=do 5, 2.=do 3, 3+=0 — nakon 2 pokušaja
 //      na istom prilogu nikakav score ne donosi hasanate.
-//   2) MAX 50 hasanata po vježbi (kapa upside) — proporcionalno score-u.
+//   2) Ako je rezultat 100%, novi pokušaj se zaključava 48 sati.
 //   3) Atomski upsert hasanata (lost-update safe).
 //
 // Pravo server-side ocjenjivanje H5P-a zahtijeva H5P CMS server stack
@@ -80,6 +73,27 @@ router.post("/result", requireAuth, requireRole("ucenik"), async (req: Request, 
     if (!prilog) { res.status(404).json({ error: "Prilog nije pronađen" }); return; }
     if (prilog.kind !== "h5p") { res.status(400).json({ error: "Prilog nije H5P vježba" }); return; }
 
+    // Tačan rezultat zaključava sljedeći pokušaj na 48 sati. Provjera je
+    // serverska jer disabled dugme u browseru nije sigurnosna granica.
+    const [lastPerfect] = await db.select({
+      completedAt: h5pPokusajiTable.completedAt,
+      procenat: h5pPokusajiTable.procenat,
+    }).from(h5pPokusajiTable).where(and(
+      eq(h5pPokusajiTable.userId, userId),
+      eq(h5pPokusajiTable.priloziId, priloziId),
+      eq(h5pPokusajiTable.procenat, 100),
+    )).orderBy(desc(h5pPokusajiTable.completedAt)).limit(1);
+    if (lastPerfect) {
+      const lockedUntil = lockUntilForAttempt(lastPerfect.completedAt, lastPerfect.procenat);
+      if (lockedUntil && lockedUntil.getTime() > Date.now()) {
+        res.status(423).json({
+          error: "Vježba je zaključana 48 sati nakon tačno riješenog pokušaja",
+          lockedUntil: lockedUntil.toISOString(),
+        });
+        return;
+      }
+    }
+
     // 2. Atomski izračunaj attempt_no koristeći DB unique index — pokušavamo
     //    INSERT-e dok god dobivamo conflict (max 5 retry-a, što je više nego
     //    dovoljno za realne race condition scenarije).
@@ -95,10 +109,10 @@ router.post("/result", requireAuth, requireRole("ucenik"), async (req: Request, 
     //    za njegov stvarni attemptNo dozvoljava.
     let inserted: typeof h5pPokusajiTable.$inferSelect | null = null;
     for (let retry = 0; retry < 5; retry++) {
-      const multiplier = multiplierForAttempt(attemptNo);
-      // Hasanati = round(score/maxScore × MAX × multiplier).
-      // Proporcionalno score-u (0/10 → 0, 5/10 → 12-13, 10/10 → 50 na 1. pokušaju).
-      const hasanatGained = Math.round((score / maxScore) * MAX_HASANATA_PER_H5P * multiplier);
+      const rewardCap = rewardCapForAttempt(attemptNo);
+      // Nagrada je proporcionalna rezultatu, ali nikad ne prelazi kap za
+      // pokušaj: 100% = 5 na prvom, odnosno 3 na drugom pokušaju.
+      const hasanatGained = Math.round((score / maxScore) * rewardCap);
       try {
         const [row] = await db.insert(h5pPokusajiTable).values({
           userId,
@@ -161,6 +175,7 @@ router.post("/result", requireAuth, requireRole("ucenik"), async (req: Request, 
       maxScore: inserted.maxScore,
       procenat: inserted.procenat,
       multiplier: multiplierForAttempt(inserted.attemptNo),
+      rewardCap: rewardCapForAttempt(inserted.attemptNo),
       hasanatGained: inserted.hasanatGained,
       totalHasanat,
       previousHasanat,
@@ -184,6 +199,12 @@ router.get("/attempts/:priloziId", requireAuth, async (req: Request, res: Respon
         eq(h5pPokusajiTable.priloziId, priloziId),
       ))
       .orderBy(h5pPokusajiTable.attemptNo);
+    const lastPerfect = [...rows].reverse().find(r => r.procenat >= 100);
+    const lockedUntil = lastPerfect
+      ? lockUntilForAttempt(lastPerfect.completedAt, lastPerfect.procenat)
+      : null;
+    const activeLock = lockedUntil && lockedUntil.getTime() > Date.now() ? lockedUntil : null;
+
     res.json({
       attempts: rows.map(r => ({
         attemptNo: r.attemptNo,
@@ -195,6 +216,9 @@ router.get("/attempts/:priloziId", requireAuth, async (req: Request, res: Respon
       })),
       nextAttemptNo: rows.length + 1,
       nextMultiplier: multiplierForAttempt(rows.length + 1),
+      nextReward: rewardCapForAttempt(rows.length + 1),
+      lockedUntil: activeLock?.toISOString() ?? null,
+      isLocked: !!activeLock,
     });
   } catch (e: any) {
     res.status(500).json({ error: e?.message || "Greška servera" });

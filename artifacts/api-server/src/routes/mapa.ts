@@ -12,6 +12,7 @@ import { eq, and, lt, asc, notLike } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { polozeneEtapeNivoa } from "./etape.js";
 import { polozenaKrunisanja } from "./krunisanja.js";
+import { JWT_SECRET } from "../lib/jwt-secret.js";
 import {
   getRasporedPositionsForStudent,
   applyEffectiveOrder,
@@ -107,7 +108,6 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     if (authHeader?.startsWith("Bearer ")) {
       try {
         const jwt = await import("jsonwebtoken");
-        const JWT_SECRET = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
         const payload = jwt.default.verify(authHeader.slice(7), JWT_SECRET) as { userId: number };
         const userIdStr = String(payload.userId);
 

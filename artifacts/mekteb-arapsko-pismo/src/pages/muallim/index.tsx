@@ -271,6 +271,8 @@ interface Zadaca {
   zavrsenih?: number;
   ukupno?: number;
   completed?: boolean;
+  lekcijaZavrsenih?: number;
+  lekcijaUkupno?: number | null;
 }
 
 interface ZadacaStatusRed {
@@ -283,6 +285,8 @@ interface ZadacaStatusRed {
   noviRok: string | null;
   prolongCount: number;
   status: string;
+  lekcijaZavrsena: boolean;
+  lekcijaZavrsenaAt: string | null;
 }
 
 const KAPI_MEDA_OPCIJE = [0, 10, 20, 30];
@@ -3713,9 +3717,15 @@ export default function MuallimPanel() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-extrabold text-foreground text-base">{z.naslov}</h4>
                                     {z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t("Završeno")}</span>}
-                                    {typeof z.ukupno === "number" && z.ukupno > 0 && !z.completed && (
-                                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{t("{zavrsenih}/{ukupno} završeno", { zavrsenih: String(z.zavrsenih ?? 0), ukupno: String(z.ukupno) })}</span>
-                                    )}
+                                     {typeof z.ukupno === "number" && z.ukupno > 0 && (
+                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{t("Pregledano: {zavrsenih}/{ukupno}", { zavrsenih: String(z.zavrsenih ?? 0), ukupno: String(z.ukupno) })}</span>
+                                     )}
+                                     {z.lekcijaSlug && typeof z.lekcijaUkupno === "number" && z.lekcijaUkupno > 0 && (
+                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 flex items-center gap-1">
+                                         <BookOpen className="w-3 h-3" />
+                                         {t("Lekcija: {zavrsenih}/{ukupno}", { zavrsenih: String(z.lekcijaZavrsenih ?? 0), ukupno: String(z.lekcijaUkupno) })}
+                                       </span>
+                                     )}
                                     {isExpired && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{t("Isteklo")}</span>}
                                     {z.ucenikIds && z.ucenikIds.length > 0 ? (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700" title={
@@ -3784,9 +3794,25 @@ export default function MuallimPanel() {
                       <div className="flex items-start justify-between gap-3 p-5 border-b border-border/50">
                         <div className="min-w-0">
                           <h3 className="font-extrabold text-foreground text-lg truncate">{pregledZadaca.naslov}</h3>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {t("Pregled za cijelu grupu — označi urađeno, ocjenu i kapi meda.")}
-                          </p>
+                           <p className="text-xs text-muted-foreground mt-0.5">
+                             {t("Pregled za adresate zadaće — automatski završetak lekcije je odvojen od ručnog pregleda.")}
+                           </p>
+                           {pregledZadaca.lekcijaSlug && (
+                             <div className="flex flex-wrap gap-2 mt-2">
+                               <span className="text-xs font-bold px-2 py-1 rounded-lg bg-violet-100 text-violet-700">
+                                 {t("Lekcija završena: {zavrsenih}/{ukupno}", {
+                                   zavrsenih: String(pregledUcenici.filter(u => u.lekcijaZavrsena).length),
+                                   ukupno: String(pregledUcenici.length),
+                                 })}
+                               </span>
+                               <span className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-100 text-blue-700">
+                                 {t("Ručno pregledano: {zavrsenih}/{ukupno}", {
+                                   zavrsenih: String(pregledUcenici.filter(u => u.status === "zavrseno").length),
+                                   ukupno: String(pregledUcenici.length),
+                                 })}
+                               </span>
+                             </div>
+                           )}
                         </div>
                         <button onClick={() => setPregledZadaca(null)} className="text-muted-foreground hover:text-foreground p-1 shrink-0">
                           <X className="w-5 h-5" />
@@ -3807,6 +3833,14 @@ export default function MuallimPanel() {
                                 <div className="flex items-center justify-between gap-2 mb-3">
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className="font-extrabold text-foreground truncate">{red.displayName}</span>
+                                    {red.lekcijaZavrsena && (
+                                      <span
+                                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0"
+                                        title={red.lekcijaZavrsenaAt ? `${t("Završeno")} ${new Date(red.lekcijaZavrsenaAt).toLocaleString("bs-BA")}` : undefined}
+                                      >
+                                        <BookOpen className="w-3 h-3" /> {t("Lekcija završena")}
+                                      </span>
+                                    )}
                                     {zavrseno && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
                                     {red.prolongCount > 0 && (
                                       <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 shrink-0">
@@ -3818,6 +3852,11 @@ export default function MuallimPanel() {
                                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">{t("Na čekanju")}</span>
                                   )}
                                 </div>
+                                {red.lekcijaZavrsena && red.lekcijaZavrsenaAt && (
+                                  <p className="text-[11px] text-violet-700 mb-3">
+                                    {t("Lekcija završena:")} {new Date(red.lekcijaZavrsenaAt).toLocaleString("bs-BA")}
+                                  </p>
+                                )}
 
                                 <div className="grid grid-cols-2 gap-3">
                                   {/* Uradjeno da/ne */}
