@@ -3134,6 +3134,31 @@ export default function IlmihalLekcijaPage() {
               {savingUvjeti ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
               {t("Preduvjeti:")} {(lekcija.uvjetiIds ?? []).length > 0 ? (lekcija.uvjetiIds ?? []).length : "—"}
             </button>
+            <button
+              onClick={async () => {
+                if (!lekcija || !token) return;
+                const potvrda = window.confirm(
+                  t("Zaista obrisati lekciju „{naslov}“? Ova radnja se ne može poništiti.", { naslov: lekcija.naslov }),
+                );
+                if (!potvrda) return;
+                try {
+                  await apiRequest("DELETE", `/admin/ilmihal/${lekcija.id}`, undefined, token);
+                  toast({ title: t("Lekcija obrisana"), description: t("Vraćam se na listu lekcija.") });
+                  setLocation("/ilmihal/sve");
+                } catch (err: any) {
+                  toast({
+                    title: t("Greška"),
+                    description: err?.message || t("Nije moguće obrisati lekciju."),
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+              data-testid="button-delete-lesson"
+              title={t("Trajno obriši ovu lekciju")}
+            >
+              <Trash2 className="w-3.5 h-3.5" /> {t("Obriši lekciju")}
+            </button>
               </>
             )}
             <button onClick={() => setShowEditor(true)}
