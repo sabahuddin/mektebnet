@@ -1913,7 +1913,7 @@ function PriloziSection({
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-blue-100/50 transition-colors"
       >
         <img
-          src={`${LESSON_ICON_BASE}lekcija-materijali.svg`}
+          src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`}
           alt=""
           aria-hidden="true"
           className="w-9 h-9 object-contain flex-shrink-0"
