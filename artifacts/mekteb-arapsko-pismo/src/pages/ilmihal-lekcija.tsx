@@ -171,16 +171,23 @@ interface LekcijaNav {
 // ──────────────────────────────────────────────────
 // Horizontal lesson strip
 // ──────────────────────────────────────────────────
-function LekcijeStrip({ lekcije, currentSlug, completedIds, onNavigate }: {
+function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigate, onExit }: {
   lekcije: LekcijaNav[];
   currentSlug: string;
+  currentId: number;
   completedIds: Set<number>;
   onNavigate: (slug: string) => void;
+  onExit: () => void;
 }) {
   const { t } = useLanguage();
   const stripRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
-  const currentIdx = lekcije.findIndex(l => l.slug === currentSlug);
+  // ID je stabilniji od sluga (posebno dok se stranica prebacuje na novu rutu).
+  // Slug ostaje fallback za stare/privremene odgovore liste.
+  const currentById = lekcije.findIndex(l => l.id === currentId);
+  const currentIdx = currentById >= 0
+    ? currentById
+    : lekcije.findIndex(l => l.slug === currentSlug);
 
   useEffect(() => {
     if (activeRef.current && stripRef.current) {
@@ -198,16 +205,44 @@ function LekcijeStrip({ lekcije, currentSlug, completedIds, onNavigate }: {
         <button
           onClick={() => prev && onNavigate(prev.slug)}
           disabled={!prev}
-          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors"
+          className="flex-1 min-w-0 h-10 rounded-xl flex items-center justify-center gap-1.5 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-sm font-bold text-muted-foreground"
           title={prev?.naslov}
+          aria-label={t("Nazad")}
+          data-testid="button-lesson-prev"
         >
           <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+          <span>{t("Nazad")}</span>
         </button>
 
-        <div ref={stripRef} className="flex-1 overflow-x-auto scrollbar-hide flex gap-1.5 py-1 px-0.5"
+        <button
+          type="button"
+          onClick={onExit}
+          className="shrink-0 h-10 rounded-xl px-3 flex items-center justify-center gap-1.5 border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors text-sm font-bold"
+          title={t("Vrati se u košnicu")}
+          aria-label={t("U košnicu")}
+          data-testid="button-lesson-hive"
+        >
+          <X className="w-4 h-4" />
+          <span className="hidden sm:inline">{t("U košnicu")}</span>
+        </button>
+
+        <button
+          onClick={() => next && onNavigate(next.slug)}
+          disabled={!next}
+          className="flex-1 min-w-0 h-10 rounded-xl flex items-center justify-center gap-1.5 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-sm font-bold text-muted-foreground"
+          title={next?.naslov}
+          aria-label={t("Sljedeća")}
+          data-testid="button-lesson-next"
+        >
+          <span>{t("Sljedeća")}</span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </button>
+      </div>
+
+      <div ref={stripRef} className="mt-2 overflow-x-auto scrollbar-hide flex gap-1.5 py-1 px-0.5"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {lekcije.map((l, i) => {
-            const isActive = l.slug === currentSlug;
+            const isActive = i === currentIdx;
             const isDone = completedIds.has(l.id);
             const isNext = l.id === nextLessonId;
             return (
@@ -233,16 +268,6 @@ function LekcijeStrip({ lekcije, currentSlug, completedIds, onNavigate }: {
               </button>
             );
           })}
-        </div>
-
-        <button
-          onClick={() => next && onNavigate(next.slug)}
-          disabled={!next}
-          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors"
-          title={next?.naslov}
-        >
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        </button>
       </div>
       {/* Current lesson name + position */}
       <div className="text-center mt-1.5">
@@ -1894,7 +1919,7 @@ function PriloziSection({
           className="w-9 h-9 object-contain flex-shrink-0"
         />
         <span className="font-bold text-blue-800 text-base flex-1">
-          {t("Materijali za nastavu")}
+          {t("Vježbe")}
           {attachments.length > 0 && (
             <span className="ml-2 text-sm font-normal text-blue-500">({attachments.length})</span>
           )}
@@ -3074,8 +3099,6 @@ export default function IlmihalLekcijaPage() {
 
   const NIVO_LABELS: Record<number, string> = { 1: "Nivo 1", 2: "Nivo 2", 3: "Nivo 3" };
   const backNivo = lekcija ? displayNivo(lekcija.nivo) : null;
-  // Za direktno otvorenu lekciju fallback je njena mapa; inače idemo jedan korak nazad.
-  const goBack = () => goBackOr(() => setLocation(backNivo ? `/nivo${backNivo}-mapa` : "/ilmihal"));
 
   if (isLoading) {
     return (
@@ -3387,29 +3410,16 @@ export default function IlmihalLekcijaPage() {
           ) : (
             <h1 className="text-2xl font-extrabold text-foreground leading-tight text-center">{lekcija.naslov}</h1>
           )}
-          <div className="flex justify-center mt-2">
-            <button onClick={goBack}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary font-bold text-sm transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10">
-              <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
-            </button>
-          </div>
-          {(user?.role === "admin" || user?.role === "muallim") && (() => {
-            const nextUndone = lekcijeStrip.find(l => !completedIds.has(l.id) && l.id !== lekcija.id);
-            if (!nextUndone) return null;
-            return (
-              <div className="flex justify-center mt-1">
-                <button
-                  onClick={() => setLocation(`/ilmihal/${nextUndone.slug}`)}
-                  className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-800 hover:underline"
-                  data-testid="link-sljedeca-lekcija"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                  <span className="text-muted-foreground font-semibold">{t("Sljedeća:")}</span>
-                  <span className="truncate max-w-[16rem] sm:max-w-xs">{nextUndone.naslov}</span>
-                </button>
-              </div>
-            );
-          })()}
+          {lekcijeStrip.length > 0 && slug && (
+            <LekcijeStrip
+              lekcije={lekcijeStrip}
+              currentSlug={slug}
+              currentId={lekcija.id}
+              completedIds={completedIds}
+              onNavigate={s => setLocation(`/ilmihal/${s}`)}
+              onExit={() => setLocation(backNivo ? `/nivo${backNivo}-mapa` : "/ilmihal")}
+            />
+          )}
         </div>
 
         {/* Print button */}
@@ -3513,16 +3523,6 @@ export default function IlmihalLekcijaPage() {
           <div className="flex justify-end -mt-3 mb-4 pr-1">
             <PcelaRating tip="lekcija" id={lekcija.id} size={20} align="right" label={t("Ocijeni lekciju")} />
           </div>
-        )}
-
-        {/* Lesson navigation strip — samo muallim/admin (učenik se kreće samo iz Košnice) */}
-        {(user?.role === "admin" || user?.role === "muallim") && lekcijeStrip.length > 1 && slug && (
-          <LekcijeStrip
-            lekcije={lekcijeStrip}
-            currentSlug={slug}
-            completedIds={completedIds}
-            onNavigate={s => setLocation(`/ilmihal/${s}`)}
-          />
         )}
 
         {/* Accordion sections — ordered: story → ilmihal → Provjeri znanje → pitanja → zadatak → other */}
