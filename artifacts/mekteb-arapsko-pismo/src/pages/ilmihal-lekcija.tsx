@@ -2324,7 +2324,7 @@ function PriloziSection({
                   CelebrationModal (z-[60]) se prikazuje IZNAD ovog popupa (z-50). */}
               <Dialog open={!!openH5p} onOpenChange={(o) => { if (!o) setOpenH5p(null); }}>
                 <DialogContent
-                  className="h5p-tablet-modal p-0 gap-0 w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-[95vw] md:max-w-4xl rounded-2xl overflow-hidden flex flex-col [&>button.absolute]:hidden"
+                  className="h5p-centered-modal p-0 gap-0 rounded-2xl overflow-hidden flex flex-col [&>button.absolute]:hidden"
                   data-testid="h5p-modal"
                 >
                   {openH5p && (() => {
@@ -2387,6 +2387,7 @@ function PriloziSection({
                                 contentKey={`${a.id}-${aKey}`}
                                 onCompleted={(r) => handleH5pCompleted(a.id, r.score, r.maxScore)}
                                 isManager={canManage}
+                                className="w-full min-w-0"
                               />
                             </Suspense>
                           )}

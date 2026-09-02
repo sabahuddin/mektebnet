@@ -178,22 +178,57 @@
   }
 
   /*
-    H5P popup na iPad/Safari mora stati unutar stvarno vidljivog viewporta.
-    `vh` na iOS-u uključuje prostor iza browser traka, pa centrirani modal
-    odsiječe zaglavlje i X dugme. Modal zato počinje ispod safe-area ruba,
-    koristi dinamičku visinu i skrola samo svoj sadržaj.
+    H5P modal ima jednu stabilnu geometriju po veličini ekrana:
+    mobitel 90%, tablet 75%, desktop 50%. Radixove ulazne transformacije
+    su isključene jer H5P iframe tokom njih ponavlja resize/repaint i treperi.
   */
-  .h5p-tablet-modal {
-    top: calc(env(safe-area-inset-top, 0px) + 0.5rem) !important;
-    transform: translateX(-50%) !important;
-    height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
-    max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+  .h5p-centered-modal {
+    left: 50% !important;
+    top: 50% !important;
+    width: 90vw !important;
+    max-width: none !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+    transform: translate(-50%, -50%) !important;
+    animation: none !important;
+    transition: none !important;
   }
 
   @supports (height: 100dvh) {
-    .h5p-tablet-modal {
-      height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
-      max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+    .h5p-centered-modal {
+      height: 90dvh !important;
+      max-height: 90dvh !important;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .h5p-centered-modal {
+      width: 75vw !important;
+      height: 75vh !important;
+      max-height: 75vh !important;
+    }
+
+    @supports (height: 100dvh) {
+      .h5p-centered-modal {
+        height: 75dvh !important;
+        max-height: 75dvh !important;
+      }
+    }
+  }
+
+  /* Desktop ima miš/trackpad; iPad u landscape modu ostaje na tablet 75%. */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .h5p-centered-modal {
+      width: 50vw !important;
+      height: 50vh !important;
+      max-height: 50vh !important;
+    }
+
+    @supports (height: 100dvh) {
+      .h5p-centered-modal {
+        height: 50dvh !important;
+        max-height: 50dvh !important;
+      }
     }
   }
 
