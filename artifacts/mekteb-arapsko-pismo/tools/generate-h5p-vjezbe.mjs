@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import AdmZip from "adm-zip";
 import { VJEZBE } from "./h5p-vjezbe-sadrzaj.mjs";
+import { VJEZBE_N3 } from "./h5p-vjezbe-nivo3.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../../..");
@@ -333,7 +334,7 @@ function zatvorenje(direktne) {
 
 // ── gradnja ──────────────────────────────────────────────────────────────
 fs.mkdirSync(OUT_DIR, { recursive: true });
-for (const v of VJEZBE) {
+for (const v of [...VJEZBE, ...VJEZBE_N3]) {
   const omot = OMOTACI[v.tip];
   if (!omot) throw new Error(`Nepoznat tip vježbe: ${v.tip}`);
   const potrebne = zatvorenje(omot.direktne);
