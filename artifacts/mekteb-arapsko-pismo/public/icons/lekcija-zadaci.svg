@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Zadaci</title>
+  <desc id="desc">Saće i lista zadataka</desc>
+  <g stroke="#49320B" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M14 29 28 21l14 8v16l-14 8-14-8Z" fill="#FFB52E"/>
+    <path d="M42 29 56 21l14 8v16l-14 8-14-8Z" fill="#F7931E"/>
+    <path d="M28 53 42 45l14 8v16l-14 8-14-8Z" fill="#FFC83D"/>
+    <path d="M51 54h18v24H51Z" fill="#FFFDF0"/>
+    <path d="m55 61 2 2 4-5M55 68h10M55 73h7" fill="none" stroke="#2C8E88" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Uvodni tekst</title>
+  <desc id="desc">Saće i otvorena knjiga za uvodni tekst</desc>
+  <g stroke="#49320B" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M14 28 28 20l14 8v16l-14 8-14-8Z" fill="#FFB52E"/>
+    <path d="M42 28 56 20l14 8v16l-14 8-14-8Z" fill="#F7931E"/>
+    <path d="M28 52 42 44l14 8v16l-14 8-14-8Z" fill="#FFC83D"/>
+    <path d="M28 61c5-4 10-4 16 0v15c-6-3-11-3-16 0ZM44 61c5-4 10-4 16 0v15c-6-3-11-3-16 0Z" fill="#FFFDF0"/>
+    <path d="M32 65h9M48 65h9" stroke="#8DBCB5" stroke-linecap="round"/>
+  </g>
+</svg>

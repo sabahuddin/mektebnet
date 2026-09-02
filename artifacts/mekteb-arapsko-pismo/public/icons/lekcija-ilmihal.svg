@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Ilmihal</title>
+  <desc id="desc">Saće i knjiga za ilmihal</desc>
+  <g stroke="#49320B" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M17 28 31 20l14 8v16l-14 8-14-8Z" fill="#FFB52E"/>
+    <path d="M45 28 59 20l14 8v16l-14 8-14-8Z" fill="#F7931E"/>
+    <path d="M31 52 45 44l14 8v16l-14 8-14-8Z" fill="#FFC83D"/>
+    <path d="M34 60h22v17H34Z" fill="#FFFDF0"/>
+    <path d="M38 57v-5h14v5M42 52v-5h6v5" fill="none"/>
+    <path d="M38 65h14M38 70h10" stroke="#8DBCB5" stroke-linecap="round"/>
+  </g>
+</svg>

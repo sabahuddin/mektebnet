@@ -27,6 +27,7 @@ import { CelebrationModal, type CelebrationData } from "@/components/celebration
 import confetti from "canvas-confetti";
 const WysiwygEditor = lazy(() => import("@/components/wysiwyg-editor").then(m => ({ default: m.WysiwygEditor })));
 const H5PPlayerLazy = lazy(() => import("@/components/h5p-player").then(m => ({ default: m.H5PPlayer })));
+const LESSON_ICON_BASE = `${import.meta.env.BASE_URL}icons/`;
 
 // Minimalni oblik /mapa/nivo/:nivo odgovora — samo polja potrebna za gate
 // otključavanja lekcije (ista logika kao mapa, vidi @/lib/lekcija-unlock).
@@ -541,6 +542,7 @@ const SECTION_CONFIG = {
     headerText: "text-amber-800",
     Icon: Sparkles,
     iconBg: "bg-amber-100 text-amber-600",
+    illustration: `${LESSON_ICON_BASE}lekcija-uvod.svg`,
   },
   ilmihal: {
     bg: "bg-blue-50",
@@ -549,6 +551,7 @@ const SECTION_CONFIG = {
     headerText: "text-blue-800",
     Icon: BookMarked,
     iconBg: "bg-blue-100 text-blue-700",
+    illustration: `${LESSON_ICON_BASE}lekcija-ilmihal.svg`,
   },
   pitanja: {
     bg: "bg-red-50",
@@ -557,6 +560,7 @@ const SECTION_CONFIG = {
     headerText: "text-red-800",
     Icon: MessageSquare,
     iconBg: "bg-red-100 text-red-600",
+    illustration: `${LESSON_ICON_BASE}lekcija-provjeri.svg`,
   },
   zadatak: {
     bg: "bg-purple-50",
@@ -565,6 +569,7 @@ const SECTION_CONFIG = {
     headerText: "text-purple-800",
     Icon: PenLine,
     iconBg: "bg-purple-100 text-purple-600",
+    illustration: `${LESSON_ICON_BASE}lekcija-zadaci.svg`,
   },
   quiz_box: {
     bg: "bg-white",
@@ -573,6 +578,7 @@ const SECTION_CONFIG = {
     headerText: "text-teal-800",
     Icon: HelpCircle,
     iconBg: "bg-teal-100 text-teal-700",
+    illustration: `${LESSON_ICON_BASE}lekcija-provjeri.svg`,
   },
   priprema: {
     bg: "bg-green-50",
@@ -581,6 +587,7 @@ const SECTION_CONFIG = {
     headerText: "text-green-800",
     Icon: FilePen,
     iconBg: "bg-green-100 text-green-700",
+    illustration: `${LESSON_ICON_BASE}lekcija-materijali.svg`,
   },
   other: {
     bg: "bg-gray-50",
@@ -589,6 +596,7 @@ const SECTION_CONFIG = {
     headerText: "text-gray-800",
     Icon: BookOpen,
     iconBg: "bg-gray-100 text-gray-600",
+    illustration: `${LESSON_ICON_BASE}lekcija-materijali.svg`,
   },
 };
 
@@ -859,9 +867,12 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
           className="flex-1 flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-teal-500/15"
           data-testid="button-toggle-kviz">
           <div className="flex items-center gap-3">
-            <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-teal-100 text-teal-700">
-              <HelpCircle className="w-4 h-4 shrink-0" />
-            </span>
+            <img
+              src={`${LESSON_ICON_BASE}lekcija-provjeri.svg`}
+              alt=""
+              aria-hidden="true"
+              className="w-9 h-9 object-contain shrink-0"
+            />
             <span className="font-extrabold text-sm tracking-wide uppercase text-teal-800">
               {t("Provjeri znanje")}
             </span>
@@ -1287,9 +1298,12 @@ const SectionAccordion = memo(function SectionAccordion({ section, slug, nivo, o
       <button onClick={handleToggle}
         className={`w-full flex items-center justify-between gap-3 px-5 py-4 text-left transition-colors ${cfg.headerBg}`}>
         <div className="flex items-center gap-3">
-          <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${cfg.iconBg}`}>
-            <cfg.Icon className="w-4 h-4 shrink-0" />
-          </span>
+          <img
+            src={cfg.illustration}
+            alt=""
+            aria-hidden="true"
+            className="w-9 h-9 object-contain shrink-0"
+          />
           <span className={`font-extrabold text-sm tracking-wide uppercase ${cfg.headerText}`}>
             {section.title}
           </span>
@@ -1873,7 +1887,12 @@ function PriloziSection({
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-blue-100/50 transition-colors"
       >
-        <Paperclip className="w-5 h-5 text-blue-600 flex-shrink-0" />
+        <img
+          src={`${LESSON_ICON_BASE}lekcija-materijali.svg`}
+          alt=""
+          aria-hidden="true"
+          className="w-9 h-9 object-contain flex-shrink-0"
+        />
         <span className="font-bold text-blue-800 text-base flex-1">
           {t("Materijali za nastavu")}
           {attachments.length > 0 && (
@@ -2101,7 +2120,7 @@ function PriloziSection({
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 min-w-0">
                           <span className="text-2xl flex-shrink-0">
                             {isH5p ? (
-                              <img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-10 h-10 object-contain" />
+                              <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-10 h-10 object-contain" />
                             ) : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
@@ -2147,7 +2166,7 @@ function PriloziSection({
                               >
                                 {isH5pLocked
                                   ? <><Clock className="w-4 h-4" /> {t("Zaključano 48 sati")}</>
-                                  : <><img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-5 h-5 object-contain" /> {t("Otvori vježbu")}</>}
+                                  : <><img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-5 h-5 object-contain" /> {t("Otvori vježbu")}</>}
                               </button>
                             ) : isUrl ? (
                               <a
@@ -2283,7 +2302,7 @@ function PriloziSection({
                     return (
                       <>
                         <div className="px-4 py-3 bg-purple-50 border-b border-purple-200 flex items-center gap-2 flex-shrink-0">
-                          <img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-9 h-9 object-contain flex-shrink-0" />
+                          <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-9 h-9 object-contain flex-shrink-0" />
                           <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-purple-900 truncate">
                             {displayH5pName(a.originalName)}
                           </DialogTitle>
@@ -2291,7 +2310,7 @@ function PriloziSection({
                         <div className="px-4 py-2 bg-purple-50/70 border-b border-purple-100 flex items-center gap-2 flex-shrink-0">
                           {aAtt?.isLocked
                             ? <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                            : <img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                            : <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                           <p className="text-sm font-semibold text-purple-700">
                             {aAtt?.isLocked && aAtt.lockedUntil
                               ? t("Tačno riješeno. Novi pokušaj moguć nakon {date}.", { date: formatH5pLockUntil(aAtt.lockedUntil) })
