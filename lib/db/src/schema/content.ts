@@ -467,8 +467,8 @@ export const rjecnikTable = pgTable("rjecnik", {
 export type Rjecnik = typeof rjecnikTable.$inferSelect;
 
 // H5P pokušaji — server-side scoring; klijent NIKAD ne šalje konačnu vrijednost
-// hasanata. Server čuva sve pokušaje (audit) i računa ih sa multiplier-om
-// po broju pokušaja: 1=100%, 2=50%, 3+=0%.
+// hasanata. Server čuva sve pokušaje (audit): prvi donosi do 5 kapi meda,
+// drugi do 3, a treći i naredni ne donose nagradu.
 export const h5pPokusajiTable = pgTable("h5p_pokusaji", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),

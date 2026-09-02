@@ -58,6 +58,14 @@ interface Prilog {
   hasanatReward?: number;
 }
 
+interface H5pAttemptState {
+  nextAttemptNo: number;
+  nextMultiplier: number;
+  nextReward: number;
+  lockedUntil: string | null;
+  isLocked: boolean;
+}
+
 interface Lekcija {
   id: number;
   nivo: number;
@@ -119,6 +127,22 @@ function formatDuration(totalSeconds: number): string {
   const sec = s % 60;
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m ${sec}s`;
+}
+
+function displayH5pName(name: string): string {
+  return name.replace(/\.h5p$/i, "");
+}
+
+function formatH5pLockUntil(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return date.toLocaleString("bs-BA", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 interface AccordionSection {
@@ -1562,7 +1586,7 @@ function PriloziSection({
   const [h5pSubmitting, setH5pSubmitting] = useState<Record<number, boolean>>({});
   // Po-prilogu: koliko pokušaja je učenik već imao (određuje multiplier
   // za sljedeći pokušaj — prikaz "možeš osvojiti do X hasenata").
-  const [h5pAttempts, setH5pAttempts] = useState<Record<number, { nextAttemptNo: number; nextMultiplier: number }>>({});
+  const [h5pAttempts, setH5pAttempts] = useState<Record<number, H5pAttemptState>>({});
   const { toast } = useToast();
 
   // Fetch attempts za sve H5P priloge na mount-u (i kad se attachments lista mijenja).
@@ -1572,13 +1596,13 @@ function PriloziSection({
     if (h5ps.length === 0) return;
     let cancelled = false;
     (async () => {
-      const updates: Record<number, { nextAttemptNo: number; nextMultiplier: number }> = {};
+      const updates: Record<number, H5pAttemptState> = {};
       for (const a of h5ps) {
         try {
-          const res = await apiRequest<{ nextAttemptNo: number; nextMultiplier: number }>(
+          const res = await apiRequest<H5pAttemptState>(
             "GET", `/h5p/attempts/${a.id}`, undefined, token,
           );
-          updates[a.id] = { nextAttemptNo: res.nextAttemptNo, nextMultiplier: res.nextMultiplier };
+          updates[a.id] = res;
         } catch { /* ignore — admin/muallim ne dobija; ucenik dobija */ }
       }
       if (!cancelled) setH5pAttempts(prev => ({ ...prev, ...updates }));
@@ -1630,12 +1654,12 @@ function PriloziSection({
   const refreshH5pAttempts = useCallback(async (priloziId: number) => {
     if (!token) return;
     try {
-      const fresh = await apiRequest<{ nextAttemptNo: number; nextMultiplier: number }>(
+      const fresh = await apiRequest<H5pAttemptState>(
         "GET", `/h5p/attempts/${priloziId}`, undefined, token,
       );
       setH5pAttempts(prev => ({
         ...prev,
-        [priloziId]: { nextAttemptNo: fresh.nextAttemptNo, nextMultiplier: fresh.nextMultiplier },
+        [priloziId]: fresh,
       }));
     } catch {/* ignore — npr. admin/muallim ne dobija ovaj endpoint */}
   }, [token]);
@@ -1654,6 +1678,7 @@ function PriloziSection({
         maxScore: number;
         procenat: number;
         multiplier: number;
+        rewardCap: number;
         hasanatGained: number;
         totalHasanat: number;
         previousHasanat: number;
@@ -1670,13 +1695,33 @@ function PriloziSection({
       } else {
         const reason = res.attemptNo >= 3
           ? t("Ovo je tvoj {n}. pokušaj — daljnji pokušaji ne donose kapi meda.", { n: String(res.attemptNo) })
-          : t("Pokušaj {n}: {procenat}%", { n: String(res.attemptNo), procenat: String(res.procenat) });
+          : t("Pokušaj {n}: {procenat}%. Nagrada za ovaj pokušaj: do {reward} kapi meda.", {
+              n: String(res.attemptNo),
+              procenat: String(res.procenat),
+              reward: String(res.rewardCap),
+            });
         toast({ title: t("Vježba završena"), description: reason });
       }
       // Refresh attempts za ovaj prilog (smanji prikazani max za sljedeći put).
       await refreshH5pAttempts(priloziId);
     } catch (err: any) {
-      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+      if (err?.status === 423 && err?.data?.lockedUntil) {
+        const lockedUntil = String(err.data.lockedUntil);
+        setH5pAttempts(prev => ({
+          ...prev,
+          [priloziId]: {
+            ...(prev[priloziId] ?? { nextAttemptNo: 2, nextMultiplier: 0.6, nextReward: 3 }),
+            lockedUntil,
+            isLocked: true,
+          },
+        }));
+        toast({
+          title: t("Vježba je privremeno zaključana"),
+          description: t("Tačan rezultat omogućava novi pokušaj nakon 48 sati."),
+        });
+      } else {
+        toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+      }
     } finally {
       setH5pSubmitting(prev => ({ ...prev, [priloziId]: false }));
     }
@@ -2052,38 +2097,46 @@ function PriloziSection({
                     // sadržaj se servira iz "/uploads", ne "/api/uploads". Sam URL se
                     // koristi u H5P popup-u (vidi openH5p Dialog), ne više inline.
                     const attemptKey = h5pAttemptKey[a.id] ?? 0;
-                    // Attempt-aware nagrada: koliko hasanata je moguće osvojiti za
-                    // sljedeći pokušaj na ovoj vježbi (uzima u obzir prošle pokušaje).
                     const att = isH5p ? h5pAttempts[a.id] : null;
-                    const nextMult = att?.nextMultiplier ?? 1;
-                    const maxNext = Math.round(50 * nextMult);
+                    const nextAttemptNo = att?.nextAttemptNo ?? 1;
+                    const maxNext = att?.nextReward ?? (nextAttemptNo <= 1 ? 5 : nextAttemptNo === 2 ? 3 : 0);
+                    const isH5pLocked = !!att?.isLocked;
                     return (
                       <div key={a.id} className="flex flex-col gap-2 min-w-0 max-w-full bg-white rounded-xl border border-blue-100 p-3 hover:shadow-md transition-shadow">
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 min-w-0">
                           <span className="text-2xl flex-shrink-0">
-                            {isH5p ? "🧩" : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
+                            {isH5p ? (
+                              <img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-10 h-10 object-contain" />
+                            ) : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-base text-gray-800 break-words">{a.originalName}</p>
+                              <p className="font-semibold text-base text-gray-800 break-words">
+                                {isH5p ? displayH5pName(a.originalName) : a.originalName}
+                              </p>
                               {isAdmin && a.approved === false && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 flex-shrink-0">
                                   {t("Čeka odobrenje")}
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-400 truncate">
-                              {isH5p
-                                ? (maxNext > 0
-                                    ? t("Interaktivna vježba — Pokušaj {n} · do {max} {unit} 🍯", { n: String(att?.nextAttemptNo ?? 1), max: String(maxNext), unit: maxNext === 1 ? t("kap meda") : t("kapi meda") })
-                                    : t("Interaktivna vježba — Pokušaj {n} · bez kapi meda", { n: String(att?.nextAttemptNo ?? 1) }))
-                                : isEmbed ? t("Embed vježba (bez kapi meda)") : isUrl ? targetUrl : formatFileSize(a.fileSize)}
-                            </p>
+                            {isH5pLocked && att?.lockedUntil && (
+                              <p className="text-xs text-amber-700 font-semibold">
+                                {t("Novi pokušaj moguć nakon")} {formatH5pLockUntil(att.lockedUntil)}
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
                             {isH5p ? (
                               <button
                                 onClick={() => {
+                                  if (isH5pLocked) {
+                                    toast({
+                                      title: t("Vježba je privremeno zaključana"),
+                                      description: t("Tačan rezultat omogućava novi pokušaj nakon 48 sati."),
+                                    });
+                                    return;
+                                  }
                                   // Svaki put kad se otvori popup: nova instanca
                                   // playera (contentKey se mijenja) + osvježen
                                   // brojač pokušaja da badge pokaže tačan
@@ -2092,11 +2145,14 @@ function PriloziSection({
                                   void refreshH5pAttempts(a.id);
                                   setOpenH5p(a);
                                 }}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
+                                disabled={isH5pLocked}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
                                 title={t("Otvori vježbu")}
                                 data-testid={`h5p-open-${a.id}`}
                               >
-                                <Sparkles className="w-4 h-4" /> {t("Otvori vježbu")}
+                                {isH5pLocked
+                                  ? <><Clock className="w-4 h-4" /> {t("Zaključano 48 sati")}</>
+                                  : <><img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-5 h-5 object-contain" /> {t("Otvori vježbu")}</>}
                               </button>
                             ) : isUrl ? (
                               <a
@@ -2226,33 +2282,36 @@ function PriloziSection({
                     const a = openH5p;
                     const aKey = h5pAttemptKey[a.id] ?? 0;
                     const aAtt = h5pAttempts[a.id];
-                    const aMult = aAtt?.nextMultiplier ?? 1;
-                    const aMax = Math.round(50 * aMult);
+                    const aAttemptNo = aAtt?.nextAttemptNo ?? 1;
+                    const aMax = aAtt?.nextReward ?? (aAttemptNo <= 1 ? 5 : aAttemptNo === 2 ? 3 : 0);
                     const aUrl = a.url;
                     return (
                       <>
                         <div className="px-4 py-3 bg-purple-50 border-b border-purple-200 flex items-center gap-2 flex-shrink-0">
-                          <span className="text-2xl flex-shrink-0">🧩</span>
+                          <img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-9 h-9 object-contain flex-shrink-0" />
                           <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-purple-900 truncate">
-                            {a.originalName}
+                            {displayH5pName(a.originalName)}
                           </DialogTitle>
                         </div>
                         <div className="px-4 py-2 bg-purple-50/70 border-b border-purple-100 flex items-center gap-2 flex-shrink-0">
-                          <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                          {aAtt?.isLocked
+                            ? <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                            : <img src={`${import.meta.env.BASE_URL}icons/h5p-vjezba.svg`} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                           <p className="text-sm font-semibold text-purple-700">
-                            {aMax > 0
+                            {aAtt?.isLocked && aAtt.lockedUntil
+                              ? t("Tačno riješeno. Novi pokušaj moguć nakon {date}.", { date: formatH5pLockUntil(aAtt.lockedUntil) })
+                              : aMax > 0
                               ? <>
-                                  {t("Pokušaj")} <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
+                                  {t("Pokušaj")} <span className="text-purple-900">{aAttemptNo}</span>
                                   {" — "}
-                                  <span className="text-purple-900">{Math.round(aMult * 100)}{t("% nagrade")}</span>
-                                  {" "}{t("· možeš osvojiti do")}{" "}
+                                  <span className="text-purple-900">{t("možeš osvojiti do")}{" "}</span>
                                   <span className="text-purple-900">{aMax} {aMax === 1 ? t("kap meda") : t("kapi meda")} 🍯</span>
                                 </>
                               : <>
-                                  {t("Pokušaj")} <span className="text-purple-900">{aAtt?.nextAttemptNo ?? 1}</span>
+                                  {t("Pokušaj")} <span className="text-purple-900">{aAttemptNo}</span>
                                   {" — "}
                                   <span className="text-purple-900">{t("više pokušaja ne donosi kapi meda")}</span>
-                                  {" ("}{t("već")}{" "}{Math.max(0, (aAtt?.nextAttemptNo ?? 1) - 1)} {t("pokušaja")}{")"}
+                                  {" ("}{t("već")}{" "}{Math.max(0, aAttemptNo - 1)} {t("pokušaja")}{")"}
                                 </>
                             }
                           </p>
@@ -2274,7 +2333,7 @@ function PriloziSection({
                           )}
                         </div>
                         <p className="px-4 py-2 text-xs text-purple-500 bg-purple-50/60 flex-shrink-0">
-                          {t("Maks. 50 kapi meda. 1. pokušaj: 100% nagrade, 2. pokušaj: 50%, 3+: bez nagrade.")}
+                          {t("Prvi pokušaj: do 5 kapi meda. Drugi pokušaj: do 3 kapi meda. Nakon tačnog rezultata novi pokušaj je zaključan 48 sati.")}
                         </p>
                       </>
                     );
