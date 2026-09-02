@@ -195,14 +195,26 @@ function singleChoiceSet(v) {
     choices: v.pitanja.map((p) => ({ question: `<p>${p.pitanje}</p>`, answers: p.odgovori.map((a) => `<p>${a}</p>`) })),
     behaviour: { timeoutCorrect: 2000, timeoutWrong: 3000, soundEffectsEnabled: false, enableRetry: true, enableSolutionsButton: true, passPercentage: 70, autoContinue: true },
     overallFeedback: POVRATNA,
+    // SVI l10n ključevi iz semantics.json. Slajd s rezultatom čita
+    // resultHeader, totalScore, resultTableHeader, resultScoreTableHeader i
+    // correctAnswerIntroduction — ako ijedan fali, slajd se iscrta prazan
+    // (visina 0) i djetetu se nakon zadnjeg pitanja ne prikaže ništa.
     l10n: {
-      nextButtonLabel: "Sljedeće pitanje", showSolutionButtonLabel: "Prikaži rješenje",
-      retryButtonLabel: "Pokušaj ponovo", solutionViewTitle: "Rješenja",
+      nextButtonLabel: "Sljedeće pitanje", nextButton: "Dalje",
+      showResultsButtonLabel: "Prikaži rezultat", retryButtonLabel: "Pokušaj ponovo",
+      solutionViewTitle: "Pregled rješenja",
       correctText: "Tačno!", incorrectText: "Netačno!",
+      shouldSelect: "Ovo je trebalo odabrati", shouldNotSelect: "Ovo nije trebalo odabrati",
       muteButtonLabel: "Isključi zvuk", closeButtonLabel: "Zatvori",
-      slideOfTotal: "Pitanje :num od :total", scoreBarLabel: "Osvojio/la si :num od :total bodova",
-      solutionListQuestionNumber: "Pitanje :num", resultSlideTitle: "Tvoj rezultat:",
-      shouldSelect: "Trebalo je odabrati", shouldNotSelect: "Nije trebalo odabrati", ...A11Y,
+      slideOfTotal: "Pitanje :num od :total",
+      scoreBarLabel: "Osvojio/la si :num od :total bodova",
+      solutionListQuestionNumber: "Pitanje :num",
+      resultHeader: "Tvoj rezultat:",
+      totalScore: ":score od :maxScore tačno",
+      resultTableHeader: "Pitanje",
+      resultScoreTableHeader: "Bodovi",
+      correctAnswerIntroduction: "Tačan odgovor",
+      a11yShowSolution: A11Y.a11yShowSolution, a11yRetry: A11Y.a11yRetry,
     },
   };
 }
@@ -244,6 +256,8 @@ function flashcards(v) {
     defaultAnswerText: "Upiši odgovor", correctAnswerText: "Tačno",
     incorrectAnswerText: "Netačno", showSolutionText: "Tačan odgovor:",
     results: "Rezultat", ofCorrect: "@score od @total tačno",
+    scoreHeader: "Bodovi",
+    correctAnswerAnnouncement: "@answer je tačno.",
     showResults: "Prikaži rezultat", answerShortText: "Odgovor:",
     retry: "Pokušaj ponovo", caseSensitive: false,
     cardAnnouncement: "Netačan odgovor. Tačan odgovor je @answer",
@@ -253,7 +267,12 @@ function flashcards(v) {
 
 const OMOTACI = {
   set: { fn: questionSet, main: "H5P.QuestionSet", direktne: ["H5P.QuestionSet", "H5P.MultiChoice", "H5P.TrueFalse", "H5P.Blanks", "H5P.DragText", "H5P.MarkTheWords"] },
-  scs: { fn: singleChoiceSet, main: "H5P.SingleChoiceSet", direktne: ["H5P.SingleChoiceSet"] },
+  // H5P.Components je OBAVEZAN uz SingleChoiceSet iako ga library.json ne
+  // navodi: result-slide.js zove H5P.Components.ResultScreen, a
+  // single-choice-set.js H5P.Components.Navigation. Bez njega se nakon
+  // zadnjeg pitanja baci "Cannot read properties of undefined
+  // (reading 'ResultScreen')" i slajd s rezultatom ostane prazan.
+  scs: { fn: singleChoiceSet, main: "H5P.SingleChoiceSet", direktne: ["H5P.SingleChoiceSet", "H5P.Components"] },
   kartice: { fn: dialogCards, main: "H5P.Dialogcards", direktne: ["H5P.Dialogcards"] },
   flash: { fn: flashcards, main: "H5P.Flashcards", direktne: ["H5P.Flashcards"] },
 };
