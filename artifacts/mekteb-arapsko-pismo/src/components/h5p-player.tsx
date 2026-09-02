@@ -68,6 +68,8 @@ export interface H5PErrorInfo {
 export interface H5PPlayerProps {
   /** Apsolutni URL do otpakirane H5P arhive (root direktorija sa h5p.json). */
   h5pPath: string;
+  /** Stvarna visina H5P sadržaja nakon učitavanja, za prilagodljivi popup. */
+  onContentHeightChange?: (height: number) => void;
   /** Pozove se kad korisnik završi vježbu (xAPI verb completed/answered sa rezultatom). */
   onCompleted?: (result: H5PXapiResult) => void;
   /**
@@ -219,6 +221,7 @@ function classifyInitError(e: any): H5PErrorKind {
  */
 function H5PPlayerImpl({
   h5pPath,
+  onContentHeightChange,
   onCompleted,
   isManager,
   className,
@@ -228,6 +231,10 @@ function H5PPlayerImpl({
   const [errorInfo, setErrorInfo] = useState<H5PErrorInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const completedFiredRef = useRef(false);
+  const onContentHeightChangeRef = useRef(onContentHeightChange);
+  useEffect(() => {
+    onContentHeightChangeRef.current = onContentHeightChange;
+  }, [onContentHeightChange]);
   // Drži najsvježiji onCompleted u ref-u da ga ne uvlačimo u deps useEffect-a.
   // Inače, ako roditelj proslijedi inline arrow funkciju (npr. (r) => handle(a.id, r)),
   // svaki render bi okidao re-mount playera → blinkanje vježbe.
@@ -235,6 +242,17 @@ function H5PPlayerImpl({
   useEffect(() => {
     onCompletedRef.current = onCompleted;
   }, [onCompleted]);
+
+  useEffect(() => {
+    const target = containerRef.current;
+    if (!target || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const height = Math.ceil(entry?.contentRect.height ?? 0);
+      if (height > 0) onContentHeightChangeRef.current?.(height);
+    });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

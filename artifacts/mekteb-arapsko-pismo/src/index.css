@@ -187,7 +187,8 @@
     margin: auto !important;
     width: 90vw !important;
     max-width: none !important;
-    height: 90vh !important;
+    height: min(90dvh, calc(var(--h5p-player-height, 320px) + 124px)) !important;
+    min-height: min(320px, 90dvh) !important;
     max-height: 90vh !important;
     --tw-translate-x: 0px !important;
     --tw-translate-y: 0px !important;
@@ -199,7 +200,6 @@
 
   @supports (height: 100dvh) {
     .h5p-centered-modal {
-      height: 90dvh !important;
       max-height: 90dvh !important;
     }
   }
@@ -207,13 +207,13 @@
   @media (min-width: 640px) {
     .h5p-centered-modal {
       width: 75vw !important;
-      height: 75vh !important;
+      height: min(75dvh, calc(var(--h5p-player-height, 320px) + 124px)) !important;
+      min-height: min(320px, 75dvh) !important;
       max-height: 75vh !important;
     }
 
     @supports (height: 100dvh) {
       .h5p-centered-modal {
-        height: 75dvh !important;
         max-height: 75dvh !important;
       }
     }
@@ -223,16 +223,23 @@
   @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
     .h5p-centered-modal {
       width: 50vw !important;
-      height: 75vh !important;
+      height: min(75dvh, calc(var(--h5p-player-height, 320px) + 124px)) !important;
+      min-height: min(320px, 75dvh) !important;
       max-height: 75vh !important;
     }
 
     @supports (height: 100dvh) {
       .h5p-centered-modal {
-        height: 75dvh !important;
         max-height: 75dvh !important;
       }
     }
+  }
+
+  /* H5P sadržaj određuje visinu modala dok ne dosegne viewport limit. */
+  .h5p-modal-body {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   /* === MAPA pozadina (Nivo 1) ===
