@@ -177,6 +177,26 @@
     }
   }
 
+  /*
+    H5P popup na iPad/Safari mora stati unutar stvarno vidljivog viewporta.
+    `vh` na iOS-u uključuje prostor iza browser traka, pa centrirani modal
+    odsiječe zaglavlje i X dugme. Modal zato počinje ispod safe-area ruba,
+    koristi dinamičku visinu i skrola samo svoj sadržaj.
+  */
+  .h5p-tablet-modal {
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem) !important;
+    transform: translateX(-50%) !important;
+    height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+    max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+  }
+
+  @supports (height: 100dvh) {
+    .h5p-tablet-modal {
+      height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+      max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+    }
+  }
+
   /* === MAPA pozadina (Nivo 1) ===
      Cijela pozadina je dekorativna ilustracija (saće, pčele, cvijeće),
      fixed na viewport tako da se ne pomjera dok korisnik skroluje. */

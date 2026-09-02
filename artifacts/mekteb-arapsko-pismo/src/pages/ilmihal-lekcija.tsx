@@ -2324,7 +2324,7 @@ function PriloziSection({
                   CelebrationModal (z-[60]) se prikazuje IZNAD ovog popupa (z-50). */}
               <Dialog open={!!openH5p} onOpenChange={(o) => { if (!o) setOpenH5p(null); }}>
                 <DialogContent
-                  className="p-0 gap-0 max-w-[100vw] sm:max-w-[95vw] md:max-w-4xl w-full h-[100dvh] sm:h-[92vh] sm:rounded-2xl rounded-none overflow-hidden flex flex-col"
+                  className="h5p-tablet-modal p-0 gap-0 w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-[95vw] md:max-w-4xl rounded-2xl overflow-hidden flex flex-col [&>button.absolute]:hidden"
                   data-testid="h5p-modal"
                 >
                   {openH5p && (() => {
@@ -2341,6 +2341,16 @@ function PriloziSection({
                           <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-purple-900 truncate">
                             {displayH5pName(a.originalName)}
                           </DialogTitle>
+                          <button
+                            type="button"
+                            onClick={() => setOpenH5p(null)}
+                            className="min-h-11 px-3 rounded-xl bg-white border border-purple-200 text-purple-800 font-bold text-sm inline-flex items-center gap-1.5 flex-shrink-0"
+                            aria-label={t("Zatvori vježbu")}
+                            data-testid="h5p-modal-close"
+                          >
+                            <X className="w-5 h-5" />
+                            <span className="hidden sm:inline">{t("Zatvori")}</span>
+                          </button>
                         </div>
                         <div className="px-4 py-2 bg-purple-50/70 border-b border-purple-100 flex items-center gap-2 flex-shrink-0">
                           {aAtt?.isLocked
@@ -2365,7 +2375,7 @@ function PriloziSection({
                             }
                           </p>
                         </div>
-                        <div className="flex-1 overflow-auto bg-white px-4 sm:px-6 py-4">
+                        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white px-4 sm:px-6 py-4 [-webkit-overflow-scrolling:touch]">
                           {aUrl && (
                             <Suspense fallback={
                               <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
