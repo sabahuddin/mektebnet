@@ -1,42 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
   <title id="title">Pčela piše za stolom</title>
-  <desc id="desc">Pčela koja sjedi za stolom i piše, u zlatnoj kapi meda</desc>
-  <defs>
-    <linearGradient id="honey" x1="18" y1="10" x2="78" y2="86" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFE58A"/>
-      <stop offset="1" stop-color="#E89A18"/>
-    </linearGradient>
-    <linearGradient id="wing" x1="31" y1="31" x2="58" y2="63" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#DDF4F2"/>
-    </linearGradient>
-  </defs>
-  <path d="M48 7C29 7 15 21 15 39c0 20 13 34 33 50 20-16 33-30 33-50C81 21 67 7 48 7Z" fill="url(#honey)" stroke="#A9650B" stroke-width="3"/>
-  <path d="M25 40h46M29 52h38M36 64h24" stroke="#B8750E" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+  <desc id="desc">Jednostavna pčela iz profila koja piše za stolom</desc>
 
-  <!-- Wings and antennae behind the bee -->
-  <ellipse cx="34" cy="31" rx="9" ry="13" fill="url(#wing)" stroke="#4EAAA4" stroke-width="2" transform="rotate(-32 34 31)"/>
-  <ellipse cx="61" cy="31" rx="9" ry="13" fill="url(#wing)" stroke="#4EAAA4" stroke-width="2" transform="rotate(32 61 31)"/>
-  <path d="M45 19v-6M52 19l5-6" stroke="#553A0B" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Jednostavna pčela iz profila, bez pozadine -->
+  <path d="M35 35c-4-10 1-17 9-18 7-1 12 4 12 11 0 3-1 6-3 8" fill="#DDF4F2" stroke="#2C8E88" stroke-width="2.5"/>
+  <path d="M43 18c-1-5 1-8 5-11M49 18c3-5 6-6 9-6" fill="none" stroke="#49320B" stroke-width="2.2" stroke-linecap="round"/>
+  <ellipse cx="43" cy="37" rx="17" ry="14" fill="#F6B928" stroke="#49320B" stroke-width="2.5"/>
+  <path d="M34 27l17 4M29 37l30 0M31 47l23-4" fill="none" stroke="#49320B" stroke-width="4" stroke-linecap="round"/>
+  <path d="M54 31c7 1 11 5 12 10-4 2-8 1-12-1" fill="#F6B928" stroke="#49320B" stroke-width="2.5"/>
+  <circle cx="59" cy="34" r="2.2" fill="#241A08"/>
+  <path d="M65 41l6 1" stroke="#49320B" stroke-width="2" stroke-linecap="round"/>
 
-  <!-- Bee sitting behind the desk -->
-  <ellipse cx="48" cy="37" rx="15" ry="19" fill="#F6B928" stroke="#7C520E" stroke-width="2.5"/>
-  <path d="M35 30h26M33 39h30M35 48h26" stroke="#553A0B" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="42" cy="34" r="2.2" fill="#352507"/>
-  <circle cx="53" cy="34" r="2.2" fill="#352507"/>
-  <path d="M43 41c3 2 7 2 10 0" stroke="#553A0B" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Papir, ruka i olovka -->
+  <path d="M48 45c4 4 7 7 11 9" fill="none" stroke="#49320B" stroke-width="4" stroke-linecap="round"/>
+  <path d="M49 46h19l-2 14H47Z" fill="#FFFDF0" stroke="#49320B" stroke-width="1.8"/>
+  <path d="M53 51h10M52 55h9" stroke="#8DBCB5" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M61 48l10 10" stroke="#D65A2F" stroke-width="3" stroke-linecap="round"/>
+  <path d="M70 58l2 2-3-1Z" fill="#49320B"/>
 
-  <!-- Paper, writing hand and pencil on the desk -->
-  <path d="M40 50c4 2 6 5 9 8M56 50c-2 3-4 5-7 8" fill="none" stroke="#7C520E" stroke-width="4" stroke-linecap="round"/>
-  <path d="M42 48h18l-2 12H40Z" fill="#FFFDF0" stroke="#7C520E" stroke-width="1.8"/>
-  <path d="M45 52h10M44 55h10M44 58h7" stroke="#A7C7C2" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M54 53l10 7" stroke="#D65A2F" stroke-width="3" stroke-linecap="round"/>
-  <path d="M63 60l2 2-3-1Z" fill="#553A0B"/>
-
-  <!-- Wooden desk -->
-  <path d="M25 60h46l-3 6H28Z" fill="#9A5B16" stroke="#70410D" stroke-width="2"/>
-  <path d="M29 66h38v8H29Z" fill="#B87520" stroke="#70410D" stroke-width="2"/>
-  <path d="M33 67v6M63 67v6" stroke="#70410D" stroke-width="2"/>
-  <path d="M25 60h46" stroke="#FFE08A" stroke-width="2" stroke-linecap="round" opacity=".8"/>
-  <circle cx="27" cy="19" r="3" fill="#FFF3B6" opacity=".9"/>
+  <!-- Jednostavan sto -->
+  <path d="M25 61h48l-3 6H28Z" fill="#A86B22" stroke="#70410D" stroke-width="2"/>
+  <path d="M30 67v10M68 67v10" fill="none" stroke="#70410D" stroke-width="3" stroke-linecap="round"/>
+  <path d="M25 61h48" stroke="#E3A844" stroke-width="2" stroke-linecap="round"/>
 </svg>
