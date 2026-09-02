@@ -223,14 +223,14 @@
   @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
     .h5p-centered-modal {
       width: 50vw !important;
-      height: 50vh !important;
-      max-height: 50vh !important;
+      height: 75vh !important;
+      max-height: 75vh !important;
     }
 
     @supports (height: 100dvh) {
       .h5p-centered-modal {
-        height: 50dvh !important;
-        max-height: 50dvh !important;
+        height: 75dvh !important;
+        max-height: 75dvh !important;
       }
     }
   }

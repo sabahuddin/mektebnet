@@ -2209,7 +2209,7 @@ function PriloziSection({
                                     return;
                                   }
                                   // Svaki put kad se otvori popup: nova instanca
-                                  // playera (contentKey se mijenja) + osvježen
+                                  // playera (React key se mijenja) + osvježen
                                   // brojač pokušaja da badge pokaže tačan
                                   // "Pokušaj X — Y%".
                                    setH5pCompletion(prev => ({ ...prev, [a.id]: null }));
@@ -2458,8 +2458,8 @@ function PriloziSection({
                               </div>
                             }>
                               <H5PPlayerLazy
+                                key={`${a.id}-${aKey}-${aUrl}`}
                                 h5pPath={aUrl}
-                                contentKey={`${a.id}-${aKey}`}
                                 onCompleted={(r) => handleH5pCompleted(a.id, r.score, r.maxScore)}
                                 isManager={canManage}
                                 className="w-full min-w-0"

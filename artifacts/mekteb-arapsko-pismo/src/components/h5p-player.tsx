@@ -68,8 +68,6 @@ export interface H5PErrorInfo {
 export interface H5PPlayerProps {
   /** Apsolutni URL do otpakirane H5P arhive (root direktorija sa h5p.json). */
   h5pPath: string;
-  /** Stabilan ključ — kad se promijeni, player se re-mountuje (npr. "Pokušaj ponovo"). */
-  contentKey?: string | number;
   /** Pozove se kad korisnik završi vježbu (xAPI verb completed/answered sa rezultatom). */
   onCompleted?: (result: H5PXapiResult) => void;
   /**
@@ -221,7 +219,6 @@ function classifyInitError(e: any): H5PErrorKind {
  */
 function H5PPlayerImpl({
   h5pPath,
-  contentKey,
   onCompleted,
   isManager,
   className,
@@ -255,7 +252,7 @@ function H5PPlayerImpl({
 
         await loadH5PBundle();
         if (cancelled || !containerRef.current) return;
-        // Očisti prethodni sadržaj (re-mount na contentKey change).
+        // Nova komponenta uvijek počinje sa praznim H5P korijenom.
         containerRef.current.innerHTML = "";
         const w = window as any;
         const H5PCtor = w.H5PStandalone?.H5P;
@@ -326,7 +323,12 @@ function H5PPlayerImpl({
         containerRef.current.innerHTML = "";
       }
     };
-  }, [h5pPath, contentKey]);
+    // Instanca se namjerno inicijalizira samo jednom tokom ovog mounta.
+    // Ručni novi pokušaj parent pokreće promjenom React `key` propa, što pravi
+    // potpuno novu komponentu. Parent re-renderi i osvježavanje attempt stanja
+    // zato više ne mogu očistiti i ponovo pokrenuti aktivnu H5P vježbu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const managerHint = errorInfo && isManager ? describeManagerHint(errorInfo.kind, t) : null;
 
@@ -373,7 +375,6 @@ function H5PPlayerImpl({
 export const H5PPlayer = memo(H5PPlayerImpl, (prev, next) => {
   return (
     prev.h5pPath === next.h5pPath &&
-    prev.contentKey === next.contentKey &&
     prev.isManager === next.isManager &&
     prev.className === next.className
   );
