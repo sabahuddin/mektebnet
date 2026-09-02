@@ -26,6 +26,7 @@ import AdmZip from "adm-zip";
 import { VJEZBE } from "./h5p-vjezbe-sadrzaj.mjs";
 import { VJEZBE_N3 } from "./h5p-vjezbe-nivo3.mjs";
 import { VJEZBE_N3B } from "./h5p-vjezbe-nivo3b.mjs";
+import { VJEZBE_N3L } from "./h5p-vjezbe-n3-lekcije.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../../..");
@@ -335,7 +336,7 @@ function zatvorenje(direktne) {
 
 // ── gradnja ──────────────────────────────────────────────────────────────
 fs.mkdirSync(OUT_DIR, { recursive: true });
-for (const v of [...VJEZBE, ...VJEZBE_N3, ...VJEZBE_N3B]) {
+for (const v of [...VJEZBE, ...VJEZBE_N3, ...VJEZBE_N3B, ...VJEZBE_N3L]) {
   const omot = OMOTACI[v.tip];
   if (!omot) throw new Error(`Nepoznat tip vježbe: ${v.tip}`);
   const potrebne = zatvorenje(omot.direktne);
@@ -351,6 +352,6 @@ for (const v of [...VJEZBE, ...VJEZBE_N3, ...VJEZBE_N3B]) {
   const out = path.join(OUT_DIR, `${v.slug}.h5p`);
   zip.writeZip(out);
   const broj = v.pitanja?.length ?? v.kartice?.length ?? 0;
-  console.log(`✓ ${v.slug}.h5p — ${omot.main.replace("H5P.", "")}, ${broj} stavki, ${(fs.statSync(out).size / 1024).toFixed(0)} KB`);
+  console.log(`✓ ${v.slug}.h5p — ${omot.main.replace("H5P.", "").padEnd(16)} ${String(broj).padStart(2)} stavki${v.lekcija ? "  → lekcija: " + v.lekcija : ""}`);
 }
 console.log(`\nGotovo. Fajlovi su u ${OUT_DIR}`);

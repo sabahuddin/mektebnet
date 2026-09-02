@@ -1,0 +1,56 @@
+GDJE IDE KOJA H5P VJEŽBA — Nivo 3, ahlak-blok
+
+Jedan prilog pripada tačno jednoj lekciji (prilozi.lekcijaId je notNull),
+pa vježbe ispod idu svaka na svoju lekciju. Upload: admin panel -> lekcija
+-> Prilozi -> H5P.
+
+POJEDINAČNE VJEŽBE — po jedna na svoju lekciju
+----------------------------------------------------------------------------
+red | slug lekcije     | fajl                      | tip vježbe      | stavki
+----------------------------------------------------------------------------
+ 52 | roditelji        | l-roditelji.h5p           | Question Set    |  6
+ 53 | rodbinske-veze   | l-rodbinske-veze.h5p      | Single Choice   |  8
+ 54 | komsije          | l-komsije.h5p             | Question Set    |  6
+ 56 | stariji          | l-stariji.h5p             | Dialog Cards    |  6
+ 57 | poboznost        | l-poboznost.h5p           | Flashcards      |  6
+ 61 | dobrota          | l-dobrota.h5p             | Question Set    |  5
+ 63 | skrtost          | l-skrtost.h5p             | Single Choice   |  8
+ 64 | ogovaranje       | l-ogovaranje.h5p          | Question Set    |  6
+ 65 | oholost          | l-oholost.h5p             | Question Set    |  6
+ 66 | mrznja           | l-mrznja.h5p              | Dialog Cards    |  7
+ 67 | neprijateljstvo  | l-neprijateljstvo.h5p     | Single Choice   |  7
+
+Tip vježbe se namjerno smjenjuje, da dijete kroz blok ne dobije deset puta
+isti oblik. Unutar Question Seta smjenjuju se i vrste pitanja: jedan tačan
+odgovor, tačno/netačno, popuni prazninu, prevuci riječi i označi riječi.
+
+
+ZBIRNE VJEŽBE — za Zlatni medaljon na kraju etape
+----------------------------------------------------------------------------
+fajl                      | tip             | pokriva
+----------------------------------------------------------------------------
+n3-asocijacije.h5p        | Single Choice   | 10 nizova iz cijelog bloka
+n3-ahlak-brzo.h5p         | Single Choice   | brzo prepoznavanje, cijeli blok
+n3-ahlak-kartice.h5p      | Dialog Cards    | ponavljanje, cijeli blok
+n3-ahlak-pojmovi.h5p      | Flashcards      | pojmovi, cijeli blok
+
+
+RANIJE ISPORUČENE VJEŽBE KOJE POKRIVAJU VIŠE LEKCIJA
+----------------------------------------------------------------------------
+Ove su građene prije nego je bilo jasno da prilog ide na jednu lekciju.
+Idu na Zlatni medaljon, ili ih mogu razdvojiti po lekcijama ako zatražiš.
+
+n3-prijateljstvo.h5p        -> lekcija 55 (prijateljstvo), samostalna, može i na lekciju
+n3-iskrenost-pravednost.h5p -> lekcija 58, samostalna
+n3-strpljivost.h5p          -> lekcija 59, samostalna
+n3-istinoljubivost.h5p      -> lekcija 60, samostalna
+n3-samilost-prastanje.h5p   -> lekcija 62, samostalna
+n3-mahane-srca.h5p          -> pokriva 63, 64, 65 — Zlatni medaljon
+n3-roditelji-i-stariji.h5p  -> pokriva 52, 53, 56 — Zlatni medaljon
+n3-komsije-i-dobrota.h5p    -> pokriva 54, 61, 90 — Zlatni medaljon
+n3-porodica.h5p             -> pokriva 44, 45, 46 — Zlatni medaljon
+n3-stetne-navike.h5p        -> pokriva 68, 69, 70 — Zlatni medaljon
+n3-kocka-i-internet.h5p     -> pokriva 72, 74 — Zlatni medaljon
+n3-zdravlje-i-okolina.h5p   -> pokriva 49, 75, 76 — Zlatni medaljon
+n3-hidzra-i-bedr.h5p        -> pokriva 84, 85 — Zlatni medaljon
+n3-halife.h5p               -> lekcija 96, samostalna
