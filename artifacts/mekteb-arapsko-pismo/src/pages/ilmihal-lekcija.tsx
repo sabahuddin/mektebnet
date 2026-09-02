@@ -1327,7 +1327,7 @@ const SectionAccordion = memo(function SectionAccordion({ section, slug, nivo, o
             src={cfg.illustration}
             alt=""
             aria-hidden="true"
-            className="w-9 h-9 object-contain shrink-0"
+            className="w-12 h-12 object-contain shrink-0"
           />
           <span className={`font-extrabold text-sm tracking-wide uppercase ${cfg.headerText}`}>
             {section.title}
