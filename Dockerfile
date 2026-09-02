@@ -63,4 +63,4 @@ ENV SERVE_STATIC=true
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node artifacts/api-server/scripts/apply-npp2018-lesson-subjects.mjs --apply --backup-confirmed && exec node --enable-source-maps artifacts/api-server/dist/index.mjs"]
+CMD ["sh", "-c", "node artifacts/api-server/scripts/apply-npp2018-lesson-subjects.mjs --apply --backup-confirmed || echo 'UPOZORENJE: NPP migracija predmeta nije primijenjena; API se ipak pokreće bez izmjene podataka.' >&2; exec node --enable-source-maps artifacts/api-server/dist/index.mjs"]
