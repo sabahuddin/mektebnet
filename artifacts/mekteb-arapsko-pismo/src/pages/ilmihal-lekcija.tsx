@@ -2009,7 +2009,7 @@ function PriloziSection({
                         </select>
                       </div>
                       <p className="text-xs text-amber-600 italic">
-                        {t("Učenik dobija kapi tek kada klikne")} <strong>{t('"Završio sam vježbu"')}</strong> {t("u popupu — i to samo prvi put.")}
+                        {t("Učenik dobija kapi tek kada klikne")} <strong>{t('"Završi vježbu"')}</strong> {t("u popupu — i to samo prvi put.")}
                       </p>
                       <Button
                         onClick={handleAddEmbed}
@@ -2043,10 +2043,6 @@ function PriloziSection({
 
                     // Embed: široki button preko cijele kartice umjesto inline iframe-a
                     if (isEmbed) {
-                      const reward = a.hasanatReward ?? 0;
-                      const subtitle = reward > 0
-                        ? t("Klikni da otvoriš vježbu • do {reward} kapi meda 🍯", { reward: String(reward) })
-                        : t("Klikni da otvoriš vježbu • bez kapi meda 🍯");
                       return (
                         <div key={a.id} className="flex flex-col gap-1 min-w-0 max-w-full">
                           <div className="flex items-stretch gap-2 min-w-0 max-w-full">
@@ -2058,7 +2054,6 @@ function PriloziSection({
                             <span className="text-3xl flex-shrink-0">🎯</span>
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-base text-amber-900 break-words">{a.originalName}</p>
-                              <p className="text-xs text-amber-700 break-words">{subtitle}</p>
                             </div>
                             {isAdmin && a.approved === false && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-800 border border-amber-400 flex-shrink-0">
@@ -2202,7 +2197,7 @@ function PriloziSection({
 
               {/* Modal za embed vježbe — full-screen na mobile, large na desktop.
                   X dugme gore desno, žuta napomena unutra iznad iframe-a.
-                  Footer "Završio sam" se prikazuje samo učeniku (ne admin/muallim)
+                  Footer "Završi vježbu" se prikazuje samo učeniku (ne admin/muallim)
                   i samo ako vježba ima hasanatReward > 0. */}
               <Dialog open={!!openEmbed} onOpenChange={(o) => { if (!o) setOpenEmbed(null); }}>
                 <DialogContent
@@ -2247,7 +2242,7 @@ function PriloziSection({
                             <p className="text-xs sm:text-sm text-amber-800 font-semibold">
                               {alreadyClaimed
                                 ? t("Već si dobio kapi za ovu vježbu.")
-                                : t("Kad završiš vježbu, klikni dugme da dobiješ kapi meda.")}
+                                : t("Kada završiš vježbu, klikni dugme da preuzmeš kapi meda.")}
                             </p>
                             <Button
                               onClick={() => handleClaimEmbed(openEmbed)}
@@ -2259,7 +2254,7 @@ function PriloziSection({
                                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</>
                                 : alreadyClaimed
                                   ? t("✓ Završeno")
-                                  : t("Završio sam vježbu • +{reward} 🍯", { reward: String(reward) })}
+                                  : t("Završi vježbu")}
                             </Button>
                           </div>
                         )}
