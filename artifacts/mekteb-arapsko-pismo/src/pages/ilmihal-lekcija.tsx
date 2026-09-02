@@ -200,42 +200,42 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
   const nextLessonId = lekcije.find(l => !completedIds.has(l.id))?.id ?? null;
 
   return (
-    <div className="mb-5">
-      <div className="flex items-center gap-2">
+    <div className="mb-4">
+      <div className="flex items-center justify-center gap-2">
         <button
           onClick={() => prev && onNavigate(prev.slug)}
           disabled={!prev}
-          className="flex-1 min-w-0 h-12 rounded-xl flex items-center justify-center gap-2 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-base font-bold text-muted-foreground"
-          title={prev?.naslov}
+          className="h-10 w-10 rounded-lg flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-muted-foreground"
+          title={prev ? `${t("Nazad")}: ${prev.naslov}` : t("Nazad")}
           aria-label={t("Nazad")}
           data-testid="button-lesson-prev"
         >
           <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-          <span>{t("Nazad")}</span>
+          <span className="sr-only">{t("Nazad")}</span>
         </button>
 
         <button
           type="button"
           onClick={onExit}
-          className="shrink-0 h-12 rounded-xl px-4 flex items-center justify-center gap-2 border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors text-base font-bold"
+          className="shrink-0 h-10 w-10 rounded-lg flex items-center justify-center border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
           title={t("Vrati se u košnicu")}
           aria-label={t("U košnicu")}
           data-testid="button-lesson-hive"
         >
           <X className="w-5 h-5" />
-          <span className="hidden sm:inline">{t("U košnicu")}</span>
+          <span className="sr-only">{t("U košnicu")}</span>
         </button>
 
         <button
           onClick={() => next && onNavigate(next.slug)}
           disabled={!next}
-          className="flex-1 min-w-0 h-12 rounded-xl flex items-center justify-center gap-2 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-base font-bold text-muted-foreground"
-          title={next?.naslov}
-          aria-label={t("Sljedeća")}
+          className="h-10 w-10 rounded-lg flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-muted-foreground"
+          title={next ? `${t("Naprijed")}: ${next.naslov}` : t("Naprijed")}
+          aria-label={t("Naprijed")}
           data-testid="button-lesson-next"
         >
-          <span>{t("Sljedeća")}</span>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          <span className="sr-only">{t("Naprijed")}</span>
         </button>
       </div>
 
