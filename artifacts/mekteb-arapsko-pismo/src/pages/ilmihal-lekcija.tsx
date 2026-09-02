@@ -205,41 +205,41 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
         <button
           onClick={() => prev && onNavigate(prev.slug)}
           disabled={!prev}
-          className="flex-1 min-w-0 h-10 rounded-xl flex items-center justify-center gap-1.5 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-sm font-bold text-muted-foreground"
+          className="flex-1 min-w-0 h-12 rounded-xl flex items-center justify-center gap-2 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-base font-bold text-muted-foreground"
           title={prev?.naslov}
           aria-label={t("Nazad")}
           data-testid="button-lesson-prev"
         >
-          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
           <span>{t("Nazad")}</span>
         </button>
 
         <button
           type="button"
           onClick={onExit}
-          className="shrink-0 h-10 rounded-xl px-3 flex items-center justify-center gap-1.5 border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors text-sm font-bold"
+          className="shrink-0 h-12 rounded-xl px-4 flex items-center justify-center gap-2 border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors text-base font-bold"
           title={t("Vrati se u košnicu")}
           aria-label={t("U košnicu")}
           data-testid="button-lesson-hive"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
           <span className="hidden sm:inline">{t("U košnicu")}</span>
         </button>
 
         <button
           onClick={() => next && onNavigate(next.slug)}
           disabled={!next}
-          className="flex-1 min-w-0 h-10 rounded-xl flex items-center justify-center gap-1.5 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-sm font-bold text-muted-foreground"
+          className="flex-1 min-w-0 h-12 rounded-xl flex items-center justify-center gap-2 border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-base font-bold text-muted-foreground"
           title={next?.naslov}
           aria-label={t("Sljedeća")}
           data-testid="button-lesson-next"
         >
           <span>{t("Sljedeća")}</span>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>
       </div>
 
-      <div ref={stripRef} className="mt-2 overflow-x-auto scrollbar-hide flex gap-1.5 py-1 px-0.5"
+      <div ref={stripRef} className="mt-3 overflow-x-auto scrollbar-hide flex gap-2 py-1 px-0.5"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {lekcije.map((l, i) => {
             const isActive = i === currentIdx;
@@ -251,7 +251,7 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
                 ref={isActive ? activeRef : undefined}
                 onClick={() => onNavigate(l.slug)}
                 title={`${l.naslov}${isDone ? " ✓" : isNext ? ` (${t("sljedeća")})` : ""}`}
-                className={`relative shrink-0 flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-xs font-bold transition-all min-w-[2.5rem]
+                className={`relative shrink-0 flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-sm font-bold transition-all min-w-[2.75rem]
                   ${isActive
                     ? "bg-teal-500 text-white shadow-md shadow-teal-200 scale-105"
                     : isDone
@@ -261,7 +261,7 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
                         : "bg-white border border-border/50 text-muted-foreground hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50"
                   }`}
               >
-                <span className="text-[10px] leading-none">{i + 1}</span>
+                <span className="text-xs leading-none">{i + 1}</span>
                 {isDone && !isActive && (
                   <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3 text-emerald-600 bg-white rounded-full" strokeWidth={3} />
                 )}
@@ -896,7 +896,7 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
               src={`${LESSON_ICON_BASE}lekcija-provjeri.svg`}
               alt=""
               aria-hidden="true"
-              className="w-9 h-9 object-contain shrink-0"
+              className="w-12 h-12 object-contain shrink-0"
             />
             <span className="font-extrabold text-sm tracking-wide uppercase text-teal-800">
               {t("Provjeri znanje")}
@@ -1916,7 +1916,7 @@ function PriloziSection({
           src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`}
           alt=""
           aria-hidden="true"
-          className="w-9 h-9 object-contain flex-shrink-0"
+          className="w-12 h-12 object-contain flex-shrink-0"
         />
         <span className="font-bold text-blue-800 text-base flex-1">
           {t("Vježbe")}
@@ -2145,7 +2145,7 @@ function PriloziSection({
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 min-w-0">
                           <span className="text-2xl flex-shrink-0">
                             {isH5p ? (
-                              <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-10 h-10 object-contain" />
+                              <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-12 h-12 object-contain" />
                             ) : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
                           </span>
                           <div className="flex-1 min-w-0">
@@ -2327,7 +2327,7 @@ function PriloziSection({
                     return (
                       <>
                         <div className="px-4 py-3 bg-purple-50 border-b border-purple-200 flex items-center gap-2 flex-shrink-0">
-                          <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-9 h-9 object-contain flex-shrink-0" />
+                          <img src={`${LESSON_ICON_BASE}lekcija-vjezba.svg`} alt="" className="w-12 h-12 object-contain flex-shrink-0" />
                           <DialogTitle className="flex-1 min-w-0 text-left text-base font-bold text-purple-900 truncate">
                             {displayH5pName(a.originalName)}
                           </DialogTitle>
