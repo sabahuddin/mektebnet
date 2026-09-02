@@ -67,6 +67,14 @@ interface H5pAttemptState {
   isLocked: boolean;
 }
 
+interface H5pCompletionState {
+  attemptNo: number;
+  procenat: number;
+  hasanatGained: number;
+  lockedUntil: string | null;
+  isLocked: boolean;
+}
+
 interface Lekcija {
   id: number;
   nivo: number;
@@ -1623,6 +1631,7 @@ function PriloziSection({
   const h5pInputRef = useRef<HTMLInputElement>(null);
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
   const [h5pSubmitting, setH5pSubmitting] = useState<Record<number, boolean>>({});
+  const [h5pCompletion, setH5pCompletion] = useState<Record<number, H5pCompletionState | null>>({});
   // Po-prilogu: koliko pokušaja je učenik već imao (određuje multiplier
   // za sljedeći pokušaj — prikaz "možeš osvojiti do X hasenata").
   const [h5pAttempts, setH5pAttempts] = useState<Record<number, H5pAttemptState>>({});
@@ -1691,7 +1700,7 @@ function PriloziSection({
   // prilog. Koristi se nakon završetka vježbe i pri klik-u na "Ponovi" kako bi
   // badge iznad playera uvijek pokazivao tačan "Pokušaj X — Y% nagrade".
   const refreshH5pAttempts = useCallback(async (priloziId: number) => {
-    if (!token) return;
+    if (!token) return null;
     try {
       const fresh = await apiRequest<H5pAttemptState>(
         "GET", `/h5p/attempts/${priloziId}`, undefined, token,
@@ -1700,7 +1709,11 @@ function PriloziSection({
         ...prev,
         [priloziId]: fresh,
       }));
-    } catch {/* ignore — npr. admin/muallim ne dobija ovaj endpoint */}
+      return fresh;
+    } catch {
+      // Admin/muallim ne mora imati attempt stanje.
+      return null;
+    }
   }, [token]);
 
   const handleH5pCompleted = useCallback(async (priloziId: number, score: number, maxScore: number) => {
@@ -1722,16 +1735,7 @@ function PriloziSection({
         totalHasanat: number;
         previousHasanat: number;
       }>("POST", `/h5p/result`, { priloziId, score, maxScore }, token);
-      if (res.hasanatGained > 0) {
-        onH5pCelebration?.({
-          isRepeat: false,
-          hasanatGained: res.hasanatGained,
-          totalHasanat: res.totalHasanat,
-          previousHasanat: res.previousHasanat,
-          streakDays: 0,
-          streakIncreased: false,
-        });
-      } else {
+      if (res.hasanatGained <= 0) {
         const reason = res.attemptNo >= 3
           ? t("Ovo je tvoj {n}. pokušaj — daljnji pokušaji ne donose kapi meda.", { n: String(res.attemptNo) })
           : t("Pokušaj {n}: {procenat}%. Nagrada za ovaj pokušaj: do {reward} kapi meda.", {
@@ -1741,8 +1745,21 @@ function PriloziSection({
             });
         toast({ title: t("Vježba završena"), description: reason });
       }
-      // Refresh attempts za ovaj prilog (smanji prikazani max za sljedeći put).
-      await refreshH5pAttempts(priloziId);
+      // Player se nakon potvrđenog rezultata namjerno uklanja i zamjenjuje
+      // stabilnim završnim ekranom. Ne otvaramo CelebrationModal preko aktivnog
+      // H5P Radix dijaloga jer dva modala međusobno remete fokus i mogu
+      // zatvoriti/remountati player.
+      const fresh = await refreshH5pAttempts(priloziId);
+      setH5pCompletion(prev => ({
+        ...prev,
+        [priloziId]: {
+          attemptNo: res.attemptNo,
+          procenat: res.procenat,
+          hasanatGained: res.hasanatGained,
+          lockedUntil: fresh?.lockedUntil ?? null,
+          isLocked: fresh?.isLocked ?? res.procenat >= 100,
+        },
+      }));
     } catch (err: any) {
       if (err?.status === 423 && err?.data?.lockedUntil) {
         const lockedUntil = String(err.data.lockedUntil);
@@ -1750,6 +1767,16 @@ function PriloziSection({
           ...prev,
           [priloziId]: {
             ...(prev[priloziId] ?? { nextAttemptNo: 2, nextMultiplier: 0.6, nextReward: 3 }),
+            lockedUntil,
+            isLocked: true,
+          },
+        }));
+        setH5pCompletion(prev => ({
+          ...prev,
+          [priloziId]: {
+            attemptNo: prev[priloziId]?.attemptNo ?? 1,
+            procenat: prev[priloziId]?.procenat ?? 100,
+            hasanatGained: prev[priloziId]?.hasanatGained ?? 0,
             lockedUntil,
             isLocked: true,
           },
@@ -1764,7 +1791,7 @@ function PriloziSection({
     } finally {
       setH5pSubmitting(prev => ({ ...prev, [priloziId]: false }));
     }
-  }, [token, h5pSubmitting, onH5pCelebration, toast, refreshH5pAttempts, isGuestLike, promptRegister]);
+  }, [token, h5pSubmitting, toast, refreshH5pAttempts, isGuestLike, promptRegister, t]);
 
   const handleAddUrl = async () => {
     if (!urlValue.trim() || !token) return;
@@ -2185,6 +2212,7 @@ function PriloziSection({
                                   // playera (contentKey se mijenja) + osvježen
                                   // brojač pokušaja da badge pokaže tačan
                                   // "Pokušaj X — Y%".
+                                   setH5pCompletion(prev => ({ ...prev, [a.id]: null }));
                                   setH5pAttemptKey(prev => ({ ...prev, [a.id]: attemptKey + 1 }));
                                   void refreshH5pAttempts(a.id);
                                   setOpenH5p(a);
@@ -2331,6 +2359,7 @@ function PriloziSection({
                     const a = openH5p;
                     const aKey = h5pAttemptKey[a.id] ?? 0;
                     const aAtt = h5pAttempts[a.id];
+                    const completion = h5pCompletion[a.id];
                     const aAttemptNo = aAtt?.nextAttemptNo ?? 1;
                     const aMax = aAtt?.nextReward ?? (aAttemptNo <= 1 ? 5 : aAttemptNo === 2 ? 3 : 0);
                     const aUrl = a.url;
@@ -2376,7 +2405,53 @@ function PriloziSection({
                           </p>
                         </div>
                         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white px-4 sm:px-6 py-4 [-webkit-overflow-scrolling:touch]">
-                          {aUrl && (
+                          {completion ? (
+                            <div
+                              className="min-h-full flex flex-col items-center justify-center text-center px-4 py-8"
+                              data-testid="h5p-completion"
+                            >
+                              <CheckCircle2 className="w-14 h-14 text-emerald-500 mb-4" />
+                              <h3 className="text-xl font-extrabold text-slate-900">
+                                {t("Vježba završena")}
+                              </h3>
+                              <p className="mt-2 text-base font-semibold text-purple-800">
+                                {completion.procenat}% — {completion.hasanatGained > 0
+                                  ? t("Osvojio/la si {count} kapi meda 🍯", { count: String(completion.hasanatGained) })
+                                  : t("Ovaj pokušaj ne donosi nove kapi meda.")}
+                              </p>
+                              {completion.isLocked ? (
+                                <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                                  <div className="flex items-center justify-center gap-2 font-bold">
+                                    <Clock className="w-5 h-5" />
+                                    {completion.lockedUntil
+                                      ? t("Novi pokušaj moguć nakon")
+                                      : t("Novi pokušaj je zaključan 48 sati.")}
+                                  </div>
+                                  {completion.lockedUntil && (
+                                    <p className="mt-1 font-semibold">
+                                      {formatH5pLockUntil(completion.lockedUntil)}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  className="mt-6 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                                  onClick={() => {
+                                    setH5pCompletion(prev => ({ ...prev, [a.id]: null }));
+                                    setH5pAttemptKey(prev => ({
+                                      ...prev,
+                                      [a.id]: (prev[a.id] ?? 0) + 1,
+                                    }));
+                                    void refreshH5pAttempts(a.id);
+                                  }}
+                                  data-testid="h5p-retry"
+                                >
+                                  {t("Ponovi vježbu")}
+                                </Button>
+                              )}
+                            </div>
+                          ) : aUrl ? (
                             <Suspense fallback={
                               <div className="flex items-center gap-2 text-blue-500 text-sm py-4 px-3">
                                 <Loader2 className="w-4 h-4 animate-spin" /> {t("Učitavam vježbu...")}
@@ -2390,7 +2465,7 @@ function PriloziSection({
                                 className="w-full min-w-0"
                               />
                             </Suspense>
-                          )}
+                          ) : null}
                         </div>
                         <p className="px-4 py-2 text-xs text-purple-500 bg-purple-50/60 flex-shrink-0">
                           {t("Prvi pokušaj: do 5 kapi meda. Drugi pokušaj: do 3 kapi meda. Nakon tačnog rezultata novi pokušaj je zaključan 48 sati.")}
