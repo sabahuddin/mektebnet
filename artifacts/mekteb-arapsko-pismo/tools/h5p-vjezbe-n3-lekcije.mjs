@@ -119,18 +119,46 @@ export const VJEZBE_N3L = [
     ],
   },
 
-  // ── 57 · pobožnost · Flashcards ────────────────────────────────────
+  // ── 57 · pobožnost · Question Set ─────────────────────────────────
+  // Ranije je ovdje bio Flashcards. Zamijenjen jer Flashcards traži da dijete
+  // UPIŠE odgovor, a poređenje je doslovno (js/flashcards.js:150) — samo se
+  // sve svede na mala slova. Dijete koje na telefonu kuca bez dijakritika
+  // („sedzda“ umjesto „sedžda“) dobija netačno iako zna. Za provjeru znanja
+  // to ne valja; Flashcards ostaje upotrebljiv kao pomoć pri učenju u lekciji.
   {
-    slug: "l-poboznost", lekcija: "poboznost", tip: "flash",
+    slug: "l-poboznost", lekcija: "poboznost", tip: "set",
     naslov: "Pobožnost i bogobojaznost",
-    uvod: "Pročitaj opis i upiši pojam. Odgovor je uvijek jedna riječ.",
-    kartice: [
-      { opis: "Stalna svijest o Allahu — obožavati Ga kao da Ga vidimo.", odgovor: "ihsan" },
-      { opis: "Ono što je zabranjeno i čega se treba čuvati da bi se bilo pobožan.", odgovor: "haram" },
-      { opis: "Svojstvo koje upotpunjava vjerovanje i čuva od negativnih postupaka.", odgovor: "bogobojaznost" },
-      { opis: "Ono čemu se okreće onaj ko se Allaha boji, umjesto prohtjevima.", odgovor: "ibadet" },
-      { opis: "Sura u kojoj stoji: bojte se Allaha onako kako se treba bojati.", odgovor: "Alu Imran" },
-      { opis: "Svođenje računa sa samim sobom u pogledu svakog učinjenog djela.", odgovor: "muhaseba" },
+    uvod: "Šta pobožnost jeste, a šta nije. Odgovori se biraju, ne kucaju.",
+    pitanja: [
+      { tip: "mc",
+        pitanje: "Poslanik, a.s., je rekao: „Čuvaj se harama onoga što je zabranjeno — bit ćeš najpobožniji čovjek.“ (Tirmizi)<br><br>U čemu je, prema tome, suština pobožnosti?",
+        odgovori: [["U čuvanju od harama i sumnjivih stvari, i u svođenju računa sa samim sobom", true],
+                   ["U što većem broju nafila-namaza", false],
+                   ["U dugom boravku u džamiji", false],
+                   ["U znanju o vjeri", false]] },
+      { tip: "mc",
+        pitanje: "Šta je ihsan, prema lekciji?",
+        odgovori: [["Stalna svijest o Allahu — obožavati Ga kao da Ga vidimo, jer On nas uistinu vidi", true],
+                   ["Dobrovoljna sadaka", false],
+                   ["Naziv za pet dnevnih namaza", false],
+                   ["Iskrena namjera pri ibadetu", false]] },
+      { tip: "mc",
+        pitanje: "Adnan klanja i posti, ali ne pazi odakle mu novac i ne razmišlja o tome šta govori o drugima.<br><br>Šta mu, prema lekciji, nedostaje?",
+        odgovori: [["Nema potpune pobožnosti — ona traži i čuvanje od harama i svođenje računa sa sobom", true],
+                   ["Ništa, namaz i post su dovoljni", false],
+                   ["Treba klanjati više nafila", false],
+                   ["Treba više učiti Kur'an", false]] },
+      { tip: "tf",
+        pitanje: "Prema lekciji, bogobojaznost je sastavni dio vjerovanja i ona ga upotpunjava.",
+        tacno: true },
+      { tip: "tf",
+        pitanje: "Onaj ko se Allaha, dž.š., boji prepustit će se svojim željama i prohtjevima.",
+        tacno: false },
+      { tip: "blanks", uputa: "Popuni praznine.",
+        tekst: "Bogobojaznost čuva od negativnih postupaka i u svakom trenutku podsjeća da Allah sve *vidi*, čuje i *zna*." },
+      { tip: "drag", uputa: "Prevuci riječi na pravo mjesto.",
+        tekst: "Onaj ko se Allaha boji neće se prepustiti *prohtjevima*, nego će se okrenuti *ibadetu* i pokornosti svome Gospodaru.",
+        ometaci: "*znanju* *odmoru*" },
     ],
   },
 

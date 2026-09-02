@@ -12,7 +12,7 @@ red | slug lekcije     | fajl                      | tip vježbe      | stavki
  53 | rodbinske-veze   | l-rodbinske-veze.h5p      | Single Choice   |  8
  54 | komsije          | l-komsije.h5p             | Question Set    |  6
  56 | stariji          | l-stariji.h5p             | Dialog Cards    |  6
- 57 | poboznost        | l-poboznost.h5p           | Flashcards      |  6
+ 57 | poboznost        | l-poboznost.h5p           | Question Set    |  7 
  61 | dobrota          | l-dobrota.h5p             | Question Set    |  5
  63 | skrtost          | l-skrtost.h5p             | Single Choice   |  8
  64 | ogovaranje       | l-ogovaranje.h5p          | Question Set    |  6
@@ -24,6 +24,16 @@ Tip vježbe se namjerno smjenjuje, da dijete kroz blok ne dobije deset puta
 isti oblik. Unutar Question Seta smjenjuju se i vrste pitanja: jedan tačan
 odgovor, tačno/netačno, popuni prazninu, prevuci riječi i označi riječi.
 
+ZAŠTO NIGDJE NEMA FLASHCARDS
+H5P Flashcards traži da dijete UPIŠE odgovor, a poređenje je doslovno
+(js/flashcards.js:150) — sve se svede na mala slova i traži tačno podudaranje.
+Provjereno: „sedzda“ umjesto „sedžda“ se odbija, „skrtost“ umjesto „škrtost“
+se odbija. Dijete koje na telefonu kuca bez dijakritika dobija netačno iako
+zna odgovor — to provjerava tipkanje, a ne znanje. Zato su sve vježbe koje
+su bile Flashcards prebačene na Single Choice Set ili Question Set.
+Flashcards ostaje upotrebljiv kao pomoć pri učenju UNUTAR lekcije, ne kao
+provjera znanja.
+
 
 ZBIRNE VJEŽBE — za Zlatni medaljon na kraju etape
 ----------------------------------------------------------------------------
@@ -32,7 +42,7 @@ fajl                      | tip             | pokriva
 n3-asocijacije.h5p        | Single Choice   | 10 nizova iz cijelog bloka
 n3-ahlak-brzo.h5p         | Single Choice   | brzo prepoznavanje, cijeli blok
 n3-ahlak-kartice.h5p      | Dialog Cards    | ponavljanje, cijeli blok
-n3-ahlak-pojmovi.h5p      | Flashcards      | pojmovi, cijeli blok
+n3-ahlak-pojmovi.h5p      | Single Choice   | pojmovi, cijeli blok
 
 
 RANIJE ISPORUČENE VJEŽBE KOJE POKRIVAJU VIŠE LEKCIJA

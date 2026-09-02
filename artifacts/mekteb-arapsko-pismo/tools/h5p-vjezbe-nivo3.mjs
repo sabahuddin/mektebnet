@@ -379,22 +379,34 @@ export const VJEZBE_N3 = [
   },
 
   // ── pojmovi ────────────────────────────────────────────────────────
+  // Ranije Flashcards, zamijenjeno iz istog razloga kao i u Nivou 1:
+  // upisivanje odgovora provjerava tipkanje, a ne znanje.
   {
     slug: "n3-ahlak-pojmovi",
-    tip: "flash",
-    naslov: "Pogodi pojam — ahlak",
-    uvod: "Pročitaj opis i upiši pojam. Odgovor je uvijek jedna riječ.",
-    kartice: [
-      { opis: "Spominjanje brata po onome što on ne voli, a što je istina.", odgovor: "ogovaranje" },
-      { opis: "Spominjanje brata po onome što nije istina.", odgovor: "potvora" },
-      { opis: "Odbijanje istine i ponižavanje ljudi.", odgovor: "oholost" },
-      { opis: "Zadržavanje imetka za sebe i uskraćivanje drugima.", odgovor: "škrtost" },
-      { opis: "Povjerena stvar ili obaveza koju smo dužni sačuvati.", odgovor: "amanet" },
-      { opis: "Poštivanje i uvažavanje tuđih prava.", odgovor: "pravednost" },
-      { opis: "Dostojanstveno podnošenje životnih nedaća, oružje vjernika.", odgovor: "strpljivost" },
-      { opis: "Nadimak po kojem je Poslanik, a.s., bio poznat prije poslanstva.", odgovor: "El-Emin" },
-      { opis: "Osjećaj koji nas navodi da oprostimo uvredu i budemo blagi prema drugima.", odgovor: "samilost" },
-      { opis: "Činjenje dobra isključivo radi Allahovog zadovoljstva.", odgovor: "iskrenost" },
+    tip: "scs",
+    naslov: "Prepoznaj pojam — ahlak",
+    uvod: "Pročitaj opis i odaberi pojam.",
+    pitanja: [
+      { pitanje: "Spominjanje brata po onome što on ne voli, a što je istina.",
+        odgovori: ["Ogovaranje", "Potvora", "Savjet", "Opomena"] },
+      { pitanje: "Spominjanje brata po onome što nije istina.",
+        odgovori: ["Potvora", "Ogovaranje", "Šala", "Kritika"] },
+      { pitanje: "Odbijanje istine i ponižavanje ljudi.",
+        odgovori: ["Oholost", "Škrtost", "Zavidnost", "Srdžba"] },
+      { pitanje: "Zadržavanje imetka za sebe i uskraćivanje drugima.",
+        odgovori: ["Škrtost", "Štednja", "Zavidnost", "Oprez"] },
+      { pitanje: "Povjerena stvar ili obaveza koju smo dužni sačuvati.",
+        odgovori: ["Amanet", "Sadaka", "Zekat", "Nijet"] },
+      { pitanje: "Poštivanje i uvažavanje tuđih prava.",
+        odgovori: ["Pravednost", "Darežljivost", "Strpljivost", "Samilost"] },
+      { pitanje: "Dostojanstveno podnošenje nedaća, oružje vjernika.",
+        odgovori: ["Strpljivost", "Šutnja", "Skromnost", "Ustrajnost"] },
+      { pitanje: "Nadimak po kojem je Poslanik, a.s., bio poznat prije poslanstva.",
+        odgovori: ["El-Emin", "Es-Sidik", "El-Halim", "El-Kerim"] },
+      { pitanje: "Osjećaj koji nas navodi da oprostimo uvredu i budemo blagi.",
+        odgovori: ["Samilost", "Strpljivost", "Pravednost", "Skromnost"] },
+      { pitanje: "Činjenje dobra isključivo radi Allahovog zadovoljstva.",
+        odgovori: ["Iskrenost", "Darežljivost", "Pobožnost", "Ustrajnost"] },
     ],
   },
 ];
