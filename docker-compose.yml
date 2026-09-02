@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://mekteb:${POSTGRES_PASSWORD:-changeme}@db:5432/mekteb
-      JWT_SECRET: ${JWT_SECRET:-mekteb-secret-change-in-production}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       NODE_ENV: production
       PORT: 3000
       SERVE_STATIC: "true"

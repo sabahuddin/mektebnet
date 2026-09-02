@@ -3,10 +3,9 @@ import jwt from "jsonwebtoken";
 import { db, ocjeneSadrzajaTable } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 const router: IRouter = Router();
-const JWT_SECRET = process.env.JWT_SECRET || "mekteb-secret-change-in-production";
-
 const ALLOWED_TIPOVI = new Set(["lekcija", "prilog", "kviz"]);
 function parseTip(tip: string | undefined): string | null {
   if (!tip) return null;

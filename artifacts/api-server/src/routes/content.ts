@@ -33,6 +33,7 @@ import {
   applyEffectiveOrder,
 } from "../lib/raspored.js";
 import { getLang, overlayRows, overlayOne } from "../lib/content-translatable.js";
+import { JWT_SECRET } from "../lib/jwt-secret.js";
 import {
   INTERACTIVE_TABLE,
   canonicalQuestionHash,
@@ -370,7 +371,7 @@ router.get("/ilmihal", async (req, res) => {
       try {
         const jwt = await import("jsonwebtoken");
         const token = authHeader.replace("Bearer ", "");
-        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
+        const decoded = jwt.default.verify(token, JWT_SECRET) as any;
         const userId = decoded.userId;
         if (userId) {
           const completedSet = new Set<number>();
@@ -437,7 +438,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
         const jwt = await import("jsonwebtoken");
         const decoded = jwt.default.verify(
           authHeaderEarly.slice(7),
-          process.env.JWT_SECRET || "mekteb-secret-change-in-production",
+          JWT_SECRET,
         ) as { userId: number; role?: string };
         if (decoded.role === "ucenik") {
           const studentId = String(decoded.userId);
@@ -556,7 +557,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
       try {
         const jwt = await import("jsonwebtoken");
         const token = authHeader.replace("Bearer ", "");
-        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || "mekteb-secret-change-in-production") as any;
+        const decoded = jwt.default.verify(token, JWT_SECRET) as any;
         const userId = decoded.userId;
 
         // Dohvati napredak ovog korisnika za ovu lekciju (timeSpentSeconds + zavrsen).

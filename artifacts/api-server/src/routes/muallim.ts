@@ -5025,10 +5025,10 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
       : { napametNivo: null, napametStavkaId: null };
     const statusVal = oznaciZavrseno === true ? "zavrseno"
       : oznaciZavrseno === false ? "na_cekanju"
+      : ocjenaVal !== null ? "zavrseno"
       : (postojeci?.status ?? "na_cekanju");
-    // Završavanje je nezavisno od ocjene. Muallim može zadaću označiti
-    // završenom i bez dodijeljene ocjene, a učenik je odmah vidi u svom
-    // tabu "Završene".
+    // Eksplicitna kontrola omogućava završavanje i bez ocjene ili vraćanje
+    // na čekanje. Bez eksplicitne kontrole, dodjela ocjene završava zadaću.
     const uradjenoVal = statusVal === "zavrseno"
       ? true
       : typeof uradjeno === "boolean" ? uradjeno : (postojeci?.uradjeno ?? false);
