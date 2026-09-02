@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Generisani H5P paketi — regenerišu se sa tools/generate-h5p-vjezbe.mjs
+artifacts/mekteb-arapsko-pismo/tools/vjezbe-out/
