@@ -1,0 +1,408 @@
+RASPORED LEKCIJA PO PREDMETIMA — mekteb.net
+Svih 231 lekcija u sva četiri nivoa (1, 2, 21, 3), po NPP 2018.
+
+==============================================================================
+1. NA ČEMU SE OVO ZASNIVA
+==============================================================================
+
+NPP 2018 hijerarhija je već definisana u kodu projekta, u fajlu
+lib/db/src/schema/content.ts — konstante KVIZ_KATEGORIJE i KVIZ_TAGOVI.
+Pet kategorija i njihovi tagovi preuzeti su odatle, ne izmišljeni.
+
+Dvije posljedice koje treba znati unaprijed:
+
+  a) KUR'AN NIJE ZASEBAN PREDMET. Tagovi `kuran` i `sure` pripadaju Akaidu.
+     Zato sve lekcije sa surama idu pod Akaid, tag `sure`. Naziv „Kiraet“,
+     koji se javlja u pripremama, u NPP 2018 podjeli ne postoji.
+
+  b) „ISLAMSKI ŽIVOT“ NIJE NPP 2018 KATEGORIJA. Ono što bi tu spadalo —
+     bajrami, mubarek-dani, higijena, odijevanje, zdravlje, štetne navike,
+     ekologija — u NPP 2018 pokriva Ahlak preko taga `obici`. Zato je u ovom
+     rasporedu sve to svrstano u Ahlak.
+     Ako želiš zadržati „Islamski život“ kao svoj šesti predmet, to je tvoja
+     uređivačka odluka i ovaj popis je i dalje upotrebljiv: izdvoji iz Ahlaka
+     lekcije s tagom `obici` i njima daj taj predmet. Ali to onda više nije
+     NPP 2018.
+
+Uočena nedosljednost koju vrijedi riješiti usput: pripreme pišu „Ibadat“,
+a kod piše „ibadet“. Ovaj raspored koristi „Ibadet“, da se lekcije i banka
+pitanja slažu. Ako ti je draže „Ibadat“, zamijeni globalno prije upisa.
+
+==============================================================================
+2. PET KATEGORIJA I NJIHOVI TAGOVI
+==============================================================================
+
+Akaid   (Akaid — vjerovanje)
+    tagovi: allah, meleki, knjige, poslanici, ahiret, kuran, sure
+
+Ibadet   (Ibadet i praksa)
+    tagovi: namaz, abdest, post, zekat, hadz, dove, zikrovi, halal_haram
+
+Ahlak   (Ahlak — lijepo ponašanje)
+    tagovi: ponasanje, obici, ljubaznost, postenje, srdacnost, pomaganje
+
+Historija islama   (Historija islama)
+    tagovi: zivot_poslanika, ashabi, islamska_civilizacija, osvajanja, kalifi
+
+Bosna   (Bosna i naša baština)
+    tagovi: nas_ucenjaci, dzamije, tradicije, ilahije, dijaspora
+
+==============================================================================
+3. UKUPNO
+==============================================================================
+
+    74  Ibadet
+    64  Ahlak
+    57  Akaid
+    19  Bosna
+    17  Historija islama
+  ----
+   231  ukupno
+
+  najčešći tagovi:
+        38  namaz
+        25  obici
+        23  allah
+        18  sure
+        17  postenje
+        13  zivot_poslanika
+        11  abdest
+        10  dove
+        10  ponasanje
+         9  tradicije
+
+==============================================================================
+4. RASPORED PO LEKCIJAMA
+==============================================================================
+
+Kolone:  nivo | redoslijed | PREDMET | tag | slug | naslov
+Znak !!! znači graničan slučaj — obrazloženje je u odjeljku 5.
+
+------------------------------------------------------------------------------
+NIVO 1  (62 lekcija)
+------------------------------------------------------------------------------
+  1 |   0 | Ahlak            | obici                | uvodna-rijec                                 | Uvodna riječ !!!
+  1 |   1 | Ibadet           | zikrovi              | euzubilla-i-bismilla                         | Euzubilla i Bismilla
+  1 |   2 | Ibadet           | zikrovi              | kako-pocinjem-posao                          | Kako počinjemo svaki dobar posao
+  1 |   3 | Akaid            | allah                | covjek-najljepse-stvorenje                   | Čovjek je najljepše Allahovo stvorenje
+  1 |   4 | Ahlak            | obici                | ja-idem-u-mekteb                             | Ja idem u mekteb
+  1 |   5 | Ibadet           | dove                 | rabbi-jessir                                 | Dove za hairli početak - Rabbi jessir
+  1 |   6 | Ibadet           | dove                 | dova-za-znanje                               | Dova za znanje
+  1 |   7 | Akaid            | allah                | nasa-vjera                                   | Kako se zove naša vjera
+  1 |   8 | Bosna            | ilahije              | allahu-rabbi                                 | Allahu Rabbi !!!
+  1 |   9 | Bosna            | ilahije              | zuri-mirza-na-pouku                          | Žuri Mirza na pouku !!!
+  1 |  11 | Ahlak            | ljubaznost           | selam                                        | Islamski pozdrav - selam
+  1 |  12 | Ahlak            | obici                | voda-izvor-zivota                            | Voda je izvor života
+  1 |  13 | Ibadet           | dove                 | subhaneke                                    | Subhaneke s prijevodom
+  1 |  14 | Akaid            | sure                 | sura-el-fatiha                               | Sura El-Fatiha
+  1 |  15 | Akaid            | allah                | allah-dz-s                                   | Allah, dželle šanuhu - Svemogući Stvoritelj
+  1 |  16 | Historija islama | zivot_poslanika      | muhammed-as-poslanik                         | Muhammed, a.s., je naš poslanik
+  1 |  17 | Bosna            | ilahije              | hasbi-rabbi                                  | Hasbi Rabbi !!!
+  1 |  18 | Ahlak            | ponasanje            | prednost-desne-strane                        | Prednost desne strane
+  1 |  19 | Akaid            | allah                | dinski-sarti                                 | Dinski šarti !!!
+  1 |  20 | Akaid            | allah                | imanski-sarti                                | Imanski šarti
+  1 |  21 | Akaid            | sure                 | sura-el-ihlas                                | Sura El-Ihlas
+  1 |  24 | Ibadet           | namaz                | namaski-sarti                                | Namaski šarti
+  1 |  25 | Ibadet           | abdest               | prvi-namaski-sart                            | Prvi namaski šart (Čistoća)
+  1 |  26 | Ibadet           | abdest               | abdest                                       | Drugi namaski šart - abdest
+  1 |  27 | Ibadet           | abdest               | abdeski-sarti                                | Abdeski šarti
+  1 |  28 | Ibadet           | abdest               | sta-kvari-abdest                             | Šta kvari abdest
+  1 |  29 | Akaid            | sure                 | sura-en-nas                                  | Sura En-Nas
+  1 |  30 | Ibadet           | namaz                | treci-namaski-sart                           | Treći namaski šart (Odijevanje)
+  1 |  31 | Ibadet           | namaz                | cetvrti-namaski-sart                         | Četvrti namaski šart (Vrijeme)
+  1 |  32 | Ibadet           | namaz                | ezan                                         | Ezan
+  1 |  33 | Ibadet           | namaz                | ikamet                                       | Ikamet
+  1 |  34 | Ibadet           | dove                 | dova-poslije-ezana                           | Dova poslije ezana
+  1 |  35 | Ibadet           | namaz                | peti-namaski-sart                            | Peti namaski šart (Kibla)
+  1 |  36 | Ibadet           | namaz                | odredjivanje-kible                           | Orijentacija i određivanje kible
+  1 |  37 | Ibadet           | namaz                | sesti-namaski-sart                           | Šesti namaski šart (Nijet)
+  1 |  38 | Ibadet           | namaz                | namaski-ruknovi-1                            | Namaski ruknovi (I dio)
+  1 |  39 | Ibadet           | namaz                | namaski-ruknovi-2                            | Namaski ruknovi (II dio)
+  1 |  40 | Ahlak            | ponasanje            | ulazak-izlazak                               | Ponašanje pri ulasku i izlasku
+  1 |  41 | Akaid            | sure                 | sura-el-felek                                | Sura El-Felek
+  1 |  42 | Ibadet           | abdest               | gusulski-sarti                               | Gusulski šarti
+  1 |  43 | Ibadet           | abdest               | tejemumski-sarti                             | Tejemumski šarti
+  1 |  44 | Ibadet           | dove                 | et-tehijatu                                  | Et-Tehijatu
+  1 |  45 | Ibadet           | dove                 | salavati                                     | Salavati
+  1 |  46 | Ibadet           | dove                 | dove                                         | Dove
+  1 |  47 | Ahlak            | ponasanje            | pravila-ponasanja                            | Islamska pravila ponašanja
+  1 |  48 | Ahlak            | obici                | mubarek-dani                                 | Muslimanski mubarek-dani
+  1 |  49 | Ahlak            | obici                | ramazanski-bajram                            | Radost Ramazanskog bajrama
+  1 |  50 | Ahlak            | obici                | kurban-bajram                                | Radost Kurban-bajrama
+  1 |  51 | Ahlak            | obici                | za-bajram-je-pohvalno                        | Za Bajram je lijepo i pohvalno
+  1 |  52 | Ahlak            | obici                | nova-hidzretska-godina                       | Nova hidžretska godina
+  1 |  53 | Bosna            | tradicije            | mevlud                                       | Mevlud !!!
+  1 |  54 | Bosna            | ilahije              | dobro-nam-dos-o                              | Dobro nam doš'o !!!
+  1 |  56 | Ibadet           | namaz                | sabah-namaz                                  | Sabah-namaz
+  1 |  57 | Akaid            | sure                 | sura-el-leheb                                | Sura El-Leheb
+  1 |  58 | Ibadet           | namaz                | aksam-namaz                                  | Akšam-namaz
+  1 |  59 | Akaid            | sure                 | ajetul-kursija                               | Ajetul-Kursija
+  1 |  60 | Ibadet           | zikrovi              | zikr                                         | Zikr poslije namaza
+  1 |  61 | Akaid            | sure                 | sura-en-nasr                                 | Sura En-Nasr
+  1 |  62 | Ahlak            | obici                | bajramske-aktivnosti                         | Bajramske aktivnosti polaznika mekteba
+  1 |  63 | Ahlak            | obici                | sport                                        | Sport i rekreacija !!!
+  1 | 180 | Akaid            | allah                | lekcija-01                                   | LEKCIJA 1: IMANSKI ŠARTI
+  1 | 196 | Ibadet           | zikrovi              | tesbih                                       | tesbih
+
+------------------------------------------------------------------------------
+NIVO 2  (26 lekcija)
+------------------------------------------------------------------------------
+  2 |  13 | Ibadet           | namaz                | sehvi-sedzda                                 | Sehvi-sedžda
+  2 |  16 | Ibadet           | namaz                | prispijevanje                                | Prispijevanje u džemat
+  2 |  21 | Ahlak            | obici                | cistoca                                      | Čistoća i lična higijena
+  2 |  23 | Ahlak            | obici                | ishrana                                      | Zdrava ishrana
+  2 |  24 | Ahlak            | ponasanje            | ponasanje-jela                               | Ponašanje prilikom jela
+  2 |  25 | Ibadet           | dove                 | dova-poslije-jela                            | Učenje dove poslije jela
+  2 |  27 | Ahlak            | srdacnost            | braca-sestre                                 | Pažnja prema sestrama i braći
+  2 |  30 | Ibadet           | namaz                | namaz-cuva                                   | Namaz čuva i odgaja
+  2 |  33 | Ibadet           | abdest               | mesh                                         | Mesh po mestvama i zavoju
+  2 |  36 | Ahlak            | postenje             | veliki-grijesi                               | Veliki grijesi !!!
+  2 |  37 | Ahlak            | postenje             | teski-grijesi                                | Teški grijesi !!!
+  2 |  38 | Ahlak            | postenje             | posljedice-grijeha                           | Posljedice grijeha !!!
+  2 |  40 | Ahlak            | postenje             | cestitost                                    | Čestitost i odgovornost
+  2 |  45 | Ibadet           | namaz                | namaz-bolesnika                              | Namaz bolesnika
+  2 |  47 | Ibadet           | dove                 | kunut-dova                                   | Učenje Kunut-dove
+  2 |  48 | Ibadet           | dove                 | namaska-dova                                 | Namaska dova
+  2 |  50 | Ahlak            | ponasanje            | radne-navike                                 | Razvijanje radne navike
+  2 |  51 | Ahlak            | ponasanje            | srednji-put                                  | Uloga i važnost srednjeg puta
+  2 |  55 | Ibadet           | namaz                | teravih-namaz                                | Teravih-namaz
+  2 |  56 | Ahlak            | postenje             | istina                                       | Važnost i snaga istine
+  2 |  57 | Ahlak            | postenje             | prevara                                      | Prevara, laž i krađa
+  2 |  58 | Ahlak            | ponasanje            | ponasanje-drustvo                            | Ponašanje u društvu
+  2 |  65 | Bosna            | tradicije            | kultura                                      | Kultura i tradicija
+  2 |  66 | Bosna            | tradicije            | bosnjak                                      | Ja sam Bošnjak/Bošnjakinja
+  2 |  67 | Akaid            | sure                 | lekad-dzaekum                                | Lekad džāekum
+  2 | 155 | Akaid            | meleki               | ve-melaiketihi                               | DRUGI IMANSKI ŠART – VE MELĀIKETIHĪ
+
+------------------------------------------------------------------------------
+NIVO 21  (43 lekcija)
+------------------------------------------------------------------------------
+ 21 |   0 | Historija islama | zivot_poslanika      | adem-as                                      | Adem, a.s.
+ 21 |   1 | Akaid            | allah                | mentu-billahi                                | Prvi imanski šart - Āmentu billāhi
+ 21 |   2 | Akaid            | allah                | sifatuz-zatijje                              | Es-sifatuz-zatijje, općenito
+ 21 |   3 | Akaid            | allah                | sifatus-subutijje                            | Es-sifatus-subutijje, općenito
+ 21 |   4 | Akaid            | meleki               | ve-melaikethi                                | Drugi imanski šart - ve melāiketihī
+ 21 |   5 | Akaid            | knjige               | ve-kutubihi                                  | Treći imanski šart - ve kutubihī
+ 21 |   6 | Akaid            | poslanici            | ve-rusulihi                                  | Četvrti imanski šart - ve rusulihī
+ 21 |   7 | Akaid            | ahiret               | vel-jevmil-ahiri                             | Peti imanski šart - vel-jevmil āhiri
+ 21 |   8 | Akaid            | allah                | ve-bil-kaderi                                | Šesti imanski šart - ve bil-kaderi
+ 21 |   9 | Akaid            | sure                 | el-kafirun                                   | Učenje sure El-Kāfirūn
+ 21 |  11 | Ibadet           | namaz                | namaz                                        | Drugi islamski šart - namaz
+ 21 |  12 | Ibadet           | namaz                | sta-kvari-namaz                              | Šta kvari namaz
+ 21 |  14 | Ibadet           | namaz                | naklanjavanje                                | Naklanjavanje namaza
+ 21 |  15 | Ibadet           | namaz                | namaz-u-dzematu                              | Namaz u džematu
+ 21 |  17 | Ibadet           | post                 | post                                         | Treći islamski šart - post
+ 21 |  18 | Ibadet           | zekat                | zekat                                        | Četvrti islamski šart - zekat
+ 21 |  19 | Ibadet           | hadz                 | hadz                                         | Peti islamski šart - hadž
+ 21 |  20 | Ahlak            | obici                | urednost                                     | Urednost muslimana
+ 21 |  22 | Ibadet           | namaz                | islamski-sarti                               | Islamski šarti !!!
+ 21 |  22 | Ahlak            | obici                | zdravlje                                     | Dužnost čuvanja zdravlja
+ 21 |  28 | Ahlak            | srdacnost            | rodbina                                      | Dužnosti prema rodbini
+ 21 |  29 | Ibadet           | halal_haram          | halal-haram                                  | Pojam i smisao halala i harama
+ 21 |  31 | Ibadet           | namaz                | podne-namaz                                  | Podne-namaz
+ 21 |  32 | Ibadet           | abdest               | tejemum                                      | Tejemum - simbolično čišćenje
+ 21 |  34 | Akaid            | sure                 | el-kevser                                    | Učenje sure El-Kevser
+ 21 |  35 | Ahlak            | postenje             | mali-grijesi                                 | Vrste grijeha - Mali grijesi !!!
+ 21 |  39 | Akaid            | ahiret               | tevba                                        | Tevba - pokajanje !!!
+ 21 |  41 | Ahlak            | postenje             | iskrenost                                    | Iskrenost i saosjećajnost
+ 21 |  42 | Ahlak            | ponasanje            | skromnost                                    | Skromnost i umjerenost
+ 21 |  43 | Ibadet           | namaz                | ikindija-namaz                               | Ikindija-namaz
+ 21 |  44 | Ibadet           | namaz                | namaz-putnika                                | Namaz putnika
+ 21 |  46 | Ibadet           | namaz                | jacija-namaz                                 | Jacija-namaz
+ 21 |  49 | Akaid            | sure                 | el-maun                                      | Učenje sure El-Māūn
+ 21 |  52 | Ibadet           | namaz                | dzuma-namaz                                  | Džuma-namaz
+ 21 |  53 | Ibadet           | namaz                | bajram-namaz                                 | Bajram-namaz
+ 21 |  54 | Akaid            | sure                 | el-kurejs                                    | Učenje sure El-Kurejš
+ 21 |  59 | Akaid            | sure                 | elif-lam-mim                                 | Elif-lām-mīm
+ 21 |  60 | Ahlak            | obici                | mubarek-noci                                 | Važnost mubarek-noći
+ 21 |  61 | Ibadet           | namaz                | nafila                                       | Vrste nafila-namaza
+ 21 |  62 | Bosna            | nas_ucenjaci         | alimi                                        | Poznati alimi u BiH
+ 21 |  63 | Bosna            | tradicije            | bih                                          | Moja domovina - BiH
+ 21 |  64 | Bosna            | tradicije            | bosanski-jezik                               | Bosanski jezik
+ 21 | 105 | Akaid            | allah                | amentu-billahi                               | ÄMENTU BILLÃHI – 1. IMANSKI ŠART
+
+------------------------------------------------------------------------------
+NIVO 3  (100 lekcija)
+------------------------------------------------------------------------------
+  3 |   0 | Ibadet           | namaz                | duznosti-allah                               | Izvršavanje dužnosti prema Allahu
+  3 |   1 | Akaid            | sure                 | el-fil                                       | Učenje sure El-Fīl
+  3 |   2 | Akaid            | allah                | amentu-billahi3                              | Āmentu billāhi - vjerovanje u Allaha, dž.š.
+  3 |   3 | Akaid            | allah                | tevhid                                       | Tevhid - Allah je jedan
+  3 |   4 | Akaid            | allah                | vjerovanje-gajb                              | Vjerovanje u gajb
+  3 |   5 | Akaid            | allah                | kufr-sirk-nifak                              | Kufr, širk, nifak
+  3 |   6 | Akaid            | allah                | zatijje-1                                    | Es-sifatuz-zatijje: Vudžud, Kidem i Beka
+  3 |   7 | Akaid            | allah                | zatijje-2                                    | Es-sifatuz-zatijje: Vahdanijet, Muhalefetun lil-havadisi, Kijamun bi nefsihi
+  3 |   8 | Akaid            | allah                | subutijje-1                                  | Es-sifatus-subutijje: Hajat, 'Ilm, Sem' i Besar
+  3 |   9 | Akaid            | allah                | subutijje-2                                  | Es-sifatus-subutijje: Iradet, Kudret, Kelam i Tekvin
+  3 |  10 | Akaid            | allah                | esmaul-husna                                 | Allahova lijepa imena - El-Esmaul-husna
+  3 |  11 | Akaid            | meleki               | melaike                                      | Ve melāiketihī - vjerovanje u Allahove meleke
+  3 |  12 | Akaid            | meleki               | dzini-sejtani                                | Druga duhovna bića – džini i šejtani
+  3 |  13 | Akaid            | knjige               | kitabi                                       | Ve kutubihī - vjerovanje u Allahove knjige i suhufe
+  3 |  14 | Akaid            | kuran                | kuran-objava                                 | Kur'an – Posljednja objava
+  3 |  15 | Akaid            | poslanici            | poslanici                                    | Ve rusulihī - vjerovanje u Allahove poslanike i odlike poslanika
+  3 |  16 | Akaid            | poslanici            | mudzize                                      | Mudžize Allahovih poslanika !!!
+  3 |  17 | Historija islama | zivot_poslanika      | isra-miradz                                  | Kur'an, Isra i Miradž !!!
+  3 |  18 | Akaid            | ahiret               | sudnji-dan                                   | Vel-jevmil-āhiri – vjerovanje u Sudnji dan
+  3 |  19 | Akaid            | ahiret               | prozivljenje                                 | Proživljenje poslije smrti
+  3 |  20 | Akaid            | ahiret               | sefaat-mizan-sirat                           | Šefaat, Mizan i Sirat-ćuprija
+  3 |  21 | Akaid            | ahiret               | dzennet-dzehennem                            | Džennet i Džehennem
+  3 |  22 | Akaid            | allah                | kader                                        | Ve bil-kaderi hajrihī ve šerrihī minellāhi te'ālā – vjerovanje u Allahovo određenje
+  3 |  23 | Akaid            | sure                 | el-humeze                                    | Učenje sure El-Humeze
+  3 |  24 | Akaid            | allah                | kelimei-sehadet                              | Kelimei-šehadet (detaljno)
+  3 |  25 | Ibadet           | namaz                | pet-namaza                                   | Namaz – pet dnevnih namaza
+  3 |  26 | Ibadet           | namaz                | farzovi-namaz                                | Farzovi u namazu
+  3 |  27 | Ibadet           | namaz                | vadzibi-namaz                                | Vadžibi u namazu
+  3 |  28 | Ibadet           | namaz                | sunneti-namaz                                | Sunneti u namazu
+  3 |  29 | Ibadet           | namaz                | mekruhi-namaz                                | Mekruhi u namazu
+  3 |  30 | Akaid            | sure                 | el-asr                                       | Učenje sure El-'Asr
+  3 |  31 | Ibadet           | namaz                | vaznost-dzemata                              | Smisao i važnost džemata i namaza u džematu
+  3 |  32 | Ibadet           | namaz                | vrste-namaza                                 | Podjela namaza po stepenu važnosti
+  3 |  33 | Ibadet           | namaz                | dzenaza-namaz                                | Dženaza-namaz
+  3 |  34 | Ibadet           | post                 | post-propisi                                 | Post – propisi i fadileti ramazanskog posta
+  3 |  35 | Ibadet           | zekat                | zekat-bejtul-mal                             | Zekat – Bejtul-mal
+  3 |  36 | Ibadet           | zekat                | sadekatul-fitr                               | Sadekatul-fitr
+  3 |  37 | Ibadet           | hadz                 | hadz-propisi                                 | Hadž – propisi i odlike hadža
+  3 |  38 | Akaid            | sure                 | et-tekassur                                  | Učenje sure Et-Tekasur
+  3 |  39 | Historija islama | islamska_civilizacija | hadiske-zbirke                               | Najpoznatije hadiske zbirke
+  3 |  40 | Ibadet           | halal_haram          | mukellef                                     | Ef 'alu mukellefīn – postupci odraslih osoba
+  3 |  41 | Ibadet           | abdest               | gusul                                        | Gusul – vjersko kupanje
+  3 |  42 | Ibadet           | abdest               | hajz-nifas                                   | Hajz, nifas i istihaza
+  3 |  43 | Ibadet           | abdest               | sahibi-uzur                                  | Sahibi-uzur
+  3 |  44 | Ahlak            | srdacnost            | porodica                                     | Uloga i značaj porodice
+  3 |  45 | Ibadet           | halal_haram          | brak                                         | Islamski brak !!!
+  3 |  46 | Ibadet           | halal_haram          | zenidba-udaja                                | Ženidba i udaja !!!
+  3 |  47 | Ahlak            | obici                | odijevanje-hidzab                            | Kultura odijevanja, hidžab – smisao i značaj
+  3 |  48 | Akaid            | sure                 | el-kariah                                    | Učenje sure El-Kari'ah
+  3 |  49 | Ahlak            | obici                | odgovornost-zdravlje                         | Odgovornost prema životu i zdravlju
+  3 |  50 | Ahlak            | ponasanje            | rad-kultura                                  | Rad i radna kultura
+  3 |  51 | Ahlak            | ponasanje            | stjecanje-znanja                             | Stjecanje znanja
+  3 |  52 | Ahlak            | srdacnost            | roditelji                                    | Poslušnost i briga prema roditeljima
+  3 |  53 | Ahlak            | srdacnost            | rodbinske-veze                               | Čuvanje rodbinskih veza
+  3 |  54 | Ahlak            | pomaganje            | komsije                                      | Dužnosti prema komšijama
+  3 |  55 | Ahlak            | srdacnost            | prijateljstvo                                | Prijateljstvo i drugarstvo
+  3 |  56 | Ahlak            | ljubaznost           | stariji                                      | Poštivanje starijih
+  3 |  57 | Ahlak            | postenje             | poboznost                                    | Pobožnost i bogobojaznost
+  3 |  58 | Ahlak            | postenje             | iskrenost-pravednost                         | Iskrenost i pravednost
+  3 |  59 | Ahlak            | postenje             | strpljivost                                  | Predanost i strpljivost
+  3 |  60 | Ahlak            | postenje             | istinoljubivost                              | Istinoljubivost i pouzdanost
+  3 |  61 | Ahlak            | pomaganje            | dobrota                                      | Dobrota i ustrajnost
+  3 |  62 | Ahlak            | srdacnost            | samilost                                     | Samilost i praštanje
+  3 |  63 | Ahlak            | postenje             | skrtost                                      | Škrtost i zavidnost
+  3 |  64 | Ahlak            | postenje             | ogovaranje                                   | Ogovaranje
+  3 |  65 | Ahlak            | postenje             | oholost                                      | Oholost
+  3 |  66 | Ahlak            | postenje             | mrznja                                       | Mržnja i ljubomora
+  3 |  67 | Ahlak            | postenje             | neprijateljstvo                              | Neprijateljstvo
+  3 |  68 | Ahlak            | obici                | droga                                        | Droga – štetnost i posljedice
+  3 |  69 | Ahlak            | obici                | alkohol                                      | Alkohol i alkoholna pića
+  3 |  70 | Ahlak            | obici                | duhan                                        | Duhan – upotreba i njegova štetnost
+  3 |  71 | Ahlak            | obici                | nemoral                                      | Nemoral – blud, čuvanje i posljedice
+  3 |  72 | Ahlak            | obici                | internet-ovisnost                            | Ovisnost o internetu
+  3 |  73 | Akaid            | allah                | horoskop                                     | Horoskop i savremena idolatrija !!!
+  3 |  74 | Ahlak            | obici                | kockanje                                     | Kockanje, igre na sreću i sportske kladionice
+  3 |  75 | Ahlak            | obici                | ekologija                                    | Čuvanje okoline – ekologija
+  3 |  76 | Ahlak            | obici                | biljke-zivotinje                             | Odnos prema biljnom i životinjskom svijetu
+  3 |  77 | Historija islama | zivot_poslanika      | poslanici-kuran                              | Božiji poslanici spomenuti u Kur'anu
+  3 |  78 | Historija islama | zivot_poslanika      | nuh-as                                       | Nuh, a.s.
+  3 |  79 | Historija islama | zivot_poslanika      | ibrahim-as                                   | Ibrahim, a.s.
+  3 |  80 | Historija islama | zivot_poslanika      | musa-as                                      | Musa, a.s.
+  3 |  81 | Historija islama | zivot_poslanika      | isa-as                                       | Isa, a.s.
+  3 |  82 | Historija islama | zivot_poslanika      | muhammed-as-djetinjstvo                      | Djetinjstvo Muhammeda, a.s.
+  3 |  83 | Historija islama | zivot_poslanika      | muhammed-as-porodica                         | Porodica poslanika Muhammeda, a.s.
+  3 |  84 | Historija islama | zivot_poslanika      | hidzra                                       | Hidžra – prelazak iz Mekke u Medinu
+  3 |  85 | Historija islama | osvajanja            | bitka-bedr                                   | Bitka na Bedru
+  3 |  86 | Historija islama | zivot_poslanika      | oprostajni-hadz                              | Oproštajni hadž
+  3 |  87 | Historija islama | zivot_poslanika      | preseljenje-ahiret                           | Preseljenje na ahiret – smrt Božijeg Poslanika
+  3 |  88 | Bosna            | ilahije              | kulidullahe                                  | Kulid'ullahe !!!
+  3 |  89 | Bosna            | tradicije            | muslimanska-imena                            | Lijepa muslimanska imena
+  3 |  90 | Ahlak            | ljubaznost           | lijepa-rijec                                 | Lijepa riječ
+  3 |  91 | Bosna            | tradicije            | iz-historija                                 | Islamska zajednica – historijski nastanak i razvoj
+  3 |  92 | Bosna            | dzamije              | dan-dzamija                                  | Dan džamija i džemata
+  3 |  93 | Bosna            | dzamije              | prava-dzematlija                             | Prava i dužnosti džematlija !!!
+  3 |  94 | Bosna            | dzamije              | temelji-odgoja                               | Mekteb, džamija i škola – temelji odgoja i obrazovanja
+  3 |  95 | Bosna            | tradicije            | iz-ustanove                                  | Odgojno-obrazovne ustanove Islamske zajednice
+  3 |  96 | Historija islama | kalifi               | halife                                       | Pravedne halife: hazreti Ebu Bekr, Omer, Osman i Alija, r.a.
+  3 |  97 | Historija islama | ashabi               | odabrane-zene                                | Odabrane žene spomenute u Kur'anu i hadisima
+  3 |  98 | Bosna            | dzamije              | vakufi-bih                                   | Najpoznatiji vakufi i vakufske građevine u Bosni i Hercegovini
+  3 |  99 | Bosna            | tradicije            | bosnjacki-pjesnici                           | Bošnjački pjesnici i književnici
+
+==============================================================================
+5. GRANIČNI SLUČAJEVI — ODLUKA JE TVOJA
+==============================================================================
+
+  Nivo 1 — Dinski šarti
+      Akaid — obuhvata i imanske i islamske šarte; može i Ibadet
+  Nivo 21 — Islamski šarti
+      Ibadet — jer su to dužnosti; može i Akaid
+  Nivo 2 — Veliki grijesi
+      Ahlak/postenje; može i Akaid ako grijeh vodiš kao pitanje vjerovanja
+  Nivo 2 — Teški grijesi
+      isto kao gore
+  Nivo 2 — Posljedice grijeha
+      isto kao gore
+  Nivo 21 — Vrste grijeha - Mali grijesi
+      isto kao gore
+  Nivo 21 — Tevba - pokajanje
+      Akaid/ahiret; može i Ahlak
+  Nivo 3 — Islamski brak
+      Ibadet/halal_haram kao fikh; može i Ahlak
+  Nivo 3 — Ženidba i udaja
+      isto kao gore
+  Nivo 3 — Horoskop i savremena idolatrija
+      Akaid jer je posrijedi širk, a ne navika
+  Nivo 1 — Mevlud
+      Bosna/tradicije jer je mevlud naša tradicija; može i Ibadet
+  Nivo 1 — Allahu Rabbi
+      Bosna/ilahije; može i Ibadet ako ilahije vodiš kao zikr
+  Nivo 1 — Hasbi Rabbi
+      isto kao gore
+  Nivo 1 — Žuri Mirza na pouku
+      isto kao gore
+  Nivo 1 — Dobro nam doš'o
+      isto kao gore
+  Nivo 3 — Kulid'ullahe
+      isto kao gore
+  Nivo 3 — Prava i dužnosti džematlija
+      Bosna/dzamije; može i Ahlak
+  Nivo 3 — Mudžize Allahovih poslanika
+      Akaid/poslanici; može i Historija islama
+  Nivo 3 — Kur'an, Isra i Miradž
+      Historija islama; može i Akaid
+  Nivo 1 — Sport i rekreacija
+      Ahlak/obici; može i bez predmeta
+  Nivo 1 — Uvodna riječ
+      Ahlak/obici; predgovor, može i bez predmeta
+
+==============================================================================
+6. UPUTA ZA AGENTA KOJI OVO PRIMJENJUJE
+==============================================================================
+
+GDJE SE PRIMJENJUJE
+  Vrijednosti predmeta žive u PRODUKCIJSKOJ bazi (Coolify Postgres).
+  Dev baza je odvojena — primjena na njoj ne mijenja ništa što korisnici vide.
+
+PRIJE BILO ČEGA
+  1. Backup produkcijske baze.
+  2. Pogledaj trenutno stanje, bez izmjena:
+       SELECT predmet, COUNT(*) FROM ilmihal_lekcije GROUP BY predmet ORDER BY 2 DESC;
+  3. Usporedi s odjeljkom 4 i JAVI KORISNIKU RAZLIKE PRIJE UPISA.
+     Dio lekcija je korisnik ručno rasporedio; te odluke se ne smiju tiho
+     pregaziti. Korisnik odlučuje šta se prepisuje, a šta ostaje.
+
+KAKO UPISATI
+  Lekcije pogađati po koloni `slug` — ona je stabilna. Ne po naslovu.
+      UPDATE ilmihal_lekcije SET predmet = '<PREDMET>' WHERE slug = '<slug>';
+  Sve u jednoj transakciji, uz provjeru broja pogođenih redova prije COMMIT-a.
+
+ŠTA SE NE SMIJE
+  - Ne pisati boot migraciju u index.ts koja ovo primjenjuje pri startu servera.
+  - Ne dirati content_html, naslov, redoslijed ni bilo koju kolonu osim `predmet`.
+  - Ne pretvarati `predmet` u enum: kolona je varchar(60), slobodan tekst, a
+    filter na stranici /ilmihal-sve sam gradi listu iz podataka.
+
+TAG KOLONA — ZASEBNA ODLUKA
+  Tag iz odjeljka 4 NEMA gdje da se upiše: `ilmihal_lekcije` nema kolonu za
+  tag. Tagovi postoje samo u banci pitanja (`pitanja_banka.tagovi`, jsonb).
+  Ovdje su dati kao pomoć pri odlučivanju i kao priprema, ako se kasnije
+  odluči dodati i lekcijama. Ne pokušavati ih upisati bez dogovora — to
+  traži izmjenu sheme i novu migraciju.
+
