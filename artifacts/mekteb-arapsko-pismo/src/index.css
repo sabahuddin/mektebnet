@@ -189,6 +189,9 @@
     max-width: none !important;
     height: 90vh !important;
     max-height: 90vh !important;
+    /* Tailwind v4 koristi zasebno `translate` svojstvo; resetuj ga prije
+       klasičnog transform centriranja da se pomak ne primijeni dvaput. */
+    translate: none !important;
     transform: translate(-50%, -50%) !important;
     animation: none !important;
     transition: none !important;
