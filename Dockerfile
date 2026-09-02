@@ -48,6 +48,7 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Copy built assets
 COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
+COPY --from=base /app/artifacts/api-server/scripts/apply-npp2018-lesson-subjects.mjs ./artifacts/api-server/scripts/apply-npp2018-lesson-subjects.mjs
 COPY --from=base /app/artifacts/mekteb-arapsko-pismo/dist ./artifacts/mekteb-arapsko-pismo/dist
 COPY --from=base /app/scripts/content-seed.json.gz ./scripts/content-seed.json.gz
 # Drizzle migrations folder — REQUIRED by drizzle-migrate.ts at runtime startup.
