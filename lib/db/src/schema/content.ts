@@ -2,11 +2,12 @@ import { pgTable, serial, text, integer, boolean, timestamp, varchar, jsonb, ind
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-// Centralna banka pitanja — kategorije su usklađene sa NPP 2018 (službeni
-// nastavni plan Islamske zajednice). Postoje 5 glavnih kategorija (predmeta)
+// Centralna banka pitanja — kategorije su usklađene sa predmetima lekcija i
+// NPP 2018. Postoji 6 glavnih kategorija (predmeta)
 // i prateći tagovi za pod-teme. Tagovi se koriste za filtriranje unutar
 // glavne kategorije; ne vide ih polaznici, već admin prilikom kreiranja sadržaja.
 export const KVIZ_KATEGORIJE = [
+  "kiraet",
   "akaid",
   "ibadet",
   "ahlak",
@@ -16,18 +17,21 @@ export const KVIZ_KATEGORIJE = [
 export type KvizKategorija = (typeof KVIZ_KATEGORIJE)[number];
 
 export const KVIZ_KATEGORIJE_META: Record<KvizKategorija, { naziv: string; ikona: string }> = {
-  akaid: { naziv: "Akaid — vjerovanje", ikona: "⭐" },
-  ibadet: { naziv: "Ibadet i praksa", ikona: "🕌" },
-  ahlak: { naziv: "Ahlak — lijepo ponašanje", ikona: "💝" },
+  kiraet: { naziv: "Kiraet", ikona: "📖" },
+  akaid: { naziv: "Vjerovanje", ikona: "⭐" },
+  ibadet: { naziv: "Ibadet", ikona: "🕌" },
+  ahlak: { naziv: "Ahlak", ikona: "💝" },
   historija: { naziv: "Historija islama", ikona: "📜" },
-  bosna: { naziv: "Bosna i naša baština", ikona: "🇧🇦" },
+  bosna: { naziv: "Ostali sadržaji", ikona: "🇧🇦" },
 };
 
 // Tagovi — pod-teme unutar glavne kategorije. Svaki tag pripada tačno jednoj
 // glavnoj kategoriji. Admin koristi tagove za filtriranje u banci pitanja.
 export const KVIZ_TAGOVI = [
-  // Akaid (7)
-  "allah", "meleki", "knjige", "poslanici", "ahiret", "kuran", "sure",
+  // Kiraet (1)
+  "sure",
+  // Akaid (6)
+  "allah", "meleki", "knjige", "poslanici", "ahiret", "kuran",
   // Ibadet (8)
   "namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram",
   // Ahlak (6)
@@ -40,8 +44,9 @@ export const KVIZ_TAGOVI = [
 export type KvizTag = (typeof KVIZ_TAGOVI)[number];
 
 export const KVIZ_TAG_KATEGORIJA_MAP: Record<KvizTag, KvizKategorija> = {
+  sure: "kiraet",
   allah: "akaid", meleki: "akaid", knjige: "akaid", poslanici: "akaid",
-  ahiret: "akaid", kuran: "akaid", sure: "akaid",
+  ahiret: "akaid", kuran: "akaid",
   namaz: "ibadet", abdest: "ibadet", post: "ibadet", zekat: "ibadet",
   hadz: "ibadet", dove: "ibadet", zikrovi: "ibadet", halal_haram: "ibadet",
   ponasanje: "ahlak", obici: "ahlak", ljubaznost: "ahlak", postenje: "ahlak",

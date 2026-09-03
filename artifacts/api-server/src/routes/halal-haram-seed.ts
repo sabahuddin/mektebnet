@@ -38,7 +38,7 @@ export async function seedHalalHaramLesson(): Promise<void> {
         locked = FALSE,
         locked_at = NULL,
         locked_note = NULL,
-        predmet = 'Ibadet i praksa',
+        predmet = 'Ibadet',
         uvjeti_ids = '[]'::jsonb
       WHERE slug = ${slug}
     `);
@@ -52,7 +52,7 @@ export async function seedHalalHaramLesson(): Promise<void> {
     )
     VALUES (
       3, ${slug}, ${naslov}, ${halalHaramContentHtml}, ${nextOrder}, TRUE, FALSE,
-      'Ibadet i praksa', '[]'::jsonb
+      'Ibadet', '[]'::jsonb
     )
   `);
 }

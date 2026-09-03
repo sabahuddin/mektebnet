@@ -390,27 +390,34 @@ async function runResidualSchema() {
 
     // === NORMALIZACIJA PREDMETA NA NPP STRUKTURU (idempotentno) ===
     // Nastavni plan i program (NPP, 2017) definiše 6 oblasti. Prikazni nazivi:
-    // Kiraet, Vjerovanje (Akaid), Ibadet i praksa (Fikh), Ahlak, Historija
+    // Kiraet, Vjerovanje (Akaid), Ibadet, Ahlak, Historija
     // islama + "Ostali sadržaji". Zatečene zbrkane i
     // kombinovane vrijednosti (Ibadat, Ibadat / Fikh, Kur'an, Vjeronauka...) se
     // sažimaju u te kanonske kategorije da dropdown na "Sve lekcije" ne bude
     // prevelik. Idempotentno: nakon prvog prolaza stare vrijednosti više ne
     // postoje pa su naredni prolazi no-op.
-    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet i praksa' WHERE predmet IN ('Ibadat', 'Ibadat / Fikh');`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet' WHERE predmet IN ('Ibadet i praksa', 'Ibadat', 'Ibadat / Fikh', 'Fikh');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Kiraet' WHERE predmet IN ('Kur''an', 'Kur’an');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Vjerovanje' WHERE predmet IN ('Akaid/Ahlak', 'Akaid/Ibadat');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Historija islama' WHERE predmet = 'Vjeronauka/Historija';`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ostali sadržaji' WHERE predmet IN ('Vjeronauka', 'Vjeronauka/Kultura', 'Kultura i tradicija');`);
     // Catch-up rename: već normalizovani podaci (raniji redeploy) sa starim
-    // nazivima Fikh/Akaid → novi prikazni nazivi. Idempotentno.
-    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet i praksa' WHERE predmet='Fikh';`);
+    // nazivom Akaid → novi prikazni naziv. Idempotentno.
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Vjerovanje' WHERE predmet='Akaid';`);
+    // Sve lekcije koje su sure pripadaju Kiraetu, bez obzira na raniju
+    // pogrešnu vrijednost (npr. Ahlak). Pokriva i buduće stare importe.
+    await db.execute(sql`
+      UPDATE ilmihal_lekcije
+      SET predmet='Kiraet'
+      WHERE naslov ~* '^[[:space:]]*Sura([[:space:]]|$)'
+         OR slug ~* '^sura-'
+    `);
 
     // Dodjela predmeta lekcijama bez oblasti (predmet IS NULL), po slug-u.
     // NULL-guard: ne dira lekcije kojima je admin već postavio predmet, pa
     // ručne izmjene ne budu pregažene na sljedećem redeployu. Medaljon-lekcije
     // (slug medaljon-nivo%) NAMJERNO ostaju bez predmeta — nisu nastavni sadržaj.
-    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet i praksa' WHERE predmet IS NULL AND slug IN ('abdeski-sarti', 'namaski-sarti', 'dova-poslije-ezana', 'mubarek-dani', 'dzenaza-namaz', 'gusul', 'post-propisi', 'sunneti-namaz');`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ibadet' WHERE predmet IS NULL AND slug IN ('abdeski-sarti', 'namaski-sarti', 'dova-poslije-ezana', 'mubarek-dani', 'dzenaza-namaz', 'gusul', 'post-propisi', 'sunneti-namaz');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Vjerovanje' WHERE predmet IS NULL AND slug = 'dinski-sarti';`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Ahlak' WHERE predmet IS NULL AND slug IN ('cestitost', 'ljubav-poslusnost-roditelji', 'radne-navike', 'alkohol');`);
     await db.execute(sql`UPDATE ilmihal_lekcije SET predmet='Historija islama' WHERE predmet IS NULL AND slug = 'mevlud';`);
@@ -652,6 +659,21 @@ async function runResidualSchema() {
         ON CONFLICT (slug) DO NOTHING;
       `);
     }
+    // Prikazni nazivi Banke pitanja i predmeti lekcija moraju biti isti.
+    // Slugovi ostaju stabilni radi postojećih pitanja i kvizova.
+    await db.execute(sql`
+      UPDATE kviz_kategorije
+      SET naziv = CASE slug
+        WHEN 'kiraet' THEN 'Kiraet'
+        WHEN 'akaid' THEN 'Vjerovanje'
+        WHEN 'ibadet' THEN 'Ibadet'
+        WHEN 'ahlak' THEN 'Ahlak'
+        WHEN 'historija' THEN 'Historija islama'
+        WHEN 'bosna' THEN 'Ostali sadržaji'
+        ELSE naziv
+      END
+      WHERE slug IN ('kiraet', 'akaid', 'ibadet', 'ahlak', 'historija', 'bosna')
+    `);
 
     // Kviz tagovi (admin-definisani, vezani za glavnu kategoriju). Tabela +
     // idempotent seed iz KVIZ_TAGOVI/MAP/META ako tag još ne postoji.
@@ -679,6 +701,23 @@ async function runResidualSchema() {
         ON CONFLICT (slug) DO NOTHING;
       `);
     }
+    // Sure su Kiraet. Ažuriraj i postojeći tag i sva pitanja koja ga nose ili
+    // su direktno povezana sa lekcijom čiji naslov/slug označava suru.
+    await db.execute(sql`UPDATE kviz_tagovi SET kategorija='kiraet' WHERE slug='sure';`);
+    await db.execute(sql`
+      UPDATE pitanja_banka p
+      SET kategorija='kiraet', updated_at=NOW()
+      WHERE p.tagovi ? 'sure'
+         OR EXISTS (
+           SELECT 1
+           FROM ilmihal_lekcije l
+           WHERE l.id = p.lekcija_id
+             AND (
+               l.naslov ~* '^[[:space:]]*Sura([[:space:]]|$)'
+               OR l.slug ~* '^sura-'
+             )
+         )
+    `);
 
     // --- Task #126 — Etape i krunisanje nivoa ----------------------------------
     // Proširenja medaljona (završni ispit etape) + nove tabele za polaganja,
