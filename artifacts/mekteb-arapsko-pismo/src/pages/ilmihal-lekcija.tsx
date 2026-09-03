@@ -1632,7 +1632,6 @@ function PriloziSection({
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
   const [h5pSubmitting, setH5pSubmitting] = useState<Record<number, boolean>>({});
   const [h5pCompletion, setH5pCompletion] = useState<Record<number, H5pCompletionState | null>>({});
-  const [h5pContentHeights, setH5pContentHeights] = useState<Record<number, number>>({});
   // Po-prilogu: koliko pokušaja je učenik već imao (određuje multiplier
   // za sljedeći pokušaj — prikaz "možeš osvojiti do X hasenata").
   const [h5pAttempts, setH5pAttempts] = useState<Record<number, H5pAttemptState>>({});
@@ -2354,9 +2353,6 @@ function PriloziSection({
               <Dialog open={!!openH5p} onOpenChange={(o) => { if (!o) setOpenH5p(null); }}>
                 <DialogContent
                   className="h5p-centered-modal p-0 gap-0 rounded-2xl overflow-hidden flex flex-col [&>button.absolute]:hidden"
-                  style={{
-                    "--h5p-player-height": `${openH5p ? h5pContentHeights[openH5p.id] ?? 320 : 320}px`,
-                  } as React.CSSProperties}
                   data-testid="h5p-modal"
                 >
                   {openH5p && (() => {
@@ -2464,11 +2460,6 @@ function PriloziSection({
                               <H5PPlayerLazy
                                 key={`${a.id}-${aKey}-${aUrl}`}
                                 h5pPath={aUrl}
-                                onContentHeightChange={(height) => {
-                                  setH5pContentHeights(prev => (
-                                    prev[a.id] === height ? prev : { ...prev, [a.id]: height }
-                                  ));
-                                }}
                                 onCompleted={(r) => handleH5pCompleted(a.id, r.score, r.maxScore)}
                                 isManager={canManage}
                                 className="w-full min-w-0"

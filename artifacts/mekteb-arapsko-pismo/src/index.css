@@ -187,8 +187,8 @@
     margin: auto !important;
     width: 90vw !important;
     max-width: none !important;
-    height: min(90dvh, calc(var(--h5p-player-height, 320px) + 124px)) !important;
-    min-height: min(320px, 90dvh) !important;
+    height: fit-content !important;
+    min-height: 0 !important;
     max-height: 90vh !important;
     --tw-translate-x: 0px !important;
     --tw-translate-y: 0px !important;
@@ -207,8 +207,8 @@
   @media (min-width: 640px) {
     .h5p-centered-modal {
       width: 75vw !important;
-      height: min(75dvh, calc(var(--h5p-player-height, 320px) + 124px)) !important;
-      min-height: min(320px, 75dvh) !important;
+      height: fit-content !important;
+      min-height: 0 !important;
       max-height: 75vh !important;
     }
 
@@ -223,8 +223,8 @@
   @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
     .h5p-centered-modal {
       width: 50vw !important;
-      height: min(75dvh, calc(var(--h5p-player-height, 320px) + 124px)) !important;
-      min-height: min(320px, 75dvh) !important;
+      height: fit-content !important;
+      min-height: 0 !important;
       max-height: 75vh !important;
     }
 
