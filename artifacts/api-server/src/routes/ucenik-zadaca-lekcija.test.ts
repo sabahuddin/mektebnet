@@ -640,11 +640,26 @@ test("nastavnički file/url materijali ne mogu se dodijeliti niti izložiti uče
   const create = await teacherPost("/api/muallim/zadace", {
     grupaId: groupId, naslov: "Zadaća bez nastavničkih materijala",
     lekcijaNaslov: `Zadata lekcija ${suffix}`, lekcijaSlug: assignedSlug,
-    ucenikIds: [studentId],
+    tipDodjele: "pojedinacno", ucenikIds: [studentId],
   });
   assert.equal(create.status, 201);
-  const created = await create.json() as { id: number };
+  const created = await create.json() as { id: number; ucenikIds: number[] };
   attachmentHomeworkId = created.id;
+  assert.deepEqual(created.ucenikIds, [studentId]);
+
+  const zaSve = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}`, {
+    tipDodjele: "svi",
+    ucenikIds: [],
+  });
+  assert.equal(zaSve.status, 200);
+  assert.deepEqual((await zaSve.json() as { ucenikIds: number[] }).ucenikIds, []);
+
+  const pojedinacna = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}`, {
+    tipDodjele: "pojedinacno",
+    ucenikIds: [studentId],
+  });
+  assert.equal(pojedinacna.status, 200);
+  assert.deepEqual((await pojedinacna.json() as { ucenikIds: number[] }).ucenikIds, [studentId]);
 
   // Simuliraj historijske veze koje su nastale prije zabrane.
   await db.execute(sql`

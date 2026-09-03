@@ -977,7 +977,7 @@ export default function MuallimPanel() {
       toast({ title: t("Odaberi lekciju ili upiši opis"), variant: "destructive" });
       return;
     }
-    if (zadTipTab === "pojedinacno" && zadUcenikIds.size === 0) {
+    if (zadDodjela === "pojedinacno" && zadUcenikIds.size === 0) {
       toast({ title: t("Odaberi najmanje jednog učenika"), variant: "destructive" });
       return;
     }

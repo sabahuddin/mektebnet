@@ -4920,8 +4920,12 @@ router.put("/zadace/:id", async (req, res) => {
       }).where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId))).returning();
       if (tipDodjele !== undefined || Array.isArray(ucenikIds)) {
         await tx.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
-        const numericIds: number[] = individualna
-          ? [...new Set(ucenikIds.map(Number).filter(Number.isFinite))]
+        const numericIds = individualna
+          ? [...new Set<number>(
+              (ucenikIds as unknown[])
+                .map((value) => Number(value))
+                .filter((value): value is number => Number.isFinite(value)),
+            )]
           : [];
         if (numericIds.length) {
           const ucenici = await tx.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
