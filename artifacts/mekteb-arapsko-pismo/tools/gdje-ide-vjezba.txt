@@ -206,9 +206,25 @@ Te vjezbe idu na Zlatni medaljon, a lekcije koje pokrivaju su:
 Sest od njih su vec samostalne i mogu odmah na svoju lekciju.
 Ostale se mogu razdvojiti po lekcijama ako se zatrazi.
 
-Bez ijedne vjezbe ostaje 8 lekcija:
-  47 odijevanje-hidzab, 50 rad-kultura, 51 stjecanje-znanja, 71 nemoral,
-  73 horoskop, 88 kulidullahe, 89 muslimanska-imena, i 0 uvodna lekcija.
+PREOSTALE LEKCIJE — sada pokrivene
+----------------------------------------------------------------------------
+red | slug lekcije        | fajl                       | tip           | st.
+----------------------------------------------------------------------------
+ 47 | odijevanje-hidzab   | odijevanje_hidzab.h5p      | Question Set  |  5
+ 50 | rad-kultura         | rad_kultura.h5p            | Question Set  |  5
+ 51 | stjecanje-znanja    | stjecanje_znanja.h5p       | Single Choice |  6
+ 71 | nemoral             | nemoral.h5p                | Question Set  |  5
+ 73 | horoskop            | horoskop.h5p               | Question Set  |  5
+ 88 | kulidullahe         | kulidullahe.h5p            | Single Choice |  6
+ 89 | muslimanska-imena   | muslimanska_imena.h5p      | Dialog Cards  |  5
+
+
+NIVO 3 JE POKRIVEN U CIJELOSTI — 100 od 100 lekcija.
+
+80 lekcija ima vlastitu vjezbu, jednu za jednu lekciju.
+20 lekcija pokriveno je unutar tematski grupisanih vjezbi (popis gore), od
+kojih je sest vec samostalno i moze odmah na svoju lekciju. Ostale se mogu
+razdvojiti po lekcijama kad se zatrazi.
 
 NAPOMENA O NAZIVLJU U HISTORIJI
 Vecina imena iz sire nije u glosaru Rijaseta, pa je zadrzan oblik iz same
