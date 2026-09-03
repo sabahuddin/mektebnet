@@ -236,7 +236,7 @@ export default function GrupaPage() {
 
   // Settings dropdown po učeniku (zupčanik na kartici)
   const [settingsOpenId, setSettingsOpenId] = useState<number | null>(null);
-  const [settingsPlacement, setSettingsPlacement] = useState<"above" | "below">("above");
+  const [settingsMenuPosition, setSettingsMenuPosition] = useState({ top: 0, left: 0 });
 
   // Zvjezdice summary po učeniku (za prikaz na kartici)
   const [zvjezdiceSummary, setZvjezdiceSummary] = useState<Map<number, { pozitivne: number; negativne: number }>>(new Map());
@@ -1167,7 +1167,16 @@ export default function GrupaPage() {
                             const menuHeight = 220;
                             const roomAbove = buttonRect.top;
                             const roomBelow = window.innerHeight - buttonRect.bottom;
-                            setSettingsPlacement(roomAbove >= menuHeight || roomAbove >= roomBelow ? "above" : "below");
+                             const placement = roomAbove >= menuHeight || roomAbove >= roomBelow ? "above" : "below";
+                             const menuWidth = 180;
+                             const top = placement === "above"
+                               ? Math.max(8, buttonRect.top - menuHeight)
+                               : Math.max(8, Math.min(window.innerHeight - menuHeight - 8, buttonRect.bottom + 8));
+                             const left = Math.min(
+                               Math.max(8, buttonRect.right - menuWidth),
+                               window.innerWidth - menuWidth - 8,
+                             );
+                             setSettingsMenuPosition({ top, left });
                             setSettingsOpenId(u.id);
                           }}
                           className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
@@ -1175,10 +1184,12 @@ export default function GrupaPage() {
                         >
                           <Settings className="w-4 h-4" />
                         </button>
-                        {settingsOpen && (
-                          <div className={`absolute right-0 z-30 bg-white border border-border/60 rounded-xl shadow-xl py-1 min-w-[170px] ${
-                            settingsPlacement === "above" ? "bottom-8" : "top-8"
-                          }`}>
+                         {settingsOpen && typeof document !== "undefined" && createPortal(
+                           <div
+                             className="fixed z-[60] min-w-[180px] rounded-xl border border-border/60 bg-white py-1 shadow-xl"
+                             style={{ top: settingsMenuPosition.top, left: settingsMenuPosition.left }}
+                             onClick={e => e.stopPropagation()}
+                           >
                             <Link href={`/muallim/ucenik/${u.id}`}>
                               <button className="w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-muted flex items-center gap-2 text-foreground"
                                 onClick={() => setSettingsOpenId(null)}>
@@ -1206,8 +1217,9 @@ export default function GrupaPage() {
                             >
                               <Trash2 className="w-4 h-4" /> {t("Obriši učenika")}
                             </button>
-                          </div>
-                        )}
+                           </div>,
+                           document.body,
+                         )}
                       </div>
                     </div>
 
