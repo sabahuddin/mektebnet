@@ -771,7 +771,7 @@ export default function GrupaPage() {
       {/* Sticky traka na vrhu — uvijek vidljiva pri skrolu, jasno pokazuje
           u kojoj smo grupi i kako izaći nazad na panel. Header layout-a je
           h-16 (top-16), pa naša traka sjeda odmah ispod njega. */}
-      <div className="sticky top-16 z-30 -mx-4 px-4 py-2.5 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 border-b border-emerald-200/70 shadow-sm mb-6">
+      <div className="sticky top-16 z-30 -mx-3 px-3 py-2.5 sm:-mx-4 sm:px-4 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 border-b border-emerald-200/70 shadow-sm mb-5 sm:mb-6">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
           <button
             onClick={() => goBackOr(() => setLocation("/muallim?tab=grupe"))}
@@ -796,12 +796,12 @@ export default function GrupaPage() {
       </div>
 
          <div className="max-w-6xl mx-auto">
-         <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
-          <aside className="order-1 lg:order-2 lg:sticky lg:top-24">
+         <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+          <aside className="order-1 xl:order-2 xl:sticky xl:top-24">
             <MuallimGroupSidebar grupaId={grupa.id} activeModule={aktivniModul} zadacaBadge={zadacaBadge} />
           </aside>
 
-         <div className="order-2 lg:order-1 min-w-0">
+         <div className="order-2 xl:order-1 min-w-0">
 
         {grupa.isArchived && (
           <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-6">

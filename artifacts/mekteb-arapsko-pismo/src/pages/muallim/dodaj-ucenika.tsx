@@ -122,7 +122,7 @@ export default function DodajUcenikaPage() {
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
 
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md">
             <UserPlus className="w-6 h-6 text-white" />
           </div>
@@ -134,22 +134,22 @@ export default function DodajUcenikaPage() {
 
         {created ? (
           <div className="space-y-4">
-            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-6">
+            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4 sm:p-6">
               <h2 className="text-lg font-extrabold text-emerald-800 mb-1">{t("Učenik kreiran! ✓")}</h2>
               <p className="text-emerald-700 text-sm mb-4">{t("Proslijedi ove podatke učeniku:")}</p>
 
               <div className="bg-white rounded-xl border border-emerald-200 p-4 font-mono text-sm space-y-2 mb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-muted-foreground">{t("Ime:")}</span>
                   <span className="font-bold text-foreground">{created.displayName}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-muted-foreground">{t("Korisničko ime:")}</span>
-                  <span className="font-bold text-foreground">{created.username}</span>
+                  <span className="break-all font-bold text-foreground">{created.username}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-muted-foreground">{t("Lozinka:")}</span>
-                  <span className="font-bold text-foreground">{created.generatedPassword}</span>
+                  <span className="break-all font-bold text-foreground">{created.generatedPassword}</span>
                 </div>
               </div>
 
@@ -160,22 +160,22 @@ export default function DodajUcenikaPage() {
             </div>
 
             {created.roditelj && (
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 sm:p-6">
                 <h2 className="text-lg font-extrabold text-blue-800 mb-1">{t("Roditelj kreiran! ✓")}</h2>
                 <p className="text-blue-700 text-sm mb-4">{t("Proslijedi ove podatke roditelju:")}</p>
 
                 <div className="bg-white rounded-xl border border-blue-200 p-4 font-mono text-sm space-y-2 mb-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-muted-foreground">{t("Ime:")}</span>
                     <span className="font-bold text-foreground">{created.roditelj.displayName}</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-muted-foreground">{t("Korisničko ime:")}</span>
-                    <span className="font-bold text-foreground">{created.roditelj.username}</span>
+                    <span className="break-all font-bold text-foreground">{created.roditelj.username}</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-muted-foreground">{t("Lozinka:")}</span>
-                    <span className="font-bold text-foreground">{created.roditelj.generatedPassword}</span>
+                    <span className="break-all font-bold text-foreground">{created.roditelj.generatedPassword}</span>
                   </div>
                 </div>
 
@@ -186,7 +186,7 @@ export default function DodajUcenikaPage() {
               </div>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               {created.roditelj && (
                 <Button variant="outline" onClick={copyOba} className="flex-1 rounded-xl flex items-center gap-2">
                   {copiedTarget === "oba" ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
@@ -203,7 +203,7 @@ export default function DodajUcenikaPage() {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-6 space-y-5">
+          <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-4 sm:p-6 space-y-5">
             <div>
               <label className="text-sm font-bold text-foreground mb-1.5 block">
                 {t("Ime i prezime učenika")} <span className="text-red-500">*</span>
@@ -253,7 +253,7 @@ export default function DodajUcenikaPage() {
               </label>
 
               {dodajRoditelja && (
-                <div className="mt-4 ml-8">
+                <div className="mt-4 sm:ml-8">
                   <label className="text-sm font-bold text-foreground mb-1.5 block">
                     {t("Ime i prezime roditelja")} <span className="text-red-500">*</span>
                   </label>

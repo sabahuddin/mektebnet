@@ -307,7 +307,7 @@ export default function MuallimH5pStatistikaPage() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+      <div className="max-w-6xl mx-auto grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
         <main className="min-w-0">
         <div className="flex items-center gap-3 mb-6">
           <BackLink fallback="/muallim" className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
@@ -359,7 +359,7 @@ export default function MuallimH5pStatistikaPage() {
         {grupaId && (
           <>
             {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
                 <Sparkles className="w-5 h-5 text-purple-600 mb-2" />
                 <div className="text-2xl font-extrabold text-purple-900" data-testid="stat-broj-vjezbi">
@@ -578,7 +578,7 @@ export default function MuallimH5pStatistikaPage() {
                           {v.priloziName}
                         </h3>
                       </div>
-                      <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+                    <div className="grid w-full grid-cols-3 items-center gap-2 md:flex md:w-auto md:gap-4 md:flex-shrink-0">
                         <div className="text-center">
                           <div className="text-xs font-bold text-muted-foreground">{t("Učenika")}</div>
                           <div className="text-lg font-extrabold text-foreground">
@@ -605,10 +605,10 @@ export default function MuallimH5pStatistikaPage() {
 
                     {v.najslabijiUcenik && (
                       <div
-                        className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-3"
+                        className="mt-3 pt-3 border-t border-border/40 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center gap-2 text-sm min-w-0">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
                           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                           <span className="text-muted-foreground font-medium truncate">
                             {t("Najslabiji rezultat:")}
@@ -652,7 +652,7 @@ export default function MuallimH5pStatistikaPage() {
         )}
         </main>
         {grupaId && (
-          <aside className="lg:sticky lg:top-24">
+          <aside className="xl:sticky xl:top-24">
             <MuallimGroupSidebar grupaId={grupaId} activeModule="h5p" />
           </aside>
         )}

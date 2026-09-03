@@ -130,7 +130,7 @@ export default function PrisustvoPage() {
           </div>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+        <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
         <main className="min-w-0">
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <div>
@@ -209,7 +209,7 @@ export default function PrisustvoPage() {
           </div>
         )}
         </main>
-        <aside className="lg:sticky lg:top-24">
+        <aside className="xl:sticky xl:top-24">
           <MuallimGroupSidebar grupaId={parseInt(grupaId)} activeModule="prisustvo" />
         </aside>
         </div>

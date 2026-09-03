@@ -153,7 +153,7 @@ export default function DodajGrupuPage() {
           <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
         </button>
 
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="w-12 h-12 bg-gradient-to-br from-secondary to-emerald-600 rounded-2xl flex items-center justify-center shadow-md">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
@@ -171,7 +171,7 @@ export default function DodajGrupuPage() {
             <Button onClick={() => goBackOr(() => setLocation("/muallim?tab=grupe"))} variant="outline" className="rounded-xl font-bold">{t("Nazad na grupe")}</Button>
           </div>
         ) : (
-        <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-4 sm:p-6 space-y-5">
 
           {/* Muallim grupe — samo za glavnog muallima */}
           {isGlavni && muallimi.length > 0 && (
@@ -219,7 +219,7 @@ export default function DodajGrupuPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Početak mektebske godine")}</label>
               <input

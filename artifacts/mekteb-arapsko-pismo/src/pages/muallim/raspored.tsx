@@ -159,7 +159,7 @@ export default function MuallimRasporedPage() {
 
   return (
     <Layout>
-      <div className="sticky top-16 z-30 -mx-4 px-4 py-2.5 bg-gradient-to-r from-violet-50 via-white to-violet-50 border-b border-violet-200/70 shadow-sm mb-6">
+      <div className="sticky top-16 z-30 -mx-3 px-3 py-2.5 sm:-mx-4 sm:px-4 bg-gradient-to-r from-violet-50 via-white to-violet-50 border-b border-violet-200/70 shadow-sm mb-5 sm:mb-6">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
           <button
             onClick={() => goBackOr(() => setLocation(`/muallim/grupa/${grupaId}`))}
@@ -174,7 +174,7 @@ export default function MuallimRasporedPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+      <div className="max-w-6xl mx-auto grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
         <main className="min-w-0">
         <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-2xl p-4 mb-5">
           <Info className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
@@ -185,7 +185,7 @@ export default function MuallimRasporedPage() {
         </div>
 
         {/* Nivo tabovi */}
-        <div className="flex gap-2 mb-5">
+        <div className="flex flex-wrap gap-2 mb-5">
           {NIVOI.map(n => (
             <button
               key={n}
@@ -202,7 +202,7 @@ export default function MuallimRasporedPage() {
               {t("Nivo {n}", { n: String(n) })}
             </button>
           ))}
-          <div className="ml-auto flex items-center">
+          <div className="w-full flex items-center sm:ml-auto sm:w-auto">
             <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${imaRaspored ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
               {imaRaspored ? t("Vlastiti raspored") : t("Zadani redoslijed")}
             </span>
@@ -310,7 +310,7 @@ export default function MuallimRasporedPage() {
           </div>
         )}
         </main>
-        <aside className="lg:sticky lg:top-24">
+        <aside className="xl:sticky xl:top-24">
           <MuallimGroupSidebar grupaId={grupaId} />
         </aside>
       </div>

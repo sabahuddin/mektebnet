@@ -228,13 +228,13 @@ export function Layout({ children }: LayoutProps) {
       <FlyingMaskota />
       <SelamWelcome userName={user?.displayName} />
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-3 min-w-0">
 
           <Link href="/" className="flex items-center gap-2 group cursor-pointer shrink-0">
             <img src="/logo-mekteb.png" alt="Mekteb" className="h-10 w-auto group-hover:scale-105 transition-transform" />
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden xl:flex items-center gap-1 min-w-0">
             {mainNavLinks.map((link) => {
               // Glavna navigacija sa ikonom i nazivom modula (ranije bila samo
               // ikona, ali korisnici nisu prepoznavali šta je šta).
@@ -330,7 +330,7 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Brza prečica na poruke — vidljiva na mobilnom kad ima nepročitanih */}
             {user && unreadPoruke > 0 && (
-              <Link href="/poruke" className="lg:hidden relative p-2 rounded-xl hover:bg-muted transition-colors" aria-label={t("{count} nepročitanih poruka", { count: String(unreadPoruke) })}>
+              <Link href="/poruke" className="xl:hidden relative p-2 rounded-xl hover:bg-muted transition-colors" aria-label={t("{count} nepročitanih poruka", { count: String(unreadPoruke) })}>
                 <MessageSquare className="w-6 h-6 text-primary" />
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm leading-none">
                   {unreadPoruke > 99 ? "99+" : unreadPoruke}
@@ -338,7 +338,15 @@ export function Layout({ children }: LayoutProps) {
               </Link>
             )}
 
-            <Button variant="ghost" size="icon" className="lg:hidden text-primary rounded-xl" onClick={() => setMobileOpen(!mobileOpen)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="xl:hidden min-h-11 min-w-11 text-primary rounded-xl"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? t("Zatvori meni") : t("Otvori meni")}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-main-menu"
+            >
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
           </div>
@@ -354,7 +362,8 @@ export function Layout({ children }: LayoutProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="lg:hidden fixed top-16 inset-x-0 bottom-0 z-40 bg-white border-t border-border/50 flex flex-col"
+            id="mobile-main-menu"
+            className="xl:hidden fixed top-16 inset-x-0 bottom-0 z-40 bg-white border-t border-border/50 flex flex-col"
           >
             {/* Gornja traka: jezik + zvuk */}
             <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 shrink-0">
@@ -429,7 +438,7 @@ export function Layout({ children }: LayoutProps) {
 
       <TrialBanner />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8">
+      <main className="flex-1 w-full min-w-0 max-w-7xl mx-auto px-3 py-5 sm:px-4 sm:py-8">
         {children}
       </main>
 

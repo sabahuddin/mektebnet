@@ -296,7 +296,7 @@ export default function MuallimIzvjestajPage() {
         modu (vidi index.css), ova klasa dodatno izoluje izvještaj od
         ostalih dijelova <main> kontejnera.
       */}
-      <div className={grupaId ? "max-w-6xl mx-auto grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start" : ""}>
+      <div className={grupaId ? "max-w-6xl mx-auto grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start" : ""}>
       <div className="print-worksheet max-w-4xl mx-auto print-root min-w-0">
         <div className="no-print mb-6 flex items-center justify-between gap-3 flex-wrap">
           <button
@@ -306,12 +306,12 @@ export default function MuallimIzvjestajPage() {
           >
             <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Button
               onClick={handleExportExcel}
               disabled={exportingExcel || filteredUcenici.length === 0}
               variant="outline"
-              className="rounded-xl font-bold text-sm flex items-center gap-2"
+              className="w-full rounded-xl font-bold text-sm flex items-center justify-center gap-2 sm:w-auto"
               data-testid="btn-export-excel"
             >
               {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
@@ -319,7 +319,7 @@ export default function MuallimIzvjestajPage() {
             </Button>
             <Button
               onClick={handlePrint}
-              className="rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center gap-2"
+              className="w-full rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 sm:w-auto"
               data-testid="btn-print"
             >
               <Printer className="w-4 h-4" /> {t("Štampaj / Sačuvaj kao PDF")}
@@ -507,7 +507,7 @@ export default function MuallimIzvjestajPage() {
         )}
       </div>
       {grupaId && (
-        <aside className="no-print lg:sticky lg:top-24">
+        <aside className="no-print xl:sticky xl:top-24">
           <MuallimGroupSidebar grupaId={grupaId} activeModule="izvjestaji" />
         </aside>
       )}
@@ -550,7 +550,7 @@ function SumarniPregled({ ucenici, nivo }: { ucenici: UcenikIzvjestaj[]; nivo: "
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div className="bg-primary/5 print-bg-primary border border-border/50 rounded-xl p-4">
           <Users className="w-4 h-4 text-primary mb-1" />
           <div className="text-2xl font-extrabold text-primary">{ucenici.length}</div>

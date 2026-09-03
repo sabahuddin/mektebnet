@@ -706,7 +706,7 @@ export default function UcenikPage() {
                     </p>
                     <div className="relative">
                       <div className="flex gap-2 flex-wrap">
-                        <div className="relative flex-1 min-w-[240px]">
+                        <div className="relative min-w-0 flex-1 basis-full sm:min-w-[240px] sm:basis-auto">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 pointer-events-none" />
                           <input
                             type="text"
@@ -819,7 +819,7 @@ export default function UcenikPage() {
                         onChange={e => setNovoRoditeljIme(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && novoRoditeljIme.trim() && !savingRoditelj) addRoditelj(); }}
                         placeholder={t("Ime i prezime roditelja")}
-                        className="flex-1 min-w-[200px] border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="min-w-0 flex-1 basis-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 sm:min-w-[200px] sm:basis-auto"
                         data-testid="input-roditelj-ime"
                       />
                       <Button
@@ -840,7 +840,7 @@ export default function UcenikPage() {
               </motion.div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
               <div className={`border border-border/50 rounded-2xl p-4 ${prisustvoPct !== null && prisustvoPct >= 80 ? "bg-emerald-50" : prisustvoPct !== null && prisustvoPct >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
                 <CalendarCheck className="w-5 h-5 text-foreground/60 mb-2" />
                 <div className={`text-2xl font-extrabold ${prisustvoPct !== null && prisustvoPct >= 80 ? "text-emerald-600" : prisustvoPct !== null && prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>

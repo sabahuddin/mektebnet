@@ -56,21 +56,21 @@ export function MuallimGroupSidebar({
   ];
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-white/80 p-3">
+    <div className="rounded-2xl border border-border/50 bg-white/80 p-2.5 sm:p-3">
       <p className="px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
-      <nav className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-1.5 lg:overflow-visible lg:pb-0">
+      <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:flex xl:flex-col xl:gap-1.5">
         {modules.map((module) => (
           <Link
             key={module.key}
             href={module.href}
-            className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors lg:w-full ${
+            className={`relative flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2.5 text-left text-xs font-bold transition-colors sm:px-3 sm:text-sm xl:w-full ${
               activeModule === module.key
                 ? "border-emerald-500 bg-emerald-100 text-emerald-900 shadow-sm"
                 : "border-border/60 bg-white text-foreground hover:border-emerald-300 hover:bg-emerald-50"
             }`}
           >
             <module.icon className={`h-4 w-4 shrink-0 ${activeModule === module.key ? "text-emerald-700" : "text-muted-foreground"}`} />
-            <span className="truncate">{module.label}</span>
+            <span className="min-w-0 truncate">{module.label}</span>
             {(module.badge ?? 0) > 0 && (
               <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-black text-white shadow-md">
                 {module.badge}
