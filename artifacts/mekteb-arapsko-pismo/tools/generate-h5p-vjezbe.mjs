@@ -31,6 +31,7 @@ import { VJEZBE_N3A } from "./h5p-vjezbe-n3-akaid.mjs";
 import { VJEZBE_N3A2 } from "./h5p-vjezbe-n3-akaid2.mjs";
 import { VJEZBE_N3I } from "./h5p-vjezbe-n3-ibadet.mjs";
 import { VJEZBE_N3I2 } from "./h5p-vjezbe-n3-ibadet2.mjs";
+import { VJEZBE_N3H } from "./h5p-vjezbe-n3-historija.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../../..");
@@ -340,7 +341,7 @@ function zatvorenje(direktne) {
 
 // ── gradnja ──────────────────────────────────────────────────────────────
 fs.mkdirSync(OUT_DIR, { recursive: true });
-for (const v of [...VJEZBE, ...VJEZBE_N3, ...VJEZBE_N3B, ...VJEZBE_N3L, ...VJEZBE_N3A, ...VJEZBE_N3A2, ...VJEZBE_N3I, ...VJEZBE_N3I2]) {
+for (const v of [...VJEZBE, ...VJEZBE_N3, ...VJEZBE_N3B, ...VJEZBE_N3L, ...VJEZBE_N3A, ...VJEZBE_N3A2, ...VJEZBE_N3I, ...VJEZBE_N3I2, ...VJEZBE_N3H]) {
   const omot = OMOTACI[v.tip];
   if (!omot) throw new Error(`Nepoznat tip vježbe: ${v.tip}`);
   const potrebne = zatvorenje(omot.direktne);

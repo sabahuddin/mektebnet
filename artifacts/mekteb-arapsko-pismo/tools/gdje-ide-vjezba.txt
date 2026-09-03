@@ -140,11 +140,37 @@ IBADET NIVOA 3 JE SADA POKRIVEN U CIJELOSTI — 17 lekcija, 17 vjezbi.
 Zajedno s akaidom (22) i ahlakom, Nivo 3 ima 50 od 100 lekcija s vlastitom
 vjezbom.
 
+HISTORIJA ISLAMA
+----------------------------------------------------------------------------
+red | slug lekcije            | fajl                        | tip           | st.
+----------------------------------------------------------------------------
+ 39 | hadiske-zbirke          | hadiske_zbirke.h5p          | Question Set  |  5
+ 77 | poslanici-kuran         | poslanici_kuran.h5p         | Single Choice |  7
+ 78 | nuh-as                  | nuh.h5p                     | Question Set  |  5
+ 79 | ibrahim-as              | ibrahim.h5p                 | Question Set  |  5
+ 80 | musa-as                 | musa.h5p                    | Question Set  |  5
+ 81 | isa-as                  | isa.h5p                     | Single Choice |  6
+ 82 | muhammed-as-djetinjstvo | djetinjstvo_poslanika.h5p   | Question Set  |  5
+ 83 | muhammed-as-porodica    | porodica_poslanika.h5p      | Single Choice |  6
+ 86 | oprostajni-hadz         | oprostajni_hadz.h5p         | Question Set  |  5
+ 87 | preseljenje-ahiret      | preseljenje_poslanika.h5p   | Dialog Cards  |  6
+ 97 | odabrane-zene           | odabrane_zene.h5p           | Question Set  |  5
+
+Hidzra (84), Bitka na Bedru (85) i pravedne halife (96) urađeni su ranije, u
+paketu n3_hidzra_i_bedr.h5p i halife.h5p. HISTORIJA JE TIME POKRIVENA.
+
+Nivo 3 sada ima 61 od 100 lekcija s vlastitom vjezbom.
+
 Ostaje u Nivou 3:
-  sure               El-Fil, El-Humeze, El-'Asr, Et-Tekasur, El-Kari'ah  (5)
-  Historija islama   poslanici pojedinacno, sira Poslanika, a.s.        (10)
-  Bosna              IZ, dzamije, vakufi, pjesnici, lijepa imena         (8)
-  ostalo             hadiske zbirke i slicno
+  sure     El-Fil, El-Humeze, El-'Asr, Et-Tekasur, El-Kari'ah, El-Kevser  (5-6)
+  Bosna    IZ, dzamije, vakufi, pjesnici, lijepa imena, mekteb i skola     (8)
+
+NAPOMENA O NAZIVLJU U HISTORIJI
+Vecina imena iz sire nije u glosaru Rijaseta, pa je zadrzan oblik iz same
+lekcije: Merjema, hazreti Hava, Asija, Ebreha, Muaz ibn Dzebel, Amina.
+Jedan izuzetak: Pravila izricito propisuju ABDUL-MUTTALIB, s crticom i velikim
+slovom u oba dijela, dok lekcija pise "Abdulmuttalib". Abdullah ostaje
+sastavljeno jer je to ime s Allahovim imenom.
 
 
 NAPOMENA O IMENIMA FAJLOVA
