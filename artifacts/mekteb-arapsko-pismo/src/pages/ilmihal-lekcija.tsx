@@ -2200,6 +2200,7 @@ function PriloziSection({
                           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
                             {isH5p ? (
                               <button
+                                type="button"
                                 onClick={() => {
                                   if (isH5pLocked) {
                                     toast({

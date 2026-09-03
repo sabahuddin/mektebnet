@@ -11,6 +11,7 @@ const H5P_RUNTIME_BASE = `${import.meta.env.BASE_URL}h5p-standalone`;
 const h5pBundleUrl = `${H5P_RUNTIME_BASE}/main.bundle.js`;
 
 let h5pBundleLoadPromise: Promise<void> | null = null;
+let h5pBundleReloadAttempt = 0;
 
 class H5PInitError extends Error {
   kind: H5PErrorKind;
@@ -20,32 +21,75 @@ class H5PInitError extends Error {
   }
 }
 
-function loadH5PBundle(): Promise<void> {
+function loadH5PBundle(forceReload = false): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if ((window as any).H5PStandalone?.H5P) return Promise.resolve();
+  const w = window as any;
+  if (!forceReload && w.H5PStandalone?.H5P) return Promise.resolve();
+
+  if (forceReload) {
+    h5pBundleLoadPromise = null;
+    document
+      .querySelectorAll(`script[data-h5p-standalone="1"]`)
+      .forEach(script => script.remove());
+    delete w.H5PStandalone;
+  }
+
   if (h5pBundleLoadPromise) return h5pBundleLoadPromise;
-  h5pBundleLoadPromise = new Promise<void>((resolve, reject) => {
+  const loadPromise = new Promise<void>((resolve, reject) => {
     const existing = document.querySelector(
       `script[data-h5p-standalone="1"]`,
     ) as HTMLScriptElement | null;
     if (existing) {
-      if ((window as any).H5PStandalone?.H5P) return resolve();
-      existing.addEventListener("load", () => resolve());
+      if (w.H5PStandalone?.H5P) return resolve();
+      existing.addEventListener("load", () => {
+        if (w.H5PStandalone?.H5P) resolve();
+        else reject(new H5PInitError("library", "H5P biblioteka nije dostupna nakon učitavanja"));
+      });
       existing.addEventListener("error", () =>
         reject(new H5PInitError("library", "H5P biblioteka se nije mogla učitati")),
       );
       return;
     }
     const s = document.createElement("script");
-    s.src = h5pBundleUrl;
+    s.src = forceReload
+      ? `${h5pBundleUrl}?reload=${++h5pBundleReloadAttempt}`
+      : h5pBundleUrl;
     s.async = true;
     s.dataset["h5pStandalone"] = "1";
-    s.onload = () => resolve();
+    s.onload = () => {
+      if (w.H5PStandalone?.H5P) resolve();
+      else reject(new H5PInitError("library", "H5P biblioteka nije dostupna nakon učitavanja"));
+    };
     s.onerror = () =>
       reject(new H5PInitError("library", "H5P biblioteka se nije mogla učitati"));
     document.head.appendChild(s);
   });
+
+  h5pBundleLoadPromise = loadPromise.catch(error => {
+    h5pBundleLoadPromise = null;
+    throw error;
+  });
   return h5pBundleLoadPromise;
+}
+
+async function getH5PConstructor(): Promise<any> {
+  try {
+    await loadH5PBundle();
+  } catch {
+    // Stari script/promise može ostati u nevažećem stanju nakon zatvaranja
+    // playera. Jedan svježi reload je dovoljan; stvarnu grešku bacamo ispod.
+    await loadH5PBundle(true);
+  }
+
+  let ctor = (window as any).H5PStandalone?.H5P;
+  if (!ctor) {
+    await loadH5PBundle(true);
+    ctor = (window as any).H5PStandalone?.H5P;
+  }
+  if (!ctor) {
+    throw new H5PInitError("library", "H5P biblioteka nije dostupna nakon svježeg učitavanja");
+  }
+  return ctor;
 }
 
 export interface H5PXapiResult {
@@ -250,15 +294,11 @@ function H5PPlayerImpl({
         await prefetchAndValidate(h5pPath);
         if (cancelled) return;
 
-        await loadH5PBundle();
+        const H5PCtor = await getH5PConstructor();
         if (cancelled || !containerRef.current) return;
         // Nova komponenta uvijek počinje sa praznim H5P korijenom.
         containerRef.current.innerHTML = "";
         const w = window as any;
-        const H5PCtor = w.H5PStandalone?.H5P;
-        if (!H5PCtor) {
-          throw new H5PInitError("library", "H5P biblioteka nije dostupna nakon učitavanja");
-        }
         await new H5PCtor(containerRef.current, {
           h5pJsonPath: h5pPath,
           frameJs: `${H5P_RUNTIME_BASE}/frame.bundle.js`,
