@@ -84,7 +84,22 @@ red | slug lekcije       | fajl                       | tip vježbe      | stavk
  21 | dzennet-dzehennem  | l-dzennet-dzehennem.h5p    | Question Set    |  5
  22 | kader              | l-kader.h5p                | Single Choice   |  7
 
-Još nepokriveno u akaid-bloku: Allahova svojstva (es-sifatuz-zatijje i
-es-sifatus-subutijje, lekcije 6-9), El-Esmaul-husna (10), Kur'an kao
-posljednja objava (14), mudžize (16), Isra i Miradž (17), kelime-i
-šehadet detaljno (24).
+AKAID-BLOK, DRUGI DIO — svojstva, imena, Kur'an, mudžize
+----------------------------------------------------------------------------
+red | slug lekcije       | fajl                       | tip vježbe      | stavki
+----------------------------------------------------------------------------
+  6 | zatijje-1          | l-zatijje-1.h5p            | Question Set    |  6
+  7 | zatijje-2          | l-zatijje-2.h5p            | Question Set    |  5
+  8 | subutijje-1        | l-subutijje-1.h5p          | Single Choice   |  7
+  9 | subutijje-2        | l-subutijje-2.h5p          | Single Choice   |  7
+ 10 | esmaul-husna       | l-esmaul-husna.h5p         | Question Set    |  5
+ 14 | kuran-objava       | l-kuran-objava.h5p         | Question Set    |  6
+ 16 | mudzize            | l-mudzize.h5p              | Question Set    |  5
+ 17 | isra-miradz        | l-isra-miradz.h5p          | Dialog Cards    |  6
+ 24 | kelimei-sehadet    | l-kelimei-sehadet.h5p      | Single Choice   |  7
+
+AKAID-BLOK NIVOA 3 JE SADA POKRIVEN U CIJELOSTI — 22 lekcije, 22 vježbe.
+
+Ostaje u Nivou 3: Ibadet (namaz, post, zekat, hadž, čistoća — oko 19 lekcija),
+Historija islama (poslanici pojedinačno, sira — oko 10) i Bosna (IZ, džamije,
+vakufi, pjesnici — oko 8).
