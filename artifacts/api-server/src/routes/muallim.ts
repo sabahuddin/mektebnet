@@ -37,6 +37,7 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
 import { mektebDokumentiDir, streamDokument, deleteDokumentFajl, optimizePdfFile } from "../lib/dokumenti.js";
+import { normalizeUploadedFilename } from "../lib/file-names.js";
 import { getGlobalNapametKatalog, getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
@@ -808,6 +809,7 @@ router.get("/mekteb/statistika", async (req, res) => {
 const dokumentStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, mektebDokumentiDir),
   filename: (_req, file, cb) => {
+    file.originalname = normalizeUploadedFilename(file.originalname);
     const ext = path.extname(file.originalname);
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
   },
@@ -836,7 +838,7 @@ router.get("/mekteb/dokumenti", async (req, res) => {
       id: d.id,
       naziv: d.naziv,
       opis: d.opis,
-      originalName: d.originalName,
+      originalName: normalizeUploadedFilename(d.originalName),
       storedName: d.storedName,
       fileSize: d.fileSize,
       createdAt: d.createdAt,

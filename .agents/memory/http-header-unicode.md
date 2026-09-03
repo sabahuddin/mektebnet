@@ -13,3 +13,8 @@ Sanitizacija koja ZADRŽAVA unicode opsege (`\u0100-\u017F` itd.) ne pomaže —
 **How to apply:** Koristi RFC 5987 oblik (uzor postoji u `admin.ts`):
 `Content-Disposition: attachment; filename="ascii-fallback.ext"; filename*=UTF-8''${encodeURIComponent(naziv)}`.
 Na frontendu parsiraj prvo `filename\*=UTF-8''(...)` pa tek onda `filename="..."`.
+
+Multer/Busboy može UTF-8 naziv uploada protumačiti kao latin1, pa `šđčćž`
+postanu mojibake sekvence (`Å...`/`Ä...`). Normalizuj `file.originalname` na
+upload granici, ali samo kada su te sekvence prepoznate; već ispravan Unicode
+naziv se ne smije ponovo dekodirati.

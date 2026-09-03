@@ -57,6 +57,7 @@ import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 import { optimizePdfFile } from "../lib/dokumenti.js";
 import { getGlobalNapametKatalog } from "../data/napamet.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
+import { contentDisposition, normalizeUploadedFilename } from "../lib/file-names.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -92,6 +93,7 @@ if (!fs.existsSync(uploadsDir)) {
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadsDir),
   filename: (_req, file, cb) => {
+    file.originalname = normalizeUploadedFilename(file.originalname);
     const ext = path.extname(file.originalname);
     const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
     cb(null, name);
@@ -599,7 +601,7 @@ router.get("/prilozi/download/:id", async (req, res) => {
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Fajl nije pronađen na serveru" });
     const stat = fs.statSync(filePath);
     res.setHeader("Content-Length", stat.size);
-    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.originalName)}`);
+    res.setHeader("Content-Disposition", contentDisposition(file.originalName));
     res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
     res.setHeader("Cache-Control", "private, no-cache");
     fs.createReadStream(filePath).pipe(res);

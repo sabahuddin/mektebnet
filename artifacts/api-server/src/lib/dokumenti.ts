@@ -3,6 +3,7 @@ import fs from "fs";
 import type { Response } from "express";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { contentDisposition } from "./file-names.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -78,7 +79,7 @@ export function streamDokument(res: Response, doc: DokumentFajl) {
     return;
   }
   res.setHeader("Content-Type", doc.mimeType || "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(doc.originalName)}"`);
+  res.setHeader("Content-Disposition", contentDisposition(doc.originalName, "inline"));
   fs.createReadStream(fp).pipe(res);
 }
 

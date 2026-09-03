@@ -24,6 +24,7 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../lib/badges.js";
 import { computeGameStats } from "./games.js";
 import { streamDokument } from "../lib/dokumenti.js";
+import { normalizeUploadedFilename } from "../lib/file-names.js";
 import { getStudentGodine, razrijesiGodinu } from "../lib/mektebska-godina.js";
 import { getNapametKatalog } from "../data/napamet.js";
 
@@ -815,7 +816,7 @@ router.get("/dijete/:ucenikId/dokumenti", async (req, res) => {
       id: d.id,
       naziv: d.naziv,
       opis: d.opis,
-      originalName: d.originalName,
+      originalName: normalizeUploadedFilename(d.originalName),
       storedName: d.storedName,
       fileSize: d.fileSize,
       createdAt: d.createdAt,
