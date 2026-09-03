@@ -24,7 +24,7 @@ import {
   krunisanjaTable,
   mektebDokumentiTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists } from "drizzle-orm";
+import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges, buildProgressSnapshot, computeBadgeProgress } from "../lib/badges.js";
 import { streamDokument } from "../lib/dokumenti.js";
@@ -56,7 +56,7 @@ router.get("/zadace/:zadacaId/prilozi/:prilogId/download", async (req, res) => {
     const zadacaId = Number(req.params.zadacaId);
     const prilogId = Number(req.params.prilogId);
     if (!Number.isInteger(zadacaId) || !Number.isInteger(prilogId)) { res.status(400).json({ error: "Nevažeći ID" }); return; }
-    const [zadaca] = await db.select().from(zadaceTable).where(and(eq(zadaceTable.id, zadacaId), eq(zadaceTable.isActive, true)));
+    const [zadaca] = await db.select().from(zadaceTable).where(eq(zadaceTable.id, zadacaId));
     if (!zadaca) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
     const targets = await db.select({ ucenikId: zadaceUceniciTable.ucenikId }).from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, zadacaId));
     const [profil] = await db.select({ grupaId: ucenikProfiliTable.grupaId }).from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, req.user!.userId));
@@ -376,8 +376,12 @@ router.get("/zadace", async (req, res) => {
     }
     if (grupeZaZadace.length === 0) { res.json([]); return; }
 
+    const currentSchoolYearStart = new Date(`${currentSchoolYearResetDate()}T00:00:00.000Z`);
     const allGroupZadace = await db.select().from(zadaceTable)
-      .where(and(inArray(zadaceTable.grupaId, grupeZaZadace), eq(zadaceTable.isActive, true)))
+      .where(and(
+        inArray(zadaceTable.grupaId, grupeZaZadace),
+        or(eq(zadaceTable.isActive, true), gte(zadaceTable.createdAt, currentSchoolYearStart)),
+      ))
       .orderBy(desc(zadaceTable.createdAt));
 
     if (allGroupZadace.length === 0) { res.json([]); return; }
@@ -429,8 +433,13 @@ router.get("/zadace", async (req, res) => {
       const status = s?.status ?? "na_cekanju";
       const prolongCount = s?.prolongCount ?? 0;
       const efektivniRok = s?.noviRok ?? z.rokDo ?? null;
-      // Kategorija za tabove: zavrseno -> "zavrsene"; ostalo -> "aktivne".
-      const kategorija = status === "zavrseno" ? "zavrsene" : "aktivne";
+      // Arhivirana zadaća je zatvorena: realizovana ide u "zavrsene", a
+      // nerealizovana u "neuradjene". Aktivne zadaće ostaju "aktivne".
+      const kategorija = status === "zavrseno"
+        ? "zavrsene"
+        : z.isActive === false
+          ? "neuradjene"
+          : "aktivne";
       const istekao = !!(efektivniRok && efektivniRok < today);
       return {
         ...z,

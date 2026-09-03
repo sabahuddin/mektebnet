@@ -295,7 +295,7 @@ interface Zadaca {
   noviRok?: string | null;
   prolongCount?: number;
   istekao?: boolean;
-  kategorija?: "zavrsene" | "aktivne";
+  kategorija?: "zavrsene" | "aktivne" | "neuradjene";
   prilozi?: Array<{ id: number; originalName: string; mimeType?: string | null; fileSize?: number | null; kind: "file" | "url" | string; externalUrl?: string | null; }>;
 }
 
@@ -336,7 +336,7 @@ export default function UcenikProfilPage() {
   const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "napamet" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti" | "postavke">("zadace");
   const [napamet, setNapamet] = useState<NapametResponse | null>(null);
   const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
-  const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene">("aktivne");
+  const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene" | "neuradjene">("aktivne");
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => getSoundEffectsEnabled());
   const reducedMotion = prefersReducedMotion();
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
@@ -1177,9 +1177,14 @@ export default function UcenikProfilPage() {
             )}
 
             {activeTab === "zadace" && (() => {
-              const aktivne = zadace.filter(z => (z.kategorija ?? "aktivne") !== "zavrsene");
+              const aktivne = zadace.filter(z => (z.kategorija ?? "aktivne") === "aktivne");
               const zavrsene = zadace.filter(z => z.kategorija === "zavrsene");
-              const lista = zadSubTab === "zavrsene" ? zavrsene : aktivne;
+              const neuradjene = zadace.filter(z => z.kategorija === "neuradjene");
+              const lista = zadSubTab === "zavrsene"
+                ? zavrsene
+                : zadSubTab === "neuradjene"
+                  ? neuradjene
+                  : aktivne;
               const sortByRok = (arr: Zadaca[]) => [...arr].sort((a, b) => {
                 const ar = a.efektivniRok ?? a.rokDo, br = b.efektivniRok ?? b.rokDo;
                 if (!ar && !br) return 0;
@@ -1189,14 +1194,18 @@ export default function UcenikProfilPage() {
               });
               return (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="flex gap-1.5 mb-4">
+                <div className="flex flex-wrap gap-1.5 mb-4">
                   <button onClick={() => setZadSubTab("aktivne")}
                     className={`flex-1 sm:flex-none rounded-lg px-3 py-2 text-xs sm:text-sm font-extrabold border transition-all ${zadSubTab === "aktivne" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
-                    {t("Aktivne ({n})", { n: String(aktivne.length) })}
+                    {t("U toku ({n})", { n: String(aktivne.length) })}
                   </button>
                   <button onClick={() => setZadSubTab("zavrsene")}
                     className={`flex-1 sm:flex-none rounded-lg px-3 py-2 text-xs sm:text-sm font-extrabold border transition-all ${zadSubTab === "zavrsene" ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
                     {t("Završene ({n})", { n: String(zavrsene.length) })}
+                  </button>
+                  <button onClick={() => setZadSubTab("neuradjene")}
+                    className={`flex-1 sm:flex-none rounded-lg px-3 py-2 text-xs sm:text-sm font-extrabold border transition-all ${zadSubTab === "neuradjene" ? "bg-red-600 text-white border-red-600 shadow-md shadow-red-600/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
+                    {t("Neurađeno ({n})", { n: String(neuradjene.length) })}
                   </button>
                 </div>
 
@@ -1204,10 +1213,18 @@ export default function UcenikProfilPage() {
                   <div className="bg-white border border-border/50 rounded-2xl p-10 text-center">
                     <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
                     <h3 className="font-extrabold text-foreground mb-1">
-                      {zadSubTab === "zavrsene" ? t("Nema završenih zadaća") : t("Nema aktivnih zadaća")}
+                      {zadSubTab === "zavrsene"
+                        ? t("Nema završenih zadaća")
+                        : zadSubTab === "neuradjene"
+                          ? t("Nema neurađenih zadaća")
+                          : t("Nema zadaća u toku")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {zadSubTab === "zavrsene" ? t("Zadaće koje je muallim označio završenim prikazat će se ovdje.") : t("Tvoj muallim ti trenutno nije zadao zadaću.")}
+                      {zadSubTab === "zavrsene"
+                        ? t("Zadaće koje je muallim označio završenim prikazat će se ovdje.")
+                        : zadSubTab === "neuradjene"
+                          ? t("Zadaće koje nisu realizovane prije arhiviranja prikazat će se ovdje.")
+                          : t("Tvoj muallim ti trenutno nije zadao zadaću.")}
                     </p>
                   </div>
                 ) : (
@@ -1226,9 +1243,11 @@ export default function UcenikProfilPage() {
                       const daysLeft = rokDate ? Math.round((rokDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
                       const invalidRok = !!efektivni && rokDate === null;
                       const isDone = z.kategorija === "zavrsene";
-                      const isOverdue = !isDone && daysLeft !== null && daysLeft < 0;
-                      const isUrgent = !isDone && daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
+                      const isNotDone = z.kategorija === "neuradjene";
+                      const isOverdue = !isDone && !isNotDone && daysLeft !== null && daysLeft < 0;
+                      const isUrgent = !isDone && !isNotDone && daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
                       const rokColor = isDone ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                        : isNotDone ? "bg-red-100 text-red-700 border-red-300"
                         : invalidRok ? "bg-muted text-muted-foreground border-border"
                         : isOverdue ? "bg-red-100 text-red-700 border-red-300"
                         : isUrgent ? "bg-amber-100 text-amber-700 border-amber-300"
@@ -1236,6 +1255,7 @@ export default function UcenikProfilPage() {
                         : "bg-muted text-muted-foreground border-border";
                       const rokDisplay = efektivni ? efektivni.slice(0, 10).split("-").reverse().join(".") : "";
                       const rokLabel = isDone ? t("Završeno")
+                        : isNotDone ? t("Nije realizovano")
                         : invalidRok ? t("Neispravan rok")
                         : !efektivni ? t("Bez roka")
                         : isOverdue ? t("Rok prošao ({datum})", { datum: rokDisplay })
@@ -1245,11 +1265,11 @@ export default function UcenikProfilPage() {
 
                       return (
                         <div key={z.id} data-testid={`zadaca-${z.id}`}
-                          className={`bg-white border-2 rounded-2xl p-4 sm:p-5 ${isDone ? "border-emerald-200" : isOverdue ? "border-red-200" : isUrgent ? "border-amber-200" : "border-border/50"}`}>
+                          className={`bg-white border-2 rounded-2xl p-4 sm:p-5 ${isDone ? "border-emerald-200" : isNotDone ? "border-red-300 bg-red-50/30" : isOverdue ? "border-red-200" : isUrgent ? "border-amber-200" : "border-border/50"}`}>
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                             <div className="flex items-start gap-3 min-w-0 flex-1">
-                              <div className={`p-2 rounded-xl ${isDone ? "bg-emerald-50" : isOverdue ? "bg-red-50" : isUrgent ? "bg-amber-50" : "bg-violet-50"}`}>
-                                {isDone ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : isOverdue ? <AlertCircle className="w-5 h-5 text-red-600" /> : <FileText className="w-5 h-5 text-violet-600" />}
+                              <div className={`p-2 rounded-xl ${isDone ? "bg-emerald-50" : isNotDone || isOverdue ? "bg-red-50" : isUrgent ? "bg-amber-50" : "bg-violet-50"}`}>
+                                {isDone ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : isNotDone || isOverdue ? <AlertCircle className="w-5 h-5 text-red-600" /> : <FileText className="w-5 h-5 text-violet-600" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-extrabold text-foreground text-base leading-snug break-words">{z.naslov}</h3>

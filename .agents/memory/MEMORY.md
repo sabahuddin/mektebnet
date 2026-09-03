@@ -51,3 +51,4 @@
 - [Mektebska godina — prisustvo](mektebska-godina-prisustvo.md) — tekuće prisustvo se strogo računa od 1. augusta, nikad po kalendarskoj godini ili staroj grupi.
 - [GitHub content API i JSX](github-content-api-jsx.md) — ne mijenjaj složeni JSX marker-zamjenama na udaljenom fajlu; validiraj tačan sadržaj prije Coolify redeploya.
 - [Tailwind v4 modal centriranje](tailwind-v4-modal-centering.md) — resetuj interne translate varijable; optimizovani build može izbaciti samo `translate:none`.
+- [Arhiviranje grupne zadaće](arhiviranje-grupne-zadace.md) — arhiva zatvara zadaću za sve; završeni ostaju završeni, nezavršeni prelaze u Neurađeno.

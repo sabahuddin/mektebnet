@@ -515,6 +515,25 @@ test("ocjena završava grupnu zadaću samo ocijenjenom učeniku", async () => {
   assert.equal(ungraded?.ocjena, null);
 });
 
+test("arhivirana grupna zadaća je završena realizovanom, a neurađena ostalim učenicima", async () => {
+  const archiveResponse = await teacherPut(`/api/muallim/zadace/${emptyHomeworkId}/arhiviraj`, {});
+  assert.equal(archiveResponse.status, 200);
+  const archived = await archiveResponse.json() as { isActive: boolean };
+  assert.equal(archived.isActive, false);
+
+  const [gradedResponse, ungradedResponse] = await Promise.all([
+    studentGet("/api/ucenik/zadace"),
+    studentGet("/api/ucenik/zadace", {}, otherStudentToken),
+  ]);
+  assert.equal(gradedResponse.status, 200);
+  assert.equal(ungradedResponse.status, 200);
+
+  const gradedHomework = await gradedResponse.json() as Array<{ id: number; kategorija: string }>;
+  const ungradedHomework = await ungradedResponse.json() as Array<{ id: number; kategorija: string }>;
+  assert.equal(gradedHomework.find(item => item.id === emptyHomeworkId)?.kategorija, "zavrsene");
+  assert.equal(ungradedHomework.find(item => item.id === emptyHomeworkId)?.kategorija, "neuradjene");
+});
+
 test("NAPAMET pamti direktne ocjene i samo ocjene 5/6 iz zadaće", async () => {
   const directResponse = await teacherPost("/api/muallim/ocjene", {
     ucenikId: studentId,
@@ -621,6 +640,8 @@ test("privatni file/url prilozi zadaće su scoped na adresata i ne cure kroz lek
   attachmentHomeworkId = created.id;
   assert.deepEqual(created.prilozi.map(p => p.id).sort(), [filePrilogId, urlPrilogId].sort());
   assert.equal(created.prilozi.every(p => !("storedName" in p)), true);
+  const targetedArchive = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}/arhiviraj`, {});
+  assert.equal(targetedArchive.status, 400);
 
   const [content, targetList, download, outsiderDownload] = await Promise.all([
     studentGet(`/api/content/ilmihal/${assignedSlug}`),

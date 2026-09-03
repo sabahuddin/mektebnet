@@ -4928,6 +4928,39 @@ router.put("/zadace/:id", async (req, res) => {
   }
 });
 
+// Arhiviranje je dozvoljeno samo za zadaću dodijeljenu cijeloj grupi.
+// Zadaća ostaje sačuvana radi historije; nezavršeni učenici je vide kao
+// "Neurađeno", a završeni kao "Završeno".
+router.put("/zadace/:id/arhiviraj", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!Number.isInteger(id)) { res.status(400).json({ error: "Nevažeći ID" }); return; }
+
+    const [entry] = await db.select().from(zadaceTable).where(and(
+      eq(zadaceTable.id, id),
+      eq(zadaceTable.muallimId, req.user!.userId),
+    ));
+    if (!entry) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
+
+    const targets = await db.select({ id: zadaceUceniciTable.id })
+      .from(zadaceUceniciTable)
+      .where(eq(zadaceUceniciTable.zadacaId, id))
+      .limit(1);
+    if (targets.length > 0) {
+      res.status(400).json({ error: "Arhivirati se može samo zadaća za cijelu grupu" });
+      return;
+    }
+
+    const [archived] = await db.update(zadaceTable)
+      .set({ isActive: false })
+      .where(eq(zadaceTable.id, id))
+      .returning();
+    res.json({ ...archived, ucenikIds: [] });
+  } catch {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 router.delete("/zadace/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -5048,7 +5081,6 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
     const grupneZadace = await db.select().from(zadaceTable)
       .where(and(
         eq(zadaceTable.grupaId, profil.grupaId),
-        eq(zadaceTable.isActive, true),
         gte(zadaceTable.createdAt, currentSchoolYearResetTimestamp()),
       ))
       .orderBy(desc(zadaceTable.createdAt));
@@ -5082,7 +5114,11 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
       const s = statusMap.get(z.id);
       const status = s?.status ?? "na_cekanju";
       const efektivniRok = s?.noviRok ?? z.rokDo ?? null;
-      const kategorija = status === "zavrseno" ? "zavrsene" : "aktivne";
+      const kategorija = status === "zavrseno"
+        ? "zavrsene"
+        : z.isActive === false
+          ? "neuradjene"
+          : "aktivne";
       const istekao = !!(efektivniRok && efektivniRok < today);
       return {
         ...z,

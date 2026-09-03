@@ -583,6 +583,7 @@ export default function MuallimPanel() {
   const [zadace, setZadace] = useState<Zadaca[]>([]);
   const [zadLoading, setZadLoading] = useState(false);
   const [showZadForm, setShowZadForm] = useState(false);
+  const [zadTipTab, setZadTipTab] = useState<"pojedinacno" | "svi">("svi");
   const [zadSubTab, setZadSubTab] = useState<"nova" | "utoku" | "zavrseno">("utoku");
   const [zadNaslov, setZadNaslov] = useState("");
   const [zadOpis, setZadOpis] = useState("");
@@ -986,6 +987,10 @@ export default function MuallimPanel() {
       toast({ title: t("Odaberi lekciju ili upiši opis"), variant: "destructive" });
       return;
     }
+    if (zadTipTab === "pojedinacno" && zadUcenikIds.size === 0) {
+      toast({ title: t("Odaberi najmanje jednog učenika"), variant: "destructive" });
+      return;
+    }
     setSavingZadaca(true);
     try {
       const payload = {
@@ -997,7 +1002,7 @@ export default function MuallimPanel() {
         lekcijaSlug: zadLekcijaSlug || null,
         lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
         priloziIds: Array.from(zadPriloziIds),
-        ucenikIds: zadUcenikIds.size > 0 ? Array.from(zadUcenikIds) : undefined,
+        ucenikIds: zadTipTab === "pojedinacno" ? Array.from(zadUcenikIds) : [],
       };
       const saved = await apiRequest<Zadaca>(
         editingZadaca ? "PUT" : "POST",
@@ -1011,6 +1016,7 @@ export default function MuallimPanel() {
       setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadMaterijali([]); setZadPriloziIds(new Set()); setZadUcenikIds(new Set());
       setEditingZadaca(null);
       setShowZadForm(false);
+      setZadTipTab(saved.ucenikIds?.length ? "pojedinacno" : "svi");
       setZadSubTab("utoku");
       toast({ title: editingZadaca ? t("Zadaća ažurirana") : t("Zadaća dodana!") });
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
@@ -1025,6 +1031,7 @@ export default function MuallimPanel() {
     setZadOpis(zadaca.opis || "");
     setZadRok(zadaca.rokDo ? zadaca.rokDo.slice(0, 10) : "");
     setZadUcenikIds(new Set(zadaca.ucenikIds || []));
+    setZadTipTab(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
     setZadSubTab("nova");
     setShowZadForm(true);
   }
@@ -1036,6 +1043,19 @@ export default function MuallimPanel() {
       setZadace(prev => prev.filter(z => z.id !== id));
       toast({ title: t("Zadaća obrisana") });
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
+  }
+
+  async function arhivirajZadacu(zadaca: Zadaca) {
+    if (!token || zadaca.ucenikIds?.length) return;
+    if (!confirm(t("Arhivirati ovu zadaću za cijelu grupu? Učenicima koji je nisu završili prikazat će se kao neurađena."))) return;
+    try {
+      const archived = await apiRequest<Zadaca>("PUT", `/muallim/zadace/${zadaca.id}/arhiviraj`, {}, token);
+      setZadace(prev => prev.map(z => z.id === zadaca.id ? { ...z, ...archived, isActive: false } : z));
+      setZadSubTab("zavrseno");
+      toast({ title: t("Zadaća arhivirana") });
+    } catch {
+      toast({ title: t("Greška pri arhiviranju zadaće"), variant: "destructive" });
+    }
   }
 
   async function openPregled(z: Zadaca) {
@@ -3587,10 +3607,44 @@ export default function MuallimPanel() {
                         className="text-sm text-muted-foreground hover:text-foreground font-medium">{t("← Promijeni grupu")}</button>
                     </div>
 
+                    {/* Vrsta zadaće: pojedinačna ili za cijelu grupu */}
+                    {(() => {
+                      const pojedinacne = zadace.filter(z => (z.ucenikIds?.length ?? 0) > 0);
+                      const zaSve = zadace.filter(z => !z.ucenikIds?.length);
+                      return (
+                        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/50 p-1.5">
+                          {([
+                            { id: "pojedinacno" as const, label: t("Pojedinačne"), broj: pojedinacne.length },
+                            { id: "svi" as const, label: t("Svi"), broj: zaSve.length },
+                          ]).map(tab => {
+                            const aktivan = zadTipTab === tab.id;
+                            return (
+                              <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => {
+                                  setZadTipTab(tab.id);
+                                  setEditingZadaca(null);
+                                  setShowZadForm(false);
+                                  setZadSubTab("utoku");
+                                  if (tab.id === "svi") setZadUcenikIds(new Set());
+                                }}
+                                className={`rounded-xl px-4 py-3 text-sm font-extrabold transition-all ${aktivan ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                              >
+                                {tab.label}
+                                <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${aktivan ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{tab.broj}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
                     {/* Pod-tabovi: Nova zadaća / U toku / Završeno */}
                     {(() => {
-                      const uTokuBroj = zadace.filter(z => !z.completed).length;
-                      const zavrsenoBroj = zadace.filter(z => z.completed).length;
+                      const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 0);
+                      const uTokuBroj = zadacePoTipu.filter(z => z.isActive !== false && !z.completed).length;
+                      const zavrsenoBroj = zadacePoTipu.filter(z => z.completed || z.isActive === false).length;
                       const tabovi: { id: "nova" | "utoku" | "zavrseno"; label: string; broj?: number }[] = [
                         { id: "nova", label: t("Nova zadaća") },
                         { id: "utoku", label: t("U toku"), broj: uTokuBroj },
@@ -3628,6 +3682,11 @@ export default function MuallimPanel() {
                           </p>
                         )}
                         <div className="grid sm:grid-cols-2 gap-4">
+                          {zadTipTab === "svi" && (
+                            <div className="sm:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                              {t("Ova zadaća bit će dodijeljena svim aktivnim učenicima odabrane grupe.")}
+                            </div>
+                          )}
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                             <LekcijaPicker
@@ -3675,7 +3734,7 @@ export default function MuallimPanel() {
                             <input type="date" value={zadRok} onChange={e => setZadRok(e.target.value)}
                               className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
                           </div>
-                          <div className="sm:col-span-2">
+                          <div className={`sm:col-span-2 ${zadTipTab === "svi" ? "hidden" : ""}`}>
                             <label className="text-sm font-bold text-muted-foreground block mb-1">
                               {t("Učenici")} {zadUcenikIds.size === 0 ? t("(cijela grupa)") : t("({n} učenik/a)", { n: String(zadUcenikIds.size) })}
                             </label>
@@ -3689,7 +3748,7 @@ export default function MuallimPanel() {
                                 <div className="border border-border rounded-xl p-3 bg-muted/20">
                                   <div className="flex items-center justify-between mb-2 gap-2">
                                     <p className="text-xs text-muted-foreground">
-                                      {t("Ne označavaj nikoga = zadaća za cijelu grupu. Označi pojedince za individualnu zadaću.")}
+                                      {t("Odaberi jednog ili više učenika za pojedinačnu zadaću.")}
                                     </p>
                                     <div className="flex gap-2 shrink-0">
                                       <button type="button" onClick={() => setZadUcenikIds(allSelected ? new Set() : new Set(grupaUcenici.map(u => u.id)))}
@@ -3745,7 +3804,10 @@ export default function MuallimPanel() {
                     )}
 
                     {zadSubTab !== "nova" && (() => {
-                      const filtrirane = zadace.filter(z => zadSubTab === "zavrseno" ? z.completed : !z.completed);
+                      const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 0);
+                      const filtrirane = zadacePoTipu.filter(z => zadSubTab === "zavrseno"
+                        ? z.completed || z.isActive === false
+                        : z.isActive !== false && !z.completed);
                       const praznoTekst = zadSubTab === "zavrseno"
                         ? t("Nema završenih zadaća. Zadaća se prebaci ovdje kad svi učenici budu označeni završenim.")
                         : t("Nema zadaća u toku. Kreiraj novu zadaću.");
@@ -3757,15 +3819,17 @@ export default function MuallimPanel() {
                     ) : (
                       <div className="space-y-3">
                         {filtrirane.map((z, i) => {
-                          const isExpired = !z.completed && z.rokDo && new Date(z.rokDo) < new Date();
+                          const isArchived = z.isActive === false;
+                          const isExpired = !z.completed && !isArchived && z.rokDo && new Date(z.rokDo) < new Date();
                           return (
                             <motion.div key={z.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                              className={`bg-white border rounded-2xl p-5 ${z.completed ? "border-emerald-200 bg-emerald-50/30" : isExpired ? "border-red-200 bg-red-50/30" : "border-border/50"}`}>
+                              className={`bg-white border rounded-2xl p-5 ${z.completed ? "border-emerald-200 bg-emerald-50/30" : isArchived ? "border-slate-200 bg-slate-50/60" : isExpired ? "border-red-200 bg-red-50/30" : "border-border/50"}`}>
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-extrabold text-foreground text-base">{z.naslov}</h4>
                                     {z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t("Završeno")}</span>}
+                                     {isArchived && !z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 flex items-center gap-1"><Archive className="w-3 h-3" /> {t("Arhivirano")}</span>}
                                      {typeof z.ukupno === "number" && z.ukupno > 0 && (
                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{t("Pregledano: {zavrsenih}/{ukupno}", { zavrsenih: String(z.zavrsenih ?? 0), ukupno: String(z.ukupno) })}</span>
                                      )}
@@ -3817,6 +3881,12 @@ export default function MuallimPanel() {
                                      className="rounded-xl font-bold flex items-center gap-1.5" title={t("Uredi zadaću")}>
                                      <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">{t("Uredi")}</span>
                                    </Button>
+                                   {!z.ucenikIds?.length && z.isActive !== false && (
+                                     <Button onClick={() => arhivirajZadacu(z)} variant="outline" size="sm"
+                                       className="rounded-xl font-bold flex items-center gap-1.5 text-slate-700" title={t("Arhiviraj zadaću")}>
+                                       <Archive className="w-4 h-4" /> <span className="hidden sm:inline">{t("Arhiviraj")}</span>
+                                     </Button>
+                                   )}
                                   <button onClick={() => deleteZadaca(z.id)}
                                     className="text-red-400 hover:text-red-600 p-2">
                                     <Trash2 className="w-4 h-4" />
