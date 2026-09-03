@@ -64,3 +64,27 @@ n3-kocka-i-internet.h5p     -> pokriva 72, 74 — Zlatni medaljon
 n3-zdravlje-i-okolina.h5p   -> pokriva 49, 75, 76 — Zlatni medaljon
 n3-hidzra-i-bedr.h5p        -> pokriva 84, 85 — Zlatni medaljon
 n3-halife.h5p               -> lekcija 96, samostalna
+
+
+AKAID-BLOK NIVOA 3 — lanac vjerovanja, po jedna vježba na svoju lekciju
+----------------------------------------------------------------------------
+red | slug lekcije       | fajl                       | tip vježbe      | stavki
+----------------------------------------------------------------------------
+  2 | amentu-billahi3    | l-amentu-billahi.h5p       | Question Set    |  5
+  3 | tevhid             | l-tevhid.h5p               | Question Set    |  5
+  4 | vjerovanje-gajb    | l-gajb.h5p                 | Single Choice   |  7
+  5 | kufr-sirk-nifak    | l-kufr-sirk-nifak.h5p      | Question Set    |  6
+ 11 | melaike            | l-meleci.h5p               | Question Set    |  6
+ 12 | dzini-sejtani      | l-dzini-sejtani.h5p        | Single Choice   |  7
+ 13 | kitabi             | l-kitabi.h5p               | Question Set    |  6
+ 15 | poslanici          | l-poslanici.h5p            | Single Choice   |  7
+ 18 | sudnji-dan         | l-sudnji-dan.h5p           | Question Set    |  5
+ 19 | prozivljenje       | l-prozivljenje.h5p         | Dialog Cards    |  6
+ 20 | sefaat-mizan-sirat | l-sefaat-mizan-sirat.h5p   | Question Set    |  5
+ 21 | dzennet-dzehennem  | l-dzennet-dzehennem.h5p    | Question Set    |  5
+ 22 | kader              | l-kader.h5p                | Single Choice   |  7
+
+Još nepokriveno u akaid-bloku: Allahova svojstva (es-sifatuz-zatijje i
+es-sifatus-subutijje, lekcije 6-9), El-Esmaul-husna (10), Kur'an kao
+posljednja objava (14), mudžize (16), Isra i Miradž (17), kelime-i
+šehadet detaljno (24).
