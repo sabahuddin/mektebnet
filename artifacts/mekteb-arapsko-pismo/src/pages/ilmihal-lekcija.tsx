@@ -1566,6 +1566,7 @@ function PriloziSection({
   token,
   canManage,
   canDelete,
+  mode = "vjezbe",
   onH5pCelebration,
 }: {
   lekcija: Lekcija;
@@ -1575,6 +1576,7 @@ function PriloziSection({
   /** Da li korisnik smije BRISATI materijale (samo admin). Muallim NE smije
    *  brisati embedovane vježbe, linkove, fajlove itd. — backend takođe odbija. */
   canDelete: boolean;
+  mode?: "vjezbe" | "materijali";
   onH5pCelebration?: (data: CelebrationData) => void;
 }) {
   // Lokalni alias za čitljivost — ranije su uvjeti pisali `isAdmin`, ali sada
@@ -1587,7 +1589,6 @@ function PriloziSection({
   const isGuestLike = !user || user?.role === "roditelj";
   const promptRegister = useRegisterPrompt();
   const [open, setOpen] = useState(true);
-  const [openMaterials, setOpenMaterials] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   // `lekcija.prilozi` može stići naknadno (npr. token postane dostupan tek
   // nakon AuthProvider hidratacije, pa se GET re-issuea). useState() inicijalna
@@ -1640,6 +1641,7 @@ function PriloziSection({
 
   // Fetch attempts za sve H5P priloge na mount-u (i kad se attachments lista mijenja).
   useEffect(() => {
+    if (mode !== "vjezbe") return;
     if (!token) return;
     const h5ps = attachments.filter(a => a.kind === "h5p");
     if (h5ps.length === 0) return;
@@ -1657,7 +1659,7 @@ function PriloziSection({
       if (!cancelled) setH5pAttempts(prev => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [token, attachments]);
+  }, [token, attachments, mode]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1933,6 +1935,56 @@ function PriloziSection({
       toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     }
   };
+
+  if (mode === "materijali") {
+    if (!canManage) return null;
+    const materijali = attachments.filter(a => a.kind === "file" || a.kind === "url");
+    return (
+      <div className="mt-5 rounded-xl border border-teal-200 bg-white/80 p-4" data-testid="priprema-materijali">
+        <div className="mb-3 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-teal-700" />
+          <span className="flex-1 text-sm font-extrabold text-teal-900">
+            {t("Materijali za nastavu")}
+            <span className="ml-1 font-normal text-teal-600">({materijali.length})</span>
+          </span>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          {t("Ovi materijali su dio pripreme za nastavu i vidljivi su samo muallimu i administratoru.")}
+        </p>
+        <input ref={fileInputRef} type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
+            {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem...")}</> : <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>}
+          </Button>
+          <Button onClick={() => setShowUrlForm(v => !v)} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
+            <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}
+          </Button>
+        </div>
+        {showUrlForm && (
+          <div className="mb-3 flex flex-col gap-2 rounded-xl border border-teal-200 bg-teal-50 p-3">
+            <input type="url" placeholder="https://…" value={urlValue} onChange={e => setUrlValue(e.target.value)} className="rounded-lg border border-teal-200 px-3 py-2 text-sm" />
+            <input type="text" placeholder={t("Naziv (opciono)")} value={urlLabel} onChange={e => setUrlLabel(e.target.value)} className="rounded-lg border border-teal-200 px-3 py-2 text-sm" />
+            <Button onClick={handleAddUrl} disabled={savingUrl || !urlValue.trim()} className="self-start rounded-lg bg-teal-700 font-bold text-white hover:bg-teal-800">
+              {savingUrl ? t("Spašavam...") : t("Spasi link")}
+            </Button>
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          {materijali.map(a => (
+            <div key={a.id} className="flex items-center gap-3 rounded-xl border border-teal-100 bg-teal-50/60 p-3">
+              <span className="text-xl">{a.kind === "url" ? "🔗" : getFileIcon(a.mimeType)}</span>
+              <span className="min-w-0 flex-1 break-words text-sm font-semibold">{a.originalName}</span>
+              {a.kind === "url"
+                ? <a href={a.externalUrl || a.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-teal-700">{t("Otvori")}</a>
+                : <button onClick={() => downloadFile(a, true)} className="text-sm font-bold text-teal-700">{t("Otvori")}</button>}
+              {canDelete && <button onClick={() => handleDelete(a.id, a.originalName)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>}
+            </div>
+          ))}
+          {materijali.length === 0 && <p className="text-sm italic text-muted-foreground">{t("Nema materijala za nastavu.")}</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-6 min-w-0 rounded-2xl border-2 border-blue-200 bg-blue-50/50 overflow-hidden shadow-sm">
@@ -2481,37 +2533,6 @@ function PriloziSection({
           </motion.div>
         )}
       </AnimatePresence>
-      {canManage && (
-        <div className="border-t-2 border-blue-200 bg-white">
-          <button onClick={() => setOpenMaterials(v => !v)} className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-blue-50 transition-colors">
-            <FileText className="w-7 h-7 text-blue-600" />
-            <span className="font-bold text-blue-800 text-base flex-1">{t("Materijali za nastavu")} <span className="ml-1 text-sm font-normal text-blue-500">({attachments.filter(a => a.kind === "file" || a.kind === "url").length})</span></span>
-            <ChevronDown className={`w-5 h-5 text-blue-400 transition-transform ${openMaterials ? "rotate-180" : ""}`} />
-          </button>
-          {openMaterials && <div className="px-5 pb-5">
-            <input ref={fileInputRef} type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
-            <div className="flex flex-wrap gap-2 mb-3">
-              <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold">
-                {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem...")}</> : <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>}
-              </Button>
-              <Button onClick={() => setShowUrlForm(v => !v)} variant="outline" className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"><ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}</Button>
-            </div>
-            {showUrlForm && <div className="mb-3 p-3 bg-blue-50 rounded-xl border border-blue-200 flex flex-col gap-2">
-              <input type="url" placeholder="https://…" value={urlValue} onChange={e => setUrlValue(e.target.value)} className="px-3 py-2 rounded-lg border border-blue-200 text-sm" />
-              <input type="text" placeholder={t("Naziv (opciono)")} value={urlLabel} onChange={e => setUrlLabel(e.target.value)} className="px-3 py-2 rounded-lg border border-blue-200 text-sm" />
-              <Button onClick={handleAddUrl} disabled={savingUrl || !urlValue.trim()} className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold self-start">{savingUrl ? t("Spašavam...") : t("Spasi link")}</Button>
-            </div>}
-            <div className="flex flex-col gap-2">
-              {attachments.filter(a => a.kind === "file" || a.kind === "url").map(a => <div key={a.id} className="flex items-center gap-3 bg-blue-50/50 border border-blue-100 rounded-xl p-3">
-                <span className="text-xl">{a.kind === "url" ? "🔗" : getFileIcon(a.mimeType)}</span><span className="flex-1 min-w-0 font-semibold text-sm break-words">{a.originalName}</span>
-                {a.kind === "url" ? <a href={a.externalUrl || a.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-teal-700">{t("Otvori")}</a> : <button onClick={() => downloadFile(a, true)} className="text-sm font-bold text-blue-700">{t("Otvori")}</button>}
-                {canDelete && <button onClick={() => handleDelete(a.id, a.originalName)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>}
-              </div>)}
-              {attachments.filter(a => a.kind === "file" || a.kind === "url").length === 0 && <p className="text-sm text-muted-foreground italic">{t("Nema materijala za nastavu.")}</p>}
-            </div>
-          </div>}
-        </div>
-      )}
     </div>
   );
 }
@@ -3656,19 +3677,25 @@ export default function IlmihalLekcijaPage() {
               let kvizInserted = false;
               for (const section of visibleSections) {
                 items.push(
-                  <SectionAccordion
-                    // Uključujemo slug u key kako bi React PRIMUSAO unmount/mount
-                    // kad učenik prelazi između lekcija (section.id="STORY" je
-                    // isti u svim lekcijama → bez slug-a komponenta bi se reuse-ovala
-                    // i useEffect za defaultOpen ne bi opet ispalio onOpened()).
-                    key={`${slug}-${section.id}`}
-                    section={section}
-                    slug={slug!}
-                    nivo={lekcija.nivo}
-                    onOpened={handleSectionOpened}
-                    pauseAnswers={lekcija.pauseAnswers}
-                    onPauseProgressChange={handlePauseProgressChange}
-                  />
+                  <React.Fragment key={`${slug}-${section.id}`}>
+                    <SectionAccordion
+                      section={section}
+                      slug={slug!}
+                      nivo={lekcija.nivo}
+                      onOpened={handleSectionOpened}
+                      pauseAnswers={lekcija.pauseAnswers}
+                      onPauseProgressChange={handlePauseProgressChange}
+                    />
+                    {section.type === "priprema" && (user?.role === "admin" || user?.role === "muallim") && (
+                      <PriloziSection
+                        lekcija={lekcija}
+                        token={token}
+                        canManage
+                        canDelete={user.role === "admin"}
+                        mode="materijali"
+                      />
+                    )}
+                  </React.Fragment>
                 );
                 if (!kvizInserted && section.type === "ilmihal") {
                   const node = renderKvizOrCta();
@@ -3722,14 +3749,27 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {/* Prilozi / Materijali — backend već filtrira: učenici vide samo H5P
-            i URL prilozi (ne fajlove); muallim i admin vide sve. */}
+        {(user?.role === "admin" || user?.role === "muallim")
+          && !visibleSections.some(section => section.type === "priprema") && (
+          <div className="mb-6">
+            <PriloziSection
+              lekcija={lekcija}
+              token={token}
+              canManage
+              canDelete={user.role === "admin"}
+              mode="materijali"
+            />
+          </div>
+        )}
+
+        {/* Vježbe su odvojene od nastavničke pripreme i dostupne učenicima. */}
         {user && (
           <PriloziSection
             lekcija={lekcija}
             token={token}
             canManage={user.role === "admin" || user.role === "muallim"}
             canDelete={user.role === "admin"}
+            mode="vjezbe"
             onH5pCelebration={setCelebration}
           />
         )}

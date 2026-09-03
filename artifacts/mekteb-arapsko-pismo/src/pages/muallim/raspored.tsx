@@ -311,7 +311,7 @@ export default function MuallimRasporedPage() {
         )}
         </main>
         <aside className="lg:sticky lg:top-24">
-          <MuallimGroupSidebar grupaId={grupaId} activeModule="raspored" />
+          <MuallimGroupSidebar grupaId={grupaId} />
         </aside>
       </div>
     </Layout>

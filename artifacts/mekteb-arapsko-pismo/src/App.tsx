@@ -104,7 +104,6 @@ import MuallimDodajUcenikaPage from "./pages/muallim/dodaj-ucenika";
 import MuallimDodajGrupuPage from "./pages/muallim/dodaj-grupu";
 import MuallimUcenikPage from "./pages/muallim/ucenik";
 import MuallimGrupaPage from "./pages/muallim/grupa";
-import MuallimRasporedPage from "./pages/muallim/raspored";
 import MuallimIzvjestajPage from "./pages/muallim/izvjestaj";
 import MuallimTutorijalPage from "./pages/muallim/tutorijal";
 import H5pUputstvoPage from "./pages/h5p-uputstvo";
@@ -240,7 +239,6 @@ function Router() {
       <Route path="/muallim/prisustvo/:grupaId" component={MuallimPrisustvoPage} />
       <Route path="/muallim/ucenik/:id" component={MuallimUcenikPage} />
       <Route path="/muallim/grupa/:id" component={MuallimGrupaPage} />
-      <Route path="/muallim/raspored/:grupaId" component={MuallimRasporedPage} />
 
       <Route component={NotFound} />
     </Switch>

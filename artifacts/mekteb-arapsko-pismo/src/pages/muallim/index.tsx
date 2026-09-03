@@ -590,8 +590,6 @@ export default function MuallimPanel() {
   const [zadRok, setZadRok] = useState("");
   const [zadLekcija, setZadLekcija] = useState("");
   const [zadLekcijaSlug, setZadLekcijaSlug] = useState("");
-  const [zadMaterijali, setZadMaterijali] = useState<NastavniMaterijal[]>([]);
-  const [zadPriloziIds, setZadPriloziIds] = useState<Set<number>>(new Set());
   const [zadUcenikIds, setZadUcenikIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
   const [editingZadaca, setEditingZadaca] = useState<Zadaca | null>(null);
@@ -971,15 +969,6 @@ export default function MuallimPanel() {
       .finally(() => setZadLoading(false));
   }, [token, zadGrupaId]);
 
-  // Pri uređivanju zadaće slug je već postavljen, pa učitaj materijale da
-  // postojeći izbor ostane vidljiv i može se izmijeniti.
-  useEffect(() => {
-    if (!token || !zadLekcijaSlug) return;
-    apiRequest<{ prilozi?: NastavniMaterijal[] }>("GET", `/content/ilmihal/${zadLekcijaSlug}`, undefined, token)
-      .then(data => setZadMaterijali((data.prilozi || []).filter(p => p.kind === "file" || p.kind === "url")))
-      .catch(() => setZadMaterijali([]));
-  }, [token, zadLekcijaSlug]);
-
   async function saveZadaca() {
     if (!token || !zadGrupaId) return;
     // Lekcija je naziv zadaće; ako nema lekcije, opis je obavezan.
@@ -1001,7 +990,6 @@ export default function MuallimPanel() {
         lekcijaNaslov: zadLekcija || null,
         lekcijaSlug: zadLekcijaSlug || null,
         lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
-        priloziIds: Array.from(zadPriloziIds),
         ucenikIds: zadTipTab === "pojedinacno" ? Array.from(zadUcenikIds) : [],
       };
       const saved = await apiRequest<Zadaca>(
@@ -1013,7 +1001,7 @@ export default function MuallimPanel() {
       setZadace(prev => editingZadaca
         ? prev.map(z => z.id === saved.id ? saved : z)
         : [saved, ...prev]);
-      setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadMaterijali([]); setZadPriloziIds(new Set()); setZadUcenikIds(new Set());
+      setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set());
       setEditingZadaca(null);
       setShowZadForm(false);
       setZadTipTab(saved.ucenikIds?.length ? "pojedinacno" : "svi");
@@ -1027,7 +1015,6 @@ export default function MuallimPanel() {
     setEditingZadaca(zadaca);
     setZadLekcija(zadaca.lekcijaNaslov || "");
     setZadLekcijaSlug(zadaca.lekcijaSlug || "");
-    setZadPriloziIds(new Set((zadaca.prilozi || []).map(p => p.id)));
     setZadOpis(zadaca.opis || "");
     setZadRok(zadaca.rokDo ? zadaca.rokDo.slice(0, 10) : "");
     setZadUcenikIds(new Set(zadaca.ucenikIds || []));
@@ -3693,36 +3680,12 @@ export default function MuallimPanel() {
                               lekcije={dostupneLekcije}
                               value={zadLekcija}
                               onChange={setZadLekcija}
-                              onSelectLesson={async lekcija => {
+                              onSelectLesson={lekcija => {
                                 setZadLekcijaSlug(lekcija?.slug || "");
-                                setZadPriloziIds(new Set());
-                                if (!lekcija?.slug || !token) { setZadMaterijali([]); return; }
-                                try {
-                                  const data = await apiRequest<{ prilozi?: NastavniMaterijal[] }>("GET", `/content/ilmihal/${lekcija.slug}`, undefined, token);
-                                  setZadMaterijali((data.prilozi || []).filter(p => p.kind === "file" || p.kind === "url"));
-                                } catch { setZadMaterijali([]); }
                               }}
                               placeholder={t("Pretraži i odaberi lekciju...")}
                             />
                           </div>
-                          {zadLekcijaSlug && (
-                            <div className="sm:col-span-2">
-                              <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Materijali za nastavu")}</label>
-                              {zadMaterijali.length === 0 ? (
-                                <p className="text-xs text-muted-foreground italic">{t("Ova lekcija nema dostupnih materijala.")}</p>
-                              ) : (
-                                <div className="border border-border rounded-xl p-3 space-y-1.5 bg-muted/20">
-                                  {zadMaterijali.map(m => <label key={m.id} className="flex items-center gap-2 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-muted/50">
-                                    <input type="checkbox" checked={zadPriloziIds.has(m.id)} onChange={() => setZadPriloziIds(prev => {
-                                      const next = new Set(prev); if (next.has(m.id)) next.delete(m.id); else next.add(m.id); return next;
-                                    })} className="w-4 h-4 accent-primary" />
-                                    <span className="text-sm font-medium text-foreground">{m.originalName}</span>
-                                    <span className="text-xs text-muted-foreground">({m.kind === "url" ? t("link") : t("fajl")})</span>
-                                  </label>)}
-                                </div>
-                              )}
-                            </div>
-                          )}
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Opis (opcionalno)")}</label>
                             <textarea value={zadOpis} onChange={e => setZadOpis(e.target.value)} rows={2}
@@ -3793,7 +3756,7 @@ export default function MuallimPanel() {
                           </div>
                         </div>
                         <div className="flex gap-3 mt-4 justify-end">
-                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadPriloziIds(new Set()); setZadMaterijali([]); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
+                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
                             {t("Otkaži")}
                           </button>
                           <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim())} className="rounded-xl font-bold">

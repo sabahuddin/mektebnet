@@ -1,6 +1,4 @@
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
@@ -17,9 +15,7 @@ import {
   studentProgressTable,
   zadaceTable,
   zadaceUceniciTable,
-  zadacePriloziTable,
   zadaceStatusTable,
-  prilozi,
   obavjestenjaTable,
   mektebDokumentiTable,
 } from "@workspace/db/schema";
@@ -33,44 +29,6 @@ import { getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
-
-async function getZadacaPrilozi(zadacaIds: number[]) {
-  const result = new Map<number, Array<{ id: number; originalName: string; mimeType: string; fileSize: number; kind: string; externalUrl: string | null }>>();
-  if (!zadacaIds.length) return result;
-  const rows = await db.select({
-    zadacaId: zadacePriloziTable.zadacaId, id: prilozi.id, originalName: prilozi.originalName,
-    mimeType: prilozi.mimeType, fileSize: prilozi.fileSize, kind: prilozi.kind, externalUrl: prilozi.externalUrl,
-  }).from(zadacePriloziTable).innerJoin(prilozi, eq(zadacePriloziTable.prilogId, prilozi.id))
-    .where(inArray(zadacePriloziTable.zadacaId, zadacaIds));
-  for (const row of rows) {
-    const list = result.get(row.zadacaId) || [];
-    list.push({ id: row.id, originalName: row.originalName, mimeType: row.mimeType, fileSize: row.fileSize, kind: row.kind, externalUrl: row.externalUrl });
-    result.set(row.zadacaId, list);
-  }
-  return result;
-}
-
-router.get("/zadace/:ucenikId/:zadacaId/prilozi/:prilogId/download", async (req, res) => {
-  try {
-    const ucenikId = Number(req.params.ucenikId), zadacaId = Number(req.params.zadacaId), prilogId = Number(req.params.prilogId);
-    if (![ucenikId, zadacaId, prilogId].every(Number.isInteger)) { res.status(400).json({ error: "Nevažeći ID" }); return; }
-    const [veza] = await db.select({ id: roditeljUcenikTable.id }).from(roditeljUcenikTable).where(and(eq(roditeljUcenikTable.roditeljId, req.user!.userId), eq(roditeljUcenikTable.ucenikId, ucenikId), eq(roditeljUcenikTable.status, "approved")));
-    const [zadaca] = await db.select().from(zadaceTable).where(and(eq(zadaceTable.id, zadacaId), eq(zadaceTable.isActive, true)));
-    const [profil] = await db.select({ grupaId: ucenikProfiliTable.grupaId }).from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
-    if (!veza || !zadaca || zadaca.grupaId !== profil?.grupaId) { res.status(403).json({ error: "Nemate pristup ovom prilogu" }); return; }
-    const targets = await db.select({ ucenikId: zadaceUceniciTable.ucenikId }).from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, zadacaId));
-    if (targets.length && !targets.some(t => t.ucenikId === ucenikId)) { res.status(403).json({ error: "Nemate pristup ovom prilogu" }); return; }
-    const [file] = await db.select({ originalName: prilozi.originalName, storedName: prilozi.storedName, mimeType: prilozi.mimeType, kind: prilozi.kind }).from(zadacePriloziTable)
-      .innerJoin(prilozi, eq(zadacePriloziTable.prilogId, prilozi.id)).where(and(eq(zadacePriloziTable.zadacaId, zadacaId), eq(zadacePriloziTable.prilogId, prilogId)));
-    if (!file || file.kind !== "file") { res.status(404).json({ error: "Fajl nije pronađen" }); return; }
-    const filePath = path.join(process.env["UPLOADS_DIR"] || path.join(process.cwd(), "uploads"), path.basename(file.storedName));
-    if (!fs.existsSync(filePath)) { res.status(404).json({ error: "Fajl nije pronađen na serveru" }); return; }
-    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.originalName)}`);
-    res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
-    res.setHeader("Cache-Control", "private, no-cache");
-    fs.createReadStream(filePath).pipe(res);
-  } catch { res.status(500).json({ error: "Greška servera" }); }
-});
 
 // Sažetak za jedno dijete — koristi se i u /dashboard/:ucenikId i u /djeca-summary.
 // Pretpostavlja da je pristup već provjeren prije poziva.
@@ -494,10 +452,8 @@ router.get("/zadace/:ucenikId", async (req, res) => {
       ));
     const prolongMap = new Map(statusi.map(s => [s.zadacaId, s.prolongCount ?? 0]));
 
-    const prilogMap = await getZadacaPrilozi(visible.map(z => z.id));
     const result = visible.map(z => ({
       ...z,
-      prilozi: prilogMap.get(z.id) || [],
       grupaNaziv: grupaMap.get(z.grupaId) || null,
       djecaIds: [ucenikId],
       djecaImena: [djetetovoIme],
@@ -739,7 +695,6 @@ router.get("/zadace", async (req, res) => {
       prolongMap.set(`${s.zadacaId}:${s.ucenikId}`, s.prolongCount ?? 0);
     }
 
-    const prilogMap = await getZadacaPrilozi(zadace.map(z => z.id));
     const result = zadace.flatMap(z => {
       const grupaDjeca = grupaToDjeca.get(z.grupaId) || [];
       const targeted = targetMap.get(z.id);
@@ -750,7 +705,6 @@ router.get("/zadace", async (req, res) => {
       const prolongCount = Math.max(0, ...adresati.map(uid => prolongMap.get(`${z.id}:${uid}`) ?? 0));
       return [{
         ...z,
-        prilozi: prilogMap.get(z.id) || [],
         grupaNaziv: grupaMap.get(z.grupaId) || null,
         djecaIds: adresati,
         djecaImena: adresati.map(uid => djecaMap.get(uid) || `#${uid}`),

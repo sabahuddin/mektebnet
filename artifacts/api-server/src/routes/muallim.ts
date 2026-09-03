@@ -4769,7 +4769,11 @@ router.get("/zadace", async (req, res) => {
 
 router.post("/zadace", async (req, res) => {
   try {
-    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, priloziIds } = req.body;
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds } = req.body;
+    if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
+      res.status(400).json({ error: "Materijali za nastavu dostupni su samo u Pripremi za nastavu" });
+      return;
+    }
     // naslov više nije obavezan — nova UX koristi lekciju kao naziv zadaće.
     if (!grupaId) { res.status(400).json({ error: "grupaId je obavezan" }); return; }
     const naslovFinal = (naslov && String(naslov).trim()) || (lekcijaNaslov && String(lekcijaNaslov).trim()) || null;
@@ -4793,12 +4797,6 @@ router.post("/zadace", async (req, res) => {
         .limit(2);
       canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     }
-    const [attachmentLesson] = canonicalSlug
-      ? await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, canonicalSlug))
-      : [];
-    const attachmentValidation = await validateHomeworkAttachments(priloziIds, attachmentLesson?.id ?? null, req.user!.userId, req.user!.role);
-    if (attachmentValidation.error) { res.status(400).json({ error: attachmentValidation.error }); return; }
-
     let validUcenikIds: number[] = [];
     if (Array.isArray(ucenikIds) && ucenikIds.length > 0) {
       const numericIds = ucenikIds.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x));
@@ -4817,7 +4815,6 @@ router.post("/zadace", async (req, res) => {
         lekcijaTip: canonicalSlug ? "ilmihal" : (lekcijaTip || null),
       }).returning();
       if (validUcenikIds.length) await tx.insert(zadaceUceniciTable).values(validUcenikIds.map(ucenikId => ({ zadacaId: created.id, ucenikId })));
-      if (attachmentValidation.ids.length) await tx.insert(zadacePriloziTable).values(attachmentValidation.ids.map(prilogId => ({ zadacaId: created.id, prilogId })));
       return created;
     });
 
@@ -4871,7 +4868,11 @@ router.post("/zadace", async (req, res) => {
 router.put("/zadace/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds, priloziIds } = req.body;
+    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds } = req.body;
+    if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
+      res.status(400).json({ error: "Materijali za nastavu dostupni su samo u Pripremi za nastavu" });
+      return;
+    }
 
     const [existing] = await db.select().from(zadaceTable)
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
@@ -4894,12 +4895,6 @@ router.put("/zadace/:id", async (req, res) => {
     } else if (lekcijaNaslov === undefined) {
       canonicalSlug = existing.lekcijaSlug;
     }
-    const [attachmentLesson] = canonicalSlug
-      ? await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, canonicalSlug))
-      : [];
-    const attachmentValidation = await validateHomeworkAttachments(priloziIds, attachmentLesson?.id ?? null, req.user!.userId, req.user!.role);
-    if (attachmentValidation.error) { res.status(400).json({ error: attachmentValidation.error }); return; }
-
     const updated = await db.transaction(async (tx) => {
       const [row] = await tx.update(zadaceTable).set({
         naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug: canonicalSlug,
@@ -4913,10 +4908,6 @@ router.put("/zadace/:id", async (req, res) => {
             .where(and(eq(ucenikProfiliTable.grupaId, existing.grupaId), inArray(ucenikProfiliTable.userId, numericIds)));
           if (ucenici.length) await tx.insert(zadaceUceniciTable).values(ucenici.map(u => ({ zadacaId: id, ucenikId: u.userId })));
         }
-      }
-      if (Array.isArray(priloziIds)) {
-        await tx.delete(zadacePriloziTable).where(eq(zadacePriloziTable.zadacaId, id));
-        if (attachmentValidation.ids.length) await tx.insert(zadacePriloziTable).values(attachmentValidation.ids.map(prilogId => ({ zadacaId: id, prilogId })));
       }
       return row;
     });

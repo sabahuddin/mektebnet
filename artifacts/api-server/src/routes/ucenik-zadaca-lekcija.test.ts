@@ -609,7 +609,7 @@ test("detail lekcije preklapa naslov i HTML istim prijevodnim overlayem", async 
   assert.doesNotMatch(lesson.contentHtml, /Bosanski uvodni sadržaj/);
 });
 
-test("privatni file/url prilozi zadaće su scoped na adresata i ne cure kroz lekciju", async () => {
+test("nastavnički file/url materijali ne mogu se dodijeliti niti izložiti učeniku", async () => {
   attachmentStoredName = `test-zadaca-prilog-${suffix}.pdf`;
   const uploadsDir = process.env["UPLOADS_DIR"] || path.join(process.cwd(), "uploads");
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -630,16 +630,27 @@ test("privatni file/url prilozi zadaće su scoped na adresata i ne cure kroz lek
   filePrilogId = inserted.find(p => p.kind === "file")!.id;
   urlPrilogId = inserted.find(p => p.kind === "url")!.id;
 
-  const create = await teacherPost("/api/muallim/zadace", {
+  const rejected = await teacherPost("/api/muallim/zadace", {
     grupaId: groupId, naslov: "Zadaća s privatnim materijalima",
     lekcijaNaslov: `Zadata lekcija ${suffix}`, lekcijaSlug: assignedSlug,
     ucenikIds: [studentId], priloziIds: [filePrilogId, urlPrilogId],
   });
+  assert.equal(rejected.status, 400);
+
+  const create = await teacherPost("/api/muallim/zadace", {
+    grupaId: groupId, naslov: "Zadaća bez nastavničkih materijala",
+    lekcijaNaslov: `Zadata lekcija ${suffix}`, lekcijaSlug: assignedSlug,
+    ucenikIds: [studentId],
+  });
   assert.equal(create.status, 201);
-  const created = await create.json() as { id: number; prilozi: Array<{ id: number; storedName?: unknown }> };
+  const created = await create.json() as { id: number };
   attachmentHomeworkId = created.id;
-  assert.deepEqual(created.prilozi.map(p => p.id).sort(), [filePrilogId, urlPrilogId].sort());
-  assert.equal(created.prilozi.every(p => !("storedName" in p)), true);
+
+  // Simuliraj historijske veze koje su nastale prije zabrane.
+  await db.execute(sql`
+    INSERT INTO zadace_prilozi (zadaca_id, prilog_id)
+    VALUES (${attachmentHomeworkId}, ${filePrilogId}), (${attachmentHomeworkId}, ${urlPrilogId})
+  `);
   const targetedArchive = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}/arhiviraj`, {});
   assert.equal(targetedArchive.status, 400);
 
@@ -653,12 +664,9 @@ test("privatni file/url prilozi zadaće su scoped na adresata i ne cure kroz lek
   const lesson = await content.json() as { prilozi?: Array<{ id: number }> };
   assert.equal(lesson.prilozi?.some(p => p.id === filePrilogId || p.id === urlPrilogId), false);
   assert.equal(targetList.status, 200);
-  const homework = await targetList.json() as Array<{ id: number; prilozi: Array<{ id: number; externalUrl: string | null; storedName?: unknown }> }>;
+  const homework = await targetList.json() as Array<{ id: number; prilozi?: unknown }>;
   const assigned = homework.find(h => h.id === attachmentHomeworkId)!;
-  assert.deepEqual(assigned.prilozi.map(p => p.id).sort(), [filePrilogId, urlPrilogId].sort());
-  assert.equal(assigned.prilozi.every(p => !("storedName" in p)), true);
-  assert.equal(assigned.prilozi.find(p => p.id === urlPrilogId)?.externalUrl, "https://example.test/private-video");
-  assert.equal(download.status, 200);
-  assert.equal(await download.text(), "private homework bytes");
-  assert.equal(outsiderDownload.status, 403);
+  assert.equal("prilozi" in assigned, false);
+  assert.equal(download.status, 404);
+  assert.equal(outsiderDownload.status, 404);
 });

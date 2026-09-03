@@ -1,6 +1,4 @@
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -15,9 +13,7 @@ import {
   ilmihalLekcijeTable,
   zadaceTable,
   zadaceUceniciTable,
-  zadacePriloziTable,
   zadaceStatusTable,
-  prilozi,
   etapaPolaganjaTable,
   medaljoniTable,
   studentKrunisanjaTable,
@@ -33,46 +29,6 @@ import { getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
-
-async function getZadacaPrilozi(zadacaIds: number[]) {
-  const result = new Map<number, Array<{ id: number; originalName: string; mimeType: string; fileSize: number; kind: string; externalUrl: string | null }>>();
-  if (!zadacaIds.length) return result;
-  const rows = await db.select({
-    zadacaId: zadacePriloziTable.zadacaId, id: prilozi.id, originalName: prilozi.originalName,
-    mimeType: prilozi.mimeType, fileSize: prilozi.fileSize, kind: prilozi.kind, externalUrl: prilozi.externalUrl,
-  }).from(zadacePriloziTable).innerJoin(prilozi, eq(zadacePriloziTable.prilogId, prilozi.id))
-    .where(inArray(zadacePriloziTable.zadacaId, zadacaIds));
-  for (const row of rows) {
-    const list = result.get(row.zadacaId) || [];
-    list.push({ id: row.id, originalName: row.originalName, mimeType: row.mimeType, fileSize: row.fileSize, kind: row.kind, externalUrl: row.externalUrl });
-    result.set(row.zadacaId, list);
-  }
-  return result;
-}
-
-// Privatni file prilog je dostupan samo učeniku kojem je zadaća dodijeljena.
-router.get("/zadace/:zadacaId/prilozi/:prilogId/download", async (req, res) => {
-  try {
-    const zadacaId = Number(req.params.zadacaId);
-    const prilogId = Number(req.params.prilogId);
-    if (!Number.isInteger(zadacaId) || !Number.isInteger(prilogId)) { res.status(400).json({ error: "Nevažeći ID" }); return; }
-    const [zadaca] = await db.select().from(zadaceTable).where(eq(zadaceTable.id, zadacaId));
-    if (!zadaca) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
-    const targets = await db.select({ ucenikId: zadaceUceniciTable.ucenikId }).from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, zadacaId));
-    const [profil] = await db.select({ grupaId: ucenikProfiliTable.grupaId }).from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, req.user!.userId));
-    if (zadaca.grupaId !== profil?.grupaId || (targets.length && !targets.some(t => t.ucenikId === req.user!.userId))) { res.status(403).json({ error: "Nemate pristup ovom prilogu" }); return; }
-    const [file] = await db.select({ originalName: prilozi.originalName, storedName: prilozi.storedName, mimeType: prilozi.mimeType, kind: prilozi.kind })
-      .from(zadacePriloziTable).innerJoin(prilozi, eq(zadacePriloziTable.prilogId, prilozi.id))
-      .where(and(eq(zadacePriloziTable.zadacaId, zadacaId), eq(zadacePriloziTable.prilogId, prilogId)));
-    if (!file || file.kind !== "file") { res.status(404).json({ error: "Fajl nije pronađen" }); return; }
-    const filePath = path.join(process.env["UPLOADS_DIR"] || path.join(process.cwd(), "uploads"), path.basename(file.storedName));
-    if (!fs.existsSync(filePath)) { res.status(404).json({ error: "Fajl nije pronađen na serveru" }); return; }
-    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.originalName)}`);
-    res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
-    res.setHeader("Cache-Control", "private, no-cache");
-    fs.createReadStream(filePath).pipe(res);
-  } catch { res.status(500).json({ error: "Greška servera" }); }
-});
 
 // GET /api/ucenik/profil — student's own profile + stats
 router.get("/profil", async (req, res) => {
@@ -427,7 +383,6 @@ router.get("/zadace", async (req, res) => {
       : [];
     const lessonSlugByTitle = new Map(linkedLessons.map(l => [l.naslov, l.slug]));
 
-    const prilogMap = await getZadacaPrilozi(visible.map(z => z.id));
     const withStatus = visible.map(z => {
       const s = statusMap.get(z.id);
       const status = s?.status ?? "na_cekanju";
@@ -443,7 +398,6 @@ router.get("/zadace", async (req, res) => {
       const istekao = !!(efektivniRok && efektivniRok < today);
       return {
         ...z,
-        prilozi: prilogMap.get(z.id) || [],
         // Novi unosi imaju kanonski slug; naslov ostaje samo fallback za stare
         // zadaće nastale prije uvođenja stabilne veze sa lekcijom.
         lekcijaSlug: z.lekcijaSlug ?? (z.lekcijaNaslov

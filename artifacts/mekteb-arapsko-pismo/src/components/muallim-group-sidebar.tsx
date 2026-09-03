@@ -7,7 +7,6 @@ import {
   ClipboardList,
   FileText,
   Heart,
-  ListOrdered,
   Settings,
   Sparkles,
   TrendingUp,
@@ -21,7 +20,6 @@ export type GroupModuleKey =
   | "greske"
   | "plan"
   | "prisustvo"
-  | "raspored"
   | "kalendar"
   | "statistika"
   | "zadace"
@@ -48,7 +46,6 @@ export function MuallimGroupSidebar({
     { key: "greske" as const, label: t("Gdje učenici griješe"), icon: AlertTriangle, href: `/muallim/grupa/${grupaId}?modul=greske` },
     { key: "plan" as const, label: t("Plan lekcija"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=plan` },
     { key: "prisustvo" as const, label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupaId}` },
-    { key: "raspored" as const, label: t("Raspored lekcija"), icon: ListOrdered, href: `/muallim/raspored/${grupaId}` },
     { key: "kalendar" as const, label: t("Kalendar"), icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupaId}` },
     { key: "statistika" as const, label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupaId}` },
     { key: "zadace" as const, label: t("Zadaća"), icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupaId}`, badge: zadacaBadge },
