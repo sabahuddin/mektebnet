@@ -100,6 +100,30 @@ red | slug lekcije       | fajl                       | tip vježbe      | stavk
 
 AKAID-BLOK NIVOA 3 JE SADA POKRIVEN U CIJELOSTI — 22 lekcije, 22 vježbe.
 
-Ostaje u Nivou 3: Ibadet (namaz, post, zekat, hadž, čistoća — oko 19 lekcija),
+IBADET — NAMASKI BLOK, po jedna vježba na svoju lekciju
+----------------------------------------------------------------------------
+red | slug lekcije       | fajl                       | tip vježbe      | stavki
+----------------------------------------------------------------------------
+  0 | duznosti-allah     | l-duznosti-allah.h5p       | Single Choice   |  6
+ 25 | pet-namaza         | l-pet-namaza.h5p           | Question Set    |  5
+ 26 | farzovi-namaz      | l-farzovi-namaz.h5p        | Question Set    |  6
+ 27 | vadzibi-namaz      | l-vadzibi-namaz.h5p        | Question Set    |  6
+ 28 | sunneti-namaz      | l-sunneti-namaz.h5p        | Single Choice   |  7
+ 29 | mekruhi-namaz      | l-mekruhi-namaz.h5p        | Question Set    |  5
+ 31 | vaznost-dzemata    | l-vaznost-dzemata.h5p      | Question Set    |  5
+ 32 | vrste-namaza       | l-vrste-namaza.h5p         | Question Set    |  5
+ 33 | dzenaza-namaz      | l-dzenaza-namaz.h5p        | Dialog Cards    |  6
+
+Namaski blok je namjerno građen oko razlike farz / vadžib / sunnet / mekruh,
+jer se ta četiri pojma najlakše pobrkaju, a posljedica je različita:
+  propušten farz    -> namaz se obnavlja
+  propušten vadžib  -> sehvi-sedžda (ako je iz zaborava)
+  propušten sunnet  -> namaz se NE ponavlja
+  mekruh            -> pokuđeno, ali namaz ostaje ispravan
+Ista situacija je postavljena u tri vježbe s različitim ishodom, da dijete
+razliku nauči kroz posljedicu, a ne kroz definiciju.
+
+Ostaje u Nivou 3: ibadet bez namaza (post, zekat, hadž, čistoća — oko 10
+lekcija), sure (El-Fil, El-Humeze, El-'Asr, Et-Tekasur, El-Kari'ah),
 Historija islama (poslanici pojedinačno, sira — oko 10) i Bosna (IZ, džamije,
 vakufi, pjesnici — oko 8).
