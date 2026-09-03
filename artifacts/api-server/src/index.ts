@@ -1339,6 +1339,102 @@ async function normalizePitanjaPoLekcijama() {
         )
     `);
 
+    // Tagovi za pitanja koja imaju sigurnu lekciju. Popunjava samo prazne ili
+    // neusklađene tagove; valjani ručno uređeni tagovi ostaju netaknuti.
+    await db.execute(sql`
+      UPDATE pitanja_banka p
+      SET tagovi = CASE
+        WHEN p.kategorija = 'kiraet' THEN
+          CASE
+            WHEN concat_ws(' ', p.pitanje, p.objasnjenje, p.opcije::text, p.meta::text)
+                   ~* '(^|[^[:alpha:]])sur(a|e|u|om|i)?([^[:alpha:]]|$)'
+              THEN '["sure"]'::jsonb
+            ELSE '["kuran_tekst"]'::jsonb
+          END
+        WHEN p.kategorija = 'ibadet' THEN
+          CASE
+            WHEN l.naslov ~* '(abdest|gusul|tejemum|mesh|hajz|nifas|istihaza|uzur)' THEN '["abdest"]'::jsonb
+            WHEN l.naslov ~* '(post|ramazan)' THEN '["post"]'::jsonb
+            WHEN l.naslov ~* '(zekat|sadekatul)' THEN '["zekat"]'::jsonb
+            WHEN l.naslov ~* '(hadž|hadz|umra)' THEN '["hadz"]'::jsonb
+            WHEN l.naslov ~* '(dova)' THEN '["dove"]'::jsonb
+            WHEN l.naslov ~* '(zikr|tesbih)' THEN '["zikrovi"]'::jsonb
+            WHEN l.naslov ~* '(halal|haram|mukellef)' THEN '["halal_haram"]'::jsonb
+            WHEN l.naslov ~* '(mubarek)' THEN '["ostali_ibadeti"]'::jsonb
+            ELSE '["namaz"]'::jsonb
+          END
+        WHEN p.kategorija = 'historija' THEN
+          CASE
+            WHEN l.naslov ~* '(ashab)' THEN '["ashabi"]'::jsonb
+            WHEN l.naslov ~* '(halif)' THEN '["kalifi"]'::jsonb
+            WHEN l.naslov ~* '(civiliz|zajednica|historij)' THEN '["islamska_civilizacija"]'::jsonb
+            ELSE '["zivot_poslanika"]'::jsonb
+          END
+        WHEN p.kategorija = 'akaid' THEN
+          CASE
+            WHEN l.naslov ~* '(melek)' THEN '["meleki"]'::jsonb
+            WHEN l.naslov ~* '(knjig|kur.an)' THEN '["knjige"]'::jsonb
+            WHEN l.naslov ~* '(poslan|pejgamber)' THEN '["poslanici"]'::jsonb
+            WHEN l.naslov ~* '(ahiret|sudnji|kader)' THEN '["ahiret"]'::jsonb
+            ELSE '["allah"]'::jsonb
+          END
+        WHEN p.kategorija = 'ahlak' THEN '["ponasanje"]'::jsonb
+        WHEN p.kategorija = 'bosna' THEN '["ostalo"]'::jsonb
+        ELSE p.tagovi
+      END,
+      updated_at = NOW()
+      FROM ilmihal_lekcije l
+      WHERE l.id = p.lekcija_id
+        AND (
+          jsonb_array_length(COALESCE(p.tagovi, '[]'::jsonb)) = 0
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(p.tagovi, '[]'::jsonb)) tag(slug)
+            LEFT JOIN kviz_tagovi kt ON kt.slug = tag.slug
+            WHERE kt.kategorija IS DISTINCT FROM p.kategorija
+          )
+        )
+    `);
+
+    // Catch-up za dvije ranije preširoke automatske dodjele.
+    await db.execute(sql`
+      UPDATE pitanja_banka p
+      SET tagovi = CASE
+        WHEN l.naslov ~* '^(Ezan|Ikamet)$' THEN '["namaz"]'::jsonb
+        WHEN l.naslov ~* 'mubarek' THEN '["ostali_ibadeti"]'::jsonb
+        ELSE p.tagovi
+      END,
+      updated_at = NOW()
+      FROM ilmihal_lekcije l
+      WHERE l.id = p.lekcija_id
+        AND p.kategorija = 'ibadet'
+        AND (l.naslov ~* '^(Ezan|Ikamet)$' OR l.naslov ~* 'mubarek')
+    `);
+
+    // Opšta pitanja bez konkretne lekcije zadržavaju NULL lekciju, ali Kiraet
+    // ipak može dobiti siguran tematski tag prema tekstu pitanja.
+    await db.execute(sql`
+      UPDATE pitanja_banka p
+      SET tagovi = CASE
+        WHEN concat_ws(' ', p.pitanje, p.objasnjenje, p.opcije::text, p.meta::text)
+               ~* '(^|[^[:alpha:]])sur(a|e|u|om|i)?([^[:alpha:]]|$)'
+          THEN '["sure"]'::jsonb
+        ELSE '["kuran_tekst"]'::jsonb
+      END,
+      updated_at = NOW()
+      WHERE p.lekcija_id IS NULL
+        AND p.kategorija = 'kiraet'
+        AND (
+          jsonb_array_length(COALESCE(p.tagovi, '[]'::jsonb)) = 0
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(p.tagovi, '[]'::jsonb)) tag(slug)
+            LEFT JOIN kviz_tagovi kt ON kt.slug = tag.slug
+            WHERE kt.kategorija IS DISTINCT FROM p.kategorija
+          )
+        )
+    `);
+
     const summary = await db.execute(sql`
       SELECT
         COUNT(*)::int AS ukupno,

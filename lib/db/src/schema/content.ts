@@ -28,33 +28,34 @@ export const KVIZ_KATEGORIJE_META: Record<KvizKategorija, { naziv: string; ikona
 // Tagovi — pod-teme unutar glavne kategorije. Svaki tag pripada tačno jednoj
 // glavnoj kategoriji. Admin koristi tagove za filtriranje u banci pitanja.
 export const KVIZ_TAGOVI = [
-  // Kiraet (1)
-  "sure",
+  // Kiraet (2)
+  "sure", "kuran_tekst",
   // Akaid (6)
   "allah", "meleki", "knjige", "poslanici", "ahiret", "kuran",
   // Ibadet (8)
-  "namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram",
+  "namaz", "abdest", "post", "zekat", "hadz", "dove", "zikrovi", "halal_haram", "ostali_ibadeti",
   // Ahlak (6)
   "ponasanje", "obici", "ljubaznost", "postenje", "srdacnost", "pomaganje",
   // Historija (5)
   "zivot_poslanika", "ashabi", "islamska_civilizacija", "osvajanja", "kalifi",
   // Bosna (5)
-  "nas_ucenjaci", "dzamije", "tradicije", "ilahije", "dijaspora",
+  "nas_ucenjaci", "dzamije", "tradicije", "ilahije", "dijaspora", "ostalo",
 ] as const;
 export type KvizTag = (typeof KVIZ_TAGOVI)[number];
 
 export const KVIZ_TAG_KATEGORIJA_MAP: Record<KvizTag, KvizKategorija> = {
-  sure: "kiraet",
+  sure: "kiraet", kuran_tekst: "kiraet",
   allah: "akaid", meleki: "akaid", knjige: "akaid", poslanici: "akaid",
   ahiret: "akaid", kuran: "akaid",
   namaz: "ibadet", abdest: "ibadet", post: "ibadet", zekat: "ibadet",
   hadz: "ibadet", dove: "ibadet", zikrovi: "ibadet", halal_haram: "ibadet",
+  ostali_ibadeti: "ibadet",
   ponasanje: "ahlak", obici: "ahlak", ljubaznost: "ahlak", postenje: "ahlak",
   srdacnost: "ahlak", pomaganje: "ahlak",
   zivot_poslanika: "historija", ashabi: "historija", islamska_civilizacija: "historija",
   osvajanja: "historija", kalifi: "historija",
   nas_ucenjaci: "bosna", dzamije: "bosna", tradicije: "bosna", ilahije: "bosna",
-  dijaspora: "bosna",
+  dijaspora: "bosna", ostalo: "bosna",
 };
 
 // Čitljivi nazivi tagova — koriste se za seed `kviz_tagovi` tabele i kao
@@ -62,15 +63,17 @@ export const KVIZ_TAG_KATEGORIJA_MAP: Record<KvizTag, KvizKategorija> = {
 // dodavati/brisati/preimenovati tagove).
 export const KVIZ_TAGOVI_META: Record<KvizTag, string> = {
   allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici",
-  ahiret: "Ahiret", kuran: "Kuran", sure: "Sure",
+  ahiret: "Ahiret", kuran: "Kuran kao objava", sure: "Sure",
+  kuran_tekst: "Kuran i ajeti",
   namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž",
   dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram",
+  ostali_ibadeti: "Ostali ibadeti",
   ponasanje: "Ponašanje", obici: "Običaji", ljubaznost: "Ljubaznost",
   postenje: "Poštenje", srdacnost: "Srdačnost", pomaganje: "Pomaganje",
   zivot_poslanika: "Život poslanika", ashabi: "Ashabi",
   islamska_civilizacija: "Isl. civilizacija", osvajanja: "Osvajanja", kalifi: "Kalifi",
   nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije",
-  ilahije: "Ilahije", dijaspora: "Dijaspora",
+  ilahije: "Ilahije", dijaspora: "Dijaspora", ostalo: "Ostalo",
 };
 
 // Vrsta pitanja u banci.

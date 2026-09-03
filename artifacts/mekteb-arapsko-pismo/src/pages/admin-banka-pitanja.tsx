@@ -115,11 +115,11 @@ const KATEGORIJE_LABELS: Record<string, string> = {
   bosna: "Ostali sadržaji",
 };
 const TAG_LABELS: Record<string, string> = {
-  allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici", ahiret: "Ahiret", kuran: "Kuran", sure: "Sure",
-  namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž", dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram",
+  allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici", ahiret: "Ahiret", kuran: "Kuran kao objava", sure: "Sure", kuran_tekst: "Kuran i ajeti",
+  namaz: "Namaz", abdest: "Abdest", post: "Post", zekat: "Zekat", hadz: "Hadž", dove: "Dove", zikrovi: "Zikrovi", halal_haram: "Halal/Haram", ostali_ibadeti: "Ostali ibadeti",
   ponasanje: "Ponašanje", obici: "Običaji", ljubaznost: "Ljubaznost", postenje: "Poštenje", srdacnost: "Srdacnost", pomaganje: "Pomaganje",
   zivot_poslanika: "Život poslanika", ashabi: "Ashabi", islamska_civilizacija: "Isl. civilizacija", osvajanja: "Osvajanja", kalifi: "Kalifi",
-  nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije", ilahije: "Ilahije", dijaspora: "Dijaspora",
+  nas_ucenjaci: "Naši učenjaci", dzamije: "Džamije", tradicije: "Tradicije", ilahije: "Ilahije", dijaspora: "Dijaspora", ostalo: "Ostalo",
 };
 
 interface KvizKategorijaApi {

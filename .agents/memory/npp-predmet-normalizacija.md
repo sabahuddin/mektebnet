@@ -19,6 +19,9 @@ lekcijama i Banci pitanja:
 - Kada pitanje ima `lekcija_id`, predmet te lekcije je autoritativan za
   kategoriju pitanja. Automatska dodjela lekcije mora biti konzervativna:
   nejasna ili višeznačna pitanja ostaju bez lekcije za ručni pregled.
+- Tag mora pripadati istoj kategoriji kao pitanje. Kiraet razlikuje `sure` od
+  `kuran_tekst`; opšti sadržaji koriste `ostalo`, a nekategorizovani ibadeti
+  `ostali_ibadeti`. Opšte pitanje smije imati predmet+tag bez `lekcija_id`.
 
 **Why / kako se primjenjuje:** produkcija je self-hosted (Coolify), pa se data-
 izmjene dostavljaju kao idempotentna startup-migracija u api-server index.ts

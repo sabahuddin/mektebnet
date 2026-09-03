@@ -1,7 +1,7 @@
 /**
  * Klasifikacija SVIH pitanja u banci po NPP 2018 hijerarhiji:
- *   - 5 glavnih kategorija: akaid, ibadet, ahlak, historija, bosna
- *   - 32 taga (pod-teme) — svaki tag pripada tačno jednoj kategoriji
+ *   - 6 glavnih kategorija: kiraet, akaid, ibadet, ahlak, historija, bosna
+ *   - tagovi (pod-teme) — svaki tag pripada tačno jednoj kategoriji
  *
  * Koristi Anthropic (preko Replit AI Integrations proxy-ja, env vars
  * AI_INTEGRATIONS_ANTHROPIC_BASE_URL/_API_KEY). Obrađuje pitanja u
@@ -74,11 +74,12 @@ function pitanjeTekst(r: Row): string {
 }
 
 const KAT_OPIS = `
-- akaid    = vjerovanje/iman: Allah, meleki, kitabi (knjige), pejgamberi (poslanici/vjerovanje u njih), ahiret/Sudnji dan, kader, Kur'an kao knjiga, sure i ajeti.
+- kiraet   = učenje Kur'ana: sure, ajeti, pravilno učenje i kur'anski tekst.
+- akaid    = vjerovanje/iman: Allah, meleki, kitabi (objavljene knjige), pejgamberi, ahiret/Sudnji dan i kader.
 - ibadet   = praksa/obredi: namaz, abdest/gusul/tejemmum, post/ramazan, zekat/sadekatul-fitr, hadž/umra, dove, zikr/tesbih, halal-haram propisi.
 - ahlak    = lijepo ponašanje i moral: bonton, navike, ljubaznost, poštenje/iskrenost, srdačnost, pomaganje, odnos prema roditeljima/komšijama, mahane (zavist, laž).
 - historija = historija islama: život Poslanika ﷺ (sira), ashabi, halife, osvajanja, islamska civilizacija/kultura/nauka kroz historiju (van Bosne).
-- bosna    = Bosna i naša baština: bosanski učenjaci, džamije u BiH (Gazi Husrev-beg...), bh. tradicije/običaji, ilahije/kaside, mektebi/medrese u BiH, dijaspora.
+- bosna    = ostali sadržaji: Bosna i naša baština, učenjaci, džamije, tradicije, ilahije, mektebi, dijaspora i sadržaji koji ne pripadaju ostalim predmetima.
 `.trim();
 
 function tagListPrompt(): string {
@@ -87,7 +88,7 @@ function tagListPrompt(): string {
 
 const SYSTEM = `Ti si stručnjak za islamsku edukaciju (NPP 2018, Islamska zajednica BiH). Klasifikuješ kviz pitanja za mekteb.
 
-Svako pitanje svrstaj u TAČNO JEDNU od 5 glavnih kategorija:
+Svako pitanje svrstaj u TAČNO JEDNU od 6 glavnih kategorija:
 ${KAT_OPIS}
 
 Zatim dodijeli 1-3 TAGA (pod-teme) koji MORAJU pripadati izabranoj kategoriji. Validni tagovi po kategoriji:
@@ -97,7 +98,7 @@ Pravila:
 - "kategorija" mora biti jedna od: ${KVIZ_KATEGORIJE.join(", ")}.
 - "tagovi" je niz od 1 do 3 stringa, SAMO iz liste tagova izabrane kategorije.
 - Ako pitanje spominje Bosnu/bh. ustanove/učenjake/tradicije → kategorija "bosna".
-- Pitanja o surama/ajetima/Kur'anu kao tekstu → akaid (tagovi: kuran/sure).
+- Pitanja o surama/ajetima/Kur'anu kao tekstu → kiraet (tagovi: sure/kuran_tekst).
 - Generička pitanja ("Dopuni:", "Pronađi greške:") klasifikuj po SADRŽAJU opcija/riječi.
 - Vrati ISKLJUČIVO validan JSON, bez markdown ograda.`;
 

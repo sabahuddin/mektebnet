@@ -15,4 +15,7 @@ test("Banka pitanja koristi iste prikazne predmete kao lekcije", () => {
 
 test("pitanja o surama pripadaju Kiraetu", () => {
   assert.equal(KVIZ_TAG_KATEGORIJA_MAP.sure, "kiraet");
+  assert.equal(KVIZ_TAG_KATEGORIJA_MAP.kuran_tekst, "kiraet");
+  assert.equal(KVIZ_TAG_KATEGORIJA_MAP.ostalo, "bosna");
+  assert.equal(KVIZ_TAG_KATEGORIJA_MAP.ostali_ibadeti, "ibadet");
 });
