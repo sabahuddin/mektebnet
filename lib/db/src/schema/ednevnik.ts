@@ -115,6 +115,15 @@ export const zadaceUceniciTable = pgTable("zadace_ucenici", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Privatni materijali koji su dodijeljeni uz konkretnu zadaću. Prilog ostaje
+// vezan za lekciju, a ova tabela ga čini dostupnim adresatima zadaće.
+export const zadacePriloziTable = pgTable("zadace_prilozi", {
+  id: serial("id").primaryKey(),
+  zadacaId: integer("zadaca_id").notNull(),
+  prilogId: integer("prilog_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Certificates / Certifikati
 export const certifikatiTable = pgTable("certifikati", {
   id: serial("id").primaryKey(),
@@ -141,3 +150,4 @@ export type MektebKalendar = typeof mektebKalendarTable.$inferSelect;
 export type PlanLekcija = typeof planLekcijaTable.$inferSelect;
 export type Zadaca = typeof zadaceTable.$inferSelect;
 export type ZadacaStatus = typeof zadaceStatusTable.$inferSelect;
+export type ZadacaPrilog = typeof zadacePriloziTable.$inferSelect;

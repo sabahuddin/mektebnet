@@ -184,6 +184,30 @@ async function runResidualSchema() {
         END IF;
       END $$;
     `);
+
+    // Prilozi dodijeljeni zadaći. Baseline može biti stariji od ove tabele,
+    // stoga je kreiramo idempotentno i eksplicitno čuvamo FK/integritet.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS zadace_prilozi (
+        id serial PRIMARY KEY,
+        zadaca_id integer NOT NULL,
+        prilog_id integer NOT NULL,
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS zadace_prilozi_zadaca_prilog_unique_idx ON zadace_prilozi (zadaca_id, prilog_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS zadace_prilozi_prilog_idx ON zadace_prilozi (prilog_id);`);
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'zadace_prilozi_zadaca_id_fkey' AND conrelid = 'zadace_prilozi'::regclass) THEN
+          ALTER TABLE zadace_prilozi ADD CONSTRAINT zadace_prilozi_zadaca_id_fkey FOREIGN KEY (zadaca_id) REFERENCES zadace(id) ON DELETE CASCADE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'zadace_prilozi_prilog_id_fkey' AND conrelid = 'zadace_prilozi'::regclass) THEN
+          ALTER TABLE zadace_prilozi ADD CONSTRAINT zadace_prilozi_prilog_id_fkey FOREIGN KEY (prilog_id) REFERENCES prilozi(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
     // Server-side scoring za quiz: spremamo cjelokupna pitanja sesije
     // (sa odgovorima) na strani servera. Klijent vraća samo izbor po questionId
     // — server validira i računa score.

@@ -3,10 +3,11 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { ArrowLeft, ClipboardList, Clock, BookOpen, Users, User as UserIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, ClipboardList, Clock, BookOpen, Download, Users, User as UserIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ZadacaRoditelj {
@@ -22,6 +23,14 @@ interface ZadacaRoditelj {
   grupaNaziv?: string | null;
   djecaIds: number[];
   djecaImena: string[];
+  prilozi?: Array<{
+    id: number;
+    originalName: string;
+    mimeType?: string | null;
+    fileSize?: number | null;
+    kind: "file" | "url" | string;
+    externalUrl?: string | null;
+  }>;
 }
 
 export default function RoditeljZadacePage() {
@@ -148,8 +157,11 @@ export default function RoditeljZadacePage() {
 }
 
 function ZadacaCard({ z, index, expired }: { z: ZadacaRoditelj; index: number; expired: boolean }) {
+  const { token } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const isIndividualna = z.djecaImena.length === 1;
+  const dijeteIdZaDownload = z.djecaIds[0];
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -174,6 +186,43 @@ function ZadacaCard({ z, index, expired }: { z: ZadacaRoditelj; index: number; e
             )}
           </div>
           {z.opis && <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">{z.opis}</p>}
+          {!!z.prilozi?.length && (
+            <div className="mb-3">
+              <p className="text-xs font-bold text-muted-foreground mb-1">{t("Materijali za nastavu")}</p>
+              <div className="flex flex-wrap gap-2">
+                {z.prilozi.map(p => p.kind === "url" ? (
+                  <a
+                    key={p.id}
+                    href={p.externalUrl || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg bg-teal-50 border border-teal-200 px-2.5 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" /> {p.originalName}
+                  </a>
+                ) : (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      if (!dijeteIdZaDownload) return;
+                      void openAuthorizedFile(
+                        `/roditelj/zadace/${dijeteIdZaDownload}/${z.id}/prilozi/${p.id}/download`,
+                        token,
+                      ).catch((err: Error) => toast({
+                        title: t("Greška"),
+                        description: err.message,
+                        variant: "destructive",
+                      }));
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                  >
+                    <Download className="w-3.5 h-3.5" /> {p.originalName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-4 flex-wrap">
             {z.rokDo && (
               <span className={`text-xs flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-muted-foreground"}`}>

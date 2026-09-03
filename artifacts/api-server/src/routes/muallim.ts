@@ -22,6 +22,7 @@ import {
   ilmihalLekcijeTable,
   zadaceTable,
   zadaceUceniciTable,
+  zadacePriloziTable,
   zadaceStatusTable,
   porukeTable,
   mektebiTable,
@@ -76,6 +77,44 @@ function currentSchoolYearResetDate(): string {
 
 function currentSchoolYearResetTimestamp(): Date {
   return new Date(`${currentSchoolYearResetDate()}T00:00:00.000Z`);
+}
+
+type HomeworkAttachment = {
+  id: number; originalName: string; mimeType: string; fileSize: number;
+  kind: string; externalUrl: string | null;
+};
+
+async function getHomeworkAttachments(zadacaIds: number[]): Promise<Map<number, HomeworkAttachment[]>> {
+  const result = new Map<number, HomeworkAttachment[]>();
+  if (!zadacaIds.length) return result;
+  const rows = await db.select({
+    zadacaId: zadacePriloziTable.zadacaId,
+    id: prilozi.id, originalName: prilozi.originalName, mimeType: prilozi.mimeType,
+    fileSize: prilozi.fileSize, kind: prilozi.kind, externalUrl: prilozi.externalUrl,
+  }).from(zadacePriloziTable).innerJoin(prilozi, eq(zadacePriloziTable.prilogId, prilozi.id))
+    .where(inArray(zadacePriloziTable.zadacaId, zadacaIds));
+  for (const row of rows) {
+    const list = result.get(row.zadacaId) || [];
+    list.push({ id: row.id, originalName: row.originalName, mimeType: row.mimeType, fileSize: row.fileSize, kind: row.kind, externalUrl: row.externalUrl });
+    result.set(row.zadacaId, list);
+  }
+  return result;
+}
+
+async function validateHomeworkAttachments(
+  ids: unknown, lessonId: number | null, muallimId: number, role: string,
+): Promise<{ ids: number[]; error?: string }> {
+  if (!Array.isArray(ids)) return { ids: [] };
+  if (!lessonId) return { ids: [], error: "Za priloge je obavezna ispravna lekcija" };
+  const normalized = [...new Set(ids.map(Number).filter(Number.isInteger).filter(id => id > 0))];
+  if (normalized.length !== ids.length) return { ids: [], error: "Nevažeći ID priloga" };
+  if (!normalized.length) return { ids: [] };
+  const records = await db.select().from(prilozi).where(inArray(prilozi.id, normalized));
+  if (records.length !== normalized.length || records.some(p =>
+    p.lekcijaId !== lessonId || (p.kind !== "file" && p.kind !== "url") ||
+    (role !== "admin" && !p.approved && p.uploadedByUserId !== muallimId)
+  )) return { ids: [], error: "Prilozi nisu dostupni za odabranu lekciju" };
+  return { ids: normalized };
 }
 
 function isFromCurrentSchoolYear(date: string | null | undefined): boolean {
@@ -4626,6 +4665,7 @@ router.get("/zadace", async (req, res) => {
       arr.push(t.ucenikId);
       targetMap.set(t.zadacaId, arr);
     }
+    const prilogMap = await getHomeworkAttachments(zadace.map(z => z.id));
 
     const grupaIds = Array.from(new Set(zadace.map(z => z.grupaId)));
     const grupaUcenici = await db.select({ grupaId: ucenikProfiliTable.grupaId, userId: ucenikProfiliTable.userId })
@@ -4713,6 +4753,7 @@ router.get("/zadace", async (req, res) => {
       const completed = ukupno > 0 && zavrsenih >= ukupno;
       return {
         ...z,
+        prilozi: prilogMap.get(z.id) || [],
         ucenikIds,
         zavrsenih,
         ukupno,
@@ -4728,7 +4769,7 @@ router.get("/zadace", async (req, res) => {
 
 router.post("/zadace", async (req, res) => {
   try {
-    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds } = req.body;
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, priloziIds } = req.body;
     // naslov više nije obavezan — nova UX koristi lekciju kao naziv zadaće.
     if (!grupaId) { res.status(400).json({ error: "grupaId je obavezan" }); return; }
     const naslovFinal = (naslov && String(naslov).trim()) || (lekcijaNaslov && String(lekcijaNaslov).trim()) || null;
@@ -4739,7 +4780,7 @@ router.post("/zadace", async (req, res) => {
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
-      const [lekcija] = await db.select({ slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
+      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
         .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
       if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
@@ -4752,6 +4793,11 @@ router.post("/zadace", async (req, res) => {
         .limit(2);
       canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     }
+    const [attachmentLesson] = canonicalSlug
+      ? await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, canonicalSlug))
+      : [];
+    const attachmentValidation = await validateHomeworkAttachments(priloziIds, attachmentLesson?.id ?? null, req.user!.userId, req.user!.role);
+    if (attachmentValidation.error) { res.status(400).json({ error: attachmentValidation.error }); return; }
 
     let validUcenikIds: number[] = [];
     if (Array.isArray(ucenikIds) && ucenikIds.length > 0) {
@@ -4764,23 +4810,16 @@ router.post("/zadace", async (req, res) => {
       }
     }
 
-    const [nova] = await db.insert(zadaceTable).values({
-      grupaId,
-      muallimId: req.user!.userId,
-      naslov: naslovFinal,
-      opis: opis || null,
-      rokDo: rokDo || null,
-      lekcijaNaslov: lekcijaNaslov || null,
-      lekcijaSlug: canonicalSlug,
-      // Kanonski slug uvijek označava Ilmihal, nezavisno od klijentskog polja.
-      lekcijaTip: canonicalSlug ? "ilmihal" : (lekcijaTip || null),
-    }).returning();
-
-    if (validUcenikIds.length > 0) {
-      await db.insert(zadaceUceniciTable).values(
-        validUcenikIds.map(uid => ({ zadacaId: nova.id, ucenikId: uid }))
-      );
-    }
+    const nova = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(zadaceTable).values({
+        grupaId, muallimId: req.user!.userId, naslov: naslovFinal, opis: opis || null,
+        rokDo: rokDo || null, lekcijaNaslov: lekcijaNaslov || null, lekcijaSlug: canonicalSlug,
+        lekcijaTip: canonicalSlug ? "ilmihal" : (lekcijaTip || null),
+      }).returning();
+      if (validUcenikIds.length) await tx.insert(zadaceUceniciTable).values(validUcenikIds.map(ucenikId => ({ zadacaId: created.id, ucenikId })));
+      if (attachmentValidation.ids.length) await tx.insert(zadacePriloziTable).values(attachmentValidation.ids.map(prilogId => ({ zadacaId: created.id, prilogId })));
+      return created;
+    });
 
     // Push notifikacija — ciljanim učenicima ili cijeloj grupi (default).
     const notifyIds = validUcenikIds.length > 0
@@ -4823,7 +4862,7 @@ router.post("/zadace", async (req, res) => {
       })().catch(err => console.error("[zadaca-notify-roditelj] background notify failed", err));
     }
 
-    res.status(201).json({ ...nova, ucenikIds: validUcenikIds });
+    res.status(201).json({ ...nova, ucenikIds: validUcenikIds, prilozi: await getHomeworkAttachments([nova.id]).then(m => m.get(nova.id) || []) });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -4832,7 +4871,7 @@ router.post("/zadace", async (req, res) => {
 router.put("/zadace/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds } = req.body;
+    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds, priloziIds } = req.body;
 
     const [existing] = await db.select().from(zadaceTable)
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
@@ -4840,7 +4879,7 @@ router.put("/zadace/:id", async (req, res) => {
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
-      const [lekcija] = await db.select({ slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
+      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
         .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
       if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
@@ -4855,38 +4894,35 @@ router.put("/zadace/:id", async (req, res) => {
     } else if (lekcijaNaslov === undefined) {
       canonicalSlug = existing.lekcijaSlug;
     }
+    const [attachmentLesson] = canonicalSlug
+      ? await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, canonicalSlug))
+      : [];
+    const attachmentValidation = await validateHomeworkAttachments(priloziIds, attachmentLesson?.id ?? null, req.user!.userId, req.user!.role);
+    if (attachmentValidation.error) { res.status(400).json({ error: attachmentValidation.error }); return; }
 
-    const [updated] = await db.update(zadaceTable)
-      .set({
-        naslov,
-        opis,
-        rokDo,
-        lekcijaNaslov,
-        lekcijaSlug: canonicalSlug,
-        lekcijaTip: canonicalSlug ? "ilmihal" : lekcijaTip,
-        isActive,
-      })
-      .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)))
-      .returning();
-
-    if (Array.isArray(ucenikIds)) {
-      await db.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
-      const numericIds = ucenikIds.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x));
-      if (numericIds.length > 0) {
-        const ucenici = await db.select({ userId: ucenikProfiliTable.userId })
-          .from(ucenikProfiliTable)
-          .where(and(eq(ucenikProfiliTable.grupaId, existing.grupaId), inArray(ucenikProfiliTable.userId, numericIds)));
-        const validIds = ucenici.map(u => u.userId);
-        if (validIds.length > 0) {
-          await db.insert(zadaceUceniciTable).values(
-            validIds.map(uid => ({ zadacaId: id, ucenikId: uid }))
-          );
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx.update(zadaceTable).set({
+        naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug: canonicalSlug,
+        lekcijaTip: canonicalSlug ? "ilmihal" : lekcijaTip, isActive,
+      }).where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId))).returning();
+      if (Array.isArray(ucenikIds)) {
+        await tx.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
+        const numericIds = [...new Set(ucenikIds.map(Number).filter(Number.isFinite))];
+        if (numericIds.length) {
+          const ucenici = await tx.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
+            .where(and(eq(ucenikProfiliTable.grupaId, existing.grupaId), inArray(ucenikProfiliTable.userId, numericIds)));
+          if (ucenici.length) await tx.insert(zadaceUceniciTable).values(ucenici.map(u => ({ zadacaId: id, ucenikId: u.userId })));
         }
       }
-    }
+      if (Array.isArray(priloziIds)) {
+        await tx.delete(zadacePriloziTable).where(eq(zadacePriloziTable.zadacaId, id));
+        if (attachmentValidation.ids.length) await tx.insert(zadacePriloziTable).values(attachmentValidation.ids.map(prilogId => ({ zadacaId: id, prilogId })));
+      }
+      return row;
+    });
 
     const targets = await db.select().from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
-    res.json({ ...updated, ucenikIds: targets.map(t => t.ucenikId) });
+    res.json({ ...updated, ucenikIds: targets.map(t => t.ucenikId), prilozi: (await getHomeworkAttachments([id])).get(id) || [] });
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
@@ -4927,7 +4963,7 @@ router.get("/zadace/:id/pregled", async (req, res) => {
 
     const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId);
     if (recipientIds.length === 0) {
-      res.json({ zadaca, lekcija: null, lekcijaZavrsenih: 0, lekcijaUkupno: null, ucenici: [] });
+      res.json({ zadaca: { ...zadaca, prilozi: (await getHomeworkAttachments([id])).get(id) || [] }, lekcija: null, lekcijaZavrsenih: 0, lekcijaUkupno: null, ucenici: [] });
       return;
     }
 
@@ -4982,7 +5018,7 @@ router.get("/zadace/:id/pregled", async (req, res) => {
       .sort((a, b) => (a.displayName || "").localeCompare(b.displayName || "", "bs"));
 
     res.json({
-      zadaca,
+      zadaca: { ...zadaca, prilozi: (await getHomeworkAttachments([id])).get(id) || [] },
       lekcija: linkedLesson ?? null,
       lekcijaZavrsenih: linkedLesson ? ucenici.filter(u => u.lekcijaZavrsena).length : 0,
       lekcijaUkupno: linkedLesson ? ucenici.length : null,
@@ -5041,6 +5077,7 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
     const statusMap = new Map(statusi.map(s => [s.zadacaId, s]));
     const today = new Date().toISOString().split("T")[0];
 
+    const prilogMap = await getHomeworkAttachments(visible.map(z => z.id));
     const withStatus = visible.map(z => {
       const s = statusMap.get(z.id);
       const status = s?.status ?? "na_cekanju";
@@ -5049,6 +5086,7 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
       const istekao = !!(efektivniRok && efektivniRok < today);
       return {
         ...z,
+        prilozi: prilogMap.get(z.id) || [],
         efektivniRok,
         status,
         uradjeno: s?.uradjeno ?? false,

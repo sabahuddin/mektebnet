@@ -85,6 +85,14 @@ interface IlmihalLekcija {
   nivo: number;
   slug?: string;
 }
+interface NastavniMaterijal {
+  id: number;
+  originalName: string;
+  kind: "file" | "url" | string;
+  mimeType?: string | null;
+  fileSize?: number | null;
+  externalUrl?: string | null;
+}
 
 interface PlanLekcija {
   id: number;
@@ -205,6 +213,8 @@ export default function GrupaPage() {
   const [showZadacaModal, setShowZadacaModal] = useState(false);
   const [zadacaTarget, setZadacaTarget] = useState<Ucenik | null>(null);
   const [newZadaca, setNewZadaca] = useState({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
+  const [zadMaterijali, setZadMaterijali] = useState<NastavniMaterijal[]>([]);
+  const [zadPriloziIds, setZadPriloziIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
 
   // Brisanje učenika (hard delete)
@@ -527,6 +537,7 @@ export default function GrupaPage() {
   function openZadacaForOne(u: Ucenik) {
     setZadacaTarget(u);
     setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
+    setZadMaterijali([]); setZadPriloziIds(new Set());
     setShowZadacaModal(true);
   }
 
@@ -545,6 +556,7 @@ export default function GrupaPage() {
         lekcijaNaslov: newZadaca.lekcijaNaslov || null,
         lekcijaSlug: newZadaca.lekcijaSlug || null,
         lekcijaTip: newZadaca.lekcijaSlug ? "ilmihal" : null,
+        priloziIds: Array.from(zadPriloziIds),
         ucenikIds: zadacaTarget ? [zadacaTarget.id] : [],
       }, token);
       toast({
@@ -1576,11 +1588,34 @@ export default function GrupaPage() {
                       lekcije={ilmihalLekcije}
                       value={newZadaca.lekcijaNaslov}
                       onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v }))}
-                      onSelectLesson={lekcija => setNewZadaca(z => ({ ...z, lekcijaSlug: lekcija?.slug || "" }))}
+                      onSelectLesson={async lekcija => {
+                        setNewZadaca(z => ({ ...z, lekcijaSlug: lekcija?.slug || "" }));
+                        setZadPriloziIds(new Set());
+                        if (!lekcija?.slug || !token) { setZadMaterijali([]); return; }
+                        try {
+                          const data = await apiRequest<{ prilozi?: NastavniMaterijal[] }>("GET", `/content/ilmihal/${lekcija.slug}`, undefined, token);
+                          setZadMaterijali((data.prilozi || []).filter(p => p.kind === "file" || p.kind === "url"));
+                        } catch { setZadMaterijali([]); }
+                      }}
                       placeholder={t("Pretraži lekciju ili upiši broj…")}
                     />
                   </div>
                 </div>
+                {newZadaca.lekcijaSlug && (
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Materijali za nastavu")}</label>
+                    {zadMaterijali.length === 0 ? <p className="text-xs text-muted-foreground italic">{t("Ova lekcija nema dostupnih materijala.")}</p> : (
+                      <div className="border border-border rounded-xl p-2 space-y-1 max-h-36 overflow-y-auto">
+                        {zadMaterijali.map(m => <label key={m.id} className="flex items-center gap-2 px-1 py-1 cursor-pointer">
+                          <input type="checkbox" checked={zadPriloziIds.has(m.id)} onChange={() => setZadPriloziIds(prev => {
+                            const next = new Set(prev); if (next.has(m.id)) next.delete(m.id); else next.add(m.id); return next;
+                          })} className="w-4 h-4 accent-primary" />
+                          <span className="text-sm">{m.originalName}</span>
+                        </label>)}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex gap-3 mt-4">
                 <Button variant="outline" onClick={() => setShowZadacaModal(false)} disabled={savingZadaca} className="flex-1 rounded-xl">

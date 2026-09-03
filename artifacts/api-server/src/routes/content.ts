@@ -617,12 +617,14 @@ router.get("/ilmihal/:slug", async (req, res) => {
         // Vidljivost:
         // - admin vidi sve (i odobrene i one koje čekaju)
         // - muallim vidi sve odobrene + svoje neodobrene (one koje je sam dodao)
-        // - studenti vide samo odobrene (h5p + url + embed)
+        // - studenti/roditelji vide samo odobrene interaktivne materijale.
+        //   file/url materijali mogu biti privatno dodijeljeni uz zadaću i
+        //   nikad se ne izlažu preko općeg lesson-content endpointa.
         const visible = isAdmin
           ? all
           : isMuallim
             ? all.filter(a => a.approved || (myId !== null && a.uploadedByUserId === myId))
-            : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "url" || a.kind === "embed"));
+            : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "embed"));
         result.prilozi = visible.map(a => {
           let url: string;
           if (a.kind === "url" || a.kind === "embed") url = a.externalUrl || "";

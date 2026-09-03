@@ -1587,6 +1587,7 @@ function PriloziSection({
   const isGuestLike = !user || user?.role === "roditelj";
   const promptRegister = useRegisterPrompt();
   const [open, setOpen] = useState(true);
+  const [openMaterials, setOpenMaterials] = useState(true);
   const [attachments, setAttachments] = useState<Prilog[]>(lekcija.prilozi || []);
   // `lekcija.prilozi` može stići naknadno (npr. token postane dostupan tek
   // nakon AuthProvider hidratacije, pa se GET re-issuea). useState() inicijalna
@@ -1947,8 +1948,8 @@ function PriloziSection({
         />
         <span className="font-bold text-blue-800 text-base flex-1">
           {t("Vježbe")}
-          {attachments.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-blue-500">({attachments.length})</span>
+          {attachments.filter(a => a.kind === "h5p" || a.kind === "embed").length > 0 && (
+            <span className="ml-2 text-sm font-normal text-blue-500">({attachments.filter(a => a.kind === "h5p" || a.kind === "embed").length})</span>
           )}
         </span>
         <ChevronDown className={`w-5 h-5 text-blue-400 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -1967,13 +1968,6 @@ function PriloziSection({
               {isAdmin && (
                 <div className="mb-4">
                   <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf"
-                    onChange={handleUpload}
-                    className="hidden"
-                  />
-                  <input
                     ref={h5pInputRef}
                     type="file"
                     accept=".h5p"
@@ -1981,25 +1975,6 @@ function PriloziSection({
                     className="hidden"
                   />
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      variant="outline"
-                      className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
-                    >
-                      {uploading ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem...")}</>
-                      ) : (
-                        <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={() => setShowUrlForm(v => !v)}
-                      variant="outline"
-                      className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}
-                    </Button>
                     <Button
                       onClick={() => h5pInputRef.current?.click()}
                       disabled={uploadingH5p}
@@ -2020,32 +1995,7 @@ function PriloziSection({
                       <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? t("Odustani") : t("Dodaj embed vježbu")}
                     </Button>
                   </div>
-                  <p className="text-sm text-blue-400 mt-1">{t("PDF, DOCX, XLSX, PPTX, TXT (max 20MB), YouTube/web link, .h5p arhiva (max 50MB), ili embed (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")}</p>
-                  {showUrlForm && (
-                    <div className="mt-3 p-3 bg-white rounded-xl border border-blue-200 flex flex-col gap-2">
-                      <input
-                        type="url"
-                        placeholder="https://www.youtube.com/watch?v=..."
-                        value={urlValue}
-                        onChange={e => setUrlValue(e.target.value)}
-                        className="px-3 py-2 rounded-lg border border-blue-200 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder={t("Naziv (opciono, npr. 'Video o abdestu')")}
-                        value={urlLabel}
-                        onChange={e => setUrlLabel(e.target.value)}
-                        className="px-3 py-2 rounded-lg border border-blue-200 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                      <Button
-                        onClick={handleAddUrl}
-                        disabled={savingUrl || !urlValue.trim()}
-                        className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold self-start"
-                      >
-                        {savingUrl ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi link")}
-                      </Button>
-                    </div>
-                  )}
+                  <p className="text-sm text-blue-400 mt-1">{t(".h5p arhiva (max 50MB) ili embed vježba (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")}</p>
                   {showEmbedForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 flex flex-col gap-2">
                       <p className="text-xs text-amber-700 font-semibold">
@@ -2094,14 +2044,14 @@ function PriloziSection({
                 </div>
               )}
 
-              {attachments.length === 0 ? (
-                <p className="text-blue-400 text-base italic">{t("Nema uploadovanih materijala za ovu lekciju.")}</p>
+              {attachments.filter(a => a.kind === "h5p" || a.kind === "embed").length === 0 ? (
+                <p className="text-blue-400 text-base italic">{t("Nema vježbi za ovu lekciju.")}</p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {/* Embed vježbe idu na dno spiska — prikazuju se kao široki
                       button koji otvara popup, da bi vježba imala maksimum prostora
                       umjesto da se gubi u 4 ugnježdena okvira. */}
-                  {[...attachments].sort((x, y) => {
+                  {[...attachments].filter(a => a.kind === "h5p" || a.kind === "embed").sort((x, y) => {
                     const ex = x.kind === "embed" ? 1 : 0;
                     const ey = y.kind === "embed" ? 1 : 0;
                     return ex - ey;
@@ -2531,6 +2481,37 @@ function PriloziSection({
           </motion.div>
         )}
       </AnimatePresence>
+      {canManage && (
+        <div className="border-t-2 border-blue-200 bg-white">
+          <button onClick={() => setOpenMaterials(v => !v)} className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-blue-50 transition-colors">
+            <FileText className="w-7 h-7 text-blue-600" />
+            <span className="font-bold text-blue-800 text-base flex-1">{t("Materijali za nastavu")} <span className="ml-1 text-sm font-normal text-blue-500">({attachments.filter(a => a.kind === "file" || a.kind === "url").length})</span></span>
+            <ChevronDown className={`w-5 h-5 text-blue-400 transition-transform ${openMaterials ? "rotate-180" : ""}`} />
+          </button>
+          {openMaterials && <div className="px-5 pb-5">
+            <input ref={fileInputRef} type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold">
+                {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem...")}</> : <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>}
+              </Button>
+              <Button onClick={() => setShowUrlForm(v => !v)} variant="outline" className="rounded-xl border-blue-300 text-blue-700 hover:bg-blue-100 font-bold"><ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}</Button>
+            </div>
+            {showUrlForm && <div className="mb-3 p-3 bg-blue-50 rounded-xl border border-blue-200 flex flex-col gap-2">
+              <input type="url" placeholder="https://…" value={urlValue} onChange={e => setUrlValue(e.target.value)} className="px-3 py-2 rounded-lg border border-blue-200 text-sm" />
+              <input type="text" placeholder={t("Naziv (opciono)")} value={urlLabel} onChange={e => setUrlLabel(e.target.value)} className="px-3 py-2 rounded-lg border border-blue-200 text-sm" />
+              <Button onClick={handleAddUrl} disabled={savingUrl || !urlValue.trim()} className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold self-start">{savingUrl ? t("Spašavam...") : t("Spasi link")}</Button>
+            </div>}
+            <div className="flex flex-col gap-2">
+              {attachments.filter(a => a.kind === "file" || a.kind === "url").map(a => <div key={a.id} className="flex items-center gap-3 bg-blue-50/50 border border-blue-100 rounded-xl p-3">
+                <span className="text-xl">{a.kind === "url" ? "🔗" : getFileIcon(a.mimeType)}</span><span className="flex-1 min-w-0 font-semibold text-sm break-words">{a.originalName}</span>
+                {a.kind === "url" ? <a href={a.externalUrl || a.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-teal-700">{t("Otvori")}</a> : <button onClick={() => downloadFile(a, true)} className="text-sm font-bold text-blue-700">{t("Otvori")}</button>}
+                {canDelete && <button onClick={() => handleDelete(a.id, a.originalName)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>}
+              </div>)}
+              {attachments.filter(a => a.kind === "file" || a.kind === "url").length === 0 && <p className="text-sm text-muted-foreground italic">{t("Nema materijala za nastavu.")}</p>}
+            </div>
+          </div>}
+        </div>
+      )}
     </div>
   );
 }

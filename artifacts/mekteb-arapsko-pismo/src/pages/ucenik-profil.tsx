@@ -296,6 +296,7 @@ interface Zadaca {
   prolongCount?: number;
   istekao?: boolean;
   kategorija?: "zavrsene" | "aktivne";
+  prilozi?: Array<{ id: number; originalName: string; mimeType?: string | null; fileSize?: number | null; kind: "file" | "url" | string; externalUrl?: string | null; }>;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -1272,6 +1273,22 @@ export default function UcenikProfilPage() {
                           </div>
                           {z.opis && (
                             <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words mt-3 sm:pl-12">{z.opis}</p>
+                          )}
+                          {!!z.prilozi?.length && (
+                            <div className="mt-3 sm:pl-12">
+                              <p className="text-xs font-bold text-muted-foreground mb-1">{t("Materijali za nastavu")}</p>
+                              <div className="flex flex-wrap gap-2">
+                                {z.prilozi.map(p => p.kind === "url" ? (
+                                  <a key={p.id} href={p.externalUrl || "#"} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-teal-50 border border-teal-200 px-2.5 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100">
+                                    <BookOpen className="w-3.5 h-3.5" /> {p.originalName}
+                                  </a>
+                                ) : (
+                                  <button key={p.id} onClick={() => openAuthorizedFile(`/ucenik/zadace/${z.id}/prilozi/${p.id}/download`, token).catch(err => toast({ title: t("Greška"), description: err.message, variant: "destructive" }))} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                                    <Download className="w-3.5 h-3.5" /> {p.originalName}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           )}
                           {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
                             <div className="flex flex-wrap items-center gap-2 mt-3 sm:pl-12">

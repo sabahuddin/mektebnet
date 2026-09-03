@@ -1,6 +1,8 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import type { Server } from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
@@ -12,6 +14,8 @@ import {
   ucenikProfiliTable,
   usersTable,
   zadaceTable,
+  zadacePriloziTable,
+  prilozi,
 } from "@workspace/db/schema";
 import app from "../app.js";
 import {
@@ -42,6 +46,10 @@ let napametHomeworkId: number;
 let studentToken: string;
 let otherStudentToken: string;
 let teacherToken: string;
+let attachmentHomeworkId: number;
+let filePrilogId: number;
+let urlPrilogId: number;
+let attachmentStoredName: string;
 
 function teacherGet(path: string) {
   return fetch(`${baseUrl}${path}`, {
@@ -81,23 +89,33 @@ function teacherPost(path: string, body: unknown) {
 }
 
 async function cleanup(): Promise<void> {
-  if (assignedHomeworkId || emptyHomeworkId || napametHomeworkId) {
+  if (assignedHomeworkId || emptyHomeworkId || napametHomeworkId || attachmentHomeworkId) {
     await db.execute(sql`
       DELETE FROM zadace_status
-      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1})
+       WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1}, ${attachmentHomeworkId || -1})
     `);
     await db.execute(sql`
       DELETE FROM zadace_ucenici
-      WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1})
+       WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1}, ${attachmentHomeworkId || -1})
     `);
     await db.delete(ocjeneTable).where(inArray(
       ocjeneTable.zadacaId,
-      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId].filter(Boolean),
+      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId, attachmentHomeworkId].filter(Boolean),
     ));
     await db.delete(zadaceTable).where(inArray(
       zadaceTable.id,
-      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId].filter(Boolean),
+      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId, attachmentHomeworkId].filter(Boolean),
     ));
+  }
+  if (filePrilogId || urlPrilogId) {
+    await db.delete(zadacePriloziTable).where(inArray(
+      zadacePriloziTable.prilogId,
+      [filePrilogId, urlPrilogId].filter(Boolean),
+    ));
+    await db.delete(prilozi).where(inArray(prilozi.id, [filePrilogId, urlPrilogId].filter(Boolean)));
+  }
+  if (attachmentStoredName) {
+    fs.rmSync(path.resolve(process.env["UPLOADS_DIR"] || path.join(process.cwd(), "uploads"), attachmentStoredName), { force: true });
   }
   if (studentId || otherStudentId) {
     await db.delete(korisnikNapredakTable).where(inArray(
@@ -157,6 +175,13 @@ before(async () => {
     ALTER TABLE zadace
     ADD COLUMN IF NOT EXISTS lekcija_slug varchar(300)
   `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS zadace_prilozi (
+      id serial PRIMARY KEY, zadaca_id integer NOT NULL, prilog_id integer NOT NULL,
+      created_at timestamp DEFAULT now()
+    )
+  `);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS zadace_prilozi_zadaca_prilog_unique_idx ON zadace_prilozi (zadaca_id, prilog_id)`);
   // Očisti samo pomoćne redove iz ranije prekinutog pokretanja ovog istog
   // testa; produkcijski sadržaj nikada ne koristi ovaj rezervisani slug prefiks.
   await db.execute(sql`
@@ -563,4 +588,56 @@ test("detail lekcije preklapa naslov i HTML istim prijevodnim overlayem", async 
   assert.equal(lesson.naslov, "Assigned lesson");
   assert.match(lesson.contentHtml, /Translated introduction and content/);
   assert.doesNotMatch(lesson.contentHtml, /Bosanski uvodni sadržaj/);
+});
+
+test("privatni file/url prilozi zadaće su scoped na adresata i ne cure kroz lekciju", async () => {
+  attachmentStoredName = `test-zadaca-prilog-${suffix}.pdf`;
+  const uploadsDir = process.env["UPLOADS_DIR"] || path.join(process.cwd(), "uploads");
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  fs.writeFileSync(path.join(uploadsDir, attachmentStoredName), "private homework bytes");
+  const inserted = await db.insert(prilozi).values([
+    {
+      lekcijaId: assignedLessonId, originalName: "Privatni radni list.pdf",
+      storedName: attachmentStoredName, fileSize: 22, mimeType: "application/pdf",
+      kind: "file", approved: true, uploadedByRole: "muallim", uploadedByUserId: teacherId,
+    },
+    {
+      lekcijaId: assignedLessonId, originalName: "Privatni video",
+      storedName: "", fileSize: 0, mimeType: "text/uri-list", kind: "url",
+      externalUrl: "https://example.test/private-video", approved: true,
+      uploadedByRole: "muallim", uploadedByUserId: teacherId,
+    },
+  ]).returning({ id: prilozi.id, kind: prilozi.kind });
+  filePrilogId = inserted.find(p => p.kind === "file")!.id;
+  urlPrilogId = inserted.find(p => p.kind === "url")!.id;
+
+  const create = await teacherPost("/api/muallim/zadace", {
+    grupaId: groupId, naslov: "Zadaća s privatnim materijalima",
+    lekcijaNaslov: `Zadata lekcija ${suffix}`, lekcijaSlug: assignedSlug,
+    ucenikIds: [studentId], priloziIds: [filePrilogId, urlPrilogId],
+  });
+  assert.equal(create.status, 201);
+  const created = await create.json() as { id: number; prilozi: Array<{ id: number; storedName?: unknown }> };
+  attachmentHomeworkId = created.id;
+  assert.deepEqual(created.prilozi.map(p => p.id).sort(), [filePrilogId, urlPrilogId].sort());
+  assert.equal(created.prilozi.every(p => !("storedName" in p)), true);
+
+  const [content, targetList, download, outsiderDownload] = await Promise.all([
+    studentGet(`/api/content/ilmihal/${assignedSlug}`),
+    studentGet("/api/ucenik/zadace"),
+    studentGet(`/api/ucenik/zadace/${attachmentHomeworkId}/prilozi/${filePrilogId}/download`),
+    studentGet(`/api/ucenik/zadace/${attachmentHomeworkId}/prilozi/${filePrilogId}/download`, {}, otherStudentToken),
+  ]);
+  assert.equal(content.status, 200);
+  const lesson = await content.json() as { prilozi?: Array<{ id: number }> };
+  assert.equal(lesson.prilozi?.some(p => p.id === filePrilogId || p.id === urlPrilogId), false);
+  assert.equal(targetList.status, 200);
+  const homework = await targetList.json() as Array<{ id: number; prilozi: Array<{ id: number; externalUrl: string | null; storedName?: unknown }> }>;
+  const assigned = homework.find(h => h.id === attachmentHomeworkId)!;
+  assert.deepEqual(assigned.prilozi.map(p => p.id).sort(), [filePrilogId, urlPrilogId].sort());
+  assert.equal(assigned.prilozi.every(p => !("storedName" in p)), true);
+  assert.equal(assigned.prilozi.find(p => p.id === urlPrilogId)?.externalUrl, "https://example.test/private-video");
+  assert.equal(download.status, 200);
+  assert.equal(await download.text(), "private homework bytes");
+  assert.equal(outsiderDownload.status, 403);
 });
