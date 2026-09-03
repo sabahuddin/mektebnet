@@ -8,17 +8,17 @@ POJEDINAČNE VJEŽBE — po jedna na svoju lekciju
 ----------------------------------------------------------------------------
 red | slug lekcije     | fajl                      | tip vježbe      | stavki
 ----------------------------------------------------------------------------
- 52 | roditelji        | l-roditelji.h5p           | Question Set    |  6
- 53 | rodbinske-veze   | l-rodbinske-veze.h5p      | Single Choice   |  8
- 54 | komsije          | l-komsije.h5p             | Question Set    |  6
- 56 | stariji          | l-stariji.h5p             | Dialog Cards    |  6
- 57 | poboznost        | l-poboznost.h5p           | Question Set    |  7 
- 61 | dobrota          | l-dobrota.h5p             | Question Set    |  5
- 63 | skrtost          | l-skrtost.h5p             | Single Choice   |  8
- 64 | ogovaranje       | l-ogovaranje.h5p          | Question Set    |  6
- 65 | oholost          | l-oholost.h5p             | Question Set    |  6
- 66 | mrznja           | l-mrznja.h5p              | Dialog Cards    |  7
- 67 | neprijateljstvo  | l-neprijateljstvo.h5p     | Single Choice   |  7
+ 52 | roditelji        | roditelji.h5p           | Question Set    |  6
+ 53 | rodbinske-veze   | rodbinske_veze.h5p      | Single Choice   |  8
+ 54 | komsije          | komsije.h5p             | Question Set    |  6
+ 56 | stariji          | stariji.h5p             | Dialog Cards    |  6
+ 57 | poboznost        | poboznost.h5p           | Question Set    |  7 
+ 61 | dobrota          | dobrota.h5p             | Question Set    |  5
+ 63 | skrtost          | skrtost.h5p             | Single Choice   |  8
+ 64 | ogovaranje       | ogovaranje.h5p          | Question Set    |  6
+ 65 | oholost          | oholost.h5p             | Question Set    |  6
+ 66 | mrznja           | mrznja.h5p              | Dialog Cards    |  7
+ 67 | neprijateljstvo  | neprijateljstvo.h5p     | Single Choice   |  7
 
 Tip vježbe se namjerno smjenjuje, da dijete kroz blok ne dobije deset puta
 isti oblik. Unutar Question Seta smjenjuju se i vrste pitanja: jedan tačan
@@ -39,10 +39,10 @@ ZBIRNE VJEŽBE — za Zlatni medaljon na kraju etape
 ----------------------------------------------------------------------------
 fajl                      | tip             | pokriva
 ----------------------------------------------------------------------------
-n3-asocijacije.h5p        | Single Choice   | 10 nizova iz cijelog bloka
-n3-ahlak-brzo.h5p         | Single Choice   | brzo prepoznavanje, cijeli blok
-n3-ahlak-kartice.h5p      | Dialog Cards    | ponavljanje, cijeli blok
-n3-ahlak-pojmovi.h5p      | Single Choice   | pojmovi, cijeli blok
+n3_asocijacije.h5p        | Single Choice   | 10 nizova iz cijelog bloka
+n3_ahlak_brzo.h5p         | Single Choice   | brzo prepoznavanje, cijeli blok
+n3_ahlak_kartice.h5p      | Dialog Cards    | ponavljanje, cijeli blok
+n3_ahlak_pojmovi.h5p      | Single Choice   | pojmovi, cijeli blok
 
 
 RANIJE ISPORUČENE VJEŽBE KOJE POKRIVAJU VIŠE LEKCIJA
@@ -50,53 +50,53 @@ RANIJE ISPORUČENE VJEŽBE KOJE POKRIVAJU VIŠE LEKCIJA
 Ove su građene prije nego je bilo jasno da prilog ide na jednu lekciju.
 Idu na Zlatni medaljon, ili ih mogu razdvojiti po lekcijama ako zatražiš.
 
-n3-prijateljstvo.h5p        -> lekcija 55 (prijateljstvo), samostalna, može i na lekciju
-n3-iskrenost-pravednost.h5p -> lekcija 58, samostalna
-n3-strpljivost.h5p          -> lekcija 59, samostalna
-n3-istinoljubivost.h5p      -> lekcija 60, samostalna
-n3-samilost-prastanje.h5p   -> lekcija 62, samostalna
-n3-mahane-srca.h5p          -> pokriva 63, 64, 65 — Zlatni medaljon
-n3-roditelji-i-stariji.h5p  -> pokriva 52, 53, 56 — Zlatni medaljon
-n3-komsije-i-dobrota.h5p    -> pokriva 54, 61, 90 — Zlatni medaljon
-n3-porodica.h5p             -> pokriva 44, 45, 46 — Zlatni medaljon
-n3-stetne-navike.h5p        -> pokriva 68, 69, 70 — Zlatni medaljon
-n3-kocka-i-internet.h5p     -> pokriva 72, 74 — Zlatni medaljon
-n3-zdravlje-i-okolina.h5p   -> pokriva 49, 75, 76 — Zlatni medaljon
-n3-hidzra-i-bedr.h5p        -> pokriva 84, 85 — Zlatni medaljon
-n3-halife.h5p               -> lekcija 96, samostalna
+n3_prijateljstvo.h5p        -> lekcija 55 (prijateljstvo), samostalna, može i na lekciju
+n3_iskrenost_pravednost.h5p -> lekcija 58, samostalna
+n3_strpljivost.h5p          -> lekcija 59, samostalna
+n3_istinoljubivost.h5p      -> lekcija 60, samostalna
+n3_samilost_prastanje.h5p   -> lekcija 62, samostalna
+n3_mahane_srca.h5p          -> pokriva 63, 64, 65 — Zlatni medaljon
+n3_roditelji_i_stariji.h5p  -> pokriva 52, 53, 56 — Zlatni medaljon
+n3_komsije_i_dobrota.h5p    -> pokriva 54, 61, 90 — Zlatni medaljon
+n3_porodica.h5p             -> pokriva 44, 45, 46 — Zlatni medaljon
+n3_stetne_navike.h5p        -> pokriva 68, 69, 70 — Zlatni medaljon
+n3_kocka_i_internet.h5p     -> pokriva 72, 74 — Zlatni medaljon
+n3_zdravlje_i_okolina.h5p   -> pokriva 49, 75, 76 — Zlatni medaljon
+n3_hidzra_i_bedr.h5p        -> pokriva 84, 85 — Zlatni medaljon
+n3_halife.h5p               -> lekcija 96, samostalna
 
 
 AKAID-BLOK NIVOA 3 — lanac vjerovanja, po jedna vježba na svoju lekciju
 ----------------------------------------------------------------------------
 red | slug lekcije       | fajl                       | tip vježbe      | stavki
 ----------------------------------------------------------------------------
-  2 | amentu-billahi3    | l-amentu-billahi.h5p       | Question Set    |  5
-  3 | tevhid             | l-tevhid.h5p               | Question Set    |  5
-  4 | vjerovanje-gajb    | l-gajb.h5p                 | Single Choice   |  7
-  5 | kufr-sirk-nifak    | l-kufr-sirk-nifak.h5p      | Question Set    |  6
- 11 | melaike            | l-meleci.h5p               | Question Set    |  6
- 12 | dzini-sejtani      | l-dzini-sejtani.h5p        | Single Choice   |  7
- 13 | kitabi             | l-kitabi.h5p               | Question Set    |  6
- 15 | poslanici          | l-poslanici.h5p            | Single Choice   |  7
- 18 | sudnji-dan         | l-sudnji-dan.h5p           | Question Set    |  5
- 19 | prozivljenje       | l-prozivljenje.h5p         | Dialog Cards    |  6
- 20 | sefaat-mizan-sirat | l-sefaat-mizan-sirat.h5p   | Question Set    |  5
- 21 | dzennet-dzehennem  | l-dzennet-dzehennem.h5p    | Question Set    |  5
- 22 | kader              | l-kader.h5p                | Single Choice   |  7
+  2 | amentu-billahi3    | amentu_billahi.h5p       | Question Set    |  5
+  3 | tevhid             | tevhid.h5p               | Question Set    |  5
+  4 | vjerovanje-gajb    | gajb.h5p                 | Single Choice   |  7
+  5 | kufr-sirk-nifak    | kufr_sirk_nifak.h5p      | Question Set    |  6
+ 11 | melaike            | meleci.h5p               | Question Set    |  6
+ 12 | dzini-sejtani      | dzini_sejtani.h5p        | Single Choice   |  7
+ 13 | kitabi             | kitabi.h5p               | Question Set    |  6
+ 15 | poslanici          | poslanici.h5p            | Single Choice   |  7
+ 18 | sudnji-dan         | sudnji_dan.h5p           | Question Set    |  5
+ 19 | prozivljenje       | prozivljenje.h5p         | Dialog Cards    |  6
+ 20 | sefaat-mizan-sirat | sefaat_mizan_sirat.h5p   | Question Set    |  5
+ 21 | dzennet-dzehennem  | dzennet_dzehennem.h5p    | Question Set    |  5
+ 22 | kader              | kader.h5p                | Single Choice   |  7
 
 AKAID-BLOK, DRUGI DIO — svojstva, imena, Kur'an, mudžize
 ----------------------------------------------------------------------------
 red | slug lekcije       | fajl                       | tip vježbe      | stavki
 ----------------------------------------------------------------------------
-  6 | zatijje-1          | l-zatijje-1.h5p            | Question Set    |  6
-  7 | zatijje-2          | l-zatijje-2.h5p            | Question Set    |  5
-  8 | subutijje-1        | l-subutijje-1.h5p          | Single Choice   |  7
-  9 | subutijje-2        | l-subutijje-2.h5p          | Single Choice   |  7
- 10 | esmaul-husna       | l-esmaul-husna.h5p         | Question Set    |  5
- 14 | kuran-objava       | l-kuran-objava.h5p         | Question Set    |  6
- 16 | mudzize            | l-mudzize.h5p              | Question Set    |  5
- 17 | isra-miradz        | l-isra-miradz.h5p          | Dialog Cards    |  6
- 24 | kelimei-sehadet    | l-kelimei-sehadet.h5p      | Single Choice   |  7
+  6 | zatijje-1          | zatijje_1.h5p            | Question Set    |  6
+  7 | zatijje-2          | zatijje_2.h5p            | Question Set    |  5
+  8 | subutijje-1        | subutijje_1.h5p          | Single Choice   |  7
+  9 | subutijje-2        | subutijje_2.h5p          | Single Choice   |  7
+ 10 | esmaul-husna       | esmaul_husna.h5p         | Question Set    |  5
+ 14 | kuran-objava       | kuran_objava.h5p         | Question Set    |  6
+ 16 | mudzize            | mudzize.h5p              | Question Set    |  5
+ 17 | isra-miradz        | isra_miradz.h5p          | Dialog Cards    |  6
+ 24 | kelimei-sehadet    | kelimei_sehadet.h5p      | Single Choice   |  7
 
 AKAID-BLOK NIVOA 3 JE SADA POKRIVEN U CIJELOSTI — 22 lekcije, 22 vježbe.
 
@@ -104,15 +104,15 @@ IBADET — NAMASKI BLOK, po jedna vježba na svoju lekciju
 ----------------------------------------------------------------------------
 red | slug lekcije       | fajl                       | tip vježbe      | stavki
 ----------------------------------------------------------------------------
-  0 | duznosti-allah     | l-duznosti-allah.h5p       | Single Choice   |  6
- 25 | pet-namaza         | l-pet-namaza.h5p           | Question Set    |  5
- 26 | farzovi-namaz      | l-farzovi-namaz.h5p        | Question Set    |  6
- 27 | vadzibi-namaz      | l-vadzibi-namaz.h5p        | Question Set    |  6
- 28 | sunneti-namaz      | l-sunneti-namaz.h5p        | Single Choice   |  7
- 29 | mekruhi-namaz      | l-mekruhi-namaz.h5p        | Question Set    |  5
- 31 | vaznost-dzemata    | l-vaznost-dzemata.h5p      | Question Set    |  5
- 32 | vrste-namaza       | l-vrste-namaza.h5p         | Question Set    |  5
- 33 | dzenaza-namaz      | l-dzenaza-namaz.h5p        | Dialog Cards    |  6
+  0 | duznosti-allah     | duznosti_allah.h5p       | Single Choice   |  6
+ 25 | pet-namaza         | pet_namaza.h5p           | Question Set    |  5
+ 26 | farzovi-namaz      | farzovi_namaz.h5p        | Question Set    |  6
+ 27 | vadzibi-namaz      | vadzibi_namaz.h5p        | Question Set    |  6
+ 28 | sunneti-namaz      | sunneti_namaz.h5p        | Single Choice   |  7
+ 29 | mekruhi-namaz      | mekruhi_namaz.h5p        | Question Set    |  5
+ 31 | vaznost-dzemata    | vaznost_dzemata.h5p      | Question Set    |  5
+ 32 | vrste-namaza       | vrste_namaza.h5p         | Question Set    |  5
+ 33 | dzenaza-namaz      | dzenaza_namaz.h5p        | Dialog Cards    |  6
 
 Namaski blok je namjerno građen oko razlike farz / vadžib / sunnet / mekruh,
 jer se ta četiri pojma najlakše pobrkaju, a posljedica je različita:
@@ -127,3 +127,11 @@ Ostaje u Nivou 3: ibadet bez namaza (post, zekat, hadž, čistoća — oko 10
 lekcija), sure (El-Fil, El-Humeze, El-'Asr, Et-Tekasur, El-Kari'ah),
 Historija islama (poslanici pojedinačno, sira — oko 10) i Bosna (IZ, džamije,
 vakufi, pjesnici — oko 8).
+
+
+NAPOMENA O IMENIMA FAJLOVA
+Ime fajla nije samo interna oznaka — platforma ga prikazuje kao naziv vježbe
+i učeniku na lekciji i muallimu u pregledu učenika. Funkcija displayH5pName
+u ilmihal-lekcija.tsx:132 samo skine nastavak .h5p i ostatak ispiše.
+Zato imena više nemaju interni prefiks `l-`, a crtice su zamijenjene
+podvlakama, kako ih korisnik i inače preimenuje prije uploada.

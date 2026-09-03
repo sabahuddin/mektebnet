@@ -352,9 +352,13 @@ for (const v of [...VJEZBE, ...VJEZBE_N3, ...VJEZBE_N3B, ...VJEZBE_N3L, ...VJEZB
     preloadedDependencies: [...potrebne.values()].map((x) => x.dep),
   }, null, 2), "utf8"));
   zip.addFile("content/content.json", Buffer.from(JSON.stringify(omot.fn(v), null, 2), "utf8"));
-  const out = path.join(OUT_DIR, `${v.slug}.h5p`);
+  // Ime fajla NIJE samo interno: platforma ga prikazuje kao naziv vježbe i
+  // učeniku i muallimu (ilmihal-lekcija.tsx:132 samo skine nastavak .h5p).
+  // Zato bez internog prefiksa `l-` i s podvlakama umjesto crtica.
+  const imeFajla = v.slug.replace(/^l-/, "").replace(/-/g, "_");
+  const out = path.join(OUT_DIR, `${imeFajla}.h5p`);
   zip.writeZip(out);
   const broj = v.pitanja?.length ?? v.kartice?.length ?? 0;
-  console.log(`✓ ${v.slug}.h5p — ${omot.main.replace("H5P.", "").padEnd(16)} ${String(broj).padStart(2)} stavki${v.lekcija ? "  → lekcija: " + v.lekcija : ""}`);
+  console.log(`✓ ${imeFajla}.h5p — ${omot.main.replace("H5P.", "").padEnd(16)} ${String(broj).padStart(2)} stavki${v.lekcija ? "  → lekcija: " + v.lekcija : ""}`);
 }
 console.log(`\nGotovo. Fajlovi su u ${OUT_DIR}`);
