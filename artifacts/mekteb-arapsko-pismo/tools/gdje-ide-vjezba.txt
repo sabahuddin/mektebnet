@@ -161,9 +161,54 @@ paketu n3_hidzra_i_bedr.h5p i halife.h5p. HISTORIJA JE TIME POKRIVENA.
 
 Nivo 3 sada ima 61 od 100 lekcija s vlastitom vjezbom.
 
-Ostaje u Nivou 3:
-  sure     El-Fil, El-Humeze, El-'Asr, Et-Tekasur, El-Kari'ah, El-Kevser  (5-6)
-  Bosna    IZ, dzamije, vakufi, pjesnici, lijepa imena, mekteb i skola     (8)
+SURE I BOSNA
+----------------------------------------------------------------------------
+red | slug lekcije        | fajl                       | tip           | st.
+----------------------------------------------------------------------------
+  1 | el-fil              | el_fil.h5p                 | Question Set  |  5
+ 23 | el-humeze           | el_humeze.h5p              | Single Choice |  6
+ 30 | el-asr              | el_asr.h5p                 | Question Set  |  5
+ 38 | et-tekassur         | et_tekasur.h5p             | Question Set  |  5
+ 48 | el-kariah           | el_kariah.h5p              | Single Choice |  6
+ 91 | iz-historija        | iz_historija.h5p           | Question Set  |  5
+ 92 | dan-dzamija         | dan_dzamija.h5p            | Question Set  |  5
+ 93 | prava-dzematlija    | prava_dzematlija.h5p       | Single Choice |  6
+ 94 | temelji-odgoja      | temelji_odgoja.h5p         | Dialog Cards  |  5
+ 95 | iz-ustanove         | iz_ustanove.h5p            | Question Set  |  5
+ 98 | vakufi-bih          | vakufi.h5p                 | Question Set  |  5
+ 99 | bosnjacki-pjesnici  | bosnjacki_pjesnici.h5p     | Single Choice |  6
+
+Kod sura vjezba NE provjerava napamet ucenje nego razumijevanje: o cemu sura
+govori, koja joj je poruka i sta znace njene slike (leptiri rastrkani, vuna
+iscupana, vlasnici slona).
+
+
+STANJE NIVOA 3 — VAZNO ZA RAZUMIJEVANJE POKRIVENOSTI
+
+73 lekcije imaju vlastitu vjezbu, jednu za jednu lekciju.
+
+Jos 19 lekcija JESTE pokriveno, ali unutar tematski grupisanih vjezbi
+napravljenih prije nego je bilo jasno da prilog ide na tacno jednu lekciju.
+Te vjezbe idu na Zlatni medaljon, a lekcije koje pokrivaju su:
+  44,45,46  porodica, brak, zenidba        -> n3_porodica.h5p
+  49,75,76  zdravlje, ekologija, biljke    -> n3_zdravlje_i_okolina.h5p
+  55        prijateljstvo                  -> n3_prijateljstvo.h5p (samostalna)
+  58        iskrenost i pravednost         -> n3_iskrenost_pravednost.h5p (samostalna)
+  59        predanost i strpljivost        -> n3_strpljivost.h5p (samostalna)
+  60        istinoljubivost i pouzdanost   -> n3_istinoljubivost.h5p (samostalna)
+  62        samilost i prastanje           -> n3_samilost_prastanje.h5p (samostalna)
+  68,69,70  droga, alkohol, duhan          -> n3_stetne_navike.h5p
+  72,74     internet, kockanje             -> n3_kocka_i_internet.h5p
+  84,85     Hidzra, Bitka na Bedru         -> n3_hidzra_i_bedr.h5p
+  90        lijepa rijec                   -> n3_komsije_i_dobrota.h5p
+  96        pravedne halife                -> halife.h5p (samostalna)
+
+Sest od njih su vec samostalne i mogu odmah na svoju lekciju.
+Ostale se mogu razdvojiti po lekcijama ako se zatrazi.
+
+Bez ijedne vjezbe ostaje 8 lekcija:
+  47 odijevanje-hidzab, 50 rad-kultura, 51 stjecanje-znanja, 71 nemoral,
+  73 horoskop, 88 kulidullahe, 89 muslimanska-imena, i 0 uvodna lekcija.
 
 NAPOMENA O NAZIVLJU U HISTORIJI
 Vecina imena iz sire nije u glosaru Rijaseta, pa je zadrzan oblik iz same
