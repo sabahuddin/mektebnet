@@ -585,6 +585,7 @@ export default function MuallimPanel() {
   const [showZadForm, setShowZadForm] = useState(false);
   const [zadTipTab, setZadTipTab] = useState<"pojedinacno" | "svi">("svi");
   const [zadSubTab, setZadSubTab] = useState<"nova" | "utoku" | "zavrseno">("utoku");
+  const [zadDodjela, setZadDodjela] = useState<"svi" | "pojedinacno">("svi");
   const [zadNaslov, setZadNaslov] = useState("");
   const [zadOpis, setZadOpis] = useState("");
   const [zadRok, setZadRok] = useState("");
@@ -990,7 +991,8 @@ export default function MuallimPanel() {
         lekcijaNaslov: zadLekcija || null,
         lekcijaSlug: zadLekcijaSlug || null,
         lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
-        ucenikIds: zadTipTab === "pojedinacno" ? Array.from(zadUcenikIds) : [],
+         tipDodjele: zadDodjela,
+         ucenikIds: zadDodjela === "pojedinacno" ? Array.from(zadUcenikIds) : [],
       };
       const saved = await apiRequest<Zadaca>(
         editingZadaca ? "PUT" : "POST",
@@ -1018,6 +1020,7 @@ export default function MuallimPanel() {
     setZadOpis(zadaca.opis || "");
     setZadRok(zadaca.rokDo ? zadaca.rokDo.slice(0, 10) : "");
     setZadUcenikIds(new Set(zadaca.ucenikIds || []));
+    setZadDodjela(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
     setZadTipTab(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
     setZadSubTab("nova");
     setShowZadForm(true);
@@ -3611,6 +3614,7 @@ export default function MuallimPanel() {
                                 type="button"
                                 onClick={() => {
                                   setZadTipTab(tab.id);
+                                   setZadDodjela(tab.id);
                                   setEditingZadaca(null);
                                   setShowZadForm(false);
                                   setZadSubTab("utoku");
@@ -3669,7 +3673,28 @@ export default function MuallimPanel() {
                           </p>
                         )}
                         <div className="grid sm:grid-cols-2 gap-4">
-                          {zadTipTab === "svi" && (
+                           <div className="sm:col-span-2">
+                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Dodjela zadaće")}</label>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                               <button
+                                 type="button"
+                                 onClick={() => { setZadDodjela("svi"); setZadUcenikIds(new Set()); }}
+                                 className={`rounded-xl border px-4 py-3 text-left transition-colors ${zadDodjela === "svi" ? "border-emerald-400 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200" : "border-border bg-white text-muted-foreground hover:bg-muted/30"}`}
+                               >
+                                 <span className="block text-sm font-extrabold">{t("Za sve učenike")}</span>
+                                 <span className="block text-xs mt-1 opacity-80">{t("Svi aktivni učenici odabrane grupe")}</span>
+                               </button>
+                               <button
+                                 type="button"
+                                 onClick={() => setZadDodjela("pojedinacno")}
+                                 className={`rounded-xl border px-4 py-3 text-left transition-colors ${zadDodjela === "pojedinacno" ? "border-amber-400 bg-amber-50 text-amber-800 ring-2 ring-amber-200" : "border-border bg-white text-muted-foreground hover:bg-muted/30"}`}
+                               >
+                                 <span className="block text-sm font-extrabold">{t("Odabrani učenici")}</span>
+                                 <span className="block text-xs mt-1 opacity-80">{t("Jedan ili više učenika")}</span>
+                               </button>
+                             </div>
+                           </div>
+                           {zadDodjela === "svi" && (
                             <div className="sm:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
                               {t("Ova zadaća bit će dodijeljena svim aktivnim učenicima odabrane grupe.")}
                             </div>
@@ -3697,7 +3722,7 @@ export default function MuallimPanel() {
                             <input type="date" value={zadRok} onChange={e => setZadRok(e.target.value)}
                               className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
                           </div>
-                          <div className={`sm:col-span-2 ${zadTipTab === "svi" ? "hidden" : ""}`}>
+                          <div className={`sm:col-span-2 ${zadDodjela === "svi" ? "hidden" : ""}`}>
                             <label className="text-sm font-bold text-muted-foreground block mb-1">
                               {t("Učenici")} {zadUcenikIds.size === 0 ? t("(cijela grupa)") : t("({n} učenik/a)", { n: String(zadUcenikIds.size) })}
                             </label>
@@ -3759,7 +3784,7 @@ export default function MuallimPanel() {
                           <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2">
                             {t("Otkaži")}
                           </button>
-                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim())} className="rounded-xl font-bold">
+                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size === 0)} className="rounded-xl font-bold">
                             {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> {editingZadaca ? t("Sačuvaj izmjene") : t("Sačuvaj")}</>}
                           </Button>
                         </div>

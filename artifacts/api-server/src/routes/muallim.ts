@@ -4769,13 +4769,22 @@ router.get("/zadace", async (req, res) => {
 
 router.post("/zadace", async (req, res) => {
   try {
-    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds } = req.body;
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, tipDodjele } = req.body;
     if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
       res.status(400).json({ error: "Materijali za nastavu dostupni su samo u Pripremi za nastavu" });
       return;
     }
     // naslov više nije obavezan — nova UX koristi lekciju kao naziv zadaće.
     if (!grupaId) { res.status(400).json({ error: "grupaId je obavezan" }); return; }
+    const individualna = tipDodjele === undefined
+      ? Array.isArray(ucenikIds) && ucenikIds.length > 0
+      : tipDodjele === "pojedinacno";
+    if (tipDodjele !== undefined && tipDodjele !== "svi" && tipDodjele !== "pojedinacno") {
+      res.status(400).json({ error: "Neispravna vrsta dodjele" }); return;
+    }
+    if (individualna && (!Array.isArray(ucenikIds) || ucenikIds.length === 0)) {
+      res.status(400).json({ error: "Odaberi najmanje jednog učenika za pojedinačnu zadaću" }); return;
+    }
     const naslovFinal = (naslov && String(naslov).trim()) || (lekcijaNaslov && String(lekcijaNaslov).trim()) || null;
     if (!naslovFinal) { res.status(400).json({ error: "Odaberi lekciju ili unesi naslov" }); return; }
 
@@ -4798,7 +4807,7 @@ router.post("/zadace", async (req, res) => {
       canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     }
     let validUcenikIds: number[] = [];
-    if (Array.isArray(ucenikIds) && ucenikIds.length > 0) {
+    if (individualna && Array.isArray(ucenikIds) && ucenikIds.length > 0) {
       const numericIds = ucenikIds.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x));
       if (numericIds.length > 0) {
         const ucenici = await db.select({ userId: ucenikProfiliTable.userId })
@@ -4868,10 +4877,19 @@ router.post("/zadace", async (req, res) => {
 router.put("/zadace/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds } = req.body;
+    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds, tipDodjele } = req.body;
     if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
       res.status(400).json({ error: "Materijali za nastavu dostupni su samo u Pripremi za nastavu" });
       return;
+    }
+    const individualna = tipDodjele === undefined
+      ? Array.isArray(ucenikIds) && ucenikIds.length > 0
+      : tipDodjele === "pojedinacno";
+    if (tipDodjele !== undefined && tipDodjele !== "svi" && tipDodjele !== "pojedinacno") {
+      res.status(400).json({ error: "Neispravna vrsta dodjele" }); return;
+    }
+    if (individualna && (!Array.isArray(ucenikIds) || ucenikIds.length === 0)) {
+      res.status(400).json({ error: "Odaberi najmanje jednog učenika za pojedinačnu zadaću" }); return;
     }
 
     const [existing] = await db.select().from(zadaceTable)
@@ -4900,9 +4918,11 @@ router.put("/zadace/:id", async (req, res) => {
         naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug: canonicalSlug,
         lekcijaTip: canonicalSlug ? "ilmihal" : lekcijaTip, isActive,
       }).where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId))).returning();
-      if (Array.isArray(ucenikIds)) {
+      if (tipDodjele !== undefined || Array.isArray(ucenikIds)) {
         await tx.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
-        const numericIds = [...new Set(ucenikIds.map(Number).filter(Number.isFinite))];
+        const numericIds: number[] = individualna
+          ? [...new Set(ucenikIds.map(Number).filter(Number.isFinite))]
+          : [];
         if (numericIds.length) {
           const ucenici = await tx.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
             .where(and(eq(ucenikProfiliTable.grupaId, existing.grupaId), inArray(ucenikProfiliTable.userId, numericIds)));
