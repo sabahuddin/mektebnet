@@ -168,7 +168,9 @@ function slugFromPath(filePath: string): string {
 
 function nivoFromPath(filePath: string): number {
   if (filePath.includes("nivo1")) return 1;
-  if (filePath.includes("nivo21")) return 21;
+  // Stari izvor je direktorij "nivo21" koristio za drugi dio današnjeg Nivoa 2.
+  // Nikada više ne upisuj internu vrijednost 21 u bazu.
+  if (filePath.includes("nivo21")) return 2;
   if (filePath.includes("nivo2")) return 2;
   if (filePath.includes("nivo3")) return 3;
   return 1;

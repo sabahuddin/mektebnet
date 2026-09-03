@@ -104,9 +104,8 @@ export async function backfillAllPripreme() {
     logger.error({ err }, "Pripreme N1 backfill failed");
   }
 
-  // Nivo 2 — UI je spojio "Osnovni" (nivo=2, 25 priprema) + "Srednji" (nivo=21, 43 priprema)
-  // U trenutnoj bazi sve se vode kao nivo=2 (68 lekcija). Pa pokušamo N2 slug-ove pod nivo=2,
-  // a N21 slug-ove takođe pod nivo=2 (jer su istorijski premješteni).
+  // Nivo 2 sadrži oba istorijska segmenta izvornog materijala.
+  // Oba se u bazi trajno vode isključivo kao nivo=2.
   try {
     const { NIVO2_PRIPREME } = await import("./pripreme-seed-n2.js");
     const r2 = await backfillNivo(2, NIVO2_PRIPREME);
@@ -119,15 +118,13 @@ export async function backfillAllPripreme() {
 
   try {
     const { NIVO21_PRIPREME } = await import("./pripreme-seed-n21.js");
-    // Try nivo=2 first (UI-merged), then fallback to nivo=21 if any rows still match
-    const r21a = await backfillNivo(2, NIVO21_PRIPREME);
-    const r21b = await backfillNivo(21, NIVO21_PRIPREME);
-    const total = { added: r21a.added + r21b.added, appended: r21a.appended + r21b.appended };
+    // Naziv seed fajla prati stari izvorni direktorij; DB nivo je uvijek 2.
+    const total = await backfillNivo(2, NIVO21_PRIPREME);
     if (total.added > 0 || total.appended > 0) {
-      logger.info(total, "Pripreme N21 reinjected (under nivo=2 and/or nivo=21)");
+      logger.info(total, "Drugi segment priprema Nivoa 2 reinjected");
     }
   } catch (err) {
-    logger.error({ err }, "Pripreme N21 backfill failed");
+    logger.error({ err }, "Drugi segment priprema Nivoa 2 backfill failed");
   }
 
   try {

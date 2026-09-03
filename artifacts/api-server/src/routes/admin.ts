@@ -3074,30 +3074,19 @@ router.get("/analytics", async (req, res) => {
   });
 });
 
-// GET /api/admin/online — ko je trenutno online (aktivan u zadnjih 5 min) i odakle
-// "Online" = posjetilac (po IP-u) sa zabilježenom posjetom u zadnjih 5 minuta.
-// Pokriva i prijavljene korisnike i goste; lokacija dolazi iz geolokacije posjete.
+// GET /api/admin/online — prijavljeni korisnici aktivni u zadnjih 5 minuta.
+// Aktivnost dolazi iz autentificiranog heartbeat-a, bez IP/geolokacije.
 router.get("/online", async (_req, res) => {
   try {
     const petMinutaPrije = new Date(Date.now() - 5 * 60 * 1000);
 
     const ukupnoRows = await db.select({
-      broj: sql<number>`count(distinct ${posjeteTable.ip})::int`,
-    }).from(posjeteTable)
-      .where(gte(posjeteTable.createdAt, petMinutaPrije));
+      broj: sql<number>`count(*)::int`,
+    }).from(usersTable)
+      .where(gte(usersTable.lastSeenAt, petMinutaPrije));
     const ukupno = ukupnoRows[0]?.broj ?? 0;
 
-    const poLokaciji = await db.select({
-      country: posjeteTable.country,
-      city: posjeteTable.city,
-      broj: sql<number>`count(distinct ${posjeteTable.ip})::int`,
-    }).from(posjeteTable)
-      .where(and(gte(posjeteTable.createdAt, petMinutaPrije), sql`${posjeteTable.country} is distinct from 'Local'`))
-      .groupBy(posjeteTable.country, posjeteTable.city)
-      .orderBy(sql`count(distinct ${posjeteTable.ip}) desc`)
-      .limit(50);
-
-    res.json({ ukupno, poLokaciji });
+    res.json({ ukupno, poLokaciji: [] });
   } catch (e: any) {
     console.error("Online stats error:", e?.message || e);
     res.json({ ukupno: 0, poLokaciji: [], _error: e?.message || String(e) });

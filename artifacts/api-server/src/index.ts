@@ -508,6 +508,17 @@ async function runResidualSchema() {
     // Heartbeat endpoint (POST /api/aktivnost/heartbeat) ažurira ova polja.
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at timestamp;`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_screentime_sec integer NOT NULL DEFAULT 0;`);
+    // Stari import je drugi segment Nivoa 2 označavao internom vrijednošću 21.
+    // Kanonski nivoi su isključivo 1, 2 i 3.
+    await db.execute(sql`UPDATE ilmihal_lekcije SET nivo = 2 WHERE nivo = 21;`);
+    await db.execute(sql`UPDATE kvizovi SET nivo = 2 WHERE nivo = 21;`);
+    // Evidencija posjeta ostaje, ali stare IP i geolokacijske vrijednosti više
+    // nisu potrebne za aktivnost učenika, zadnju prijavu ni screentime.
+    await db.execute(sql`
+      UPDATE posjete
+      SET ip = NULL, country = NULL, city = NULL
+      WHERE ip IS NOT NULL OR country IS NOT NULL OR city IS NOT NULL;
+    `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS users_last_seen_idx ON users (last_seen_at);`);
 
     // Probni period za self-registration. Login dozvoljen ako je

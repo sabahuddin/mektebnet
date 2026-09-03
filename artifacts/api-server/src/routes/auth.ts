@@ -378,25 +378,12 @@ router.post("/change-password", requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/auth/geo — detect if user is from Bosnia (BA)
-router.get("/geo", async (req, res) => {
-  try {
-    const forwarded = req.headers["x-forwarded-for"];
-    const ip = typeof forwarded === "string" ? forwarded.split(",")[0].trim() : req.ip || "";
-
-    let isBiH = false;
-    try {
-      const response = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`);
-      const data = await response.json() as { countryCode?: string };
-      isBiH = data.countryCode === "BA";
-    } catch {
-      isBiH = false;
-    }
-
-    res.json({ isBiH });
-  } catch {
-    res.json({ isBiH: false });
-  }
+// GET /api/auth/geo — cijene registracije bez slanja IP adrese trećoj strani.
+// Ako je domena iza Cloudflarea, zemlja stiže kao provjeren proxy header.
+router.get("/geo", (req, res) => {
+  const countryHeader = req.headers["cf-ipcountry"];
+  const country = Array.isArray(countryHeader) ? countryHeader[0] : countryHeader;
+  res.json({ isBiH: country?.toUpperCase() === "BA" });
 });
 
 function generateUsername(firstName: string): string {

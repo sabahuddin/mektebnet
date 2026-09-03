@@ -44,7 +44,6 @@ export default function PrivatnostPage() {
             </ul>
             <h3 className="font-semibold text-foreground/90 mt-3 mb-1">2.3 Tehnički podaci</h3>
             <ul className="list-disc pl-5 space-y-1.5">
-              <li>IP adresa</li>
               <li>Tip preglednika i uređaja</li>
               <li>Podaci o sesiji (lokalna pohrana)</li>
             </ul>
