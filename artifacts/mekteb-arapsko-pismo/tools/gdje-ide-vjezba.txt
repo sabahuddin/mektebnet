@@ -123,10 +123,28 @@ jer se ta četiri pojma najlakše pobrkaju, a posljedica je različita:
 Ista situacija je postavljena u tri vježbe s različitim ishodom, da dijete
 razliku nauči kroz posljedicu, a ne kroz definiciju.
 
-Ostaje u Nivou 3: ibadet bez namaza (post, zekat, hadž, čistoća — oko 10
-lekcija), sure (El-Fil, El-Humeze, El-'Asr, Et-Tekasur, El-Kari'ah),
-Historija islama (poslanici pojedinačno, sira — oko 10) i Bosna (IZ, džamije,
-vakufi, pjesnici — oko 8).
+IBADET — POST, ZEKAT, HADŽ I ČISTOĆA
+----------------------------------------------------------------------------
+red | slug lekcije       | fajl                       | tip vježbe      | stavki
+----------------------------------------------------------------------------
+ 34 | post-propisi       | post_propisi.h5p           | Question Set    |  6
+ 35 | zekat-bejtul-mal   | zekat.h5p                  | Question Set    |  6
+ 36 | sadekatul-fitr     | sadekatul_fitr.h5p         | Single Choice   |  7
+ 37 | hadz-propisi       | hadz.h5p                   | Question Set    |  5
+ 40 | mukellef           | mukellef.h5p               | Question Set    |  5
+ 41 | gusul              | gusul.h5p                  | Single Choice   |  6
+ 42 | hajz-nifas         | hajz_nifas.h5p             | Question Set    |  5
+ 43 | sahibi-uzur        | sahibi_uzur.h5p            | Dialog Cards    |  6
+
+IBADET NIVOA 3 JE SADA POKRIVEN U CIJELOSTI — 17 lekcija, 17 vjezbi.
+Zajedno s akaidom (22) i ahlakom, Nivo 3 ima 50 od 100 lekcija s vlastitom
+vjezbom.
+
+Ostaje u Nivou 3:
+  sure               El-Fil, El-Humeze, El-'Asr, Et-Tekasur, El-Kari'ah  (5)
+  Historija islama   poslanici pojedinacno, sira Poslanika, a.s.        (10)
+  Bosna              IZ, dzamije, vakufi, pjesnici, lijepa imena         (8)
+  ostalo             hadiske zbirke i slicno
 
 
 NAPOMENA O IMENIMA FAJLOVA
