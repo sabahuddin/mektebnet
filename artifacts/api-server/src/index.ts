@@ -409,7 +409,7 @@ async function runResidualSchema() {
     await db.execute(sql`
       UPDATE ilmihal_lekcije
       SET predmet='Kiraet'
-      WHERE naslov ~* '^[[:space:]]*Sura([[:space:]]|$)'
+      WHERE naslov ~* '(^|[[:space:]])Sur(a|e)([[:space:]]|$)'
          OR slug ~* '^sura-'
     `);
 
@@ -713,7 +713,7 @@ async function runResidualSchema() {
            FROM ilmihal_lekcije l
            WHERE l.id = p.lekcija_id
              AND (
-               l.naslov ~* '^[[:space:]]*Sura([[:space:]]|$)'
+               l.naslov ~* '(^|[[:space:]])Sur(a|e)([[:space:]]|$)'
                OR l.slug ~* '^sura-'
              )
          )
@@ -1266,6 +1266,92 @@ async function runDataBootstrap() {
   // }
 }
 
+async function normalizePitanjaPoLekcijama() {
+  try {
+    // Poveži samo ona još-nepovezana pitanja čiji se normalizovani tekst tačno
+    // pojavljuje u kviz_pitanja JSON-u TAČNO JEDNE lekcije. Višestruka
+    // podudaranja namjerno ostaju NULL za ručnu odluku.
+    await db.execute(sql`
+      WITH kandidati AS (
+        SELECT p.id AS pitanje_id, MIN(l.id) AS lekcija_id
+        FROM pitanja_banka p
+        JOIN ilmihal_lekcije l ON EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements(
+            CASE
+              WHEN jsonb_typeof(l.kviz_pitanja) = 'array' THEN l.kviz_pitanja
+              ELSE '[]'::jsonb
+            END
+          ) q
+          WHERE trim(regexp_replace(
+            COALESCE(q->>'question', q->>'pitanje', ''),
+            '[[:space:]]+', ' ', 'g'
+          )) = trim(regexp_replace(p.pitanje, '[[:space:]]+', ' ', 'g'))
+        )
+        WHERE p.lekcija_id IS NULL
+        GROUP BY p.id
+        HAVING COUNT(DISTINCT l.id) = 1
+      )
+      UPDATE pitanja_banka p
+      SET lekcija_id = k.lekcija_id, updated_at = NOW()
+      FROM kandidati k
+      WHERE p.id = k.pitanje_id
+    `);
+
+    // Kada pitanje ima konkretnu lekciju, njen predmet je autoritativan.
+    // Pitanja bez lekcije zadržavaju postojeću kategoriju dok ih admin ne
+    // poveže; ne nagađamo lekciju niti brišemo korisnu klasifikaciju predmeta.
+    await db.execute(sql`
+      UPDATE pitanja_banka p
+      SET kategorija = CASE l.predmet
+        WHEN 'Kiraet' THEN 'kiraet'
+        WHEN 'Vjerovanje' THEN 'akaid'
+        WHEN 'Ibadet' THEN 'ibadet'
+        WHEN 'Ahlak' THEN 'ahlak'
+        WHEN 'Historija islama' THEN 'historija'
+        WHEN 'Ostali sadržaji' THEN 'bosna'
+        ELSE p.kategorija
+      END,
+      tagovi = CASE
+        WHEN l.predmet = 'Kiraet'
+          AND (l.naslov ~* '(^|[[:space:]])Sur(a|e)([[:space:]]|$)' OR l.slug ~* '^sura-')
+          THEN '["sure"]'::jsonb
+        ELSE p.tagovi
+      END,
+      updated_at = NOW()
+      FROM ilmihal_lekcije l
+      WHERE l.id = p.lekcija_id
+        AND l.predmet IN ('Kiraet', 'Vjerovanje', 'Ibadet', 'Ahlak', 'Historija islama', 'Ostali sadržaji')
+        AND (
+          p.kategorija IS DISTINCT FROM CASE l.predmet
+            WHEN 'Kiraet' THEN 'kiraet'
+            WHEN 'Vjerovanje' THEN 'akaid'
+            WHEN 'Ibadet' THEN 'ibadet'
+            WHEN 'Ahlak' THEN 'ahlak'
+            WHEN 'Historija islama' THEN 'historija'
+            WHEN 'Ostali sadržaji' THEN 'bosna'
+          END
+          OR (
+            l.predmet = 'Kiraet'
+            AND (l.naslov ~* '(^|[[:space:]])Sur(a|e)([[:space:]]|$)' OR l.slug ~* '^sura-')
+            AND p.tagovi IS DISTINCT FROM '["sure"]'::jsonb
+          )
+        )
+    `);
+
+    const summary = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS ukupno,
+        COUNT(*) FILTER (WHERE lekcija_id IS NOT NULL)::int AS sa_lekcijom,
+        COUNT(*) FILTER (WHERE lekcija_id IS NULL)::int AS nejasna_lekcija
+      FROM pitanja_banka
+    `);
+    logger.info({ summary: summary.rows[0] }, "Pitanja usklađena sa predmetima i pouzdanim vezama lekcija");
+  } catch (e) {
+    logger.error({ err: e }, "Usklađivanje pitanja sa lekcijama nije uspjelo (non-fatal)");
+  }
+}
+
 // DEMO USER BOOTSTRAP (idempotentno) — eksplicitno traženo od korisnika:
 //   `demo-uspjeh` / `demo123` — učenik koji je završio sve (sve lekcije, svi
 //   bedževi, svi medaljoni, sva krunisanja). Koristi se za demo/screenshot-ove
@@ -1441,6 +1527,7 @@ async function startup() {
 
   await applyBundledGermanOverlays();
   await runDataBootstrap();
+  await normalizePitanjaPoLekcijama();
   try {
     const { seedHalalHaramLesson } = await import("./routes/halal-haram-seed.js");
     await seedHalalHaramLesson();

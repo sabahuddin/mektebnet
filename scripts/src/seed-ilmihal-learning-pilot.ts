@@ -381,9 +381,10 @@ function normalizeSourceQuestions(value: unknown): LekcijaKvizPitanje[] {
 
 function categoryForLesson(predmet: string | null): { kategorija: KvizKategorija; tagovi: string[] } {
   if (predmet === "Vjerovanje") return { kategorija: "akaid", tagovi: ["allah"] };
-  if (predmet === "Kiraet") return { kategorija: "akaid", tagovi: ["kuran"] };
-  if (predmet === "Ibadet i praksa") return { kategorija: "ibadet", tagovi: [] };
+  if (predmet === "Kiraet") return { kategorija: "kiraet", tagovi: ["sure"] };
+  if (predmet === "Ibadet") return { kategorija: "ibadet", tagovi: [] };
   if (predmet === "Historija islama") return { kategorija: "historija", tagovi: [] };
+  if (predmet === "Ostali sadržaji") return { kategorija: "bosna", tagovi: [] };
   return { kategorija: "ahlak", tagovi: ["ponasanje"] };
 }
 

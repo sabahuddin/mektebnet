@@ -16,6 +16,9 @@ lekcijama i Banci pitanja:
 - Sve lekcije čiji naslov ili slug označava Suru pripadaju **Kiraetu**; tag
   pitanja `sure` također pripada kategoriji `kiraet`.
 - Legacy naziv **Ibadet i praksa** uvijek se spaja u **Ibadet**.
+- Kada pitanje ima `lekcija_id`, predmet te lekcije je autoritativan za
+  kategoriju pitanja. Automatska dodjela lekcije mora biti konzervativna:
+  nejasna ili višeznačna pitanja ostaju bez lekcije za ručni pregled.
 
 **Why / kako se primjenjuje:** produkcija je self-hosted (Coolify), pa se data-
 izmjene dostavljaju kao idempotentna startup-migracija u api-server index.ts

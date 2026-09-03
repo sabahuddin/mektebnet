@@ -14,14 +14,14 @@ import {
 
 // Banka pitanja — centralni admin UI za sva kviz pitanja.
 // Backend rute u admin.ts:
-//   GET    /admin/banka-pitanja?search=&kategorija=&tag=&page=&pageSize=
+//   GET    /admin/banka-pitanja?search=&kategorija=&tag=&bezLekcije=&page=&pageSize=
 //   GET    /admin/banka-pitanja/:id
 //   GET    /admin/banka-pitanja/:id/usage
 //   POST   /admin/banka-pitanja
 //   PUT    /admin/banka-pitanja/:id
 //   DELETE /admin/banka-pitanja/:id  (CASCADE briše iz svih kvizova)
 //
-// Kategorije: 5 glavnih (NPP 2018) — akaid, ibadet, ahlak, historija, bosna
+// Kategorije: 6 glavnih — kiraet, akaid, ibadet, ahlak, historija, bosna
 // Tagovi: pod-teme za admin filtriranje (npr. namaz, abdest, zekat…)
 
 interface PitanjeMeta {
@@ -108,11 +108,11 @@ interface UsageInfo {
 
 const PAGE_SIZE = 50;
 
-// 5 glavnih kategorija po NPP 2018 + tagovi
+// 6 glavnih kategorija po NPP 2018 + tagovi
 const KATEGORIJE_LABELS: Record<string, string> = {
-  akaid: "Akaid (vjerovanje)", ibadet: "Ibadet (namaz, abdest…)",
-  ahlak: "Ahlak i moral", historija: "Historija",
-  bosna: "Bosna (džamije, običaji, džemat)",
+  kiraet: "Kiraet", akaid: "Vjerovanje", ibadet: "Ibadet",
+  ahlak: "Ahlak", historija: "Historija islama",
+  bosna: "Ostali sadržaji",
 };
 const TAG_LABELS: Record<string, string> = {
   allah: "Allah", meleki: "Meleki", knjige: "Knjige", poslanici: "Poslanici", ahiret: "Ahiret", kuran: "Kuran", sure: "Sure",
@@ -174,6 +174,7 @@ export default function AdminBankaPitanjaPage() {
   const [filterKategorija, setFilterKategorija] = useState("");
   const [filterTag, setFilterTag] = useState("");
   const [filterUrednickiStatus, setFilterUrednickiStatus] = useState("");
+  const [filterVezaLekcije, setFilterVezaLekcije] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [lekcije, setLekcije] = useState<IlmihalLekcija[]>([]);
@@ -265,7 +266,7 @@ export default function AdminBankaPitanjaPage() {
     if (!token) return;
     void loadList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page, debouncedSearch, filterKategorija, filterTag, filterUrednickiStatus]);
+  }, [token, page, debouncedSearch, filterKategorija, filterTag, filterUrednickiStatus, filterVezaLekcije]);
 
   useEffect(() => {
     if (!token) return;
@@ -317,6 +318,7 @@ export default function AdminBankaPitanjaPage() {
         ...(filterKategorija ? { kategorija: filterKategorija } : {}),
         ...(filterTag ? { tag: filterTag } : {}),
         ...(filterUrednickiStatus ? { urednickiStatus: filterUrednickiStatus } : {}),
+        ...(filterVezaLekcije === "bez" ? { bezLekcije: "1" } : {}),
       }).toString();
       const data = await apiRequest<PitanjeListResp>("GET", `/admin/banka-pitanja?${qs}`, undefined, token);
       setRows(data.rows);
@@ -621,6 +623,18 @@ export default function AdminBankaPitanjaPage() {
               {Object.entries(kategorijeLabels).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
+            </select>
+          </div>
+          <div className="relative">
+            <BookOpenCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <select
+              value={filterVezaLekcije}
+              onChange={e => { setFilterVezaLekcije(e.target.value); setPage(1); }}
+              className="pl-10 pr-4 py-2.5 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-[210px]"
+              data-testid="filter-veza-lekcije"
+            >
+              <option value="">{t("Sve veze s lekcijama")}</option>
+              <option value="bez">{t("Bez lekcije — nejasna")}</option>
             </select>
           </div>
           <div className="relative">

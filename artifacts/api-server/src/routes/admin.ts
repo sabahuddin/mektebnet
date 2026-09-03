@@ -48,7 +48,7 @@ import {
   studentKrunisanjaTable,
   napametGlobalProgramTable,
 } from "@workspace/db/schema";
-import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNotNull, or } from "drizzle-orm";
+import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
 import { canAccessAdminRoute } from "../lib/admin-route-access.js";
@@ -2190,7 +2190,7 @@ router.delete("/kategorije-knjiga/:id", async (req, res) => {
 // Centralizovana baza svih pitanja. Vidi schema komentar uz pitanjaBankaTable.
 // Sve rute admin-only (router.use guard iznad).
 
-// GET /api/admin/banka-pitanja?search=...&kategorija=...&lekcijaId=...&page=1&pageSize=50
+// GET /api/admin/banka-pitanja?search=...&kategorija=...&lekcijaId=...&bezLekcije=1&page=1&pageSize=50
 router.get("/banka-pitanja", async (req, res) => {
   try {
     const search = (req.query["search"] as string | undefined)?.trim() || "";
@@ -2199,6 +2199,7 @@ router.get("/banka-pitanja", async (req, res) => {
     const urednickiStatus = (req.query["urednickiStatus"] as string | undefined) || "";
     const lekcijaIdRaw = req.query["lekcijaId"] as string | undefined;
     const lekcijaId = lekcijaIdRaw ? parseInt(lekcijaIdRaw) : undefined;
+    const bezLekcije = req.query["bezLekcije"] === "1";
     const page = Math.max(1, parseInt((req.query["page"] as string) || "1") || 1);
     const pageSize = Math.min(200, Math.max(1, parseInt((req.query["pageSize"] as string) || "50") || 50));
 
@@ -2209,7 +2210,11 @@ router.get("/banka-pitanja", async (req, res) => {
     if (["na_cekanju", "odobreno", "vraceno_na_doradu"].includes(urednickiStatus)) {
       filters.push(eq(pitanjaBankaTable.urednickiStatus, urednickiStatus as "na_cekanju" | "odobreno" | "vraceno_na_doradu"));
     }
-    if (lekcijaId) filters.push(eq(pitanjaBankaTable.lekcijaId, lekcijaId));
+    if (bezLekcije) {
+      filters.push(isNull(pitanjaBankaTable.lekcijaId));
+    } else if (lekcijaId) {
+      filters.push(eq(pitanjaBankaTable.lekcijaId, lekcijaId));
+    }
     const whereClause = filters.length ? and(...filters) : undefined;
 
     const [{ total }] = await db
@@ -2233,7 +2238,7 @@ router.get("/banka-pitanja", async (req, res) => {
 });
 
 // GET /api/admin/banka-pitanja/kategorije — meta za UI dropdowns
-// Vraća hijerarhiju: 5 glavnih kategorija (NPP 2018) + tagovi za filtriranje.
+// Vraća hijerarhiju: 6 glavnih kategorija (NPP 2018) + tagovi za filtriranje.
 router.get("/banka-pitanja/kategorije", async (_req, res) => {
   try {
     const kategorijeRows = await db.select().from(kvizKategorijeTable)
