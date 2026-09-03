@@ -49,12 +49,15 @@ let tudjiUcenikId: number;
 let roditeljDvojeId: number;
 let roditeljBId: number;
 let tudjiRoditeljId: number;
+let adminId: number;
+let glavniMuallimId: number;
 let muallimToken: string;
+let glavniMuallimToken: string;
 let roditeljDvojeToken: string;
 const obavjestenjaIds: number[] = [];
 
 async function createUser(
-  role: "muallim" | "ucenik" | "roditelj",
+  role: "admin" | "muallim" | "ucenik" | "roditelj",
   label: string,
 ): Promise<number> {
   const [row] = await db
@@ -72,7 +75,9 @@ async function createUser(
 
 before(async () => {
   muallimId = await createUser("muallim", "m");
+  glavniMuallimId = await createUser("muallim", "mglavni");
   tudjiMuallimId = await createUser("muallim", "mtudji");
+  adminId = await createUser("admin", "admin");
   ucenikAId = await createUser("ucenik", "ua");
   ucenikBId = await createUser("ucenik", "ub");
   ucenikCId = await createUser("ucenik", "uc");
@@ -82,6 +87,7 @@ before(async () => {
   tudjiRoditeljId = await createUser("roditelj", "rtudji");
 
   await db.insert(muallimProfiliTable).values({ userId: muallimId });
+  await db.insert(muallimProfiliTable).values({ userId: glavniMuallimId, isGlavni: true });
   await db.insert(muallimProfiliTable).values({ userId: tudjiMuallimId });
 
   const [gA] = await db.insert(grupeTable)
@@ -123,6 +129,9 @@ before(async () => {
   muallimToken = signToken({
     userId: muallimId, username: `m.${SUFFIX}`, role: "muallim", displayName: `m ${SUFFIX}`,
   });
+  glavniMuallimToken = signToken({
+    userId: glavniMuallimId, username: `mglavni.${SUFFIX}`, role: "muallim", displayName: `mglavni ${SUFFIX}`,
+  });
   roditeljDvojeToken = signToken({
     userId: roditeljDvojeId, username: `rdvoje.${SUFFIX}`, role: "roditelj", displayName: `rdvoje ${SUFFIX}`,
   });
@@ -146,7 +155,7 @@ after(async () => {
   }
 
   const userIds = [
-    muallimId, tudjiMuallimId, ucenikAId, ucenikBId, ucenikCId, tudjiUcenikId,
+    muallimId, glavniMuallimId, tudjiMuallimId, adminId, ucenikAId, ucenikBId, ucenikCId, tudjiUcenikId,
     roditeljDvojeId, roditeljBId, tudjiRoditeljId,
   ].filter(Boolean);
   if (userIds.length) {
@@ -255,4 +264,30 @@ test("bulk poruka ignoriše primatelja izvan opsega muallima", async () => {
   const primljene = await db.select().from(porukeTable)
     .where(inArray(porukeTable.primateljId, [tudjiRoditeljId]));
   assert.equal(primljene.length, 0);
+});
+
+test("roditelj i obični muallim ne mogu poslati poruku adminu", async () => {
+  for (const token of [roditeljDvojeToken, muallimToken]) {
+    const res = await authed("/api/poruke", token, {
+      method: "POST",
+      body: JSON.stringify({ primateljId: adminId, sadrzaj: "Ne smije stići adminu" }),
+    });
+    assert.equal(res.status, 403);
+  }
+
+  const kontaktiRoditelja = await (await authed("/api/poruke/kontakti", roditeljDvojeToken)).json() as Array<{ role: string }>;
+  const kontaktiMuallima = await (await authed("/api/poruke/kontakti", muallimToken)).json() as Array<{ role: string }>;
+  assert.equal(kontaktiRoditelja.some(k => k.role === "admin"), false);
+  assert.equal(kontaktiMuallima.some(k => k.role === "admin"), false);
+});
+
+test("samo glavni muallim može poslati poruku adminu", async () => {
+  const kontakti = await (await authed("/api/poruke/kontakti", glavniMuallimToken)).json() as Array<{ id: number; role: string }>;
+  assert.equal(kontakti.some(k => k.id === adminId && k.role === "admin"), true);
+
+  const res = await authed("/api/poruke", glavniMuallimToken, {
+    method: "POST",
+    body: JSON.stringify({ primateljId: adminId, sadrzaj: "Dozvoljena poruka adminu" }),
+  });
+  assert.equal(res.status, 201);
 });

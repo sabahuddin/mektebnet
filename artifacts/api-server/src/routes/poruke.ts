@@ -128,18 +128,16 @@ router.post("/", async (req, res) => {
     if (role === "admin") {
       allowed = true;
     } else if (role === "muallim") {
-      if (["roditelj", "admin", "ucenik"].includes(target.role)) {
+      if (["roditelj", "ucenik"].includes(target.role)) {
         allowed = true;
-      } else if (target.role === "muallim") {
-        // Samo glavni muallim smije pisati drugim muallimima
+      } else if (target.role === "admin" || target.role === "muallim") {
+        // Samo glavni muallim smije pisati adminima i drugim muallimima.
         const [mp] = await db.select({ isGlavni: muallimProfiliTable.isGlavni })
           .from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
         allowed = !!mp?.isGlavni;
       }
     } else if (role === "roditelj") {
-      if (target.role === "admin") {
-        allowed = true;
-      } else if (target.role === "muallim") {
+      if (target.role === "muallim") {
         // Roditelj smije pisati samo muallimima čije dijete ima dodano
         const veze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
           .from(roditeljUcenikTable).where(eq(roditeljUcenikTable.roditeljId, userId));
@@ -214,21 +212,24 @@ async function izracunajKontakte(userId: number, role: string): Promise<Contact[
         .from(usersTable).where(eq(usersTable.role, "muallim"));
       contacts = muallimi;
     } else if (role === "muallim") {
-      const admini = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
-        .from(usersTable).where(eq(usersTable.role, "admin"));
-
-      // Provjeri je li ovaj muallim glavni — ako jeste, dodaj ostale muallime istog mekteba
+      // Samo glavni muallim vidi admine i ostale muallime istog mekteba.
       const [mprofil] = await db.select({ isGlavni: muallimProfiliTable.isGlavni, mektebId: muallimProfiliTable.mektebId })
         .from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
 
+      let adminContacts: Contact[] = [];
       let muallimiContacts: Contact[] = [];
-      if (mprofil?.isGlavni && mprofil.mektebId) {
-        const ostali = await db
-          .select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
-          .from(usersTable)
-          .innerJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
-          .where(and(eq(muallimProfiliTable.mektebId, mprofil.mektebId), ne(usersTable.id, userId)));
-        muallimiContacts = ostali;
+      if (mprofil?.isGlavni) {
+        adminContacts = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
+          .from(usersTable).where(eq(usersTable.role, "admin"));
+
+        if (mprofil.mektebId) {
+          const ostali = await db
+            .select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
+            .from(usersTable)
+            .innerJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
+            .where(and(eq(muallimProfiliTable.mektebId, mprofil.mektebId), ne(usersTable.id, userId)));
+          muallimiContacts = ostali;
+        }
       }
 
       const mojiUcenici = await db.select({
@@ -292,12 +293,8 @@ async function izracunajKontakte(userId: number, role: string): Promise<Contact[
         }
       }
 
-      contacts = [...admini, ...muallimiContacts, ...ucenikContacts, ...roditeljContacts];
+      contacts = [...adminContacts, ...muallimiContacts, ...ucenikContacts, ...roditeljContacts];
     } else if (role === "roditelj") {
-      // Admini uvijek
-      const admini = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
-        .from(usersTable).where(eq(usersTable.role, "admin"));
-
       // Samo muallimi povezani sa svojom djecom
       const veze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
         .from(roditeljUcenikTable).where(eq(roditeljUcenikTable.roditeljId, userId));
@@ -313,7 +310,7 @@ async function izracunajKontakte(userId: number, role: string): Promise<Contact[
             .from(usersTable).where(inArray(usersTable.id, muallimIds));
         }
       }
-      contacts = [...muallimContacts, ...admini];
+      contacts = muallimContacts;
     } else if (role === "ucenik") {
       const [profil] = await db.select({ muallimId: ucenikProfiliTable.muallimId })
         .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));

@@ -102,6 +102,10 @@ export default function PorukePage() {
   const endRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const canBulkSend = user && (user.role === "admin" || user.role === "muallim");
+  const slanjeAdminuZabranjeno = aktivan?.role === "admin" && (
+    user?.role === "roditelj" ||
+    (user?.role === "muallim" && !kontakti.some(k => k.id === aktivan.id))
+  );
 
   // ── Load ───────────────────────────────────────────────────────────────────
 
@@ -531,15 +535,23 @@ export default function PorukePage() {
                     })}
                     <div ref={endRef} />
                   </div>
-                  <form onSubmit={sendPoruka} className="p-3 md:p-4 border-t border-border/50 flex gap-3 shrink-0 bg-white shadow-[0_-6px_18px_rgba(0,0,0,0.03)]">
-                    <label className="sr-only" htmlFor="poruke-composer">{t("Napiši poruku...")}</label>
-                    <input id="poruke-composer" type="text" placeholder={t("Napiši poruku...")} value={tekst}
-                      onChange={e => setTekst(e.target.value)} autoComplete="off"
-                      className="flex-1 border border-border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                    <Button type="submit" disabled={isSending || !tekst.trim()} className="rounded-xl px-5 shrink-0">
-                      {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    </Button>
-                  </form>
+                  {slanjeAdminuZabranjeno ? (
+                    <div className="p-3 md:p-4 border-t border-border/50 text-center text-sm text-muted-foreground bg-muted/20">
+                      {user.role === "roditelj"
+                        ? t("Roditelj ne može poslati poruku Adminu. Obratite se muallimu svog djeteta.")
+                        : t("Samo glavni muallim može poslati poruku Adminu.")}
+                    </div>
+                  ) : (
+                    <form onSubmit={sendPoruka} className="p-3 md:p-4 border-t border-border/50 flex gap-3 shrink-0 bg-white shadow-[0_-6px_18px_rgba(0,0,0,0.03)]">
+                      <label className="sr-only" htmlFor="poruke-composer">{t("Napiši poruku...")}</label>
+                      <input id="poruke-composer" type="text" placeholder={t("Napiši poruku...")} value={tekst}
+                        onChange={e => setTekst(e.target.value)} autoComplete="off"
+                        className="flex-1 border border-border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                      <Button type="submit" disabled={isSending || !tekst.trim()} className="rounded-xl px-5 shrink-0">
+                        {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      </Button>
+                    </form>
+                  )}
                 </motion.div>
               )}
 
