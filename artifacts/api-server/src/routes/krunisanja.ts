@@ -17,6 +17,21 @@ import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 const router = Router();
 
+// Banka pitanja krunisanja može biti veća od jednog ispita (Nivo 1 ima tri
+// završna kviza od po 100 pitanja u istoj banci). Svaki pokušaj dobija
+// nasumičan izbor od najviše ovoliko pitanja.
+const PITANJA_PO_ISPITU = 100;
+
+function nasumicniIzbor<T>(niz: T[], koliko: number): T[] {
+  if (niz.length <= koliko) return [...niz];
+  const kopija = [...niz];
+  for (let i = kopija.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [kopija[i], kopija[j]] = [kopija[j]!, kopija[i]!];
+  }
+  return kopija.slice(0, koliko);
+}
+
 // GET /api/krunisanja/nivo/:n
 // Vraća krunisanje + krunske lekcije + status polaganja za prijavljenog učenika.
 router.get("/nivo/:n", async (req, res) => {
@@ -84,7 +99,8 @@ router.get("/nivo/:n", async (req, res) => {
         boja: krunisanje.boja,
         pragProlazaPercent: krunisanje.pragProlazaPercent,
         isGating: krunisanje.isGating,
-        brojPitanja: ids.length,
+        brojPitanja: Math.min(ids.length, PITANJA_PO_ISPITU),
+        brojPitanjaUBanci: ids.length,
         imaKviz: ids.length > 0,
       },
       lekcije,
@@ -114,6 +130,7 @@ router.post("/:id/start", requireAuth, requireRole("ucenik"), async (req, res) =
     }
     const gateErr = await proveriGatingKrunisanja(userId, krunisanje);
     if (gateErr) return res.status(403).json({ error: gateErr });
+    const izabraniIds = nasumicniIzbor(ids, PITANJA_PO_ISPITU);
     const pitanja = await db
       .select({
         id: pitanjaBankaTable.id,
@@ -123,8 +140,8 @@ router.post("/:id/start", requireAuth, requireRole("ucenik"), async (req, res) =
         vrsta: pitanjaBankaTable.vrsta,
       })
       .from(pitanjaBankaTable)
-      .where(inArray(pitanjaBankaTable.id, ids));
-    const order = new Map(ids.map((id, i) => [id, i]));
+      .where(inArray(pitanjaBankaTable.id, izabraniIds));
+    const order = new Map(izabraniIds.map((id, i) => [id, i]));
     pitanja.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
     res.json({
       krunisanjeId: krunisanje.id,
@@ -177,15 +194,26 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
       .where(inArray(pitanjaBankaTable.id, ids));
     const byId = new Map(pitanja.map((p) => [p.id, p]));
 
-    let tacni = 0;
-    for (const pid of ids) {
-      const p = byId.get(pid);
-      if (!p) continue;
-      const odgovor = odgovori.find((o) => o.pitanjeId === pid);
-      if (!odgovor) continue;
-      if (Number(odgovor.optionIndex) === Number(p.correctIndex)) tacni++;
+    // Ispit servira nasumičan izbor iz banke, pa se boduje po predatim
+    // odgovorima — ali samo onim pitanjima koja stvarno pripadaju krunisanju,
+    // i svakom pitanju najviše jednom.
+    const vazeci = new Map<number, number>();
+    for (const o of odgovori) {
+      const pid = Number(o.pitanjeId);
+      if (!byId.has(pid) || vazeci.has(pid)) continue;
+      vazeci.set(pid, Number(o.optionIndex));
     }
-    const ukupno = ids.length;
+    const ocekivano = Math.min(ids.length, PITANJA_PO_ISPITU);
+    if (vazeci.size < ocekivano) {
+      return res.status(400).json({
+        error: `Ispit nije potpun — odgovoreno ${vazeci.size} od ${ocekivano} pitanja.`,
+      });
+    }
+    let tacni = 0;
+    for (const [pid, optionIndex] of vazeci) {
+      if (optionIndex === Number(byId.get(pid)!.correctIndex)) tacni++;
+    }
+    const ukupno = vazeci.size;
     const procenat = ukupno > 0 ? Math.round((tacni / ukupno) * 100) : 0;
     const polozeno = procenat >= (krunisanje.pragProlazaPercent ?? 70);
 

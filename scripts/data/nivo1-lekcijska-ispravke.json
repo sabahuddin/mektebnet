@@ -1,0 +1,168 @@
+{
+  "_opis": "Ispravke lekcijskih kviz-pitanja (ilmihal_lekcije.kvizPitanja) za Nivo 1. Ključ je '<lekcija-slug>#<indeks>'. Originali su generirani automatski i sadrže hrvatske oblike, ćirilične homoglife i engleske ostatke. Ove ispravke se primjenjuju samo pri gradnji etapnih kvizova — ne mijenjaju lekcije.",
+  "kako-pocinjem-posao#1": {
+    "question": "Kada je lijepo izgovoriti Bismillu?",
+    "options": ["Samo ujutro", "Ujutro, navečer i pri jelu", "Samo prije spavanja", "Samo u džamiji"],
+    "answer": "Ujutro, navečer i pri jelu"
+  },
+  "ja-idem-u-mekteb#2": {
+    "question": "Kako se osjećao Mirza kada je prvi dan došao u mekteb?",
+    "options": ["Uplašio se i plakao", "Obradovao se i upoznao nove prijatelje", "Bio je tužan i osamljen", "Nije mu se svidjelo"],
+    "answer": "Obradovao se i upoznao nove prijatelje"
+  },
+  "dova-za-znanje#4": {
+    "question": "Iz kojeg dijela Kur'ana je dova za znanje?",
+    "options": ["Iz sure Ta-Ha, 114. ajet", "Iz sure El-Fatiha, 1. ajet", "Iz sure El-Ihlas, 1. ajet", "Iz sure En-Nas, 6. ajet"],
+    "answer": "Iz sure Ta-Ha, 114. ajet"
+  },
+  "nasa-vjera#3": {
+    "question": "Šta nas islam uči kako da se odnosimo prema drugima?",
+    "options": ["Da ih mrzimo", "Da im govorimo neistinu", "Da ih volimo i poštujemo", "Da ih izbjegavamo"],
+    "answer": "Da ih volimo i poštujemo"
+  },
+  "zuri-mirza-na-pouku#0": {
+    "question": "Kada je Mirza usto' iz postelje?",
+    "options": ["Ranim jutrom prije zore", "Poslije doručka", "Kad ga je babo probudio", "U podne, kada je sunce visoko"],
+    "answer": "Ranim jutrom prije zore"
+  },
+  "selam#4": {
+    "question": "Kome i kada nazivamo selam?",
+    "options": ["Roditeljima, rodbini i prijateljima, pri ulasku i izlasku", "Samo mujezinu za vrijeme ezana", "Samo učitelju u školi", "Samo imamu poslije namaza"],
+    "answer": "Roditeljima, rodbini i prijateljima, pri ulasku i izlasku"
+  },
+  "voda-izvor-zivota#3": {
+    "question": "Zašto je propisano čišćenje vodom prije namaza?",
+    "options": ["Jer je voda hladna", "Jer je tako lakše", "Voda nas čisti i duhovno priprema", "Jer je tako običaj"],
+    "answer": "Voda nas čisti i duhovno priprema"
+  },
+  "voda-izvor-zivota#4": {
+    "question": "Koliki dio površine Zemlje čini voda?",
+    "options": ["Manje od polovine", "Oko dvije trećine", "Samo četvrtinu", "Cijelu površinu"],
+    "answer": "Oko dvije trećine"
+  },
+  "subhaneke#1": {
+    "question": "Kada učimo Subhaneke?",
+    "options": ["Samo u ramazanu", "Često, a posebno na početku svakog namaza", "Samo na džumi", "Samo na mektebskom času"],
+    "answer": "Često, a posebno na početku svakog namaza"
+  },
+  "subhaneke#2": {
+    "question": "Šta znače riječi 'Slavljen neka si Ti, Allahu moj'?",
+    "options": ["Veličamo i slavimo Allaha", "Molimo Allaha za hljeb", "Zahvaljujemo na hrani", "Tražimo oprost od Allaha"],
+    "answer": "Veličamo i slavimo Allaha"
+  },
+  "sura-el-fatiha#3": {
+    "question": "U kojim prilikama učimo suru El-Fatihu?",
+    "options": ["Samo na mektebskom času", "U namazu, pri buđenju i prije spavanja", "Samo u ramazanu", "Samo kod kuće"],
+    "answer": "U namazu, pri buđenju i prije spavanja"
+  },
+  "dinski-sarti#3": {
+    "question": "Koliko puta se pere lice prilikom uzimanja abdesta?",
+    "options": ["Dva puta", "Pet puta", "Tri puta", "Jednom"],
+    "answer": "Tri puta"
+  },
+  "prvi-namaski-sart#0": {
+    "question": "Šta je prvi namaski šart (uvjet)?",
+    "options": ["Čistoća tijela, odjeće i mjesta", "Lijepa odjeća i ukrasni predmeti", "Glasno učenje Kur'ana prije namaza", "Duga kosa i brada"],
+    "answer": "Čistoća tijela, odjeće i mjesta"
+  },
+  "abdest#2": {
+    "question": "Koliki dio glave se potire prilikom uzimanja abdesta?",
+    "options": ["Cijela glava", "Najmanje četvrtina glave", "Samo čelo", "Samo tjeme"],
+    "answer": "Najmanje četvrtina glave"
+  },
+  "sta-kvari-abdest#2": {
+    "question": "Kvari li povraćanje abdest?",
+    "options": ["Ne, nikada ne kvari abdest", "Da, povraćanje punim ustima kvari abdest", "Samo ako je glasno", "Samo ako se desi za vrijeme namaza"],
+    "answer": "Da, povraćanje punim ustima kvari abdest"
+  },
+  "cetvrti-namaski-sart#0": {
+    "question": "Koliko ima namaskih vremena u toku dana?",
+    "options": ["Tri", "Pet", "Četiri", "Šest"],
+    "answer": "Pet"
+  },
+  "ikamet#4": {
+    "question": "Uči li se ikamet brže ili sporije od ezana?",
+    "options": ["Sporije od ezana", "Brže od ezana", "Isto kao ezan", "Tri puta sporije"],
+    "answer": "Brže od ezana"
+  },
+  "dova-poslije-ezana#0": {
+    "question": "Ko je prvi proučio ezan, na osnovu Abdullahova sna?",
+    "options": ["Bilal, r.a.", "Abdullah, r.a.", "Omer, r.a.", "Ebu Bekr, r.a."],
+    "answer": "Bilal, r.a."
+  },
+  "sesti-namaski-sart#0": {
+    "question": "Koji je šesti namaski šart (uvjet)?",
+    "options": ["Nijet — odluka da se klanja namaz", "Čistoća tijela prije namaza", "Znanje svih sura Kur'ana napamet", "Nošenje posebno duge odjeće"],
+    "answer": "Nijet — odluka da se klanja namaz"
+  },
+  "sesti-namaski-sart#1": {
+    "question": "Šta je nijet?",
+    "options": ["Bol u srcu", "Svjesna odluka zašto i zbog čega nešto činimo", "Poseban obred prije jela", "Vrsta odjeće za namaz"],
+    "answer": "Svjesna odluka zašto i zbog čega nešto činimo"
+  },
+  "sesti-namaski-sart#3": {
+    "question": "Kako možemo ojačati nijet?",
+    "options": ["Dobrom hranom prije namaza", "Izgovaranjem riječi nijeta", "Čitanjem novina", "Tihim sjedenjem"],
+    "answer": "Izgovaranjem riječi nijeta"
+  },
+  "namaski-ruknovi-1#2": {
+    "question": "Gdje djevojčice drže ruke pri kijamu (stajanju)?",
+    "options": ["Na pojasu", "Na grudima", "Iza leđa", "Uz bokove"],
+    "answer": "Na grudima"
+  },
+  "namaski-ruknovi-1#3": {
+    "question": "Šta učimo na prvom stajanju, pri kiraetu?",
+    "options": ["Samo Fatihu i jednu suru", "Samo Euzubillu", "Subhaneke, Euzubillu, Bismillu, Fatihu i suru", "Samo Bismillu"],
+    "answer": "Subhaneke, Euzubillu, Bismillu, Fatihu i suru"
+  },
+  "namaski-ruknovi-2#0": {
+    "question": "Kako se rukama drže koljena na ruku'u?",
+    "options": ["Dječaci rastavljenih prstiju, djevojčice sastavljenih", "Svi rastavljenih prstiju", "Svi sastavljenih prstiju", "Ne dodiruju se koljena"],
+    "answer": "Dječaci rastavljenih prstiju, djevojčice sastavljenih"
+  },
+  "namaski-ruknovi-2#3": {
+    "question": "Kako dječaci drže noge pri sjedenju u namazu?",
+    "options": ["Lijeva noga podvijena, desna uspravna", "Obje noge na desnu stranu", "Obje noge na lijevu stranu", "Obje noge podvijene"],
+    "answer": "Lijeva noga podvijena, desna uspravna"
+  },
+  "namaski-ruknovi-2#4": {
+    "question": "Koliko puta učimo zikr na ruku'u?",
+    "options": ["Tri puta", "Dva puta", "Četiri puta", "Pet puta"],
+    "answer": "Tri puta"
+  },
+  "sura-el-felek#1": {
+    "question": "Od čega tražimo zaštitu u suri El-Felek?",
+    "options": ["Od bogatstva", "Od zla svega što je Allah stvorio", "Od kiše", "Od učenja"],
+    "answer": "Od zla svega što je Allah stvorio"
+  },
+  "gusulski-sarti#4": {
+    "question": "Šta znači 'gasli vudžud' u gusulu?",
+    "options": ["Pranje nosa tri puta", "Oprati cijelo tijelo, da ne ostane suho mjesto", "Pranje ruku do lakata", "Pranje lica i brade"],
+    "answer": "Oprati cijelo tijelo, da ne ostane suho mjesto"
+  },
+  "tejemumski-sarti#3": {
+    "question": "Šta radimo u drugom tejemumskom šartu?",
+    "options": ["Dotaknemo zemlju i potiremo lice", "Potiremo samo desnu ruku", "Izgovaramo nijet naglas", "Peremo noge"],
+    "answer": "Dotaknemo zemlju i potiremo lice"
+  },
+  "dove#4": {
+    "question": "Kada možemo učiti dovu, osim u namazu?",
+    "options": ["Samo kada nam stariji kažu", "Samo u džamiji", "U raznim prilikama u toku dana", "Samo prije spavanja"],
+    "answer": "U raznim prilikama u toku dana"
+  },
+  "dobro-nam-dos-o#3": {
+    "question": "Iz kojeg plemena i roda je Muhammed, alejhis-selam?",
+    "options": ["Iz plemena Kurejš, roda Benu Hašim", "Iz plemena Sekif", "Iz roda Benu Umejje", "Iz plemena Huzeja"],
+    "answer": "Iz plemena Kurejš, roda Benu Hašim"
+  },
+  "sura-el-leheb#2": {
+    "question": "Zašto je Ebu Leheb prokažen u ovoj suri?",
+    "options": ["Jer je napadao i vrijeđao Muhammeda, a.s.", "Jer je bio bogat", "Jer nije znao čitati", "Jer je mnogo putovao"],
+    "answer": "Jer je napadao i vrijeđao Muhammeda, a.s."
+  },
+  "sura-en-nasr#4": {
+    "question": "Kako se naziva izgovaranje riječi 'E'uzu billahi mineš-šejtanir-radžim'?",
+    "options": ["Euzubilla", "Bismilla", "Tekbir", "Tesbih"],
+    "answer": "Euzubilla"
+  }
+}

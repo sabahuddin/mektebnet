@@ -1,0 +1,349 @@
+{
+  "_opis": "Nova pitanja napisana iz sadržaja lekcija Nivoa 1 kako bi svaka etapa imala 100 pitanja. `lekcija` je slug izvorne lekcije, `etapa` redni broj etape (1-6).",
+  "pitanja": [
+    {
+      "etapa": 1,
+      "lekcija": "uvodna-rijec",
+      "type": "truefalse",
+      "question": "Ilmihal je prva vjerska knjiga koju polaznik dobije u mektebu.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Ilmihal je udžbenik koji polaznika vodi kroz osnove vjere islama.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "euzubilla-i-bismilla",
+      "type": "radio",
+      "question": "Kako u cijelosti glasi Euzubilla?",
+      "options": [
+        "E'uzu billahi mineš-šejtanir-radžim",
+        "Bismillahir-Rahmanir-Rahim",
+        "Subhaneke Allahumme ve bihamdike",
+        "Rabbi jessir ve la tu'assir"
+      ],
+      "answer": "E'uzu billahi mineš-šejtanir-radžim",
+      "explanation": "Euzubilla glasi: E'uzu billahi mineš-šejtanir-radžim — Tražim Allahovu zaštitu od prokletog šejtana.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "euzubilla-i-bismilla",
+      "type": "radio",
+      "question": "Kako u cijelosti glasi Bismilla?",
+      "options": [
+        "Bismillahir-Rahmanir-Rahim",
+        "E'uzu billahi mineš-šejtanir-radžim",
+        "Elhamdu lillahi Rabbil-alemin",
+        "La ilahe illallah"
+      ],
+      "answer": "Bismillahir-Rahmanir-Rahim",
+      "explanation": "Bismilla glasi: Bismillahir-Rahmanir-Rahim — U ime Allaha, Milostivog, Samilosnog.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "euzubilla-i-bismilla",
+      "type": "radio",
+      "question": "Šta u Bismilli znače riječi 'Er-Rahmanir-Rahim'?",
+      "options": [
+        "Milostivi, Samilosni",
+        "Uzvišeni, Veliki",
+        "Sveznajući, Mudri",
+        "Vječni, Jedini"
+      ],
+      "answer": "Milostivi, Samilosni",
+      "explanation": "Bismillahir-Rahmanir-Rahim znači: U ime Allaha, Milostivog, Samilosnog.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "euzubilla-i-bismilla",
+      "type": "truefalse",
+      "question": "Euzubillu učimo prije Bismille.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Prvo se prouči Euzubilla, pa onda Bismilla.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "euzubilla-i-bismilla",
+      "type": "radio",
+      "question": "Od koga tražimo zaštitu kada učimo Euzubillu?",
+      "options": [
+        "Od prokletog šejtana",
+        "Od bolesti",
+        "Od siromaštva",
+        "Od zaborava"
+      ],
+      "answer": "Od prokletog šejtana",
+      "explanation": "Euzubillom molimo Allaha da nas sačuva od prokletog šejtana koji nas nagovara na ružna djela.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "kako-pocinjem-posao",
+      "type": "truefalse",
+      "question": "Svaki dobar i hairli posao lijepo je započeti Euzubillom i Bismillom.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Učenjem Euzubille i Bismille molimo Allaha da nas čuva i da nam podari Svoju milost.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "covjek-najljepse-stvorenje",
+      "type": "radio",
+      "question": "U kojoj suri Allah, dž.š., kaže: 'Mi čovjeka stvaramo u skladu najljepšem'?",
+      "options": [
+        "Et-Tin",
+        "El-Fatiha",
+        "En-Nas",
+        "El-Ihlas"
+      ],
+      "answer": "Et-Tin",
+      "explanation": "Ove riječi su u suri Et-Tin, 4. ajet.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "covjek-najljepse-stvorenje",
+      "type": "radio",
+      "question": "Koga je Allah, dž.š., postavio Svojim namjesnikom na Zemlji?",
+      "options": [
+        "Čovjeka",
+        "Meleke",
+        "Džine",
+        "Životinje"
+      ],
+      "answer": "Čovjeka",
+      "explanation": "Allah je čovjeka obdario razumom i postavio ga Svojim namjesnikom na Zemlji.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "covjek-najljepse-stvorenje",
+      "type": "truefalse",
+      "question": "Prema Kur'anu, džini i ljudi stvoreni su da robuju Allahu.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Allah kaže: 'Džine i ljude sam stvorio samo zato da Mi se klanjaju' (Ez-Zarijat, 56).",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "ja-idem-u-mekteb",
+      "type": "radio",
+      "question": "Kako se zove osoba koja nas poučava u mektebu?",
+      "options": [
+        "Muallim i muallima",
+        "Mujezin",
+        "Hafiz",
+        "Kadija"
+      ],
+      "answer": "Muallim i muallima",
+      "explanation": "Muallim i muallima poučavaju polaznike o islamskom vjerovanju, dužnostima i ponašanju.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "ja-idem-u-mekteb",
+      "type": "radio",
+      "question": "Kojim riječima počinje pjesmica iz lekcije 'Ja idem u mekteb'?",
+      "options": [
+        "Ja u mekteb idem, ponosim se time",
+        "Žuri Mirza na pouku",
+        "Islam mi je vjera",
+        "Kad tekbiri zažubore"
+      ],
+      "answer": "Ja u mekteb idem, ponosim se time",
+      "explanation": "Pjesmica počinje riječima: 'Ja u mekteb idem, ponosim se time, sreću da postignem želim i sa time!'",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "rabbi-jessir",
+      "type": "radio",
+      "question": "Šta znače riječi 'Rabbi jessir ve la tu'assir'?",
+      "options": [
+        "Gospodaru, olakšaj a ne otežaj",
+        "Gospodaru moj, znanje moje proširi",
+        "Gospodaru, oprosti mi",
+        "Gospodaru, podari mi zdravlje"
+      ],
+      "answer": "Gospodaru, olakšaj a ne otežaj",
+      "explanation": "Rabbi jessir ve la tu'assir znači: Gospodaru, olakšaj a ne otežaj.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "rabbi-jessir",
+      "type": "radio",
+      "question": "Šta molimo riječima 'Rabbi temmim bil-hajr'?",
+      "options": [
+        "Da nam posao bude završen s dobrim",
+        "Da nam se poveća imetak",
+        "Da nam se olakša učenje",
+        "Da nam se oprosti grijeh"
+      ],
+      "answer": "Da nam posao bude završen s dobrim",
+      "explanation": "Rabbi temmim bil-hajr znači: Gospodaru, upotpuni mi posao s dobrim.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "rabbi-jessir",
+      "type": "radio",
+      "question": "Kako se zove djevojčica koja je u pjesmici prvom dovom započela?",
+      "options": [
+        "Fatima",
+        "Merjema",
+        "Amina",
+        "Selma"
+      ],
+      "answer": "Fatima",
+      "explanation": "U pjesmici 'Prva dova' Fatima je proučila Euzubillu i Bismillu i naučila Rabbi jessir.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "rabbi-jessir",
+      "type": "truefalse",
+      "question": "Rabbi jessir učimo prije nego što počnemo neki koristan posao.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Rabbi jessir učimo prije učenja, pisanja zadaće, putovanja i svakog lijepog posla.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "dova-za-znanje",
+      "type": "truefalse",
+      "question": "Dova 'Rabbi zidni ilma' zapisana je u Kur'anu.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Ova dova je kur'anska — nalazi se u suri Ta-Ha, 114. ajet.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "nasa-vjera",
+      "type": "truefalse",
+      "question": "Islam je vjera koju je Allah objavio preko Svojih poslanika cijelom čovječanstvu.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Islam nije vjera samo jednog naroda — objavljen je cijelom čovječanstvu.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "nasa-vjera",
+      "type": "radio",
+      "question": "Kako se, prema lekciji, muslimani odnose prema drugim ljudima?",
+      "options": [
+        "Poštuju sve druge ljude",
+        "Izbjegavaju ih",
+        "Ne razgovaraju s njima",
+        "Sude im"
+      ],
+      "answer": "Poštuju sve druge ljude",
+      "explanation": "Muslimani govore istinu, rade dobra djela i poštuju sve druge ljude.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "allahu-rabbi",
+      "type": "radio",
+      "question": "Kojim riječima počinje dova 'Allahu Rabbi'?",
+      "options": [
+        "Allahu Rabbi ve Muhammedun nebijji",
+        "Rabbi jessir ve la tu'assir",
+        "Subhaneke Allahumme",
+        "Es-selamu alejkum"
+      ],
+      "answer": "Allahu Rabbi ve Muhammedun nebijji",
+      "explanation": "Dova glasi: Allahu Rabbi ve Muhammedun nebijji, vel-Kur'anu kitabi, vel-islamu dini.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "allahu-rabbi",
+      "type": "radio",
+      "question": "Koju knjigu spominjemo u dovi 'Allahu Rabbi'?",
+      "options": [
+        "Kur'an",
+        "Tevrat",
+        "Indžil",
+        "Zebur"
+      ],
+      "answer": "Kur'an",
+      "explanation": "U dovi kažemo: vel-Kur'anu kitabi — Kur'an je moja knjiga.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "zuri-mirza-na-pouku",
+      "type": "radio",
+      "question": "Ko je napisao pjesmu 'Žuri Mirza na pouku'?",
+      "options": [
+        "Rešad Kadić",
+        "Nevres Mustafić",
+        "Safvet-beg Bašagić",
+        "Musa Ćazim Ćatić"
+      ],
+      "answer": "Rešad Kadić",
+      "explanation": "Pjesmu 'Žuri Mirza na pouku' napisao je Rešad Kadić.",
+      "tezina": 2
+    },
+    {
+      "etapa": 1,
+      "lekcija": "zuri-mirza-na-pouku",
+      "type": "truefalse",
+      "question": "Pjesma 'Žuri Mirza na pouku' već se decenijama uči u mektebima.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Ta poznata pjesmica uči se u mektebima već desetinama godina.",
+      "tezina": 1
+    },
+    {
+      "etapa": 1,
+      "lekcija": "uvodna-rijec",
+      "type": "radio",
+      "question": "Šta, prema uvodnoj riječi, mekteb čini posebnim mjestom?",
+      "options": [
+        "Tu sklapamo prijateljstva i jedni drugima budemo podrška na putu dobra",
+        "Tu se samo pišu zadaće",
+        "Tu se odmara poslije škole",
+        "Tu se održavaju sportska takmičenja"
+      ],
+      "answer": "Tu sklapamo prijateljstva i jedni drugima budemo podrška na putu dobra",
+      "explanation": "Mekteb nije samo mjesto gdje učimo lekcije — to je mjesto gdje sklapamo prijateljstva i učimo kako da jedni drugima budemo podrška na putu dobra.",
+      "tezina": 1
+    }
+  ]
+}
