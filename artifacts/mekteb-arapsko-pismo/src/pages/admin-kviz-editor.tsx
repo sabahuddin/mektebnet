@@ -28,6 +28,7 @@ import {
 interface Kviz {
   id: number;
   nivo: number | null;
+  etapa: number | null;
   slug: string;
   naslov: string;
   modul: string;
@@ -158,7 +159,7 @@ export default function AdminKvizEditorPage() {
   const kvizId = matchEdit ? parseInt(paramsEdit!.id) : 0;
 
   const [meta, setMeta] = useState<Partial<Kviz>>({
-    naslov: "", slug: "", modul: "ilmihal", nivo: 1, variant: "normal",
+    naslov: "", slug: "", modul: "ilmihal", nivo: 1, etapa: null, variant: "normal",
     kategorija: "", tagovi: [], lekcijaId: null, opis: "", isPublished: true,
   });
   const [pitanja, setPitanja] = useState<KvizPitanjeRow[]>([]);
@@ -223,6 +224,7 @@ export default function AdminKvizEditorPage() {
         slug: meta.slug.trim(),
         modul: meta.modul,
         nivo: meta.nivo,
+        etapa: meta.etapa,
         variant: meta.variant,
         kategorija: meta.kategorija || null,
         tagovi: meta.tagovi || [],
@@ -352,7 +354,7 @@ export default function AdminKvizEditorPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div>
               <label className="block text-sm font-semibold mb-1">{t("Modul")}</label>
               <select value={meta.modul || "ilmihal"} onChange={e => setMeta(p => ({ ...p, modul: e.target.value }))}
@@ -365,6 +367,21 @@ export default function AdminKvizEditorPage() {
               <label className="block text-sm font-semibold mb-1">{t("Nivo")}</label>
               <input type="number" min={1} max={4} value={meta.nivo ?? ""} onChange={e => setMeta(p => ({ ...p, nivo: e.target.value ? parseInt(e.target.value) : null }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">{t("Etapa (opciono)")}</label>
+              <select
+                value={meta.etapa ?? ""}
+                onChange={e => setMeta(p => ({ ...p, etapa: e.target.value ? Number(e.target.value) : null }))}
+                className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">{t("— bez etape —")}</option>
+                {Array.from({ length: 7 }, (_, i) => i + 1).map(etapa => (
+                  <option key={etapa} value={etapa}>
+                    {etapa}-{meta.nivo ?? "?"} · {((etapa - 1) * 10) + 1}–{etapa * 10}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-semibold mb-1">{t("Varijanta")}</label>
@@ -386,13 +403,13 @@ export default function AdminKvizEditorPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">{t("Kategorija (NPP 2018)")}</label>
+              <label className="block text-sm font-semibold mb-1">{t("Oblast (opciono, NPP 2018)")}</label>
               <select value={meta.kategorija || ""} onChange={e => {
                 const kat = e.target.value || null;
                 setMeta(p => ({ ...p, kategorija: kat, tagovi: [] }));
               }}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="">{t("— bez —")}</option>
+                <option value="">{t("— bez oblasti / mješoviti kviz —")}</option>
                 {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>

@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
 import { apiRequest } from "@/lib/api";
-import { HelpCircle, ChevronRight, Trophy, BookOpen, LayoutGrid, FolderTree, Lock } from "lucide-react";
+import { HelpCircle, ChevronRight, Trophy, BookOpen, LayoutGrid, FolderTree, Lock, Milestone } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -13,6 +13,7 @@ import { ToastAction } from "@/components/ui/toast";
 interface Kviz {
   id: number;
   nivo: number | null;
+  etapa?: number | null;
   variant: string;
   modul: string;
   naslov: string;
@@ -113,7 +114,7 @@ function pluralKviz(n: number): string {
   return "kvizova";
 }
 
-type GroupMode = "nivo" | "kategorija";
+type GroupMode = "nivo" | "kategorija" | "etapa";
 
 export default function KvizoviPage() {
   const { t } = useLanguage();
@@ -184,6 +185,13 @@ export default function KvizoviPage() {
     return acc;
   }, {});
 
+  const groupedByEtapa = ilmihalKvizovi.reduce((acc: Record<string, Kviz[]>, k) => {
+    const key = k.etapa && k.nivo ? `${k.etapa}-${k.nivo}` : "_bez_etape";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(k);
+    return acc;
+  }, {});
+
   // Guest gating: samo prvi kviz (najmanji ID) je otvoren gostima.
   const unlockedSlugs = useMemo(() => {
     const set = new Set<string>();
@@ -229,6 +237,12 @@ export default function KvizoviPage() {
               >
                 <FolderTree className="w-3.5 h-3.5" /> {t("Po oblasti")}
               </button>
+              <button
+                onClick={() => setGroupMode("etapa")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition ${groupMode === "etapa" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground"}`}
+              >
+                <Milestone className="w-3.5 h-3.5" /> {t("Po etapi")}
+              </button>
             </div>
             <select
               value={filterKategorija}
@@ -268,6 +282,36 @@ export default function KvizoviPage() {
                   </div>
                 </div>
               ))}
+          </div>
+        ) : groupMode === "etapa" ? (
+          <div className="flex flex-col gap-8">
+            {Object.entries(groupedByEtapa)
+              .sort(([a], [b]) => {
+                if (a === "_bez_etape") return 1;
+                if (b === "_bez_etape") return -1;
+                const [ae, an] = a.split("-").map(Number);
+                const [be, bn] = b.split("-").map(Number);
+                return an - bn || ae - be;
+              })
+              .map(([etapaKey, list]) => {
+                const etapaBroj = etapaKey === "_bez_etape" ? null : Number(etapaKey.split("-")[0]);
+                return (
+                  <div key={etapaKey}>
+                    <h2 className="text-sm font-extrabold uppercase tracking-wider text-teal-700 mb-4">
+                      {etapaBroj
+                        ? `${t("Etapa")} ${etapaKey} · ${((etapaBroj - 1) * 10) + 1}–${etapaBroj * 10}. ${t("lekcija")}`
+                        : t("Bez etape")} — {list.length} {pluralKviz(list.length)}
+                    </h2>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {list.map((k, i) => (
+                        <motion.div key={k.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                          <KvizCard k={k} nivo={k.nivo} locked={isLocked(k)} onLockedClick={showLockedToast} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         ) : (
           <div className="flex flex-col gap-8">

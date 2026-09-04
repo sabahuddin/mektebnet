@@ -1832,7 +1832,7 @@ router.post("/ilmihal/delete-batch", async (req, res) => {
 // PUT /api/admin/kvizovi/:id — Update quiz questions/title
 router.put("/kvizovi/:id", async (req, res) => {
   try {
-    const { pitanja, naslov, isPublished, kategorija, tagovi, lekcijaId, opis, modul, nivo, variant } = req.body;
+    const { pitanja, naslov, isPublished, kategorija, tagovi, lekcijaId, opis, modul, nivo, etapa, variant } = req.body;
     const updates: Record<string, any> = {};
     if (pitanja !== undefined) {
       updates.pitanja = normalizeSurahNames(
@@ -1864,6 +1864,14 @@ router.put("/kvizovi/:id", async (req, res) => {
     if (opis !== undefined) updates.opis = normalizeSurahNames(String(opis || ""));
     if (modul !== undefined) updates.modul = modul;
     if (nivo !== undefined) updates.nivo = nivo;
+    if (etapa !== undefined) {
+      const etapaBroj = etapa === null || etapa === "" ? null : Number(etapa);
+      if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
+        res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
+        return;
+      }
+      updates.etapa = etapaBroj;
+    }
     if (variant !== undefined) updates.variant = variant;
     await db.update(kvizoviTable).set(updates).where(eq(kvizoviTable.id, parseInt(req.params.id)));
     res.json({ success: true });
@@ -1873,17 +1881,22 @@ router.put("/kvizovi/:id", async (req, res) => {
 });
 
 // POST /api/admin/kvizovi/ai-import — uvoz kompletnog kviza (AI-generisanog).
-// Prima JSON: { naslov, slug, kategorija, tagovi, opis?, pitanja: [...] }.
+// Prima JSON: { naslov, slug, nivo?, etapa?, kategorija?, tagovi?, opis?, pitanja: [...] }.
 // Svako pitanje se dedup-uje po tekstu (UNIQUE na pitanja_banka.pitanje). Ako
 // pitanje već postoji, koristi se postojeći ID; inaće se kreira u banci.
 // Na kraju se kreira kviz i linkuju sva pitanja.
 router.post("/kvizovi/ai-import", async (req, res) => {
   try {
-    const { naslov, slug, kategorija, tagovi, opis, pitanja } = req.body || {};
+    const { naslov, slug, nivo, etapa, kategorija, tagovi, opis, pitanja } = req.body || {};
     if (!naslov || !slug) { res.status(400).json({ error: "naslov i slug su obavezni" }); return; }
     if (!Array.isArray(pitanja) || pitanja.length === 0) { res.status(400).json({ error: "pitanja mora biti niz sa barem jednim pitanjem" }); return; }
 
     const userId = (req as any).user?.id;
+    const etapaBroj = etapa === null || etapa === undefined || etapa === "" ? null : Number(etapa);
+    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
+      res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
+      return;
+    }
     const slugClean = String(slug).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
     if (!slugClean) { res.status(400).json({ error: "Slug mora sadržavati a-z, 0-9 ili _" }); return; }
 
@@ -1893,6 +1906,8 @@ router.post("/kvizovi/ai-import", async (req, res) => {
         naslov: normalizeSurahNames(String(naslov).trim()),
         slug: slugClean,
         modul: "ilmihal",
+        nivo: nivo == null || nivo === "" ? null : Number(nivo),
+        etapa: etapaBroj,
         variant: "normal",
         kategorija: kategorija ? String(kategorija) : null,
         tagovi: Array.isArray(tagovi) ? tagovi.map(String) : [],
@@ -1954,9 +1969,14 @@ router.post("/kvizovi/ai-import", async (req, res) => {
 // posebno kroz POST /kvizovi/:id/dodaj-pitanja iz banke.
 router.post("/kvizovi", async (req, res) => {
   try {
-    const { naslov, slug, modul, nivo, variant, kategorija, tagovi, lekcijaId, opis, isPublished } = req.body || {};
+    const { naslov, slug, modul, nivo, etapa, variant, kategorija, tagovi, lekcijaId, opis, isPublished } = req.body || {};
     if (!naslov || !slug) {
       res.status(400).json({ error: "naslov i slug su obavezni" });
+      return;
+    }
+    const etapaBroj = etapa === null || etapa === undefined || etapa === "" ? null : Number(etapa);
+    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
+      res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
       return;
     }
     const [created] = await db.insert(kvizoviTable).values({
@@ -1964,6 +1984,7 @@ router.post("/kvizovi", async (req, res) => {
       slug,
       modul: modul || "ilmihal",
       nivo: nivo ?? null,
+      etapa: etapaBroj,
       variant: variant || "normal",
       kategorija: kategorija || null,
       tagovi: Array.isArray(tagovi) ? tagovi : (tagovi ? [tagovi] : []),

@@ -662,10 +662,10 @@ router.get("/ilmihal/:slug", async (req, res) => {
 
 // ── KVIZOVI ───────────────────────────────────────────────────────────────────
 
-// GET /api/content/kvizovi?nivo=1&modul=ilmihal
+// GET /api/content/kvizovi?nivo=1&etapa=1&modul=ilmihal
 router.get("/kvizovi", optionalAuth, async (req, res) => {
   try {
-    const { nivo, modul, lekcijaId } = req.query;
+    const { nivo, etapa, modul, lekcijaId } = req.query;
     const lekcijaIdNum = lekcijaId !== undefined ? parseInt(lekcijaId as string, 10) : undefined;
     // Ako klijent pošalje lekcijaId koji nije validan integer, vrati praznu
     // listu umjesto svih kvizova — sprječava nehotičan "fall-through" na
@@ -680,6 +680,7 @@ router.get("/kvizovi", optionalAuth, async (req, res) => {
     const result = await db.select({
       id: kvizoviTable.id,
       nivo: kvizoviTable.nivo,
+      etapa: kvizoviTable.etapa,
       slug: kvizoviTable.slug,
       naslov: kvizoviTable.naslov,
       modul: kvizoviTable.modul,
@@ -708,6 +709,7 @@ router.get("/kvizovi", optionalAuth, async (req, res) => {
       if (!isAdmin && !k.isPublished) return false;
       if (!isAdmin && k.neodobrenaPitanja > 0) return false;
       if (nivo && k.nivo !== parseInt(nivo as string)) return false;
+      if (etapa && k.etapa !== parseInt(etapa as string)) return false;
       if (modul && k.modul !== modul) return false;
       if (lekcijaIdNum !== undefined && Number.isFinite(lekcijaIdNum) && k.lekcijaId !== lekcijaIdNum) return false;
       return true;

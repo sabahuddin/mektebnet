@@ -447,6 +447,7 @@ async function runResidualSchema() {
     // tako da SELECT iz /api/content/kvizovi (koji referencira sve te kolone)
     // ne puca sa "column does not exist". Bezbjedno za pokretanje na svaki start.
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS kategorija varchar(60);`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS etapa integer;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS lekcija_id integer;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS opis text DEFAULT '' NOT NULL;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS pitanja_po_sesiji integer;`);
