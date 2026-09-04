@@ -6,7 +6,7 @@ import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen, GripVertical, Lock } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Trophy, Star, Pencil, X, Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown, RotateCcw, ImageIcon, Upload, FolderOpen, GripVertical, Lock, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -42,8 +42,12 @@ interface Kviz {
   id: number;
   naslov: string;
   nivo: number;
+  etapa?: number | null;
   pitanja: Pitanje[];
   pitanjaPoSesiji?: number | null;
+  pragProlazaPercent?: number;
+  cooldownUntil?: string | null;
+  etapaPolozena?: boolean;
 }
 
 const QUESTION_TYPES = [
@@ -546,6 +550,15 @@ function shuffleQuestionOptions(p: Pitanje): Pitanje {
   return { ...p, options: shuffle(p.options) };
 }
 
+function getSessionSize(kviz: Kviz): number {
+  // Etapa je završna provjera znanja: uvijek prikaži sva pitanja. Ograničenje
+  // `pitanjaPoSesiji` i default od 20 vrijede samo za obične kvizove.
+  if (kviz.etapa != null) return kviz.pitanja.length;
+  return (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
+    ? kviz.pitanjaPoSesiji
+    : DEFAULT_QUIZ_SIZE;
+}
+
 export default function KvizPage() {
   const { t } = useLanguage();
   const { slug } = useParams<{ slug: string }>();
@@ -584,6 +597,7 @@ export default function KvizPage() {
   const [finished, setFinished] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  const [cooldownUntil, setCooldownUntil] = useState<string | null>(null);
   // Drag-and-drop redoslijed preko Pointer Events — radi i mišom i prstom
   // (touchscreen). HTML5 draggable se ne koristi jer ne radi na dodir.
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -616,7 +630,7 @@ export default function KvizPage() {
     if (!slug) return;
     setIsLoading(true);
     setBlockedGuest(false);
-    apiRequest<Kviz>("GET", `/content/kvizovi/${slug}`)
+    apiRequest<Kviz>("GET", `/content/kvizovi/${slug}`, undefined, token || undefined)
       .then(async data => {
         // Task #133: gost/roditelj smije otvoriti SAMO prvi ilmihal kviz
         // (najmanji id), isto kao na listi kvizova. Ostali → poruka za
@@ -638,11 +652,10 @@ export default function KvizPage() {
           }
         }
         setKviz(data);
+        setCooldownUntil(data.cooldownUntil ?? null);
         if (data.pitanja.length > 0) {
           const pool = shuffle(data.pitanja);
-          const sessionSize = (typeof data.pitanjaPoSesiji === "number" && data.pitanjaPoSesiji > 0)
-            ? data.pitanjaPoSesiji
-            : DEFAULT_QUIZ_SIZE;
+          const sessionSize = getSessionSize(data);
           const selected = pool.slice(0, Math.min(sessionSize, pool.length)).map(shuffleQuestionOptions);
           setPitanja(selected);
           // init state for the first question
@@ -659,7 +672,7 @@ export default function KvizPage() {
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [slug, isGuestLike]);
+  }, [slug, isGuestLike, token]);
 
   if (isLoading) return <Layout><div className="max-w-2xl mx-auto"><Skeleton className="h-96 rounded-3xl" /></div></Layout>;
 
@@ -686,6 +699,35 @@ export default function KvizPage() {
   }
 
   if (!kviz) return <Layout><div className="text-center py-20 text-muted-foreground">{t("Kviz nije pronađen")}</div></Layout>;
+
+  const cooldownActive = !!cooldownUntil && new Date(cooldownUntil).getTime() > Date.now();
+  if (kviz.etapa != null && cooldownActive && !finished) {
+    return (
+      <Layout>
+        <div className="max-w-lg mx-auto py-14">
+          <div className="bg-white rounded-3xl border-2 border-amber-200 shadow-xl p-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-5">
+              <Clock className="w-8 h-8 text-amber-700" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-foreground mb-3">{t("Sljedeći pokušaj još nije dostupan")}</h2>
+            <p className="text-muted-foreground mb-2">
+              {t("Za prolaz etapnog kviza potrebno je najmanje {prag}% tačnih odgovora.", {
+                prag: String(kviz.pragProlazaPercent ?? 80),
+              })}
+            </p>
+            <p className="font-bold text-amber-800 mb-6">
+              {t("Novi pokušaj možeš započeti {vrijeme}.", {
+                vrijeme: new Date(cooldownUntil!).toLocaleString("bs-BA"),
+              })}
+            </p>
+            <Button variant="outline" onClick={() => goBackOr(() => setLocation("/kvizovi"))} className="rounded-2xl">
+              <ArrowLeft className="w-4 h-4 mr-2" /> {t("Nazad")}
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (kviz.pitanja.length === 0) {
     return (
@@ -922,10 +964,6 @@ export default function KvizPage() {
             items: wrongAnswers,
           }, token).catch(() => {});
         }
-        apiRequest("POST", "/content/napredak", {
-          contentType: "kviz", contentId: kviz.id,
-          zavrsen: true, bodovi, tacniOdgovori: score, ukupnoPitanja: pitanja.length,
-        }, token).catch(() => {});
         apiRequest<{
           hasanatEarned?: number;
           hasanatGained?: number;
@@ -934,12 +972,28 @@ export default function KvizPage() {
           streakDays?: number;
           streakIncreased?: boolean;
           newBadges?: { id: string; naziv: string; opis: string; ikona: string }[];
+          isEtapa?: boolean;
+          polozeno?: boolean;
+          pragProlazaPercent?: number;
+          cooldownUntil?: string | null;
         }>(
           "POST", "/content/kviz-rezultat", {
             kvizId: kviz.id, kvizNaslov: kviz.naslov,
             tacniOdgovori: score, ukupnoPitanja: pitanja.length,
           }, token
         ).then(resp => {
+          const zavrsen = kviz.etapa == null || resp.polozeno === true;
+          if (resp.cooldownUntil) setCooldownUntil(resp.cooldownUntil);
+          // Etapni kviz se smatra završenim samo uz najmanje 80%. Obični
+          // kvizovi zadržavaju dosadašnje ponašanje.
+          apiRequest("POST", "/content/napredak", {
+            contentType: "kviz",
+            contentId: kviz.id,
+            zavrsen,
+            bodovi,
+            tacniOdgovori: score,
+            ukupnoPitanja: pitanja.length,
+          }, token).catch(() => {});
           const earned = resp?.hasanatEarned || 0;
           // Show the shared CelebrationModal for "passing" attempts (>= 50%),
           // matching the server-side bodovi threshold so we only celebrate
@@ -970,7 +1024,16 @@ export default function KvizPage() {
             }, 900);
           }
         }).catch((err: any) => {
-          if (err?.status === 429 || err?.message?.includes("429")) {
+          if (err?.data?.code === "etapa_cooldown" && err?.data?.cooldownUntil) {
+            setCooldownUntil(err.data.cooldownUntil);
+            toast({
+              title: t("Pokušaj je zaključan 48 sati"),
+              description: t("Novi pokušaj možeš započeti {vrijeme}.", {
+                vrijeme: new Date(err.data.cooldownUntil).toLocaleString("bs-BA"),
+              }),
+              variant: "destructive",
+            });
+          } else if (err?.status === 429 || err?.message?.includes("429")) {
             toast({ title: t("Već si radio/la ovaj kviz danas"), description: t("Pokušaj ponovo sutra!"), variant: "destructive" });
           }
         });
@@ -985,6 +1048,9 @@ export default function KvizPage() {
 
   if (finished) {
     const pct = Math.round((score / pitanja.length) * 100);
+    const isEtapa = kviz.etapa != null;
+    const prag = kviz.pragProlazaPercent ?? 80;
+    const polozeno = !isEtapa || pct >= prag;
     return (
       <Layout>
         <div className="max-w-2xl mx-auto">
@@ -993,17 +1059,23 @@ export default function KvizPage() {
             <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Trophy className="w-10 h-10 text-yellow-600" />
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground mb-2">{t("Kviz završen!")}</h2>
+            <h2 className="text-2xl font-extrabold text-foreground mb-2">
+              {isEtapa ? (polozeno ? t("Etapa je položena!") : t("Etapa nije položena")) : t("Kviz završen!")}
+            </h2>
             <p className="text-muted-foreground mb-6">{t("Tačnih odgovora: {score} od {ukupno} pitanja", { score: String(score), ukupno: String(pitanja.length) })}</p>
             {(() => {
-              const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
-                ? kviz.pitanjaPoSesiji
-                : DEFAULT_QUIZ_SIZE;
+              const sessionSize = getSessionSize(kviz);
               return kviz.pitanja.length > sessionSize ? (
                 <p className="text-xs text-muted-foreground mb-2">{t("nasumično odabrano iz {n} pitanja", { n: String(kviz.pitanja.length) })}</p>
               ) : null;
             })()}
             <div className="text-5xl font-extrabold text-primary mb-6">{pct}%</div>
+            {isEtapa && !polozeno && (
+              <div className="bg-amber-50 text-amber-900 rounded-2xl p-4 mb-6 border border-amber-200">
+                <p className="font-bold">{t("Za prolaz je potrebno najmanje {prag}%.", { prag: String(prag) })}</p>
+                <p className="text-sm mt-1">{t("Novi pokušaj bit će dostupan nakon 48 sati.")}</p>
+              </div>
+            )}
             {pct >= 80 && (
               <div className="flex items-center gap-2 justify-center bg-yellow-50 text-yellow-700 rounded-2xl p-4 mb-6 border border-yellow-200">
                 <Star className="w-5 h-5 fill-yellow-500" />
@@ -1012,11 +1084,9 @@ export default function KvizPage() {
             )}
             <div className="flex gap-3 justify-center">
               <Button variant="outline" onClick={() => goBackOr(() => setLocation("/kvizovi"))} className="rounded-2xl">{t("Nazad")}</Button>
-              <Button onClick={() => {
+              {(!isEtapa || polozeno || !cooldownUntil) && <Button onClick={() => {
                 const pool = shuffle(kviz.pitanja);
-                const sessionSize = (typeof kviz.pitanjaPoSesiji === "number" && kviz.pitanjaPoSesiji > 0)
-                  ? kviz.pitanjaPoSesiji
-                  : DEFAULT_QUIZ_SIZE;
+                const sessionSize = getSessionSize(kviz);
                 const sel = pool.slice(0, Math.min(sessionSize, pool.length)).map(shuffleQuestionOptions);
                 setPitanja(sel);
                 setCurrent(0); setScore(0); setFinished(false);
@@ -1026,7 +1096,7 @@ export default function KvizPage() {
                 if (first?.type === "dragDrop" && first.template && first.words) { setDroppedWords(Array(first.template.filter((t: string) => t === "DROP").length).fill(null)); setWordBank(shuffle([...first.words])); }
               }} className="rounded-2xl">
                 {t("Ponovi")}
-              </Button>
+              </Button>}
             </div>
             {wrongAnswers.length > 0 && (
               <div className="mt-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl text-sm text-amber-900 text-left">

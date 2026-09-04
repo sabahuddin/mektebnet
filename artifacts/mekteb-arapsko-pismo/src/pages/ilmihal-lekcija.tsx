@@ -3280,6 +3280,23 @@ export default function IlmihalLekcijaPage() {
           description: t('Tačno odgovori na sva pitanja u "Provjeri znanje" pa onda označi lekciju kao završenu.'),
           variant: "destructive",
         });
+      } else if (e?.status === 422 && e?.data?.error === "etapa_quiz_not_passed") {
+        toast({
+          title: t("Najprije položi etapni kviz"),
+          description: t('Riješi cijeli kviz "{naslov}" sa najmanje {prag}% tačnih odgovora.', {
+            naslov: String(e.data.kvizNaslov || t("Provjera znanja")),
+            prag: String(e.data.pragProlazaPercent || 80),
+          }),
+          variant: "destructive",
+          action: e.data.kvizSlug ? (
+            <ToastAction
+              altText={t("Otvori kviz")}
+              onClick={() => setLocation(`/kvizovi/${e.data.kvizSlug}`)}
+            >
+              {t("Otvori kviz")}
+            </ToastAction>
+          ) : undefined,
+        });
       } else {
         toast({
           title: t("Greška"),

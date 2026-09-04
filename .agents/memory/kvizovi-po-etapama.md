@@ -14,3 +14,9 @@ Cijeli postojeći kviz se s medaljon-lekcijom povezuje kao zaseban kviz, umjesto
 **Why:** Mali blok podržava samo jednostavna pitanja s jednim tačnim odgovorom, dok cijeli kviz podržava svih šest vrsta pitanja.
 
 **How to apply:** Poveži kviz s medaljon-lekcijom i prikaži ga kao vezani kviz; mini-kviz ostaje samo za kratka, ručno uređena pitanja.
+
+Etapni kviz uvijek prikazuje sva svoja pitanja, prolaz je najmanje 80%, a rezultat ispod praga zaključava novi pokušaj 48 sati.
+
+**Why:** Etapa je cjelovita provjera znanja, ne nasumična vježba iz ograničenog broja pitanja.
+
+**How to apply:** Ne primjenjuj uobičajeni limit pitanja po sesiji na kviz s etapom. Prag i cooldown provodi server; medaljon-lekcija se ne završava bez prolaza.
