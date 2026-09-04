@@ -1268,6 +1268,18 @@ async function runDataBootstrap() {
 
 async function normalizePitanjaPoLekcijama() {
   try {
+    // Sve lekcije čiji je primarni sadržaj učenje konkretne sure pripadaju
+    // Kiraetu, bez obzira na staru seed kategoriju.
+    await db.execute(sql`
+      UPDATE ilmihal_lekcije
+      SET predmet = 'Kiraet'
+      WHERE predmet IS DISTINCT FROM 'Kiraet'
+        AND (
+          naslov ~* '(^|[[:space:]])(učenje[[:space:]]+)?sur(a|e)([[:space:]]|$)'
+          OR slug ~* '^sura-'
+        )
+    `);
+
     // Poveži samo ona još-nepovezana pitanja čiji se normalizovani tekst tačno
     // pojavljuje u kviz_pitanja JSON-u TAČNO JEDNE lekcije. Višestruka
     // podudaranja namjerno ostaju NULL za ručnu odluku.
@@ -1298,9 +1310,9 @@ async function normalizePitanjaPoLekcijama() {
       WHERE p.id = k.pitanje_id
     `);
 
-    // Kada pitanje ima konkretnu lekciju, njen predmet je autoritativan.
-    // Pitanja bez lekcije zadržavaju postojeću kategoriju dok ih admin ne
-    // poveže; ne nagađamo lekciju niti brišemo korisnu klasifikaciju predmeta.
+    // Početna kategorija vezanog pitanja prati predmet lekcije. Posebna pravila
+    // zasnovana na samom tekstu pitanja (npr. pitanja čiji je odgovor sura)
+    // primjenjuju se poslije ovog početnog usklađivanja.
     await db.execute(sql`
       UPDATE pitanja_banka p
       SET kategorija = CASE l.predmet
@@ -1339,6 +1351,24 @@ async function normalizePitanjaPoLekcijama() {
         )
     `);
 
+    // Predmet pitanja nije nužno predmet lekcije u kojoj se pitanje koristi.
+    // Ako pitanje primarno traži naziv/identitet/broj sure, ono je Kiraet čak
+    // i kada je korisno u lekciji Ahlaka, Ibadeta ili Vjerovanja.
+    await db.execute(sql`
+      UPDATE pitanja_banka p
+      SET kategorija = 'kiraet',
+          tagovi = '["sure"]'::jsonb,
+          updated_at = NOW()
+      WHERE p.kategorija IS DISTINCT FROM 'kiraet'
+        AND (
+          p.pitanje ~* '(koja|koju|koje|koji)[[:space:]]+(kur.ansku[[:space:]]+)?sura'
+          OR p.pitanje ~* 'u[[:space:]]+kojoj[[:space:]]+suri'
+          OR p.pitanje ~* 'koliko([[:space:]]+je)?[[:space:]]+sur(a|ah)'
+          OR p.pitanje ~* 'koji[[:space:]]+surah'
+          OR p.pitanje ~* 'koji[[:space:]]+ajeti[[:space:]]+čine[[:space:]].*kulid'
+        )
+    `);
+
     // Tagovi za pitanja koja imaju sigurnu lekciju. Popunjava samo prazne ili
     // neusklađene tagove; valjani ručno uređeni tagovi ostaju netaknuti.
     await db.execute(sql`
@@ -1346,8 +1376,8 @@ async function normalizePitanjaPoLekcijama() {
       SET tagovi = CASE
         WHEN p.kategorija = 'kiraet' THEN
           CASE
-            WHEN concat_ws(' ', p.pitanje, p.objasnjenje, p.opcije::text, p.meta::text)
-                   ~* '(^|[^[:alpha:]])sur(a|e|u|om|i)?([^[:alpha:]]|$)'
+            WHEN p.pitanje
+                   ~* '(^|[^[:alpha:]])sur(a|e|u|om|i|ah)([^[:alpha:]]|$)'
               THEN '["sure"]'::jsonb
             ELSE '["kuran_tekst"]'::jsonb
           END
@@ -1416,8 +1446,8 @@ async function normalizePitanjaPoLekcijama() {
     await db.execute(sql`
       UPDATE pitanja_banka p
       SET tagovi = CASE
-        WHEN concat_ws(' ', p.pitanje, p.objasnjenje, p.opcije::text, p.meta::text)
-               ~* '(^|[^[:alpha:]])sur(a|e|u|om|i)?([^[:alpha:]]|$)'
+        WHEN p.pitanje
+               ~* '(^|[^[:alpha:]])sur(a|e|u|om|i|ah)([^[:alpha:]]|$)'
           THEN '["sure"]'::jsonb
         ELSE '["kuran_tekst"]'::jsonb
       END,

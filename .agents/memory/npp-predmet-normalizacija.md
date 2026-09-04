@@ -16,9 +16,10 @@ lekcijama i Banci pitanja:
 - Sve lekcije čiji naslov ili slug označava Suru pripadaju **Kiraetu**; tag
   pitanja `sure` također pripada kategoriji `kiraet`.
 - Legacy naziv **Ibadet i praksa** uvijek se spaja u **Ibadet**.
-- Kada pitanje ima `lekcija_id`, predmet te lekcije je autoritativan za
-  kategoriju pitanja. Automatska dodjela lekcije mora biti konzervativna:
-  nejasna ili višeznačna pitanja ostaju bez lekcije za ručni pregled.
+- `lekcija_id` ne određuje nužno predmet pitanja: isto pitanje može služiti u
+  više lekcija. Tekst pitanja određuje predmet; pitanje koje primarno traži
+  naziv/identitet/broj sure uvijek je Kiraet. Automatska dodjela lekcije ostaje
+  konzervativna i višeznačna pitanja ostaju bez lekcije za ručni pregled.
 - Tag mora pripadati istoj kategoriji kao pitanje. Kiraet razlikuje `sure` od
   `kuran_tekst`; opšti sadržaji koriste `ostalo`, a nekategorizovani ibadeti
   `ostali_ibadeti`. Opšte pitanje smije imati predmet+tag bez `lekcija_id`.

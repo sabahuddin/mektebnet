@@ -99,6 +99,10 @@ Pravila:
 - "tagovi" je niz od 1 do 3 stringa, SAMO iz liste tagova izabrane kategorije.
 - Ako pitanje spominje Bosnu/bh. ustanove/učenjake/tradicije → kategorija "bosna".
 - Pitanja o surama/ajetima/Kur'anu kao tekstu → kiraet (tagovi: sure/kuran_tekst).
+- Ako pitanje traži naziv, identitet ili broj sure ("Koja sura...", "U kojoj
+  suri...", "Koliko sura..."), kategorija je uvijek kiraet/tag sure, čak i kada
+  se pitanje koristi u lekciji drugog predmeta. Samo citiranje ajeta kao dokaza
+  za Ahlak/Akaid/Ibadet ne mijenja primarni predmet pitanja.
 - Generička pitanja ("Dopuni:", "Pronađi greške:") klasifikuj po SADRŽAJU opcija/riječi.
 - Vrati ISKLJUČIVO validan JSON, bez markdown ograda.`;
 
