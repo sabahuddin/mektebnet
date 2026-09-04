@@ -29,6 +29,7 @@
     "categorize-migrated-kvizovi": "tsx ./src/categorize-migrated-kvizovi.ts",
     "migrate-pitanja-u-banku": "tsx ./src/migrate-pitanja-u-banku.ts",
     "seed-nivo1-etape": "tsx ./src/seed-nivo1-etape.ts",
+    "export-nivo1-etape": "tsx ./src/export-nivo1-etape.ts",
     "translate-content": "tsx ./src/translate-content.ts",
     "test:translate-content": "tsx --test ./src/translate-content.test.ts",
     "test:nivo1-etape": "tsx --test ./src/nivo1-etape-lib.test.ts",
