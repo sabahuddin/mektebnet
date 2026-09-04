@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/context/language";
+import { cleanupH5PInstance } from "./h5p-player-lifecycle";
 
 // h5p-standalone runtime se servira iz public/h5p-standalone/ (kopira ga
 // scripts/copy-h5p-standalone.mjs prije dev/build). Reference idu preko
@@ -11,6 +12,7 @@ const H5P_RUNTIME_BASE = `${import.meta.env.BASE_URL}h5p-standalone`;
 const h5pBundleUrl = `${H5P_RUNTIME_BASE}/main.bundle.js`;
 
 let h5pBundleLoadPromise: Promise<void> | null = null;
+let nextH5PInstanceId = 0;
 let h5pBundleReloadAttempt = 0;
 
 class H5PInitError extends Error {
@@ -67,6 +69,7 @@ function loadH5PBundle(forceReload = false): Promise<void> {
 
   h5pBundleLoadPromise = loadPromise.catch(error => {
     h5pBundleLoadPromise = null;
+    document.querySelector(`script[data-h5p-standalone="1"]`)?.remove();
     throw error;
   });
   return h5pBundleLoadPromise;
@@ -112,6 +115,8 @@ export interface H5PErrorInfo {
 export interface H5PPlayerProps {
   /** Apsolutni URL do otpakirane H5P arhive (root direktorija sa h5p.json). */
   h5pPath: string;
+  /** Stabilan ključ — kad se promijeni, player se re-mountuje (npr. "Pokušaj ponovo"). */
+  contentKey?: string | number;
   /** Pozove se kad korisnik završi vježbu (xAPI verb completed/answered sa rezultatom). */
   onCompleted?: (result: H5PXapiResult) => void;
   /**
@@ -253,7 +258,7 @@ function classifyInitError(e: any): H5PErrorKind {
 /**
  * Klijentski wrapper oko h5p-standalone (UMD bundle iz npm).
  * Pristup:
- *   - lazy load bundle.js skripte preko Vite ?url importa (samo jednom)
+ *   - lazy load bundle.js skripte iz javnog runtime direktorija (samo jednom)
  *   - po mount-u: new H5PStandalone.H5P(el, { h5pJsonPath, frameJs, frameCss })
  *   - xAPI listener: window.H5P.externalDispatcher.on("xAPI", evt => ...)
  *
@@ -263,6 +268,7 @@ function classifyInitError(e: any): H5PErrorKind {
  */
 function H5PPlayerImpl({
   h5pPath,
+  contentKey,
   onCompleted,
   isManager,
   className,
@@ -283,6 +289,8 @@ function H5PPlayerImpl({
   useEffect(() => {
     let cancelled = false;
     let xapiHandler: ((event: any) => void) | null = null;
+    const instanceId = `mekteb-h5p-${++nextH5PInstanceId}`;
+    const container = containerRef.current;
     completedFiredRef.current = false;
     setErrorInfo(null);
     setLoading(true);
@@ -295,14 +303,20 @@ function H5PPlayerImpl({
         if (cancelled) return;
 
         const H5PCtor = await getH5PConstructor();
-        if (cancelled || !containerRef.current) return;
+        if (cancelled || !containerRef.current || !container) return;
         // Nova komponenta uvijek počinje sa praznim H5P korijenom.
-        containerRef.current.innerHTML = "";
+        container.innerHTML = "";
         const w = window as any;
-        await new H5PCtor(containerRef.current, {
+        await new H5PCtor(container, {
+          id: instanceId,
           h5pJsonPath: h5pPath,
           frameJs: `${H5P_RUNTIME_BASE}/frame.bundle.js`,
           frameCss: `${H5P_RUNTIME_BASE}/styles/h5p.css`,
+        }).then((createdId: string | number) => {
+          if (cancelled) {
+            cleanupH5PInstance(w, container, createdId);
+          }
+          return createdId;
         });
         if (cancelled) return;
 
@@ -359,16 +373,11 @@ function H5PPlayerImpl({
       if (xapiHandler && dispatcher && typeof dispatcher.off === "function") {
         try { dispatcher.off("xAPI", xapiHandler); } catch {}
       }
-      if (containerRef.current) {
-        containerRef.current.innerHTML = "";
-      }
+      // H5PStandalone nema destroy() — ukloni njegovu instancu iz globalnog
+      // runtime-a da sljedeće otvaranje istog paketa dobije čisto okruženje.
+      cleanupH5PInstance(w, container, instanceId);
     };
-    // Instanca se namjerno inicijalizira samo jednom tokom ovog mounta.
-    // Ručni novi pokušaj parent pokreće promjenom React `key` propa, što pravi
-    // potpuno novu komponentu. Parent re-renderi i osvježavanje attempt stanja
-    // zato više ne mogu očistiti i ponovo pokrenuti aktivnu H5P vježbu.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [h5pPath, contentKey]);
 
   const managerHint = errorInfo && isManager ? describeManagerHint(errorInfo.kind, t) : null;
 
@@ -415,6 +424,7 @@ function H5PPlayerImpl({
 export const H5PPlayer = memo(H5PPlayerImpl, (prev, next) => {
   return (
     prev.h5pPath === next.h5pPath &&
+    prev.contentKey === next.contentKey &&
     prev.isManager === next.isManager &&
     prev.className === next.className
   );

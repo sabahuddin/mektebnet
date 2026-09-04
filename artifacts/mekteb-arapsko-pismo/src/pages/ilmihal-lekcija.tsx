@@ -1719,6 +1719,29 @@ function PriloziSection({
     }
   }, [token]);
 
+  // Ako učenik ostavi stranicu otvorenu do isteka 48-satne blokade, lokalni
+  // snapshot ne smije ostati zaključan zauvijek. Osvježi baš u trenutku isteka
+  // kako bi se isto dugme pretvorilo u novi pokušaj bez ručnog reload-a.
+  useEffect(() => {
+    const expiries = Object.entries(h5pAttempts)
+      .filter(([, attempt]) => attempt.isLocked && attempt.lockedUntil)
+      .map(([id, attempt]) => ({
+        id: Number(id),
+        at: new Date(attempt.lockedUntil!).getTime(),
+      }))
+      .filter(({ at }) => Number.isFinite(at));
+    if (expiries.length === 0) return;
+
+    const next = expiries.reduce((soonest, current) =>
+      current.at < soonest.at ? current : soonest,
+    );
+    const delay = Math.max(1000, next.at - Date.now() + 100);
+    const timer = window.setTimeout(() => {
+      void refreshH5pAttempts(next.id);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [h5pAttempts, refreshH5pAttempts]);
+
   const handleH5pCompleted = useCallback(async (priloziId: number, score: number, maxScore: number) => {
     // Gost-like (gost/roditelj) je read-only — ne upisuje H5P rezultat; umjesto
     // generičke backend greške (403) pokaži poziv na registraciju.
