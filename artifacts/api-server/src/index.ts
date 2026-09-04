@@ -968,6 +968,14 @@ async function runDataBootstrap() {
     logger.error({ err: pilotErr }, "Ilmihal pilot pitanja nisu pripremljena (non-fatal)");
   }
 
+  try {
+    const { normalizeStoredSurahNames } = await import("./lib/surah-data-normalization.js");
+    const result = await normalizeStoredSurahNames();
+    logger.info(result, "Nazivi sura ujednačeni");
+  } catch (surahNameErr) {
+    logger.error({ err: surahNameErr }, "Ujednačavanje naziva sura nije uspjelo (non-fatal)");
+  }
+
   // ČITAONICA CLEANUP (idempotentno) — eksplicitno odobreno od strane user-a:
   //   1. Brisanje duplikata "Ilmihal za djecu" (postojala su 2 zapisa: id=1 slug
   //      'knjiga-ilmihal' i id=12 slug 'ilmihal'). Čitaonica je samo za priče,

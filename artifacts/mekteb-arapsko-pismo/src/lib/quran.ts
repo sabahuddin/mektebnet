@@ -135,7 +135,7 @@ const BOSNIAN_NAMES: string[] = [
   "Et-Tarik", "El-'Ala", "El-Gašija", "El-Fedžr", "El-Beled", "Eš-Šems",
   "El-Lejl", "Ed-Duha", "El-Inširah", "Et-Tin", "El-Alek", "El-Kadr",
   "El-Bejjina", "Ez-Zilzal", "El-Adijat", "El-Karia", "Et-Tekasur", "El-Asr",
-  "El-Humaza", "El-Fil", "Kurejš", "El-Maun", "El-Kevser", "El-Kafirun",
+  "El-Humaza", "El-Fil", "El-Kurejš", "El-Maun", "El-Kevser", "El-Kafirun",
   "En-Nasr", "El-Leheb", "El-Ihlas", "El-Felek", "En-Nas",
 ];
 

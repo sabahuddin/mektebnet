@@ -58,6 +58,7 @@ import { optimizePdfFile } from "../lib/dokumenti.js";
 import { getGlobalNapametKatalog } from "../data/napamet.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 import { contentDisposition, normalizeUploadedFilename } from "../lib/file-names.js";
+import { normalizeSurahNames, normalizeSurahNamesDeep } from "../lib/surah-names.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -1643,10 +1644,16 @@ router.post("/ilmihal", async (req, res) => {
         });
       }
     }
-    const kviz = kvizPitanja ? (typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja)) : null;
+    const kviz = kvizPitanja
+      ? normalizeSurahNames(typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja))
+      : null;
     const [row] = await db.insert(ilmihalLekcijeTable).values({
-      naslov, slug, nivo: nivo || 2, redoslijed: redoslijed || 0,
-      contentHtml: contentHtml || "", kvizPitanja: kviz as any,
+      naslov: normalizeSurahNames(String(naslov)),
+      slug,
+      nivo: nivo || 2,
+      redoslijed: redoslijed || 0,
+      contentHtml: normalizeSurahNames(String(contentHtml || "")),
+      kvizPitanja: kviz as any,
     }).returning({ id: ilmihalLekcijeTable.id });
     res.json({ success: true, id: row.id });
   } catch (err) {
@@ -1691,9 +1698,9 @@ router.put("/ilmihal/:id", async (req, res) => {
       }
       // Auto-clean before save: remove duplicate priprema accordions, upgrade old design.
       const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
-      updates.contentHtml = regeneratePripremaInHtml(safeHtml);
+      updates.contentHtml = normalizeSurahNames(regeneratePripremaInHtml(safeHtml));
     }
-    if (naslov !== undefined) updates.naslov = naslov;
+    if (naslov !== undefined) updates.naslov = normalizeSurahNames(String(naslov));
     if (redoslijed !== undefined) updates.redoslijed = redoslijed;
     if (predmet !== undefined) {
       // Predmet: prazan string → NULL (lekcija "bez predmeta"). Trim, max 60 char.
@@ -1701,7 +1708,9 @@ router.put("/ilmihal/:id", async (req, res) => {
       updates.predmet = p ? p.slice(0, 60) : null;
     }
     if (kvizPitanja !== undefined) {
-      updates.kvizPitanja = typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja);
+      updates.kvizPitanja = normalizeSurahNames(
+        typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja),
+      );
     }
     if (contentHtml !== undefined) {
       updates.locked = true;
@@ -1826,9 +1835,11 @@ router.put("/kvizovi/:id", async (req, res) => {
     const { pitanja, naslov, isPublished, kategorija, tagovi, lekcijaId, opis, modul, nivo, variant } = req.body;
     const updates: Record<string, any> = {};
     if (pitanja !== undefined) {
-      updates.pitanja = typeof pitanja === "string" ? pitanja : JSON.stringify(pitanja);
+      updates.pitanja = normalizeSurahNames(
+        typeof pitanja === "string" ? pitanja : JSON.stringify(pitanja),
+      );
     }
-    if (naslov !== undefined) updates.naslov = naslov;
+    if (naslov !== undefined) updates.naslov = normalizeSurahNames(String(naslov));
     if (isPublished !== undefined) {
       if (isPublished === true) {
         const quizId = parseInt(req.params.id);
@@ -1850,7 +1861,7 @@ router.put("/kvizovi/:id", async (req, res) => {
     if (kategorija !== undefined) updates.kategorija = kategorija || null;
     if (tagovi !== undefined) updates.tagovi = Array.isArray(tagovi) ? tagovi : (tagovi ? [tagovi] : []);
     if (lekcijaId !== undefined) updates.lekcijaId = lekcijaId || null;
-    if (opis !== undefined) updates.opis = opis || "";
+    if (opis !== undefined) updates.opis = normalizeSurahNames(String(opis || ""));
     if (modul !== undefined) updates.modul = modul;
     if (nivo !== undefined) updates.nivo = nivo;
     if (variant !== undefined) updates.variant = variant;
@@ -1879,13 +1890,13 @@ router.post("/kvizovi/ai-import", async (req, res) => {
     const result = await db.transaction(async (tx) => {
       // 1) Kreiraj kviz
       const [kviz] = await tx.insert(kvizoviTable).values({
-        naslov: String(naslov).trim(),
+        naslov: normalizeSurahNames(String(naslov).trim()),
         slug: slugClean,
         modul: "ilmihal",
         variant: "normal",
         kategorija: kategorija ? String(kategorija) : null,
         tagovi: Array.isArray(tagovi) ? tagovi.map(String) : [],
-        opis: opis ? String(opis) : "",
+        opis: opis ? normalizeSurahNames(String(opis)) : "",
         isPublished: true,
         pitanja: [],
       }).returning();
@@ -1949,7 +1960,7 @@ router.post("/kvizovi", async (req, res) => {
       return;
     }
     const [created] = await db.insert(kvizoviTable).values({
-      naslov,
+      naslov: normalizeSurahNames(String(naslov)),
       slug,
       modul: modul || "ilmihal",
       nivo: nivo ?? null,
@@ -1957,7 +1968,7 @@ router.post("/kvizovi", async (req, res) => {
       kategorija: kategorija || null,
       tagovi: Array.isArray(tagovi) ? tagovi : (tagovi ? [tagovi] : []),
       lekcijaId: lekcijaId || null,
-      opis: opis || "",
+      opis: normalizeSurahNames(String(opis || "")),
       isPublished: isPublished ?? true,
       pitanja: [],
     }).returning();
@@ -2523,12 +2534,14 @@ router.get("/banka-pitanja/:id/usage", async (req, res) => {
 });
 
 function normalizePitanjeBody(body: any) {
-  const pitanje = String(body?.pitanje || "").trim();
+  const pitanje = normalizeSurahNames(String(body?.pitanje || "").trim());
   const allowed = ["single", "multiple", "truefalse", "reorder", "dragDrop", "markWords"];
   const vrsta = (allowed.includes(body?.vrsta) ? body.vrsta : "single") as
     "single" | "multiple" | "truefalse" | "reorder" | "dragDrop" | "markWords";
 
-  let opcije: string[] = Array.isArray(body?.opcije) ? body.opcije.map((o: any) => String(o)) : [];
+  let opcije: string[] = Array.isArray(body?.opcije)
+    ? body.opcije.map((o: any) => normalizeSurahNames(String(o)))
+    : [];
   let correctIndex = 0;
   let correctIndexes: number[] | null = null;
   let correctOrder: number[] | null = null;
@@ -2607,7 +2620,8 @@ function normalizePitanjeBody(body: any) {
     };
   }
 
-  const objasnjenje = String(body?.objasnjenje || "").trim();
+  meta = normalizeSurahNamesDeep(meta);
+  const objasnjenje = normalizeSurahNames(String(body?.objasnjenje || "").trim());
   const slika = body?.slika ? String(body.slika) : null;
   const kategorija = body?.kategorija ? String(body.kategorija) : null;
   const tagovi = Array.isArray(body?.tagovi) ? body.tagovi.map((t: any) => String(t).trim().toLowerCase()).filter(Boolean) : (body?.tagovi ? [String(body.tagovi).trim().toLowerCase()] : []);
