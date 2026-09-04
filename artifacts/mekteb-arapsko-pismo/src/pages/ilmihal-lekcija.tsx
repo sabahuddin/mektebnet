@@ -14,7 +14,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -792,9 +792,10 @@ function VezaniKvizovi({ lekcijaId }: { lekcijaId: number }) {
 // ──────────────────────────────────────────────────
 // AI-generated lekcija kviz accordion
 // ──────────────────────────────────────────────────
-function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed, alreadyPassed, defaultOpen }: {
+function LekcijaKvizBox({ pitanja, lekcijaId, nivo, isAdmin, token, onSaved, onPassed, alreadyPassed, defaultOpen }: {
   pitanja: LekcijaKvizPitanje[];
   lekcijaId?: number;
+  nivo?: number;
   isAdmin?: boolean;
   token?: string | null;
   onSaved?: (novaPitanja: LekcijaKvizPitanje[]) => void;
@@ -946,6 +947,7 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
       {canEdit && editOpen && (
         <KvizEditModal
           lekcijaId={lekcijaId!}
+          nivo={nivo}
           token={token!}
           initialPitanja={pitanja}
           onClose={() => setEditOpen(false)}
@@ -1050,8 +1052,9 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
 // ──────────────────────────────────────────────────
 // Admin: editor za pitanja "Provjeri znanje"
 // ──────────────────────────────────────────────────
-function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
+function KvizEditModal({ lekcijaId, nivo, token, initialPitanja, onClose, onSaved }: {
   lekcijaId: number;
+  nivo?: number;
   token: string;
   initialPitanja: LekcijaKvizPitanje[];
   onClose: () => void;
@@ -1070,7 +1073,39 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
   );
   const [pitanja, setPitanja] = useState<LekcijaKvizPitanje[]>(() => initial.current.map(p => ({ ...p, options: p.options.slice() })));
   const [saving, setSaving] = useState(false);
+  const [postojeciKvizovi, setPostojeciKvizovi] = useState<Array<{
+    id: number;
+    naslov: string;
+    slug: string;
+    nivo: number | null;
+    etapa?: number | null;
+    lekcijaId?: number | null;
+    pitanjaCount?: number;
+  }>>([]);
+  const [selectedKvizId, setSelectedKvizId] = useState("");
+  const [linkingKviz, setLinkingKviz] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const query = nivo ? `?nivo=${nivo}&modul=ilmihal` : "?modul=ilmihal";
+    apiRequest<Array<{
+      id: number;
+      naslov: string;
+      slug: string;
+      nivo: number | null;
+      etapa?: number | null;
+      lekcijaId?: number | null;
+      pitanjaCount?: number;
+    }>>("GET", `/content/kvizovi${query}`, undefined, token)
+      .then(data => {
+        if (!cancelled) setPostojeciKvizovi(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setPostojeciKvizovi([]);
+      });
+    return () => { cancelled = true; };
+  }, [nivo, token]);
 
   const isDirty = useCallback(() => {
     return JSON.stringify(pitanja) !== JSON.stringify(initial.current);
@@ -1118,6 +1153,34 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
 
   const addP = () => {
     setPitanja(prev => [...prev, { question: "", options: ["", "", "", ""], answer: "" }]);
+  };
+
+  const poveziPostojeciKviz = async () => {
+    const kvizId = Number(selectedKvizId);
+    const kviz = postojeciKvizovi.find(k => k.id === kvizId);
+    if (!kviz || linkingKviz) return;
+    if (kviz.lekcijaId && kviz.lekcijaId !== lekcijaId) {
+      const potvrda = confirm(t('Kviz "{naslov}" je već povezan s drugom lekcijom. Premjestiti ga u ovaj medaljon?', { naslov: kviz.naslov }));
+      if (!potvrda) return;
+    }
+    setLinkingKviz(true);
+    try {
+      await apiRequest("PUT", `/admin/kvizovi/${kviz.id}`, { lekcijaId }, token);
+      toast({
+        title: t("Kviz je povezan"),
+        description: t('Cijeli kviz "{naslov}" sada je dodat ovom medaljonu.', { naslov: kviz.naslov }),
+      });
+      onClose();
+      window.location.reload();
+    } catch (e: any) {
+      toast({
+        title: t("Greška"),
+        description: e?.message || t("Nije moguće povezati kviz"),
+        variant: "destructive",
+      });
+    } finally {
+      setLinkingKviz(false);
+    }
   };
 
   const validate = (): string | null => {
@@ -1185,6 +1248,53 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          <div className="rounded-xl border-2 border-violet-200 bg-violet-50 p-4">
+            <div className="flex items-start gap-3">
+              <Link2 className="w-5 h-5 text-violet-700 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <h4 className="font-extrabold text-violet-950">{t("Uvezi cijeli postojeći kviz")}</h4>
+                <p className="text-xs text-violet-800 mt-1 mb-3">
+                  {t("Kviz ostaje zaseban i zadržava sve vrste pitanja. Ovdje ga povezujemo sa ovim medaljonom.")}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={selectedKvizId}
+                    onChange={e => setSelectedKvizId(e.target.value)}
+                    className="flex-1 min-w-0 border border-violet-300 bg-white rounded-lg px-3 py-2 text-sm"
+                    data-testid="select-postojeci-kviz"
+                  >
+                    <option value="">{t("Odaberi napravljeni kviz…")}</option>
+                    {postojeciKvizovi.map(kviz => (
+                      <option key={kviz.id} value={kviz.id}>
+                        {kviz.etapa && kviz.nivo ? `${kviz.etapa}-${kviz.nivo} · ` : ""}
+                        {kviz.naslov} ({kviz.pitanjaCount ?? 0})
+                        {kviz.lekcijaId === lekcijaId ? ` · ${t("već dodat")}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    onClick={poveziPostojeciKviz}
+                    disabled={!selectedKvizId || linkingKviz || postojeciKvizovi.find(k => k.id === Number(selectedKvizId))?.lekcijaId === lekcijaId}
+                    className="rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
+                    data-testid="button-povezi-postojeci-kviz"
+                  >
+                    {linkingKviz ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Link2 className="w-4 h-4 mr-2" />}
+                    {t("Dodaj u medaljon")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px bg-border flex-1" />
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {t("ili uređuj mali kviz pitanje po pitanje")}
+            </span>
+            <div className="h-px bg-border flex-1" />
+          </div>
+
           {pitanja.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-8">
               {t("Nema pitanja. Kliknite \"Dodaj pitanje\" ispod.")}
@@ -3665,6 +3775,7 @@ export default function IlmihalLekcijaPage() {
                       key="lekcija-kviz"
                       pitanja={kvizPitanja}
                       lekcijaId={lekcija.id}
+                      nivo={lekcija.nivo}
                       isAdmin={isAdmin}
                       token={token}
                       onSaved={onKvizSaved}
@@ -3749,6 +3860,7 @@ export default function IlmihalLekcijaPage() {
                 key="lekcija-kviz-fallback"
                 pitanja={lekcija.kvizPitanja}
                 lekcijaId={lekcija.id}
+                nivo={lekcija.nivo}
                 isAdmin={user?.role === "admin"}
                 token={token}
                 onSaved={(novaPitanja) => setLekcija(prev => prev ? { ...prev, kvizPitanja: novaPitanja } : prev)}
