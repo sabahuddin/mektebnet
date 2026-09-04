@@ -48,7 +48,7 @@ import {
   studentKrunisanjaTable,
   napametGlobalProgramTable,
 } from "@workspace/db/schema";
-import { eq, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
+import { eq, ne, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
 import { canAccessAdminRoute } from "../lib/admin-route-access.js";
@@ -2702,6 +2702,11 @@ router.post("/banka-pitanja", async (req, res) => {
 // PUT /api/admin/banka-pitanja/:id
 router.put("/banka-pitanja/:id", async (req, res) => {
   try {
+    const id = parseInt(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Nevažeći ID pitanja" });
+      return;
+    }
     const data = normalizePitanjeBody(req.body);
     const err = validatePitanjeData(data);
     if (err) { res.status(400).json({ error: err }); return; }
@@ -2710,18 +2715,45 @@ router.put("/banka-pitanja/:id", async (req, res) => {
     const [existing] = await db.select({
       meta: pitanjaBankaTable.meta,
       urednickiStatus: pitanjaBankaTable.urednickiStatus,
-    }).from(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, parseInt(req.params.id)));
+    }).from(pitanjaBankaTable).where(eq(pitanjaBankaTable.id, id));
     if (!existing) { res.status(404).json({ error: "Pitanje nije pronađeno" }); return; }
+
+    // Standardna pitanja moraju biti jedinstvena po normalizovanom tekstu.
+    // Provjeri konflikt eksplicitno kako odgovor ne bi ovisio o tekstu poruke
+    // koju vraća konkretna PostgreSQL verzija/locale na produkciji.
+    if (data.vrsta !== "dragDrop" && data.vrsta !== "markWords") {
+      const [duplicate] = await db.select({ id: pitanjaBankaTable.id })
+        .from(pitanjaBankaTable)
+        .where(and(
+          ne(pitanjaBankaTable.id, id),
+          sql`${pitanjaBankaTable.vrsta} NOT IN ('dragDrop', 'markWords')`,
+          sql`lower(trim(${pitanjaBankaTable.pitanje})) = lower(trim(${data.pitanje}))`,
+        ))
+        .limit(1);
+      if (duplicate) {
+        res.status(409).json({ error: "Drugo pitanje sa istim tekstom već postoji" });
+        return;
+      }
+    }
+
     const isLearning = Boolean((existing.meta as { pilotKey?: string } | null)?.pilotKey || data.meta?.pilotKey);
     await db.update(pitanjaBankaTable).set({
       ...data,
       ...(isLearning ? { urednickiStatus: "na_cekanju", reviewedBy: null, reviewedAt: null, reviewNote: null } : {}),
       updatedAt: new Date(),
-    }).where(eq(pitanjaBankaTable.id, parseInt(req.params.id)));
+    }).where(eq(pitanjaBankaTable.id, id));
     res.json({ success: true });
   } catch (err: any) {
-    if (String(err?.message || "").toLowerCase().includes("unique")) {
+    if (err?.code === "23505" || String(err?.message || "").toLowerCase().includes("unique")) {
       res.status(409).json({ error: "Drugo pitanje sa istim tekstom već postoji" });
+      return;
+    }
+    if (err?.code === "23503") {
+      res.status(400).json({ error: "Odabrana lekcija više ne postoji" });
+      return;
+    }
+    if (err?.code === "22001") {
+      res.status(400).json({ error: "Jedno od polja je predugo" });
       return;
     }
     console.error("[PUT /banka-pitanja/:id]", err);
