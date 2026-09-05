@@ -6,7 +6,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
-  ArrowLeft, Users, Printer, ChevronRight, ArrowRightLeft,
+  ArrowLeft, Users, ChevronRight, ArrowRightLeft,
   Loader2, GraduationCap, X, Plus, Trash2, Star, ClipboardList, KeyRound,
   AlertTriangle, BookOpen, Copy, Check,
   CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles, ListOrdered, Pencil,
@@ -59,24 +59,6 @@ interface Ucenik {
   lastSeenAt?: string | null;
   totalScreentimeSec?: number | null;
   roditeljPovezan?: boolean;
-}
-
-interface CreatedUcenik {
-  id: number;
-  displayName: string;
-  username: string;
-  generatedPassword: string;
-  roditelj?: {
-    id: number;
-    displayName: string;
-    username: string;
-    generatedPassword: string;
-  } | null;
-  roditelji?: Array<{
-    username: string;
-    displayName: string | null;
-    password: string;
-  }>;
 }
 
 interface IlmihalLekcija {
@@ -158,8 +140,6 @@ export default function GrupaPage() {
   const { token } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const printRef = useRef<HTMLDivElement>(null);
-  const [printLoading, setPrintLoading] = useState(false);
 
   const [grupa, setGrupa] = useState<Grupa | null>(null);
   const [zadacaBadge, setZadacaBadge] = useState(0);
@@ -589,81 +569,6 @@ export default function GrupaPage() {
     }
   }
 
-  function openPrintWindow(cards: CreatedUcenik[]) {
-    const esc = (s: string) => s.replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]!));
-    const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${t("Kartice učenika")}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Nunito', sans-serif; }
-  @media print { @page { margin: 8mm; } }
-  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .card {
-    border: 2px solid #14b8a6; border-radius: 12px; padding: 10px;
-    page-break-inside: avoid; background: #f0fdfa;
-  }
-  .logo { text-align: center; font-size: 14px; font-weight: 800; color: #0d9488; margin-bottom: 5px; }
-  .name { font-size: 13px; font-weight: 800; color: #134e4a; margin-bottom: 3px; }
-  .section-title { font-size: 10px; font-weight: 800; color: #0d9488; text-transform: uppercase; letter-spacing: 0.5px; margin: 6px 0 2px; }
-  .field { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; border-bottom: 1px dashed #99f6e4; gap: 6px; }
-  .label { color: #5eead4; font-weight: 600; flex-shrink: 0; }
-  .value { color: #134e4a; font-weight: 800; font-family: monospace; text-align: right; word-break: break-all; }
-  .parent-block { background: #fef3c7; border: 1px dashed #f59e0b; border-radius: 8px; padding: 5px 8px; margin-top: 5px; }
-  .parent-block .field { border-bottom-color: #fde68a; }
-  .parent-block .label { color: #b45309; }
-  .parent-block .value { color: #78350f; }
-  .grupa-info { text-align: center; color: #5eead4; font-size: 9px; margin-top: 5px; }
-</style></head><body>
-<div class="grid">${cards.map(c => `
-  <div class="card">
-    <div class="logo">MEKTEB</div>
-    <div class="name">${esc(c.displayName)}</div>
-    <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(c.username)}</span></div>
-    <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(c.generatedPassword)}</span></div>
-    ${((): string => {
-      // Normalizuj: singular c.roditelj (generatedPassword) i plural c.roditelji (password)
-      // u jedinstven niz da print window uvijek prikaže roditelja bez obzira na izvor.
-      const rods: Array<{username: string; displayName: string | null; password: string}> =
-        c.roditelji && c.roditelji.length > 0
-          ? c.roditelji.map(r => ({ username: r.username, displayName: r.displayName ?? null, password: r.password }))
-          : c.roditelj
-            ? [{ username: c.roditelj.username, displayName: c.roditelj.displayName, password: c.roditelj.generatedPassword }]
-            : [];
-      return rods.map((r, idx) => `
-    <div class="parent-block">
-      <div class="section-title">${t("Roditelj")}${rods.length > 1 ? ` ${idx + 1}` : ""}${r.displayName ? ` — ${esc(r.displayName)}` : ""}</div>
-      <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(r.username)}</span></div>
-      <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(r.password)}</span></div>
-    </div>`).join("");
-    })()}
-    <div class="grupa-info">${esc(grupa?.naziv || "")} · mekteb.net</div>
-  </div>`).join("")}
-</div></body></html>`;
-
-    const w = window.open("", "_blank");
-    if (w) {
-      w.document.write(html);
-      w.document.close();
-      setTimeout(() => w.print(), 300);
-    }
-  }
-
-  function printCards() {
-    if (studentiGrupe.length === 0) return;
-    setPrintLoading(true);
-    const ucenikIds = studentiGrupe.map(s => s.id);
-    apiRequest<CreatedUcenik[]>("POST", "/muallim/print-kartice", { ucenikIds }, token!)
-      .then(cards => {
-        openPrintWindow(cards);
-        toast({ title: t("Kartice su spremne za štampu"), description: t("Prikazane su trenutne standardne lozinke — štampanje ne mijenja i ne resetuje nijednu šifru.") });
-      })
-      .catch(() => {
-        toast({ title: t("Greška"), description: t("Nije moguće generisati kartice"), variant: "destructive" });
-      })
-      .finally(() => setPrintLoading(false));
-  }
-
   async function confirmChangeMuallim() {
     if (!token || !grupa || changeMuallimId === null) return;
     setChangingMuallim(true);
@@ -789,13 +694,6 @@ export default function GrupaPage() {
         )}
 
         <div className="flex flex-wrap gap-2 mb-6">
-          {studentiGrupe.length > 0 && (
-            <Button variant="outline" onClick={printCards} disabled={printLoading} className="rounded-xl font-bold flex items-center gap-2">
-              {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} {t("Printaj kartice")}
-            </Button>
-          )}
-        </div>
-
          {aktivniModul === "plan" && (
           <section className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">

@@ -279,7 +279,7 @@ export default function DodajGrupuPage() {
             {isLoading ? (isEdit ? t("Spremanje...") : t("Kreiranje...")) : (isEdit ? t("Sačuvaj izmjene") : t("Kreiraj grupu"))}
           </Button>
         </form>
-        {isEdit && editId && <GroupStudentSetup grupaId={editId} />}
+        {isEdit && editId && <GroupStudentSetup grupaId={editId} grupaNaziv={naziv} />}
         </div>
         )}
       </div>

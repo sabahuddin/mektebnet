@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Plus, UserPlus, Users } from "lucide-react";
+import { Loader2, Plus, Printer, UserPlus, Users } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -25,10 +25,16 @@ interface CreatedUcenik {
     username: string;
     generatedPassword: string;
   } | null;
+  roditelji?: Array<{
+    username: string;
+    displayName: string | null;
+    password: string;
+  }>;
 }
 
 interface GroupStudentSetupProps {
   grupaId: number;
+  grupaNaziv: string;
 }
 
 function parseBulkEntries(text: string) {
@@ -38,7 +44,7 @@ function parseBulkEntries(text: string) {
   }).filter(entry => entry.ucenik.length > 0);
 }
 
-export function GroupStudentSetup({ grupaId }: GroupStudentSetupProps) {
+export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProps) {
   const { token } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -47,8 +53,10 @@ export function GroupStudentSetup({ grupaId }: GroupStudentSetupProps) {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [createdStudents, setCreatedStudents] = useState<CreatedUcenik[]>([]);
   const [availableStudents, setAvailableStudents] = useState<Ucenik[]>([]);
+  const [groupStudents, setGroupStudents] = useState<Ucenik[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [addingStudentId, setAddingStudentId] = useState<number | null>(null);
+  const [printLoading, setPrintLoading] = useState(false);
 
   async function loadAvailableStudents() {
     if (!token) return;
@@ -63,8 +71,19 @@ export function GroupStudentSetup({ grupaId }: GroupStudentSetupProps) {
     }
   }
 
+  async function loadGroupStudents() {
+    if (!token) return;
+    try {
+      const students = await apiRequest<Ucenik[]>("GET", `/muallim/grupa/${grupaId}/ucenici`, undefined, token);
+      setGroupStudents(students);
+    } catch {
+      setGroupStudents([]);
+    }
+  }
+
   useEffect(() => {
     void loadAvailableStudents();
+    void loadGroupStudents();
   }, [token, grupaId]);
 
   async function handleBulkAdd() {
@@ -104,6 +123,7 @@ export function GroupStudentSetup({ grupaId }: GroupStudentSetupProps) {
     try {
       await apiRequest("PUT", `/muallim/ucenici/${studentId}/grupa`, { grupaId }, token);
       setAvailableStudents(current => current.filter(student => student.id !== studentId));
+      await loadGroupStudents();
       toast({ title: t("Učenik dodan u grupu!") });
     } catch (error: any) {
       toast({
@@ -113,6 +133,79 @@ export function GroupStudentSetup({ grupaId }: GroupStudentSetupProps) {
       });
     } finally {
       setAddingStudentId(null);
+    }
+  }
+
+  function openPrintWindow(cards: CreatedUcenik[]) {
+    const esc = (s: string) => s.replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" }[c]!));
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${t("Kartice učenika")}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Nunito', sans-serif; }
+  @media print { @page { margin: 8mm; } }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .card { border: 2px solid #14b8a6; border-radius: 12px; padding: 10px; page-break-inside: avoid; background: #f0fdfa; }
+  .logo { text-align: center; font-size: 14px; font-weight: 800; color: #0d9488; margin-bottom: 5px; }
+  .name { font-size: 13px; font-weight: 800; color: #134e4a; margin-bottom: 3px; }
+  .section-title { font-size: 10px; font-weight: 800; color: #0d9488; text-transform: uppercase; letter-spacing: 0.5px; margin: 6px 0 2px; }
+  .field { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; border-bottom: 1px dashed #99f6e4; gap: 6px; }
+  .label { color: #5eead4; font-weight: 600; flex-shrink: 0; }
+  .value { color: #134e4a; font-weight: 800; font-family: monospace; text-align: right; word-break: break-all; }
+  .parent-block { background: #fef3c7; border: 1px dashed #f59e0b; border-radius: 8px; padding: 5px 8px; margin-top: 5px; }
+  .parent-block .field { border-bottom-color: #fde68a; }
+  .parent-block .label { color: #b45309; }
+  .parent-block .value { color: #78350f; }
+  .grupa-info { text-align: center; color: #5eead4; font-size: 9px; margin-top: 5px; }
+</style></head><body>
+<div class="grid">${cards.map(c => `
+  <div class="card">
+    <div class="logo">MEKTEB</div>
+    <div class="name">${esc(c.displayName)}</div>
+    <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(c.username)}</span></div>
+    <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(c.generatedPassword)}</span></div>
+    ${((): string => {
+      const rods = c.roditelji && c.roditelji.length > 0
+        ? c.roditelji.map(r => ({ username: r.username, displayName: r.displayName, password: r.password }))
+        : c.roditelj
+          ? [{ username: c.roditelj.username, displayName: c.roditelj.displayName, password: c.roditelj.generatedPassword }]
+          : [];
+      return rods.map((r, idx) => `
+    <div class="parent-block">
+      <div class="section-title">${t("Roditelj")}${rods.length > 1 ? ` ${idx + 1}` : ""}${r.displayName ? ` — ${esc(r.displayName)}` : ""}</div>
+      <div class="field"><span class="label">${t("Korisničko ime:")}</span><span class="value">${esc(r.username)}</span></div>
+      <div class="field"><span class="label">${t("Lozinka:")}</span><span class="value">${esc(r.password)}</span></div>
+    </div>`).join("");
+    })()}
+    <div class="grupa-info">${esc(grupaNaziv)} · mekteb.net</div>
+  </div>`).join("")}
+</div></body></html>`;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      setTimeout(() => printWindow.print(), 300);
+    }
+  }
+
+  async function printCards() {
+    if (!token || groupStudents.length === 0) return;
+    setPrintLoading(true);
+    try {
+      const cards = await apiRequest<CreatedUcenik[]>(
+        "POST",
+        "/muallim/print-kartice",
+        { ucenikIds: groupStudents.map(student => student.id) },
+        token,
+      );
+      openPrintWindow(cards);
+      toast({ title: t("Kartice su spremne za štampu"), description: t("Prikazane su trenutne standardne lozinke — štampanje ne mijenja i ne resetuje nijednu šifru.") });
+    } catch {
+      toast({ title: t("Greška"), description: t("Nije moguće generisati kartice"), variant: "destructive" });
+    } finally {
+      setPrintLoading(false);
     }
   }
 
@@ -149,6 +242,19 @@ export function GroupStudentSetup({ grupaId }: GroupStudentSetupProps) {
           <Plus className="w-4 h-4 mr-2" /> {t("Dodaj postojećeg")}
         </Button>
       </div>
+
+      {groupStudents.length > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={printCards}
+          disabled={printLoading}
+          className="w-full rounded-xl font-bold flex items-center justify-center gap-2"
+        >
+          {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+          {t("Printaj kartice")}
+        </Button>
+      )}
 
       {mode === "bulk" && (
         createdStudents.length > 0 ? (
