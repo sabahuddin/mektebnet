@@ -2326,7 +2326,10 @@ router.get("/prisustvo", async (req, res) => {
 // POST /api/muallim/ocjene - add grade
 router.post("/ocjene", async (req, res) => {
   try {
-    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, lekcijaSlug, napomena, datum, napametStavkaId } = req.body;
+    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, lekcijaSlug, napomena, napametStavkaId } = req.body;
+    const datum = typeof req.body.datum === "string" && req.body.datum.trim()
+      ? req.body.datum.trim()
+      : new Date().toISOString().slice(0, 10);
     const automatskaStavka = lekcijaSlug
       ? (await getGlobalNapametKatalog(false)).find((item) => item.sourceLessonSlug === String(lekcijaSlug))
       : undefined;

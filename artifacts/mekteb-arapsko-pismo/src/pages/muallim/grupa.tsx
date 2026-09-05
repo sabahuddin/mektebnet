@@ -207,6 +207,7 @@ export default function GrupaPage() {
   const [napametDetalji, setNapametDetalji] = useState<NapametDetalji | null>(null);
   const [napametDetaljiLoading, setNapametDetaljiLoading] = useState(false);
   const [napametDetaljiError, setNapametDetaljiError] = useState<string | null>(null);
+  const [brzaNapametOcjena, setBrzaNapametOcjena] = useState<{ stavka: NapametStavka } | null>(null);
   const [savingOcjena, setSavingOcjena] = useState(false);
 
   // Zadaća modal — ako zadacaTarget=null → zadaća za cijelu grupu
@@ -503,9 +504,28 @@ export default function GrupaPage() {
 
   function openOcjena(u: Ucenik) {
     setOcjenaTarget(u);
+    setBrzaNapametOcjena(null);
     setNewOcjena({
       kategorija: "usmeno", ocjena: 6, lekcijaNaziv: "", napomena: "",
       datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
+    });
+  }
+
+  function openBrzaNapametOcjena(
+    stavka: NapametStavka,
+    student: { id: number; displayName: string },
+    existingGrade?: number,
+  ) {
+    setOcjenaTarget({ id: student.id, displayName: student.displayName, username: "" });
+    setBrzaNapametOcjena({ stavka });
+    setNewOcjena({
+      kategorija: "napamet",
+      ocjena: existingGrade ?? 6,
+      lekcijaNaziv: stavka.naziv,
+      napomena: "",
+      datum: new Date().toISOString().split("T")[0],
+      napametStavkaId: stavka.id,
+      lekcijaSlug: "",
     });
   }
 
@@ -526,7 +546,9 @@ export default function GrupaPage() {
       }, token);
       toast({ title: t("Ocjena dodana!"), description: `${ocjenaTarget.displayName} — ${newOcjena.ocjena}` });
       setOcjenaTarget(null);
+      setBrzaNapametOcjena(null);
       refreshNapametKatalog();
+      if (napametOdabrana) void openNapametDetalji(napametOdabrana);
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće dodati ocjenu"), variant: "destructive" });
     } finally {
@@ -1449,13 +1471,31 @@ export default function GrupaPage() {
         )}
 
         {ocjenaTarget && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => !savingOcjena && setOcjenaTarget(null)}>
+          <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" onClick={() => !savingOcjena && (setOcjenaTarget(null), setBrzaNapametOcjena(null))}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="font-extrabold text-foreground mb-1 flex items-center gap-2">
                 <Star className="w-5 h-5 text-amber-500" /> {t("Ocjena za {ime}", { ime: ocjenaTarget.displayName })}
               </h3>
-              <p className="text-sm text-muted-foreground mb-4">{t("Unesi ocjenu i pripadajuću kategoriju.")}</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {brzaNapametOcjena ? brzaNapametOcjena.stavka.naziv : t("Unesi ocjenu i pripadajuću kategoriju.")}
+              </p>
+              {brzaNapametOcjena ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-emerald-700">{t("NAPAMET")}</p>
+                    <p className="mt-1 font-extrabold text-emerald-950">{brzaNapametOcjena.stavka.naziv}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–6)")}</label>
+                    <select value={newOcjena.ocjena}
+                      onChange={e => setNewOcjena(o => ({ ...o, ocjena: parseInt(e.target.value) }))}
+                      className="w-full border border-border rounded-xl px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-extrabold">
+                      {[6, 5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                </div>
+              ) : (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1545,8 +1585,9 @@ export default function GrupaPage() {
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                 </div>
               </div>
+              )}
               <div className="flex gap-3 mt-4">
-                <Button variant="outline" onClick={() => setOcjenaTarget(null)} disabled={savingOcjena} className="flex-1 rounded-xl">
+                <Button variant="outline" onClick={() => { setOcjenaTarget(null); setBrzaNapametOcjena(null); }} disabled={savingOcjena} className="flex-1 rounded-xl">
                   {t("Otkaži")}
                 </Button>
                 <Button onClick={saveOcjena} disabled={savingOcjena} className="flex-1 rounded-xl font-bold">
@@ -1804,17 +1845,23 @@ export default function GrupaPage() {
                   <div>
                     <h3 className="mb-2 flex items-center gap-2 font-extrabold text-emerald-800"><Check className="h-4 w-4" /> {t("Ocijenjeni")} <span className="text-xs font-bold text-muted-foreground">({napametDetalji.ocijenjeni.length})</span></h3>
                     {napametDetalji.ocijenjeni.length ? <div className="space-y-2">{napametDetalji.ocijenjeni.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5">
+                       <button type="button" key={student.id}
+                         onClick={() => openBrzaNapametOcjena(napametOdabrana, student, student.ocjena)}
+                         className="flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5 text-left hover:border-emerald-300 hover:bg-emerald-100 transition-colors">
                         <span className="min-w-0 truncate text-sm font-bold">{student.displayName}</span>
                         <span className="shrink-0 text-right"><strong className="rounded-full bg-emerald-100 px-2 py-1 text-sm text-emerald-800">{student.ocjena}</strong><small className="ml-2 text-xs text-muted-foreground">{fmtDatum(student.datum) || student.datum}</small></span>
-                      </div>
+                       </button>
                     ))}</div> : <p className="rounded-xl bg-slate-50 p-4 text-sm text-muted-foreground">{t("Niko još nije ocijenjen.")}</p>}
                   </div>
                   <div>
                     <h3 className="mb-2 flex items-center gap-2 font-extrabold text-slate-600"><Users className="h-4 w-4" /> {t("Još nisu ocijenjeni")} <span className="text-xs font-bold text-muted-foreground">({napametDetalji.nisuOcijenjeni.length})</span></h3>
                     {napametDetalji.nisuOcijenjeni.length ? <div className="space-y-2">{napametDetalji.nisuOcijenjeni.map((student) => (
-                      <div key={student.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-600">{student.displayName}</div>
-                    ))}</div> : <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{t("Svi učenici su ocijenjeni.")}</p>}
+                       <button type="button" key={student.id}
+                         onClick={() => openBrzaNapametOcjena(napametOdabrana, student)}
+                         className="flex w-full items-center rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-left text-sm font-bold text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">
+                         {student.displayName}
+                       </button>
+                     ))}</div> : <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{t("Svi učenici su ocijenjeni.")}</p>}
                   </div>
                 </div>
               )}
