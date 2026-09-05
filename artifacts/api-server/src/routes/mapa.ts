@@ -93,7 +93,9 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     // gating treba polaganje ispita ili samo završene lekcije + claim.
     const medaljoniAug = medaljoni.map((m) => ({
       ...m,
-      imaKviz: Array.isArray(m.kvizPitanjaIds) && m.kvizPitanjaIds.length > 0,
+      imaKviz:
+        (Array.isArray(m.kvizIds) && m.kvizIds.length > 0)
+        || (Array.isArray(m.kvizPitanjaIds) && m.kvizPitanjaIds.length > 0),
       isGating: m.isGating ?? true,
     }));
     await overlayRows(medaljoniAug, "medaljoni", getLang(req));
@@ -235,8 +237,9 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
     // ispit (`/etape/:medaljonId/predaj`) koji onda automatski upisuje
     // medaljon. Bez ove provjere učenik bi mogao zaobići ispit i otključati
     // sljedeći blok lekcija + krunisanje.
-    const imaKviz = Array.isArray(medaljon.kvizPitanjaIds)
-      && (medaljon.kvizPitanjaIds as unknown[]).length > 0;
+    const imaKviz =
+      (Array.isArray(medaljon.kvizIds) && medaljon.kvizIds.length > 0)
+      || (Array.isArray(medaljon.kvizPitanjaIds) && medaljon.kvizPitanjaIds.length > 0);
     // Poštuj `is_gating` toggle: non-gating etape dozvoljavaju direktan
     // claim i bez polaganja ispita (admin može imati pripremne etape
     // koje ne blokiraju progres).

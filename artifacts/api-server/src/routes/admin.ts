@@ -4124,13 +4124,47 @@ router.get("/krunisanja/:id/banka", async (req, res) => {
 });
 
 // PUT /api/admin/etape/:medaljonId — ažuriraj konfiguraciju kviza za etapu
-// Body: { kvizPitanjaIds?: number[], pragProlazaPercent?: number, isGating?: boolean,
+// Body: { kvizIds?: number[], kvizPitanjaIds?: number[], pragProlazaPercent?: number, isGating?: boolean,
 //         naziv?: string, opis?: string, contentHtml?: string }
 router.put("/etape/:medaljonId", async (req, res) => {
   try {
     const id = Number(req.params.medaljonId);
     if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const [existingEtapa] = await db
+      .select({ id: medaljoniTable.id, nivo: medaljoniTable.nivo, posAfterRedoslijed: medaljoniTable.posAfterRedoslijed })
+      .from(medaljoniTable)
+      .where(eq(medaljoniTable.id, id))
+      .limit(1);
+    if (!existingEtapa) return res.status(404).json({ error: "Etapa ne postoji" });
     const patch: Partial<typeof medaljoniTable.$inferInsert> = {};
+    if (Array.isArray(req.body?.kvizIds)) {
+      const kvizIds = Array.from(new Set<number>(
+        req.body.kvizIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n) && n > 0),
+      ));
+      if (kvizIds.length > 0) {
+        const [kvizovi, etapeNivoa] = await Promise.all([
+          db
+            .select({ id: kvizoviTable.id, nivo: kvizoviTable.nivo, etapa: kvizoviTable.etapa })
+            .from(kvizoviTable)
+            .where(inArray(kvizoviTable.id, kvizIds)),
+          db
+            .select({ id: medaljoniTable.id })
+            .from(medaljoniTable)
+            .where(eq(medaljoniTable.nivo, existingEtapa.nivo))
+            .orderBy(asc(medaljoniTable.posAfterRedoslijed)),
+        ]);
+        const etapaBroj = etapeNivoa.findIndex((etapa) => etapa.id === existingEtapa.id) + 1;
+        if (
+          etapaBroj < 1
+          ||
+          kvizovi.length !== kvizIds.length
+          || kvizovi.some((kviz) => kviz.nivo !== existingEtapa.nivo || kviz.etapa !== etapaBroj)
+        ) {
+          return res.status(400).json({ error: "Etapa može koristiti samo kvizove označene istim nivoom i brojem etape" });
+        }
+      }
+      patch.kvizIds = kvizIds;
+    }
     if (Array.isArray(req.body?.kvizPitanjaIds)) {
       patch.kvizPitanjaIds = req.body.kvizPitanjaIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n));
     }

@@ -82,6 +82,9 @@ export const medaljoniTable = pgTable("medaljoni", {
   // Server scoring (anti-cheat): klijent dobija pitanja BEZ tačnog odgovora,
   // odgovori se predaju serveru koji ih boduje protiv banke.
   kvizPitanjaIds: jsonb("kviz_pitanja_ids").$type<number[]>().notNull().default([]),
+  // Cijeli kvizovi povezani s ovom etapom. Pitanja se pri polaganju razrješavaju
+  // preko kviz_pitanja, a kvizPitanjaIds ostaje za dodatna ručno birana pitanja.
+  kvizIds: jsonb("kviz_ids").$type<number[]>().notNull().default([]),
   // Minimalni procenat tačnih odgovora za prolaz (0-100). Default 70%.
   pragProlazaPercent: integer("prag_prolaza_percent").notNull().default(70),
   // Ako je true (default), nepoloženi ispit zaključava lekcije sa

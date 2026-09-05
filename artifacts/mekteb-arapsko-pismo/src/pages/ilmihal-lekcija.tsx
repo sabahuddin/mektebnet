@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/api";
 import { isLekcijaUnlocked } from "@/lib/lekcija-unlock";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
+import { EtapaQuizCard } from "@/components/etapa-quiz-card";
 import { RjecnikContent } from "@/components/rjecnik-content";
 import type { PauseProgress } from "@/components/lesson-pause";
 import { mergePauseProgress } from "@/components/lesson-pause-progress";
@@ -4001,6 +4002,10 @@ export default function IlmihalLekcijaPage() {
             mode="vjezbe"
             onH5pCelebration={setCelebration}
           />
+        )}
+
+        {/^medaljon-nivo\d+-\d+$/.test(lekcija.slug) && (
+          <EtapaQuizCard medaljonLessonSlug={lekcija.slug} />
         )}
 
         {/* Vezani kvizovi (kvizovi.lekcija_id = lekcija.id) — sakriveno ako nema rezultata */}
