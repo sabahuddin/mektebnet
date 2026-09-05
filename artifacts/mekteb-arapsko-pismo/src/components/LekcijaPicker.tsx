@@ -55,7 +55,8 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
   const selected = numbered.find(l => l.naslov === value);
 
   useEffect(() => {
-    if (selected?.nivo >= 1 && selected.nivo <= 3) setActiveNivo(selected.nivo);
+    const selectedNivo = selected?.nivo;
+    if (selectedNivo != null && selectedNivo >= 1 && selectedNivo <= 3) setActiveNivo(selectedNivo);
   }, [selected?.nivo]);
 
   const matches = useMemo(() => {
