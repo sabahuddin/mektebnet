@@ -33,6 +33,18 @@ router.get("/", async (req, res) => {
 
     const raw = Buffer.concat(chunks).toString("utf8");
     const { lekcije, kvizovi, knjige } = JSON.parse(raw);
+    const invalidLessons = !Array.isArray(lekcije)
+      ? ["lekcije nije niz"]
+      : lekcije.filter((lesson) => ![1, 2, 3].includes(Number(lesson?.nivo)));
+    if (invalidLessons.length > 0) {
+      throw new Error(`Seed sadrži ${invalidLessons.length} lekcija sa nevažećim nivoom`);
+    }
+    const duplicateSlugs = Array.isArray(lekcije)
+      ? lekcije.filter((lesson, index, rows) => rows.findIndex((row) => row.slug === lesson.slug) !== index)
+      : [];
+    if (duplicateSlugs.length > 0) {
+      throw new Error(`Seed sadrži ${duplicateSlugs.length} duplih slugova lekcija`);
+    }
 
     const client = await pool.connect();
     const results: string[] = [];
@@ -44,6 +56,7 @@ router.get("/", async (req, res) => {
       // Import ilmihal lekcije
       let lekcijeCount = 0;
       for (const l of lekcije) {
+        const nivo = Number(l.nivo);
         await client.query(
           `INSERT INTO ilmihal_lekcije (id, nivo, slug, naslov, content_html, audio_src, redoslijed, is_published, created_at, kviz_pitanja)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -53,7 +66,7 @@ router.get("/", async (req, res) => {
              redoslijed = EXCLUDED.redoslijed,
              nivo = EXCLUDED.nivo,
              kviz_pitanja = EXCLUDED.kviz_pitanja`,
-          [l.id, l.nivo, l.slug, l.naslov, l.contentHtml, l.audioSrc, l.redoslijed, l.isPublished, l.createdAt,
+          [l.id, nivo, l.slug, l.naslov, l.contentHtml, l.audioSrc, l.redoslijed, l.isPublished, l.createdAt,
            l.kvizPitanja ? JSON.stringify(l.kvizPitanja) : null]
         );
         lekcijeCount++;
