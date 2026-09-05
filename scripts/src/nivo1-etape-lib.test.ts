@@ -11,6 +11,7 @@ import {
   lekcijskaPitanja,
   PITANJA_PO_ETAPI,
   PITANJA_PO_KRUNISANJU,
+  MAX_ETAPA,
   bankaKljuc,
   buildPool,
   etapaZaRedoslijed,
@@ -33,12 +34,19 @@ test("etapaZaRedoslijed grupiše lekcije u blokove po deset", () => {
   assert.equal(etapaZaRedoslijed(59), 6);
   assert.equal(etapaZaRedoslijed(60), 7);
   assert.equal(etapaZaRedoslijed(67), 7);
+  assert.equal(etapaZaRedoslijed(90), 10);  // Nivo 3 ide do desete etape
+  assert.equal(etapaZaRedoslijed(99), 10);
 });
 
-test("svaki nivo ima sedam etapa koje ne preklapaju blokove lekcija", () => {
-  for (const nivo of [1, 2]) {
+test("etape ne preklapaju blokove lekcija ni na jednom nivou", () => {
+  // Nivoi 1 i 2 imaju do 70 lekcija, pa sedam etapa; Nivo 3 ima 100 lekcija, dakle deset.
+  const ocekivanoEtapa: Record<number, number> = { 1: 7, 2: 7, 3: 10 };
+  // `redoslijed` posljednje lekcije nivoa (0-baziran).
+  const zadnjaLekcija: Record<number, number> = { 1: 63, 2: 67, 3: 99 };
+  for (const nivo of [1, 2, 3]) {
     const etape = etapeZaNivo(nivo);
-    assert.equal(etape.length, 7, `nivo ${nivo}`);
+    assert.equal(etape.length, ocekivanoEtapa[nivo], `nivo ${nivo}`);
+    assert.ok(etape.length <= MAX_ETAPA, `nivo ${nivo} prelazi ${MAX_ETAPA} etapa`);
     etape.forEach((e, i) => {
       assert.equal(e.redni, i + 1);
       assert.equal(e.od, i * 10);
@@ -47,7 +55,7 @@ test("svaki nivo ima sedam etapa koje ne preklapaju blokove lekcija", () => {
       assert.equal(e.kvizSlug, `${nivo}-etapa-${i + 1}`);
     });
     // Posljednja etapa se zaustavlja na stvarnom broju lekcija nivoa.
-    assert.equal(etapeZaNivo(nivo)[6]!.do, nivo === 1 ? 63 : 67);
+    assert.equal(etape.at(-1)!.do, zadnjaLekcija[nivo], `nivo ${nivo}`);
   }
   assert.equal(ETAPE_PO_NIVOU[1]!.length, 7);
 });
@@ -209,7 +217,7 @@ function izgradiKandidate(nivo: number): Kandidat[] {
   return [...jedinstveni.values()];
 }
 
-for (const nivo of [1, 2]) {
+for (const nivo of [1, 2, 3]) {
   test(`Nivo ${nivo}: svaka etapa dobije pitanja samo iz svojih lekcija, bez duplikata`, () => {
     const svi = izgradiKandidate(nivo);
     for (const e of etapeZaNivo(nivo)) {
@@ -244,6 +252,13 @@ test("Nivo 1: svih sedam etapa dobije po 100 pitanja osim posljednje (samo četi
 test("Nivo 2: svih sedam etapa dobije po 100 pitanja", () => {
   const svi = izgradiKandidate(2);
   for (const e of etapeZaNivo(2)) {
+    assert.equal(odaberiZaEtapu(svi, e.redni).length, PITANJA_PO_ETAPI, `etapa ${e.redni}`);
+  }
+});
+
+test("Nivo 3: svih deset etapa dobije po 100 pitanja", () => {
+  const svi = izgradiKandidate(3);
+  for (const e of etapeZaNivo(3)) {
     assert.equal(odaberiZaEtapu(svi, e.redni).length, PITANJA_PO_ETAPI, `etapa ${e.redni}`);
   }
 });

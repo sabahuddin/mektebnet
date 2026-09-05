@@ -1,0 +1,1491 @@
+{
+  "_opis": "Nova pitanja napisana iz sadržaja lekcija Nivoa 3 za etape 2, 3 i 6, koje su iz postojećih kvizova dobile najmanje pitanja.",
+  "pitanja": [
+    {
+      "etapa": 2,
+      "lekcija": "esmaul-husna",
+      "type": "radio",
+      "question": "Koliko puta je ime Allah spomenuto u Kur'anu?",
+      "options": [
+        "2.698 puta",
+        "1.000 puta",
+        "99 puta",
+        "114 puta"
+      ],
+      "answer": "2.698 puta",
+      "explanation": "Ime Allah je u Kur'anu spomenuto 2.698 puta.",
+      "tezina": 3
+    },
+    {
+      "etapa": 2,
+      "lekcija": "esmaul-husna",
+      "type": "radio",
+      "question": "Šta znači el-esmaul-husna?",
+      "options": [
+        "Allahova najljepša imena",
+        "Allahova svojstva",
+        "Imena poslanika",
+        "Imena meleka"
+      ],
+      "answer": "Allahova najljepša imena",
+      "explanation": "El-esmaul-husna su Allahova lijepa imena; ima ih devedeset devet.",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "esmaul-husna",
+      "type": "radio",
+      "question": "Šta je, prema hadisu, nagrada onome ko zna Allahovih devedeset devet imena?",
+      "options": [
+        "Ući će u Džennet",
+        "Dobit će imetak",
+        "Živjet će dugo",
+        "Bit će vladar"
+      ],
+      "answer": "Ući će u Džennet",
+      "explanation": "Poslanik, a.s., je rekao: „Onaj ko ih bude znao ući će u Džennet.\" (Buhari)",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "esmaul-husna",
+      "type": "radio",
+      "question": "Koja je sura objavljena kada su ashabi rekli da žele upoznati Allaha?",
+      "options": [
+        "El-Ihlas",
+        "El-Fatiha",
+        "El-Fil",
+        "En-Nas"
+      ],
+      "answer": "El-Ihlas",
+      "explanation": "Tada je objavljena sura El-Ihlas: „Reci: On je Allah Jedan!\"",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "melaike",
+      "type": "truefalse",
+      "question": "Meleki nisu ni muškog ni ženskog roda.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Meleki ne jedu, ne piju, ne spavaju, nisu ni muškog ni ženskog roda i nikada ne griješe.",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "melaike",
+      "type": "radio",
+      "question": "Od čega su stvoreni meleki?",
+      "options": [
+        "Od nura (svjetlosti)",
+        "Od vatre",
+        "Od zemlje",
+        "Od vode"
+      ],
+      "answer": "Od nura (svjetlosti)",
+      "explanation": "Meleki su razumna i nevidljiva duhovna bića, stvorena od nura — svjetlosti.",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "melaike",
+      "type": "radio",
+      "question": "Ko zna tačan broj meleka?",
+      "options": [
+        "Samo Allah, dž.š.",
+        "Poslanici",
+        "Meleki sami",
+        "Učenjaci"
+      ],
+      "answer": "Samo Allah, dž.š.",
+      "explanation": "Meleka ima mnogo, a samo Allah, dž.š., zna njihov tačan broj.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "melaike",
+      "type": "radio",
+      "question": "Kome se, osim Poslaniku, a.s., melek Džibril pojavljivao u ljudskom liku?",
+      "options": [
+        "Merjemi",
+        "Asiji",
+        "Hadžeri",
+        "Sari"
+      ],
+      "answer": "Merjemi",
+      "explanation": "Melek Džibril pojavljivao se Muhammedu, a.s., i Merjemi.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "dzini-sejtani",
+      "type": "radio",
+      "question": "Od čega su stvoreni džini?",
+      "options": [
+        "Od vatre užarene",
+        "Od svjetlosti",
+        "Od zemlje",
+        "Od zraka"
+      ],
+      "answer": "Od vatre užarene",
+      "explanation": "Allah kaže: „a još prije smo stvorili džine od vatre užarene\" (El-Hidžr, 27).",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "dzini-sejtani",
+      "type": "radio",
+      "question": "Kako nazivamo džine nevjernike?",
+      "options": [
+        "Šejtani",
+        "Meleki",
+        "Ashabi",
+        "Evlije"
+      ],
+      "answer": "Šejtani",
+      "explanation": "Džine nevjernike nazivamo šejtanima, a vođa im je Iblis.",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "dzini-sejtani",
+      "type": "truefalse",
+      "question": "Džini su stvoreni prije ljudi.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Prema islamskom učenju, džini su stvoreni od vatre, i to prije ljudi.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "dzini-sejtani",
+      "type": "radio",
+      "question": "Nad kim šejtan nema nikakve vlasti?",
+      "options": [
+        "Nad onima koji vjeruju i u Allaha se pouzdaju",
+        "Nad djecom",
+        "Nad učenima",
+        "Nad bogatima"
+      ],
+      "answer": "Nad onima koji vjeruju i u Allaha se pouzdaju",
+      "explanation": "Allah kaže da šejtan nema vlasti nad onima koji vjeruju i u svoga Gospodara se pouzdaju (En-Nahl, 99).",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "kitabi",
+      "type": "radio",
+      "question": "Koliko je suhufa (manjih objava) objavljeno?",
+      "options": [
+        "Stotinu",
+        "Deset",
+        "Četiri",
+        "Pedeset"
+      ],
+      "answer": "Stotinu",
+      "explanation": "Prema islamskoj tradiciji objavljeno je stotinu suhufa i četiri velike knjige.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "kitabi",
+      "type": "radio",
+      "question": "Kome je data prva objava?",
+      "options": [
+        "Ademu, a.s.",
+        "Nuhu, a.s.",
+        "Ibrahimu, a.s.",
+        "Musau, a.s."
+      ],
+      "answer": "Ademu, a.s.",
+      "explanation": "Prva objava data je prvom čovjeku i poslaniku Ademu, a.s.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "kitabi",
+      "type": "radio",
+      "question": "Preko kojeg meleka su objavljivane Allahove knjige?",
+      "options": [
+        "Preko Džibrila",
+        "Preko Mikaila",
+        "Preko Israfila",
+        "Preko Azraila"
+      ],
+      "answer": "Preko Džibrila",
+      "explanation": "Allahove knjige sadrže Allahov govor objavljen preko meleka Džibrila.",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "kuran-objava",
+      "type": "radio",
+      "question": "Gdje je počelo objavljivanje Kur'ana?",
+      "options": [
+        "U pećini Hira na brdu Nur",
+        "U pećini Sevr",
+        "U Kabi",
+        "U Medini"
+      ],
+      "answer": "U pećini Hira na brdu Nur",
+      "explanation": "Objavljivanje je počelo u noći Kadr, u ramazanu 610. godine, u pećini Hira na brdu Nur.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "kuran-objava",
+      "type": "radio",
+      "question": "Koliko je godina trajalo objavljivanje Kur'ana i kako je raspoređeno?",
+      "options": [
+        "23 godine — 13 u Mekki i 10 u Medini",
+        "20 godina — 10 i 10",
+        "30 godina — 15 i 15",
+        "13 godina — sve u Mekki"
+      ],
+      "answer": "23 godine — 13 u Mekki i 10 u Medini",
+      "explanation": "Objavljivanje je trajalo 23 godine: 13 godina u Mekki i 10 godina u Medini.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "kuran-objava",
+      "type": "radio",
+      "question": "Na koliko je džuzova podijeljen Kur'an?",
+      "options": [
+        "30",
+        "20",
+        "40",
+        "114"
+      ],
+      "answer": "30",
+      "explanation": "Kur'an je podijeljen na 30 džuzova, a svaki džuz ima po 20 stranica.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "kuran-objava",
+      "type": "radio",
+      "question": "Koji su ajeti prvi objavljeni Muhammedu, a.s.?",
+      "options": [
+        "Ajeti sure El-Alek",
+        "Ajeti sure El-Fatiha",
+        "Ajeti sure El-Ihlas",
+        "Ajeti sure En-Nasr"
+      ],
+      "answer": "Ajeti sure El-Alek",
+      "explanation": "Prvi objavljeni ajeti bili su ajeti sure El-Alek: „Čitaj, u ime Gospodara tvoga…\"",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "poslanici",
+      "type": "radio",
+      "question": "Koliko je poslanika spomenuto u hadisima, a koliko imenom u Kur'anu?",
+      "options": [
+        "124 hiljade poslanika, 25 u Kur'anu",
+        "1.000 poslanika, 25 u Kur'anu",
+        "124 hiljade poslanika, 5 u Kur'anu",
+        "313 poslanika, 25 u Kur'anu"
+      ],
+      "answer": "124 hiljade poslanika, 25 u Kur'anu",
+      "explanation": "U hadisima se spominje 124 hiljade poslanika, dok je u Kur'anu imenom spomenuto 25.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "poslanici",
+      "type": "radio",
+      "question": "Kako se nazivaju najodabraniji Božiji poslanici?",
+      "options": [
+        "Ulul-'azm",
+        "Ashabi",
+        "Evlije",
+        "Halife"
+      ],
+      "answer": "Ulul-'azm",
+      "explanation": "Nuh, Ibrahim, Musa, Isa i Muhammed, a.s., nazivaju se Ulul-'azm — odlučni poslanici.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "mudzize",
+      "type": "radio",
+      "question": "Šta je mudžiza?",
+      "options": [
+        "Natprirodna pojava kojom poslanik dokazuje svoje poslanstvo",
+        "Vrsta namaza",
+        "Dova za bolesne",
+        "Hadžski obred"
+      ],
+      "answer": "Natprirodna pojava kojom poslanik dokazuje svoje poslanstvo",
+      "explanation": "Mudžiza je natprirodna pojava, Božije djelo dato poslanicima radi dokazivanja poslanstva.",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "mudzize",
+      "type": "radio",
+      "question": "Zašto je Musau, a.s., data mudžiza sa štapom koji se pretvara u zmiju?",
+      "options": [
+        "Jer je u Egiptu bilo rasprostranjeno čarobnjaštvo",
+        "Jer je volio zmije",
+        "Jer je bio pastir",
+        "Jer je tako tražio faraon"
+      ],
+      "answer": "Jer je u Egiptu bilo rasprostranjeno čarobnjaštvo",
+      "explanation": "Allah je poslanicima davao mudžize iz područja u kojima su njihovi narodi bili najvještiji.",
+      "tezina": 3
+    },
+    {
+      "etapa": 2,
+      "lekcija": "mudzize",
+      "type": "radio",
+      "question": "Koje su mudžize date Isau, a.s.?",
+      "options": [
+        "Liječenje slijepog od rođenja i oživljavanje mrtvaca",
+        "Razdvajanje mora",
+        "Gradnja lađe",
+        "Pretvaranje štapa u zmiju"
+      ],
+      "answer": "Liječenje slijepog od rođenja i oživljavanje mrtvaca",
+      "explanation": "U vrijeme Isaa, a.s., medicina je bila razvijena, pa su mu date mudžize iz tog područja.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "isra-miradz",
+      "type": "radio",
+      "question": "Iz kojeg hrama je u koji Poslanik, a.s., preveden u noći Isra?",
+      "options": [
+        "Iz Hrama časnog u Hram daleki",
+        "Iz Medine u Mekku",
+        "Iz Kabe u Kubu",
+        "Iz Taifa u Mekku"
+      ],
+      "answer": "Iz Hrama časnog u Hram daleki",
+      "explanation": "Allah kaže da je preveo Svoga roba „iz Hrama časnog u Hram daleki\" (El-Isra, 1).",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "isra-miradz",
+      "type": "radio",
+      "question": "Zbog čega je godina smrti hazreti Hatidže i Ebu Taliba nazvana „Godina tuge\"?",
+      "options": [
+        "Jer je Poslanik, a.s., izgubio dvoje najbližih zaštitnika",
+        "Jer je bila glad",
+        "Jer je bila bitka",
+        "Jer je bila suša"
+      ],
+      "answer": "Jer je Poslanik, a.s., izgubio dvoje najbližih zaštitnika",
+      "explanation": "Te godine su umrli supruga Hatidža i amidža Ebu Talib, pa je nazvana Senetul-huzn.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "sudnji-dan",
+      "type": "radio",
+      "question": "Koliko će se puta puhnuti u sur?",
+      "options": [
+        "Dva puta",
+        "Jednom",
+        "Tri puta",
+        "Sedam puta"
+      ],
+      "answer": "Dva puta",
+      "explanation": "Na prvo puhanje sve će umrijeti, a na drugo će svi biti proživljeni (Ez-Zumer, 68).",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "sudnji-dan",
+      "type": "truefalse",
+      "question": "Dunjaluk je prolazan, a ahiret vječan.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Ovaj svijet je prolazan; na budućem svijetu ćemo biti proživljeni i vječno živjeti.",
+      "tezina": 1
+    },
+    {
+      "etapa": 2,
+      "lekcija": "prozivljenje",
+      "type": "radio",
+      "question": "Šta je berzah?",
+      "options": [
+        "Boravište ljudskih duša od smrti do proživljenja",
+        "Most preko Džehennema",
+        "Vaga za djela",
+        "Prva džamija"
+      ],
+      "answer": "Boravište ljudskih duša od smrti do proživljenja",
+      "explanation": "Berzah je boravište ljudskih duša od smrti do proživljenja.",
+      "tezina": 2
+    },
+    {
+      "etapa": 2,
+      "lekcija": "prozivljenje",
+      "type": "radio",
+      "question": "Koja pitanja postavljaju Munkir i Nekir u kaburu?",
+      "options": [
+        "Ko ti je Gospodar, ko ti je Poslanik, koje si vjere",
+        "Koliko imaš godina",
+        "Šta si radio za život",
+        "Koliko imaš djece"
+      ],
+      "answer": "Ko ti je Gospodar, ko ti je Poslanik, koje si vjere",
+      "explanation": "Munkir i Nekir postavljaju upravo ta tri pitanja.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "sefaat-mizan-sirat",
+      "type": "radio",
+      "question": "Šta je šefa'at?",
+      "options": [
+        "Pravo odabranih Allahovih robova da se zauzimaju za druge na Sudnjem danu",
+        "Vaga za djela",
+        "Most preko Džehennema",
+        "Vrsta namaza"
+      ],
+      "answer": "Pravo odabranih Allahovih robova da se zauzimaju za druge na Sudnjem danu",
+      "explanation": "Šefa'at je pravo poslanika, šehida, evlija i drugih odabranih robova da se zauzimaju za ljude.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "sefaat-mizan-sirat",
+      "type": "truefalse",
+      "question": "Šefa'at će biti omogućen samo onima kojima Allah to dozvoli.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Zauzimanje je moguće samo uz Allahovu dozvolu.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "sefaat-mizan-sirat",
+      "type": "radio",
+      "question": "Ko će, osim poslanika i šehida, imati pravo zauzimanja na Sudnjem danu?",
+      "options": [
+        "Kur'an — za one koji su ga učili i po njemu postupali",
+        "Meleki isključivo",
+        "Vladari",
+        "Bogataši"
+      ],
+      "answer": "Kur'an — za one koji su ga učili i po njemu postupali",
+      "explanation": "Kur'an će imati pravo da se zauzima za one koji su ga učili i po njemu postupali.",
+      "tezina": 3
+    },
+    {
+      "etapa": 3,
+      "lekcija": "sefaat-mizan-sirat",
+      "type": "radio",
+      "question": "Šta će biti sa onima čija dobra djela prevagnu na vagi?",
+      "options": [
+        "Postići će ono što žele",
+        "Ostat će na mostu",
+        "Vratit će se na dunjaluk",
+        "Čekat će novo suđenje"
+      ],
+      "answer": "Postići će ono što žele",
+      "explanation": "Allah kaže: „oni čija dobra djela prevagnu oni će šta žele postići\" (El-A'raf, 8).",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "dzennet-dzehennem",
+      "type": "radio",
+      "question": "Koliko deredža (stepena) ima Džennet?",
+      "options": [
+        "Stotinu",
+        "Sedam",
+        "Deset",
+        "Devedeset devet"
+      ],
+      "answer": "Stotinu",
+      "explanation": "Džennet ima stotinu deredža, a najviši nivo je Firdevs.",
+      "tezina": 3
+    },
+    {
+      "etapa": 3,
+      "lekcija": "dzennet-dzehennem",
+      "type": "radio",
+      "question": "Kako se zove najviši stepen Dženneta?",
+      "options": [
+        "Firdevs",
+        "Adn",
+        "Naim",
+        "Me'va"
+      ],
+      "answer": "Firdevs",
+      "explanation": "Najviši nivo Dženneta je Firdevs.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "dzennet-dzehennem",
+      "type": "radio",
+      "question": "Kojom riječju će se stanovnici Dženneta pozdravljati?",
+      "options": [
+        "Riječju „Mir\" (Selam)",
+        "Riječju „Hvala\"",
+        "Riječju „Radost\"",
+        "Riječju „Nagrada\""
+      ],
+      "answer": "Riječju „Mir\" (Selam)",
+      "explanation": "„U njima će se riječju 'Mir' pozdravljati\" (Ibrahim, 23).",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "dzennet-dzehennem",
+      "type": "radio",
+      "question": "Za koga je pripremljen Džehennem?",
+      "options": [
+        "Za nevjernike, nasilnike i teške grešnike",
+        "Za sve ljude",
+        "Za one koji manje klanjaju",
+        "Za siromašne"
+      ],
+      "answer": "Za nevjernike, nasilnike i teške grešnike",
+      "explanation": "Džehennem je boravište pripremljeno za nevjernike, nasilnike i zločince.",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "kader",
+      "type": "radio",
+      "question": "Gdje je Allah, dž.š., zapisao sudbinu Svojih stvorenja?",
+      "options": [
+        "U Levhi-mahfuz",
+        "U Kur'an",
+        "U Tevrat",
+        "U knjigu meleka"
+      ],
+      "answer": "U Levhi-mahfuz",
+      "explanation": "Allah je odredio sudbinu prije nego što je stvorio stvorenja i zapisao je u Levhi-mahfuz.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "kader",
+      "type": "radio",
+      "question": "Šta sve obuhvata Allahovo znanje?",
+      "options": [
+        "Prošlost, sadašnjost i budućnost — dobro i loše",
+        "Samo prošlost",
+        "Samo sadašnjost",
+        "Samo djela vjernika"
+      ],
+      "answer": "Prošlost, sadašnjost i budućnost — dobro i loše",
+      "explanation": "Njegovo znanje obuhvata ono što se dogodilo, što se događa i što će se dogoditi.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "kader",
+      "type": "radio",
+      "question": "Koji je šesti imanski šart?",
+      "options": [
+        "Vjerovanje u Allahovo određenje, dobro ili zlo",
+        "Vjerovanje u meleke",
+        "Vjerovanje u knjige",
+        "Vjerovanje u Sudnji dan"
+      ],
+      "answer": "Vjerovanje u Allahovo određenje, dobro ili zlo",
+      "explanation": "Ve bil-kaderi hajrihi ve šerrihi minellahi te'ala — šesti je imanski šart.",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "el-humeze",
+      "type": "radio",
+      "question": "Koliko ajeta ima sura El-Humeze?",
+      "options": [
+        "Devet",
+        "Sedam",
+        "Pet",
+        "Jedanaest"
+      ],
+      "answer": "Devet",
+      "explanation": "Sura El-Humeze objavljena je u Mekki i sadrži devet ajeta.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "el-humeze",
+      "type": "radio",
+      "question": "Koga sura El-Humeze osuđuje?",
+      "options": [
+        "Klevetnika i podrugljivca koji gomila blago",
+        "Onoga ko klanja",
+        "Onoga ko putuje",
+        "Onoga ko posti"
+      ],
+      "answer": "Klevetnika i podrugljivca koji gomila blago",
+      "explanation": "„Teško svakom klevetniku — podrugljivcu, koji blago gomila i prebrojava ga.\"",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "el-humeze",
+      "type": "radio",
+      "question": "Gdje je objavljena sura El-Humeze?",
+      "options": [
+        "U Mekki",
+        "U Medini",
+        "U Taifu",
+        "U Kudusu"
+      ],
+      "answer": "U Mekki",
+      "explanation": "Sura El-Humeze je mekkanska sura.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "kelimei-sehadet",
+      "type": "radio",
+      "question": "Od koliko se dijelova sastoji Kelimei-šehadet?",
+      "options": [
+        "Od dva",
+        "Od tri",
+        "Od jednog",
+        "Od četiri"
+      ],
+      "answer": "Od dva",
+      "explanation": "Kelimei-šehadet se sastoji od dva dijela: svjedočenja o Allahovoj jednoći i o Muhammedovu, a.s., poslanstvu.",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "kelimei-sehadet",
+      "type": "radio",
+      "question": "Šta je ključ ulaska u islam?",
+      "options": [
+        "Izjava da nema drugog Boga osim Allaha",
+        "Post",
+        "Zekat",
+        "Hadž"
+      ],
+      "answer": "Izjava da nema drugog Boga osim Allaha",
+      "explanation": "Izjava „nema drugog Boga osim Allaha\" ključ je ulaska u islam i temelj vjere.",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "pet-namaza",
+      "type": "radio",
+      "question": "Šta je, prema hadisu, prvo za što će čovjek biti pitan na Sudnjem danu?",
+      "options": [
+        "Namaz",
+        "Post",
+        "Zekat",
+        "Hadž"
+      ],
+      "answer": "Namaz",
+      "explanation": "„Prvo za što će čovjek biti pitan na Sudnjem danu je namaz…\" (Taberani)",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "pet-namaza",
+      "type": "radio",
+      "question": "Gdje je namaz propisan?",
+      "options": [
+        "Na najvišem nebu, prilikom Miradža",
+        "U Kabi",
+        "U Medini",
+        "U pećini Hira"
+      ],
+      "answer": "Na najvišem nebu, prilikom Miradža",
+      "explanation": "Namazu je ukazana posebna počast time što je propisan na najvišem nebu prilikom Miradža.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "pet-namaza",
+      "type": "radio",
+      "question": "Čime počinje i čime se završava namaz?",
+      "options": [
+        "Počinje početnim tekbirom, a završava selamom",
+        "Počinje Fatihom, završava dovom",
+        "Počinje ezanom, završava ikametom",
+        "Počinje nijetom, završava sedždom"
+      ],
+      "answer": "Počinje početnim tekbirom, a završava selamom",
+      "explanation": "Namaz počinje početnim tekbirom, a završava selamom.",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "farzovi-namaz",
+      "type": "radio",
+      "question": "Šta su farzovi u namazu?",
+      "options": [
+        "Dijelovi koji se moraju izvršiti da bi namaz bio ispravan",
+        "Dijelovi koji su preporučeni",
+        "Dijelovi koji se mogu izostaviti",
+        "Pokuđene radnje"
+      ],
+      "answer": "Dijelovi koji se moraju izvršiti da bi namaz bio ispravan",
+      "explanation": "Farzovi su dijelovi namaza koji se moraju izvršiti kako bi namaz bio ispravan.",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "farzovi-namaz",
+      "type": "radio",
+      "question": "Šta treba uraditi klanjač koji shvati da je propustio namaski farz?",
+      "options": [
+        "Obnoviti namaz",
+        "Učiniti sehvi-sedždu",
+        "Ništa",
+        "Proučiti dovu"
+      ],
+      "answer": "Obnoviti namaz",
+      "explanation": "Ako je propušten farz, namaz se mora obnoviti — sehvi-sedžda tu ne pomaže.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "farzovi-namaz",
+      "type": "radio",
+      "question": "Šta znači izvršiti iftitahi tekbir?",
+      "options": [
+        "Izgovoriti Allahu ekber u stojećem položaju, tiho u sebi",
+        "Podići ruke do ušiju",
+        "Proučiti Fatihu",
+        "Predati selam"
+      ],
+      "answer": "Izgovoriti Allahu ekber u stojećem položaju, tiho u sebi",
+      "explanation": "Iftitahi tekbir znači izgovoriti riječi Allahu ekber, u stojećem položaju, tiho u sebi.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "vadzibi-namaz",
+      "type": "radio",
+      "question": "Šta se čini ako se namaski vadžib izostavi zbog zaborava?",
+      "options": [
+        "Sehvi-sedžda",
+        "Ponavlja se namaz",
+        "Ništa",
+        "Uči se Kunut-dova"
+      ],
+      "answer": "Sehvi-sedžda",
+      "explanation": "Neizvršavanje vadžiba namaz čini nepotpunim; ako je zbog zaborava, čini se sehvi-sedžda.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "vadzibi-namaz",
+      "type": "radio",
+      "question": "Na kojim namazima imam uči Fatihu i suru naglas?",
+      "options": [
+        "Na sabahu, prva dva rekata akšama i jacije, džumi, bajramu, teravihi i vitru u ramazanu",
+        "Na podnevu i ikindiji",
+        "Samo na džumi",
+        "Na svim namazima"
+      ],
+      "answer": "Na sabahu, prva dva rekata akšama i jacije, džumi, bajramu, teravihi i vitru u ramazanu",
+      "explanation": "Na podnevu i ikindiji imam uči tiho, a naglas na navedenim namazima.",
+      "tezina": 3
+    },
+    {
+      "etapa": 3,
+      "lekcija": "vadzibi-namaz",
+      "type": "radio",
+      "question": "Na kojem se namazu obavezno uči Kunut-dova?",
+      "options": [
+        "Na vitr-namazu",
+        "Na sabah-namazu",
+        "Na džuma-namazu",
+        "Na bajram-namazu"
+      ],
+      "answer": "Na vitr-namazu",
+      "explanation": "Proučiti Kunut-dovu na vitr-namazu jedan je od namaskih vadžiba.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "sunneti-namaz",
+      "type": "radio",
+      "question": "Do koje visine muškarci, a do koje žene podižu ruke pri početnom tekbiru?",
+      "options": [
+        "Muškarci do ušiju, žene do ramena",
+        "Oboje do ušiju",
+        "Oboje do ramena",
+        "Muškarci do ramena, žene do ušiju"
+      ],
+      "answer": "Muškarci do ušiju, žene do ramena",
+      "explanation": "Sunnet je da muškarci podignu ruke do visine ušiju, a žene do visine ramena.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "sunneti-namaz",
+      "type": "radio",
+      "question": "Šta se izgovara pri podizanju sa ruku'a?",
+      "options": [
+        "Semi'allahu limen hamideh i rabbena lekel-hamd",
+        "Subhaneke",
+        "Et-Tehijjatu",
+        "Allahu ekber samo"
+      ],
+      "answer": "Semi'allahu limen hamideh i rabbena lekel-hamd",
+      "explanation": "Sunnet je izgovoriti semi'allahu limen hamideh i rabbena lekel-hamd.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "sunneti-namaz",
+      "type": "truefalse",
+      "question": "Ako izostavimo namaski sunnet, dužni smo ponoviti namaz.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Ne",
+      "explanation": "Ako sunnete ne učinimo, nismo dužni ponoviti namaz — za razliku od farzova.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "mekruhi-namaz",
+      "type": "radio",
+      "question": "Šta su mekruhi u namazu?",
+      "options": [
+        "Pokuđene radnje kojih se treba kloniti",
+        "Obavezni dijelovi",
+        "Preporučeni dijelovi",
+        "Zabranjene riječi"
+      ],
+      "answer": "Pokuđene radnje kojih se treba kloniti",
+      "explanation": "Mekruhi su djela koja je pokuđeno činiti i kojih bi se musliman trebao kloniti.",
+      "tezina": 1
+    },
+    {
+      "etapa": 3,
+      "lekcija": "mekruhi-namaz",
+      "type": "radio",
+      "question": "Koja od navedenih radnji je mekruh u namazu?",
+      "options": [
+        "Dizati pogled prema gore",
+        "Učiti Fatihu",
+        "Predati selam",
+        "Izgovoriti tekbir"
+      ],
+      "answer": "Dizati pogled prema gore",
+      "explanation": "Dizanje pogleda prema gore, žmirenje bez potrebe i zijevanje ubrajaju se u mekruhe.",
+      "tezina": 2
+    },
+    {
+      "etapa": 3,
+      "lekcija": "mekruhi-namaz",
+      "type": "radio",
+      "question": "Je li mekruh klanjati dok je jelo postavljeno, a osoba gladna?",
+      "options": [
+        "Da, to je mekruh",
+        "Ne, to je sunnet",
+        "Ne, to je vadžib",
+        "Ne, to je farz"
+      ],
+      "answer": "Da, to je mekruh",
+      "explanation": "Klanjati dok je jelo postavljeno na stolu, a osoba je gladna, ubraja se u mekruhe.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rad-kultura",
+      "type": "radio",
+      "question": "Kako islam gleda na rad?",
+      "options": [
+        "Rad je ibadet drag Allahu, dž.š.",
+        "Rad je sramota",
+        "Rad je samo nužda",
+        "Rad je zabranjen petkom"
+      ],
+      "answer": "Rad je ibadet drag Allahu, dž.š.",
+      "explanation": "Rad je ibadet, drago djelo Allahu, a potreba za radom je urođena čovjekova osobina.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rad-kultura",
+      "type": "radio",
+      "question": "Šta musliman nastoji osigurati radom?",
+      "options": [
+        "Sredstva za sebe i porodicu, te za pomoć siromašnima i zajednici",
+        "Samo bogatstvo za sebe",
+        "Samo ugled",
+        "Samo slobodno vrijeme"
+      ],
+      "answer": "Sredstva za sebe i porodicu, te za pomoć siromašnima i zajednici",
+      "explanation": "Radom se osiguravaju sredstva za porodicu, ali i za pomoć siromašnima i zajednici.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rad-kultura",
+      "type": "radio",
+      "question": "Kome je Muhammed, a.s., u ranoj mladosti pomagao svojim radom?",
+      "options": [
+        "Porodici amidže Ebu Taliba",
+        "Porodici Ebu Bekra",
+        "Porodici Omera",
+        "Porodici Hamze"
+      ],
+      "answer": "Porodici amidže Ebu Taliba",
+      "explanation": "Još u ranoj mladosti svojim radom je doprinosio porodici svog amidže Ebu Taliba.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rad-kultura",
+      "type": "radio",
+      "question": "Koje vidove privređivanja je Poslanik, a.s., posebno isticao?",
+      "options": [
+        "Rad, trgovinu i poljoprivredu",
+        "Samo trgovinu",
+        "Samo zanat",
+        "Samo poljoprivredu"
+      ],
+      "answer": "Rad, trgovinu i poljoprivredu",
+      "explanation": "Usmjeravao je pažnju na važnost rada, trgovine, poljoprivrede i drugih produktivnih vidova života.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stjecanje-znanja",
+      "type": "radio",
+      "question": "Na šta su se odnosile prve kur'anske riječi objavljene Poslaniku, a.s.?",
+      "options": [
+        "Na čitanje, učenje i stjecanje znanja",
+        "Na post",
+        "Na namaz",
+        "Na zekat"
+      ],
+      "answer": "Na čitanje, učenje i stjecanje znanja",
+      "explanation": "Prve objavljene riječi bile su „Čitaj, u ime Gospodara tvoga…\" (El-Alek, 1).",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stjecanje-znanja",
+      "type": "radio",
+      "question": "Šta, prema lekciji, znanje podrazumijeva uz motivaciju?",
+      "options": [
+        "Čovjekovu odgovornost",
+        "Bogatstvo",
+        "Slavu",
+        "Vlast"
+      ],
+      "answer": "Čovjekovu odgovornost",
+      "explanation": "Znanje ima veliku motivacijsku snagu, ali istovremeno podrazumijeva i odgovornost.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stjecanje-znanja",
+      "type": "truefalse",
+      "question": "Prema lekciji, vjerovanje bez znanja često vodi u stranputicu.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Čovjek može vjerovati i bez znanja, ali je takvo vjerovanje često stranputica.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stjecanje-znanja",
+      "type": "radio",
+      "question": "Šta musliman treba činiti sa stečenim znanjem?",
+      "options": [
+        "Primjenjivati ga i njime upućivati druge na dobro",
+        "Čuvati ga za sebe",
+        "Prodavati ga",
+        "Zaboraviti ga"
+      ],
+      "answer": "Primjenjivati ga i njime upućivati druge na dobro",
+      "explanation": "Stečeno znanje se primjenjuje u praksi, a njime se drugi upućuju na dobro i odvraćaju od zla.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "roditelji",
+      "type": "radio",
+      "question": "Iz koje sure je ajet „Mi smo naredili čovjeku da bude poslušan roditeljima svojim\"?",
+      "options": [
+        "Lukman",
+        "El-Bekare",
+        "En-Nisa",
+        "Et-Tevbe"
+      ],
+      "answer": "Lukman",
+      "explanation": "Ajet je iz sure Lukman, 14.",
+      "tezina": 3
+    },
+    {
+      "etapa": 6,
+      "lekcija": "roditelji",
+      "type": "radio",
+      "question": "Koliko, prema ajetu, majka doji dijete?",
+      "options": [
+        "Dvije godine",
+        "Jednu godinu",
+        "Šest mjeseci",
+        "Tri godine"
+      ],
+      "answer": "Dvije godine",
+      "explanation": "„…i odbija ga u toku dvije godine\" (Lukman, 14).",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "roditelji",
+      "type": "radio",
+      "question": "Kome smo, prema ajetu iz sure Lukman, dužni biti zahvalni?",
+      "options": [
+        "Allahu i roditeljima",
+        "Samo roditeljima",
+        "Samo učiteljima",
+        "Samo sebi"
+      ],
+      "answer": "Allahu i roditeljima",
+      "explanation": "„Budi zahvalan Meni i roditeljima svojim, Meni će se svi vratiti.\"",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "roditelji",
+      "type": "radio",
+      "question": "Šta je, prema lekciji, jedna od najljepših osobina karakternih ljudi?",
+      "options": [
+        "Na dobročinstvo uzvratiti još većim dobročinstvom",
+        "Šutjeti",
+        "Ne tražiti pomoć",
+        "Sve pamtiti"
+      ],
+      "answer": "Na dobročinstvo uzvratiti još većim dobročinstvom",
+      "explanation": "Jedna od najljepših osobina je na dobročinstvo drugih uzvratiti još većim dobročinstvom.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rodbinske-veze",
+      "type": "radio",
+      "question": "Ko se sve, osim roditelja, braće i sestara, ubraja u rodbinu?",
+      "options": [
+        "Djedovi i nane, tetke, daidže, amidže i njihova djeca",
+        "Samo komšije",
+        "Samo prijatelji",
+        "Samo djeca iz razreda"
+      ],
+      "answer": "Djedovi i nane, tetke, daidže, amidže i njihova djeca",
+      "explanation": "U rodbinu se ubrajaju i djedovi i nane, braća i sestre naših roditelja i njihova djeca.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rodbinske-veze",
+      "type": "radio",
+      "question": "Koji je najbolji način čuvanja rodbinskih veza?",
+      "options": [
+        "Posjećivanje i obilaženje rodbine",
+        "Slanje poruka jednom godišnje",
+        "Davanje novca",
+        "Šutnja"
+      ],
+      "answer": "Posjećivanje i obilaženje rodbine",
+      "explanation": "Posjećivanje i obilaženje rodbine je najbolji način održavanja rodbinskih veza.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rodbinske-veze",
+      "type": "radio",
+      "question": "Šta je, prema hadisi-kudsiju, Allah rekao o onome ko prekida rodbinske veze?",
+      "options": [
+        "I On će s njim vezu prekinuti",
+        "Da će ga obogatiti",
+        "Da će ga zaboraviti",
+        "Da će mu produžiti život"
+      ],
+      "answer": "I On će s njim vezu prekinuti",
+      "explanation": "„…pa ko ih održava i Ja ću s njim vezu održavati, a ko ih prekida i Ja ću s njim vezu prekinuti.\"",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "rodbinske-veze",
+      "type": "radio",
+      "question": "Iz kojeg je Svog imena Allah, dž.š., izveo rodbinske veze?",
+      "options": [
+        "Iz imena Er-Rahman (Milostivi)",
+        "Iz imena El-Halik",
+        "Iz imena El-Alim",
+        "Iz imena Es-Selam"
+      ],
+      "answer": "Iz imena Er-Rahman (Milostivi)",
+      "explanation": "„Ja sam Milostivi, Ja sam stvorio rodbinske veze i izveo ih iz Svog imena.\"",
+      "tezina": 3
+    },
+    {
+      "etapa": 6,
+      "lekcija": "komsije",
+      "type": "radio",
+      "question": "Koga nazivamo komšijama?",
+      "options": [
+        "Osobe koje žive u blizini naše kuće, ulice ili mahale",
+        "Samo rodbinu",
+        "Samo školske drugove",
+        "Samo one iz iste zgrade"
+      ],
+      "answer": "Osobe koje žive u blizini naše kuće, ulice ili mahale",
+      "explanation": "Komšije su osobe koje žive u blizini naše kuće, ulice ili mahale.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "komsije",
+      "type": "radio",
+      "question": "Ko je, prema hadisu, najbolji komšija?",
+      "options": [
+        "Onaj koji se najljepše odnosi prema svom komšiji",
+        "Onaj koji je najbogatiji",
+        "Onaj koji je najstariji",
+        "Onaj koji najviše šuti"
+      ],
+      "answer": "Onaj koji se najljepše odnosi prema svom komšiji",
+      "explanation": "„…a najbolji od svih komšija je onaj koji se najljepše odnosi prema svom komšiji.\"",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "komsije",
+      "type": "radio",
+      "question": "Kako se ponašamo prema starijim komšijama?",
+      "options": [
+        "Poštujemo ih i pozdravljamo pri susretu",
+        "Izbjegavamo ih",
+        "Čekamo da nas oni pozovu",
+        "Ne obraćamo im se"
+      ],
+      "answer": "Poštujemo ih i pozdravljamo pri susretu",
+      "explanation": "Starije komšije treba poštovati i pri susretu ih pozdraviti.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "komsije",
+      "type": "radio",
+      "question": "Koga Allah, dž.š., u suri En-Nisa spominje uz roditelje i rodbinu?",
+      "options": [
+        "Siročad, siromahe, komšije i drugove",
+        "Samo vladare",
+        "Samo učene",
+        "Samo trgovce"
+      ],
+      "answer": "Siročad, siromahe, komšije i drugove",
+      "explanation": "„…i siročadi, i siromasima, i komšijama bližnjim i komšijama daljnjim, i drugovima\" (En-Nisa, 36).",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "prijateljstvo",
+      "type": "radio",
+      "question": "Ko je, prema hadisu, najbolji drug kod Allaha?",
+      "options": [
+        "Onaj koji se najljepše ophodi prema svom drugu",
+        "Onaj koji ima najviše drugova",
+        "Onaj koji najviše daje",
+        "Onaj koji najviše zna"
+      ],
+      "answer": "Onaj koji se najljepše ophodi prema svom drugu",
+      "explanation": "„Najbolji drug kod Allaha je onaj koji se najljepše ophodi prema svom drugu.\" (Tirmizi)",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "prijateljstvo",
+      "type": "radio",
+      "question": "Na čemu treba biti zasnovano prijateljstvo?",
+      "options": [
+        "Na iskrenosti, praštanju, povjerenju i pomaganju",
+        "Na koristi",
+        "Na bogatstvu",
+        "Na strahu"
+      ],
+      "answer": "Na iskrenosti, praštanju, povjerenju i pomaganju",
+      "explanation": "Prijateljstvo treba biti zasnovano na iskrenosti, međusobnom praštanju, povjerenju i pomaganju.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "prijateljstvo",
+      "type": "radio",
+      "question": "Gdje najčešće upoznajemo prve prijatelje?",
+      "options": [
+        "U vrtiću, mektebu ili školi",
+        "Na putovanju",
+        "Na poslu",
+        "U džamiji tek u starosti"
+      ],
+      "answer": "U vrtiću, mektebu ili školi",
+      "explanation": "Prve drugare upoznajemo u ranom djetinjstvu — u vrtiću, mektebu ili školi.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "prijateljstvo",
+      "type": "radio",
+      "question": "Iz koje je sure ajet „budite s onima koji su iskreni\"?",
+      "options": [
+        "Et-Tevbe",
+        "El-Bekare",
+        "En-Nisa",
+        "Lukman"
+      ],
+      "answer": "Et-Tevbe",
+      "explanation": "Ajet je iz sure Et-Tevbe, 119.",
+      "tezina": 3
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stariji",
+      "type": "radio",
+      "question": "Ko, prema hadisu, „ne pripada nama\"?",
+      "options": [
+        "Ko nije milostiv prema mlađima i ne poštuje starije",
+        "Ko ne posti nafilu",
+        "Ko ne putuje",
+        "Ko ne uči napamet"
+      ],
+      "answer": "Ko nije milostiv prema mlađima i ne poštuje starije",
+      "explanation": "„Ko ne bude milostiv prema mlađima i ne bude poštovao starije… ne pripada nama.\" (Buhari)",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stariji",
+      "type": "radio",
+      "question": "Šta je Poslanik, a.s., najavio kao mali predznak Sudnjeg dana?",
+      "options": [
+        "Da će djeca postati srdita, a nestati poštovanja starijih",
+        "Da će nestati vode",
+        "Da će nestati knjiga",
+        "Da će prestati trgovina"
+      ],
+      "answer": "Da će djeca postati srdita, a nestati poštovanja starijih",
+      "explanation": "Poslanik, a.s., je udaljavanje od poštivanja starijih najavio kao mali predznak Sudnjeg dana.",
+      "tezina": 3
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stariji",
+      "type": "radio",
+      "question": "Šta, prema lekciji, čini životnu sredinu ugodnom?",
+      "options": [
+        "Poštivanje starijih i međusobno uvažavanje",
+        "Šutnja",
+        "Takmičenje",
+        "Odvojenost generacija"
+      ],
+      "answer": "Poštivanje starijih i međusobno uvažavanje",
+      "explanation": "Poštivanje starijih i međusobno uvažavanje oplemenjuje porodični i društveni ambijent.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "poboznost",
+      "type": "radio",
+      "question": "Šta je ihsan?",
+      "options": [
+        "Stalna svijest o Allahu — da Ga obožavamo kao da Ga vidimo",
+        "Vrsta namaza",
+        "Vrsta posta",
+        "Dobrovoljna sadaka"
+      ],
+      "answer": "Stalna svijest o Allahu — da Ga obožavamo kao da Ga vidimo",
+      "explanation": "Ihsan je stalna svijest o Allahu: obožavamo Ga kao da Ga vidimo, jer On nas uistinu vidi.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "poboznost",
+      "type": "radio",
+      "question": "U čemu je, prema lekciji, suština pobožnosti i bogobojaznosti?",
+      "options": [
+        "U čuvanju od harama i sumnjivih stvari",
+        "U dugom postu",
+        "U mnogo govora",
+        "U bogatstvu"
+      ],
+      "answer": "U čuvanju od harama i sumnjivih stvari",
+      "explanation": "Suština je u čuvanju od harama i sumnjivih stvari te svođenju računa sa samim sobom.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "poboznost",
+      "type": "radio",
+      "question": "Šta je Poslanik, a.s., rekao onome ko se čuva harama?",
+      "options": [
+        "Bit će najpobožniji čovjek",
+        "Bit će najbogatiji",
+        "Bit će najučeniji",
+        "Bit će najjači"
+      ],
+      "answer": "Bit će najpobožniji čovjek",
+      "explanation": "„Čuvaj se harama — bit ćeš najpobožniji čovjek…\" (Tirmizi)",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "iskrenost-pravednost",
+      "type": "radio",
+      "question": "Šta podrazumijeva iskrenost u islamu?",
+      "options": [
+        "Činjenje dobra isključivo radi Allahovog zadovoljstva",
+        "Da uvijek govorimo ono što drugi žele",
+        "Da ne griješimo nikada",
+        "Da mnogo dajemo"
+      ],
+      "answer": "Činjenje dobra isključivo radi Allahovog zadovoljstva",
+      "explanation": "Iskrenost je ispoljavanje vjerovanja i činjenje dobra isključivo radi Allahovog zadovoljstva.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "iskrenost-pravednost",
+      "type": "radio",
+      "question": "Koja djela će, prema lekciji, biti primljena i nagrađena?",
+      "options": [
+        "Samo ona iskreno učinjena u ime Allaha",
+        "Sva djela bez razlike",
+        "Samo velika djela",
+        "Samo javna djela"
+      ],
+      "answer": "Samo ona iskreno učinjena u ime Allaha",
+      "explanation": "Samo ona djela koja su iskreno učinjena u ime Uzvišenog Allaha bit će primljena.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "iskrenost-pravednost",
+      "type": "radio",
+      "question": "Kako glasi poznati hadis o namjeri?",
+      "options": [
+        "„Djela se vrednuju prema namjerama\"",
+        "„Djela se vrednuju prema broju\"",
+        "„Djela se vrednuju prema vremenu\"",
+        "„Djela se vrednuju prema mjestu\""
+      ],
+      "answer": "„Djela se vrednuju prema namjerama\"",
+      "explanation": "„Djela se vrednuju prema namjerama i svakome pripada ono što je naumio.\"",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "iskrenost-pravednost",
+      "type": "truefalse",
+      "question": "Iskrenost u riječima vodi ka iskrenosti u djelima.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Iskrenost u riječima uvodi čovjeka u iskrenost u djelima i ispravnost u postupcima.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "strpljivost",
+      "type": "radio",
+      "question": "Šta znači riječ islam?",
+      "options": [
+        "Potpuna predanost i poniznost Allahu, dž.š.",
+        "Znanje",
+        "Strpljenje",
+        "Zahvalnost"
+      ],
+      "answer": "Potpuna predanost i poniznost Allahu, dž.š.",
+      "explanation": "Islam znači potpunu predanost, povinovanost i poniznost Allahu, dž.š.",
+      "tezina": 1
+    },
+    {
+      "etapa": 6,
+      "lekcija": "strpljivost",
+      "type": "radio",
+      "question": "Koji je prvenstveni cilj islama, prema lekciji?",
+      "options": [
+        "Odvratiti ljude od robovanja stvorenjima i strastima i usmjeriti ih Allahu",
+        "Sticanje imetka",
+        "Osvajanje zemalja",
+        "Gradnja džamija"
+      ],
+      "answer": "Odvratiti ljude od robovanja stvorenjima i strastima i usmjeriti ih Allahu",
+      "explanation": "Cilj je odvratiti ljude od robovanja stvorenjima, žudnjama i strastima i usmjeriti ih Allahu.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "strpljivost",
+      "type": "radio",
+      "question": "Kada su, prema lekciji, sve naše aktivnosti u predanosti Allahu?",
+      "options": [
+        "Kada su u skladu s Božijim zakonom i kada nam je cilj Allahovo zadovoljstvo",
+        "Kada su javne",
+        "Kada su teške",
+        "Kada donose zaradu"
+      ],
+      "answer": "Kada su u skladu s Božijim zakonom i kada nam je cilj Allahovo zadovoljstvo",
+      "explanation": "Ako su u skladu s Božijim zakonom, srce ispunjeno bogobojaznošću, a cilj Allahovo zadovoljstvo.",
+      "tezina": 2
+    },
+    {
+      "etapa": 6,
+      "lekcija": "strpljivost",
+      "type": "radio",
+      "question": "Iz koje sure je ajet „Klanjanje moje, i obredi moji, i život moj, i smrt moja doista su posvećeni Allahu\"?",
+      "options": [
+        "El-En'am",
+        "El-Bekare",
+        "Et-Tevbe",
+        "Lukman"
+      ],
+      "answer": "El-En'am",
+      "explanation": "Ajet je iz sure El-En'am, 162.",
+      "tezina": 3
+    },
+    {
+      "etapa": 6,
+      "lekcija": "stariji",
+      "type": "radio",
+      "question": "Ko je bio Ebu Kuhafe, oronuli starac koji je pri oslobođenju Mekke došao Muhammedu, a.s., da prihvati islam?",
+      "options": [
+        "Otac Ebu Bekra, r.a.",
+        "Amidža Omera, r.a.",
+        "Brat Osmana, r.a.",
+        "Djed Alije, r.a."
+      ],
+      "answer": "Otac Ebu Bekra, r.a.",
+      "explanation": "Ebu Kuhafe je bio otac Ebu Bekra, r.a.; na njegovom primjeru Poslanik, a.s., nas je podučio poštivanju starijih.",
+      "tezina": 3
+    }
+  ]
+}

@@ -170,7 +170,9 @@ export const kvizoviTable = pgTable("kvizovi", {
   id: serial("id").primaryKey(),
   seedKey: varchar("seed_key", { length: 160 }),
   nivo: integer("nivo"),
-  // Etapa unutar nivoa: 1 = lekcije 1–10, 2 = 11–20, ... 7 = 61–70.
+  // Etapa unutar nivoa: 1 = lekcije 1–10, 2 = 11–20, i tako dalje do
+  // posljednjeg bloka nivoa. Nivoi 1 i 2 imaju sedam etapa, a Nivo 3 deset
+  // (100 lekcija).
   // NULL znači da kviz nije vezan za etapu. U UI-ju se prikazuje kao
   // "{etapa}-{nivo}", npr. 1-1 za prvu etapu Nivoa 1.
   etapa: integer("etapa"),

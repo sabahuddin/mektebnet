@@ -6,6 +6,7 @@
 export const IZVORNI_KVIZOVI_PO_NIVOU: Record<number, string[]> = {
   1: ["1a", "1a-hard", "1b", "1b-hard", "1c", "1c-hard", "1d", "1d-hard", "1e", "1e-hard"],
   2: ["2a", "2a-hard", "2b", "2b-hard", "2c", "2c-hard", "2d", "2d-hard", "2e", "2e-hard", "2f"],
+  3: ["3a", "3a-hard", "3b", "3b-hard", "3c", "3c-hard", "3d", "3d-hard", "3e", "3e-hard"],
 };
 
 /** Zadržano zbog postojećih poziva za Nivo 1. */
@@ -17,6 +18,8 @@ export const PITANJA_PO_ETAPI = 100;
 export const PITANJA_PO_KRUNISANJU = 100;
 /** Prag prolaza na etapnom kvizu i krunisanju (vidi .agents/memory/kvizovi-po-etapama.md). */
 export const PRAG_PROLAZA_PERCENT = 80;
+/** Najveći redni broj etape koji nivo može imati (Nivo 3 ima 100 lekcija). */
+export const MAX_ETAPA = 10;
 
 export type Etapa = {
   redni: number;
@@ -65,6 +68,18 @@ export const ETAPE_PO_NIVOU: Record<number, Etapa[]> = {
     etapa(2, 6, "Zlatni medaljon 6 — Džuma, bajram i društvo", "Radne navike, srednji put, džuma i bajram-namaz, sura El-Kurejš, teravih, istina i ponašanje u društvu."),
     etapa(2, 7, "Zlatni medaljon 7 — Domovina i identitet", "Mubarek-noći, nafila-namazi, bošnjački alimi, Bosna i Hercegovina, bosanski jezik, kultura i Lekad džāekum.", 68),
   ],
+  3: [
+    etapa(3, 1, "Zlatni medaljon 1 — Vjerovanje u Allaha", "Dužnosti prema Allahu, sura El-Fil, tevhid, vjerovanje u gajb, kufr i širk, te Allahova svojstva."),
+    etapa(3, 2, "Zlatni medaljon 2 — Meleki, knjige i poslanici", "Esmaul-husna, meleki, džini i šejtani, Allahove knjige, objava Kur'ana, poslanici i njihove mudžize, Isra i Miradž, Sudnji dan."),
+    etapa(3, 3, "Zlatni medaljon 3 — Ahiret i propisi namaza", "Šefa'at, Mizan i Sirat, Džennet i Džehennem, kader, sura El-Humeze, kelimei-šehadet te farzovi, vadžibi, sunneti i mekruhi namaza."),
+    etapa(3, 4, "Zlatni medaljon 4 — Islamski šarti u praksi", "Sura El-'Asr, džemat, podjela namaza, dženaza-namaz, post, zekat, sadekatul-fitr, hadž, sura Et-Tekasur i hadiske zbirke."),
+    etapa(3, 5, "Zlatni medaljon 5 — Porodica i odgovornost", "Ef'alu mukellefin, gusul, sahibi-uzur, porodica i brak, kultura odijevanja, sura El-Kari'ah i odgovornost prema zdravlju."),
+    etapa(3, 6, "Zlatni medaljon 6 — Rad, znanje i lijep odnos", "Rad, stjecanje znanja, roditelji, rodbinske veze, komšije, prijateljstvo, poštivanje starijih, pobožnost, iskrenost i strpljivost."),
+    etapa(3, 7, "Zlatni medaljon 7 — Loše osobine", "Istinoljubivost i dobrota naspram škrtosti, zavisti, ogovaranja, oholosti, mržnje i neprijateljstva, te štetnost droge i alkohola."),
+    etapa(3, 8, "Zlatni medaljon 8 — Ovisnosti i odnos prema prirodi", "Duhan, nemoral, ovisnost o internetu, horoskop, kockanje, ekologija, odnos prema biljkama i životinjama te poslanici Nuh i Ibrahim, a.s."),
+    etapa(3, 9, "Zlatni medaljon 9 — Život Poslanika, a.s.", "Musa i Isa, a.s., djetinjstvo i porodica Muhammeda, a.s., Hidžra, Bitka na Bedru, Oproštajni hadž, preseljenje na ahiret i Kulid'ullahe."),
+    etapa(3, 10, "Zlatni medaljon 10 — Islamska zajednica i naše naslijeđe", "Lijepa riječ, historija Islamske zajednice, Dan džamija, ustanove IZ, pravedne halife, odabrane žene, vakufi i bošnjački književnici.", 100),
+  ],
 };
 
 /** Zadržano zbog postojećih poziva za Nivo 1. */
@@ -79,12 +94,13 @@ export function etapeZaNivo(nivo: number): Etapa[] {
 
 /**
  * Etapa kojoj pripada lekcija sa datim `redoslijed`: 1 = lekcije 1–10,
- * 2 = 11–20, ... 7 = 61 i dalje. Isti raspored koristi i `kvizovi.etapa`.
+ * 2 = 11–20, i tako do posljednje etape nivoa. Isti raspored koristi i
+ * `kvizovi.etapa`. Nivoi 1 i 2 imaju sedam etapa, Nivo 3 ima deset.
  */
-export function etapaZaRedoslijed(redoslijed: number): number {
+export function etapaZaRedoslijed(redoslijed: number, maxEtapa = MAX_ETAPA): number {
   // Uvodne lekcije znaju imati negativan `redoslijed` (npr. -10 za "Uvodna
   // riječ" Nivoa 2) — one pripadaju prvoj etapi.
-  return Math.min(Math.max(Math.floor(redoslijed / 10) + 1, 1), 7);
+  return Math.min(Math.max(Math.floor(redoslijed / 10) + 1, 1), maxEtapa);
 }
 
 // ── Parsiranje legacy JSONB pitanja ────────────────────────────────────────

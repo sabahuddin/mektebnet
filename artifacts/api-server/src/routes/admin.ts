@@ -60,6 +60,10 @@ import { JWT_SECRET } from "../lib/jwt-secret.js";
 import { contentDisposition, normalizeUploadedFilename } from "../lib/file-names.js";
 import { normalizeSurahNames, normalizeSurahNamesDeep } from "../lib/surah-names.js";
 
+// Najveći redni broj etape. Etapa pokriva blok od deset lekcija, pa nivo sa
+// 100 lekcija (Nivo 3) ima deset etapa, a nivoi 1 i 2 po sedam.
+const MAX_ETAPA = 10;
+
 const router = Router();
 router.use(requireAuth);
 
@@ -1873,8 +1877,8 @@ router.put("/kvizovi/:id", async (req, res) => {
     if (nivo !== undefined) updates.nivo = nivo;
     if (etapa !== undefined) {
       const etapaBroj = etapa === null || etapa === "" ? null : Number(etapa);
-      if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
-        res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
+      if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > MAX_ETAPA)) {
+        res.status(400).json({ error: `Etapa mora biti broj od 1 do ${MAX_ETAPA}` });
         return;
       }
       updates.etapa = etapaBroj;
@@ -1900,8 +1904,8 @@ router.post("/kvizovi/ai-import", async (req, res) => {
 
     const userId = (req as any).user?.id;
     const etapaBroj = etapa === null || etapa === undefined || etapa === "" ? null : Number(etapa);
-    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
-      res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
+    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > MAX_ETAPA)) {
+      res.status(400).json({ error: `Etapa mora biti broj od 1 do ${MAX_ETAPA}` });
       return;
     }
     const slugClean = String(slug).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
@@ -1982,8 +1986,8 @@ router.post("/kvizovi", async (req, res) => {
       return;
     }
     const etapaBroj = etapa === null || etapa === undefined || etapa === "" ? null : Number(etapa);
-    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
-      res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
+    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > MAX_ETAPA)) {
+      res.status(400).json({ error: `Etapa mora biti broj od 1 do ${MAX_ETAPA}` });
       return;
     }
     const [created] = await db.insert(kvizoviTable).values({

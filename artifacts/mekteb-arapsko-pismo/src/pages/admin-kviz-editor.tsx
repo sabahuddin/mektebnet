@@ -11,6 +11,9 @@ import {
   ArrowRightLeft, BookOpenCheck, ClipboardList, Database, Pencil
 } from "lucide-react";
 
+// Etapa pokriva blok od deset lekcija; Nivo 3 ima 100 lekcija, dakle deset etapa.
+const MAX_ETAPA = 10;
+
 // Admin editor jednog kviza. Pravi novi kviz (kad nema id-a) ili uređuje
 // postojeći. Pitanja se NE čuvaju u JSONB-u — bira ih iz centralne banke
 // preko join tabele `kviz_pitanja`.
@@ -376,7 +379,7 @@ export default function AdminKvizEditorPage() {
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
               >
                 <option value="">{t("— bez etape —")}</option>
-                {Array.from({ length: 7 }, (_, i) => i + 1).map(etapa => (
+                {Array.from({ length: MAX_ETAPA }, (_, i) => i + 1).map(etapa => (
                   <option key={etapa} value={etapa}>
                     {etapa}-{meta.nivo ?? "?"} · {((etapa - 1) * 10) + 1}–{etapa * 10}
                   </option>

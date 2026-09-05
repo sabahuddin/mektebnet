@@ -1,0 +1,190 @@
+{
+  "_opis": "Ispravke pitanja u postojećim kvizovima Nivoa 3 kojima tačan odgovor ne odgovara nijednoj ponuđenoj opciji. Tačan odgovor je u svakom slučaju jednoznačno naveden u objašnjenju samog pitanja. Ključ je '<kviz-slug>#<indeks>'; primjenjuje se samo pri gradnji etapnih kvizova.",
+  "3a#15": {
+    "question": "Koliko ima imanskih šartova (temelja islamskog vjerovanja)?",
+    "options": [
+      "Pet",
+      "Šest",
+      "Sedam",
+      "Četiri"
+    ],
+    "answer": "Šest",
+    "explanation": "Šest imanskih šartova: vjerovanje u Allaha, meleke, knjige, poslanike, Sudnji dan i kader."
+  },
+  "3a#30": {
+    "question": "IZBACI ULJEZA: Koja dužnost NE spada u pet islamskih šartova?",
+    "options": [
+      "Namaz",
+      "Hadž",
+      "Vjerovanje u meleke",
+      "Zekat"
+    ],
+    "answer": "Vjerovanje u meleke",
+    "explanation": "Vjerovanje u meleke je imanski šart, ne islamski. Pet islamskih šartova su: šehadet, namaz, post, zekat, hadž."
+  },
+  "3a#37": {
+    "question": "SITUACIJA: Ahmed ima 10.000 KM već 8 mjeseci. Da li mora dati zekat?",
+    "options": [
+      "Da, odmah",
+      "Ne, mora proći godina dana",
+      "Da, ali samo 1%",
+      "Ne, jer nije dovoljno"
+    ],
+    "answer": "Ne, mora proći godina dana",
+    "explanation": "Za obavezu zekata, imovina mora biti u posjedu GODINU DANA (12 mjeseci), ne samo 8."
+  },
+  "3a#44": {
+    "question": "SITUACIJA: Amira želi ići na hadž. Njeni roditelji ne mogu ići s njom. Može li otići sama?",
+    "options": [
+      "Da, bez problema",
+      "Ne, žena mora imati mahrema",
+      "Da, ako ima dovoljno novca",
+      "Samo ako je starija od 50 godina"
+    ],
+    "answer": "Ne, žena mora imati mahrema",
+    "explanation": "Žena može putovati na hadž samo uz muža ili mahrema (oca, brata, djeda) ili u skupini žena."
+  },
+  "3a#51": {
+    "question": "SITUACIJA: Mustafa klanja farz bez abdesta, a zatim uzme abdest i klanja sunnete. Je li namaz ispravan?",
+    "options": [
+      "Da, sve je ispravno",
+      "Ne, mora ponoviti samo farz",
+      "Ne, mora ponoviti sve",
+      "Da, ako je zaboravio"
+    ],
+    "answer": "Ne, mora ponoviti samo farz",
+    "explanation": "Abdest je uvjet za ispravnost namaza. Farz klanjan bez abdesta nije ispravan i mora se ponoviti."
+  },
+  "3a#72": {
+    "question": "SITUACIJA: Selim je bogat, zdrav i punoljetan, ali se boji putovanja. Mora li obaviti hadž?",
+    "options": [
+      "Da, strah nije opravdanje",
+      "Ne, ako postoji realna opasnost",
+      "Da, ali može poslati zamjenu",
+      "Ne, jer je još mlad"
+    ],
+    "answer": "Ne, ako postoji realna opasnost",
+    "explanation": "Sigurnost puta je jedan od uvjeta za obaveznost hadža. Ako postoji realna opasnost, hadž nije obavezan."
+  },
+  "3a#79": {
+    "question": "SITUACIJA: Emir je kupio auto za 20.000 KM koji koristi za posao. Mora li dati zekat na auto?",
+    "options": [
+      "Da, na punu vrijednost",
+      "Ne, jer ga koristi",
+      "Da, ali samo 1%",
+      "Da, ako ga ima godinu dana"
+    ],
+    "answer": "Ne, jer ga koristi",
+    "explanation": "Zekat se ne daje na predmete koji se koriste za lične potrebe (kuća, auto koji se koristi)."
+  },
+  "3a#86": {
+    "question": "SITUACIJA: Lejla želi dati sadekatul-fitr za svoje nerođeno dijete u stomaku. Je li to ispravno?",
+    "options": [
+      "Ne, samo za rođene",
+      "Da, lijepo je dati i za nerođeno dijete",
+      "Ne, to je zabranjeno",
+      "Samo ako je muško"
+    ],
+    "answer": "Da, lijepo je dati i za nerođeno dijete",
+    "explanation": "Lijepo je (mustehab) dati sadekatul-fitr i na nerođeno dijete u utrobi majke."
+  },
+  "3a#93": {
+    "question": "SITUACIJA: Kemal je propustio podne-namaz bez opravdanja. Mora li ga naklanjati?",
+    "options": [
+      "Ne, propušteno je propušteno",
+      "Da, mora naklanjati kaza-namaz",
+      "Samo ako se sjeti",
+      "Ne, jer je prošlo vrijeme"
+    ],
+    "answer": "Da, mora naklanjati kaza-namaz",
+    "explanation": "Propušteni farz-namaz se mora naklanjati (kaza), bez obzira na razlog propuštanja."
+  },
+  "3b#15": {
+    "question": "Koja je prva faza kur'anske zabrane alkohola?",
+    "options": [
+      "Potpuna zabrana",
+      "Zabrana pri namazu",
+      "Stavljanje u ravan sa štetnim stvarima",
+      "Upozorenje na posljedice"
+    ],
+    "answer": "Stavljanje u ravan sa štetnim stvarima",
+    "explanation": "Prva faza: alkohol se spominje odvojeno od 'hrane prijatne', ukazujući da nije dobar (En-Nahl, 67)."
+  },
+  "3b#30": {
+    "question": "IZBACI ULJEZA: Koja od navedenih NIJE pohvalna osobina?",
+    "options": [
+      "Iskrenost",
+      "Strpljivost",
+      "Oholost",
+      "Pravednost"
+    ],
+    "answer": "Oholost",
+    "explanation": "Oholost (kibur) je pokuđena osobina. Iskrenost, strpljivost i pravednost su pohvalne vrline."
+  },
+  "3b#37": {
+    "question": "SITUACIJA: Ahmed prodaje alkohol u svojoj prodavnici, ali sam ga ne pije. Je li to dozvoljeno?",
+    "options": [
+      "Da, jer ga ne pije",
+      "Ne, prodaja alkohola je zabranjena",
+      "Da, ako daje sadaku",
+      "Samo ako prodaje nemuslimanima"
+    ],
+    "answer": "Ne, prodaja alkohola je zabranjena",
+    "explanation": "Poslanik, a.s., je prokleo i PRODAVCA alkohola. Prodaja je zabranjena bez obzira pije li osoba ili ne."
+  },
+  "3b#72": {
+    "question": "SITUACIJA: Lejla nosi hidžab samo kada ide u džamiju. Je li to ispravno?",
+    "options": [
+      "Da, dovoljno je u džamiji",
+      "Ne, hidžab je obavezan pred svim nemahremima",
+      "Da, ako klanja sve namaze",
+      "Samo ako je udata"
+    ],
+    "answer": "Ne, hidžab je obavezan pred svim nemahremima",
+    "explanation": "Hidžab je obavezan pred svim muškarcima koji nisu mahremi, ne samo u džamiji."
+  },
+  "3b#93": {
+    "question": "SITUACIJA: Selim prodaje časopise koji promovišu alkohol i nemoral. Je li to dozvoljeno?",
+    "options": [
+      "Da, on samo prodaje papir",
+      "Ne, pomaganje u grijehu je zabranjeno",
+      "Da, ako ne čita",
+      "Samo ako daje sadaku"
+    ],
+    "answer": "Ne, pomaganje u grijehu je zabranjeno",
+    "explanation": "Pomaganje u grijehu je zabranjeno. Prodaja materijala koji promovišu haram je također haram."
+  },
+  "3c#15": {
+    "question": "Koji poslanik je sagradio lađu (arku) po Allahovoj naredbi?",
+    "options": [
+      "Ibrahim, a.s.",
+      "Musa, a.s.",
+      "Nuh, a.s.",
+      "Isa, a.s."
+    ],
+    "answer": "Nuh, a.s.",
+    "explanation": "Nuh, a.s., je sagradio lađu (arku) da spasi vjernike od potopa."
+  },
+  "3c#21": {
+    "question": "Ko je prvi čovjek koji je primio islam od muškaraca?",
+    "options": [
+      "Omer, r.a.",
+      "Ebu Bekr, r.a.",
+      "Alija, r.a.",
+      "Hamza, r.a."
+    ],
+    "answer": "Ebu Bekr, r.a.",
+    "explanation": "Ebu Bekr es-Siddik, r.a., je prvi odrasli muškarac koji je primio islam."
+  },
+  "3c#30": {
+    "question": "IZBACI ULJEZA: Ko NIJE od četiri pravedne halife?",
+    "options": [
+      "Ebu Bekr",
+      "Omer",
+      "Hamza",
+      "Osman"
+    ],
+    "answer": "Hamza",
+    "explanation": "Četiri pravedne halife su: Ebu Bekr, Omer, Osman i Alija. Hamza je bio amidža Poslanika, a.s."
+  }
+}

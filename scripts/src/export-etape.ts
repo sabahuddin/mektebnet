@@ -7,7 +7,8 @@
  * ručne dopune iz `scripts/data/`, bez ikakvog dodira sa bazom. Namijenjeno
  * ručnom uvozu (Replit / Coolify).
  *
- * Svaki nivo ima sedam etapa (1 = lekcije 1–10, ... 7 = 61 i dalje), u skladu
+ * Etapa je blok od deset lekcija (1 = lekcije 1–10, 2 = 11–20 …); nivoi 1 i 2
+ * imaju po sedam etapa, a Nivo 3 sa svojih 100 lekcija ima deset, u skladu
  * sa `kvizovi.etapa`. Etapni kviz prikazuje sva svoja pitanja, pa se
  * `pitanjaPoSesiji` ne postavlja, a prag prolaza je 80%.
  *
@@ -104,7 +105,7 @@ function readme(
   return [
     `# Nivo ${NIVO} — etapni kvizovi i krunisanje`,
     "",
-    "Deset kvizova u formatu šablona za uvoz (`naslov` / `slug` / `nivo` / `etapa` / `kategorija` /",
+    `${zapisi.length} kvizova u formatu šablona za uvoz (\`naslov\` / \`slug\` / \`nivo\` / \`etapa\` / \`kategorija\` /`,
     `\`tagovi\` / \`opis\` / \`pitanja[]\`), plus \`medaljoni-nivo${NIVO}.json\` sa podacima o tome koji kviz`,
     "ide na koji Zlatni medaljon.",
     "",
@@ -121,7 +122,7 @@ function readme(
     ...medaljoni.map((m) =>
       `| \`${m.slug}\` — ${m.naziv} | ${m.lekcije} | ${m.posAfterRedoslijed} | \`${m.kviz}\` | \`${m.medaljonLekcija}\` |`),
     "",
-    "Svaki nivo ima sedam etapa — po jednu na svakih deset lekcija. Etapni kviz se veže za",
+    `Ovaj nivo ima ${medaljoni.length} etapa — po jednu na svakih deset lekcija. Etapni kviz se veže za`,
     "medaljon-lekciju preko `kvizovi.lekcija_id`, a `kvizovi.etapa` nosi redni broj etape.",
     "",
     "## Postavke etapnog kviza",
@@ -171,6 +172,7 @@ function main() {
     .sort((a, b) => a.redoslijed - b.redoslijed);
   const naslovPoSlugu = new Map(lekcije.map((l) => [l.slug, l.naslov]));
 
+  const ETAPE = etapeZaNivo(NIVO);
   const kandidati: Kandidat[] = [];
   for (const p of pool) {
     const parsed = parseLegacy(kvizIspravke[p.id] ?? p.pitanje, p.id);
@@ -181,7 +183,7 @@ function main() {
     lekcijskaPitanja(l.kvizPitanja).forEach((raw, idx) => {
       const parsed = parseLegacy(ispravke[`${l.slug}#${idx}`] ?? raw, `${l.slug}#${idx}`);
       if (!parsed) return;
-      kandidati.push({ ...parsed, etapa: etapaZaRedoslijed(l.redoslijed), lekcijaSlug: l.slug, lekcijaNaslov: l.naslov });
+      kandidati.push({ ...parsed, etapa: etapaZaRedoslijed(l.redoslijed, ETAPE.length), lekcijaSlug: l.slug, lekcijaNaslov: l.naslov });
     });
   }
   for (const n of nova.pitanja) {
@@ -214,7 +216,6 @@ function main() {
     zapisi.push({ fajl, slug, naslov, ukupno: pitanja.length, bodivih: pitanja.filter(jeBodivo).length });
   }
 
-  const ETAPE = etapeZaNivo(NIVO);
   const izbor = ETAPE.map((e) => ({ etapa: e, pitanja: odaberiZaEtapu(svi, e.redni) }));
   for (const { etapa, pitanja } of izbor) {
     zapisi1(etapa.kvizSlug, etapa.kvizNaslov, etapa.opis, pitanja,
