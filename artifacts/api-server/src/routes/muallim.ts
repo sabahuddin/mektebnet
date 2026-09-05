@@ -1564,7 +1564,9 @@ router.get("/ucenici", async (req, res) => {
       // Svi učenici džemata — join kroz muallim_profili (siguran i za starije zapise
       // gdje ucenik_profili.mekteb_id može biti NULL).
       const rows = await db.execute(sql`
-        SELECT up.user_id, up.muallim_id, up.grupa_id, up.mekteb_id, up.is_archived,
+        SELECT up.user_id,
+               COALESCE(g.muallim_id, up.muallim_id) AS muallim_id,
+               up.grupa_id, up.mekteb_id, up.is_archived,
                u.display_name, u.username, u.email, u.role,
                u.last_seen_at, u.total_screentime_sec,
                mu.display_name AS muallim_display_name,
