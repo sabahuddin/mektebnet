@@ -189,6 +189,7 @@ interface IlmihalLekcija {
   naslov: string;
   nivo: number;
   slug?: string;
+  dostupnost?: "svi" | "muallimi";
 }
 
 interface NastavniMaterijal {
@@ -3702,7 +3703,7 @@ export default function MuallimPanel() {
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                             <LekcijaPicker
-                              lekcije={dostupneLekcije}
+                               lekcije={dostupneLekcije.filter((lekcija) => lekcija.dostupnost !== "muallimi")}
                               value={zadLekcija}
                               onChange={setZadLekcija}
                               onSelectLesson={lekcija => {

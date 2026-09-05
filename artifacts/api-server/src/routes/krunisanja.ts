@@ -269,7 +269,10 @@ async function proveriGatingKrunisanja(
   const sveLekcije = await db
     .select({ id: ilmihalLekcijeTable.id })
     .from(ilmihalLekcijeTable)
-    .where(eq(ilmihalLekcijeTable.nivo, krunisanje.nivo));
+    .where(and(
+      eq(ilmihalLekcijeTable.nivo, krunisanje.nivo),
+      eq(ilmihalLekcijeTable.dostupnost, "svi"),
+    ));
   const [progressRow] = await db
     .select({ completedLessons: studentProgressTable.completedLessons })
     .from(studentProgressTable)

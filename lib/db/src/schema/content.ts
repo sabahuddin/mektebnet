@@ -140,6 +140,8 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   audioSrc: varchar("audio_src", { length: 500 }),
   redoslijed: integer("redoslijed").notNull().default(0),
   isPublished: boolean("is_published").notNull().default(true),
+  // Ko smije vidjeti lekciju: "svi" ili "muallimi" (admin uvijek ima pristup).
+  dostupnost: varchar("dostupnost", { length: 20 }).notNull().default("svi"),
   // Predmet (Akaid, Ahlak, Ibadat, ...) — koristi se za filter na "Sve lekcije".
   // Inicijalno backfill-ovano iz priprema HTML-a (regex extract iz meta bloka),
   // dalje admin može direktno mijenjati. NULL za lekcije bez priprema/predmeta.

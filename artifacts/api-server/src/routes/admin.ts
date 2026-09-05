@@ -1622,7 +1622,7 @@ router.get("/ilmihal/lista", async (req, res) => {
 
 router.post("/ilmihal", async (req, res) => {
   try {
-    const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja } = req.body;
+    const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja, dostupnost } = req.body;
     if (!naslov || !slug) return res.status(400).json({ error: "naslov and slug required" });
     // Sigurnost + validacija contentHtml (isti uvjeti kao PUT)
     if (contentHtml) {
@@ -1654,6 +1654,7 @@ router.post("/ilmihal", async (req, res) => {
       redoslijed: redoslijed || 0,
       contentHtml: normalizeSurahNames(String(contentHtml || "")),
       kvizPitanja: kviz as any,
+      dostupnost: dostupnost === "muallimi" ? "muallimi" : "svi",
     }).returning({ id: ilmihalLekcijeTable.id });
     res.json({ success: true, id: row.id });
   } catch (err) {
@@ -1666,7 +1667,7 @@ router.post("/ilmihal", async (req, res) => {
 router.put("/ilmihal/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds } = req.body;
+    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds, dostupnost } = req.body;
     const editorRole = req.user?.role;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
@@ -1706,6 +1707,12 @@ router.put("/ilmihal/:id", async (req, res) => {
       // Predmet: prazan string → NULL (lekcija "bez predmeta"). Trim, max 60 char.
       const p = typeof predmet === "string" ? predmet.trim() : "";
       updates.predmet = p ? p.slice(0, 60) : null;
+    }
+    if (dostupnost !== undefined) {
+      if (dostupnost !== "svi" && dostupnost !== "muallimi") {
+        return res.status(400).json({ error: "Dostupnost mora biti 'svi' ili 'muallimi'" });
+      }
+      updates.dostupnost = dostupnost;
     }
     if (kvizPitanja !== undefined) {
       updates.kvizPitanja = normalizeSurahNames(
@@ -3901,6 +3908,7 @@ router.get("/statistika-sadrzaja", async (req, res) => {
         l.nivo,
         l.slug,
         l.redoslijed,
+        l.dostupnost,
         COALESCE(l.uvjeti_ids, '[]'::jsonb) AS uvjeti_ids,
         COALESCE(c.zavrseno, 0)::int AS zavrseno,
         COALESCE(o.avg_ocjena, 0)::float AS avg_ocjena,

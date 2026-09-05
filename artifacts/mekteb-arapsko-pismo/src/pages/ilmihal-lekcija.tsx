@@ -14,7 +14,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2, Users, UserCog
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -84,6 +84,7 @@ interface Lekcija {
   contentHtml: string;
   audioSrc?: string;
   predmet?: string | null;
+  dostupnost?: "svi" | "muallimi";
   /** Lista ID-jeva lekcija koje student mora završiti da bi ova bila dostupna. */
   uvjetiIds?: number[];
   kvizPitanja?: LekcijaKvizPitanje[] | null;
@@ -2695,6 +2696,7 @@ export default function IlmihalLekcijaPage() {
   const [naslovDraft, setNaslovDraft] = useState("");
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [savingPredmet, setSavingPredmet] = useState(false);
+  const [savingDostupnost, setSavingDostupnost] = useState(false);
   const [predmetModalOpen, setPredmetModalOpen] = useState(false);
   const [predmetDraft, setPredmetDraft] = useState("");
   // Preduvjeti (uvjetiIds) admin editor stanja
@@ -2861,6 +2863,30 @@ export default function IlmihalLekcijaPage() {
       toast({ title: t("Greška"), description: e?.message || t("Ne mogu spasiti predmet."), variant: "destructive" });
     } finally {
       setSavingPredmet(false);
+    }
+  };
+
+  const handleToggleDostupnost = async () => {
+    if (!lekcija || !token) return;
+    const nova = lekcija.dostupnost === "muallimi" ? "svi" : "muallimi";
+    if (
+      nova === "muallimi"
+      && !window.confirm(t("Ovu lekciju učenici, roditelji i neprijavljeni posjetioci više neće moći vidjeti niti dobiti kao zadaću. Nastaviti?"))
+    ) return;
+    setSavingDostupnost(true);
+    try {
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { dostupnost: nova }, token);
+      setLekcija((prev) => prev ? { ...prev, dostupnost: nova } : prev);
+      toast({
+        title: t("Dostupnost ažurirana"),
+        description: nova === "muallimi"
+          ? t("Lekcija je sada dostupna samo muallimima i adminima.")
+          : t("Lekcija je sada dostupna svima."),
+      });
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Ne mogu promijeniti dostupnost."), variant: "destructive" });
+    } finally {
+      setSavingDostupnost(false);
     }
   };
 
@@ -3472,6 +3498,20 @@ export default function IlmihalLekcijaPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors disabled:opacity-50">
               {savingPredmet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PenLine className="w-3.5 h-3.5" />}
               {t("Predmet:")} {lekcija.predmet || "—"}
+            </button>
+            <button onClick={handleToggleDostupnost} disabled={savingDostupnost}
+              title={t("Odredi mogu li ovu lekciju vidjeti svi ili samo muallimi")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${
+                lekcija.dostupnost === "muallimi"
+                  ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                  : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+              }`}>
+              {savingDostupnost
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : lekcija.dostupnost === "muallimi"
+                  ? <UserCog className="w-3.5 h-3.5" />
+                  : <Users className="w-3.5 h-3.5" />}
+              {lekcija.dostupnost === "muallimi" ? t("Samo muallimi") : t("Dostupno svima")}
             </button>
             <button onClick={otvoriUvjetiModal} disabled={savingUvjeti}
               title={t("Postavi preduvjete — lekcije koje učenik mora završiti da bi ova bila dostupna")}

@@ -37,6 +37,17 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     return res.status(400).json({ error: "Nivo mora biti 1, 2 ili 3" });
   }
   try {
+    let authPayload: { userId: number; role?: string } | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const jwt = await import("jsonwebtoken");
+        authPayload = jwt.default.verify(authHeader.slice(7), JWT_SECRET) as { userId: number; role?: string };
+      } catch {
+        authPayload = null;
+      }
+    }
+    const canSeeMuallimOnly = authPayload?.role === "admin" || authPayload?.role === "muallim";
     const [lekcije, medaljoni, krunisanjeRow] = await Promise.all([
       db
         .select({
@@ -56,6 +67,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
           // DODATAK lekcije (slug `dodatak-nivo{N}-{n}`) nisu dio mape niti
           // progresije — dodatni sadržaj dostupan samo kroz listu svih lekcija.
           notLike(ilmihalLekcijeTable.slug, "dodatak-nivo%"),
+          ...(canSeeMuallimOnly ? [] : [eq(ilmihalLekcijeTable.dostupnost, "svi")]),
         ))
         .orderBy(asc(ilmihalLekcijeTable.redoslijed)),
       db
@@ -104,11 +116,9 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
     let polozenaKrunisanjaIds: number[] = [];
 
     // Provjeri JWT iz Authorization headera (opcionalno — ne baca 401 ako nema).
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith("Bearer ")) {
+    if (authPayload) {
       try {
-        const jwt = await import("jsonwebtoken");
-        const payload = jwt.default.verify(authHeader.slice(7), JWT_SECRET) as { userId: number };
+        const payload = authPayload;
         const userIdStr = String(payload.userId);
 
         // Raspored grupe (ako postoji) → efektivni redoslijed lekcija.
@@ -201,6 +211,7 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
         and(
           eq(ilmihalLekcijeTable.nivo, medaljon.nivo),
           lt(ilmihalLekcijeTable.redoslijed, 9000),
+          eq(ilmihalLekcijeTable.dostupnost, "svi"),
         ),
       );
     const rasporedPosMap = await getRasporedPositionsForStudent(req.user!.userId, medaljon.nivo);

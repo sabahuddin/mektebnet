@@ -55,3 +55,4 @@
 - [Nastavnički materijali nisu zadaća](nastavnicki-materijali.md) — file/url prilozi pripadaju Pripremi i ostaju samo muallimu/adminu; učenicima su dostupne samo vježbe.
 - [Nivo 21 je samo stari izvor](nivo21-legacy-source.md) — stari direktorij `nivo21` je drugi segment Nivoa 2; DB smije sadržavati samo nivoe 1, 2 i 3.
 - [Kvizovi po etapama](kvizovi-po-etapama.md) — etapa je broj 1–7 unutar nivoa; cijeli interaktivni kviz se povezuje s medaljon-lekcijom, ne pretvara u mini-kviz.
+- [Lekcije samo za muallime i progresija](lekcije-muallimi-progresija.md) — lekcija skrivena učenicima ne smije ostati obavezna za otključavanje, etapu, medaljon ili krunisanje.
