@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -551,6 +551,7 @@ export default function MuallimPanel() {
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [dashboardStatsLoading, setDashboardStatsLoading] = useState(false);
+  const dashboardStatsRequestRef = useRef(0);
   const [selectedYear, setSelectedYear] = useState<string>(() => computeCurrentSchoolYear());
   const [mektebStats, setMektebStats] = useState<MektebStats | null>(null);
   const [mektebStatsLoading, setMektebStatsLoading] = useState(false);
@@ -567,6 +568,7 @@ export default function MuallimPanel() {
   const [statData, setStatData] = useState<StatData | null>(null);
   const [interaktivniStatPregled, setInteraktivniStatPregled] = useState<InteraktivniPregledGrupe | null>(null);
   const [statLoading, setStatLoading] = useState(false);
+  const statRequestRef = useRef(0);
   const [statView, setStatView] = useState<"pregled" | "prisustvo" | "mjesecno">("pregled");
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingSpisak, setExportingSpisak] = useState(false);
@@ -632,6 +634,8 @@ export default function MuallimPanel() {
   // godine, automatski prebaci na najnoviju godinu s podacima (jednom, bez petlje).
   useEffect(() => {
     if (!token) return;
+    const requestId = ++dashboardStatsRequestRef.current;
+    let switchingYear = false;
     setDashboardStatsLoading(true);
     setDashboardStats(null);
     apiRequest<DashboardStats>(
@@ -639,11 +643,13 @@ export default function MuallimPanel() {
       `/muallim/dashboard-stats?skolskaGodina=${encodeURIComponent(selectedYear)}${scopedMuallimId ? `&muallimId=${encodeURIComponent(String(scopedMuallimId))}` : ""}`,
       undefined, token,
     ).then(ds => {
+      if (requestId !== dashboardStatsRequestRef.current) return;
       const hasData = ds.ukupnoGrupa > 0;
       const altYears = (ds.dostupneGodine ?? []).filter(y => y !== selectedYear);
       if (!hasData && altYears.length > 0) {
         // Prebaci na najnoviju godinu koja stvarno ima grupe — sprečava prikazivanje
         // nula kad je default tekuća schulska godina ali grupe su još pod prošlom.
+        switchingYear = true;
         setSelectedYear(altYears[0]);
         // ds za ovu godinu nećemo prikazati — novi fetch dođe automatski.
       } else {
@@ -651,7 +657,13 @@ export default function MuallimPanel() {
       }
     })
       .catch(() => {})
-      .finally(() => setDashboardStatsLoading(false));
+      .finally(() => {
+        // Stariji request ne smije ugasiti spinner novijem requestu. Kod
+        // automatske promjene godine spinner ostaje dok novi fetch ne završi.
+        if (requestId === dashboardStatsRequestRef.current && !switchingYear) {
+          setDashboardStatsLoading(false);
+        }
+      });
   }, [token, selectedYear, scopedMuallimId]);
 
   // Kad se scope promijeni (Moje grupe ↔ Mekteb, ili pregled drugog muallima),
@@ -908,15 +920,33 @@ export default function MuallimPanel() {
   }
 
   useEffect(() => {
-    if (!token || !statGrupaId) return;
+    if (!token || !statGrupaId) {
+      statRequestRef.current++;
+      setStatLoading(false);
+      return;
+    }
+    const requestId = ++statRequestRef.current;
+    setStatData(null);
+    setInteraktivniStatPregled(null);
     setStatLoading(true);
     Promise.all([
       apiRequest<StatData>("GET", `/muallim/grupa/${statGrupaId}/statistika`, undefined, token),
       apiRequest<InteraktivniPregledGrupe>("GET", `/muallim/grupa/${statGrupaId}/interaktivni-blokovi`, undefined, token).catch(() => null),
     ])
-      .then(([data, interaktivni]) => { setStatData(data); setInteraktivniStatPregled(interaktivni); setStatView("pregled"); })
-      .catch(() => toast({ title: t("Greška pri učitavanju statistike"), variant: "destructive" }))
-      .finally(() => setStatLoading(false));
+      .then(([data, interaktivni]) => {
+        if (requestId !== statRequestRef.current) return;
+        setStatData(data);
+        setInteraktivniStatPregled(interaktivni);
+        setStatView("pregled");
+      })
+      .catch(() => {
+        if (requestId === statRequestRef.current) {
+          toast({ title: t("Greška pri učitavanju statistike"), variant: "destructive" });
+        }
+      })
+      .finally(() => {
+        if (requestId === statRequestRef.current) setStatLoading(false);
+      });
   }, [token, statGrupaId]);
 
   useEffect(() => {
@@ -1563,6 +1593,9 @@ export default function MuallimPanel() {
     setStatUcenikId(null);
   };
   const otvoriStatGrupu = (grupaId: number) => {
+    // Ne prikazuj statistiku prethodne grupe dok se nova učitava.
+    setStatData(null);
+    setInteraktivniStatPregled(null);
     setStatGrupaId(grupaId);
     setStatUcenikId(null);
   };
