@@ -81,6 +81,7 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
           nivo: krunisanjaTable.nivo,
           naslov: krunisanjaTable.naslov,
           isGating: krunisanjaTable.isGating,
+          kvizIds: krunisanjaTable.kvizIds,
           kvizPitanjaIds: krunisanjaTable.kvizPitanjaIds,
         })
         .from(krunisanjaTable)
@@ -102,8 +103,9 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
           nivo: krunisanjeRow.nivo,
           naslov: krunisanjeRow.naslov,
           isGating: krunisanjeRow.isGating,
-          imaKviz: Array.isArray(krunisanjeRow.kvizPitanjaIds)
-            && krunisanjeRow.kvizPitanjaIds.length > 0,
+          imaKviz:
+            (Array.isArray(krunisanjeRow.kvizIds) && krunisanjeRow.kvizIds.length > 0)
+            || (Array.isArray(krunisanjeRow.kvizPitanjaIds) && krunisanjeRow.kvizPitanjaIds.length > 0),
         }
       : null;
 
