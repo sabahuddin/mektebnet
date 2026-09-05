@@ -1499,7 +1499,6 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
   const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -1719,6 +1718,7 @@ function PriloziSection({
     setAttachments(prev => (prev.length > 0 ? prev : (lekcija.prilozi || [])));
   }, [lekcija.id, lekcija.prilozi]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [uploadingH5p, setUploadingH5p] = useState(false);
   const [showUrlForm, setShowUrlForm] = useState(false);
   const [urlValue, setUrlValue] = useState("");
