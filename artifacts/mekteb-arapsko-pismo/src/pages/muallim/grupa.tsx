@@ -693,7 +693,6 @@ export default function GrupaPage() {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2 mb-6">
          {aktivniModul === "plan" && (
           <section className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">

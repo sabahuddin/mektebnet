@@ -413,7 +413,7 @@ export default function MuallimTutorijalPage() {
               <p className="mt-3 text-xs leading-5 text-[#55706a]">Lijevo od znaka je učenik, desno je roditelj. Roditeljski nalog je opcionalan.</p>
             </div>
             <p>
-              Ako dijete već postoji u mektebu, ne pravi novi nalog. Izaberi <strong>Dodaj postojećeg</strong> i poveži ga s ovom grupom. Kada je grupa popunjena, koristi <strong>Printaj kartice</strong> za čuvanje i štampanje pristupnih podataka.
+              Ako dijete već postoji u mektebu, ne pravi novi nalog. Izaberi <strong>Dodaj postojećeg</strong> i poveži ga s ovom grupom. Kada je grupa popunjena, u istom dijelu <strong>Podešavanja → Učenici grupe</strong> koristi <strong>Printaj kartice</strong> za čuvanje i štampanje pristupnih podataka.
             </p>
             <div className="mt-5 rounded-2xl border border-[#e8c98d] bg-[#fff8e9] p-4 sm:p-5">
               <div className="flex items-start gap-3">

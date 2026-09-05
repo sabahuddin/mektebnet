@@ -105,7 +105,7 @@ export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProp
         title: t("{n} učenika dodano!", { n: String(results.length) }),
         description: withParent > 0 ? t("{n} sa nalogom za roditelja", { n: String(withParent) }) : undefined,
       });
-      await loadAvailableStudents();
+      await Promise.all([loadAvailableStudents(), loadGroupStudents()]);
     } catch (error: any) {
       toast({
         title: t("Greška"),
