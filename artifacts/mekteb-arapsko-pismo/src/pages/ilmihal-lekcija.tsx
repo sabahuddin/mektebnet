@@ -2677,7 +2677,7 @@ function PriloziSection({
 export default function IlmihalLekcijaPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   // Task #133: roditelj = gost → read-only kao neprijavljeni gost. Ne upisuje
   // napredak/hasanat/vrijeme; write-akcije (markComplete, heartbeat, quizPassed)
   // su gejtovane na isGuestLike da roditelj ne dobije više od gosta.
@@ -2871,7 +2871,7 @@ export default function IlmihalLekcijaPage() {
     const nova = lekcija.dostupnost === "muallimi" ? "svi" : "muallimi";
     if (
       nova === "muallimi"
-      && !window.confirm(t("Ovu lekciju učenici, roditelji i neprijavljeni posjetioci više neće moći vidjeti niti dobiti kao zadaću. Nastaviti?"))
+      && !window.confirm(t("Ovu lekciju učenici, roditelji i neprijavljeni posjetioci više neće vidjeti u redovnom katalogu. Muallim je i dalje može zadati kroz zadaću. Nastaviti?"))
     ) return;
     setSavingDostupnost(true);
     try {
@@ -2967,7 +2967,10 @@ export default function IlmihalLekcijaPage() {
   };
 
   useEffect(() => {
-    if (!slug) return;
+    // Nakon punog reloada AuthProvider prvo mora obnoviti user/token iz
+    // localStoragea. Bez ovog čekanja admin je kratko tretiran kao gost, pa ga
+    // lesson gate pogrešno vraća na /ilmihal uz poruku za registraciju.
+    if (!slug || authLoading) return;
     setIsLoading(true);
     // Reset gate state pri prelasku na novu lekciju (npr. preko strip-a) —
     // inače bi vrijeme/skrol/sekcije iz prethodne lekcije ostali kao "ljepak".
@@ -3063,7 +3066,7 @@ export default function IlmihalLekcijaPage() {
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [slug, token, lang]);
+  }, [slug, token, lang, authLoading, user?.role]);
 
   // Lokalni "vizuelni" tick — povećava prikaz `timeSpent` svake sekunde dok
   // je tab vidljiv. Ovo je SAMO za UX da brojač ne stoji između heartbeat-a

@@ -170,7 +170,7 @@ function parseIdsCSV(s: string): number[] {
 }
 
 export default function AdminEtapePage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -187,13 +187,14 @@ export default function AdminEtapePage() {
   const [novaLekcija, setNovaLekcija] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user || user.role !== "admin") {
       setLocation("/");
       return;
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nivo, token]);
+  }, [nivo, token, user?.role, authLoading]);
 
   async function load() {
     if (!token) return;
