@@ -34,6 +34,7 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
   const { t } = useLanguage();
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
+  const [activeNivo, setActiveNivo] = useState(1);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setQuery(value); }, [value]);
@@ -51,13 +52,18 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
     [lekcije]
   );
 
+  const selected = numbered.find(l => l.naslov === value);
+
+  useEffect(() => {
+    if (selected?.nivo >= 1 && selected.nivo <= 3) setActiveNivo(selected.nivo);
+  }, [selected?.nivo]);
+
   const matches = useMemo(() => {
     const q = normalize(query.trim());
-    if (q.length < 2) return numbered.slice(0, 50);
-    return numbered.filter(l => normalize(l.naslov).includes(q) || String(l.broj) === q).slice(0, 50);
-  }, [numbered, query]);
-
-  const selected = numbered.find(l => l.naslov === value);
+    const nivoLekcije = numbered.filter(l => l.nivo === activeNivo);
+    if (q.length < 2) return nivoLekcije;
+    return nivoLekcije.filter(l => normalize(l.naslov).includes(q) || String(l.broj) === q);
+  }, [numbered, query, activeNivo]);
 
   const pick = (l: typeof numbered[number]) => {
     onChange(l.naslov);
@@ -104,9 +110,31 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
         </div>
       )}
       {open && (
-        <div className="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white border border-border rounded-xl shadow-lg">
+        <div className="absolute z-50 mt-1 w-full max-h-80 overflow-auto bg-white border border-border rounded-xl shadow-lg">
+          <div className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-border bg-white p-2" role="tablist" aria-label={t("Nivo")}>
+            {[1, 2, 3].map(nivo => {
+              const count = numbered.filter(l => l.nivo === nivo).length;
+              return (
+                <button
+                  key={nivo}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeNivo === nivo}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => setActiveNivo(nivo)}
+                  className={`rounded-lg px-2 py-2 text-xs font-extrabold transition-colors ${
+                    activeNivo === nivo
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  {t("Nivo {nivo}", { nivo: String(nivo) })} <span className="opacity-70">({count})</span>
+                </button>
+              );
+            })}
+          </div>
           {matches.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground">{t("Nema rezultata")}</div>
+            <div className="px-3 py-4 text-center text-xs text-muted-foreground">{t("Nema rezultata")}</div>
           ) : matches.map(l => (
             <button
               key={l.id}
