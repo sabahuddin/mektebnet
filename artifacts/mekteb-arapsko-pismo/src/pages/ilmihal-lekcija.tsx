@@ -1499,6 +1499,7 @@ function HeroImageUploader({ lekcija, token, onUpdated, showAlways }: {
   const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -1773,19 +1774,45 @@ function PriloziSection({
   }, [token, attachments, mode]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !token) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !token) return;
     setUploading(true);
+    setUploadProgress({ current: 0, total: files.length });
+    let uploadedCount = 0;
+    const failed: string[] = [];
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}`, fd, token, true);
-      setAttachments(prev => [{ ...result, url: `/uploads/${(result as any).storedName || ""}` }, ...prev]);
-      toast({ title: t("Uspješno"), description: t('"{name}" uploadovan.', { name: file.name }) });
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+      // Šaljemo redom: svaki PDF se na serveru posebno optimizira, a jedan
+      // neuspješan fajl ne prekida upload ostalih odabranih fajlova.
+      for (const file of files) {
+        setUploadProgress(progress => ({ ...progress, current: progress.current + 1 }));
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}`, fd, token, true);
+          setAttachments(prev => [{ ...result, url: `/uploads/${(result as any).storedName || ""}` }, ...prev]);
+          uploadedCount++;
+        } catch (err) {
+          console.error(`Upload priloga nije uspio: ${file.name}`, err);
+          failed.push(file.name);
+        }
+      }
+      if (failed.length === 0) {
+        toast({
+          title: t("Uspješno"),
+          description: files.length === 1
+            ? t('"{name}" uploadovan.', { name: files[0].name })
+            : t("{count} fajlova je uploadovano.", { count: String(uploadedCount) }),
+        });
+      } else {
+        toast({
+          title: uploadedCount > 0 ? t("Dio fajlova je uploadovan") : t("Greška"),
+          description: `${uploadedCount}/${files.length} — ${t("Nije uspjelo")}: ${failed.join(", ")}`,
+          variant: "destructive",
+        });
+      }
     } finally {
       setUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -2085,10 +2112,17 @@ function PriloziSection({
         <p className="mb-3 text-xs text-muted-foreground">
           {t("Ovi materijali su dio pripreme za nastavu i vidljivi su samo muallimu i administratoru.")}
         </p>
-        <input ref={fileInputRef} type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
         <div className="mb-3 flex flex-wrap gap-2">
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
-            {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem...")}</> : <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>}
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {t("Uploadujem...")} {uploadProgress.total > 1 && `(${uploadProgress.current}/${uploadProgress.total})`}
+              </>
+            ) : (
+              <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>
+            )}
           </Button>
           <Button onClick={() => setShowUrlForm(v => !v)} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
             <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}
