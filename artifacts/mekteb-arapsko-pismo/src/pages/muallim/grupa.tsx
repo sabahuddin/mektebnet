@@ -1639,7 +1639,7 @@ export default function GrupaPage() {
                   <div>
                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                     <LekcijaPicker
-                      lekcije={ilmihalLekcije.filter((lekcija) => lekcija.dostupnost !== "muallimi")}
+                      lekcije={ilmihalLekcije}
                       value={newZadaca.lekcijaNaslov}
                       onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v }))}
                       onSelectLesson={async lekcija => {

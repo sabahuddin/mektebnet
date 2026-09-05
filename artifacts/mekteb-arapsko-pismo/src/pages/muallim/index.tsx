@@ -3703,7 +3703,7 @@ export default function MuallimPanel() {
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                             <LekcijaPicker
-                               lekcije={dostupneLekcije.filter((lekcija) => lekcija.dostupnost !== "muallimi")}
+                               lekcije={dostupneLekcije}
                               value={zadLekcija}
                               onChange={setZadLekcija}
                               onSelectLesson={lekcija => {

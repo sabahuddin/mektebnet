@@ -4804,9 +4804,6 @@ router.post("/zadace", async (req, res) => {
       if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
       }
-      if (lekcija.dostupnost === "muallimi") {
-        res.status(400).json({ error: "Lekcija dostupna samo muallimima ne može se zadati učenicima" }); return;
-      }
       canonicalSlug = lekcija.slug;
     } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {
       const lekcije = await db.select({ slug: ilmihalLekcijeTable.slug })
@@ -4914,9 +4911,6 @@ router.put("/zadace/:id", async (req, res) => {
         .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
       if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
-      }
-      if (lekcija.dostupnost === "muallimi") {
-        res.status(400).json({ error: "Lekcija dostupna samo muallimima ne može se zadati učenicima" }); return;
       }
       canonicalSlug = lekcija.slug;
     } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {

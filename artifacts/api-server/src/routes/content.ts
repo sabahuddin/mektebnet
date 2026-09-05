@@ -433,15 +433,6 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
     const lessonSlug = String(req.params.slug);
     const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lessonSlug));
     if (!lekcija) { res.status(404).json({ error: "Lekcija nije pronađena" }); return; }
-    if (
-      lekcija.dostupnost === "muallimi"
-      && req.user?.role !== "muallim"
-      && req.user?.role !== "admin"
-    ) {
-      res.status(403).json({ error: "Ova lekcija je dostupna samo muallimima" });
-      return;
-    }
-
     // Task #126: server-side progression gating za učenike. Direktan URL
     // pristup zaključanoj lekciji vraća 403 sa eksplicitnim razlogom; tako
     // se ne može zaobići mapa-gating preko deep linka. Privilegovane role
@@ -556,6 +547,19 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
       } catch {
         /* nevažeći token — nastavi kao gost */
       }
+    }
+    // Lekcija označena samo za muallime nije dio javnog kataloga, ali učenik
+    // smije otvoriti direktan link ako mu je lekcija dodijeljena kroz zadaću.
+    // To mora biti provjereno prije read-access gate-a, dok progression gate
+    // iznad namjerno ostaje preskočen za dodijeljenu zadaću.
+    if (
+      lekcija.dostupnost === "muallimi"
+      && req.user?.role !== "muallim"
+      && req.user?.role !== "admin"
+      && !(req.user?.role === "ucenik" && assignedThroughHomework)
+    ) {
+      res.status(403).json({ error: "Ova lekcija je dostupna samo muallimima ili učenicima kojima je zadana" });
+      return;
     }
 
     // Auto-upgrade legacy priprema (table-based) to new gradient design on read.
