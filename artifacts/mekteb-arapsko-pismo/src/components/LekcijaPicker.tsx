@@ -86,6 +86,9 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input
           type="text"
+          name="lesson-search"
+          autoComplete="off"
+          inputMode="search"
           value={query}
           onChange={e => {
             setQuery(e.target.value);
