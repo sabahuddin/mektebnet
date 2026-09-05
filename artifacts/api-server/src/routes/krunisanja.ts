@@ -10,6 +10,7 @@ import {
   studentMedaljoniTable,
   studentProgressTable,
   etapaPolaganjaTable,
+  kvizPitanjaTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -17,19 +18,39 @@ import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 const router = Router();
 
-// Banka pitanja krunisanja može biti veća od jednog ispita (Nivo 1 ima tri
-// završna kviza od po 100 pitanja u istoj banci). Svaki pokušaj dobija
-// nasumičan izbor od najviše ovoliko pitanja.
-const PITANJA_PO_ISPITU = 100;
+type KrunisanjeQuestionConfig = {
+  kvizIds?: number[] | null;
+  kvizPitanjaIds?: number[] | null;
+};
 
-function nasumicniIzbor<T>(niz: T[], koliko: number): T[] {
-  if (niz.length <= koliko) return [...niz];
-  const kopija = [...niz];
-  for (let i = kopija.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [kopija[i], kopija[j]] = [kopija[j]!, kopija[i]!];
+export async function resolveKrunisanjePitanjaIds(config: KrunisanjeQuestionConfig): Promise<number[]> {
+  const result: number[] = [];
+  const seen = new Set<number>();
+  const append = (id: number) => {
+    if (Number.isInteger(id) && id > 0 && !seen.has(id)) {
+      seen.add(id);
+      result.push(id);
+    }
+  };
+
+  for (const id of Array.isArray(config.kvizPitanjaIds) ? config.kvizPitanjaIds : []) append(Number(id));
+
+  const kvizIds = Array.isArray(config.kvizIds) ? config.kvizIds : [];
+  for (const kvizId of kvizIds) {
+    const rows = await db
+      .select({ pitanjeId: kvizPitanjaTable.pitanjeId })
+      .from(kvizPitanjaTable)
+      .where(eq(kvizPitanjaTable.kvizId, Number(kvizId)))
+      .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
+    for (const row of rows) append(row.pitanjeId);
   }
-  return kopija.slice(0, koliko);
+
+  return result;
+}
+
+function imaKonfigurisanKviz(config: KrunisanjeQuestionConfig): boolean {
+  return (Array.isArray(config.kvizIds) && config.kvizIds.length > 0)
+    || (Array.isArray(config.kvizPitanjaIds) && config.kvizPitanjaIds.length > 0);
 }
 
 // GET /api/krunisanja/nivo/:n
@@ -88,7 +109,7 @@ router.get("/nivo/:n", async (req, res) => {
       }
     }
 
-    const ids = Array.isArray(krunisanje.kvizPitanjaIds) ? krunisanje.kvizPitanjaIds : [];
+    const ids = await resolveKrunisanjePitanjaIds(krunisanje);
     res.json({
       krunisanje: {
         id: krunisanje.id,
@@ -99,8 +120,7 @@ router.get("/nivo/:n", async (req, res) => {
         boja: krunisanje.boja,
         pragProlazaPercent: krunisanje.pragProlazaPercent,
         isGating: krunisanje.isGating,
-        brojPitanja: Math.min(ids.length, PITANJA_PO_ISPITU),
-        brojPitanjaUBanci: ids.length,
+        brojPitanja: ids.length,
         imaKviz: ids.length > 0,
       },
       lekcije,
@@ -124,13 +144,12 @@ router.post("/:id/start", requireAuth, requireRole("ucenik"), async (req, res) =
       .where(eq(krunisanjaTable.id, id))
       .limit(1);
     if (!krunisanje) return res.status(404).json({ error: "Krunisanje ne postoji" });
-    const ids = Array.isArray(krunisanje.kvizPitanjaIds) ? krunisanje.kvizPitanjaIds : [];
+    const ids = await resolveKrunisanjePitanjaIds(krunisanje);
     if (ids.length === 0) {
       return res.status(400).json({ error: "Krunisanje nema pitanja. Obavijesti muallima." });
     }
     const gateErr = await proveriGatingKrunisanja(userId, krunisanje);
     if (gateErr) return res.status(403).json({ error: gateErr });
-    const izabraniIds = nasumicniIzbor(ids, PITANJA_PO_ISPITU);
     const pitanja = await db
       .select({
         id: pitanjaBankaTable.id,
@@ -140,8 +159,8 @@ router.post("/:id/start", requireAuth, requireRole("ucenik"), async (req, res) =
         vrsta: pitanjaBankaTable.vrsta,
       })
       .from(pitanjaBankaTable)
-      .where(inArray(pitanjaBankaTable.id, izabraniIds));
-    const order = new Map(izabraniIds.map((id, i) => [id, i]));
+      .where(inArray(pitanjaBankaTable.id, ids));
+    const order = new Map(ids.map((id, i) => [id, i]));
     pitanja.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
     res.json({
       krunisanjeId: krunisanje.id,
@@ -179,7 +198,7 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
       .limit(1);
     if (!krunisanje) return res.status(404).json({ error: "Krunisanje ne postoji" });
 
-    const ids = Array.isArray(krunisanje.kvizPitanjaIds) ? krunisanje.kvizPitanjaIds : [];
+    const ids = await resolveKrunisanjePitanjaIds(krunisanje);
     if (ids.length === 0) return res.status(400).json({ error: "Krunisanje nema pitanja" });
 
     const gateErr = await proveriGatingKrunisanja(userId, krunisanje);
@@ -194,26 +213,15 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
       .where(inArray(pitanjaBankaTable.id, ids));
     const byId = new Map(pitanja.map((p) => [p.id, p]));
 
-    // Ispit servira nasumičan izbor iz banke, pa se boduje po predatim
-    // odgovorima — ali samo onim pitanjima koja stvarno pripadaju krunisanju,
-    // i svakom pitanju najviše jednom.
-    const vazeci = new Map<number, number>();
-    for (const o of odgovori) {
-      const pid = Number(o.pitanjeId);
-      if (!byId.has(pid) || vazeci.has(pid)) continue;
-      vazeci.set(pid, Number(o.optionIndex));
-    }
-    const ocekivano = Math.min(ids.length, PITANJA_PO_ISPITU);
-    if (vazeci.size < ocekivano) {
-      return res.status(400).json({
-        error: `Ispit nije potpun — odgovoreno ${vazeci.size} od ${ocekivano} pitanja.`,
-      });
-    }
     let tacni = 0;
-    for (const [pid, optionIndex] of vazeci) {
-      if (optionIndex === Number(byId.get(pid)!.correctIndex)) tacni++;
+    for (const pid of ids) {
+      const p = byId.get(pid);
+      if (!p) continue;
+      const odgovor = odgovori.find((o) => o.pitanjeId === pid);
+      if (!odgovor) continue;
+      if (Number(odgovor.optionIndex) === Number(p.correctIndex)) tacni++;
     }
-    const ukupno = vazeci.size;
+    const ukupno = ids.length;
     const procenat = ukupno > 0 ? Math.round((tacni / ukupno) * 100) : 0;
     const polozeno = procenat >= (krunisanje.pragProlazaPercent ?? 70);
 
@@ -297,7 +305,10 @@ async function proveriGatingKrunisanja(
   const sveLekcije = await db
     .select({ id: ilmihalLekcijeTable.id })
     .from(ilmihalLekcijeTable)
-    .where(eq(ilmihalLekcijeTable.nivo, krunisanje.nivo));
+    .where(and(
+      eq(ilmihalLekcijeTable.nivo, krunisanje.nivo),
+      eq(ilmihalLekcijeTable.dostupnost, "svi"),
+    ));
   const [progressRow] = await db
     .select({ completedLessons: studentProgressTable.completedLessons })
     .from(studentProgressTable)
@@ -374,8 +385,7 @@ async function proveriGatingKrunisanja(
       .from(krunisanjaTable)
       .where(eq(krunisanjaTable.nivo, krunisanje.nivo - 1))
       .limit(1);
-    const prevIds = prev ? (Array.isArray(prev.kvizPitanjaIds) ? prev.kvizPitanjaIds : []) : [];
-    if (prev && prev.isGating && prevIds.length > 0) {
+    if (prev && prev.isGating && imaKonfigurisanKviz(prev)) {
       const [pass] = await db
         .select({ id: studentKrunisanjaTable.id })
         .from(studentKrunisanjaTable)

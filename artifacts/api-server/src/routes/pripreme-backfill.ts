@@ -117,9 +117,9 @@ export async function backfillAllPripreme() {
   }
 
   try {
-    const { NIVO21_PRIPREME } = await import("./pripreme-seed-n21.js");
+    const { NIVO2_PRIPREME_DIO_A } = await import("./pripreme-seed-n2-dio-a.js");
     // Naziv seed fajla prati stari izvorni direktorij; DB nivo je uvijek 2.
-    const total = await backfillNivo(2, NIVO21_PRIPREME);
+    const total = await backfillNivo(2, NIVO2_PRIPREME_DIO_A);
     if (total.added > 0 || total.appended > 0) {
       logger.info(total, "Drugi segment priprema Nivoa 2 reinjected");
     }

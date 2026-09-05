@@ -398,14 +398,14 @@ export default function MuallimTutorijalPage() {
             title="Sto djece ulazi u mekteb bez stotinu ponavljanja"
             icon={Users}
             accent="bg-[#3d8a73]"
-            click={<><strong>Otvori svaku grupu → Dodaj učenike.</strong> Za veći broj djece koristi masovni unos. Za pojedinačno dijete možeš koristiti postojeći obrazac.</>}
+            click={<><strong>Otvori svaku grupu → Podešavanja → Učenici grupe.</strong> Za veći broj djece koristi masovni unos. Za pojedinačno dijete možeš koristiti postojeći obrazac.</>}
             action={<>Glavni muallim u tekstualno polje upiše svako dijete u novi red. Roditelja prvi put unese uz jedno dijete pomoću znaka <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">|</code>, a zatim sam pronađe tog roditelja i poveže ga sa svom ostalom djecom iz iste porodice.</>}
             why={<>Masovni unos štedi vrijeme, a jedan roditeljski nalog omogućava roditelju da prati svu svoju djecu. Glavni muallim ovim redom rada sprečava duplikate i osigurava da svako dijete bude povezano s pravim roditeljem i svojim muallimom.</>}
             next={<>Tek kada su djeca, roditelji, grupe i muallimi povezani, glavni muallim štampa pristupne kartice sa korisničkim imenima i šiframa.</>}
             important={<>Glavni muallim treba prvi unijeti djecu i roditelje za cijeli mekteb. <strong>Roditelj ne treba naknadno slati zahtjev za drugo dijete:</strong> glavni muallim sam povezuje svu djecu sa roditeljem i sa odgovarajućim muallimom prije štampanja kartica. Pristupne podatke uruči sigurno, pojedinačno i bez javnog dijeljenja.</>}
           >
             <p>
-              Otvori prvu grupu i izaberi <strong>Dodaj učenike</strong>. U polje za masovni unos ne upisuješ sve u jednu rečenicu: <strong>svako ime ide u novi red</strong>. Glavni muallim zatim ponovi unos za sve grupe i sam odlučuje kako će rasporediti djecu prema stvarnim potrebama džemata.
+              Otvori prvu grupu, izaberi <strong>Podešavanja</strong>, a zatim u dijelu <strong>Učenici grupe</strong> izaberi <strong>Dodaj nove učenike</strong>. U polje za masovni unos ne upisuješ sve u jednu rečenicu: <strong>svako ime ide u novi red</strong>. Glavni muallim zatim ponovi unos za sve grupe i sam odlučuje kako će rasporediti djecu prema stvarnim potrebama džemata.
             </p>
             <div className="my-5 rounded-2xl border border-[#d5e3dc] bg-[#f5faf6] p-4 sm:p-5">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#237a6d]">Obrazac za unos</p>
@@ -413,7 +413,7 @@ export default function MuallimTutorijalPage() {
               <p className="mt-3 text-xs leading-5 text-[#55706a]">Lijevo od znaka je učenik, desno je roditelj. Roditeljski nalog je opcionalan.</p>
             </div>
             <p>
-              Ako dijete već postoji u mektebu, ne pravi novi nalog. Izaberi <strong>Dodaj postojećeg</strong> i poveži ga s ovom grupom. Kada je grupa popunjena, koristi <strong>Printaj kartice</strong> za čuvanje i štampanje pristupnih podataka.
+              Ako dijete već postoji u mektebu, ne pravi novi nalog. Izaberi <strong>Dodaj postojećeg</strong> i poveži ga s ovom grupom. Kada je grupa popunjena, u istom dijelu <strong>Podešavanja → Učenici grupe</strong> koristi <strong>Printaj kartice</strong> za čuvanje i štampanje pristupnih podataka.
             </p>
             <div className="mt-5 rounded-2xl border border-[#e8c98d] bg-[#fff8e9] p-4 sm:p-5">
               <div className="flex items-start gap-3">

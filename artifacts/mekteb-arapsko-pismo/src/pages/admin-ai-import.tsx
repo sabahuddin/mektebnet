@@ -39,7 +39,8 @@ export default function AdminAiImportPage() {
         naslov: data.naslov,
         slug: data.slug,
         ukupno: data.pitanja.length,
-        kategorija: data.kategorija || t("(nije postavljeno)"),
+        etapa: data.etapa && data.nivo ? `${data.etapa}-${data.nivo}` : t("(bez etape)"),
+        kategorija: data.kategorija || t("(mješoviti / bez oblasti)"),
       });
     } catch {
       setError(t("Nevalidan JSON format"));
@@ -95,7 +96,7 @@ export default function AdminAiImportPage() {
             <textarea
               value={jsonText}
               onChange={e => setJsonText(e.target.value)}
-              placeholder={`{\n  "naslov": "Allah i Njegova ljepota",\n  "slug": "allah_ljepota",\n  "kategorija": "akaid",\n  "tagovi": ["allah"],\n  "pitanja": [\n    {\n      "pitanje": "Ko je stvorio svemir?",\n      "opcije": ["Allah", "Muhamed", "Ibrahim"],\n      "correctIndex": 0,\n      "vrsta": "single",\n      "kategorija": "akaid",\n      "tagovi": ["allah"],\n      "tezina": 1,\n      "objasnjenje": "Allah je jedini stvoritelj."\n    }\n  ]\n}`}
+              placeholder={`{\n  "naslov": "Ponavljanje prve etape",\n  "slug": "ponavljanje_prve_etape",\n  "nivo": 1,\n  "etapa": 1,\n  "pitanja": [\n    {\n      "pitanje": "Ko je stvorio svemir?",\n      "opcije": ["Allah", "Muhamed", "Ibrahim"],\n      "correctIndex": 0,\n      "vrsta": "single",\n      "kategorija": "akaid",\n      "tagovi": ["allah"],\n      "tezina": 1,\n      "objasnjenje": "Allah je jedini stvoritelj."\n    }\n  ]\n}`}
               rows={18}
               className="w-full px-3 py-2 border border-border rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 resize-y"
             />
@@ -130,7 +131,7 @@ export default function AdminAiImportPage() {
             <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span className="font-semibold">{preview.naslov}</span>
-              <span className="text-muted-foreground">({preview.slug}) · {preview.ukupno} pitanja · {preview.kategorija}</span>
+              <span className="text-muted-foreground">({preview.slug}) · {preview.ukupno} pitanja · {preview.etapa} · {preview.kategorija}</span>
             </div>
           )}
         </div>

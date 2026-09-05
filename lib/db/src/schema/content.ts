@@ -140,6 +140,8 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   audioSrc: varchar("audio_src", { length: 500 }),
   redoslijed: integer("redoslijed").notNull().default(0),
   isPublished: boolean("is_published").notNull().default(true),
+  // Ko smije vidjeti lekciju: "svi" ili "muallimi" (admin uvijek ima pristup).
+  dostupnost: varchar("dostupnost", { length: 20 }).notNull().default("svi"),
   // Predmet (Akaid, Ahlak, Ibadat, ...) — koristi se za filter na "Sve lekcije".
   // Inicijalno backfill-ovano iz priprema HTML-a (regex extract iz meta bloka),
   // dalje admin može direktno mijenjati. NULL za lekcije bez priprema/predmeta.
@@ -168,6 +170,10 @@ export const kvizoviTable = pgTable("kvizovi", {
   id: serial("id").primaryKey(),
   seedKey: varchar("seed_key", { length: 160 }),
   nivo: integer("nivo"),
+  // Etapa unutar nivoa: 1 = lekcije 1–10, 2 = 11–20, ... 7 = 61–70.
+  // NULL znači da kviz nije vezan za etapu. U UI-ju se prikazuje kao
+  // "{etapa}-{nivo}", npr. 1-1 za prvu etapu Nivoa 1.
+  etapa: integer("etapa"),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   naslov: text("naslov").notNull(),
   modul: varchar("modul", { length: 50 }).notNull().default("ilmihal"),

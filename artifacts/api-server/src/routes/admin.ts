@@ -1622,7 +1622,7 @@ router.get("/ilmihal/lista", async (req, res) => {
 
 router.post("/ilmihal", async (req, res) => {
   try {
-    const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja } = req.body;
+    const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja, dostupnost } = req.body;
     if (!naslov || !slug) return res.status(400).json({ error: "naslov and slug required" });
     // Sigurnost + validacija contentHtml (isti uvjeti kao PUT)
     if (contentHtml) {
@@ -1654,6 +1654,7 @@ router.post("/ilmihal", async (req, res) => {
       redoslijed: redoslijed || 0,
       contentHtml: normalizeSurahNames(String(contentHtml || "")),
       kvizPitanja: kviz as any,
+      dostupnost: dostupnost === "muallimi" ? "muallimi" : "svi",
     }).returning({ id: ilmihalLekcijeTable.id });
     res.json({ success: true, id: row.id });
   } catch (err) {
@@ -1666,7 +1667,7 @@ router.post("/ilmihal", async (req, res) => {
 router.put("/ilmihal/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds } = req.body;
+    const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds, dostupnost } = req.body;
     const editorRole = req.user?.role;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
@@ -1706,6 +1707,12 @@ router.put("/ilmihal/:id", async (req, res) => {
       // Predmet: prazan string → NULL (lekcija "bez predmeta"). Trim, max 60 char.
       const p = typeof predmet === "string" ? predmet.trim() : "";
       updates.predmet = p ? p.slice(0, 60) : null;
+    }
+    if (dostupnost !== undefined) {
+      if (dostupnost !== "svi" && dostupnost !== "muallimi") {
+        return res.status(400).json({ error: "Dostupnost mora biti 'svi' ili 'muallimi'" });
+      }
+      updates.dostupnost = dostupnost;
     }
     if (kvizPitanja !== undefined) {
       updates.kvizPitanja = normalizeSurahNames(
@@ -1832,7 +1839,7 @@ router.post("/ilmihal/delete-batch", async (req, res) => {
 // PUT /api/admin/kvizovi/:id — Update quiz questions/title
 router.put("/kvizovi/:id", async (req, res) => {
   try {
-    const { pitanja, naslov, isPublished, kategorija, tagovi, lekcijaId, opis, modul, nivo, variant } = req.body;
+    const { pitanja, naslov, isPublished, kategorija, tagovi, lekcijaId, opis, modul, nivo, etapa, variant } = req.body;
     const updates: Record<string, any> = {};
     if (pitanja !== undefined) {
       updates.pitanja = normalizeSurahNames(
@@ -1864,6 +1871,14 @@ router.put("/kvizovi/:id", async (req, res) => {
     if (opis !== undefined) updates.opis = normalizeSurahNames(String(opis || ""));
     if (modul !== undefined) updates.modul = modul;
     if (nivo !== undefined) updates.nivo = nivo;
+    if (etapa !== undefined) {
+      const etapaBroj = etapa === null || etapa === "" ? null : Number(etapa);
+      if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
+        res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
+        return;
+      }
+      updates.etapa = etapaBroj;
+    }
     if (variant !== undefined) updates.variant = variant;
     await db.update(kvizoviTable).set(updates).where(eq(kvizoviTable.id, parseInt(req.params.id)));
     res.json({ success: true });
@@ -1873,17 +1888,22 @@ router.put("/kvizovi/:id", async (req, res) => {
 });
 
 // POST /api/admin/kvizovi/ai-import — uvoz kompletnog kviza (AI-generisanog).
-// Prima JSON: { naslov, slug, kategorija, tagovi, opis?, pitanja: [...] }.
+// Prima JSON: { naslov, slug, nivo?, etapa?, kategorija?, tagovi?, opis?, pitanja: [...] }.
 // Svako pitanje se dedup-uje po tekstu (UNIQUE na pitanja_banka.pitanje). Ako
 // pitanje već postoji, koristi se postojeći ID; inaće se kreira u banci.
 // Na kraju se kreira kviz i linkuju sva pitanja.
 router.post("/kvizovi/ai-import", async (req, res) => {
   try {
-    const { naslov, slug, kategorija, tagovi, opis, pitanja } = req.body || {};
+    const { naslov, slug, nivo, etapa, kategorija, tagovi, opis, pitanja } = req.body || {};
     if (!naslov || !slug) { res.status(400).json({ error: "naslov i slug su obavezni" }); return; }
     if (!Array.isArray(pitanja) || pitanja.length === 0) { res.status(400).json({ error: "pitanja mora biti niz sa barem jednim pitanjem" }); return; }
 
     const userId = (req as any).user?.id;
+    const etapaBroj = etapa === null || etapa === undefined || etapa === "" ? null : Number(etapa);
+    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
+      res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
+      return;
+    }
     const slugClean = String(slug).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
     if (!slugClean) { res.status(400).json({ error: "Slug mora sadržavati a-z, 0-9 ili _" }); return; }
 
@@ -1893,6 +1913,8 @@ router.post("/kvizovi/ai-import", async (req, res) => {
         naslov: normalizeSurahNames(String(naslov).trim()),
         slug: slugClean,
         modul: "ilmihal",
+        nivo: nivo == null || nivo === "" ? null : Number(nivo),
+        etapa: etapaBroj,
         variant: "normal",
         kategorija: kategorija ? String(kategorija) : null,
         tagovi: Array.isArray(tagovi) ? tagovi.map(String) : [],
@@ -1954,9 +1976,14 @@ router.post("/kvizovi/ai-import", async (req, res) => {
 // posebno kroz POST /kvizovi/:id/dodaj-pitanja iz banke.
 router.post("/kvizovi", async (req, res) => {
   try {
-    const { naslov, slug, modul, nivo, variant, kategorija, tagovi, lekcijaId, opis, isPublished } = req.body || {};
+    const { naslov, slug, modul, nivo, etapa, variant, kategorija, tagovi, lekcijaId, opis, isPublished } = req.body || {};
     if (!naslov || !slug) {
       res.status(400).json({ error: "naslov i slug su obavezni" });
+      return;
+    }
+    const etapaBroj = etapa === null || etapa === undefined || etapa === "" ? null : Number(etapa);
+    if (etapaBroj !== null && (!Number.isInteger(etapaBroj) || etapaBroj < 1 || etapaBroj > 7)) {
+      res.status(400).json({ error: "Etapa mora biti broj od 1 do 7" });
       return;
     }
     const [created] = await db.insert(kvizoviTable).values({
@@ -1964,6 +1991,7 @@ router.post("/kvizovi", async (req, res) => {
       slug,
       modul: modul || "ilmihal",
       nivo: nivo ?? null,
+      etapa: etapaBroj,
       variant: variant || "normal",
       kategorija: kategorija || null,
       tagovi: Array.isArray(tagovi) ? tagovi : (tagovi ? [tagovi] : []),
@@ -3880,6 +3908,7 @@ router.get("/statistika-sadrzaja", async (req, res) => {
         l.nivo,
         l.slug,
         l.redoslijed,
+        l.dostupnost,
         COALESCE(l.uvjeti_ids, '[]'::jsonb) AS uvjeti_ids,
         COALESCE(c.zavrseno, 0)::int AS zavrseno,
         COALESCE(o.avg_ocjena, 0)::float AS avg_ocjena,
@@ -4157,11 +4186,35 @@ router.put("/krunisanja/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const [existingKrunisanje] = await db
+      .select({ nivo: krunisanjaTable.nivo })
+      .from(krunisanjaTable)
+      .where(eq(krunisanjaTable.id, id))
+      .limit(1);
+    if (!existingKrunisanje) return res.status(404).json({ error: "Krunisanje ne postoji" });
     const patch: Partial<typeof krunisanjaTable.$inferInsert> = {};
     if (typeof req.body?.naslov === "string") patch.naslov = req.body.naslov;
     if (typeof req.body?.opisHtml === "string") patch.opisHtml = req.body.opisHtml;
     if (typeof req.body?.ikona === "string") patch.ikona = req.body.ikona;
     if (typeof req.body?.boja === "string") patch.boja = req.body.boja;
+    if (Array.isArray(req.body?.kvizIds)) {
+      const kvizIds = Array.from(new Set<number>(
+        req.body.kvizIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n) && n > 0),
+      ));
+      if (kvizIds.length > 0) {
+        const kvizovi = await db
+          .select({ id: kvizoviTable.id, nivo: kvizoviTable.nivo, etapa: kvizoviTable.etapa })
+          .from(kvizoviTable)
+          .where(inArray(kvizoviTable.id, kvizIds));
+        if (
+          kvizovi.length !== kvizIds.length
+          || kvizovi.some((kviz) => kviz.nivo !== existingKrunisanje.nivo || kviz.etapa == null)
+        ) {
+          return res.status(400).json({ error: "Krunisanje može koristiti samo etapne kvizove iz istog nivoa" });
+        }
+      }
+      patch.kvizIds = kvizIds;
+    }
     if (Array.isArray(req.body?.kvizPitanjaIds)) {
       patch.kvizPitanjaIds = req.body.kvizPitanjaIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n));
     }

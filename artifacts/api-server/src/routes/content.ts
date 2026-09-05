@@ -22,7 +22,7 @@ import {
   zadaceUceniciTable,
   ucenikProfiliTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, gte, lte, lt, sql, inArray, count } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte, lt, sql, inArray, count, isNotNull } from "drizzle-orm";
 import { optionalAuth, requireAuth } from "../middlewares/auth.js";
 import { sendEmail } from "../lib/email.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
@@ -340,7 +340,7 @@ router.get("/dozvoljeni-jezici", requireAuth, async (req, res) => {
 // ── ILMIHAL ────────────────────────────────────────────────────────────────────
 
 // GET /api/content/ilmihal?nivo=1
-router.get("/ilmihal", async (req, res) => {
+router.get("/ilmihal", optionalAuth, async (req, res) => {
   try {
     const nivo = req.query.nivo ? parseInt(req.query.nivo as string) : undefined;
     // Predmet se čuva u zasebnoj koloni `predmet` (backfill-ovan iz priprema
@@ -354,14 +354,23 @@ router.get("/ilmihal", async (req, res) => {
       redoslijed: ilmihalLekcijeTable.redoslijed,
       audioSrc: ilmihalLekcijeTable.audioSrc,
       isPublished: ilmihalLekcijeTable.isPublished,
+      dostupnost: ilmihalLekcijeTable.dostupnost,
       predmet: ilmihalLekcijeTable.predmet,
       uvjetiIds: ilmihalLekcijeTable.uvjetiIds,
     };
+    const canSeeMuallimOnly = req.user?.role === "admin" || req.user?.role === "muallim";
     let lekcije;
     if (nivo) {
-      lekcije = await db.select(baseSelect).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.nivo, nivo)).orderBy(asc(ilmihalLekcijeTable.redoslijed));
+      lekcije = await db.select(baseSelect).from(ilmihalLekcijeTable)
+        .where(canSeeMuallimOnly
+          ? eq(ilmihalLekcijeTable.nivo, nivo)
+          : and(eq(ilmihalLekcijeTable.nivo, nivo), eq(ilmihalLekcijeTable.dostupnost, "svi")))
+        .orderBy(asc(ilmihalLekcijeTable.redoslijed));
     } else {
-      lekcije = await db.select(baseSelect).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.redoslijed));
+      const query = db.select(baseSelect).from(ilmihalLekcijeTable);
+      lekcije = canSeeMuallimOnly
+        ? await query.orderBy(asc(ilmihalLekcijeTable.redoslijed))
+        : await query.where(eq(ilmihalLekcijeTable.dostupnost, "svi")).orderBy(asc(ilmihalLekcijeTable.redoslijed));
     }
 
     // Optional: ako je auth, dodaj zavrseno boolean za svaku lekciju
@@ -419,11 +428,11 @@ router.get("/ilmihal", async (req, res) => {
 });
 
 // GET /api/content/ilmihal/:slug
-router.get("/ilmihal/:slug", async (req, res) => {
+router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
   try {
-    const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, req.params.slug));
+    const lessonSlug = String(req.params.slug);
+    const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lessonSlug));
     if (!lekcija) { res.status(404).json({ error: "Lekcija nije pronađena" }); return; }
-
     // Task #126: server-side progression gating za učenike. Direktan URL
     // pristup zaključanoj lekciji vraća 403 sa eksplicitnim razlogom; tako
     // se ne može zaobići mapa-gating preko deep linka. Privilegovane role
@@ -455,6 +464,7 @@ router.get("/ilmihal/:slug", async (req, res) => {
             .where(and(
               eq(ilmihalLekcijeTable.nivo, lekcija.nivo),
               lt(ilmihalLekcijeTable.redoslijed, 9000),
+              eq(ilmihalLekcijeTable.dostupnost, "svi"),
             ));
           const rasporedPosMap = await getRasporedPositionsForStudent(decoded.userId, lekcija.nivo);
           const effMap = resolveEffectiveRedoslijed(regularLekcije, rasporedPosMap);
@@ -537,6 +547,19 @@ router.get("/ilmihal/:slug", async (req, res) => {
       } catch {
         /* nevažeći token — nastavi kao gost */
       }
+    }
+    // Lekcija označena samo za muallime nije dio javnog kataloga, ali učenik
+    // smije otvoriti direktan link ako mu je lekcija dodijeljena kroz zadaću.
+    // To mora biti provjereno prije read-access gate-a, dok progression gate
+    // iznad namjerno ostaje preskočen za dodijeljenu zadaću.
+    if (
+      lekcija.dostupnost === "muallimi"
+      && req.user?.role !== "muallim"
+      && req.user?.role !== "admin"
+      && !(req.user?.role === "ucenik" && assignedThroughHomework)
+    ) {
+      res.status(403).json({ error: "Ova lekcija je dostupna samo muallimima ili učenicima kojima je zadana" });
+      return;
     }
 
     // Auto-upgrade legacy priprema (table-based) to new gradient design on read.
@@ -662,10 +685,10 @@ router.get("/ilmihal/:slug", async (req, res) => {
 
 // ── KVIZOVI ───────────────────────────────────────────────────────────────────
 
-// GET /api/content/kvizovi?nivo=1&modul=ilmihal
+// GET /api/content/kvizovi?nivo=1&etapa=1&modul=ilmihal
 router.get("/kvizovi", optionalAuth, async (req, res) => {
   try {
-    const { nivo, modul, lekcijaId } = req.query;
+    const { nivo, etapa, modul, lekcijaId } = req.query;
     const lekcijaIdNum = lekcijaId !== undefined ? parseInt(lekcijaId as string, 10) : undefined;
     // Ako klijent pošalje lekcijaId koji nije validan integer, vrati praznu
     // listu umjesto svih kvizova — sprječava nehotičan "fall-through" na
@@ -680,6 +703,7 @@ router.get("/kvizovi", optionalAuth, async (req, res) => {
     const result = await db.select({
       id: kvizoviTable.id,
       nivo: kvizoviTable.nivo,
+      etapa: kvizoviTable.etapa,
       slug: kvizoviTable.slug,
       naslov: kvizoviTable.naslov,
       modul: kvizoviTable.modul,
@@ -708,6 +732,7 @@ router.get("/kvizovi", optionalAuth, async (req, res) => {
       if (!isAdmin && !k.isPublished) return false;
       if (!isAdmin && k.neodobrenaPitanja > 0) return false;
       if (nivo && k.nivo !== parseInt(nivo as string)) return false;
+      if (etapa && k.etapa !== parseInt(etapa as string)) return false;
       if (modul && k.modul !== modul) return false;
       if (lekcijaIdNum !== undefined && Number.isFinite(lekcijaIdNum) && k.lekcijaId !== lekcijaIdNum) return false;
       return true;
@@ -744,6 +769,42 @@ router.get("/kvizovi/:slug", optionalAuth, async (req, res) => {
     }
     const lang = getLang(req);
     await overlayOne(kviz, "kvizovi", lang);
+
+    // Etapni kviz je završna provjera znanja, ne kratki nasumični kviz.
+    // Učenik mora postići najmanje 80%. Nakon neuspjelog pokušaja novi
+    // pokušaj je zaključan 48 sati. Status vraćamo uz kviz da frontend može
+    // odmah prikazati tačno vrijeme narednog pokušaja.
+    let etapaStatus: {
+      pragProlazaPercent: number;
+      cooldownUntil: string | null;
+      etapaPolozena: boolean;
+    } | null = null;
+    if (kviz.etapa != null) {
+      const pragProlazaPercent = 80;
+      let cooldownUntil: string | null = null;
+      let etapaPolozena = false;
+      if (req.user?.userId) {
+        const pokusaji = await db
+          .select({
+            procenat: kvizRezultatiTable.procenat,
+            completedAt: kvizRezultatiTable.completedAt,
+          })
+          .from(kvizRezultatiTable)
+          .where(and(
+            eq(kvizRezultatiTable.userId, req.user.userId),
+            eq(kvizRezultatiTable.kvizId, kviz.id),
+          ))
+          .orderBy(desc(kvizRezultatiTable.completedAt))
+          .limit(50);
+        etapaPolozena = pokusaji.some((p) => p.procenat >= pragProlazaPercent);
+        const last = pokusaji[0];
+        if (last?.completedAt && last.procenat < pragProlazaPercent) {
+          const nextAttemptAt = new Date(last.completedAt.getTime() + 48 * 60 * 60 * 1000);
+          if (nextAttemptAt.getTime() > Date.now()) cooldownUntil = nextAttemptAt.toISOString();
+        }
+      }
+      etapaStatus = { pragProlazaPercent, cooldownUntil, etapaPolozena };
+    }
 
     // STRATEGIJA: JSONB je primarni izvor istine za REDOSLIJED i za interaktivna
     // pitanja (markWords, dragDrop, reorder, true_false, ...). Banka pitanja sadrži
@@ -894,18 +955,18 @@ router.get("/kvizovi/:slug", optionalAuth, async (req, res) => {
         }
         return p; // ostala interaktivna (reorder/truefalse) ako nemaju banka match
       });
-      res.json({ ...kviz, pitanja });
+      res.json({ ...kviz, pitanja, ...(etapaStatus ?? {}) });
       return;
     }
 
     // Edge case: nema JSONB-a, ali postoje veze u banci → vrati banku po redoslijedu insert-a
     if (linked.length > 0) {
       const pitanja = linked.map(fromBank);
-      res.json({ ...kviz, pitanja });
+      res.json({ ...kviz, pitanja, ...(etapaStatus ?? {}) });
       return;
     }
 
-    res.json(kviz);
+    res.json({ ...kviz, ...(etapaStatus ?? {}) });
   } catch (err) {
     req.log.error({ err, slug: req.params.slug }, "GET /content/kvizovi/:slug failed");
     res.status(500).json({ error: "Greška servera" });
@@ -1191,6 +1252,47 @@ router.post("/napredak", requireAuth, async (req, res) => {
       return;
     }
 
+    // Medaljon-lekcija koja ima povezan etapni kviz ne može biti završena
+    // samo klikom na dugme. Učenik mora prethodno položiti cijelu završnu
+    // provjeru sa najmanje 80%. Ovo je server-side gate, pa ga nije moguće
+    // zaobići ručnim pozivom completion endpointa.
+    if (
+      zavrsen === true &&
+      contentType === "ilmihal" &&
+      !wasAlreadyCompleted &&
+      lekcijaSlug?.startsWith("medaljon-nivo")
+    ) {
+      const [etapniKviz] = await db
+        .select({ id: kvizoviTable.id, slug: kvizoviTable.slug, naslov: kvizoviTable.naslov })
+        .from(kvizoviTable)
+        .where(and(
+          eq(kvizoviTable.lekcijaId, Number(contentId)),
+          isNotNull(kvizoviTable.etapa),
+        ))
+        .limit(1);
+      if (etapniKviz) {
+        const [polozen] = await db
+          .select({ id: kvizRezultatiTable.id })
+          .from(kvizRezultatiTable)
+          .where(and(
+            eq(kvizRezultatiTable.userId, userId),
+            eq(kvizRezultatiTable.kvizId, etapniKviz.id),
+            gte(kvizRezultatiTable.procenat, 80),
+          ))
+          .limit(1);
+        if (!polozen) {
+          res.status(422).json({
+            error: "etapa_quiz_not_passed",
+            message: "Prvo položi cijeli etapni kviz sa najmanje 80%.",
+            kvizSlug: etapniKviz.slug,
+            kvizNaslov: etapniKviz.naslov,
+            pragProlazaPercent: 80,
+          });
+          return;
+        }
+      }
+    }
+
     // GATE: 4. uslov — mini-kviz "Provjeri znanje". Ako lekcija ima validna
     // pitanja u `kvizPitanja`, učenik mora biti tačno odgovorio na sva
     // (zabilježeno kao `quiz_passed_at`) prije nego se completion odobri.
@@ -1421,41 +1523,102 @@ router.post("/heartbeat", requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/content/kviz-rezultat - save individual quiz attempt (max 1x per quiz per day)
+// POST /api/content/kviz-rezultat - save individual quiz attempt.
+// Obični kviz: max 1x dnevno. Etapni kviz: sva pitanja, prag 80%, a nakon
+// neuspjeha slijedi obavezna pauza od 48 sati.
 router.post("/kviz-rezultat", requireAuth, async (req, res) => {
   try {
     const { kvizId, kvizNaslov, tacniOdgovori, ukupnoPitanja } = req.body;
     const userId = req.user!.userId;
+    const [kviz] = await db
+      .select({
+        id: kvizoviTable.id,
+        etapa: kvizoviTable.etapa,
+        pitanja: kvizoviTable.pitanja,
+      })
+      .from(kvizoviTable)
+      .where(eq(kvizoviTable.id, Number(kvizId) || 0))
+      .limit(1);
+    if (!kviz) {
+      res.status(404).json({ error: "Kviz nije pronađen" });
+      return;
+    }
+    const isEtapa = kviz.etapa != null;
+    const pragProlazaPercent = 80;
 
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-    const existing = await db.select({ id: kvizRezultatiTable.id }).from(kvizRezultatiTable)
+    const existing = await db.select({
+      id: kvizRezultatiTable.id,
+      procenat: kvizRezultatiTable.procenat,
+      completedAt: kvizRezultatiTable.completedAt,
+    }).from(kvizRezultatiTable)
       .where(and(
         eq(kvizRezultatiTable.userId, userId),
         eq(kvizRezultatiTable.kvizId, kvizId || 0),
-        gte(kvizRezultatiTable.completedAt, startOfDay),
-        lte(kvizRezultatiTable.completedAt, endOfDay),
-      ));
+        ...(isEtapa ? [] : [
+          gte(kvizRezultatiTable.completedAt, startOfDay),
+          lte(kvizRezultatiTable.completedAt, endOfDay),
+        ]),
+      ))
+      .orderBy(desc(kvizRezultatiTable.completedAt))
+      .limit(isEtapa ? 1 : 20);
 
     if (existing.length > 0) {
-      res.status(429).json({ error: "Već si radio/la ovaj kviz danas. Pokušaj ponovo sutra!" });
-      return;
+      if (isEtapa) {
+        const last = existing[0];
+        if (last.completedAt && last.procenat < pragProlazaPercent) {
+          const nextAttemptAt = new Date(last.completedAt.getTime() + 48 * 60 * 60 * 1000);
+          if (nextAttemptAt.getTime() > Date.now()) {
+            res.status(429).json({
+              error: "Novi pokušaj etapnog kviza dostupan je nakon 48 sati.",
+              code: "etapa_cooldown",
+              cooldownUntil: nextAttemptAt.toISOString(),
+            });
+            return;
+          }
+        }
+      } else {
+        res.status(429).json({ error: "Već si radio/la ovaj kviz danas. Pokušaj ponovo sutra!" });
+        return;
+      }
     }
 
-    const procenat = ukupnoPitanja > 0 ? Math.round((tacniOdgovori / ukupnoPitanja) * 100) : 0;
+    const safeUkupno = Math.max(0, Number(ukupnoPitanja) || 0);
+    const safeTacni = Math.max(0, Math.min(safeUkupno, Number(tacniOdgovori) || 0));
+    if (isEtapa) {
+      const linked = await db
+        .select({ id: kvizPitanjaTable.id })
+        .from(kvizPitanjaTable)
+        .where(eq(kvizPitanjaTable.kvizId, kviz.id));
+      const jsonCount = Array.isArray(kviz.pitanja) ? kviz.pitanja.length : 0;
+      // Detail ruta servira JSONB niz kad postoji; banka je fallback samo kad
+      // je JSONB prazan. Provjera broja mora pratiti isti izvor, ne GREATEST.
+      const expectedTotal = jsonCount > 0 ? jsonCount : linked.length;
+      if (safeUkupno !== expectedTotal) {
+        res.status(400).json({
+          error: "Etapni kviz mora biti predan sa svim pitanjima.",
+          code: "etapa_incomplete",
+          expectedTotal,
+        });
+        return;
+      }
+    }
+    const procenat = safeUkupno > 0 ? Math.round((safeTacni / safeUkupno) * 100) : 0;
+    const polozeno = !isEtapa || procenat >= pragProlazaPercent;
     // Kapi meda (DB total_hasanat): 2 po tačnom odgovoru kad je rezultat ≥ 50%.
     // Npr. 20 tačnih = 40 kapi meda. Ranije: procenat/10 (max 10). Povećano
     // po zahtjevu — znanje vrijedi više nego igrica.
-    const bodovi = procenat >= 50 ? tacniOdgovori * 2 : 0;
+    const bodovi = procenat >= 50 ? safeTacni * 2 : 0;
 
     const [rezultat] = await db.insert(kvizRezultatiTable).values({
       userId,
       kvizId: kvizId || 0,
       kvizNaslov: kvizNaslov || "",
-      tacniOdgovori: tacniOdgovori || 0,
-      ukupnoPitanja: ukupnoPitanja || 0,
+      tacniOdgovori: safeTacni,
+      ukupnoPitanja: safeUkupno,
       procenat,
       bodovi,
     }).returning();
@@ -1519,8 +1682,15 @@ router.post("/kviz-rezultat", requireAuth, async (req, res) => {
 
     const streakIncreased = streakDays > previousStreakDays;
 
+    const cooldownUntil = isEtapa && !polozeno
+      ? new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+      : null;
     res.status(200).json({
       ...rezultat,
+      isEtapa,
+      polozeno,
+      pragProlazaPercent: isEtapa ? pragProlazaPercent : undefined,
+      cooldownUntil,
       hasanatEarned: bodovi,
       hasanatGained: bodovi,
       totalHasanat,

@@ -66,6 +66,7 @@ router.get("/medaljon/:slug", async (req, res) => {
         and(
           eq(ilmihalLekcijeTable.nivo, medaljon.nivo),
           lte(ilmihalLekcijeTable.redoslijed, medaljon.posAfterRedoslijed),
+          eq(ilmihalLekcijeTable.dostupnost, "svi"),
         ),
       )
       .orderBy(asc(ilmihalLekcijeTable.redoslijed));
@@ -284,6 +285,7 @@ async function proverigatingEtape(
       and(
         eq(ilmihalLekcijeTable.nivo, medaljon.nivo),
         lte(ilmihalLekcijeTable.redoslijed, medaljon.posAfterRedoslijed),
+        eq(ilmihalLekcijeTable.dostupnost, "svi"),
       ),
     );
   if (potrebne.length === 0) return null;

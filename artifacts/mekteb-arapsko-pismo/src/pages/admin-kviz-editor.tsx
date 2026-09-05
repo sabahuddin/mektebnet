@@ -28,6 +28,7 @@ import {
 interface Kviz {
   id: number;
   nivo: number | null;
+  etapa: number | null;
   slug: string;
   naslov: string;
   modul: string;
@@ -158,7 +159,7 @@ export default function AdminKvizEditorPage() {
   const kvizId = matchEdit ? parseInt(paramsEdit!.id) : 0;
 
   const [meta, setMeta] = useState<Partial<Kviz>>({
-    naslov: "", slug: "", modul: "ilmihal", nivo: 1, variant: "normal",
+    naslov: "", slug: "", modul: "ilmihal", nivo: 1, etapa: null, variant: "normal",
     kategorija: "", tagovi: [], lekcijaId: null, opis: "", isPublished: true,
   });
   const [pitanja, setPitanja] = useState<KvizPitanjeRow[]>([]);
@@ -223,6 +224,7 @@ export default function AdminKvizEditorPage() {
         slug: meta.slug.trim(),
         modul: meta.modul,
         nivo: meta.nivo,
+        etapa: meta.etapa,
         variant: meta.variant,
         kategorija: meta.kategorija || null,
         tagovi: meta.tagovi || [],
@@ -352,7 +354,7 @@ export default function AdminKvizEditorPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div>
               <label className="block text-sm font-semibold mb-1">{t("Modul")}</label>
               <select value={meta.modul || "ilmihal"} onChange={e => setMeta(p => ({ ...p, modul: e.target.value }))}
@@ -367,6 +369,21 @@ export default function AdminKvizEditorPage() {
                 className="w-full px-3 py-2 border border-border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
+              <label className="block text-sm font-semibold mb-1">{t("Etapa (opciono)")}</label>
+              <select
+                value={meta.etapa ?? ""}
+                onChange={e => setMeta(p => ({ ...p, etapa: e.target.value ? Number(e.target.value) : null }))}
+                className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">{t("— bez etape —")}</option>
+                {Array.from({ length: 7 }, (_, i) => i + 1).map(etapa => (
+                  <option key={etapa} value={etapa}>
+                    {etapa}-{meta.nivo ?? "?"} · {((etapa - 1) * 10) + 1}–{etapa * 10}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-semibold mb-1">{t("Varijanta")}</label>
               <select value={meta.variant || "normal"} onChange={e => setMeta(p => ({ ...p, variant: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
@@ -376,23 +393,28 @@ export default function AdminKvizEditorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{t("Status")}</label>
+              <label className="block text-sm font-semibold mb-1">{t("Vidljivost")}</label>
               <select value={meta.isPublished ? "1" : "0"} onChange={e => setMeta(p => ({ ...p, isPublished: e.target.value === "1" }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="1">{t("Objavljen")}</option>
-                <option value="0">{t("Skriven")}</option>
+                <option value="1">{t("Javno — učenici ga vide")}</option>
+                <option value="0">{t("Privatno — samo admin")}</option>
               </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {meta.isPublished
+                  ? t("Kviz je vidljiv učenicima u katalogu i na povezanim lekcijama.")
+                  : t("Kviz je skriven učenicima, ali ga možeš koristiti u završnom ispitu Krunisanja.")}
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">{t("Kategorija (NPP 2018)")}</label>
+              <label className="block text-sm font-semibold mb-1">{t("Oblast (opciono, NPP 2018)")}</label>
               <select value={meta.kategorija || ""} onChange={e => {
                 const kat = e.target.value || null;
                 setMeta(p => ({ ...p, kategorija: kat, tagovi: [] }));
               }}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="">{t("— bez —")}</option>
+                <option value="">{t("— bez oblasti / mješoviti kviz —")}</option>
                 {Object.entries(KATEGORIJE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>

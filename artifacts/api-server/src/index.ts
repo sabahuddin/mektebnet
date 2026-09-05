@@ -378,6 +378,8 @@ async function runResidualSchema() {
     // a dalje ih admin direktno mijenja kroz UI. Idempotentno na svaki start.
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS predmet varchar(60);`);
     await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS uvjeti_ids JSONB NOT NULL DEFAULT '[]'::jsonb;`);
+    await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS dostupnost varchar(20) NOT NULL DEFAULT 'svi';`);
+    await db.execute(sql`UPDATE ilmihal_lekcije SET dostupnost='svi' WHERE dostupnost NOT IN ('svi', 'muallimi');`);
     // Jednokratni backfill: popuni predmet iz content_html-a samo za redove
     // gdje je predmet NULL (preskače već postavljene). POSIX regex hvata
     // vrijednost između <div>Predmet</div> i sljedećeg <div>...</div>.
@@ -447,6 +449,7 @@ async function runResidualSchema() {
     // tako da SELECT iz /api/content/kvizovi (koji referencira sve te kolone)
     // ne puca sa "column does not exist". Bezbjedno za pokretanje na svaki start.
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS kategorija varchar(60);`);
+    await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS etapa integer;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS lekcija_id integer;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS opis text DEFAULT '' NOT NULL;`);
     await db.execute(sql`ALTER TABLE kvizovi ADD COLUMN IF NOT EXISTS pitanja_po_sesiji integer;`);
@@ -748,12 +751,14 @@ async function runResidualSchema() {
         opis_html text NOT NULL DEFAULT '',
         ikona varchar(32) NOT NULL DEFAULT 'crown',
         boja varchar(16) NOT NULL DEFAULT 'amber',
+        kviz_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
         kviz_pitanja_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
         prag_prolaza_percent integer NOT NULL DEFAULT 70,
         is_gating boolean NOT NULL DEFAULT true,
         created_at timestamp DEFAULT NOW()
       );
     `);
+    await db.execute(sql`ALTER TABLE krunisanja ADD COLUMN IF NOT EXISTS kviz_ids jsonb NOT NULL DEFAULT '[]'::jsonb;`);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS krunisanje_lekcije (
         id serial PRIMARY KEY,

@@ -30,6 +30,7 @@ interface Krunisanje {
   opisHtml: string;
   ikona: string;
   boja: string;
+  kvizIds: number[] | null;
   kvizPitanjaIds: number[] | null;
   pragProlazaPercent: number;
   isGating: boolean;
@@ -55,6 +56,14 @@ interface BankaPitanje {
 
 interface BankaLekcija { id: number; naslov: string; redoslijed: number; }
 interface BankaResponse { lekcije: BankaLekcija[]; pitanja: BankaPitanje[]; }
+interface EtapniKviz {
+  id: number;
+  nivo: number | null;
+  etapa: number | null;
+  naslov: string;
+  isPublished: boolean;
+  pitanjaCount: number;
+}
 
 function PitanjaPicker({
   url, token, selectedIds, onChange,
@@ -162,6 +171,75 @@ function PitanjaPicker({
   );
 }
 
+function KvizoviEtapaPicker({
+  nivo, token, selectedIds, onChange,
+}: {
+  nivo: number;
+  token: string;
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const { t } = useLanguage();
+  const [kvizovi, setKvizovi] = useState<EtapniKviz[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiRequest<EtapniKviz[]>("GET", `/content/kvizovi?nivo=${nivo}&modul=ilmihal`, undefined, token)
+      .then((rows) => {
+        if (!cancelled) {
+          setKvizovi(
+            rows
+              .filter((kviz) => kviz.etapa != null)
+              .sort((a, b) => (a.etapa ?? 0) - (b.etapa ?? 0) || a.naslov.localeCompare(b.naslov)),
+          );
+        }
+      })
+      .catch(() => { if (!cancelled) setKvizovi([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [nivo, token]);
+
+  if (loading) return <div className="py-3 text-sm text-muted-foreground">{t("Učitavam etapne kvizove…")}</div>;
+  if (kvizovi.length === 0) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        {t("Nema kvizova označenih etapom za ovaj nivo. U editoru kviza prvo postavi Nivo i Etapu.")}
+      </div>
+    );
+  }
+
+  const selected = new Set(selectedIds);
+  return (
+    <div className="max-h-64 space-y-2 overflow-auto rounded-lg border bg-gray-50 p-2">
+      {kvizovi.map((kviz) => (
+        <label key={kviz.id} className="flex cursor-pointer items-start gap-3 rounded-lg border bg-white px-3 py-2 hover:bg-amber-50">
+          <input
+            type="checkbox"
+            checked={selected.has(kviz.id)}
+            onChange={() => onChange(
+              selected.has(kviz.id)
+                ? selectedIds.filter((id) => id !== kviz.id)
+                : [...selectedIds, kviz.id],
+            )}
+            className="mt-1"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold text-amber-950">
+              {kviz.etapa}-{kviz.nivo} · {kviz.naslov}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {t("{n} pitanja", { n: String(kviz.pitanjaCount ?? 0) })}
+              {!kviz.isPublished ? ` · ${t("Privatno — samo admin")}` : ""}
+            </span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function parseIdsCSV(s: string): number[] {
   return s
     .split(/[\s,;]+/)
@@ -170,7 +248,7 @@ function parseIdsCSV(s: string): number[] {
 }
 
 export default function AdminEtapePage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -187,13 +265,14 @@ export default function AdminEtapePage() {
   const [novaLekcija, setNovaLekcija] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user || user.role !== "admin") {
       setLocation("/");
       return;
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nivo, token]);
+  }, [nivo, token, user?.role, authLoading]);
 
   async function load() {
     if (!token) return;
@@ -247,6 +326,7 @@ export default function AdminEtapePage() {
         opisHtml: k.opisHtml,
         ikona: k.ikona,
         boja: k.boja,
+        kvizIds: k.kvizIds ?? [],
         kvizPitanjaIds: k.kvizPitanjaIds ?? [],
         pragProlazaPercent: k.pragProlazaPercent,
         isGating: k.isGating,
@@ -388,11 +468,15 @@ export default function AdminEtapePage() {
                         {krunisanje.naslov || <span className="italic text-amber-700/60">{t("[bez naslova]")}</span>}
                       </div>
                       <div className="text-xs text-amber-700/70 mt-1">
-                        {t("{n} pitanja", { n: String((krunisanje.kvizPitanjaIds ?? []).length) })} • {t("prag")} {krunisanje.pragProlazaPercent}% • {t("gating")} {krunisanje.isGating ? t("DA") : t("NE")}
+                        {t("{n} odabranih kvizova", { n: String((krunisanje.kvizIds ?? []).length) })} • {t("{n} dodatnih pitanja", { n: String((krunisanje.kvizPitanjaIds ?? []).length) })} • {t("prag")} {krunisanje.pragProlazaPercent}% • {t("gating")} {krunisanje.isGating ? t("DA") : t("NE")}
                       </div>
                     </div>
                     <button
-                      onClick={() => setEditKrunisanje({ ...krunisanje, kvizPitanjaIds: krunisanje.kvizPitanjaIds ?? [] })}
+                      onClick={() => setEditKrunisanje({
+                        ...krunisanje,
+                        kvizIds: krunisanje.kvizIds ?? [],
+                        kvizPitanjaIds: krunisanje.kvizPitanjaIds ?? [],
+                      })}
                       className="flex items-center gap-1 px-3 py-2 bg-amber-500 text-white rounded-lg font-semibold text-sm hover:bg-amber-600"
                       data-testid="button-edit-krunisanje"
                     >
@@ -532,6 +616,7 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
 function KrunisanjeModal({ krunisanje, onClose, onSave, token }: { krunisanje: Krunisanje; onClose: () => void; onSave: (k: Krunisanje) => void; token: string }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<Krunisanje>(krunisanje);
+  const [selectedKvizIds, setSelectedKvizIds] = useState<number[]>(krunisanje.kvizIds ?? []);
   const [selectedIds, setSelectedIds] = useState<number[]>(krunisanje.kvizPitanjaIds ?? []);
   const [showRaw, setShowRaw] = useState(false);
   const [idsText, setIdsText] = useState((krunisanje.kvizPitanjaIds ?? []).join(", "));
@@ -546,7 +631,18 @@ function KrunisanjeModal({ krunisanje, onClose, onSave, token }: { krunisanje: K
           <textarea className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-28"
             value={form.opisHtml ?? ""} onChange={(e) => setForm({ ...form, opisHtml: e.target.value })} />
         </Field>
-        <Field label={t("Pitanja iz banke — odaberi iz svih lekcija nivoa {nivo} ({n} odabrano)", { nivo: String(krunisanje.nivo), n: String(selectedIds.length) })}>
+        <Field label={t("Kvizovi iz etapa — sva pitanja odabranih kvizova ulaze u završni ispit ({n} odabrano)", { n: String(selectedKvizIds.length) })}>
+          <KvizoviEtapaPicker
+            nivo={krunisanje.nivo}
+            token={token}
+            selectedIds={selectedKvizIds}
+            onChange={setSelectedKvizIds}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("Kviz može ostati privatan: učenik ga neće vidjeti u katalogu, ali će njegova pitanja biti dio Krunisanja.")}
+          </p>
+        </Field>
+        <Field label={t("Dodatna pojedinačna pitanja iz banke (opcionalno) — nivo {nivo} ({n} odabrano)", { nivo: String(krunisanje.nivo), n: String(selectedIds.length) })}>
           <PitanjaPicker
             url={`/admin/krunisanja/${krunisanje.id}/banka`}
             token={token}
@@ -591,7 +687,7 @@ function KrunisanjeModal({ krunisanje, onClose, onSave, token }: { krunisanje: K
       </div>
       <div className="flex gap-2 justify-end mt-4">
         <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">{t("Otkaži")}</button>
-        <button onClick={() => onSave({ ...form, kvizPitanjaIds: selectedIds })}
+        <button onClick={() => onSave({ ...form, kvizIds: selectedKvizIds, kvizPitanjaIds: selectedIds })}
           className="px-4 py-2 rounded-lg bg-amber-600 text-white font-bold text-sm flex items-center gap-1"
           data-testid="button-save-krunisanje">
           <Save className="w-4 h-4" /> {t("Sačuvaj")}

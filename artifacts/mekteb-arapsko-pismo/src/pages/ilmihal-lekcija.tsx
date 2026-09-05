@@ -14,7 +14,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2, Users, UserCog
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -84,6 +84,7 @@ interface Lekcija {
   contentHtml: string;
   audioSrc?: string;
   predmet?: string | null;
+  dostupnost?: "svi" | "muallimi";
   /** Lista ID-jeva lekcija koje student mora završiti da bi ova bila dostupna. */
   uvjetiIds?: number[];
   kvizPitanja?: LekcijaKvizPitanje[] | null;
@@ -792,9 +793,10 @@ function VezaniKvizovi({ lekcijaId }: { lekcijaId: number }) {
 // ──────────────────────────────────────────────────
 // AI-generated lekcija kviz accordion
 // ──────────────────────────────────────────────────
-function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed, alreadyPassed, defaultOpen }: {
+function LekcijaKvizBox({ pitanja, lekcijaId, nivo, isAdmin, token, onSaved, onPassed, alreadyPassed, defaultOpen }: {
   pitanja: LekcijaKvizPitanje[];
   lekcijaId?: number;
+  nivo?: number;
   isAdmin?: boolean;
   token?: string | null;
   onSaved?: (novaPitanja: LekcijaKvizPitanje[]) => void;
@@ -946,6 +948,7 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
       {canEdit && editOpen && (
         <KvizEditModal
           lekcijaId={lekcijaId!}
+          nivo={nivo}
           token={token!}
           initialPitanja={pitanja}
           onClose={() => setEditOpen(false)}
@@ -1050,8 +1053,9 @@ function LekcijaKvizBox({ pitanja, lekcijaId, isAdmin, token, onSaved, onPassed,
 // ──────────────────────────────────────────────────
 // Admin: editor za pitanja "Provjeri znanje"
 // ──────────────────────────────────────────────────
-function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
+function KvizEditModal({ lekcijaId, nivo, token, initialPitanja, onClose, onSaved }: {
   lekcijaId: number;
+  nivo?: number;
   token: string;
   initialPitanja: LekcijaKvizPitanje[];
   onClose: () => void;
@@ -1070,7 +1074,39 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
   );
   const [pitanja, setPitanja] = useState<LekcijaKvizPitanje[]>(() => initial.current.map(p => ({ ...p, options: p.options.slice() })));
   const [saving, setSaving] = useState(false);
+  const [postojeciKvizovi, setPostojeciKvizovi] = useState<Array<{
+    id: number;
+    naslov: string;
+    slug: string;
+    nivo: number | null;
+    etapa?: number | null;
+    lekcijaId?: number | null;
+    pitanjaCount?: number;
+  }>>([]);
+  const [selectedKvizId, setSelectedKvizId] = useState("");
+  const [linkingKviz, setLinkingKviz] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const query = nivo ? `?nivo=${nivo}&modul=ilmihal` : "?modul=ilmihal";
+    apiRequest<Array<{
+      id: number;
+      naslov: string;
+      slug: string;
+      nivo: number | null;
+      etapa?: number | null;
+      lekcijaId?: number | null;
+      pitanjaCount?: number;
+    }>>("GET", `/content/kvizovi${query}`, undefined, token)
+      .then(data => {
+        if (!cancelled) setPostojeciKvizovi(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setPostojeciKvizovi([]);
+      });
+    return () => { cancelled = true; };
+  }, [nivo, token]);
 
   const isDirty = useCallback(() => {
     return JSON.stringify(pitanja) !== JSON.stringify(initial.current);
@@ -1118,6 +1154,34 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
 
   const addP = () => {
     setPitanja(prev => [...prev, { question: "", options: ["", "", "", ""], answer: "" }]);
+  };
+
+  const poveziPostojeciKviz = async () => {
+    const kvizId = Number(selectedKvizId);
+    const kviz = postojeciKvizovi.find(k => k.id === kvizId);
+    if (!kviz || linkingKviz) return;
+    if (kviz.lekcijaId && kviz.lekcijaId !== lekcijaId) {
+      const potvrda = confirm(t('Kviz "{naslov}" je već povezan s drugom lekcijom. Premjestiti ga u ovaj medaljon?', { naslov: kviz.naslov }));
+      if (!potvrda) return;
+    }
+    setLinkingKviz(true);
+    try {
+      await apiRequest("PUT", `/admin/kvizovi/${kviz.id}`, { lekcijaId }, token);
+      toast({
+        title: t("Kviz je povezan"),
+        description: t('Cijeli kviz "{naslov}" sada je dodat ovom medaljonu.', { naslov: kviz.naslov }),
+      });
+      onClose();
+      window.location.reload();
+    } catch (e: any) {
+      toast({
+        title: t("Greška"),
+        description: e?.message || t("Nije moguće povezati kviz"),
+        variant: "destructive",
+      });
+    } finally {
+      setLinkingKviz(false);
+    }
   };
 
   const validate = (): string | null => {
@@ -1185,6 +1249,53 @@ function KvizEditModal({ lekcijaId, token, initialPitanja, onClose, onSaved }: {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          <div className="rounded-xl border-2 border-violet-200 bg-violet-50 p-4">
+            <div className="flex items-start gap-3">
+              <Link2 className="w-5 h-5 text-violet-700 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <h4 className="font-extrabold text-violet-950">{t("Uvezi cijeli postojeći kviz")}</h4>
+                <p className="text-xs text-violet-800 mt-1 mb-3">
+                  {t("Kviz ostaje zaseban i zadržava sve vrste pitanja. Ovdje ga povezujemo sa ovim medaljonom.")}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={selectedKvizId}
+                    onChange={e => setSelectedKvizId(e.target.value)}
+                    className="flex-1 min-w-0 border border-violet-300 bg-white rounded-lg px-3 py-2 text-sm"
+                    data-testid="select-postojeci-kviz"
+                  >
+                    <option value="">{t("Odaberi napravljeni kviz…")}</option>
+                    {postojeciKvizovi.map(kviz => (
+                      <option key={kviz.id} value={kviz.id}>
+                        {kviz.etapa && kviz.nivo ? `${kviz.etapa}-${kviz.nivo} · ` : ""}
+                        {kviz.naslov} ({kviz.pitanjaCount ?? 0})
+                        {kviz.lekcijaId === lekcijaId ? ` · ${t("već dodat")}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    onClick={poveziPostojeciKviz}
+                    disabled={!selectedKvizId || linkingKviz || postojeciKvizovi.find(k => k.id === Number(selectedKvizId))?.lekcijaId === lekcijaId}
+                    className="rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
+                    data-testid="button-povezi-postojeci-kviz"
+                  >
+                    {linkingKviz ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Link2 className="w-4 h-4 mr-2" />}
+                    {t("Dodaj u medaljon")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px bg-border flex-1" />
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {t("ili uređuj mali kviz pitanje po pitanje")}
+            </span>
+            <div className="h-px bg-border flex-1" />
+          </div>
+
           {pitanja.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-8">
               {t("Nema pitanja. Kliknite \"Dodaj pitanje\" ispod.")}
@@ -1607,6 +1718,7 @@ function PriloziSection({
     setAttachments(prev => (prev.length > 0 ? prev : (lekcija.prilozi || [])));
   }, [lekcija.id, lekcija.prilozi]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [uploadingH5p, setUploadingH5p] = useState(false);
   const [showUrlForm, setShowUrlForm] = useState(false);
   const [urlValue, setUrlValue] = useState("");
@@ -1662,19 +1774,45 @@ function PriloziSection({
   }, [token, attachments, mode]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !token) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !token) return;
     setUploading(true);
+    setUploadProgress({ current: 0, total: files.length });
+    let uploadedCount = 0;
+    const failed: string[] = [];
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}`, fd, token, true);
-      setAttachments(prev => [{ ...result, url: `/uploads/${(result as any).storedName || ""}` }, ...prev]);
-      toast({ title: t("Uspješno"), description: t('"{name}" uploadovan.', { name: file.name }) });
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+      // Šaljemo redom: svaki PDF se na serveru posebno optimizira, a jedan
+      // neuspješan fajl ne prekida upload ostalih odabranih fajlova.
+      for (const file of files) {
+        setUploadProgress(progress => ({ ...progress, current: progress.current + 1 }));
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}`, fd, token, true);
+          setAttachments(prev => [{ ...result, url: `/uploads/${(result as any).storedName || ""}` }, ...prev]);
+          uploadedCount++;
+        } catch (err) {
+          console.error(`Upload priloga nije uspio: ${file.name}`, err);
+          failed.push(file.name);
+        }
+      }
+      if (failed.length === 0) {
+        toast({
+          title: t("Uspješno"),
+          description: files.length === 1
+            ? t('"{name}" uploadovan.', { name: files[0].name })
+            : t("{count} fajlova je uploadovano.", { count: String(uploadedCount) }),
+        });
+      } else {
+        toast({
+          title: uploadedCount > 0 ? t("Dio fajlova je uploadovan") : t("Greška"),
+          description: `${uploadedCount}/${files.length} — ${t("Nije uspjelo")}: ${failed.join(", ")}`,
+          variant: "destructive",
+        });
+      }
     } finally {
       setUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -1974,10 +2112,17 @@ function PriloziSection({
         <p className="mb-3 text-xs text-muted-foreground">
           {t("Ovi materijali su dio pripreme za nastavu i vidljivi su samo muallimu i administratoru.")}
         </p>
-        <input ref={fileInputRef} type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
         <div className="mb-3 flex flex-wrap gap-2">
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
-            {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Uploadujem...")}</> : <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>}
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {t("Uploadujem...")} {uploadProgress.total > 1 && `(${uploadProgress.current}/${uploadProgress.total})`}
+              </>
+            ) : (
+              <><Upload className="w-4 h-4 mr-2" /> {t("Dodaj fajl")}</>
+            )}
           </Button>
           <Button onClick={() => setShowUrlForm(v => !v)} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
             <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}
@@ -2566,7 +2711,7 @@ function PriloziSection({
 export default function IlmihalLekcijaPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   // Task #133: roditelj = gost → read-only kao neprijavljeni gost. Ne upisuje
   // napredak/hasanat/vrijeme; write-akcije (markComplete, heartbeat, quizPassed)
   // su gejtovane na isGuestLike da roditelj ne dobije više od gosta.
@@ -2585,6 +2730,7 @@ export default function IlmihalLekcijaPage() {
   const [naslovDraft, setNaslovDraft] = useState("");
   const [savingNaslov, setSavingNaslov] = useState(false);
   const [savingPredmet, setSavingPredmet] = useState(false);
+  const [savingDostupnost, setSavingDostupnost] = useState(false);
   const [predmetModalOpen, setPredmetModalOpen] = useState(false);
   const [predmetDraft, setPredmetDraft] = useState("");
   // Preduvjeti (uvjetiIds) admin editor stanja
@@ -2754,6 +2900,30 @@ export default function IlmihalLekcijaPage() {
     }
   };
 
+  const handleToggleDostupnost = async () => {
+    if (!lekcija || !token) return;
+    const nova = lekcija.dostupnost === "muallimi" ? "svi" : "muallimi";
+    if (
+      nova === "muallimi"
+      && !window.confirm(t("Ovu lekciju učenici, roditelji i neprijavljeni posjetioci više neće vidjeti u redovnom katalogu. Muallim je i dalje može zadati kroz zadaću. Nastaviti?"))
+    ) return;
+    setSavingDostupnost(true);
+    try {
+      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { dostupnost: nova }, token);
+      setLekcija((prev) => prev ? { ...prev, dostupnost: nova } : prev);
+      toast({
+        title: t("Dostupnost ažurirana"),
+        description: nova === "muallimi"
+          ? t("Lekcija je sada dostupna samo muallimima i adminima.")
+          : t("Lekcija je sada dostupna svima."),
+      });
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Ne mogu promijeniti dostupnost."), variant: "destructive" });
+    } finally {
+      setSavingDostupnost(false);
+    }
+  };
+
   // Otvori modal za preduvjete i učitaj listu lekcija za picker (lazy, samo jednom).
   const otvoriUvjetiModal = async () => {
     if (!lekcija || !token) return;
@@ -2831,7 +3001,10 @@ export default function IlmihalLekcijaPage() {
   };
 
   useEffect(() => {
-    if (!slug) return;
+    // Nakon punog reloada AuthProvider prvo mora obnoviti user/token iz
+    // localStoragea. Bez ovog čekanja admin je kratko tretiran kao gost, pa ga
+    // lesson gate pogrešno vraća na /ilmihal uz poruku za registraciju.
+    if (!slug || authLoading) return;
     setIsLoading(true);
     // Reset gate state pri prelasku na novu lekciju (npr. preko strip-a) —
     // inače bi vrijeme/skrol/sekcije iz prethodne lekcije ostali kao "ljepak".
@@ -2927,7 +3100,7 @@ export default function IlmihalLekcijaPage() {
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [slug, token, lang]);
+  }, [slug, token, lang, authLoading, user?.role]);
 
   // Lokalni "vizuelni" tick — povećava prikaz `timeSpent` svake sekunde dok
   // je tab vidljiv. Ovo je SAMO za UX da brojač ne stoji između heartbeat-a
@@ -3170,6 +3343,23 @@ export default function IlmihalLekcijaPage() {
           description: t('Tačno odgovori na sva pitanja u "Provjeri znanje" pa onda označi lekciju kao završenu.'),
           variant: "destructive",
         });
+      } else if (e?.status === 422 && e?.data?.error === "etapa_quiz_not_passed") {
+        toast({
+          title: t("Najprije položi etapni kviz"),
+          description: t('Riješi cijeli kviz "{naslov}" sa najmanje {prag}% tačnih odgovora.', {
+            naslov: String(e.data.kvizNaslov || t("Provjera znanja")),
+            prag: String(e.data.pragProlazaPercent || 80),
+          }),
+          variant: "destructive",
+          action: e.data.kvizSlug ? (
+            <ToastAction
+              altText={t("Otvori kviz")}
+              onClick={() => setLocation(`/kvizovi/${e.data.kvizSlug}`)}
+            >
+              {t("Otvori kviz")}
+            </ToastAction>
+          ) : undefined,
+        });
       } else {
         toast({
           title: t("Greška"),
@@ -3345,6 +3535,20 @@ export default function IlmihalLekcijaPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors disabled:opacity-50">
               {savingPredmet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PenLine className="w-3.5 h-3.5" />}
               {t("Predmet:")} {lekcija.predmet || "—"}
+            </button>
+            <button onClick={handleToggleDostupnost} disabled={savingDostupnost}
+              title={t("Odredi mogu li ovu lekciju vidjeti svi ili samo muallimi")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${
+                lekcija.dostupnost === "muallimi"
+                  ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                  : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+              }`}>
+              {savingDostupnost
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : lekcija.dostupnost === "muallimi"
+                  ? <UserCog className="w-3.5 h-3.5" />
+                  : <Users className="w-3.5 h-3.5" />}
+              {lekcija.dostupnost === "muallimi" ? t("Samo muallimi") : t("Dostupno svima")}
             </button>
             <button onClick={otvoriUvjetiModal} disabled={savingUvjeti}
               title={t("Postavi preduvjete — lekcije koje učenik mora završiti da bi ova bila dostupna")}
@@ -3665,6 +3869,7 @@ export default function IlmihalLekcijaPage() {
                       key="lekcija-kviz"
                       pitanja={kvizPitanja}
                       lekcijaId={lekcija.id}
+                      nivo={lekcija.nivo}
                       isAdmin={isAdmin}
                       token={token}
                       onSaved={onKvizSaved}
@@ -3749,6 +3954,7 @@ export default function IlmihalLekcijaPage() {
                 key="lekcija-kviz-fallback"
                 pitanja={lekcija.kvizPitanja}
                 lekcijaId={lekcija.id}
+                nivo={lekcija.nivo}
                 isAdmin={user?.role === "admin"}
                 token={token}
                 onSaved={(novaPitanja) => setLekcija(prev => prev ? { ...prev, kvizPitanja: novaPitanja } : prev)}

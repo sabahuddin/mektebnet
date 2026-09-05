@@ -8,6 +8,7 @@ import { ArrowLeft, GraduationCap, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
+import { GroupStudentSetup } from "@/components/group-student-setup";
 
 const DANI = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja"];
 
@@ -148,7 +149,7 @@ export default function DodajGrupuPage() {
 
   return (
     <Layout>
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-2xl mx-auto">
         <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
         </button>
@@ -171,6 +172,7 @@ export default function DodajGrupuPage() {
             <Button onClick={() => goBackOr(() => setLocation("/muallim?tab=grupe"))} variant="outline" className="rounded-xl font-bold">{t("Nazad na grupe")}</Button>
           </div>
         ) : (
+        <div className="space-y-5">
         <form onSubmit={handleSubmit} className="bg-white border border-border/50 rounded-2xl p-4 sm:p-6 space-y-5">
 
           {/* Muallim grupe — samo za glavnog muallima */}
@@ -277,6 +279,8 @@ export default function DodajGrupuPage() {
             {isLoading ? (isEdit ? t("Spremanje...") : t("Kreiranje...")) : (isEdit ? t("Sačuvaj izmjene") : t("Kreiraj grupu"))}
           </Button>
         </form>
+        {isEdit && editId && <GroupStudentSetup grupaId={editId} grupaNaziv={naziv} />}
+        </div>
         )}
       </div>
     </Layout>

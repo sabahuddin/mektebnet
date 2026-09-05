@@ -470,8 +470,14 @@ router.get("/mekteb/muallimi", async (req, res) => {
 
     const lista = await Promise.all(profili.map(async (p) => {
       const grupe = await db.select({ id: grupeTable.id }).from(grupeTable).where(eq(grupeTable.muallimId, p.userId));
-      const ucenici = await db.select({ id: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
-        .where(and(eq(ucenikProfiliTable.muallimId, p.userId), eq(ucenikProfiliTable.isArchived, false)));
+      const ucenici = await db.execute(sql`
+        SELECT COUNT(DISTINCT up.user_id)::int AS count
+        FROM ucenik_profili up
+        LEFT JOIN grupe g ON g.id = up.grupa_id
+        WHERE (up.muallim_id = ${p.userId} OR g.muallim_id = ${p.userId})
+          AND COALESCE(up.is_archived, false) = false
+          AND (up.grupa_id IS NULL OR COALESCE(g.is_archived, false) = false)
+      `);
       const u = userMap.get(p.userId);
       return {
         userId: p.userId,
@@ -480,7 +486,7 @@ router.get("/mekteb/muallimi", async (req, res) => {
         isActive: u?.isActive ?? false,
         isGlavni: p.isGlavni ?? false,
         brojGrupa: grupe.length,
-        brojUcenika: ucenici.length,
+        brojUcenika: Number((ucenici.rows[0] as { count?: number } | undefined)?.count ?? 0),
       };
     }));
     lista.sort((a, b) => Number(b.isGlavni) - Number(a.isGlavni) || a.displayName.localeCompare(b.displayName));
@@ -1558,7 +1564,9 @@ router.get("/ucenici", async (req, res) => {
       // Svi učenici džemata — join kroz muallim_profili (siguran i za starije zapise
       // gdje ucenik_profili.mekteb_id može biti NULL).
       const rows = await db.execute(sql`
-        SELECT up.user_id, up.muallim_id, up.grupa_id, up.mekteb_id, up.is_archived,
+        SELECT up.user_id,
+               COALESCE(g.muallim_id, up.muallim_id) AS muallim_id,
+               up.grupa_id, up.mekteb_id, up.is_archived,
                u.display_name, u.username, u.email, u.role,
                u.last_seen_at, u.total_screentime_sec,
                mu.display_name AS muallim_display_name,
@@ -1570,10 +1578,12 @@ router.get("/ucenici", async (req, res) => {
                    AND ru.status = 'approved'
                ) AS roditelj_povezan
         FROM ucenik_profili up
-        JOIN muallim_profili mp ON mp.user_id = up.muallim_id AND mp.mekteb_id = ${ctx.mektebId}
-        JOIN users u ON u.id = up.user_id
-        LEFT JOIN users mu ON mu.id = up.muallim_id
         LEFT JOIN grupe g ON g.id = up.grupa_id
+        JOIN muallim_profili mp
+          ON mp.user_id = COALESCE(g.muallim_id, up.muallim_id)
+         AND mp.mekteb_id = ${ctx.mektebId}
+        JOIN users u ON u.id = up.user_id
+        LEFT JOIN users mu ON mu.id = COALESCE(g.muallim_id, up.muallim_id)
         WHERE (up.is_archived = false OR up.is_archived IS NULL)
           AND (up.grupa_id IS NULL OR COALESCE(g.is_archived, false) = false)
           AND (up.grupa_id IS NULL OR COALESCE(g.is_active, true) = true)
@@ -2326,7 +2336,10 @@ router.get("/prisustvo", async (req, res) => {
 // POST /api/muallim/ocjene - add grade
 router.post("/ocjene", async (req, res) => {
   try {
-    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, lekcijaSlug, napomena, datum, napametStavkaId } = req.body;
+    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, lekcijaSlug, napomena, napametStavkaId } = req.body;
+    const datum = typeof req.body.datum === "string" && req.body.datum.trim()
+      ? req.body.datum.trim()
+      : new Date().toISOString().slice(0, 10);
     const automatskaStavka = lekcijaSlug
       ? (await getGlobalNapametKatalog(false)).find((item) => item.sourceLessonSlug === String(lekcijaSlug))
       : undefined;
@@ -3279,6 +3292,7 @@ router.get("/lekcije-za-plan", async (req, res) => {
       naslov: ilmihalLekcijeTable.naslov,
       nivo: ilmihalLekcijeTable.nivo,
       slug: ilmihalLekcijeTable.slug,
+      dostupnost: ilmihalLekcijeTable.dostupnost,
     }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
 
     res.json(lekcije);
@@ -4795,7 +4809,7 @@ router.post("/zadace", async (req, res) => {
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
-      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
+      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov, dostupnost: ilmihalLekcijeTable.dostupnost })
         .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
       if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
@@ -4804,7 +4818,10 @@ router.post("/zadace", async (req, res) => {
     } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {
       const lekcije = await db.select({ slug: ilmihalLekcijeTable.slug })
         .from(ilmihalLekcijeTable)
-        .where(eq(ilmihalLekcijeTable.naslov, lekcijaNaslov.trim()))
+        .where(and(
+          eq(ilmihalLekcijeTable.naslov, lekcijaNaslov.trim()),
+          eq(ilmihalLekcijeTable.dostupnost, "svi"),
+        ))
         .limit(2);
       canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     }
@@ -4900,7 +4917,7 @@ router.put("/zadace/:id", async (req, res) => {
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
-      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov })
+      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov, dostupnost: ilmihalLekcijeTable.dostupnost })
         .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
       if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
         res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
@@ -4909,7 +4926,10 @@ router.put("/zadace/:id", async (req, res) => {
     } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {
       const lekcije = await db.select({ slug: ilmihalLekcijeTable.slug })
         .from(ilmihalLekcijeTable)
-        .where(eq(ilmihalLekcijeTable.naslov, lekcijaNaslov.trim()))
+        .where(and(
+          eq(ilmihalLekcijeTable.naslov, lekcijaNaslov.trim()),
+          eq(ilmihalLekcijeTable.dostupnost, "svi"),
+        ))
         .limit(2);
       canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     } else if (lekcijaNaslov === undefined) {
