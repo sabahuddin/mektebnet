@@ -3,14 +3,20 @@
  * Odvojeno od `seed-nivo1-etape.ts` da se logika može testirati bez baze.
  */
 
-export const IZVORNI_KVIZOVI = [
-  "1a", "1a-hard", "1b", "1b-hard", "1c", "1c-hard", "1d", "1d-hard", "1e", "1e-hard",
-] as const;
+export const IZVORNI_KVIZOVI_PO_NIVOU: Record<number, string[]> = {
+  1: ["1a", "1a-hard", "1b", "1b-hard", "1c", "1c-hard", "1d", "1d-hard", "1e", "1e-hard"],
+  2: ["2a", "2a-hard", "2b", "2b-hard", "2c", "2c-hard", "2d", "2d-hard", "2e", "2e-hard", "2f"],
+};
+
+/** Zadržano zbog postojećih poziva za Nivo 1. */
+export const IZVORNI_KVIZOVI = IZVORNI_KVIZOVI_PO_NIVOU[1]!;
 
 /** Koliko pitanja ide u jedan etapni kviz. */
 export const PITANJA_PO_ETAPI = 100;
 /** Koliko pitanja ide u jednu varijantu završnog kviza (A/B/C). */
 export const PITANJA_PO_KRUNISANJU = 100;
+/** Prag prolaza na etapnom kvizu i krunisanju (vidi .agents/memory/kvizovi-po-etapama.md). */
+export const PRAG_PROLAZA_PERCENT = 80;
 
 export type Etapa = {
   redni: number;
@@ -25,37 +31,60 @@ export type Etapa = {
   kvizNaslov: string;
 };
 
-function etapa(redni: number, naziv: string, opis: string): Etapa {
+function etapa(nivo: number, redni: number, naziv: string, opis: string, zadnjaLekcija?: number): Etapa {
   const od = (redni - 1) * 10;
-  const kraj = od + 9;
+  const kraj = zadnjaLekcija != null ? zadnjaLekcija - 1 : od + 9;
   return {
     redni,
     od,
     do: kraj,
-    medaljonSlug: `nivo1-etapa-${redni}`,
+    medaljonSlug: `nivo${nivo}-etapa-${redni}`,
     naziv,
     opis,
-    kvizSlug: `1-etapa-${redni}`,
+    kvizSlug: `${nivo}-etapa-${redni}`,
     kvizNaslov: `Zlatni medaljon ${redni} — provjera znanja (lekcije ${od + 1}–${kraj + 1})`,
   };
 }
 
-export const ETAPE: Etapa[] = [
-  etapa(1, "Zlatni medaljon 1 — Prvi koraci", "Provjera znanja nakon prvih 10 lekcija: Euzubilla i Bismilla, dove za početak, naša vjera i mekteb."),
-  etapa(2, "Zlatni medaljon 2 — Selam i Fatiha", "Provjera znanja nakon 20 lekcija: selam, Subhaneke, sura El-Fatiha, Allah dž.š., Muhammed a.s. i dinski šarti."),
-  etapa(3, "Zlatni medaljon 3 — Imanski šarti i abdest", "Provjera znanja nakon 30 lekcija: imanski i islamski šarti, sura El-Ihlas, namaski šarti, abdest i sura En-Nas."),
-  etapa(4, "Zlatni medaljon 4 — Ezan i namaski ruknovi", "Provjera znanja nakon 40 lekcija: odijevanje, namasko vrijeme, ezan i ikamet, kibla, nijet i namaski ruknovi."),
-  etapa(5, "Zlatni medaljon 5 — Dove u namazu i mubarek-dani", "Provjera znanja nakon 50 lekcija: gusul i tejemum, sura El-Felek, Et-Tehijjatu, salavati, dove i Ramazanski bajram."),
-  etapa(6, "Zlatni medaljon 6 — Bajrami i dnevni namazi", "Provjera znanja nakon 60 lekcija: Kurban-bajram, hidžretska godina, Mevlud, sabah i akšam, sura El-Leheb i Ajetul-Kursija."),
-];
+export const ETAPE_PO_NIVOU: Record<number, Etapa[]> = {
+  1: [
+    etapa(1, 1, "Zlatni medaljon 1 — Prvi koraci", "Euzubilla i Bismilla, dove za početak, naša vjera i mekteb."),
+    etapa(1, 2, "Zlatni medaljon 2 — Selam i Fatiha", "Selam, Subhaneke, sura El-Fatiha, Allah dž.š., Muhammed a.s. i dinski šarti."),
+    etapa(1, 3, "Zlatni medaljon 3 — Imanski šarti i abdest", "Imanski i islamski šarti, sura El-Ihlas, namaski šarti, abdest i sura En-Nas."),
+    etapa(1, 4, "Zlatni medaljon 4 — Ezan i namaski ruknovi", "Odijevanje, namasko vrijeme, ezan i ikamet, kibla, nijet i namaski ruknovi."),
+    etapa(1, 5, "Zlatni medaljon 5 — Dove u namazu i mubarek-dani", "Gusul i tejemum, sura El-Felek, Et-Tehijjatu, salavati, dove i Ramazanski bajram."),
+    etapa(1, 6, "Zlatni medaljon 6 — Bajrami i dnevni namazi", "Kurban-bajram, hidžretska godina, Mevlud, sabah i akšam, sura El-Leheb i Ajetul-Kursija."),
+    etapa(1, 7, "Zlatni medaljon 7 — Zikr i završetak nivoa", "Zikr poslije namaza, sura En-Nasr, bajramske aktivnosti i briga o zdravlju.", 64),
+  ],
+  2: [
+    etapa(2, 1, "Zlatni medaljon 1 — Imanski šarti", "Adem a.s., šest imanskih šarta, Allahova svojstva i sura El-Kafirun."),
+    etapa(2, 2, "Zlatni medaljon 2 — Islamski šarti", "Kelimei-šehadet, namaz i njegovi propisi, džemat, post, zekat i hadž."),
+    etapa(2, 3, "Zlatni medaljon 3 — Čistoća i porodica", "Urednost, lična higijena, zdravlje, ishrana, bonton jela i dužnosti prema porodici."),
+    etapa(2, 4, "Zlatni medaljon 4 — Podne-namaz i grijesi", "Podne-namaz, tejemum, mesh, sura El-Kevser, vrste grijeha i tevba."),
+    etapa(2, 5, "Zlatni medaljon 5 — Lijep ahlak i olakšice u namazu", "Čestitost, iskrenost, skromnost, ikindija i jacija, namaz putnika i bolesnika, Kunut-dova i sura El-Maun."),
+    etapa(2, 6, "Zlatni medaljon 6 — Džuma, bajram i društvo", "Radne navike, srednji put, džuma i bajram-namaz, sura El-Kurejš, teravih, istina i ponašanje u društvu."),
+    etapa(2, 7, "Zlatni medaljon 7 — Domovina i identitet", "Mubarek-noći, nafila-namazi, bošnjački alimi, Bosna i Hercegovina, bosanski jezik, kultura i Lekad džāekum.", 68),
+  ],
+};
+
+/** Zadržano zbog postojećih poziva za Nivo 1. */
+export const ETAPE: Etapa[] = ETAPE_PO_NIVOU[1]!;
+
+/** Etape zadanog nivoa. */
+export function etapeZaNivo(nivo: number): Etapa[] {
+  const e = ETAPE_PO_NIVOU[nivo];
+  if (!e) throw new Error(`Nema definisanih etapa za nivo ${nivo}`);
+  return e;
+}
 
 /**
- * Etapa kojoj pripada lekcija sa datim `redoslijed`. Lekcije 61-64
- * (`redoslijed` 60-63) nemaju svoj medaljon — vraća se 7 i te lekcije ulaze
- * samo u završni ispit nivoa.
+ * Etapa kojoj pripada lekcija sa datim `redoslijed`: 1 = lekcije 1–10,
+ * 2 = 11–20, ... 7 = 61 i dalje. Isti raspored koristi i `kvizovi.etapa`.
  */
 export function etapaZaRedoslijed(redoslijed: number): number {
-  return Math.min(Math.floor(redoslijed / 10) + 1, 7);
+  // Uvodne lekcije znaju imati negativan `redoslijed` (npr. -10 za "Uvodna
+  // riječ" Nivoa 2) — one pripadaju prvoj etapi.
+  return Math.min(Math.max(Math.floor(redoslijed / 10) + 1, 1), 7);
 }
 
 // ── Parsiranje legacy JSONB pitanja ────────────────────────────────────────
@@ -284,6 +313,45 @@ export function parseLegacy(p: LegacyPitanje, ctx: string): ParsedPitanje | null
   };
 }
 
+/**
+ * Ugrađeni kviz lekcije (`ilmihal_lekcije.kviz_pitanja`) dolazi u dva oblika:
+ * kao niz `{question, options, answer}` i, kod novijih lekcija, kao JSON string
+ * sa `{pitanje, odgovori, tacanOdgovor}`. Ova funkcija oba svodi na
+ * `LegacyPitanje`.
+ */
+export function lekcijskaPitanja(sirovo: unknown): LegacyPitanje[] {
+  let vrijednost = sirovo;
+  if (typeof vrijednost === "string") {
+    try {
+      vrijednost = JSON.parse(vrijednost);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(vrijednost)) return [];
+  const rezultat: LegacyPitanje[] = [];
+  for (const stavka of vrijednost as Record<string, unknown>[]) {
+    if (!stavka || typeof stavka !== "object") continue;
+    if (typeof stavka["question"] === "string") {
+      rezultat.push(stavka as LegacyPitanje);
+      continue;
+    }
+    const tekst = stavka["pitanje"];
+    const odgovori = stavka["odgovori"];
+    const tacan = Number(stavka["tacanOdgovor"]);
+    if (typeof tekst !== "string" || !Array.isArray(odgovori)) continue;
+    const opcije = odgovori.map(String);
+    if (!Number.isInteger(tacan) || tacan < 0 || tacan >= opcije.length) continue;
+    rezultat.push({
+      question: tekst,
+      options: opcije,
+      answer: opcije[tacan]!,
+      explanation: typeof stavka["objasnjenje"] === "string" ? stavka["objasnjenje"] : "",
+    });
+  }
+  return rezultat;
+}
+
 // ── Izbor pitanja ──────────────────────────────────────────────────────────
 
 /** Deterministički PRNG (mulberry32) — isti izbor pri svakom pokretanju. */
@@ -306,26 +374,48 @@ export function shuffle<T>(arr: T[], rand: () => number): T[] {
   return a;
 }
 
-/** Pitanja koja ispit etape/krunisanja može bodovati (UI nudi samo radio dugmad). */
+/** Pitanja koja ispit krunisanja može bodovati (njegov UI nudi samo radio dugmad). */
 export function jeBodivo(p: { vrsta: Vrsta }): boolean {
   return p.vrsta === "single" || p.vrsta === "truefalse";
 }
 
+/** Najmanji broj pitanja koje svaka lekcija zadržava u kvizu svoje etape. */
+export const MIN_PO_LEKCIJI = 2;
+
 /**
- * Bira do `PITANJA_PO_ETAPI` pitanja za jednu etapu. Prednost imaju bodiva
- * pitanja (single/truefalse) da ispit etape bude što potpuniji, a preostala
- * mjesta popunjavaju interaktivni tipovi koji rade u redovnom kvizu.
+ * Bira do `PITANJA_PO_ETAPI` pitanja za jednu etapu.
+ *
+ * Etapni kviz se učeniku servira kroz redovni kviz, koji podržava svih šest
+ * vrsta pitanja, pa se tipovi ne filtriraju. Kandidata je po pravilu više nego
+ * mjesta, pa se prvo svakoj lekciji te etape rezerviše `MIN_PO_LEKCIJI` njenih
+ * vlastitih pitanja — bez toga bi lekcija s malo pitanja mogla ispasti iz kviza
+ * u cijelosti. Preostala mjesta popunjava deterministički nasumičan uzorak,
+ * koji zadržava približan omjer vrsta iz bazena.
  */
-export function odaberiZaEtapu<T extends ParsedPitanje & { etapa: number }>(
+export function odaberiZaEtapu<T extends ParsedPitanje & { etapa: number; lekcijaSlug?: string | null }>(
   svi: T[],
   redni: number,
   limit = PITANJA_PO_ETAPI,
+  minPoLekciji = MIN_PO_LEKCIJI,
 ): T[] {
   const rand = prng(1000 + redni);
-  const kandidati = svi.filter((p) => p.etapa === redni);
-  const bodiva = shuffle(kandidati.filter(jeBodivo), rand);
-  const ostala = shuffle(kandidati.filter((p) => !jeBodivo(p)), rand);
-  return shuffle([...bodiva, ...ostala].slice(0, limit), rand);
+  const kandidati = shuffle(svi.filter((p) => p.etapa === redni), rand);
+
+  const rezervisano: T[] = [];
+  const uzeto = new Set<T>();
+  const brojPoLekciji = new Map<string, number>();
+  for (const p of kandidati) {
+    const lekcija = p.lekcijaSlug;
+    if (!lekcija) continue;
+    const dosad = brojPoLekciji.get(lekcija) ?? 0;
+    if (dosad >= minPoLekciji || rezervisano.length >= limit) continue;
+    brojPoLekciji.set(lekcija, dosad + 1);
+    rezervisano.push(p);
+    uzeto.add(p);
+  }
+
+  const ostatak = kandidati.filter((p) => !uzeto.has(p));
+  return shuffle([...rezervisano, ...ostatak].slice(0, limit), rand);
 }
 
 /**

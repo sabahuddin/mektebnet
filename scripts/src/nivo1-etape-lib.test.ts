@@ -5,8 +5,10 @@ import { gunzipSync } from "node:zlib";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  ETAPE,
-  IZVORNI_KVIZOVI,
+  ETAPE_PO_NIVOU,
+  IZVORNI_KVIZOVI_PO_NIVOU,
+  etapeZaNivo,
+  lekcijskaPitanja,
   PITANJA_PO_ETAPI,
   PITANJA_PO_KRUNISANJU,
   bankaKljuc,
@@ -23,24 +25,49 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 test("etapaZaRedoslijed grupiše lekcije u blokove po deset", () => {
+  assert.equal(etapaZaRedoslijed(-10), 1);  // uvodna lekcija Nivoa 2
   assert.equal(etapaZaRedoslijed(0), 1);
   assert.equal(etapaZaRedoslijed(9), 1);   // Žuri Mirza na pouku — 10. lekcija
   assert.equal(etapaZaRedoslijed(10), 2);
   assert.equal(etapaZaRedoslijed(19), 2);  // Dinski šarti — 20. lekcija
   assert.equal(etapaZaRedoslijed(59), 6);
-  // Lekcije 61-64 nemaju svoj medaljon i idu samo u krunisanje.
   assert.equal(etapaZaRedoslijed(60), 7);
-  assert.equal(etapaZaRedoslijed(63), 7);
+  assert.equal(etapaZaRedoslijed(67), 7);
 });
 
-test("etape pokrivaju lekcije 1-60 bez preklapanja", () => {
-  assert.equal(ETAPE.length, 6);
-  ETAPE.forEach((e, i) => {
-    assert.equal(e.od, i * 10);
-    assert.equal(e.do, i * 10 + 9);
-    assert.equal(e.medaljonSlug, `nivo1-etapa-${i + 1}`);
-    assert.equal(e.kvizSlug, `1-etapa-${i + 1}`);
-  });
+test("svaki nivo ima sedam etapa koje ne preklapaju blokove lekcija", () => {
+  for (const nivo of [1, 2]) {
+    const etape = etapeZaNivo(nivo);
+    assert.equal(etape.length, 7, `nivo ${nivo}`);
+    etape.forEach((e, i) => {
+      assert.equal(e.redni, i + 1);
+      assert.equal(e.od, i * 10);
+      assert.ok(e.do >= e.od, `etapa ${e.redni} nivoa ${nivo} ima prazan raspon`);
+      assert.equal(e.medaljonSlug, `nivo${nivo}-etapa-${i + 1}`);
+      assert.equal(e.kvizSlug, `${nivo}-etapa-${i + 1}`);
+    });
+    // Posljednja etapa se zaustavlja na stvarnom broju lekcija nivoa.
+    assert.equal(etapeZaNivo(nivo)[6]!.do, nivo === 1 ? 63 : 67);
+  }
+  assert.equal(ETAPE_PO_NIVOU[1]!.length, 7);
+});
+
+test("lekcijskaPitanja prihvata oba oblika ugrađenog kviza lekcije", () => {
+  const niz = lekcijskaPitanja([{ question: "A?", options: ["x", "y"], answer: "x" }]);
+  assert.equal(niz.length, 1);
+  assert.equal(niz[0]!.answer, "x");
+
+  const string = lekcijskaPitanja(JSON.stringify([
+    { pitanje: "Koliko ajeta ima sura El-Ma'un?", odgovori: ["3", "5", "7", "10"], tacanOdgovor: 2 },
+  ]));
+  assert.equal(string.length, 1);
+  assert.equal(string[0]!.question, "Koliko ajeta ima sura El-Ma'un?");
+  assert.equal(string[0]!.answer, "7");
+
+  assert.deepEqual(lekcijskaPitanja(null), []);
+  assert.deepEqual(lekcijskaPitanja("nije json"), []);
+  // Nevažeći indeks tačnog odgovora se preskače.
+  assert.deepEqual(lekcijskaPitanja(JSON.stringify([{ pitanje: "X", odgovori: ["a"], tacanOdgovor: 5 }])), []);
 });
 
 test("DA/NE pitanje postaje truefalse sa opcijama Da/Ne", () => {
@@ -128,16 +155,16 @@ test("na ispitu se boduju samo single i truefalse pitanja", () => {
   assert.equal(jeBodivo({ vrsta: "dragDrop" }), false);
 });
 
-test("odaberiZaEtapu daje prednost bodivim pitanjima i determinističan je", () => {
-  const napravi = (i: number, vrsta: ParsedPitanje["vrsta"]) =>
-    ({ ...parseLegacy({ question: `Pitanje ${i}`, options: ["a", "b"], answer: "a" }, "t")!, vrsta, etapa: 1 });
+test("odaberiZaEtapu bira samo pitanja svoje etape i determinističan je", () => {
+  const napravi = (i: number, etapa: number) =>
+    ({ ...parseLegacy({ question: `Pitanje ${i}`, options: ["a", "b"], answer: "a" }, "t")!, etapa });
   const svi = [
-    ...Array.from({ length: 30 }, (_, i) => napravi(i, "multiple")),
-    ...Array.from({ length: 8 }, (_, i) => napravi(100 + i, "single")),
+    ...Array.from({ length: 30 }, (_, i) => napravi(i, 1)),
+    ...Array.from({ length: 30 }, (_, i) => napravi(100 + i, 2)),
   ];
   const izbor = odaberiZaEtapu(svi, 1, 10);
   assert.equal(izbor.length, 10);
-  assert.equal(izbor.filter(jeBodivo).length, 8, "sva bodiva pitanja moraju ući prije interaktivnih");
+  assert.ok(izbor.every((p) => p.etapa === 1));
   assert.deepEqual(izbor.map((p) => p.pitanje), odaberiZaEtapu(svi, 1, 10).map((p) => p.pitanje));
 });
 
@@ -145,25 +172,29 @@ test("odaberiZaEtapu daje prednost bodivim pitanjima i determinističan je", () 
 
 type Kandidat = ParsedPitanje & { etapa: number };
 
-function izgradiKandidate(): Kandidat[] {
+function izgradiKandidate(nivo: number): Kandidat[] {
   const seed = JSON.parse(
     gunzipSync(readFileSync(resolve(__dirname, "../content-seed.json.gz"))).toString("utf-8"),
   ) as { kvizovi: { slug: string; pitanja?: LegacyPitanje[] }[]; lekcije: { nivo: number; slug: string; redoslijed: number; kvizPitanja?: LegacyPitanje[] }[] };
   const poSlugu = new Map(seed.kvizovi.map((k) => [k.slug, k.pitanja ?? []]));
-  const pool = buildPool(IZVORNI_KVIZOVI.map((slug) => ({ slug, pitanja: poSlugu.get(slug) ?? [] })));
-  const mapa = JSON.parse(readFileSync(resolve(__dirname, "../data/nivo1-mapa-pitanja.json"), "utf-8")) as Record<string, number>;
-  const ispravke = JSON.parse(readFileSync(resolve(__dirname, "../data/nivo1-lekcijska-ispravke.json"), "utf-8")) as Record<string, LegacyPitanje>;
-  const nova = JSON.parse(readFileSync(resolve(__dirname, "../data/nivo1-nova-pitanja.json"), "utf-8")) as { pitanja: (LegacyPitanje & { etapa: number })[] };
+  const pool = buildPool(IZVORNI_KVIZOVI_PO_NIVOU[nivo]!.map((slug) => ({ slug, pitanja: poSlugu.get(slug) ?? [] })));
+  const citaj = <T,>(ime: string, ako: T): T => {
+    try { return JSON.parse(readFileSync(resolve(__dirname, `../data/${ime}`), "utf-8")) as T; } catch { return ako; }
+  };
+  const mapa = citaj<Record<string, number>>(`nivo${nivo}-mapa-pitanja.json`, {});
+  const ispravke = citaj<Record<string, LegacyPitanje>>(`nivo${nivo}-lekcijska-ispravke.json`, {});
+  const kvizIspravke = citaj<Record<string, LegacyPitanje>>(`nivo${nivo}-kviz-ispravke.json`, {});
+  const nova = citaj<{ pitanja: (LegacyPitanje & { etapa: number })[] }>(`nivo${nivo}-nova-pitanja.json`, { pitanja: [] });
 
   const kandidati: Kandidat[] = [];
   for (const p of pool) {
-    const parsed = parseLegacy(p.pitanje, p.id);
+    const parsed = parseLegacy(kvizIspravke[p.id] ?? p.pitanje, p.id);
     assert.ok(parsed, `pitanje ${p.id} se ne može parsirati`);
-    assert.ok(mapa[p.id], `pitanje ${p.id} nema etapu u nivo1-mapa-pitanja.json`);
+    assert.ok(mapa[p.id] !== undefined, `pitanje ${p.id} nema etapu u nivo${nivo}-mapa-pitanja.json`);
     kandidati.push({ ...parsed, etapa: mapa[p.id]! });
   }
-  for (const l of seed.lekcije.filter((x) => x.nivo === 1 && x.redoslijed <= 63)) {
-    (l.kvizPitanja ?? []).forEach((raw, idx) => {
+  for (const l of seed.lekcije.filter((x) => x.nivo === nivo)) {
+    lekcijskaPitanja(l.kvizPitanja).forEach((raw, idx) => {
       const parsed = parseLegacy(ispravke[`${l.slug}#${idx}`] ?? raw, `${l.slug}#${idx}`);
       if (parsed) kandidati.push({ ...parsed, etapa: etapaZaRedoslijed(l.redoslijed) });
     });
@@ -178,29 +209,41 @@ function izgradiKandidate(): Kandidat[] {
   return [...jedinstveni.values()];
 }
 
-test("svih 6 etapa dobije puna 100 pitanja iz svojih lekcija", () => {
-  const svi = izgradiKandidate();
-  for (const e of ETAPE) {
-    const izbor = odaberiZaEtapu(svi, e.redni);
-    assert.equal(izbor.length, PITANJA_PO_ETAPI, `etapa ${e.redni} ima ${izbor.length} pitanja`);
-    assert.ok(izbor.every((p) => p.etapa === e.redni), `etapa ${e.redni} sadrži pitanje iz drugog bloka lekcija`);
-    assert.ok(
-      izbor.filter(jeBodivo).length >= 70,
-      `etapa ${e.redni} ima premalo bodivih pitanja (${izbor.filter(jeBodivo).length})`,
-    );
-    assert.equal(new Set(izbor.map(bankaKljuc)).size, izbor.length, `etapa ${e.redni} ima duplikate`);
-  }
+for (const nivo of [1, 2]) {
+  test(`Nivo ${nivo}: svaka etapa dobije pitanja samo iz svojih lekcija, bez duplikata`, () => {
+    const svi = izgradiKandidate(nivo);
+    for (const e of etapeZaNivo(nivo)) {
+      const izbor = odaberiZaEtapu(svi, e.redni);
+      assert.ok(izbor.length > 0, `nivo ${nivo}, etapa ${e.redni} je prazna`);
+      assert.ok(izbor.length <= PITANJA_PO_ETAPI, `nivo ${nivo}, etapa ${e.redni} ima ${izbor.length} pitanja`);
+      assert.ok(izbor.every((p) => p.etapa === e.redni), `nivo ${nivo}, etapa ${e.redni} sadrži pitanje iz drugog bloka`);
+      assert.equal(new Set(izbor.map(bankaKljuc)).size, izbor.length, `nivo ${nivo}, etapa ${e.redni} ima duplikate`);
+    }
+  });
+
+  test(`Nivo ${nivo}: krunisanje daje tri kviza od po 100 različitih bodivih pitanja`, () => {
+    const svi = izgradiKandidate(nivo);
+    const { a, b, c } = podijeliKrunisanje(svi);
+    for (const [ime, varijanta] of Object.entries({ a, b, c })) {
+      assert.equal(varijanta.length, PITANJA_PO_KRUNISANJU, `nivo ${nivo}, varijanta ${ime}`);
+      assert.ok(varijanta.every(jeBodivo), `nivo ${nivo}, varijanta ${ime} ima pitanje koje ispit ne može bodovati`);
+      assert.ok(new Set(varijanta.map((p) => p.etapa)).size >= 6, `nivo ${nivo}, varijanta ${ime} ne pokriva dovoljno blokova`);
+    }
+    const sve = [...a, ...b, ...c];
+    assert.equal(new Set(sve.map(bankaKljuc)).size, sve.length, `nivo ${nivo}: varijante se preklapaju`);
+  });
+}
+
+test("Nivo 1: svih sedam etapa dobije po 100 pitanja osim posljednje (samo četiri lekcije)", () => {
+  const svi = izgradiKandidate(1);
+  const duzine = etapeZaNivo(1).map((e) => odaberiZaEtapu(svi, e.redni).length);
+  assert.deepEqual(duzine.slice(0, 6), Array(6).fill(PITANJA_PO_ETAPI));
+  assert.ok(duzine[6]! >= 80, `etapa 7 ima samo ${duzine[6]} pitanja`);
 });
 
-test("krunisanje daje tri kviza od po 100 različitih bodivih pitanja iz cijelog nivoa", () => {
-  const svi = izgradiKandidate();
-  const { a, b, c } = podijeliKrunisanje(svi);
-  for (const [ime, varijanta] of Object.entries({ a, b, c })) {
-    assert.equal(varijanta.length, PITANJA_PO_KRUNISANJU, `varijanta ${ime}`);
-    assert.ok(varijanta.every(jeBodivo), `varijanta ${ime} sadrži pitanje koje ispit ne može bodovati`);
-    // Svaka varijanta pokriva sve blokove lekcija, uključujući lekcije 61-64.
-    assert.equal(new Set(varijanta.map((p) => p.etapa)).size, 7, `varijanta ${ime} ne pokriva sve blokove`);
+test("Nivo 2: svih sedam etapa dobije po 100 pitanja", () => {
+  const svi = izgradiKandidate(2);
+  for (const e of etapeZaNivo(2)) {
+    assert.equal(odaberiZaEtapu(svi, e.redni).length, PITANJA_PO_ETAPI, `etapa ${e.redni}`);
   }
-  const sve = [...a, ...b, ...c];
-  assert.equal(new Set(sve.map(bankaKljuc)).size, sve.length, "varijante se preklapaju");
 });

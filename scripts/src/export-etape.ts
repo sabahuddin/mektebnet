@@ -1,25 +1,31 @@
 /**
- * Izvoz etapnih kvizova Nivoa 1 i završnih kvizova krunisanja u JSON fajlove,
- * u formatu šablona za uvoz kviza (naslov / slug / kategorija / tagovi / opis /
+ * Izvoz etapnih kvizova i završnih kvizova krunisanja u JSON fajlove, u formatu
+ * šablona za uvoz kviza (naslov / slug / etapa / kategorija / tagovi / opis /
  * pitanja[]).
  *
- * Radi potpuno offline — čita `scripts/content-seed.json.gz`, mapu pitanja i
+ * Radi potpuno offline — čita `scripts/content-seed.json.gz`, mape pitanja i
  * ručne dopune iz `scripts/data/`, bez ikakvog dodira sa bazom. Namijenjeno
- * ručnom uvozu (Replit / Coolify), kao alternativa `seed-nivo1-etape.ts`.
+ * ručnom uvozu (Replit / Coolify).
+ *
+ * Svaki nivo ima sedam etapa (1 = lekcije 1–10, ... 7 = 61 i dalje), u skladu
+ * sa `kvizovi.etapa`. Etapni kviz prikazuje sva svoja pitanja, pa se
+ * `pitanjaPoSesiji` ne postavlja, a prag prolaza je 80%.
  *
  * Pokreni:
- *   pnpm --filter @workspace/scripts export-nivo1-etape
- *   pnpm --filter @workspace/scripts export-nivo1-etape -- --out ./neki/folder
+ *   pnpm --filter @workspace/scripts export-etape
+ *   pnpm --filter @workspace/scripts export-etape -- --nivo 2 --out ./folder
  */
 import { gunzipSync } from "node:zlib";
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  ETAPE,
-  IZVORNI_KVIZOVI,
+  IZVORNI_KVIZOVI_PO_NIVOU,
+  PRAG_PROLAZA_PERCENT,
   bankaKljuc,
   buildPool,
+  etapeZaNivo,
+  lekcijskaPitanja,
   etapaZaRedoslijed,
   jeBodivo,
   odaberiZaEtapu,
@@ -31,10 +37,14 @@ import {
 import { odrediKategoriju } from "./nivo1-kategorije.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outIdx = process.argv.indexOf("--out");
-const OUT_DIR = resolve(outIdx >= 0 ? process.argv[outIdx + 1]! : resolve(__dirname, "../../.local/nivo1-kvizovi"));
+function arg(ime: string): string | undefined {
+  const i = process.argv.indexOf(`--${ime}`);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+const NIVO = Number(arg("nivo") ?? 1);
+const OUT_DIR = resolve(arg("out") ?? resolve(__dirname, `../../.local/nivo${NIVO}-kvizovi`));
 
-type SeedLekcija = { nivo: number; slug: string; naslov: string; redoslijed: number; kvizPitanja?: LegacyPitanje[] };
+type SeedLekcija = { nivo: number; slug: string; naslov: string; redoslijed: number; kvizPitanja?: unknown };
 type Kandidat = ParsedPitanje & { etapa: number; lekcijaSlug: string | null; lekcijaNaslov: string | null };
 
 /** Jedno pitanje u izvoznom formatu (isti oblik kao šablon kviza). */
@@ -56,6 +66,15 @@ type IzvoznoPitanje = {
 
 function ucitaj<T>(rel: string): T {
   return JSON.parse(readFileSync(resolve(__dirname, rel), "utf-8")) as T;
+}
+
+/** Isto kao `ucitaj`, ali vraća `null` ako fajl ne postoji (dopune su opcione). */
+function ucitajAko<T>(rel: string): T | null {
+  try {
+    return ucitaj<T>(rel);
+  } catch {
+    return null;
+  }
 }
 
 function izvozno(k: Kandidat): IzvoznoPitanje {
@@ -82,37 +101,40 @@ function readme(
   zapisi: { fajl: string; slug: string; naslov: string; ukupno: number; bodivih: number }[],
   medaljoni: { slug: string; naziv: string; lekcije: string; posAfterRedoslijed: number; kviz: string; medaljonLekcija: string; brojBodivihNaIspitu: number }[],
 ): string {
-  const red = (z: (typeof zapisi)[number]) => `| \`${z.slug}\` | ${z.ukupno} | ${z.bodivih} | ${z.naslov} |`;
   return [
-    "# Nivo 1 — etapni kvizovi i krunisanje",
+    `# Nivo ${NIVO} — etapni kvizovi i krunisanje`,
     "",
-    "Devet kvizova u formatu šablona za uvoz (`naslov` / `slug` / `kategorija` / `tagovi` / `opis` / `pitanja[]`),",
-    "plus `medaljoni-nivo1.json` sa podacima o tome koji kviz ide na koji Zlatni medaljon.",
+    "Deset kvizova u formatu šablona za uvoz (`naslov` / `slug` / `nivo` / `etapa` / `kategorija` /",
+    `\`tagovi\` / \`opis\` / \`pitanja[]\`), plus \`medaljoni-nivo${NIVO}.json\` sa podacima o tome koji kviz`,
+    "ide na koji Zlatni medaljon.",
     "",
     "## Kvizovi",
     "",
-    "| slug | pitanja | bodivih na ispitu | naslov |",
-    "|------|---------|-------------------|--------|",
-    ...zapisi.map(red),
+    "| slug | etapa | pitanja | naslov |",
+    "|------|-------|---------|--------|",
+    ...zapisi.map((z, i) => `| \`${z.slug}\` | ${i < medaljoni.length ? String(i + 1) : "—"} | ${z.ukupno} | ${z.naslov} |`),
     "",
     "## Zlatni medaljoni",
     "",
-    "| medaljon | lekcije | `posAfterRedoslijed` | kviz | medaljon-lekcija | bodivih |",
-    "|----------|---------|----------------------|------|------------------|---------|",
+    "| medaljon | lekcije | `posAfterRedoslijed` | kviz | medaljon-lekcija |",
+    "|----------|---------|----------------------|------|------------------|",
     ...medaljoni.map((m) =>
-      `| \`${m.slug}\` — ${m.naziv} | ${m.lekcije} | ${m.posAfterRedoslijed} | \`${m.kviz}\` | \`${m.medaljonLekcija}\` | ${m.brojBodivihNaIspitu} |`),
+      `| \`${m.slug}\` — ${m.naziv} | ${m.lekcije} | ${m.posAfterRedoslijed} | \`${m.kviz}\` | \`${m.medaljonLekcija}\` |`),
     "",
-    "Nivo 1 ima 64 lekcije, a mapa puta postavlja medaljon nakon svakih deset — zato je šest etapa.",
-    "Lekcije 61–64 (Zikr, Sura En-Nasr, Bajramske aktivnosti, Sport) nemaju svoj medaljon i njihova",
-    "pitanja ulaze samo u kvizove krunisanja.",
+    "Svaki nivo ima sedam etapa — po jednu na svakih deset lekcija. Etapni kviz se veže za",
+    "medaljon-lekciju preko `kvizovi.lekcija_id`, a `kvizovi.etapa` nosi redni broj etape.",
+    "",
+    "## Postavke etapnog kviza",
+    "",
+    `- Prikazuje **sva** svoja pitanja — \`pitanjaPoSesiji\` se ne postavlja.`,
+    `- Prag prolaza je **${PRAG_PROLAZA_PERCENT}%**; nakon neuspjelog pokušaja novi je zaključan 48 sati.`,
+    "- Medaljon-lekcija se ne može završiti dok etapni kviz nije položen (server to provjerava).",
     "",
     "## Vrste pitanja",
     "",
-    "Redovni kviz podržava svih šest vrsta (`single`, `multiple`, `truefalse`, `reorder`, `dragDrop`,",
-    "`markWords`). Ispit etape i ispit krunisanja serviraju samo radio-dugmad i boduju jedan izabrani",
-    "indeks, pa mogu bodovati samo `single` i `truefalse`. Zato je u koloni „bodivih na ispitu” manje",
-    "od ukupnog broja: u `medaljoni.kviz_pitanja_ids` treba staviti samo taj podskup. Sva tri kviza",
-    "krunisanja sastoje se isključivo od bodivih pitanja.",
+    "Etapni kviz ide kroz redovni kviz UI i podržava svih šest vrsta (`single`, `multiple`,",
+    "`truefalse`, `reorder`, `dragDrop`, `markWords`). Ispit krunisanja prikazuje samo radio-dugmad,",
+    "pa se kvizovi krunisanja sastoje isključivo od `single` i `truefalse` pitanja.",
     "",
     "## Polje `lekcija`",
     "",
@@ -123,14 +145,7 @@ function readme(
     "## Kategorije i tagovi",
     "",
     "`kategorija` i `tagovi` na nivou pitanja dodijeljeni su automatski, po ključnim riječima, i",
-    "koriste vrijednosti iz `KVIZ_KATEGORIJE` i `KVIZ_TAGOVI`. Trinaest pitanja koja se nisu dala",
-    "svrstati nose `bosna` / `ostalo`. Sve se može promijeniti u banci pitanja.",
-    "",
-    "## Napomena o izvoru",
-    "",
-    "Sadržaj je izveden iz `scripts/content-seed.json.gz`, koji ima 62 od 64 lekcije Nivoa 1 —",
-    "nedostaju lekcije na pozicijama 11, 23, 24 i 56. Pitanja iz tih lekcija nisu mogla ući",
-    "u raspodjelu.",
+    "koriste vrijednosti iz `KVIZ_KATEGORIJE` i `KVIZ_TAGOVI`. Sve se može promijeniti u banci pitanja.",
     "",
   ].join("\n");
 }
@@ -141,24 +156,29 @@ function main() {
   ) as { kvizovi: { slug: string; pitanja?: LegacyPitanje[] }[]; lekcije: SeedLekcija[] };
 
   const poSlugu = new Map(seed.kvizovi.map((k) => [k.slug, k.pitanja ?? []]));
-  const pool = buildPool(IZVORNI_KVIZOVI.map((slug) => ({ slug, pitanja: poSlugu.get(slug) ?? [] })));
-  const mapa = ucitaj<Record<string, number>>("../data/nivo1-mapa-pitanja.json");
-  const ispravke = ucitaj<Record<string, LegacyPitanje>>("../data/nivo1-lekcijska-ispravke.json");
-  const nova = ucitaj<{ pitanja: (LegacyPitanje & { etapa: number; lekcija: string })[] }>("../data/nivo1-nova-pitanja.json");
+  const izvorni = IZVORNI_KVIZOVI_PO_NIVOU[NIVO];
+  if (!izvorni) throw new Error(`Nema definisanih izvornih kvizova za nivo ${NIVO}`);
+  const pool = buildPool(izvorni.map((slug) => ({ slug, pitanja: poSlugu.get(slug) ?? [] })));
+  const mapa = ucitaj<Record<string, number>>(`../data/nivo${NIVO}-mapa-pitanja.json`);
+  const ispravke = ucitajAko<Record<string, LegacyPitanje>>(`../data/nivo${NIVO}-lekcijska-ispravke.json`) ?? {};
+  const kvizIspravke = ucitajAko<Record<string, LegacyPitanje>>(`../data/nivo${NIVO}-kviz-ispravke.json`) ?? {};
+  const nova = ucitajAko<{ pitanja: (LegacyPitanje & { etapa: number; lekcija: string })[] }>(
+    `../data/nivo${NIVO}-nova-pitanja.json`,
+  ) ?? { pitanja: [] };
 
   const lekcije = seed.lekcije
-    .filter((l) => l.nivo === 1 && l.redoslijed >= 0 && l.redoslijed <= 63)
+    .filter((l) => l.nivo === NIVO)
     .sort((a, b) => a.redoslijed - b.redoslijed);
   const naslovPoSlugu = new Map(lekcije.map((l) => [l.slug, l.naslov]));
 
   const kandidati: Kandidat[] = [];
   for (const p of pool) {
-    const parsed = parseLegacy(p.pitanje, p.id);
+    const parsed = parseLegacy(kvizIspravke[p.id] ?? p.pitanje, p.id);
     if (!parsed) continue;
     kandidati.push({ ...parsed, etapa: mapa[p.id]!, lekcijaSlug: null, lekcijaNaslov: null });
   }
   for (const l of lekcije) {
-    (l.kvizPitanja ?? []).forEach((raw, idx) => {
+    lekcijskaPitanja(l.kvizPitanja).forEach((raw, idx) => {
       const parsed = parseLegacy(ispravke[`${l.slug}#${idx}`] ?? raw, `${l.slug}#${idx}`);
       if (!parsed) return;
       kandidati.push({ ...parsed, etapa: etapaZaRedoslijed(l.redoslijed), lekcijaSlug: l.slug, lekcijaNaslov: l.naslov });
@@ -178,11 +198,12 @@ function main() {
   mkdirSync(OUT_DIR, { recursive: true });
   const zapisi: { fajl: string; slug: string; naslov: string; ukupno: number; bodivih: number }[] = [];
 
-  function zapisi1(slug: string, naslov: string, opis: string, pitanja: Kandidat[], tagovi: string[]) {
+  function zapisi1(slug: string, naslov: string, opis: string, pitanja: Kandidat[], tagovi: string[], etapa: number | null) {
     const kviz = {
       naslov,
       slug,
-      nivo: 1,
+      nivo: NIVO,
+      etapa,
       kategorija: "ibadet",
       tagovi,
       opis,
@@ -193,19 +214,22 @@ function main() {
     zapisi.push({ fajl, slug, naslov, ukupno: pitanja.length, bodivih: pitanja.filter(jeBodivo).length });
   }
 
+  const ETAPE = etapeZaNivo(NIVO);
   const izbor = ETAPE.map((e) => ({ etapa: e, pitanja: odaberiZaEtapu(svi, e.redni) }));
   for (const { etapa, pitanja } of izbor) {
-    zapisi1(etapa.kvizSlug, etapa.kvizNaslov, etapa.opis, pitanja, ["nivo1", "etapa", `etapa-${etapa.redni}`]);
+    zapisi1(etapa.kvizSlug, etapa.kvizNaslov, etapa.opis, pitanja,
+      [`nivo${NIVO}`, "etapa", `etapa-${etapa.redni}`], etapa.redni);
   }
 
   const varijante = podijeliKrunisanje(svi);
   for (const oznaka of ["a", "b", "c"] as const) {
     zapisi1(
-      `1-krunisanje-${oznaka}`,
-      `Krunisanje Nivoa 1 — kviz ${oznaka.toUpperCase()}`,
-      `Završni kviz Nivoa 1 (varijanta ${oznaka.toUpperCase()}) — 100 pitanja iz svih 64 lekcije nivoa.`,
+      `${NIVO}-krunisanje-${oznaka}`,
+      `Krunisanje Nivoa ${NIVO} — kviz ${oznaka.toUpperCase()}`,
+      `Završni kviz Nivoa ${NIVO} (varijanta ${oznaka.toUpperCase()}) — 100 pitanja iz svih lekcija nivoa.`,
       varijante[oznaka],
-      ["nivo1", "krunisanje", `varijanta-${oznaka}`],
+      [`nivo${NIVO}`, "krunisanje", `varijanta-${oznaka}`],
+      null,
     );
   }
 
@@ -214,22 +238,22 @@ function main() {
     slug: etapa.medaljonSlug,
     naziv: etapa.naziv,
     opis: etapa.opis,
-    nivo: 1,
+    nivo: NIVO,
     posAfterRedoslijed: etapa.do,
     lekcije: `${etapa.od + 1}-${etapa.do + 1}`,
     kviz: etapa.kvizSlug,
-    medaljonLekcija: `medaljon-nivo1-${etapa.redni}`,
-    pragProlazaPercent: 70,
+    medaljonLekcija: `medaljon-nivo${NIVO}-${etapa.redni}`,
+    pragProlazaPercent: PRAG_PROLAZA_PERCENT,
     brojPitanjaUKvizu: pitanja.length,
     brojBodivihNaIspitu: pitanja.filter(jeBodivo).length,
   }));
-  writeFileSync(join(OUT_DIR, "medaljoni-nivo1.json"), JSON.stringify({ medaljoni }, null, 2) + "\n", "utf-8");
+  writeFileSync(join(OUT_DIR, `medaljoni-nivo${NIVO}.json`), JSON.stringify({ medaljoni }, null, 2) + "\n", "utf-8");
 
   writeFileSync(join(OUT_DIR, "PROCITAJ-ME.md"), readme(zapisi, medaljoni), "utf-8");
 
   console.log(`Zapisano u ${OUT_DIR}:`);
   for (const z of zapisi) console.log(`  ${z.fajl.padEnd(22)} ${String(z.ukupno).padStart(3)} pitanja (${z.bodivih} bodivih na ispitu) — ${z.naslov}`);
-  console.log(`  medaljoni-nivo1.json    ${medaljoni.length} medaljona`);
+  console.log(`  medaljoni-nivo${NIVO}.json    ${medaljoni.length} medaljona`);
 }
 
 main();

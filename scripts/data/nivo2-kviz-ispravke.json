@@ -1,0 +1,429 @@
+{
+  "_opis": "Ispravke pitanja u postojećim kvizovima Nivoa 2 kojima tačan odgovor ne odgovara nijednoj ponuđenoj opciji. Ključ je '<kviz-slug>#<indeks>' iz `kvizovi.pitanja`. Primjenjuju se samo pri gradnji etapnih kvizova — ne mijenjaju izvorne kvizove.",
+  "2a#3": {
+    "question": "Svojstvo \"Tevhid\" nas uči da Allahovo postojanje nema početka.",
+    "options": [
+      "DA",
+      "NE"
+    ],
+    "answer": "NE",
+    "explanation": "Da Allahovo postojanje nema početka uči nas svojstvo Kidem. Tevhid je vjerovanje u jednog Boga i nije jedno od četrnaest svojstava."
+  },
+  "2c-hard#24": {
+    "type": "checkbox",
+    "question": "Šta znači \"čuvati stid\"?",
+    "options": [
+      "Biti stidljiv pri činjenju dobrih djela",
+      "Izbjegavati ružne riječi i psovke",
+      "Ponašati se nepristojno u javnosti",
+      "Odijevati se na neprimjeren način"
+    ],
+    "answer": "Izbjegavati ružne riječi i psovke",
+    "correct": [
+      "Izbjegavati ružne riječi i psovke"
+    ],
+    "explanation": "Stid je dio imana i sprječava nas od činjenja sramotnih djela."
+  },
+  "2a-hard#49": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Imanskih šarti ima pet.",
+    "words": [
+      "Imanskih",
+      "šarti",
+      "ima",
+      "pet."
+    ],
+    "incorrect": [
+      "pet."
+    ],
+    "explanation": "Imanskih šarti ima šest."
+  },
+  "2a-hard#50": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Meleki su stvoreni od vatre.",
+    "words": [
+      "Meleki",
+      "su",
+      "stvoreni",
+      "od",
+      "vatre."
+    ],
+    "incorrect": [
+      "vatre."
+    ],
+    "explanation": "Meleki su od nura, džini od vatre."
+  },
+  "2a-hard#51": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Džibril donosi smrt.",
+    "words": [
+      "Džibril",
+      "donosi",
+      "smrt."
+    ],
+    "incorrect": [
+      "smrt."
+    ],
+    "explanation": "Džibril donosi objavu."
+  },
+  "2a-hard#52": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Kur'an je prva objava.",
+    "words": [
+      "Kur'an",
+      "je",
+      "prva",
+      "objava."
+    ],
+    "incorrect": [
+      "prva"
+    ],
+    "explanation": "Kur'an je posljednja objava."
+  },
+  "2a-hard#53": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Allah vidi očima.",
+    "words": [
+      "Allah",
+      "vidi",
+      "očima."
+    ],
+    "incorrect": [
+      "očima."
+    ],
+    "explanation": "Allah vidi bez organa."
+  },
+  "2a-hard#54": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Iblis je melek.",
+    "words": [
+      "IBLIS",
+      "je",
+      "melek."
+    ],
+    "incorrect": [
+      "melek."
+    ],
+    "explanation": "Iblis je džin."
+  },
+  "2a-hard#55": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Beka znači početak.",
+    "words": [
+      "Beka",
+      "znači",
+      "početak."
+    ],
+    "incorrect": [
+      "početak."
+    ],
+    "explanation": "Beka je bez kraja."
+  },
+  "2a-hard#56": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Vudžud znači jedinstvenost.",
+    "words": [
+      "Vudžud",
+      "znači",
+      "jedinstvenost."
+    ],
+    "incorrect": [
+      "jedinstvenost."
+    ],
+    "explanation": "Vudžud je postojanje."
+  },
+  "2a-hard#57": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Širk je mali grijeh.",
+    "words": [
+      "Širk",
+      "je",
+      "mali",
+      "grijeh."
+    ],
+    "incorrect": [
+      "mali"
+    ],
+    "explanation": "Širk je najteži grijeh."
+  },
+  "2a-hard#58": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Poslanika ima stotinu.",
+    "words": [
+      "Poslanika",
+      "ima",
+      "stotinu."
+    ],
+    "incorrect": [
+      "stotinu."
+    ],
+    "explanation": "Poslanika ima 124.000."
+  },
+  "2a-hard#59": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Tevrat je dat Isi, a.s.",
+    "words": [
+      "Tevrat",
+      "je",
+      "dat",
+      "Isi,",
+      "a.s."
+    ],
+    "incorrect": [
+      "Isi,"
+    ],
+    "explanation": "Tevrat je dat Musi."
+  },
+  "2a-hard#60": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Mizan je knjiga.",
+    "words": [
+      "Mizan",
+      "je",
+      "knjiga."
+    ],
+    "incorrect": [
+      "knjiga."
+    ],
+    "explanation": "Mizan je vaga."
+  },
+  "2a-hard#61": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Esmaul-husna ima stotinu imena.",
+    "words": [
+      "Esmaul-husna",
+      "ima",
+      "stotinu",
+      "imena."
+    ],
+    "incorrect": [
+      "stotinu"
+    ],
+    "explanation": "Esmaul-husna ima 99 imena."
+  },
+  "2a-hard#62": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Adem je posljednji poslanik.",
+    "words": [
+      "Adem",
+      "je",
+      "posljednji",
+      "poslanik."
+    ],
+    "incorrect": [
+      "posljednji"
+    ],
+    "explanation": "Adem je prvi poslanik."
+  },
+  "2a-hard#63": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Indžil je dat Davudu, a.s.",
+    "words": [
+      "Indžil",
+      "je",
+      "dat",
+      "Davudu,",
+      "a.s."
+    ],
+    "incorrect": [
+      "Davudu,"
+    ],
+    "explanation": "Indžil je dat Isi."
+  },
+  "2a-hard#64": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Meleki griješe nekada.",
+    "words": [
+      "Meleki",
+      "griješe",
+      "nekada."
+    ],
+    "incorrect": [
+      "griješe"
+    ],
+    "explanation": "Meleki su bezgrješni."
+  },
+  "2a-hard#65": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Kader znači da nemamo izbor.",
+    "words": [
+      "Kader",
+      "znači",
+      "da",
+      "nemamo",
+      "izbor."
+    ],
+    "incorrect": [
+      "nemamo"
+    ],
+    "explanation": "Imamo slobodnu volju."
+  },
+  "2a-hard#66": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Allah zavisi od drugih.",
+    "words": [
+      "Allah",
+      "zavisi",
+      "od",
+      "drugih."
+    ],
+    "incorrect": [
+      "zavisi"
+    ],
+    "explanation": "Allah je samostalan."
+  },
+  "2a-hard#67": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Munafik je iskreni vjernik.",
+    "words": [
+      "Munafik",
+      "je",
+      "iskreni",
+      "vjernik."
+    ],
+    "incorrect": [
+      "iskreni"
+    ],
+    "explanation": "Munafik je licemjer."
+  },
+  "2a-hard#68": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Kidem znači kraj.",
+    "words": [
+      "Kidem",
+      "znači",
+      "kraj."
+    ],
+    "incorrect": [
+      "kraj."
+    ],
+    "explanation": "Kidem je bez početka."
+  },
+  "2a-hard#69": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Vahdanijjet znači postojanje.",
+    "words": [
+      "Vahdanijjet",
+      "znači",
+      "postojanje."
+    ],
+    "incorrect": [
+      "postojanje."
+    ],
+    "explanation": "Vahdanijjet je jedinstvenost."
+  },
+  "2a-hard#70": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Zebur je dat Musi, a.s.",
+    "words": [
+      "Zebur",
+      "je",
+      "dat",
+      "Musi,",
+      "a.s."
+    ],
+    "incorrect": [
+      "Musi,"
+    ],
+    "explanation": "Zebur je dat Davudu."
+  },
+  "2a-hard#71": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "U džennetu ima patnje.",
+    "words": [
+      "U",
+      "džennetu",
+      "ima",
+      "patnje."
+    ],
+    "incorrect": [
+      "patnje."
+    ],
+    "explanation": "U džennetu nema patnje."
+  },
+  "2a-hard#72": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Es-sifatuz-zatijje ima osam.",
+    "words": [
+      "Es-sifatuz-zatijje",
+      "ima",
+      "osam."
+    ],
+    "incorrect": [
+      "osam."
+    ],
+    "explanation": "Zatijje ima šest."
+  },
+  "2a-hard#73": {
+    "type": "markWords",
+    "question": "Pronađi grešku u rečenici:",
+    "text": "Hajat znači znanje.",
+    "words": [
+      "Hajat",
+      "znači",
+      "znanje."
+    ],
+    "incorrect": [
+      "znanje."
+    ],
+    "explanation": "Hajat znači život."
+  },
+  "2c-hard#66": {
+    "type": "markWords",
+    "question": "Klikni na riječ koja kvari opis licemjera:",
+    "text": "Licemjer je onaj ko uvijek govori samo istinu.",
+    "words": [
+      "Licemjer",
+      "je",
+      "onaj",
+      "ko",
+      "uvijek",
+      "govori",
+      "samo",
+      "istinu."
+    ],
+    "incorrect": [
+      "istinu."
+    ],
+    "explanation": "Licemjer laže, vara i ne ispunjava obećanja."
+  },
+  "2d-hard#36": {
+    "type": "markWords",
+    "question": "Pronađi greške:",
+    "text": "Učimo 6 dodatnih sura.",
+    "words": [
+      "Učimo",
+      "6",
+      "dodatnih",
+      "sura."
+    ],
+    "incorrect": [
+      "6"
+    ],
+    "explanation": "Učimo 4 dodatne sure (ne 6)."
+  }
+}

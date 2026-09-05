@@ -1,5 +1,5 @@
 {
-  "_opis": "Nova pitanja napisana iz sadržaja lekcija Nivoa 1 kako bi svaka etapa imala 100 pitanja. `lekcija` je slug izvorne lekcije, `etapa` redni broj etape (1-6).",
+  "_opis": "Nova pitanja napisana iz sadržaja lekcija Nivoa 1 kako bi etape 1 i 7 imale dovoljno pitanja. `lekcija` je slug izvorne lekcije, `etapa` redni broj etape (1-7).",
   "pitanja": [
     {
       "etapa": 1,
@@ -343,6 +343,856 @@
       ],
       "answer": "Tu sklapamo prijateljstva i jedni drugima budemo podrška na putu dobra",
       "explanation": "Mekteb nije samo mjesto gdje učimo lekcije — to je mjesto gdje sklapamo prijateljstva i učimo kako da jedni drugima budemo podrška na putu dobra.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Šta je zikr?",
+      "options": [
+        "Sjećanje na Allaha i Njegovo spominjanje",
+        "Vrsta namaza",
+        "Poziv na namaz",
+        "Obavezno kupanje"
+      ],
+      "answer": "Sjećanje na Allaha i Njegovo spominjanje",
+      "explanation": "Zikr su riječi kojima hvalimo i slavimo Allaha, sjećamo Ga se i spominjemo.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Od čega se sastoji zikr poslije namaza?",
+      "options": [
+        "Od salavata, Ajetul-Kursije i tesbiha",
+        "Samo od tesbiha",
+        "Od Fatihe i sure",
+        "Od ezana i ikameta"
+      ],
+      "answer": "Od salavata, Ajetul-Kursije i tesbiha",
+      "explanation": "Zikr se sastoji od učenja salavata, Ajetul-Kursije i tesbiha.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Kada počinjemo zikr?",
+      "options": [
+        "Nakon predaje posljednjeg selama u namazu",
+        "Prije nijeta",
+        "Na sedždi",
+        "Prije ezana"
+      ],
+      "answer": "Nakon predaje posljednjeg selama u namazu",
+      "explanation": "Zikr učimo nakon predaje posljednjeg selama u namazu.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Kojim riječima počinje zikr poslije namaza?",
+      "options": [
+        "'Ala resulillahis-salevat",
+        "Bismillahir-Rahmanir-Rahim",
+        "Subhaneke Allahumme",
+        "Es-selamu alejkum"
+      ],
+      "answer": "'Ala resulillahis-salevat",
+      "explanation": "Zikr počinjemo riječima: 'Ala resulillahis-salevat — salavat na Allahova Poslanika.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Koliko puta učimo Subhanallah u tesbihu?",
+      "options": [
+        "33 puta",
+        "10 puta",
+        "99 puta",
+        "7 puta"
+      ],
+      "answer": "33 puta",
+      "explanation": "Poslije svakog namaza uči se 33 puta Subhanallah, 33 puta El-hamdu lillah i 33 puta Allahu ekber.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Koliko puta učimo El-hamdu lillah u tesbihu?",
+      "options": [
+        "33 puta",
+        "11 puta",
+        "66 puta",
+        "100 puta"
+      ],
+      "answer": "33 puta",
+      "explanation": "El-hamdu lillah se uči 33 puta, kao i Subhanallah i Allahu ekber.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Koliko puta učimo Allahu ekber u tesbihu?",
+      "options": [
+        "33 puta",
+        "3 puta",
+        "13 puta",
+        "93 puta"
+      ],
+      "answer": "33 puta",
+      "explanation": "Allahu ekber se u tesbihu uči 33 puta.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "truefalse",
+      "question": "Tespih uzimamo u desnu ruku.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Poslije Ajetul-Kursije uzimamo tespih u desnu ruku i učimo tesbih.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Šta učimo neposredno prije tesbiha?",
+      "options": [
+        "Ajetul-Kursiju",
+        "Fatihu",
+        "Ezan",
+        "Ikamet"
+      ],
+      "answer": "Ajetul-Kursiju",
+      "explanation": "Redoslijed je: salavat, Ajetul-Kursija, pa tesbih.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Čime upotpunjujemo namaz nakon tesbiha?",
+      "options": [
+        "Namaskom dovom i Fatihom",
+        "Ezanom",
+        "Ikametom",
+        "Sehvi-sedždom"
+      ],
+      "answer": "Namaskom dovom i Fatihom",
+      "explanation": "Nakon tesbiha namaz upotpunimo učenjem namaske dove i Fatihe.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Šta je Poslanik, a.s., rekao o riječima Subhanallahi vel-hamdu lillahi ve la ilahe illallahu vallahu ekber?",
+      "options": [
+        "Draže su mu od svega što Sunce obasjava",
+        "Uče se samo petkom",
+        "Uče se samo u ramazanu",
+        "Uče se prije spavanja"
+      ],
+      "answer": "Draže su mu od svega što Sunce obasjava",
+      "explanation": "Hadis bilježi Muslim: „Draže mi je od svega što Sunce obasjava.\"",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Iz koje sure je ajet „A kada namaz završite, Allaha spominjite\"?",
+      "options": [
+        "En-Nisa'",
+        "El-Fatiha",
+        "El-Bekare",
+        "En-Nas"
+      ],
+      "answer": "En-Nisa'",
+      "explanation": "Ajet je iz sure En-Nisa', 103.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "truefalse",
+      "question": "Zikr je obavezan dio namaza bez kojeg namaz nije ispravan.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Ne",
+      "explanation": "Zikr je lijepo učiti poslije svakog namaza, ali nije rukn bez kojeg namaz ne bi bio ispravan.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Šta znače riječi „ve la havle ve la kuvvete illa billah\"?",
+      "options": [
+        "Nema snage niti moći osim u Allaha",
+        "Hvala Allahu, Gospodaru svjetova",
+        "Slavljen neka si Ti, Allahu",
+        "U ime Allaha, Milostivog"
+      ],
+      "answer": "Nema snage niti moći osim u Allaha",
+      "explanation": "Te riječi znače: nema snage niti moći osim u Svevišnjeg Allaha.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Koje riječi učimo odmah poslije selama, prije salavata?",
+      "options": [
+        "Allahumme entes-selamu ve minkes-selam",
+        "Subhaneke Allahumme",
+        "Rabbi jessir",
+        "Euzubilla"
+      ],
+      "answer": "Allahumme entes-selamu ve minkes-selam",
+      "explanation": "Poslije selama učimo: Allahumme entes-selamu ve minkes-selam, tebarekte ja zel-dželali vel-ikram.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "zikr",
+      "type": "radio",
+      "question": "Ko je prenio hadis o 33 puta Subhanallah, El-hamdu lillah i Allahu ekber?",
+      "options": [
+        "Buhari",
+        "Tirmizi",
+        "Ebu Davud",
+        "Nesai"
+      ],
+      "answer": "Buhari",
+      "explanation": "Hadis bilježi Buhari.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Gdje je objavljena sura En-Nasr?",
+      "options": [
+        "U Medini",
+        "U Mekki",
+        "U Taifu",
+        "U Jerusalemu"
+      ],
+      "answer": "U Medini",
+      "explanation": "Od posljednjih petnaest sura sve su mekkanske osim sure En-Nasr, koja je objavljena u Medini.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Šta znači riječ „nasr\"?",
+      "options": [
+        "Pomoć",
+        "Pobjeda",
+        "Zora",
+        "Ljudi"
+      ],
+      "answer": "Pomoć",
+      "explanation": "Nasr znači pomoć.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Kolikoj vrijednosti Kur'ana odgovara sura En-Nasr, prema hadisu?",
+      "options": [
+        "Jednoj četvrtini",
+        "Jednoj trećini",
+        "Jednoj polovini",
+        "Cijelom Kur'anu"
+      ],
+      "answer": "Jednoj četvrtini",
+      "explanation": "Poslanik, a.s., je rekao da ova sura ima vrijednost jedne četvrtine Kur'ana.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Kojim se drugim imenom naziva sura En-Nasr?",
+      "options": [
+        "Sura Iza džae",
+        "Sura El-Feth",
+        "Sura El-Kevser",
+        "Sura El-Maun"
+      ],
+      "answer": "Sura Iza džae",
+      "explanation": "Ovu suru često zovemo sura Iza džae, po njenim prvim riječima.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Šta sura En-Nasr najavljuje?",
+      "options": [
+        "Skoru smrt Muhammeda, a.s.",
+        "Rođenje Poslanika",
+        "Početak posta",
+        "Gradnju Kabe"
+      ],
+      "answer": "Skoru smrt Muhammeda, a.s.",
+      "explanation": "Objavljena je pred smrt Poslanika, a.s., i najava je kraja njegova poslanstva.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Šta Allah u ovoj suri naređuje Poslaniku, a.s.?",
+      "options": [
+        "Da veliča Gospodara, hvali Ga i traži oprost",
+        "Da se preseli u Medinu",
+        "Da posti tri dana",
+        "Da ide na hadž"
+      ],
+      "answer": "Da veliča Gospodara, hvali Ga i traži oprost",
+      "explanation": "U suri stoji: „ti veličaj Gospodara svoga hvaleći Ga i moli Ga da ti oprosti\".",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Kako počinje sura En-Nasr?",
+      "options": [
+        "Iza džae nasrullahi vel-feth",
+        "Kul huvallahu ehad",
+        "Tebbet jeda Ebi Lehebin",
+        "Kul e'uzu bi Rabbil-felek"
+      ],
+      "answer": "Iza džae nasrullahi vel-feth",
+      "explanation": "Sura počinje riječima: Iza džae nasrullahi vel-feth.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Šta znači „jedhulune fi dinillahi efvadža\"?",
+      "options": [
+        "Da ljudi u skupinama ulaze u Allahovu vjeru",
+        "Da ljudi napuštaju vjeru",
+        "Da ljudi putuju u Mekku",
+        "Da ljudi grade džamije"
+      ],
+      "answer": "Da ljudi u skupinama ulaze u Allahovu vjeru",
+      "explanation": "Ajet govori o ljudima koji u velikim skupinama primaju islam.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Šta znači riječ „tevvaba\" na kraju sure?",
+      "options": [
+        "Onaj koji pokajanje prima",
+        "Onaj koji sve zna",
+        "Onaj koji sve vidi",
+        "Onaj koji je vječan"
+      ],
+      "answer": "Onaj koji pokajanje prima",
+      "explanation": "„Innehu kane tevvaba\" znači: On je uvijek pokajanje primao.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "truefalse",
+      "question": "Sura En-Nasr je jedina medinska među posljednjih petnaest sura Kur'ana.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Od zadnjih petnaest sura sve su objavljene u Mekki, osim sure En-Nasr.",
+      "tezina": 3
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Koliko sura ima Kur'an?",
+      "options": [
+        "114",
+        "113",
+        "110",
+        "120"
+      ],
+      "answer": "114",
+      "explanation": "Kur'an ima 114 sura.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Gdje se u Kur'anu nalaze najkraće sure?",
+      "options": [
+        "Na samom kraju",
+        "Na samom početku",
+        "U sredini",
+        "Nasumično"
+      ],
+      "answer": "Na samom kraju",
+      "explanation": "Na kraju Kur'ana su najkraće sure, a od početka one najduže.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "truefalse",
+      "question": "Sura En-Nasr nas uči da se Allahu treba zahvaljivati i tražiti oprost.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Allah nam u ovoj suri kazuje da Ga uvijek trebamo slaviti, zahvaljivati Mu i tražiti oprost.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Šta znači riječ „feth\" u prvom ajetu?",
+      "options": [
+        "Pobjeda",
+        "Pomoć",
+        "Zahvala",
+        "Oprost"
+      ],
+      "answer": "Pobjeda",
+      "explanation": "„Nasrullahi vel-feth\" znači: Allahova pomoć i pobjeda.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "radio",
+      "question": "Koju riječ izgovaramo tražeći oprost, kako uči sura En-Nasr?",
+      "options": [
+        "Estagfirullah",
+        "Elhamdulillah",
+        "Subhanallah",
+        "Mašallah"
+      ],
+      "answer": "Estagfirullah",
+      "explanation": "Estagfirullah je riječ kojom tražimo Allahov oprost.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sura-en-nasr",
+      "type": "truefalse",
+      "question": "Bismilla se uči na početku sure En-Nasr.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Prije učenja sure prouči se Euzubilla pa Bismilla.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Kada počinju pripreme za Bajram u mektebu?",
+      "options": [
+        "Mnogo prije samog Bajrama",
+        "Na sam dan Bajrama",
+        "Dan poslije Bajrama",
+        "Ne postoje pripreme"
+      ],
+      "answer": "Mnogo prije samog Bajrama",
+      "explanation": "Pripreme počinju mnogo prije nego što se začuju prvi tekbiri.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Šta priprema mektebski hor za Bajram?",
+      "options": [
+        "Bajramsku akademiju ilahija i recitacija",
+        "Sportsko takmičenje",
+        "Izložbu slika",
+        "Predstavu"
+      ],
+      "answer": "Bajramsku akademiju ilahija i recitacija",
+      "explanation": "Mektebski hor priprema bajramsku akademiju ilahija i primjerenih recitacija.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Ko je napisao pjesmu „Kad tekbiri zažubore\"?",
+      "options": [
+        "Nevres Mustafić",
+        "Rešad Kadić",
+        "Safvet-beg Bašagić",
+        "Musa Ćazim Ćatić"
+      ],
+      "answer": "Nevres Mustafić",
+      "explanation": "Pjesmu „Kad tekbiri zažubore\" napisao je Nevres Mustafić.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Kada, prema pjesmi, Bošnjaci ustaju da klanjaju bajram-namaz?",
+      "options": [
+        "Jedne noći prije zore",
+        "U podne",
+        "Pred akšam",
+        "Poslije jacije"
+      ],
+      "answer": "Jedne noći prije zore",
+      "explanation": "U pjesmi stoji: „Kad tekbiri zažubore, jedne noći prije zore, svi Bošnjaci ustaju, Bajram-namaz klanjaju.\"",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Kome se, prema lekciji, uručuje poseban bajramski dar?",
+      "options": [
+        "Bolesnoj drugarici ili drugu",
+        "Samo najboljem učeniku",
+        "Samo muallimu",
+        "Samo roditeljima"
+      ],
+      "answer": "Bolesnoj drugarici ili drugu",
+      "explanation": "Poseban bajramski dar uručujemo bolesnoj drugarici ili drugu i poželimo im skoro ozdravljenje.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "U čemu učestvuju svi polaznici mekteba pred Bajram?",
+      "options": [
+        "U uređenju mekteba, okoline i džamije",
+        "Samo u učenju ilahija",
+        "Samo u pisanju čestitki",
+        "Ni u čemu"
+      ],
+      "answer": "U uređenju mekteba, okoline i džamije",
+      "explanation": "Svi polaznici učestvuju u uređenju mekteba, okoline i džamije.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "truefalse",
+      "question": "Bajramska radost se umnožava kada je dijelimo s drugima.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Istinska bajramska radost se umnožava samo kada je dijelimo.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Šta se priprema iz sredstava mektebskog fonda?",
+      "options": [
+        "Bajramsko druženje",
+        "Nova učionica",
+        "Nove knjige",
+        "Putovanje"
+      ],
+      "answer": "Bajramsko druženje",
+      "explanation": "Iz sredstava mektebskog fonda priređuje se bajramsko druženje.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Šta se izrađuje za bajramsku akademiju?",
+      "options": [
+        "Veliki bajramski transparent",
+        "Maketa džamije",
+        "Novi tespih",
+        "Zastava"
+      ],
+      "answer": "Veliki bajramski transparent",
+      "explanation": "Za bajramsku akademiju izrađuje se veliki bajramski transparent.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Kome polaznici pripremaju bajramske čestitke i darove?",
+      "options": [
+        "Roditeljima i starateljima",
+        "Samo komšijama",
+        "Samo muallimu",
+        "Nikome"
+      ],
+      "answer": "Roditeljima i starateljima",
+      "explanation": "Svojim roditeljima i starateljima polaznici pripremaju bajramske čestitke i darove.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "truefalse",
+      "question": "Bajram je, prema lekciji, prilika da pokažemo koliko volimo svoju vjeru i tradiciju.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Bajram je prilika da pokažemo koliko volimo svoju vjeru, svoje prijatelje i svoju tradiciju.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "bajramske-aktivnosti",
+      "type": "radio",
+      "question": "Šta se, prema pjesmi, čuje sa svih strana za Bajram?",
+      "options": [
+        "Allah, Allah — tekbiri",
+        "Zvona",
+        "Muzika",
+        "Tišina"
+      ],
+      "answer": "Allah, Allah — tekbiri",
+      "explanation": "U pjesmi stoji: „sa svih strana glas se čuje, Allah, Allah odjekuje\".",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Šta je, prema lekciji, naše tijelo?",
+      "options": [
+        "Emanet koji nam je Allah dao na čuvanje",
+        "Naše vlasništvo bez obaveza",
+        "Nevažno za vjeru",
+        "Prepreka ibadetu"
+      ],
+      "answer": "Emanet koji nam je Allah dao na čuvanje",
+      "explanation": "Tijelo nam je Allah, dž.š., dao kao emanet — na čuvanje.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Koje sportove islam posebno podstiče?",
+      "options": [
+        "Trčanje, plivanje, streljaštvo i jahanje",
+        "Samo fudbal",
+        "Samo košarku",
+        "Samo tenis"
+      ],
+      "answer": "Trčanje, plivanje, streljaštvo i jahanje",
+      "explanation": "Islam podstiče bavljenje trčanjem, plivanjem, streljaštvom i jahanjem.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Šta je Poslanik, a.s., rekao o snažnom vjerniku?",
+      "options": [
+        "Bolji je i Allahu draži od slabog vjernika",
+        "Isti je kao slab vjernik",
+        "Manje je vrijedan",
+        "Treba izbjegavati sport"
+      ],
+      "answer": "Bolji je i Allahu draži od slabog vjernika",
+      "explanation": "Snažan vjernik je bolji i Allahu draži od slabog vjernika.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Čemu nas, prema lekciji, uči sport?",
+      "options": [
+        "Disciplini, timskom radu i poštovanju drugih",
+        "Samo takmičenju",
+        "Samo pobjeđivanju",
+        "Da budemo oholi"
+      ],
+      "answer": "Disciplini, timskom radu i poštovanju drugih",
+      "explanation": "Sport nas uči disciplini, timskom radu i poštovanju drugih.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Kako se musliman ponaša kada izgubi u sportu?",
+      "options": [
+        "Strpljivo, bez ljutnje",
+        "Ljuti se i vrijeđa",
+        "Odustaje zauvijek",
+        "Optužuje druge"
+      ],
+      "answer": "Strpljivo, bez ljutnje",
+      "explanation": "Ko se bavi sportom ne ljuti se čak i kada ne pobijedi — kroz sport učimo strpljenje.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Kako se musliman ponaša kada pobijedi?",
+      "options": [
+        "Skromno",
+        "Hvali se svima",
+        "Ismijava poražene",
+        "Traži nagradu"
+      ],
+      "answer": "Skromno",
+      "explanation": "Kroz sport učimo da budemo strpljivi kada gubimo i skromni kada pobjeđujemo.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Čime, prema lekciji, oplemenjujemo dušu?",
+      "options": [
+        "Vjerom",
+        "Sportom",
+        "Hranom",
+        "Putovanjem"
+      ],
+      "answer": "Vjerom",
+      "explanation": "Vjerom oplemenjujemo dušu, a tijelo održavamo radom, sportom i zdravim navikama.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Čime održavamo tijelo?",
+      "options": [
+        "Radom, sportom i zdravim navikama",
+        "Samo snom",
+        "Samo ishranom",
+        "Samo učenjem"
+      ],
+      "answer": "Radom, sportom i zdravim navikama",
+      "explanation": "Tijelo održavamo radom, sportom i zdravim navikama.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "truefalse",
+      "question": "Zdrava osoba lakše izvršava vjerske obaveze.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Zdravlje nam pomaže da lakše izvršavamo vjerske obaveze.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Šta je Poslanik, a.s., rekao o pravima tijela?",
+      "options": [
+        "„Tvoje tijelo ima prava kod tebe\"",
+        "Da tijelo nema prava",
+        "Da tijelo treba iscrpljivati",
+        "Da o tijelu ne treba brinuti"
+      ],
+      "answer": "„Tvoje tijelo ima prava kod tebe\"",
+      "explanation": "Hadis glasi: „...Tvoje tijelo ima prava kod tebe...\" (Muttefekun 'alejh).",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "truefalse",
+      "question": "Takmičarski duh kroz sport nas povezuje i zbližava.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Takmičarski duh kroz sport povezuje nas i zbližava.",
+      "tezina": 1
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Šta je Allah, dž.š., sjedinio u našem životu na Zemlji?",
+      "options": [
+        "Dušu i tijelo",
+        "Razum i imetak",
+        "Vrijeme i prostor",
+        "Rad i odmor"
+      ],
+      "answer": "Dušu i tijelo",
+      "explanation": "Svemogući Allah je stvorio naše duše i tijela i sjedinio ih u našim životima na Zemlji.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "truefalse",
+      "question": "Vjerski propisi nam pomažu u održavanju dobre kondicije i čuvaju zdravlje.",
+      "options": [
+        "Da",
+        "Ne"
+      ],
+      "answer": "Da",
+      "explanation": "Vjerski propisi pomažu nam u održavanju dobre kondicije i čuvaju naše zdravlje.",
+      "tezina": 2
+    },
+    {
+      "etapa": 7,
+      "lekcija": "sport",
+      "type": "radio",
+      "question": "Kako se, prema lekciji, osjećamo poslije fizičke aktivnosti?",
+      "options": [
+        "Bolje, lakše učimo i sretniji smo",
+        "Umornije i tužnije",
+        "Bez promjene",
+        "Bolesnije"
+      ],
+      "answer": "Bolje, lakše učimo i sretniji smo",
+      "explanation": "Poslije kretanja se bolje osjećamo, lakše učimo i sretniji smo.",
       "tezina": 1
     }
   ]
