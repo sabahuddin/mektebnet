@@ -6,7 +6,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
-  ArrowLeft, Users, UserPlus, Printer, ChevronRight, ArrowRightLeft,
+  ArrowLeft, Users, Printer, ChevronRight, ArrowRightLeft,
   Loader2, GraduationCap, X, Plus, Trash2, Star, ClipboardList, KeyRound,
   AlertTriangle, BookOpen, Copy, Check,
   CalendarCheck, Calendar, TrendingUp, FileText, Heart, Sparkles, ListOrdered, Pencil,
@@ -164,7 +164,6 @@ export default function GrupaPage() {
   const [grupa, setGrupa] = useState<Grupa | null>(null);
   const [zadacaBadge, setZadacaBadge] = useState(0);
   const [studentiGrupe, setStudentiGrupe] = useState<Ucenik[]>([]);
-  const [sviStudenti, setSviStudenti] = useState<Ucenik[]>([]);
   const [sveGrupe, setSveGrupe] = useState<Grupa[]>([]);
   const [lekcijeStatus, setLekcijeStatus] = useState<Map<number, LekcijaStatus>>(new Map());
   const [interaktivniPregled, setInteraktivniPregled] = useState<InteraktivniPregledGrupe | null>(null);
@@ -183,17 +182,11 @@ export default function GrupaPage() {
   const [planVrstaCasa, setPlanVrstaCasa] = useState("obrada");
   const [savingPlan, setSavingPlan] = useState(false);
 
-  const [showBulkAdd, setShowBulkAdd] = useState(false);
-  const [bulkNames, setBulkNames] = useState("");
-  const [bulkLoading, setBulkLoading] = useState(false);
-  const [createdStudents, setCreatedStudents] = useState<CreatedUcenik[]>([]);
-
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveStudent, setMoveStudent] = useState<Ucenik | null>(null);
   const [moveTargetGrupaId, setMoveTargetGrupaId] = useState<string>("");
   const [moveLoading, setMoveLoading] = useState(false);
 
-  const [showAddExisting, setShowAddExisting] = useState(false);
   const [arhivaClanovi, setArhivaClanovi] = useState<ArhivaClan[]>([]);
 
   // Ocjena modal
@@ -285,13 +278,12 @@ export default function GrupaPage() {
       .catch(() => {});
     Promise.all([
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
-      apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
       apiRequest<Ucenik[]>("GET", `/muallim/grupa/${grupaId}/ucenici`, undefined, token),
       apiRequest<LekcijaStatus[]>("GET", `/muallim/grupa/${grupaId}/lekcije-status`, undefined, token).catch(() => []),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<any[]>("GET", `/muallim/grupa/${grupaId}/zvjezdice-summary`, undefined, token).catch(() => []),
       apiRequest<{id:number;tip:string;naziv:string}[]>("GET", "/muallim/zvjezdice-kategorije", undefined, token).catch(() => []),
-    ]).then(([grupe, ucenici, grupaUcenici, status, lekcije, zvData, kategorije]) => {
+    ]).then(([grupe, grupaUcenici, status, lekcije, zvData, kategorije]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
       setSekundarniMuallimi(g?.sekundarniMuallimi ?? []);
@@ -300,7 +292,6 @@ export default function GrupaPage() {
           .then(setArhivaClanovi).catch(() => {});
       }
       setSveGrupe(grupe);
-      setSviStudenti(ucenici);
       setStudentiGrupe(grupaUcenici);
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
       setIlmihalLekcije(lekcije);
@@ -414,11 +405,9 @@ export default function GrupaPage() {
   function refreshStudents() {
     if (!token) return;
     Promise.all([
-      apiRequest<Ucenik[]>("GET", "/muallim/ucenici", undefined, token),
       apiRequest<Ucenik[]>("GET", `/muallim/grupa/${grupaId}/ucenici`, undefined, token),
       apiRequest<LekcijaStatus[]>("GET", `/muallim/grupa/${grupaId}/lekcije-status`, undefined, token).catch(() => []),
-    ]).then(([ucenici, grupaUcenici, status]) => {
-      setSviStudenti(ucenici);
+    ]).then(([grupaUcenici, status]) => {
       setStudentiGrupe(grupaUcenici);
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
     }).catch(() => {});
@@ -443,36 +432,6 @@ export default function GrupaPage() {
     }
   }
 
-  function parseBulkEntries(text: string) {
-    return text.split("\n").map(line => {
-      const [u, r] = line.split("|");
-      return { ucenik: (u || "").trim(), roditelj: r ? r.trim() : null };
-    }).filter(e => e.ucenik.length > 0);
-  }
-
-  async function handleBulkAdd() {
-    if (!token || !bulkNames.trim()) return;
-    setBulkLoading(true);
-    try {
-      const entries = parseBulkEntries(bulkNames);
-      if (entries.length === 0) { toast({ title: t("Unesite barem jedno ime") }); return; }
-      const results = await apiRequest<CreatedUcenik[]>("POST", "/muallim/ucenici/bulk", {
-        entries, grupaId
-      }, token);
-      setCreatedStudents(results);
-      const sRoditelja = results.filter(r => r.roditelj).length;
-      toast({
-        title: t("{n} učenika dodano!", { n: String(results.length) }),
-        description: sRoditelja > 0 ? t("{n} sa nalogom za roditelja", { n: String(sRoditelja) }) : undefined,
-      });
-      refreshStudents();
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err?.message || t("Neuspješno dodavanje"), variant: "destructive" });
-    } finally {
-      setBulkLoading(false);
-    }
-  }
-
   async function handleMove() {
     if (!token || !moveStudent) return;
     setMoveLoading(true);
@@ -488,18 +447,6 @@ export default function GrupaPage() {
       toast({ title: t("Greška"), description: t("Nije moguće prebaciti učenika"), variant: "destructive" });
     } finally {
       setMoveLoading(false);
-    }
-  }
-
-  async function handleAddExisting(ucenikId: number) {
-    if (!token) return;
-    try {
-      await apiRequest("PUT", `/muallim/ucenici/${ucenikId}/grupa`, { grupaId }, token);
-      toast({ title: t("Učenik dodan u grupu!") });
-      refreshStudents();
-      setShowAddExisting(false);
-    } catch {
-      toast({ title: t("Greška"), variant: "destructive" });
     }
   }
 
@@ -761,13 +708,6 @@ export default function GrupaPage() {
     }
   }
 
-  // Učenici bez ikakve grupe — mogu se dodati u ovu grupu.
-  // Za glavnog muallima: svi slobodni učenici džemata.
-  const bezGrupe = sviStudenti.filter(u => {
-    const gId = (u.profil as any)?.grupaId || (u as any).grupaId;
-    return !gId;
-  });
-
   if (isLoading) {
     return (
       <Layout>
@@ -849,19 +789,7 @@ export default function GrupaPage() {
         )}
 
         <div className="flex flex-wrap gap-2 mb-6">
-          {!grupa.isArchived && (
-            <>
-              <Button onClick={() => { setShowBulkAdd(true); setCreatedStudents([]); setBulkNames(""); }}
-                className="rounded-xl font-bold flex items-center gap-2">
-                <UserPlus className="w-4 h-4" /> {t("Dodaj učenike")}
-              </Button>
-              <Button variant="outline" onClick={() => setShowAddExisting(true)}
-                className="rounded-xl font-bold flex items-center gap-2">
-                <Plus className="w-4 h-4" /> {t("Dodaj postojećeg")}
-              </Button>
-            </>
-          )}
-          {(studentiGrupe.length > 0 || createdStudents.length > 0) && (
+          {studentiGrupe.length > 0 && (
             <Button variant="outline" onClick={printCards} disabled={printLoading} className="rounded-xl font-bold flex items-center gap-2">
               {printLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} {t("Printaj kartice")}
             </Button>
@@ -1008,121 +936,6 @@ export default function GrupaPage() {
           ) : null}
          </section>}
 
-        {showBulkAdd && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-white border border-border/50 rounded-2xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-primary" /> {t("Dodaj više učenika odjednom")}
-              </h3>
-              <button onClick={() => setShowBulkAdd(false)} className="p-1 hover:bg-muted rounded-lg">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {createdStudents.length > 0 ? (
-              <div>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
-                  <p className="font-bold text-emerald-800 mb-3">{t("{n} učenika uspješno kreirano!", { n: String(createdStudents.length) })}</p>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {createdStudents.map(s => (
-                      <div key={s.id} className="space-y-1">
-                        <div className="bg-white rounded-lg p-3 flex items-center justify-between text-sm border border-emerald-100">
-                          <div>
-                            <span className="font-bold text-foreground">{t("Učenik: {ime}", { ime: s.displayName })}</span>
-                            <span className="text-muted-foreground ml-2 font-mono text-xs">{s.username}</span>
-                          </div>
-                          <span className="font-mono font-bold text-primary">{s.generatedPassword}</span>
-                        </div>
-                        {s.roditelj && (
-                          <div className="bg-blue-50 rounded-lg p-3 flex items-center justify-between text-sm border border-blue-200 ml-4">
-                            <div>
-                              <span className="font-bold text-blue-900">{t("Roditelj: {ime}", { ime: s.roditelj.displayName })}</span>
-                              <span className="text-blue-700/70 ml-2 font-mono text-xs">{s.roditelj.username}</span>
-                            </div>
-                            <span className="font-mono font-bold text-blue-700">{s.roditelj.generatedPassword}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 text-sm text-blue-900 flex items-start gap-2">
-                  <Printer className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>{t("Kartice s lozinkama možete odštampati bilo kada preko dugmeta \"Printaj kartice\" na vrhu stranice grupe. Štampanje samo prikazuje trenutne lozinke i ništa ne mijenja.")}</span>
-                </div>
-                <div className="flex gap-3">
-                  <Button onClick={() => { setCreatedStudents([]); setBulkNames(""); }}
-                    className="flex-1 rounded-xl font-bold">{t("Dodaj još")}</Button>
-                  <Button variant="outline" onClick={() => { setCreatedStudents([]); setShowBulkAdd(false); }}
-                    className="rounded-xl">{t("Gotovo")}</Button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {t("Unesite imena učenika, svako u novi red. Ako želite kreirati i nalog za roditelja, upišite ga iza znaka")}{" "}
-                  <code className="bg-muted px-1.5 py-0.5 rounded text-xs">|</code>:
-                </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 text-xs text-blue-900">
-                  <div className="font-bold mb-1">{t("Primjer:")}</div>
-                  <code className="block whitespace-pre-wrap font-mono leading-relaxed">
-                    Amina Hasić | Senad Hasić{"\n"}Ahmed Begović{"\n"}Merjem Hadžić | Edina Hadžić
-                  </code>
-                  <p className="mt-2 text-blue-800">{t("Roditelj ne ulazi u kvotu licenci.")}</p>
-                </div>
-                <textarea value={bulkNames} onChange={e => setBulkNames(e.target.value)}
-                  rows={8} placeholder={"Amina Hasić | Senad Hasić\nAhmed Begović\nMerjem Hadžić | Edina Hadžić"}
-                  className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20 resize-none font-medium font-mono text-sm" />
-                {(() => {
-                  const entries = parseBulkEntries(bulkNames);
-                  const sRoditelja = entries.filter(e => e.roditelj).length;
-                  return (
-                    <p className="text-xs text-muted-foreground mt-1 mb-4">
-                      {t("{n} učenika", { n: String(entries.length) })}{sRoditelja > 0 ? t(" · {r} sa roditeljem", { r: String(sRoditelja) }) : ""}
-                    </p>
-                  );
-                })()}
-                <Button onClick={handleBulkAdd} disabled={bulkLoading || !bulkNames.trim()}
-                  className="w-full rounded-xl font-bold py-3">
-                  {bulkLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                  {bulkLoading ? t("Kreiranje...") : t("Kreiraj {n} učenika", { n: String(parseBulkEntries(bulkNames).length) })}
-                </Button>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {showAddExisting && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-white border border-border/50 rounded-2xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-extrabold text-foreground">{t("Dodaj postojećeg učenika u grupu")}</h3>
-              <button onClick={() => setShowAddExisting(false)} className="p-1 hover:bg-muted rounded-lg">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            {bezGrupe.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">{t("Nema dostupnih učenika za dodavanje")}</p>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {bezGrupe.map(u => (
-                  <div key={u.id} className="flex items-center justify-between bg-muted/20 rounded-xl px-4 py-3">
-                    <div>
-                      <span className="font-bold text-foreground">{u.displayName}</span>
-                      <span className="text-muted-foreground text-xs ml-2">{u.username}</span>
-                    </div>
-                    <Button size="sm" onClick={() => handleAddExisting(u.id)}
-                      className="rounded-lg text-xs font-bold">
-                      <Plus className="w-3 h-3 mr-1" /> {t("Dodaj")}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-
         {/* Backdrop za zatvaranje settings dropdowna */}
         {settingsOpenId !== null && (
           <div className="fixed inset-0 z-10" onClick={() => setSettingsOpenId(null)} />
@@ -1138,7 +951,7 @@ export default function GrupaPage() {
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="font-medium">{t("Nema učenika u ovoj grupi")}</p>
-              <p className="text-sm mt-1">{t("Dodaj učenike koristeći dugme iznad")}</p>
+              <p className="text-sm mt-1">{t("Učenike možete dodati u Podešavanjima grupe.")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-b-2xl">
