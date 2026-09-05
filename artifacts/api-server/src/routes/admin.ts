@@ -4186,11 +4186,35 @@ router.put("/krunisanja/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid ID" });
+    const [existingKrunisanje] = await db
+      .select({ nivo: krunisanjaTable.nivo })
+      .from(krunisanjaTable)
+      .where(eq(krunisanjaTable.id, id))
+      .limit(1);
+    if (!existingKrunisanje) return res.status(404).json({ error: "Krunisanje ne postoji" });
     const patch: Partial<typeof krunisanjaTable.$inferInsert> = {};
     if (typeof req.body?.naslov === "string") patch.naslov = req.body.naslov;
     if (typeof req.body?.opisHtml === "string") patch.opisHtml = req.body.opisHtml;
     if (typeof req.body?.ikona === "string") patch.ikona = req.body.ikona;
     if (typeof req.body?.boja === "string") patch.boja = req.body.boja;
+    if (Array.isArray(req.body?.kvizIds)) {
+      const kvizIds = Array.from(new Set<number>(
+        req.body.kvizIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n) && n > 0),
+      ));
+      if (kvizIds.length > 0) {
+        const kvizovi = await db
+          .select({ id: kvizoviTable.id, nivo: kvizoviTable.nivo, etapa: kvizoviTable.etapa })
+          .from(kvizoviTable)
+          .where(inArray(kvizoviTable.id, kvizIds));
+        if (
+          kvizovi.length !== kvizIds.length
+          || kvizovi.some((kviz) => kviz.nivo !== existingKrunisanje.nivo || kviz.etapa == null)
+        ) {
+          return res.status(400).json({ error: "Krunisanje može koristiti samo etapne kvizove iz istog nivoa" });
+        }
+      }
+      patch.kvizIds = kvizIds;
+    }
     if (Array.isArray(req.body?.kvizPitanjaIds)) {
       patch.kvizPitanjaIds = req.body.kvizPitanjaIds.map((x: unknown) => Number(x)).filter((n: number) => Number.isInteger(n));
     }

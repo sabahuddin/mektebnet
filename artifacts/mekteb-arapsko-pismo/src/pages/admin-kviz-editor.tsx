@@ -393,12 +393,17 @@ export default function AdminKvizEditorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{t("Status")}</label>
+              <label className="block text-sm font-semibold mb-1">{t("Vidljivost")}</label>
               <select value={meta.isPublished ? "1" : "0"} onChange={e => setMeta(p => ({ ...p, isPublished: e.target.value === "1" }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="1">{t("Objavljen")}</option>
-                <option value="0">{t("Skriven")}</option>
+                <option value="1">{t("Javno — učenici ga vide")}</option>
+                <option value="0">{t("Privatno — samo admin")}</option>
               </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {meta.isPublished
+                  ? t("Kviz je vidljiv učenicima u katalogu i na povezanim lekcijama.")
+                  : t("Kviz je skriven učenicima, ali ga možeš koristiti u završnom ispitu Krunisanja.")}
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

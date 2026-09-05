@@ -10,12 +10,48 @@ import {
   studentMedaljoniTable,
   studentProgressTable,
   etapaPolaganjaTable,
+  kvizPitanjaTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 const router = Router();
+
+type KrunisanjeQuestionConfig = {
+  kvizIds?: number[] | null;
+  kvizPitanjaIds?: number[] | null;
+};
+
+export async function resolveKrunisanjePitanjaIds(config: KrunisanjeQuestionConfig): Promise<number[]> {
+  const result: number[] = [];
+  const seen = new Set<number>();
+  const append = (id: number) => {
+    if (Number.isInteger(id) && id > 0 && !seen.has(id)) {
+      seen.add(id);
+      result.push(id);
+    }
+  };
+
+  for (const id of Array.isArray(config.kvizPitanjaIds) ? config.kvizPitanjaIds : []) append(Number(id));
+
+  const kvizIds = Array.isArray(config.kvizIds) ? config.kvizIds : [];
+  for (const kvizId of kvizIds) {
+    const rows = await db
+      .select({ pitanjeId: kvizPitanjaTable.pitanjeId })
+      .from(kvizPitanjaTable)
+      .where(eq(kvizPitanjaTable.kvizId, Number(kvizId)))
+      .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
+    for (const row of rows) append(row.pitanjeId);
+  }
+
+  return result;
+}
+
+function imaKonfigurisanKviz(config: KrunisanjeQuestionConfig): boolean {
+  return (Array.isArray(config.kvizIds) && config.kvizIds.length > 0)
+    || (Array.isArray(config.kvizPitanjaIds) && config.kvizPitanjaIds.length > 0);
+}
 
 // GET /api/krunisanja/nivo/:n
 // Vraća krunisanje + krunske lekcije + status polaganja za prijavljenog učenika.
@@ -73,7 +109,7 @@ router.get("/nivo/:n", async (req, res) => {
       }
     }
 
-    const ids = Array.isArray(krunisanje.kvizPitanjaIds) ? krunisanje.kvizPitanjaIds : [];
+    const ids = await resolveKrunisanjePitanjaIds(krunisanje);
     res.json({
       krunisanje: {
         id: krunisanje.id,
@@ -108,7 +144,7 @@ router.post("/:id/start", requireAuth, requireRole("ucenik"), async (req, res) =
       .where(eq(krunisanjaTable.id, id))
       .limit(1);
     if (!krunisanje) return res.status(404).json({ error: "Krunisanje ne postoji" });
-    const ids = Array.isArray(krunisanje.kvizPitanjaIds) ? krunisanje.kvizPitanjaIds : [];
+    const ids = await resolveKrunisanjePitanjaIds(krunisanje);
     if (ids.length === 0) {
       return res.status(400).json({ error: "Krunisanje nema pitanja. Obavijesti muallima." });
     }
@@ -162,7 +198,7 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
       .limit(1);
     if (!krunisanje) return res.status(404).json({ error: "Krunisanje ne postoji" });
 
-    const ids = Array.isArray(krunisanje.kvizPitanjaIds) ? krunisanje.kvizPitanjaIds : [];
+    const ids = await resolveKrunisanjePitanjaIds(krunisanje);
     if (ids.length === 0) return res.status(400).json({ error: "Krunisanje nema pitanja" });
 
     const gateErr = await proveriGatingKrunisanja(userId, krunisanje);
@@ -349,8 +385,7 @@ async function proveriGatingKrunisanja(
       .from(krunisanjaTable)
       .where(eq(krunisanjaTable.nivo, krunisanje.nivo - 1))
       .limit(1);
-    const prevIds = prev ? (Array.isArray(prev.kvizPitanjaIds) ? prev.kvizPitanjaIds : []) : [];
-    if (prev && prev.isGating && prevIds.length > 0) {
+    if (prev && prev.isGating && imaKonfigurisanKviz(prev)) {
       const [pass] = await db
         .select({ id: studentKrunisanjaTable.id })
         .from(studentKrunisanjaTable)

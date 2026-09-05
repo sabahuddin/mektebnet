@@ -751,12 +751,14 @@ async function runResidualSchema() {
         opis_html text NOT NULL DEFAULT '',
         ikona varchar(32) NOT NULL DEFAULT 'crown',
         boja varchar(16) NOT NULL DEFAULT 'amber',
+        kviz_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
         kviz_pitanja_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
         prag_prolaza_percent integer NOT NULL DEFAULT 70,
         is_gating boolean NOT NULL DEFAULT true,
         created_at timestamp DEFAULT NOW()
       );
     `);
+    await db.execute(sql`ALTER TABLE krunisanja ADD COLUMN IF NOT EXISTS kviz_ids jsonb NOT NULL DEFAULT '[]'::jsonb;`);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS krunisanje_lekcije (
         id serial PRIMARY KEY,
