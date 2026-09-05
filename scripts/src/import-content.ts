@@ -167,13 +167,9 @@ function slugFromPath(filePath: string): string {
 }
 
 function nivoFromPath(filePath: string): number {
-  if (filePath.includes("nivo1")) return 1;
-  // Stari izvor je direktorij "nivo21" koristio za drugi dio današnjeg Nivoa 2.
-  // Nikada više ne upisuj internu vrijednost 21 u bazu.
-  if (filePath.includes("nivo21")) return 2;
-  if (filePath.includes("nivo2")) return 2;
-  if (filePath.includes("nivo3")) return 3;
-  return 1;
+  const match = filePath.match(/\/nivo([123])\//);
+  if (!match) throw new Error(`Nepodržan direktorij nivoa: ${filePath}`);
+  return Number(match[1]);
 }
 
 async function importContent() {
@@ -191,7 +187,7 @@ async function importContent() {
     const html = entry.getData().toString("utf8");
 
     // ── ILMIHAL LEKCIJE ──────────────────────────────────────────────────────
-    if (name.match(/edu\/lekcije\/(nivo\d+)\/[^/]+\.html$/) && !name.includes("index") && !name.includes("kviz")) {
+    if (name.match(/edu\/lekcije\/nivo[123]\/[^/]+\.html$/) && !name.includes("index") && !name.includes("kviz")) {
       const slug = slugFromPath(name);
       const nivo = nivoFromPath(name);
       const naslov = extractTitle(html) || slug.replace(/-/g, " ");
