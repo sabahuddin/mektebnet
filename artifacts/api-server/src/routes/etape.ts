@@ -7,12 +7,54 @@ import {
   pitanjaBankaTable,
   ilmihalLekcijeTable,
   studentProgressTable,
+  kvizPitanjaTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, lte, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 
 const router = Router();
+
+type EtapaQuestionConfig = {
+  kvizIds?: number[] | null;
+  kvizPitanjaIds?: number[] | null;
+};
+
+export async function resolveEtapaPitanjaIds(config: EtapaQuestionConfig): Promise<number[]> {
+  const result: number[] = [];
+  const seen = new Set<number>();
+  const append = (id: number) => {
+    if (Number.isInteger(id) && id > 0 && !seen.has(id)) {
+      seen.add(id);
+      result.push(id);
+    }
+  };
+  for (const id of Array.isArray(config.kvizPitanjaIds) ? config.kvizPitanjaIds : []) append(Number(id));
+  for (const kvizId of Array.isArray(config.kvizIds) ? config.kvizIds : []) {
+    const rows = await db
+      .select({ pitanjeId: kvizPitanjaTable.pitanjeId })
+      .from(kvizPitanjaTable)
+      .where(eq(kvizPitanjaTable.kvizId, Number(kvizId)))
+      .orderBy(asc(kvizPitanjaTable.redoslijed), asc(kvizPitanjaTable.id));
+    for (const row of rows) append(row.pitanjeId);
+  }
+  return result;
+}
+
+async function findMedaljon(slug: string) {
+  const [exact] = await db.select().from(medaljoniTable).where(eq(medaljoniTable.slug, slug)).limit(1);
+  if (exact) return exact;
+  const match = slug.match(/^medaljon-nivo(\d+)-(\d+)$/);
+  if (!match) return null;
+  const nivo = Number(match[1]);
+  const pos = Number(match[2]);
+  const rows = await db
+    .select()
+    .from(medaljoniTable)
+    .where(eq(medaljoniTable.nivo, nivo))
+    .orderBy(asc(medaljoniTable.posAfterRedoslijed));
+  return rows.find((row) => row.posAfterRedoslijed === pos) ?? null;
+}
 
 // GET /api/etape/medaljon/:slug
 // Vraća meta etape, lekcije koje pokriva, ukupan broj pitanja, prag prolaza,
@@ -37,11 +79,7 @@ router.get("/medaljon/:slug", async (req, res) => {
       }
     }
 
-    const [medaljon] = await db
-      .select()
-      .from(medaljoniTable)
-      .where(eq(medaljoniTable.slug, slug))
-      .limit(1);
+    const medaljon = await findMedaljon(slug);
     if (!medaljon) return res.status(404).json({ error: "Etapa ne postoji" });
 
     // Lekcije koje ova etapa pokriva = sve lekcije u istom nivou sa
@@ -88,6 +126,7 @@ router.get("/medaljon/:slug", async (req, res) => {
       : [];
     const polozeno = pokusaji.find((p) => p.polozeno) ?? null;
 
+    const ids = await resolveEtapaPitanjaIds(medaljon);
     res.json({
       medaljon: {
         id: medaljon.id,
@@ -101,8 +140,8 @@ router.get("/medaljon/:slug", async (req, res) => {
         posAfterRedoslijed: medaljon.posAfterRedoslijed,
         pragProlazaPercent: medaljon.pragProlazaPercent,
         isGating: medaljon.isGating,
-        brojPitanja: Array.isArray(medaljon.kvizPitanjaIds) ? medaljon.kvizPitanjaIds.length : 0,
-        imaKviz: Array.isArray(medaljon.kvizPitanjaIds) && medaljon.kvizPitanjaIds.length > 0,
+        brojPitanja: ids.length,
+        imaKviz: ids.length > 0,
       },
       lekcije: lekcijeEtape,
       polozeno: polozeno
@@ -129,13 +168,9 @@ router.post("/medaljon/:slug/start", requireAuth, requireRole("ucenik"), async (
   try {
     const slug = String(req.params.slug);
     const userId = String(req.user?.userId ?? "");
-    const [medaljon] = await db
-      .select()
-      .from(medaljoniTable)
-      .where(eq(medaljoniTable.slug, slug))
-      .limit(1);
+    const medaljon = await findMedaljon(slug);
     if (!medaljon) return res.status(404).json({ error: "Etapa ne postoji" });
-    const ids = Array.isArray(medaljon.kvizPitanjaIds) ? medaljon.kvizPitanjaIds : [];
+    const ids = await resolveEtapaPitanjaIds(medaljon);
     if (ids.length === 0) {
       return res.status(400).json({ error: "Etapa nema konfigurisanih pitanja. Obavijesti muallima." });
     }
@@ -185,14 +220,10 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
       ? req.body.odgovori
       : [];
 
-    const [medaljon] = await db
-      .select()
-      .from(medaljoniTable)
-      .where(eq(medaljoniTable.slug, slug))
-      .limit(1);
+    const medaljon = await findMedaljon(slug);
     if (!medaljon) return res.status(404).json({ error: "Etapa ne postoji" });
 
-    const ids = Array.isArray(medaljon.kvizPitanjaIds) ? medaljon.kvizPitanjaIds : [];
+    const ids = await resolveEtapaPitanjaIds(medaljon);
     if (ids.length === 0) return res.status(400).json({ error: "Etapa nema pitanja" });
 
     // Server-side gating: isto pravilo kao na /start. Sprječava direktan POST /predaj.

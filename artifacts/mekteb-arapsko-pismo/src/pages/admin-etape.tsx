@@ -18,6 +18,7 @@ interface Etapa {
   ikona: string;
   boja: string;
   contentHtml: string;
+  kvizIds: number[] | null;
   kvizPitanjaIds: number[] | null;
   pragProlazaPercent: number;
   isGating: boolean;
@@ -172,9 +173,10 @@ function PitanjaPicker({
 }
 
 function KvizoviEtapaPicker({
-  nivo, token, selectedIds, onChange,
+  nivo, etapa, token, selectedIds, onChange,
 }: {
   nivo: number;
+  etapa?: number;
   token: string;
   selectedIds: number[];
   onChange: (ids: number[]) => void;
@@ -191,7 +193,7 @@ function KvizoviEtapaPicker({
         if (!cancelled) {
           setKvizovi(
             rows
-              .filter((kviz) => kviz.etapa != null)
+              .filter((kviz) => kviz.etapa != null && (etapa == null || kviz.etapa === etapa))
               .sort((a, b) => (a.etapa ?? 0) - (b.etapa ?? 0) || a.naslov.localeCompare(b.naslov)),
           );
         }
@@ -199,13 +201,15 @@ function KvizoviEtapaPicker({
       .catch(() => { if (!cancelled) setKvizovi([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [nivo, token]);
+  }, [nivo, etapa, token]);
 
   if (loading) return <div className="py-3 text-sm text-muted-foreground">{t("Učitavam etapne kvizove…")}</div>;
   if (kvizovi.length === 0) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-        {t("Nema kvizova označenih etapom za ovaj nivo. U editoru kviza prvo postavi Nivo i Etapu.")}
+        {etapa == null
+          ? t("Nema kvizova označenih etapom za ovaj nivo. U editoru kviza prvo postavi Nivo i Etapu.")
+          : t("Nema kvizova za ovu etapu. U editoru kviza prvo postavi isti Nivo i Etapu.")}
       </div>
     );
   }
@@ -302,6 +306,7 @@ export default function AdminEtapePage() {
     if (!token) return;
     try {
       await apiRequest("PUT", `/admin/etape/${e.id}`, {
+        kvizIds: e.kvizIds ?? [],
         kvizPitanjaIds: e.kvizPitanjaIds ?? [],
         pragProlazaPercent: e.pragProlazaPercent,
         isGating: e.isGating,
@@ -433,17 +438,18 @@ export default function AdminEtapePage() {
                 )}
                 {etape.map((e) => {
                   const ids = e.kvizPitanjaIds ?? [];
+                  const kvizIds = e.kvizIds ?? [];
                   return (
                     <div key={e.id} className="bg-white border border-emerald-100 rounded-xl p-4 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-bold text-emerald-900 truncate">{e.naziv}</div>
                         <div className="text-xs text-emerald-700/70 truncate">{e.opis}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {t("{n} pitanja", { n: String(ids.length) })} • {t("prag")} {e.pragProlazaPercent}% • {t("gating")} {e.isGating ? t("DA") : t("NE")} • {t("pos")} {e.posAfterRedoslijed}
+                          {t("{n} odabranih kvizova", { n: String(kvizIds.length) })} • {t("{n} dodatnih pitanja", { n: String(ids.length) })} • {t("prag")} {e.pragProlazaPercent}% • {t("gating")} {e.isGating ? t("DA") : t("NE")} • {t("pos")} {e.posAfterRedoslijed}
                         </div>
                       </div>
                       <button
-                        onClick={() => setEditEtapa({ ...e, kvizPitanjaIds: ids })}
+                        onClick={() => setEditEtapa({ ...e, kvizIds, kvizPitanjaIds: ids })}
                         className="flex items-center gap-1 px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg font-semibold text-sm hover:bg-emerald-100 whitespace-nowrap"
                         data-testid={`button-edit-etapa-${e.id}`}
                       >
@@ -528,7 +534,7 @@ export default function AdminEtapePage() {
       </div>
 
       {/* EDIT MODALI */}
-      {editEtapa && <EtapaModal etapa={editEtapa} onClose={() => setEditEtapa(null)} onSave={saveEtapa} token={token!} />}
+      {editEtapa && <EtapaModal etapa={editEtapa} etapaBroj={etape.findIndex((e) => e.id === editEtapa.id) + 1} onClose={() => setEditEtapa(null)} onSave={saveEtapa} token={token!} />}
       {editKrunisanje && <KrunisanjeModal krunisanje={editKrunisanje} onClose={() => setEditKrunisanje(null)} onSave={saveKrunisanje} token={token!} />}
       {(novaLekcija || editLekcija) && (
         <LekcijaModal
@@ -542,9 +548,10 @@ export default function AdminEtapePage() {
   );
 }
 
-function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: () => void; onSave: (e: Etapa) => void; token: string }) {
+function EtapaModal({ etapa, etapaBroj, onClose, onSave, token }: { etapa: Etapa; etapaBroj: number; onClose: () => void; onSave: (e: Etapa) => void; token: string }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<Etapa>(etapa);
+  const [selectedKvizIds, setSelectedKvizIds] = useState<number[]>(etapa.kvizIds ?? []);
   const [selectedIds, setSelectedIds] = useState<number[]>(etapa.kvizPitanjaIds ?? []);
   const [showRaw, setShowRaw] = useState(false);
   const [idsText, setIdsText] = useState((etapa.kvizPitanjaIds ?? []).join(", "));
@@ -557,6 +564,18 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
         </Field>
         <Field label={t("Opis")}>
           <input className="w-full px-3 py-2 border rounded-lg" value={form.opis} onChange={(e) => setForm({ ...form, opis: e.target.value })} />
+        </Field>
+        <Field label={t("Cijeli kvizovi za ovu etapu ({n} odabrano)", { n: String(selectedKvizIds.length) })}>
+          <KvizoviEtapaPicker
+            nivo={etapa.nivo}
+            etapa={etapaBroj}
+            token={token}
+            selectedIds={selectedKvizIds}
+            onChange={setSelectedKvizIds}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("Sva pitanja odabranih kvizova ulaze u završni ispit ove etape. Kviz može ostati privatan.")}
+          </p>
         </Field>
         <Field label={t("Pitanja iz banke — odaberi iz lekcija ove etape ({n} odabrano)", { n: String(selectedIds.length) })}>
           <PitanjaPicker
@@ -603,7 +622,7 @@ function EtapaModal({ etapa, onClose, onSave, token }: { etapa: Etapa; onClose: 
       </div>
       <div className="flex gap-2 justify-end mt-4">
         <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm">{t("Otkaži")}</button>
-        <button onClick={() => onSave({ ...form, kvizPitanjaIds: selectedIds })}
+        <button onClick={() => onSave({ ...form, kvizIds: selectedKvizIds, kvizPitanjaIds: selectedIds })}
           className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-sm flex items-center gap-1"
           data-testid="button-save-etapa">
           <Save className="w-4 h-4" /> {t("Sačuvaj")}

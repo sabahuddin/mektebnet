@@ -726,6 +726,7 @@ async function runResidualSchema() {
     // Proširenja medaljona (završni ispit etape) + nove tabele za polaganja,
     // krunisanja, krunske lekcije i student passage. Vidi schema/lessons.ts.
     await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS kviz_pitanja_ids jsonb NOT NULL DEFAULT '[]'::jsonb;`);
+    await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS kviz_ids jsonb NOT NULL DEFAULT '[]'::jsonb;`);
     await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS prag_prolaza_percent integer NOT NULL DEFAULT 70;`);
     await db.execute(sql`ALTER TABLE medaljoni ADD COLUMN IF NOT EXISTS is_gating boolean NOT NULL DEFAULT true;`);
     await db.execute(sql`
