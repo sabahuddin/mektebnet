@@ -470,8 +470,14 @@ router.get("/mekteb/muallimi", async (req, res) => {
 
     const lista = await Promise.all(profili.map(async (p) => {
       const grupe = await db.select({ id: grupeTable.id }).from(grupeTable).where(eq(grupeTable.muallimId, p.userId));
-      const ucenici = await db.select({ id: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
-        .where(and(eq(ucenikProfiliTable.muallimId, p.userId), eq(ucenikProfiliTable.isArchived, false)));
+      const ucenici = await db.execute(sql`
+        SELECT COUNT(DISTINCT up.user_id)::int AS count
+        FROM ucenik_profili up
+        LEFT JOIN grupe g ON g.id = up.grupa_id
+        WHERE (up.muallim_id = ${p.userId} OR g.muallim_id = ${p.userId})
+          AND COALESCE(up.is_archived, false) = false
+          AND (up.grupa_id IS NULL OR COALESCE(g.is_archived, false) = false)
+      `);
       const u = userMap.get(p.userId);
       return {
         userId: p.userId,
@@ -480,7 +486,7 @@ router.get("/mekteb/muallimi", async (req, res) => {
         isActive: u?.isActive ?? false,
         isGlavni: p.isGlavni ?? false,
         brojGrupa: grupe.length,
-        brojUcenika: ucenici.length,
+        brojUcenika: Number((ucenici.rows[0] as { count?: number } | undefined)?.count ?? 0),
       };
     }));
     lista.sort((a, b) => Number(b.isGlavni) - Number(a.isGlavni) || a.displayName.localeCompare(b.displayName));
@@ -1570,10 +1576,12 @@ router.get("/ucenici", async (req, res) => {
                    AND ru.status = 'approved'
                ) AS roditelj_povezan
         FROM ucenik_profili up
-        JOIN muallim_profili mp ON mp.user_id = up.muallim_id AND mp.mekteb_id = ${ctx.mektebId}
-        JOIN users u ON u.id = up.user_id
-        LEFT JOIN users mu ON mu.id = up.muallim_id
         LEFT JOIN grupe g ON g.id = up.grupa_id
+        JOIN muallim_profili mp
+          ON mp.user_id = COALESCE(g.muallim_id, up.muallim_id)
+         AND mp.mekteb_id = ${ctx.mektebId}
+        JOIN users u ON u.id = up.user_id
+        LEFT JOIN users mu ON mu.id = COALESCE(g.muallim_id, up.muallim_id)
         WHERE (up.is_archived = false OR up.is_archived IS NULL)
           AND (up.grupa_id IS NULL OR COALESCE(g.is_archived, false) = false)
           AND (up.grupa_id IS NULL OR COALESCE(g.is_active, true) = true)

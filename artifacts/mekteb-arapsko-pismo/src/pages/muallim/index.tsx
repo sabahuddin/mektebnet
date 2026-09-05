@@ -1392,10 +1392,12 @@ export default function MuallimPanel() {
 
   // Učitaj muallime + info kad glavni muallim otvori Profil.
   useEffect(() => {
-    if (!token || !mektebMeta.isGlavni || activeTab !== "profil") return;
-    apiRequest<MektebInfo>("GET", "/muallim/mekteb/info", undefined, token).then(setMektebInfo).catch(() => {});
+    if (!token || !mektebMeta.isGlavni || (activeTab !== "profil" && activeTab !== "ucenici") || selectedMuallimId !== null) return;
+    if (activeTab === "profil") {
+      apiRequest<MektebInfo>("GET", "/muallim/mekteb/info", undefined, token).then(setMektebInfo).catch(() => {});
+    }
     apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token).then(setMektebMuallimi).catch(() => setMektebMuallimi([]));
-  }, [token, activeTab, mektebMeta.isGlavni]);
+  }, [token, activeTab, mektebMeta.isGlavni, selectedMuallimId]);
 
   // Učitaj zbirnu statistiku kada je glavni muallim na mektebskom nivou
   // Statistike (drill-down po muallimima).
@@ -2013,10 +2015,13 @@ export default function MuallimPanel() {
                   </div>
                   {/* Filter po muallimu */}
                   {mektebMeta.isGlavni && !isMuallimPreview && (() => {
-                    const muallimOptions = Array.from(
-                      new Map(ucenici.filter(u => u.muallimId && u.muallimDisplayName).map(u => [u.muallimId, u.muallimDisplayName!]))
+                    const muallimOptions = (mektebMuallimi && mektebMuallimi.length > 0
+                      ? mektebMuallimi.map(m => [m.userId, m.displayName] as [number, string])
+                      : Array.from(
+                          new Map(ucenici.filter(u => u.muallimId && u.muallimDisplayName).map(u => [u.muallimId!, u.muallimDisplayName!]))
+                        )
                     ).sort((a, b) => a[1].localeCompare(b[1]));
-                    if (muallimOptions.length < 2) return null;
+                    if (muallimOptions.length === 0) return null;
                     return (
                       <select
                         value={uceniciMuallimFilter === "sve" ? "sve" : String(uceniciMuallimFilter)}
