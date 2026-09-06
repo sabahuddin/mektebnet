@@ -3,11 +3,11 @@ name: Kvizovi po etapama
 description: Pravilo za označavanje etapa kvizova i povezivanje cijelog kviza s medaljon-lekcijom.
 ---
 
-Etapa kviza je opcion broj od 1 do 7 unutar već izabranog nivoa. Prikaz je `{etapa}-{nivo}`; svaka etapa predstavlja naredni blok od 10 lekcija.
+Etapa kviza je opcioni broj unutar već izabranog nivoa. Prikaz je `{etapa}-{nivo}`; svaka etapa predstavlja naredni blok od 10 lekcija.
 
-**Why:** Nivo i oblast nisu dovoljni za zbirne kvizove poslije svakih 10 lekcija, a oblast mora ostati opciona jer etapni kviz može miješati više oblasti.
+**Why:** Nivo i oblast nisu dovoljni za zbirne kvizove poslije svakih 10 lekcija, a nivoi nemaju nužno isti broj etapa (Nivo 3 ima 10).
 
-**How to apply:** Za Nivo 1 prikazuj 1-1 do 7-1, za Nivo 2 prikazuj 1-2 do 7-2 itd. Prazna etapa i prazna oblast su dozvoljene.
+**How to apply:** Gornju granicu uzimaj iz stvarno konfiguriranih medaljona/etapa izabranog nivoa, nikad iz hardkodirane konstante. Prazna etapa i prazna oblast su dozvoljene.
 
 Cijeli postojeći kviz dodjeljuje se konkretnoj Etapi kroz konfiguraciju medaljona; njegova bankovna pitanja ulaze u server-side etapni ispit na medaljon-lekciji.
 

@@ -167,6 +167,24 @@ export default function AdminKvizEditorPage() {
   const [saving, setSaving] = useState(false);
   const [lekcije, setLekcije] = useState<IlmihalLekcija[]>([]);
   const [allKvizovi, setAllKvizovi] = useState<Kviz[]>([]);
+  const [brojEtapa, setBrojEtapa] = useState(6);
+
+  useEffect(() => {
+    const nivo = meta.nivo;
+    if (!token || !nivo || nivo < 1 || nivo > 3) {
+      setBrojEtapa(0);
+      return;
+    }
+    let cancelled = false;
+    apiRequest<{ etape: Array<{ id: number }> }>("GET", `/admin/etape/nivo/${nivo}`, undefined, token)
+      .then(({ etape }) => {
+        if (!cancelled) setBrojEtapa(etape.length);
+      })
+      .catch(() => {
+        if (!cancelled) setBrojEtapa(nivo === 3 ? 10 : nivo === 2 ? 7 : 6);
+      });
+    return () => { cancelled = true; };
+  }, [meta.nivo, token]);
 
   // Add-from-bank modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -376,7 +394,7 @@ export default function AdminKvizEditorPage() {
                 className="w-full px-3 py-2 border border-border rounded-xl text-base bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
               >
                 <option value="">{t("— bez etape —")}</option>
-                {Array.from({ length: 7 }, (_, i) => i + 1).map(etapa => (
+                {Array.from({ length: brojEtapa }, (_, i) => i + 1).map(etapa => (
                   <option key={etapa} value={etapa}>
                     {etapa}-{meta.nivo ?? "?"} · {((etapa - 1) * 10) + 1}–{etapa * 10}
                   </option>
