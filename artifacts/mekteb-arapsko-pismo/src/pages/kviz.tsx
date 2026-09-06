@@ -971,7 +971,7 @@ export default function KvizPage() {
           previousHasanat?: number;
           streakDays?: number;
           streakIncreased?: boolean;
-          newBadges?: { id: string; naziv: string; opis: string; ikona: string }[];
+          newBadges?: { id: string; naziv: string; opis: string; ikona: string; hasanatReward?: number }[];
           isEtapa?: boolean;
           polozeno?: boolean;
           pragProlazaPercent?: number;
@@ -1019,7 +1019,7 @@ export default function KvizPage() {
               const first = newBadges[0];
               toast({
                 title: `${t("🎉 Osvojio si bedž!")}${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
-                description: `${first.ikona} ${first.naziv} — ${first.opis}`,
+                description: `${first.ikona} ${first.naziv} — ${first.opis} · +${newBadges.reduce((sum, badge) => sum + (badge.hasanatReward ?? 50), 0)} ${t("kapi meda")} 🍯`,
               });
             }, 900);
           }

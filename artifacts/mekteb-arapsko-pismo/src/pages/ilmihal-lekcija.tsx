@@ -3244,7 +3244,7 @@ export default function IlmihalLekcijaPage() {
     // poziv na registraciju (poseban učenički nalog) umjesto tihog no-opa.
     if (isGuestLike) { promptRegister(); return; }
     try {
-      const resp = await apiRequest<{ progressDelta?: { newCompletion: boolean; streakDays: number; totalHasanat: number; previousHasanat?: number; previousStreakDays?: number; hasanatGained?: number; streakIncreased?: boolean; novelyEarnedBadges?: string[]; newBadges?: { id: string; naziv: string; opis: string; ikona: string }[] } }>(
+      const resp = await apiRequest<{ progressDelta?: { newCompletion: boolean; streakDays: number; totalHasanat: number; previousHasanat?: number; previousStreakDays?: number; hasanatGained?: number; streakIncreased?: boolean; novelyEarnedBadges?: string[]; newBadges?: { id: string; naziv: string; opis: string; ikona: string; hasanatReward?: number }[] } }>(
         "POST", "/content/napredak", {
           contentType: "ilmihal",
           contentId: lekcija.id,
@@ -3302,7 +3302,7 @@ export default function IlmihalLekcijaPage() {
             const first = newBadges[0];
             toast({
               title: `${t("🎉 Osvojio si bedž!")}${newBadges.length > 1 ? ` (+${newBadges.length - 1})` : ""}`,
-              description: `${first.ikona} ${first.naziv} — ${first.opis}`,
+              description: `${first.ikona} ${first.naziv} — ${first.opis} · +${newBadges.reduce((sum, badge) => sum + (badge.hasanatReward ?? 50), 0)} ${t("kapi meda")} 🍯`,
             });
             // Drugi konfeti za bedž — preskoči ako korisnik preferira reduced motion
             if (!prefersReducedMotion()) {

@@ -45,6 +45,13 @@ interface ResultResponse {
   pokusajBr: number;
   hasanatGained?: number;
   totalHasanat?: number;
+  newBadges?: Array<{
+    id: string;
+    naziv: string;
+    opis: string;
+    ikona: string;
+    hasanatReward: number;
+  }>;
 }
 
 export function EtapaQuizCard({ medaljonLessonSlug }: { medaljonLessonSlug: string }) {
@@ -118,6 +125,15 @@ export function EtapaQuizCard({ medaljonLessonSlug }: { medaljonLessonSlug: stri
       );
       setRezultat(data);
       setPitanja([]);
+      if (data.newBadges?.length) {
+        const badgeReward = data.newBadges.reduce((sum, badge) => sum + badge.hasanatReward, 0);
+        toast({
+          title: data.newBadges.length === 1
+            ? t("🎉 Osvojio si bedž!")
+            : t("🎉 Osvojio si nove bedževe!"),
+          description: `${data.newBadges.map((badge) => `${badge.ikona} ${badge.naziv}`).join(", ")} · +${badgeReward} ${t("kapi meda")} 🍯`,
+        });
+      }
       if (data.polozeno) {
         setMeta((current) => current ? {
           ...current,

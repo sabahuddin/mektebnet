@@ -69,6 +69,12 @@ export default function KrunisanjeNivoPage() {
     brojTacnih: number;
     brojPitanja: number;
     hasanatGained?: number;
+    newBadges?: Array<{
+      id: string;
+      naziv: string;
+      ikona: string;
+      hasanatReward: number;
+    }>;
   } | null>(null);
 
   useEffect(() => {
@@ -130,6 +136,12 @@ export default function KrunisanjeNivoPage() {
         brojTacnih: number;
         brojPitanja: number;
         hasanatGained?: number;
+        newBadges?: Array<{
+          id: string;
+          naziv: string;
+          ikona: string;
+          hasanatReward: number;
+        }>;
       }>(
         "POST",
         `/krunisanja/${krunisanje.id}/predaj`,
@@ -137,6 +149,15 @@ export default function KrunisanjeNivoPage() {
         token,
       );
       setRezultat(res);
+      if (res.newBadges?.length) {
+        const badgeReward = res.newBadges.reduce((sum, badge) => sum + badge.hasanatReward, 0);
+        toast({
+          title: res.newBadges.length === 1
+            ? t("🎉 Osvojio si bedž!")
+            : t("🎉 Osvojio si nove bedževe!"),
+          description: `${res.newBadges.map((badge) => `${badge.ikona} ${badge.naziv}`).join(", ")} · +${badgeReward} ${t("kapi meda")} 🍯`,
+        });
+      }
       if (res.polozeno) {
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
         toast({ title: t("Bravo!"), description: t("Krunisanje nivoa {nivo} položeno! {procenat}%", { nivo: String(nivo), procenat: String(res.procenat) }) });

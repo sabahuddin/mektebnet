@@ -123,7 +123,8 @@ test("query and body studentId cannot read or write another student's progress",
   assert.equal(saved.status, 200);
   const savedBody = await saved.json() as { studentId: string; totalHasanat: number };
   assert.equal(savedBody.studentId, String(prviUcenikId));
-  assert.equal(savedBody.totalHasanat, 30);
+  // 30 za prvu lekciju + 50 za prvi osvojeni bedž.
+  assert.equal(savedBody.totalHasanat, 80);
 
   const otherProgress = await db
     .select()
@@ -153,7 +154,9 @@ test("parallel repeats of one lesson award hasanat only once", async () => {
     .from(studentProgressTable)
     .where(eq(studentProgressTable.studentId, String(prviUcenikId)))
     .limit(1);
-  assert.equal(progress[0]?.totalHasanat, 60);
+  // Prva lekcija: 30 + prvi bedž 50. Druga lekcija: 30 + bedž za 100 kapi 50.
+  // Paralelni ponovljeni pozivi druge lekcije ne smiju dodati ništa više.
+  assert.equal(progress[0]?.totalHasanat, 160);
   assert.equal(
     (progress[0]?.completedLessons as number[]).filter((id) => id === LESSON_ID + 1).length,
     1,

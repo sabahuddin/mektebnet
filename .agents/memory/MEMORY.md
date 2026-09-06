@@ -56,3 +56,4 @@
 - [Kvizovi po etapama](kvizovi-po-etapama.md) — etapa je broj 1–7 unutar nivoa; cijeli interaktivni kviz se povezuje s medaljon-lekcijom, ne pretvara u mini-kviz.
 - [Lekcije samo za muallime i progresija](lekcije-muallimi-progresija.md) — lekcija skrivena učenicima ne smije ostati obavezna za otključavanje, etapu, medaljon ili krunisanje.
 - [Auth hidratacija prije redirecta](auth-hidratacija-redirect.md) — zaštićene stranice moraju čekati `useAuth().isLoading`; puni reload inače nakratko tretira admina kao gosta.
+- [Nagrade za etape, bedževe i krunisanje](nagrade-za-etape-bedzeve-i-krunisanje.md) — Etape daju 80/90/100, Krunisanje 1000, a svaki novi bedž 50 kapi; sve samo prvi put.

@@ -1107,8 +1107,16 @@ async function updateStudentProgressForLesson(userId: number, lessonId: number, 
   }
 
   const novelyEarned = await evaluateAndPersistBadges(userId);
+  if (novelyEarned.length > 0) {
+    const [refreshed] = await db.select({ totalHasanat: studentProgressTable.totalHasanat })
+      .from(studentProgressTable)
+      .where(eq(studentProgressTable.studentId, studentIdStr))
+      .limit(1);
+    if (refreshed) totalHasanat = refreshed.totalHasanat;
+  }
   const novelyEarnedBadges = novelyEarned.map(b => b.id);
-  const hasanatGained = newCompletion ? hasanatEarned : 0;
+  const badgeHasanatGained = novelyEarned.reduce((sum, badge) => sum + badge.hasanatReward, 0);
+  const hasanatGained = (newCompletion ? hasanatEarned : 0) + badgeHasanatGained;
   const streakIncreased = streakDays > previousStreakDays;
 
   return {
@@ -1676,6 +1684,13 @@ router.post("/kviz-rezultat", requireAuth, async (req, res) => {
       }
 
       newBadges = await evaluateAndPersistBadges(userId);
+      if (newBadges.length > 0) {
+        const [refreshed] = await db.select({ totalHasanat: studentProgressTable.totalHasanat })
+          .from(studentProgressTable)
+          .where(eq(studentProgressTable.studentId, studentIdStr))
+          .limit(1);
+        if (refreshed) totalHasanat = refreshed.totalHasanat;
+      }
     } catch (badgeErr) {
       // Bedž evaluacija / streak update ne smije srušiti glavni odgovor
     }
@@ -1692,7 +1707,7 @@ router.post("/kviz-rezultat", requireAuth, async (req, res) => {
       pragProlazaPercent: isEtapa ? pragProlazaPercent : undefined,
       cooldownUntil,
       hasanatEarned: bodovi,
-      hasanatGained: bodovi,
+      hasanatGained: bodovi + newBadges.reduce((sum, badge) => sum + badge.hasanatReward, 0),
       totalHasanat,
       previousHasanat,
       streakDays,

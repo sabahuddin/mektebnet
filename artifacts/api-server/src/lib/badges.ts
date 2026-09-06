@@ -424,6 +424,7 @@ export async function buildProgressSnapshot(userId: number, overrides?: { totalH
 
 export interface NovelyEarnedBadgeInfo extends BadgeMeta {
   earnedAt: string;
+  hasanatReward: number;
 }
 
 /**
@@ -505,7 +506,7 @@ export async function evaluateAndPersistBadges(userId: number, overrides?: { tot
     .map(id => {
       const meta = BADGE_CATALOG[id];
       if (!meta) return null;
-      return { ...meta, earnedAt: now };
+      return { ...meta, earnedAt: now, hasanatReward: BADGE_REWARD };
     })
     .filter((b): b is NovelyEarnedBadgeInfo => b !== null);
 

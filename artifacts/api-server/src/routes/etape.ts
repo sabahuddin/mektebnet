@@ -15,8 +15,9 @@ import { JWT_SECRET } from "../lib/jwt-secret.js";
 import {
   addHasanatReward,
   etapaHasanatReward,
-  ETAPA_MIN_PASS_PERCENT,
+  etapaPassThreshold,
 } from "../lib/hasanat-rewards.js";
+import { evaluateAndPersistBadges } from "../lib/badges.js";
 
 const router = Router();
 
@@ -143,7 +144,7 @@ router.get("/medaljon/:slug", async (req, res) => {
         boja: medaljon.boja,
         contentHtml: medaljon.contentHtml,
         posAfterRedoslijed: medaljon.posAfterRedoslijed,
-        pragProlazaPercent: medaljon.pragProlazaPercent,
+        pragProlazaPercent: etapaPassThreshold(medaljon.pragProlazaPercent),
         isGating: medaljon.isGating,
         brojPitanja: ids.length,
         imaKviz: ids.length > 0,
@@ -198,7 +199,7 @@ router.post("/medaljon/:slug/start", requireAuth, requireRole("ucenik"), async (
     res.json({
       medaljonId: medaljon.id,
       naziv: medaljon.naziv,
-      pragProlazaPercent: medaljon.pragProlazaPercent,
+      pragProlazaPercent: etapaPassThreshold(medaljon.pragProlazaPercent),
       pitanja: pitanja.map((p) => ({
         id: p.id,
         pitanje: p.pitanje,
@@ -255,10 +256,7 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
     }
     const ukupno = ids.length;
     const procenat = ukupno > 0 ? Math.round((tacni / ukupno) * 100) : 0;
-    const pragProlazaPercent = Math.max(
-      medaljon.pragProlazaPercent ?? ETAPA_MIN_PASS_PERCENT,
-      ETAPA_MIN_PASS_PERCENT,
-    );
+    const pragProlazaPercent = etapaPassThreshold(medaljon.pragProlazaPercent);
     const polozeno = procenat >= pragProlazaPercent;
 
     const [previousPass] = await db
@@ -308,9 +306,20 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
     const hasanatGained = polozeno && !previousPass
       ? etapaHasanatReward(procenat)
       : 0;
-    const totalHasanat = hasanatGained > 0
+    let totalHasanat = hasanatGained > 0
       ? await addHasanatReward(userId, hasanatGained)
       : undefined;
+    const newBadges = hasanatGained > 0
+      ? await evaluateAndPersistBadges(Number(userId))
+      : [];
+    if (newBadges.length > 0) {
+      const [refreshed] = await db
+        .select({ totalHasanat: studentProgressTable.totalHasanat })
+        .from(studentProgressTable)
+        .where(eq(studentProgressTable.studentId, userId))
+        .limit(1);
+      if (refreshed) totalHasanat = refreshed.totalHasanat;
+    }
 
     res.json({
       polozeno,
@@ -321,6 +330,7 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
       pokusajBr,
       medaljonClaimed,
       hasanatGained,
+      newBadges,
       ...(totalHasanat === undefined ? {} : { totalHasanat }),
     });
   } catch (err) {

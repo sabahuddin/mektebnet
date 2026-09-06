@@ -16,6 +16,7 @@ import { eq, and, inArray, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 import { addHasanatReward, KRUNISANJE_REWARD } from "../lib/hasanat-rewards.js";
+import { evaluateAndPersistBadges } from "../lib/badges.js";
 
 const router = Router();
 
@@ -228,6 +229,7 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
 
     let prvoPolaganje = false;
     let totalHasanat: number | undefined;
+    let newBadges: Awaited<ReturnType<typeof evaluateAndPersistBadges>> = [];
     if (polozeno) {
       const inserted = await db
         .insert(studentKrunisanjaTable)
@@ -243,6 +245,15 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
       prvoPolaganje = inserted.length > 0;
       if (prvoPolaganje) {
         totalHasanat = await addHasanatReward(userId, KRUNISANJE_REWARD);
+        newBadges = await evaluateAndPersistBadges(Number(userId));
+        if (newBadges.length > 0) {
+          const [refreshed] = await db
+            .select({ totalHasanat: studentProgressTable.totalHasanat })
+            .from(studentProgressTable)
+            .where(eq(studentProgressTable.studentId, userId))
+            .limit(1);
+          if (refreshed) totalHasanat = refreshed.totalHasanat;
+        }
       }
     }
 
@@ -254,6 +265,7 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
       pragProlazaPercent: krunisanje.pragProlazaPercent,
       prvoPolaganje,
       hasanatGained: prvoPolaganje ? KRUNISANJE_REWARD : 0,
+      newBadges,
       ...(totalHasanat === undefined ? {} : { totalHasanat }),
     });
   } catch (err) {

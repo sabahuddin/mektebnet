@@ -9,6 +9,10 @@ export const ETAPA_REWARD_PERCENT_100 = 100;
 export const KRUNISANJE_REWARD = 1000;
 export const BADGE_REWARD = 50;
 
+export function etapaPassThreshold(configuredPercent?: number | null): number {
+  return Math.max(configuredPercent ?? ETAPA_MIN_PASS_PERCENT, ETAPA_MIN_PASS_PERCENT);
+}
+
 export function etapaHasanatReward(procenat: number): number {
   if (procenat >= 100) return ETAPA_REWARD_PERCENT_100;
   if (procenat >= 90) return ETAPA_REWARD_PERCENT_90;
