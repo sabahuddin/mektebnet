@@ -801,8 +801,8 @@ async function runResidualSchema() {
       UPDATE krunisanja SET naslov='Hatma košnica'
        WHERE nivo=3 AND naslov IN ('Krunisanje Košnice mudrosti','Krunisanje Hatma košnice');
     `);
-    // Medaljoni za nivo 2 i 3 — 7 etapa po nivou (pos 10..70), bojama uparenim
-    // s temom košnice. PNG ikone su već u public/medaljoni/nivo{2,3}-{10..70}-lekcija.png.
+    // Medaljoni za nivo 2 (7 etapa) i nivo 3 (10 etapa), po jedna etapa na
+    // svakih 10 lekcija. Nivo 3 ima lekcije do redoslijeda 100.
     await db.execute(sql`
       INSERT INTO medaljoni (nivo, slug, naziv, opis, pos_after_redoslijed, ikona, boja)
       VALUES
@@ -819,7 +819,10 @@ async function runResidualSchema() {
         (3, 'm3-4-astronom',   'Astronom polja',        '40 lekcija Nivoa 3 — poznaješ zvijezde i polja.', 40, 'medal', 'violet'),
         (3, 'm3-5-hafiz',      'Hafiz nektara',         '50 lekcija Nivoa 3 — pamtiš sve riznice znanja.', 50, 'medal', 'orange'),
         (3, 'm3-6-mudrac',     'Mudrac saća',           '60 lekcija Nivoa 3 — mudrac među pčelama.',     60, 'medal', 'yellow'),
-        (3, 'm3-7-kralj',      'Kralj Košnice mudrosti','70 lekcija Nivoa 3 — kralj Košnice mudrosti!',  70, 'medal', 'violet')
+        (3, 'm3-7-kralj',      'Kralj Košnice mudrosti','70 lekcija Nivoa 3 — kralj Košnice mudrosti!',  70, 'medal', 'violet'),
+        (3, 'm3-8-etapa',      'Osma etapa',             '80 lekcija Nivoa 3 — osma etapa znanja.',       80, 'medal', 'violet'),
+        (3, 'm3-9-etapa',      'Deveta etapa',           '90 lekcija Nivoa 3 — deveta etapa znanja.',     90, 'medal', 'violet'),
+        (3, 'm3-10-etapa',     'Deseta etapa',           '100 lekcija Nivoa 3 — završna etapa znanja.',  100, 'medal', 'violet')
       ON CONFLICT (slug) DO NOTHING;
     `);
     // Nivo 1 — 6 novih m1-* medaljona (pos 10..60) sa PNG ikonama.
