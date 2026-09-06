@@ -17,7 +17,8 @@ import {
   porukeTable,
   usersTable,
 } from "@workspace/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
+import { BADGE_REWARD } from "./hasanat-rewards.js";
 
 export interface BadgeMeta {
   id: string;
@@ -491,7 +492,11 @@ export async function evaluateAndPersistBadges(userId: number, overrides?: { tot
 
   if (novelyEarned.length > 0) {
     await db.update(studentProgressTable)
-      .set({ badges: merged, updatedAt: new Date() })
+      .set({
+        badges: merged,
+        totalHasanat: sql`${studentProgressTable.totalHasanat} + ${novelyEarned.length * BADGE_REWARD}`,
+        updatedAt: new Date(),
+      })
       .where(eq(studentProgressTable.studentId, studentIdStr));
   }
 

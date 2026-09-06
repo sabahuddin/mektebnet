@@ -15,6 +15,7 @@ import {
 import { eq, and, inArray, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
+import { addHasanatReward, KRUNISANJE_REWARD } from "../lib/hasanat-rewards.js";
 
 const router = Router();
 
@@ -226,6 +227,7 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
     const polozeno = procenat >= (krunisanje.pragProlazaPercent ?? 70);
 
     let prvoPolaganje = false;
+    let totalHasanat: number | undefined;
     if (polozeno) {
       const inserted = await db
         .insert(studentKrunisanjaTable)
@@ -239,6 +241,9 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
         .onConflictDoNothing()
         .returning();
       prvoPolaganje = inserted.length > 0;
+      if (prvoPolaganje) {
+        totalHasanat = await addHasanatReward(userId, KRUNISANJE_REWARD);
+      }
     }
 
     res.json({
@@ -248,6 +253,8 @@ router.post("/:id/predaj", requireAuth, requireRole("ucenik"), async (req, res) 
       brojPitanja: ukupno,
       pragProlazaPercent: krunisanje.pragProlazaPercent,
       prvoPolaganje,
+      hasanatGained: prvoPolaganje ? KRUNISANJE_REWARD : 0,
+      ...(totalHasanat === undefined ? {} : { totalHasanat }),
     });
   } catch (err) {
     console.error("[krunisanja/predaj] error", err);

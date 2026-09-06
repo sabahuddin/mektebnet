@@ -12,6 +12,11 @@ import {
 import { eq, and, inArray, desc, lte, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
+import {
+  addHasanatReward,
+  etapaHasanatReward,
+  ETAPA_MIN_PASS_PERCENT,
+} from "../lib/hasanat-rewards.js";
 
 const router = Router();
 
@@ -250,7 +255,21 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
     }
     const ukupno = ids.length;
     const procenat = ukupno > 0 ? Math.round((tacni / ukupno) * 100) : 0;
-    const polozeno = procenat >= (medaljon.pragProlazaPercent ?? 70);
+    const pragProlazaPercent = Math.max(
+      medaljon.pragProlazaPercent ?? ETAPA_MIN_PASS_PERCENT,
+      ETAPA_MIN_PASS_PERCENT,
+    );
+    const polozeno = procenat >= pragProlazaPercent;
+
+    const [previousPass] = await db
+      .select({ id: etapaPolaganjaTable.id })
+      .from(etapaPolaganjaTable)
+      .where(and(
+        eq(etapaPolaganjaTable.studentId, userId),
+        eq(etapaPolaganjaTable.medaljonId, medaljon.id),
+        eq(etapaPolaganjaTable.polozeno, true),
+      ))
+      .limit(1);
 
     // Sljedeći broj pokušaja
     const [last] = await db
@@ -286,14 +305,23 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
       medaljonClaimed = inserted.length > 0;
     }
 
+    const hasanatGained = polozeno && !previousPass
+      ? etapaHasanatReward(procenat)
+      : 0;
+    const totalHasanat = hasanatGained > 0
+      ? await addHasanatReward(userId, hasanatGained)
+      : undefined;
+
     res.json({
       polozeno,
       procenat,
       brojTacnih: tacni,
       brojPitanja: ukupno,
-      pragProlazaPercent: medaljon.pragProlazaPercent,
+      pragProlazaPercent,
       pokusajBr,
       medaljonClaimed,
+      hasanatGained,
+      ...(totalHasanat === undefined ? {} : { totalHasanat }),
     });
   } catch (err) {
     console.error("[etape/predaj] error", err);

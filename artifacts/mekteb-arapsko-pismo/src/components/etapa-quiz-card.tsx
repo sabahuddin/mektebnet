@@ -43,6 +43,8 @@ interface ResultResponse {
   brojPitanja: number;
   pragProlazaPercent: number;
   pokusajBr: number;
+  hasanatGained?: number;
+  totalHasanat?: number;
 }
 
 export function EtapaQuizCard({ medaljonLessonSlug }: { medaljonLessonSlug: string }) {
@@ -161,7 +163,17 @@ export function EtapaQuizCard({ medaljonLessonSlug }: { medaljonLessonSlug: stri
               : "border-red-300 bg-red-50 text-red-900"
           }`}>
             {(rezultat?.polozeno ?? !!meta.polozeno)
-              ? <><CheckCircle2 className="mr-2 inline h-5 w-5" />{t("Etapa je položena!")} {(rezultat ?? meta.polozeno)?.procenat}%</>
+              ? (
+                <>
+                  <CheckCircle2 className="mr-2 inline h-5 w-5" />
+                  {t("Etapa je položena!")} {(rezultat ?? meta.polozeno)?.procenat}%
+                  {rezultat && rezultat.hasanatGained ? (
+                    <span className="ml-2 text-amber-700">
+                      +{rezultat.hasanatGained} {t("kapi meda")} 🍯
+                    </span>
+                  ) : null}
+                </>
+              )
               : <>{t("Etapa nije položena")} — {(rezultat ?? meta.polozeno)?.procenat}%</>}
           </div>
         )}

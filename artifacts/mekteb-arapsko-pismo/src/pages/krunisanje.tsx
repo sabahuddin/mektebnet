@@ -63,7 +63,13 @@ export default function KrunisanjeNivoPage() {
   const [pitanja, setPitanja] = useState<Pitanje[]>([]);
   const [odgovori, setOdgovori] = useState<Record<number, number>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [rezultat, setRezultat] = useState<{ polozeno: boolean; procenat: number; brojTacnih: number; brojPitanja: number } | null>(null);
+  const [rezultat, setRezultat] = useState<{
+    polozeno: boolean;
+    procenat: number;
+    brojTacnih: number;
+    brojPitanja: number;
+    hasanatGained?: number;
+  } | null>(null);
 
   useEffect(() => {
     void load();
@@ -118,7 +124,13 @@ export default function KrunisanjeNivoPage() {
           optionIndex: idx,
         })),
       };
-      const res = await apiRequest<{ polozeno: boolean; procenat: number; brojTacnih: number; brojPitanja: number }>(
+      const res = await apiRequest<{
+        polozeno: boolean;
+        procenat: number;
+        brojTacnih: number;
+        brojPitanja: number;
+        hasanatGained?: number;
+      }>(
         "POST",
         `/krunisanja/${krunisanje.id}/predaj`,
         payload,
@@ -266,7 +278,14 @@ export default function KrunisanjeNivoPage() {
               {rezultat && (
                 <div className={`rounded-xl p-4 font-bold text-center ${rezultat.polozeno ? "bg-green-100 text-green-900 border-2 border-green-400" : "bg-red-50 text-red-900 border-2 border-red-300"}`}>
                   {rezultat.polozeno ? (
-                    <><CheckCircle2 className="w-5 h-5 inline mr-2" /> {t("Položeno!")} {rezultat.procenat}% ({rezultat.brojTacnih}/{rezultat.brojPitanja})</>
+                    <>
+                      <CheckCircle2 className="w-5 h-5 inline mr-2" /> {t("Položeno!")} {rezultat.procenat}% ({rezultat.brojTacnih}/{rezultat.brojPitanja})
+                      {rezultat.hasanatGained ? (
+                        <span className="ml-2 text-amber-700">
+                          +{rezultat.hasanatGained} {t("kapi meda")} 🍯
+                        </span>
+                      ) : null}
+                    </>
                   ) : (
                     <><Lock className="w-5 h-5 inline mr-2" /> {t("Nije položeno:")} {rezultat.procenat}%. {t("Potrebno {prag}%.", { prag: String(krunisanje.pragProlazaPercent) })}</>
                   )}
