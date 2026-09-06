@@ -3431,6 +3431,22 @@ export default function IlmihalLekcijaPage() {
     // koje jednim klikom kreira praznu lekciju sa tim slugom.
     const medMatch = slug?.match(/^medaljon-nivo(\d+)-(\d+)$/);
     const isAdminUser = user?.role === "admin";
+    if (medMatch) {
+      return (
+        <Layout>
+          <div className="mx-auto max-w-3xl px-4 py-8">
+            <Button
+              className="mb-5"
+              variant="outline"
+              onClick={() => setLocation(`/nivo${medMatch[1]}-mapa`)}
+            >
+              {t("Nazad na mapu")}
+            </Button>
+            <EtapaQuizCard medaljonLessonSlug={slug!} />
+          </div>
+        </Layout>
+      );
+    }
     return (
       <Layout>
         <div className="text-center py-20 max-w-md mx-auto px-4">

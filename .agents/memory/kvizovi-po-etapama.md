@@ -26,3 +26,9 @@ Krunski kviz je kviz sa postavljenim nivoom i praznom etapom (`etapa=null`); kru
 **Why:** Krunisanje je zaseban završni ispit nivoa. Automatsko uključivanje svih etapnih kvizova miješa dvije različite provjere i onemogućava adminu da odabere namjenske završne kvizove.
 
 **How to apply:** U krunskom pickeru prikaži samo kvizove istog nivoa bez etape. Backend mora odbiti kviz drugog nivoa i svaki kviz kojem je etapa postavljena.
+
+Medaljon/Etapa se otvara na vlastitoj `/medaljon/{slug}` stranici, ne kao sintetička Ilmihal lekcija `medaljon-nivo...`.
+
+**Why:** Sintetičke medaljon-lekcije nisu postojale u bazi, pa je otključan medaljon učeniku prikazivao „Lekcija nije pronađena“ umjesto ispita.
+
+**How to apply:** Mapa linkuje stvarni slug medaljona; ekran učitava `/etape/medaljon/:slug`, prikazuje lekcije etape i `EtapaQuizCard`.
