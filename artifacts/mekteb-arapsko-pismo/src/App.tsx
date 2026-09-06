@@ -135,6 +135,16 @@ function SufaraAdminRoute() {
   return user?.role === "admin" ? <ArapskoPismoPage /> : <NotFound />;
 }
 
+function KvizoviAdminRoute() {
+  const { user } = useAuth();
+  return user?.role === "admin" ? <KvizoviPage /> : <NotFound />;
+}
+
+function KvizAdminRoute() {
+  const { user } = useAuth();
+  return user?.role === "admin" ? <KvizPage /> : <NotFound />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -176,8 +186,8 @@ function Router() {
       <Route path="/ilmihal/:slug" component={IlmihalLekcijaPage} />
 
       {/* Kvizovi */}
-      <Route path="/kvizovi" component={KvizoviPage} />
-      <Route path="/kvizovi/:slug" component={KvizPage} />
+      <Route path="/kvizovi" component={KvizoviAdminRoute} />
+      <Route path="/kvizovi/:slug" component={KvizAdminRoute} />
 
       {/* Čitaonica */}
       <Route path="/citaonica" component={CitaonicaPage} />

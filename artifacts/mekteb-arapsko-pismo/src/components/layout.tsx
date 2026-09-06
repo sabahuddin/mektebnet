@@ -179,7 +179,9 @@ export function Layout({ children }: LayoutProps) {
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
     ...(user?.role === "admin" ? [{ href: "/kuran", label: t("Kur'an"), icon: BookA } as NavLink] : []),
-    { href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle },
+    ...(user?.role === "admin"
+      ? [{ href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle } as NavLink]
+      : []),
     { href: "/citaonica", label: t("nav.citaonica"), icon: Library },
     { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
     { href: "/vodic", label: "Vodič", icon: BookMarked },
@@ -477,7 +479,9 @@ export function Layout({ children }: LayoutProps) {
                 {user?.role === "admin" && (
                   <li><Link href="/kuran" className="text-muted-foreground hover:text-primary transition-colors">{t("Kur'an")}</Link></li>
                 )}
-                <li><Link href="/kvizovi" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.kvizovi")}</Link></li>
+                {user?.role === "admin" && (
+                  <li><Link href="/kvizovi" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.kvizovi")}</Link></li>
+                )}
                 <li><Link href="/citaonica" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.citaonica")}</Link></li>
                 <li><Link href="/igrice" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.igrice")}</Link></li>
                 <li><Link href="/vodic" className="text-muted-foreground hover:text-primary transition-colors">{t("Vodič")}</Link></li>
