@@ -56,7 +56,7 @@ export function CookieConsent() {
         role="region"
         aria-label={t("Obavijest o kolačićima")}
         aria-live="polite"
-        className="pointer-events-auto mx-auto max-w-2xl bg-white border-2 border-primary/30 rounded-2xl shadow-2xl shadow-primary/10 p-4 sm:p-5 animate-in slide-in-from-bottom-4 duration-300"
+        className="cookie-consent-card pointer-events-auto mx-auto max-w-2xl overflow-y-auto bg-white border-2 border-primary/30 rounded-2xl shadow-2xl shadow-primary/10 p-3 sm:p-4 lg:p-5 animate-in slide-in-from-bottom-4 duration-300"
       >
         <div className="flex items-start gap-3 sm:gap-4">
           <div className="w-11 h-11 shrink-0 bg-primary/10 text-primary rounded-xl flex items-center justify-center">

@@ -212,6 +212,10 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Vite 7 po defaultu cilja novije Safari verzije. Transpiliraj i za
+    // starije iPad uređaje koji su ostali na iPadOS 13.
+    target: ["es2018", "safari13"],
+    cssTarget: "safari13",
   },
   server: {
     port,

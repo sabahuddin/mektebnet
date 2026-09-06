@@ -123,7 +123,9 @@ export async function initOneSignal(): Promise<void> {
         allowLocalhostAsSecureOrigin: true,
         // App je PWA — VitePWA-in workbox SW drži scope "/". OneSignal worker
         // MORA na poseban scope, inače se dva SW-a pregaze i subscribe pada.
-        serviceWorkerPath: "OneSignalSDKWorker.js",
+        // Apsolutna putanja je obavezna: relativna putanja se na rutama poput
+        // /postavke u nekim Android/PWA browserima razriješi ispod te rute.
+        serviceWorkerPath: "/OneSignalSDKWorker.js",
         serviceWorkerParam: { scope: "/push/onesignal/" },
         // OneSignal type expects full notifyButton text dict even when disabled —
         // cast to any since we explicitly set enable:false (button never renders).
@@ -270,7 +272,19 @@ export async function requestPushPermission(): Promise<boolean> {
     lastPushError = "";
     plog(`perm prije=${typeof Notification !== "undefined" ? Notification.permission : "?"}`);
     await OneSignal.Notifications.requestPermission();
+    // Pojedini Android Chromium/WebView buildovi ne prikažu OneSignalov
+    // permission prompt. Ako je dozvola i dalje "default", pozovi standardni
+    // browser API direktno dok smo još unutar korisničkog klika.
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
     plog(`perm poslije=${typeof Notification !== "undefined" ? Notification.permission : "?"}`);
+    if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
+      lastPushError = Notification.permission === "denied"
+        ? "Obavijesti su blokirane u postavkama preglednika"
+        : "Dozvola za obavijesti nije odobrena";
+      return false;
+    }
     // v16: dozvola ≠ subscription. Ako je subscription ranije opt-out-ovan
     // (ili nikad kreiran), mora se eksplicitno optIn() — bez ovoga optedIn
     // ostaje false iako je permission granted.
@@ -283,9 +297,10 @@ export async function requestPushPermission(): Promise<boolean> {
     } catch (err) {
       plog(`optIn greška: ${err instanceof Error ? err.message : String(err)}`);
     }
-    // OneSignal upisuje subscription asinhrono — pričekaj do ~5s da se pojavi
+    // OneSignal upisuje subscription asinhrono — na Androidu i u instaliranom
+    // desktop PWA-u prvi upis zna trajati duže, zato čekamo do ~15 sekundi.
     // playerId (bez ovoga toggle zna vratiti false iako je korisnik dozvolio).
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 30; i++) {
       if (OneSignal.User.PushSubscription.optedIn) {
         const playerId = OneSignal.User.PushSubscription.id;
         if (playerId) {

@@ -262,7 +262,9 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
       const el = containerRef.current?.querySelector(
         `[data-cell-index="${currentCellIndex}"]`,
       );
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Stariji iPad Safari nema pouzdan smooth scroll za elemente unutar
+      // fixed overflow kontejnera. "auto" daje stabilnu početnu poziciju.
+      el?.scrollIntoView({ behavior: "auto", block: "center" });
     }, 150);
     return () => clearTimeout(t);
   }, [data, currentCellIndex]);
@@ -292,16 +294,18 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     window.addEventListener("resize", update);
     // ResizeObserver hvata kasne layout promjene (font/image load, sticky bar
     // promjena visine na različitim breakpointima, sadržaj se širi/skuplja).
-    const ro = new ResizeObserver(() => onScroll());
-    ro.observe(el);
-    ro.observe(bg);
+    const ro = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => onScroll())
+      : null;
+    ro?.observe(el);
+    ro?.observe(bg);
     update();
     // Dodatni delayed update da uhvati kasne asset dimenzije prije prvog scrolla.
     const lateT = setTimeout(update, 300);
     return () => {
       el.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", update);
-      ro.disconnect();
+      ro?.disconnect();
       clearTimeout(lateT);
       if (rafId) cancelAnimationFrame(rafId);
     };
@@ -318,7 +322,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 overflow-auto"
+      className="mapa-fullscreen fixed inset-0 z-50 overflow-auto"
       style={{ backgroundColor: "#FEF3C7" }}
       data-testid="mapa-fullscreen"
     >

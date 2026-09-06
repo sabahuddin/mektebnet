@@ -117,6 +117,30 @@
     @apply font-sans antialiased bg-background text-foreground;
     background-image: radial-gradient(hsl(var(--primary)/0.05) 2px, transparent 2px);
     background-size: 32px 32px;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /* Stariji iPad Safari računa 100vh preko pune visine browser chrome-a.
+     -webkit-fill-available drži fullscreen mapu u stvarno vidljivom prostoru. */
+  .mapa-fullscreen {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Na iPad landscape i nižim tablet ekranima banner ne smije prekriti pola
+     mape. Sadržaj ostaje čitljiv i lokalno skrolabilan. */
+  .cookie-consent-card {
+    max-height: min(46vh, 22rem);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (min-width: 640px) and (max-height: 820px) {
+    .cookie-consent-card {
+      max-height: 12.5rem;
+    }
   }
 
   /* Medeni ambijent za stranicu lekcije — vedra svjetla šema:

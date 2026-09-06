@@ -164,6 +164,9 @@ export function PushToggle() {
         <p className="text-xs text-muted-foreground mt-1.5">
           {t("Primaj obavijesti o novim porukama, novim zadaćama i podsjetnicima — i kad mekteb nije otvoren u pregledniku.")}
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("Obavijesti se uključuju posebno na svakom uređaju: uključi ih jednom u Android PWA-u i jednom u instaliranom desktop PWA-u.")}
+        </p>
         {attemptError && !disabledReason && (
           <p className="text-xs text-amber-700 font-medium mt-2" data-testid="text-push-attempt-error">
             {attemptError}
