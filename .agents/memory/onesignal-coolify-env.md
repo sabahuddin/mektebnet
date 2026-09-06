@@ -13,6 +13,9 @@ description: Kako je konfigurisan OneSignal App ID na produkciji i zamke build-t
 - Klik na toggle mora retry-ati init i prikazati stvarnu grešku (lastPushError) — tihi `return false` je danima maskirao pravi uzrok.
 - "Can only be used on: https://..." = Site URL u OneSignal dashboardu (Settings → Web Configuration) se ne poklapa s originom; fix je u dashboardu, ne u kodu.
 - v16 flow: permission → optIn() → playerId stiže ASINHRONO (zna >5s); optedIn=true tretiraj kao uspjeh, change listener registruje playerId u backend kad stigne.
+- Web/PWA push dozvola i subscription su vezani za konkretan uređaj i browser profil; Android ne može automatski uključiti desktop PWA. Isti nalog prima na oba tek kad se uključi na oba uređaja.
+- **Why:** OneSignal `external_id` grupiše korisnika, ali browser sigurnosni model i dalje zahtijeva poseban permission i PushSubscription na svakom uređaju.
+- **How to apply:** u UI-ju jasno reci da se uključuje po uređaju; worker putanju drži apsolutnom, a nakon permissiona čekaj sporiji Android/desktop subscription ID.
 - Server 401 od OneSignal = ključ na Coolify nije isti kao pravi. OneSignal ima "Legacy API Key" i noviji named key — Coolify mora imati named key (os_v2_...). Legacy key ima drugačiji auth format i ne radi s našim kodom.
 - PushPrompt banner: ako je Notification.permission već "granted" (korisnik prošao OneSignal slidedown), ne prikazuj banner — tiho pozovi requestPushPermission() u pozadini.
 - Boot error overlay u main.tsx: korisna sigurnosna mreža za bijeli ekran — prikazuje grešku + dugme koje očisti SW/keš i reloada.
