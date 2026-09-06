@@ -4,7 +4,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { Layout } from "@/components/layout";
 import { Maskota } from "@/components/maskota";
-import { BookOpen, HelpCircle, Library, GraduationCap, Gamepad2, ChevronRight, BookMarked, Scroll, LogIn, UserPlus } from "lucide-react";
+import { BookOpen, Library, GraduationCap, Gamepad2, ChevronRight, BookMarked, Scroll, LogIn, UserPlus } from "lucide-react";
 
 interface ModuleCard {
   href: string;
@@ -55,19 +55,6 @@ export default function Home() {
       count: `231 ${t("home.lekcija")}`,
       beePose: "pcela-klanja.png",
       beeAlt: "Pčela klanja na seđadi",
-    },
-    {
-      href: "/kvizovi",
-      icon: HelpCircle,
-      label: t("nav.kvizovi"),
-      desc: t("home.kvizoviDesc"),
-      color: "from-amber-500 to-orange-500",
-      bg: "bg-amber-50",
-      border: "border-amber-200",
-      text: "text-amber-700",
-      count: `43+ kvizova`,
-      beePose: "pcela-razmislja.png",
-      beeAlt: "Pčela razmišlja",
     },
     {
       href: "/citaonica",
