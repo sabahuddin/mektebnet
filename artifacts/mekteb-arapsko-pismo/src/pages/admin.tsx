@@ -2927,7 +2927,7 @@ export default function AdminPage() {
                 <AdminToolCard icon={<BookOpen />} label="Čitaonica — priče" tone="amber" onClick={() => setLocation("/admin/citaonica")} testId="button-admin-citaonica" />
                 <AdminToolCard icon={<Plus />} label="Novi kviz" tone="orange" onClick={() => setLocation("/admin/kviz-novi")} />
                 <AdminToolCard icon={<Wand2 />} label="AI uvoz kviza" tone="violet" onClick={() => setLocation("/admin/ai-import")} />
-                <AdminToolCard icon={<BookOpen />} label="Slike bez lekcije" tone="amber" onClick={() => setLocation("/admin/orphan-uploads")} />
+                <AdminToolCard icon={<BookOpen />} label="Slike u /uploads/" tone="amber" onClick={() => setLocation("/admin/orphan-uploads")} />
                 <AdminToolCard icon={<Award />} label="Etape i krunisanja" tone="emerald" onClick={() => setLocation("/admin/etape")} testId="button-admin-etape" />
                 <AdminToolCard icon={<Languages />} label="Uređivanje prijevoda" tone="sky" onClick={() => setLocation("/admin/prijevodi")} testId="button-admin-prijevodi" />
               </div>

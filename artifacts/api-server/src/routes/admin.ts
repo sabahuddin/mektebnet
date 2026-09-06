@@ -961,55 +961,192 @@ router.get("/uploads-audio", (_req, res) => {
   return;
 });
 
-// GET /api/admin/orphan-uploads — slike koje postoje na disku ali NE postoje
-// kao /uploads/<name> referenca u contentHtml-u nijedne lekcije.
-// Vraća { orphans: [...], used: [...], lekcije: [...] } da UI može popunjavati dropdown.
-router.get("/orphan-uploads", async (_req, res) => {
-  try {
-    if (!fs.existsSync(uploadsDir)) return res.json({ orphans: [], used: [], lekcije: [] });
+type UploadImageUsage = {
+  type: "lesson" | "question" | "book";
+  id: number;
+  title: string;
+  slug?: string;
+  nivo?: number;
+};
 
-    // 1) Sve slike na disku
-    const diskFiles = fs.readdirSync(uploadsDir)
-      .filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
-    const diskSet = new Set(diskFiles);
+async function getUploadImageInventory() {
+  const diskFiles = fs.existsSync(uploadsDir)
+    ? fs.readdirSync(uploadsDir).filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f))
+    : [];
+  const diskSet = new Set(diskFiles);
+  const usageByFile = new Map<string, UploadImageUsage[]>();
+  const addUsage = (filename: string, usage: UploadImageUsage) => {
+    const decoded = (() => {
+      try { return decodeURIComponent(filename); } catch { return filename; }
+    })();
+    if (!usageByFile.has(decoded)) usageByFile.set(decoded, []);
+    const usages = usageByFile.get(decoded)!;
+    if (!usages.some(item => item.type === usage.type && item.id === usage.id)) usages.push(usage);
+  };
+  const scanValue = (value: unknown, usage: UploadImageUsage) => {
+    if (typeof value !== "string") return;
+    for (const match of value.matchAll(/\/(?:api\/)?uploads\/([^\s"'<>?#)]+)/g)) {
+      addUsage(match[1], usage);
+    }
+  };
 
-    // 2) Sve lekcije + skup korištenih /uploads/<name> referenci
-    const lessons = await db.select({
+  const [lessons, questions, books] = await Promise.all([
+    db.select({
       id: ilmihalLekcijeTable.id,
       slug: ilmihalLekcijeTable.slug,
       naslov: ilmihalLekcijeTable.naslov,
       nivo: ilmihalLekcijeTable.nivo,
       contentHtml: ilmihalLekcijeTable.contentHtml,
-    }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
+    }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed)),
+    db.select({
+      id: pitanjaBankaTable.id,
+      pitanje: pitanjaBankaTable.pitanje,
+      slika: pitanjaBankaTable.slika,
+    }).from(pitanjaBankaTable),
+    db.select({
+      id: knjige.id,
+      slug: knjige.slug,
+      naslov: knjige.naslov,
+      contentHtml: knjige.contentHtml,
+      coverImage: knjige.coverImage,
+    }).from(knjige),
+  ]);
 
-    const usedSet = new Set<string>();
-    for (const l of lessons) {
-      const html = l.contentHtml || "";
-      const matches = html.matchAll(/\/uploads\/([^\s"'<>?#]+)/g);
-      for (const m of matches) usedSet.add(m[1]);
-    }
+  for (const lesson of lessons) {
+    scanValue(lesson.contentHtml, {
+      type: "lesson", id: lesson.id, title: lesson.naslov, slug: lesson.slug, nivo: lesson.nivo,
+    });
+  }
+  for (const question of questions) {
+    scanValue(question.slika, {
+      type: "question", id: question.id, title: question.pitanje,
+    });
+  }
+  for (const book of books) {
+    const usage = { type: "book" as const, id: book.id, title: book.naslov, slug: book.slug };
+    scanValue(book.coverImage, usage);
+    scanValue(book.contentHtml, usage);
+  }
 
-    const orphans = diskFiles
-      .filter(f => !usedSet.has(f))
-      .map(f => {
-        const stat = fs.statSync(path.join(uploadsDir, f));
-        return { name: f, url: `/uploads/${f}`, size: stat.size, modified: stat.mtime };
-      })
-      .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
+  const files = diskFiles.map(name => {
+    const stat = fs.statSync(path.join(uploadsDir, name));
+    const usages = usageByFile.get(name) || [];
+    return {
+      name,
+      url: `/uploads/${name}`,
+      size: stat.size,
+      modified: stat.mtime,
+      format: path.extname(name).slice(1).toLowerCase(),
+      used: usages.length > 0,
+      usages,
+    };
+  }).sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
 
-    const used = Array.from(usedSet)
-      .filter(f => diskSet.has(f))
-      .map(f => ({ name: f, url: `/uploads/${f}` }));
+  const referencedFiles = new Set(usageByFile.keys());
+  const missing = Array.from(referencedFiles).filter(name => !diskSet.has(name));
+  return { files, lessons, missing, referencedFiles };
+}
 
-    const missing = Array.from(usedSet).filter(f => !diskSet.has(f));
+// GET /api/admin/orphan-uploads — kompletan pregled slika u /uploads, sa
+// preciznom oznakom gdje se koriste. Stari `orphans` i `used` ostaju u odgovoru
+// radi kompatibilnosti, dok novi UI koristi `files`.
+router.get("/orphan-uploads", async (_req, res) => {
+  try {
+    const { files, lessons, missing } = await getUploadImageInventory();
+    const used = files.filter(file => file.used);
+    const orphans = files.filter(file => !file.used);
 
     res.json({
+      files,
       orphans,
       used,
       missing,
       lekcije: lessons.map(l => ({ id: l.id, slug: l.slug, naslov: l.naslov, nivo: l.nivo })),
-      stats: { diskCount: diskFiles.length, usedCount: usedSet.size, orphanCount: orphans.length, missingCount: missing.length },
+      stats: { diskCount: files.length, usedCount: used.length, orphanCount: orphans.length, missingCount: missing.length },
     });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+  return;
+});
+
+router.delete("/uploads/:filename", async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    if (!filename || filename !== path.basename(filename) || !/\.(jpg|jpeg|png|gif|webp)$/i.test(filename)) {
+      return res.status(400).json({ error: "Nevažeći naziv slike" });
+    }
+    const { files } = await getUploadImageInventory();
+    const file = files.find(item => item.name === filename);
+    if (!file) return res.status(404).json({ error: "Slika nije pronađena" });
+    if (file.used) {
+      return res.status(409).json({
+        error: "Slika se koristi i ne može biti obrisana",
+        usages: file.usages,
+      });
+    }
+    fs.unlinkSync(path.join(uploadsDir, filename));
+    res.json({ ok: true, filename });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+  return;
+});
+
+router.post("/uploads/convert-webp", async (_req, res) => {
+  try {
+    const candidates = fs.existsSync(uploadsDir)
+      ? fs.readdirSync(uploadsDir).filter(name => /\.(jpg|jpeg|png|gif)$/i.test(name))
+      : [];
+    if (candidates.length === 0) return res.json({ ok: true, converted: [], failed: [] });
+
+    const sharp = (await import("sharp")).default;
+    const occupied = new Set(fs.readdirSync(uploadsDir));
+    const converted: Array<{ from: string; to: string; bytesBefore: number; bytesAfter: number }> = [];
+    const failed: Array<{ name: string; error: string }> = [];
+
+    for (const sourceName of candidates) {
+      const sourcePath = path.join(uploadsDir, sourceName);
+      const base = path.basename(sourceName, path.extname(sourceName));
+      let targetName = `${base}.webp`;
+      let suffix = 2;
+      while (occupied.has(targetName) && targetName !== sourceName) {
+        targetName = `${base}-${suffix}.webp`;
+        suffix++;
+      }
+      const targetPath = path.join(uploadsDir, targetName);
+      try {
+        const bytesBefore = fs.statSync(sourcePath).size;
+        const output = await sharp(sourcePath, { failOn: "none", animated: true })
+          .rotate()
+          .resize({ width: 1600, withoutEnlargement: true })
+          .webp({ quality: 82 })
+          .toBuffer();
+        fs.writeFileSync(targetPath, output);
+
+        const oldUrl = `/uploads/${sourceName}`;
+        const oldApiUrl = `/api/uploads/${sourceName}`;
+        const newUrl = `/uploads/${targetName}`;
+        await db.transaction(async tx => {
+          await tx.execute(sql`UPDATE ilmihal_lekcije SET content_html = replace(replace(content_html, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE content_html LIKE ${`%${sourceName}%`}`);
+          await tx.execute(sql`UPDATE pitanja_banka SET slika = replace(replace(slika, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE slika LIKE ${`%${sourceName}%`}`);
+          await tx.execute(sql`UPDATE knjige SET cover_image = replace(replace(cover_image, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE cover_image LIKE ${`%${sourceName}%`}`);
+          await tx.execute(sql`UPDATE knjige SET content_html = replace(replace(content_html, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE content_html LIKE ${`%${sourceName}%`}`);
+          await tx.execute(sql`UPDATE content_prijevodi SET prijevod = replace(replace(prijevod, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}), updated_at = NOW() WHERE prijevod LIKE ${`%${sourceName}%`}`);
+        });
+
+        fs.unlinkSync(sourcePath);
+        occupied.delete(sourceName);
+        occupied.add(targetName);
+        converted.push({ from: sourceName, to: targetName, bytesBefore, bytesAfter: output.length });
+      } catch (error) {
+        if (targetPath !== sourcePath && fs.existsSync(targetPath)) {
+          try { fs.unlinkSync(targetPath); } catch {}
+        }
+        failed.push({ name: sourceName, error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+    res.json({ ok: failed.length === 0, converted, failed });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
