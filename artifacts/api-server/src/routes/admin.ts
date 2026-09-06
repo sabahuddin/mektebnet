@@ -4242,9 +4242,9 @@ router.put("/krunisanja/:id", async (req, res) => {
           .where(inArray(kvizoviTable.id, kvizIds));
         if (
           kvizovi.length !== kvizIds.length
-          || kvizovi.some((kviz) => kviz.nivo !== existingKrunisanje.nivo || kviz.etapa == null)
+          || kvizovi.some((kviz) => kviz.nivo !== existingKrunisanje.nivo || kviz.etapa != null)
         ) {
-          return res.status(400).json({ error: "Krunisanje može koristiti samo etapne kvizove iz istog nivoa" });
+          return res.status(400).json({ error: "Krunisanje može koristiti samo kvizove istog nivoa kojima Etapa nije postavljena" });
         }
       }
       patch.kvizIds = kvizIds;

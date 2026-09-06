@@ -20,3 +20,9 @@ Etapni ispit prikazuje sva razriješena pitanja, a prag prolaza određuje konfig
 **Why:** Etapa je cjelovita provjera znanja, ne nasumična vježba iz ograničenog broja pitanja.
 
 **How to apply:** Ne primjenjuj uobičajeni limit pitanja po sesiji. Server provjerava odgovore, zapisuje pokušaj i tek nakon prolaza osvaja medaljon koji otključava napredak.
+
+Krunski kviz je kviz sa postavljenim nivoom i praznom etapom (`etapa=null`); krunisanje ne koristi etapne kvizove.
+
+**Why:** Krunisanje je zaseban završni ispit nivoa. Automatsko uključivanje svih etapnih kvizova miješa dvije različite provjere i onemogućava adminu da odabere namjenske završne kvizove.
+
+**How to apply:** U krunskom pickeru prikaži samo kvizove istog nivoa bez etape. Backend mora odbiti kviz drugog nivoa i svaki kviz kojem je etapa postavljena.

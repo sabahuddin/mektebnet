@@ -57,7 +57,7 @@ interface BankaPitanje {
 
 interface BankaLekcija { id: number; naslov: string; redoslijed: number; }
 interface BankaResponse { lekcije: BankaLekcija[]; pitanja: BankaPitanje[]; }
-interface EtapniKviz {
+interface KvizZaNivo {
   id: number;
   nivo: number | null;
   etapa: number | null;
@@ -182,13 +182,13 @@ function KvizoviEtapaPicker({
   onChange: (ids: number[]) => void;
 }) {
   const { t } = useLanguage();
-  const [kvizovi, setKvizovi] = useState<EtapniKviz[]>([]);
+  const [kvizovi, setKvizovi] = useState<KvizZaNivo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    apiRequest<EtapniKviz[]>("GET", `/content/kvizovi?nivo=${nivo}&modul=ilmihal`, undefined, token)
+    apiRequest<KvizZaNivo[]>("GET", `/content/kvizovi?nivo=${nivo}&modul=ilmihal`, undefined, token)
       .then((rows) => {
         if (!cancelled) {
           setKvizovi(
@@ -240,6 +240,89 @@ function KvizoviEtapaPicker({
           </span>
         </label>
       ))}
+    </div>
+  );
+}
+
+function KvizoviKrunisanjePicker({
+  nivo, token, selectedIds, onChange,
+}: {
+  nivo: number;
+  token: string;
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const { t } = useLanguage();
+  const [sviKvizovi, setSviKvizovi] = useState<KvizZaNivo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiRequest<KvizZaNivo[]>("GET", `/content/kvizovi?nivo=${nivo}&modul=ilmihal`, undefined, token)
+      .then((rows) => {
+        if (!cancelled) setSviKvizovi(rows.sort((a, b) => a.naslov.localeCompare(b.naslov)));
+      })
+      .catch(() => { if (!cancelled) setSviKvizovi([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [nivo, token]);
+
+  if (loading) return <div className="py-3 text-sm text-muted-foreground">{t("Učitavam krunske kvizove…")}</div>;
+
+  const krunskiKvizovi = sviKvizovi.filter((kviz) => kviz.etapa == null);
+  const krunskiIds = new Set(krunskiKvizovi.map((kviz) => kviz.id));
+  const stariEtapniIds = selectedIds.filter((id) => !krunskiIds.has(id));
+  const selected = new Set(selectedIds);
+
+  return (
+    <div className="space-y-2">
+      {stariEtapniIds.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          <div className="font-bold">
+            {t("{n} ranije odabranih etapnih kvizova ne pripada Krunisanju.", { n: String(stariEtapniIds.length) })}
+          </div>
+          <button
+            type="button"
+            className="mt-2 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700"
+            onClick={() => onChange(selectedIds.filter((id) => krunskiIds.has(id)))}
+          >
+            {t("Ukloni etapne kvizove iz Krunisanja")}
+          </button>
+        </div>
+      )}
+
+      {krunskiKvizovi.length === 0 ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          {t("Nema posebnih krunskih kvizova za ovaj nivo. U editoru kviza postavi Nivo, a polje Etapa ostavi prazno.")}
+        </div>
+      ) : (
+        <div className="max-h-72 space-y-2 overflow-auto rounded-lg border bg-gray-50 p-2">
+          {krunskiKvizovi.map((kviz) => (
+            <label key={kviz.id} className="flex cursor-pointer items-start gap-3 rounded-lg border bg-white px-3 py-2 hover:bg-amber-50">
+              <input
+                type="checkbox"
+                checked={selected.has(kviz.id)}
+                onChange={() => onChange(
+                  selected.has(kviz.id)
+                    ? selectedIds.filter((id) => id !== kviz.id)
+                    : [...selectedIds, kviz.id],
+                )}
+                className="mt-1"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold text-amber-950">
+                  {t("Krunisanje")} · {t("Nivo {n}", { n: String(kviz.nivo) })} · {kviz.naslov}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {t("{n} pitanja", { n: String(kviz.pitanjaCount ?? 0) })}
+                  {!kviz.isPublished ? ` · ${t("Privatno — samo admin")}` : ""}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -650,15 +733,15 @@ function KrunisanjeModal({ krunisanje, onClose, onSave, token }: { krunisanje: K
           <textarea className="w-full px-3 py-2 border rounded-lg font-mono text-sm h-28"
             value={form.opisHtml ?? ""} onChange={(e) => setForm({ ...form, opisHtml: e.target.value })} />
         </Field>
-        <Field label={t("Kvizovi iz etapa — sva pitanja odabranih kvizova ulaze u završni ispit ({n} odabrano)", { n: String(selectedKvizIds.length) })}>
-          <KvizoviEtapaPicker
+        <Field label={t("Krunski kvizovi — završni ispit nivoa ({n} odabrano)", { n: String(selectedKvizIds.length) })}>
+          <KvizoviKrunisanjePicker
             nivo={krunisanje.nivo}
             token={token}
             selectedIds={selectedKvizIds}
             onChange={setSelectedKvizIds}
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            {t("Kviz može ostati privatan: učenik ga neće vidjeti u katalogu, ali će njegova pitanja biti dio Krunisanja.")}
+            {t("Ovdje se prikazuju samo kvizovi ovog nivoa kojima Etapa nije postavljena. Sva njihova pitanja ulaze u Krunisanje; kviz može ostati privatan.")}
           </p>
         </Field>
         <Field label={t("Dodatna pojedinačna pitanja iz banke (opcionalno) — nivo {nivo} ({n} odabrano)", { nivo: String(krunisanje.nivo), n: String(selectedIds.length) })}>

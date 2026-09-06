@@ -125,8 +125,8 @@ export const krunisanjaTable = pgTable("krunisanja", {
   opisHtml: text("opis_html").notNull().default(""),
   ikona: varchar("ikona", { length: 32 }).notNull().default("crown"),
   boja: varchar("boja", { length: 16 }).notNull().default("amber"),
-  // Postojeći kvizovi (najčešće etapni) čija se pitanja uključuju u završni
-  // ispit. Kviz može ostati privatni/admin-only u javnom katalogu.
+  // Posebni krunski kvizovi istog nivoa (etapa=null) čija se pitanja uključuju
+  // u završni ispit. Kviz može ostati privatni/admin-only u javnom katalogu.
   kvizIds: jsonb("kviz_ids").$type<number[]>().notNull().default([]),
   kvizPitanjaIds: jsonb("kviz_pitanja_ids").$type<number[]>().notNull().default([]),
   pragProlazaPercent: integer("prag_prolaza_percent").notNull().default(70),
