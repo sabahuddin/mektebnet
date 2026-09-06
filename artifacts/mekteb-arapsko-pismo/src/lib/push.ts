@@ -44,6 +44,7 @@ export function getStoredAuthToken(): string | null {
 
 let initialized = false;
 let initPromise: Promise<void> | null = null;
+let listenersReady = false;
 
 // Zadnja stvarna greška (init ili permission) — UI je prikaže za dijagnostiku.
 export let lastPushError: string = "";
@@ -132,6 +133,7 @@ export async function initOneSignal(): Promise<void> {
         notifyButton: { enable: false } as any,
       });
       initialized = true;
+      setupPushListeners();
       console.log("[Push] OneSignal initialized");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -139,6 +141,7 @@ export async function initOneSignal(): Promise<void> {
       // internog flaga) — tretiraj kao uspjeh i nastavi.
       if (/already initialized/i.test(msg)) {
         initialized = true;
+        setupPushListeners();
         console.warn("[Push] SDK je već inicijalizovan — nastavljam");
         return;
       }
@@ -223,6 +226,60 @@ export function isPushOptedIn(): boolean {
   }
 }
 
+export type WebPushStatus = {
+  ready: boolean;
+  permission: NotificationPermission | "unsupported";
+  optedIn: boolean;
+  playerId: string | null;
+  error: string;
+};
+
+/**
+ * Pouzdano očitaj status za profil. Za razliku od sinhronog getter-a, ova
+ * funkcija sačeka/retry-a OneSignal init pa UI ne ostane lažno ugašen dok se
+ * SDK još pokreće nakon otvaranja instaliranog PWA-a.
+ */
+export async function getWebPushStatus(): Promise<WebPushStatus> {
+  if (!isWebPushSupported()) {
+    return {
+      ready: false,
+      permission: "unsupported",
+      optedIn: false,
+      playerId: null,
+      error: "Preglednik ne podržava web push",
+    };
+  }
+  if (!initialized) await initOneSignal();
+  const permission = Notification.permission;
+  if (!initialized) {
+    return {
+      ready: false,
+      permission,
+      optedIn: false,
+      playerId: null,
+      error: lastPushError || "OneSignal nije inicijalizovan",
+    };
+  }
+  try {
+    return {
+      ready: true,
+      permission,
+      optedIn: OneSignal.User.PushSubscription.optedIn === true,
+      playerId: OneSignal.User.PushSubscription.id || null,
+      error: "",
+    };
+  } catch (err) {
+    recordPushError("Status", err);
+    return {
+      ready: false,
+      permission,
+      optedIn: false,
+      playerId: null,
+      error: lastPushError,
+    };
+  }
+}
+
 export function isPushEnabledLocally(): boolean {
   if (typeof window === "undefined") return false;
   return localStorage.getItem(SETTINGS_KEY) === "true";
@@ -249,14 +306,24 @@ export function markPrompted(): void {
 export async function requestPushPermission(): Promise<boolean> {
   markPrompted();
 
-  const native = await getNative();
-  if (native) {
+  if (isCapacitorNative()) {
+    const native = await getNative();
+    if (!native) return false;
     const ok = await native.requestNativePushPermission();
     if (ok) setPushEnabledLocally(true);
     return ok;
   }
 
   if (!isWebPushSupported()) return false;
+  // Android Chrome zahtijeva da browser permission prompt bude pokrenut
+  // direktno iz korisničkog klika. Ne čekaj OneSignal init/fetch prije ovog
+  // poziva jer se tada izgubi transient user activation i browser prompt
+  // tiho odbije.
+  const browserPermissionPromise =
+    Notification.permission === "default"
+      ? Notification.requestPermission()
+      : Promise.resolve(Notification.permission);
+
   // Ako init nije završio (ili je ranije pao — npr. mreža, spor fetch App ID-a),
   // pokušaj ponovo sada. Bez ovoga klik na toggle tiho ne uradi ništa.
   if (!initialized) {
@@ -271,12 +338,11 @@ export async function requestPushPermission(): Promise<boolean> {
   try {
     lastPushError = "";
     plog(`perm prije=${typeof Notification !== "undefined" ? Notification.permission : "?"}`);
-    await OneSignal.Notifications.requestPermission();
-    // Pojedini Android Chromium/WebView buildovi ne prikažu OneSignalov
-    // permission prompt. Ako je dozvola i dalje "default", pozovi standardni
-    // browser API direktno dok smo još unutar korisničkog klika.
-    if (typeof Notification !== "undefined" && Notification.permission === "default") {
-      await Notification.requestPermission();
+    await browserPermissionPromise;
+    // Ako je browser permission već ranije bio granted, OneSignalu svejedno
+    // signaliziraj da dovrši svoj permission/subscription tok.
+    if (Notification.permission === "granted") {
+      await OneSignal.Notifications.requestPermission();
     }
     plog(`perm poslije=${typeof Notification !== "undefined" ? Notification.permission : "?"}`);
     if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
@@ -346,7 +412,11 @@ export async function disablePush(): Promise<void> {
     return;
   }
 
-  if (!initialized || !isWebPushSupported()) return;
+  if (!isWebPushSupported()) return;
+  if (!initialized) await initOneSignal();
+  if (!initialized) {
+    throw new Error(lastPushError || "OneSignal nije inicijalizovan");
+  }
   try {
     const playerId = OneSignal.User.PushSubscription.id;
     if (playerId) {
@@ -354,7 +424,7 @@ export async function disablePush(): Promise<void> {
         await apiRequest("POST", "/push/unregister", { playerId }, getStoredAuthToken());
       } catch {}
     }
-    OneSignal.User.PushSubscription.optOut();
+    await OneSignal.User.PushSubscription.optOut();
     setPushEnabledLocally(false);
   } catch (err) {
     console.error("[Push] disable failed:", err);
@@ -383,7 +453,7 @@ async function registerToken(playerId: string): Promise<void> {
  */
 export function setupPushListeners(): void {
   if (isCapacitorNative()) return;
-  if (!initialized || !isWebPushSupported()) return;
+  if (listenersReady || !initialized || !isWebPushSupported()) return;
   try {
     OneSignal.User.PushSubscription.addEventListener("change", (event: { current: { id?: string | null; optedIn?: boolean } }) => {
       const id = event.current?.id;
@@ -392,6 +462,7 @@ export function setupPushListeners(): void {
         registerToken(id).catch(() => {});
       }
     });
+    listenersReady = true;
   } catch (err) {
     console.error("[Push] listener setup failed:", err);
   }

@@ -155,7 +155,22 @@ if (process.env["SERVE_STATIC"] === "true") {
     },
   }));
 
-  app.use(express.static(frontendDist));
+  app.use(express.static(frontendDist, {
+    setHeaders: (res, filePath) => {
+      const fileName = path.basename(filePath);
+      // Service workeri i manifest moraju se provjeriti pri svakom otvaranju.
+      // Cloudflare je ranije keširao OneSignal worker 4 sata, pa Android PWA
+      // nije odmah dobijao popravke subscriptiona i app badgea.
+      if (
+        fileName === "OneSignalSDKWorker.js" ||
+        fileName === "sw.js" ||
+        fileName === "manifest.webmanifest"
+      ) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("CDN-Cache-Control", "no-store");
+      }
+    },
+  }));
   app.get("/{*path}", (_req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
   });

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 import {
-  isPushOptedIn,
   requestPushPermission,
   disablePush,
   isAppIdResolved,
   isCapacitorNative,
   isPushEnabledLocally,
+  getWebPushStatus,
 } from "@/lib/push";
 import { useLanguage } from "@/context/language";
 
@@ -65,16 +65,20 @@ export function PushToggle() {
     // OneSignal init je async u main.tsx — sinhroniziraj status periodično
     // dok ne primijetimo promjenu (npr. nakon što init-a završi ili korisnik
     // dozvoli/odbije permission van app-a).
-    const sync = () => {
+    const sync = async () => {
       try {
-        setEnabled(isPushOptedIn() || (native && isPushEnabledLocally()));
-        if (!native && typeof Notification !== "undefined") {
-          setPerm(Notification.permission as PermState);
+        if (native) {
+          setEnabled(isPushEnabledLocally());
+        } else {
+          const status = await getWebPushStatus();
+          setEnabled(status.optedIn);
+          setPerm(status.permission as PermState);
+          if (!status.ready && status.error) setAttemptError(status.error);
         }
       } catch {}
     };
-    sync();
-    intervalRef.current = window.setInterval(sync, 1500);
+    void sync();
+    intervalRef.current = window.setInterval(() => void sync(), 3000);
     return () => {
       if (intervalRef.current !== null) {
         window.clearInterval(intervalRef.current);
@@ -100,8 +104,17 @@ export function PushToggle() {
     setBusy(true);
     try {
       if (enabled) {
+        setAttemptError(null);
         await disablePush();
-        setEnabled(false);
+        if (native) {
+          setEnabled(false);
+        } else {
+          const status = await getWebPushStatus();
+          setEnabled(status.optedIn);
+          if (status.optedIn) {
+            setAttemptError(t("Isključivanje nije uspjelo. Pokušaj ponovo."));
+          }
+        }
       } else {
         setAttemptError(null);
         const ok = await requestPushPermission();
@@ -116,6 +129,10 @@ export function PushToggle() {
           );
         }
       }
+    } catch (err) {
+      setAttemptError(
+        err instanceof Error ? err.message : t("Promjena postavke nije uspjela."),
+      );
     } finally {
       setBusy(false);
     }
