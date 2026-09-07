@@ -25,4 +25,3 @@ export function playSufaraAudio(file: string, adminPreview = false): SufaraPlayb
   audio.play().catch(() => {});
   return { played: true, reason: "playing" };
 }
-

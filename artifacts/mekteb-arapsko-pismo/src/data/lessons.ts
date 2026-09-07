@@ -700,9 +700,115 @@ export const LESSONS: LessonData[] = [
     ]
   },
 
-  // ── LEKCIJA 6: SUKUN ────────────────────────────────────────
+  // ── LEKCIJA 6: DAL, ZAL, RA I ZEJN ─────────────────────────
   {
-    id: 6, orderNum: 6, slug: "sukun",
+    id: 6, orderNum: 6, slug: "dal-zal-ra-zejn",
+    title: "Dal, Zal, Ra i Zejn",
+    letters: ["د", "ذ", "ر", "ز"],
+    isCompleted: false,
+    story: {
+      lines: [
+        { speaker: "narator", text: "Muallim je na tabli napisao četiri nova harfa: د ذ ر ز. Zatim je između njih dodao kratke linije da pokaže gdje se prekida spajanje." },
+        { speaker: "muallim", text: "Ova četiri harfa imaju važno zajedničko pravilo: ne spajaju se s harfom koji dolazi poslije njih. Mogu se spojiti s harfom prije sebe, ali poslije njih počinje novi potez." },
+        { speaker: "amir", text: "Znači li to da riječ prekidamo dok je čitamo?" },
+        { speaker: "muallim", text: "Ne. Prekida se samo pisana linija, a čitanje ostaje povezano. Zato razlikujemo spajanje u pisanju od tečnog čitanja." },
+        { speaker: "dzana", text: "Dal i Zal izgledaju isto, ali Zal ima tačku iznad." },
+        { speaker: "muallim", text: "Tačno. Kod harfa Dal vrh jezika dodiruje područje iza gornjih prednjih zuba. Glas je sličan našem D, ali ga učimo slušanjem i ponavljanjem." },
+        { speaker: "muallim", text: "Kod harfa Zal vrh jezika lagano dodiruje rub gornjih prednjih zuba i malo se vidi između zuba. Glas je zvučan, sličan engleskom 'th' u riječi 'this'. Nemojte ga pretvoriti u obično Z." },
+        { speaker: "amir", text: "A Ra i Zejn također imaju isti osnovni oblik, samo Zejn ima tačku?" },
+        { speaker: "muallim", text: "Da. Kod harfa Ra vrh jezika prilazi desnima iza gornjih prednjih zuba. Ne treba ga dugo tresti niti ponavljati. Pravila kada se Ra čita krupnije ili tanje učit ćemo kasnije." },
+        { speaker: "muallim", text: "Zejn je zvučan glas sličan našem Z. Zrak prolazi uskim putem između jezika i prednjih zuba, bez dodavanja glasa D ispred njega." },
+        { speaker: "dzana", text: "Dakle, tačke razlikuju Dal od Zala i Ra od Zejna, a sva četiri prekidaju pisanu vezu s narednim harfom." },
+        { speaker: "muallim", text: "Odlično. Sada ih prvo prepoznajemo po obliku, zatim po tački, a pravilan izgovor potvrđujemo snimkom učača." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "د", name: "Dal", transliteration: "D",
+        forms: { isolated: "د", initial: "د", medial: "ـد", final: "ـد" },
+        nonConnecting: true,
+        visualAssociation: "Savijena linija bez tačke; ne spaja se s harfom poslije sebe",
+        soundFile: "dal.mp3",
+      },
+      {
+        arabic: "ذ", name: "Zal", transliteration: "DH / ð",
+        forms: { isolated: "ذ", initial: "ذ", medial: "ـذ", final: "ـذ" },
+        nonConnecting: true,
+        visualAssociation: "Isti oblik kao Dal, ali s jednom tačkom iznad",
+        soundFile: "zal.mp3",
+      },
+      {
+        arabic: "ر", name: "Ra", transliteration: "R",
+        forms: { isolated: "ر", initial: "ر", medial: "ـر", final: "ـر" },
+        nonConnecting: true,
+        visualAssociation: "Kratka savijena linija bez tačke; ne spaja se s narednim harfom",
+        soundFile: "ra.mp3",
+      },
+      {
+        arabic: "ز", name: "Zejn", transliteration: "Z",
+        forms: { isolated: "ز", initial: "ز", medial: "ـز", final: "ـز" },
+        nonConnecting: true,
+        visualAssociation: "Isti oblik kao Ra, ali s jednom tačkom iznad",
+        soundFile: "zejn.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf",
+        title: "Prepoznaj harf", description: "Pogledaj oblik i tačku — koji je ovo harf?",
+        icon: "🔡", hasanatReward: 15,
+        choices: ["Dal", "Zal", "Ra", "Zejn"],
+        items: [
+          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
+          { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" },
+          { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" },
+          { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" }, { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" },
+          { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" },
+        ],
+      },
+      {
+        type: "pronadi-harf",
+        title: "Pronađi Dal", description: "Pronađi sva slova د — Dal nema tačku.",
+        icon: "🔍", hasanatReward: 20,
+        choices: [], items: [{ show: "د", answer: "Dal" }],
+        pool: ["ذ", "ر", "ز", "ب", "ت"],
+        targetCount: 6,
+      },
+      {
+        type: "pronadi-harf",
+        title: "Pronađi Zal", description: "Pronađi sva slova ذ — Zal ima jednu tačku iznad.",
+        icon: "🔍", hasanatReward: 20,
+        choices: [], items: [{ show: "ذ", answer: "Zal" }],
+        pool: ["د", "ر", "ز", "ج", "خ"],
+        targetCount: 6,
+      },
+      {
+        type: "koji-harf",
+        title: "Harf u spojenom obliku", description: "Harf je spojen s prethodnim harfom. Prepoznaj njegov oblik.",
+        icon: "🔗", hasanatReward: 20,
+        choices: ["Dal", "Zal", "Ra", "Zejn"],
+        items: [
+          { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" }, { show: "ـز", answer: "Zejn" },
+          { show: "ـز", answer: "Zejn" }, { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" },
+          { show: "ـر", answer: "Ra" }, { show: "ـذ", answer: "Zal" }, { show: "ـد", answer: "Dal" }, { show: "ـز", answer: "Zejn" },
+        ],
+      },
+      {
+        type: "napiši",
+        title: "Napiši ime harfa", description: "Pogledaj harf i napiši njegovo ime: Dal, Zal, Ra ili Zejn.",
+        icon: "✏️", hasanatReward: 15,
+        choices: [],
+        items: [
+          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
+          { show: "ذ", answer: "Zal" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ر", answer: "Ra" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 7: SUKUN — RAZVOJNI NACRT ──────────────────────
+  {
+    id: 7, orderNum: 7, slug: "sukun",
     title: "Sukun",
     letters: ["\u0640\u0640\u0652"],
     isCompleted: false,
@@ -824,9 +930,9 @@ export const LESSONS: LessonData[] = [
     ]
   },
 
-  // ── LEKCIJA 7: TEŠDID ───────────────────────────────────────
+  // ── LEKCIJA 8: TEŠDID — RAZVOJNI NACRT ─────────────────────
   {
-    id: 7, orderNum: 7, slug: "tesdid",
+    id: 8, orderNum: 8, slug: "tesdid",
     title: "Tešdid",
     letters: ["\u0640\u0640\u0651"],
     isCompleted: false,
@@ -903,9 +1009,9 @@ export const LESSONS: LessonData[] = [
     ]
   },
 
-  // ── LEKCIJA 8: TENVIN ───────────────────────────────────────
+  // ── LEKCIJA 9: TENVIN — RAZVOJNI NACRT ─────────────────────
   {
-    id: 8, orderNum: 8, slug: "tenvin",
+    id: 9, orderNum: 9, slug: "tenvin",
     title: "Tenvin",
     letters: ["ـًـٍـٌ"],
     isCompleted: false,

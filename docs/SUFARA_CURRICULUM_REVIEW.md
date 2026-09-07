@@ -2,7 +2,7 @@
 
 ## Trenutno stanje
 
-Postojeće lekcije obrađuju elif i hemze te harfove `ب ت ث ج ح خ`. Lekcije
+Postojeće lekcije obrađuju elif i hemze te harfove `ب ت ث ج ح خ د ذ ر ز`. Lekcije
 sukuna, tešdida i tenvina postoje kao razvojni nacrti, ali ih ne treba otvoriti
 učenicima prije završetka osnovnih harfova, njihovih spojenih oblika i vježbi
 čitanja. Zato su u podacima označene sa `isDraft: true`, a cijeli modul ostaje
@@ -14,7 +14,7 @@ dostupan samo administratoru.
 2. `ب ت ث`
 3. `ج ح خ`
 4. Ponavljanje prvih sedam harfova.
-5. `د ذ ر ز`
+5. `د ذ ر ز` — izrađen funkcionalni uzorak lekcije
 6. `س ش`
 7. `ص ض`
 8. `ط ظ`

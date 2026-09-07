@@ -30,6 +30,14 @@ for (const path of sourceFiles) {
 }
 
 const lessonsSource = readFileSync(lessonsPath, "utf8");
+const lessonIds = [...lessonsSource.matchAll(/id:\s*(\d+),\s*orderNum:/g)].map((match) => Number(match[1]));
+if (new Set(lessonIds).size !== lessonIds.length) {
+  failures.push("ID-jevi lekcija moraju biti jedinstveni.");
+}
+const lessonSlugs = [...lessonsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((match) => match[1]);
+if (new Set(lessonSlugs).size !== lessonSlugs.length) {
+  failures.push("Slugovi lekcija moraju biti jedinstveni.");
+}
 if (/\b(?:šedda|šedde|shadda)\b/i.test(lessonsSource)) {
   failures.push("Korisnički sadržaj mora koristiti naziv tešdid.");
 }
@@ -69,4 +77,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`✓ Sufara provjera prošla: ${referencedFiles.size} direktnih audio putanja i ${Object.keys(mapping).length} slogova.`);
+console.log(`✓ Sufara provjera prošla: ${lessonIds.length} lekcija, ${referencedFiles.size} direktnih audio putanja i ${Object.keys(mapping).length} slogova.`);
