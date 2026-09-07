@@ -1,0 +1,1441 @@
+From c2ff3e2692f5f765371b093e59a8329a08c8859a Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Mon, 7 Sep 2026 23:22:25 +0200
+Subject: [PATCH v3] Uredi Sufaru i uvedi kontrolu kvaliteta audija
+
+---
+ artifacts/mekteb-arapsko-pismo/package.json   |   1 +
+ .../scripts/check-sufara.mjs                  |  80 +++++
+ artifacts/mekteb-arapsko-pismo/src/App.tsx    |  23 +-
+ .../src/components/push-prompt.tsx            |   5 +-
+ .../src/data/audio-approval.ts                | 104 ++++++
+ .../mekteb-arapsko-pismo/src/data/lessons.ts  | 307 +++++++++++-------
+ artifacts/mekteb-arapsko-pismo/src/index.css  |  10 +
+ .../src/lib/sufara-audio.ts                   |  27 ++
+ .../src/pages/arapsko-pismo.tsx               |  38 ++-
+ .../src/pages/karta-harfova.tsx               |  69 ++--
+ .../src/pages/lesson-detail.tsx               |  94 +++---
+ .../mekteb-arapsko-pismo/src/pages/login.tsx  |   6 +-
+ docs/SUFARA_AUDIO_STANDARD.md                 |  71 ++++
+ docs/SUFARA_CURRICULUM_REVIEW.md              |  54 +++
+ pnpm-workspace.yaml                           |   1 -
+ 15 files changed, 648 insertions(+), 242 deletions(-)
+ create mode 100644 artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
+ create mode 100644 artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts
+ create mode 100644 artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts
+ create mode 100644 docs/SUFARA_AUDIO_STANDARD.md
+ create mode 100644 docs/SUFARA_CURRICULUM_REVIEW.md
+
+diff --git a/artifacts/mekteb-arapsko-pismo/package.json b/artifacts/mekteb-arapsko-pismo/package.json
+index 051d41c..51b9db7 100644
+--- a/artifacts/mekteb-arapsko-pismo/package.json
++++ b/artifacts/mekteb-arapsko-pismo/package.json
+@@ -8,6 +8,7 @@
+     "build": "node scripts/copy-h5p-standalone.mjs && vite build --config vite.config.ts",
+     "build:mobile": "bash scripts/build-mobile.sh",
+     "mobile:verify": "node scripts/verify-mobile-config.mjs",
++    "check:sufara": "node scripts/check-sufara.mjs",
+     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
+     "typecheck": "tsc -p tsconfig.json --noEmit",
+     "cap:sync": "pnpm run cap:sync:android",
+diff --git a/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs b/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
+new file mode 100644
+index 0000000..33c6fa0
+--- /dev/null
++++ b/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
+@@ -0,0 +1,80 @@
++import { existsSync, readFileSync, readdirSync } from "node:fs";
++import { join, relative } from "node:path";
++import { fileURLToPath } from "node:url";
++
++const projectRoot = fileURLToPath(new URL("..", import.meta.url));
++const srcRoot = join(projectRoot, "src");
++const lessonsPath = join(srcRoot, "data", "lessons.ts");
++const mappingPath = join(srcRoot, "data", "slogovi-mapping.ts");
++const harfoviDir = join(projectRoot, "public", "audio", "harfovi");
++const slogoviDir = join(projectRoot, "public", "audio", "slogovi");
++
++const failures = [];
++const sourceFiles = [];
++
++function walk(dir) {
++  for (const entry of readdirSync(dir, { withFileTypes: true })) {
++    const path = join(dir, entry.name);
++    if (entry.isDirectory()) walk(path);
++    else if (/\.(ts|tsx)$/.test(entry.name)) sourceFiles.push(path);
++  }
++}
++
++walk(srcRoot);
++
++for (const path of sourceFiles) {
++  const source = readFileSync(path, "utf8");
++  if (/speechSynthesis|SpeechSynthesisUtterance/.test(source)) {
++    failures.push(`Nedozvoljeni browser TTS: ${relative(projectRoot, path)}`);
++  }
++}
++
++const lessonsSource = readFileSync(lessonsPath, "utf8");
++const lessonIds = [...lessonsSource.matchAll(/id:\s*(\d+),\s*orderNum:/g)].map((match) => Number(match[1]));
++if (new Set(lessonIds).size !== lessonIds.length) {
++  failures.push("ID-jevi lekcija moraju biti jedinstveni.");
++}
++const lessonSlugs = [...lessonsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((match) => match[1]);
++if (new Set(lessonSlugs).size !== lessonSlugs.length) {
++  failures.push("Slugovi lekcija moraju biti jedinstveni.");
++}
++if (/\b(?:šedda|šedde|shadda)\b/i.test(lessonsSource)) {
++  failures.push("Korisnički sadržaj mora koristiti naziv tešdid.");
++}
++if (/\bhamz(?:a|e|u|om)\b/i.test(lessonsSource)) {
++  failures.push("Korisnički sadržaj mora koristiti naziv hemza/hemze.");
++}
++
++const mappingSource = readFileSync(mappingPath, "utf8");
++const mapping = Object.fromEntries(
++  [...mappingSource.matchAll(/^\s*"([^"]+)":\s*"([^"]+\.mp3)"/gm)].map((match) => [match[1], match[2]]),
++);
++for (const [arabic, file] of Object.entries(mapping)) {
++  if (!existsSync(join(slogoviDir, file))) {
++    failures.push(`Nedostaje audio za ${arabic}: audio/slogovi/${file}`);
++  }
++}
++
++const referencedFiles = new Set(
++  [...lessonsSource.matchAll(/(?:audio|soundFile):\s*"([^"]+\.mp3)"/g)].map((match) => match[1]),
++);
++for (const file of referencedFiles) {
++  if (!existsSync(join(harfoviDir, file)) && !existsSync(join(slogoviDir, file))) {
++    failures.push(`Lekcija upućuje na nepostojeći audio: ${file}`);
++  }
++}
++
++const approvalPath = join(srcRoot, "data", "audio-approval.ts");
++const approvalSource = readFileSync(approvalPath, "utf8");
++for (const file of readdirSync(harfoviDir).filter((name) => name.endsWith(".mp3"))) {
++  if (!approvalSource.includes(`"${file}"`)) {
++    failures.push(`Audio nije evidentiran u kontroli kvaliteta: audio/harfovi/${file}`);
++  }
++}
++
++if (failures.length) {
++  console.error(failures.map((failure) => `✗ ${failure}`).join("\n"));
++  process.exit(1);
++}
++
++console.log(`✓ Sufara provjera prošla: ${lessonIds.length} lekcija, ${referencedFiles.size} direktnih audio putanja i ${Object.keys(mapping).length} slogova.`);
+diff --git a/artifacts/mekteb-arapsko-pismo/src/App.tsx b/artifacts/mekteb-arapsko-pismo/src/App.tsx
+index 3a5a0fe..b4e92a5 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/App.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/App.tsx
+@@ -1,5 +1,5 @@
+-import { useEffect } from "react";
+-import { Switch, Route, Router as WouterRouter } from "wouter";
++import { useEffect, type ReactNode } from "react";
++import { Redirect, Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ import { Toaster } from "@/components/ui/toaster";
+ import { TooltipProvider } from "@/components/ui/tooltip";
+@@ -130,9 +130,16 @@ function KuranAdminPageRoute() {
+   return user?.role === "admin" ? <KuranStranicaPage /> : <NotFound />;
+ }
+ 
++function SufaraAdminGate({ children }: { children: ReactNode }) {
++  const { user, isLoading } = useAuth();
++  const [location] = useLocation();
++  if (isLoading) return null;
++  if (!user) return <Redirect to={`/login?next=${encodeURIComponent(location)}`} replace />;
++  return user.role === "admin" ? <>{children}</> : <NotFound />;
++}
++
+ function SufaraAdminRoute() {
+-  const { user } = useAuth();
+-  return user?.role === "admin" ? <ArapskoPismoPage /> : <NotFound />;
++  return <SufaraAdminGate><ArapskoPismoPage /></SufaraAdminGate>;
+ }
+ 
+ function KvizoviAdminRoute() {
+@@ -167,10 +174,10 @@ function Router() {
+ 
+       {/* Arapsko pismo */}
+       <Route path="/arapsko-pismo" component={SufaraAdminRoute} />
+-      <Route path="/lesson/:id" component={LessonDetail} />
+-      <Route path="/lesson/:id/exercise/:type" component={Exercise} />
+-      <Route path="/karta-harfova" component={KartaHarfova} />
+-      <Route path="/napredak" component={Progress} />
++      <Route path="/lesson/:id" component={() => <SufaraAdminGate><LessonDetail /></SufaraAdminGate>} />
++      <Route path="/lesson/:id/exercise/:type" component={() => <SufaraAdminGate><Exercise /></SufaraAdminGate>} />
++      <Route path="/karta-harfova" component={() => <SufaraAdminGate><KartaHarfova /></SufaraAdminGate>} />
++      <Route path="/napredak" component={() => <SufaraAdminGate><Progress /></SufaraAdminGate>} />
+ 
+       {/* Ilmihal */}
+       <Route path="/ilmihal" component={IlmihalPage} />
+diff --git a/artifacts/mekteb-arapsko-pismo/src/components/push-prompt.tsx b/artifacts/mekteb-arapsko-pismo/src/components/push-prompt.tsx
+index da8513a..da464b1 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/components/push-prompt.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/components/push-prompt.tsx
+@@ -118,7 +118,10 @@ export function PushPrompt() {
+   if (!visible) return null;
+ 
+   return (
+-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 rounded-2xl bg-white border border-mekteb-teal/30 shadow-xl p-4 animate-in slide-in-from-bottom-4">
++    <div
++      data-testid="push-prompt"
++      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 rounded-2xl bg-white border border-mekteb-teal/30 shadow-xl p-4 animate-in slide-in-from-bottom-4"
++    >
+       <button
+         onClick={onDismiss}
+         className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1"
+diff --git a/artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts b/artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts
+new file mode 100644
+index 0000000..adb4561
+--- /dev/null
++++ b/artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts
+@@ -0,0 +1,104 @@
++import { SLOGOVI_AUDIO } from "@/data/slogovi-mapping";
++
++export type SufaraAudioStatus = "draft" | "needs_review" | "approved" | "rejected";
++export type SufaraAudioKind = "harf" | "hareket" | "slog" | "sukun" | "tesdid" | "tenvin";
++
++export interface SufaraAudioApproval {
++  file: string;
++  arabic: string | null;
++  kind: SufaraAudioKind;
++  reciter: string | null;
++  reviewer: string | null;
++  qiraah: "Hafs od Asima" | null;
++  status: SufaraAudioStatus;
++  reviewedAt: string | null;
++  source: string;
++  sourceUrl: string | null;
++  license: string | null;
++  folder: "harfovi" | "slogovi";
++}
++
++// Ovi fajlovi su pronađeni u staroj razvojnoj verziji projekta bez pratećeg
++// zapisnika o učaču, kiraetu i stručnoj provjeri. Zato namjerno nisu označeni
++// kao odobreni, iako tehnički mogu biti preslušani u administratorskom pregledu.
++const LEGACY_HARF_FILES = [
++  "ajn.mp3", "ba.mp3", "dad.mp3", "dal.mp3", "dzim.mp3", "elif.mp3",
++  "fa.mp3", "gajn.mp3", "ha.mp3", "ha2.mp3", "he.mp3", "ja.mp3",
++  "kaf.mp3", "kef.mp3", "lam.mp3", "mim.mp3", "nun.mp3", "ra.mp3",
++  "sa.mp3", "sad.mp3", "sin.mp3", "sin2.mp3", "ta.mp3", "ta2.mp3",
++  "waw.mp3", "za.mp3", "zal.mp3", "zejn.mp3",
++] as const;
++
++const LEGACY_HAREKET_FILES: Array<{ file: string; arabic: string; kind: SufaraAudioKind }> = [
++  { file: "hareke-fatha.mp3", arabic: "ـَ", kind: "hareket" },
++  { file: "hareke-kasra.mp3", arabic: "ـِ", kind: "hareket" },
++  { file: "hareke-damma.mp3", arabic: "ـُ", kind: "hareket" },
++  { file: "hareke-sukun.mp3", arabic: "ـْ", kind: "sukun" },
++  { file: "hareke-sedda.mp3", arabic: "ـّ", kind: "tesdid" },
++];
++
++const legacyRecord = (
++  file: string,
++  folder: "harfovi" | "slogovi",
++  arabic: string | null,
++  kind: SufaraAudioKind,
++  source: string,
++): SufaraAudioApproval => ({
++  file,
++  arabic,
++  kind,
++  reciter: null,
++  reviewer: null,
++  qiraah: null,
++  status: "needs_review",
++  reviewedAt: null,
++  source,
++  sourceUrl: null,
++  license: null,
++  folder,
++});
++
++export const SUFARA_AUDIO_APPROVALS: SufaraAudioApproval[] = [
++  ...LEGACY_HARF_FILES.map((file) =>
++    legacyRecord(file, "harfovi", null, "harf", "Naslijeđeni razvojni snimak"),
++  ),
++  ...LEGACY_HAREKET_FILES.map(({ file, arabic, kind }) =>
++    legacyRecord(file, "harfovi", arabic, kind, "Naslijeđeni razvojni snimak"),
++  ),
++  ...Object.entries(SLOGOVI_AUDIO).map(([arabic, file]) =>
++    legacyRecord(
++      file,
++      "slogovi",
++      arabic,
++      "slog",
++      "Razvojni ElevenLabs snimak (Anas, multilingual_v2)",
++    ),
++  ),
++];
++
++const approvalByFile = new Map(SUFARA_AUDIO_APPROVALS.map((record) => [record.file, record]));
++
++export function getSufaraAudioApproval(file: string): SufaraAudioApproval | null {
++  return approvalByFile.get(file) ?? null;
++}
++
++export function getSufaraAudioSummary() {
++  return SUFARA_AUDIO_APPROVALS.reduce<Record<SufaraAudioStatus, number>>(
++    (summary, record) => {
++      summary[record.status] += 1;
++      return summary;
++    },
++    { draft: 0, needs_review: 0, approved: 0, rejected: 0 },
++  );
++}
++
++export function canPlaySufaraAudio(file: string, adminPreview = false): boolean {
++  const record = getSufaraAudioApproval(file);
++  if (!record || record.status === "rejected") return false;
++  return record.status === "approved" || adminPreview;
++}
++
++export function getSufaraAudioUrl(file: string, basePath: string): string | null {
++  const record = getSufaraAudioApproval(file);
++  return record ? `${basePath}audio/${record.folder}/${record.file}` : null;
++}
+diff --git a/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts b/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
+index 24457f4..f01f9ed 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
++++ b/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
+@@ -34,7 +34,8 @@ export interface HarekeData {
+   colour: string;
+   description: string;
+   napomena: string | null;
+-  soundFile: string;
++  /** Null dok snimak učača nije stručno provjeren i odobren. */
++  soundFile: string | null;
+   speakText?: string;
+ }
+ 
+@@ -51,6 +52,8 @@ export interface LessonData {
+   letters: string[];
+   isCompleted: boolean;
+   isRevision?: boolean;
++  /** Napredna lekcija koja je dostupna samo za administratorski pregled. */
++  isDraft?: boolean;
+   story: { lines: { speaker: "dzana" | "amir" | "narator" | "otac" | "majka" | "muallim"; text: string }[] };
+   letterData: HarfData[];
+   hareketi?: HarekeData[];
+@@ -88,7 +91,7 @@ export const LESSONS: LessonData[] = [
+   // ── LEKCIJA 2 ───────────────────────────────────────────────
+   {
+     id: 2, orderNum: 2, slug: "elif-hareketi",
+-    title: "Elif i hareketi",
++    title: "Elif, hemze i hareketi",
+     letters: ["ا"],
+     isCompleted: false,
+     story: {
+@@ -99,23 +102,21 @@ export const LESSONS: LessonData[] = [
+         { speaker: "narator", text: "Otac je odmaknuo pogled od ekrana i nasmijao se." },
+         { speaker: "otac",    text: "Nisu naopako, dušo. Idu s desna na lijevo. Kao što svaka rijeka teče na svoju stranu. A vi biste mogli naučiti ovu rijeku čitati, a jednog dana možda je i napamet znati." },
+         { speaker: "narator", text: "Otac je otvorio Mushaf. Prstom je pokazao jedno tanko, uspravno slovo." },
+-        { speaker: "otac",    text: "Ovo je Elif. Prvo slovo. Stoji ravno, ponosno — kao kada vi stojite uspravno ispred učitelja u školi, muallima u mektebu ili kod mame i mene kod kuće." },
++        { speaker: "otac",    text: "Ovo je elif. Stoji ravno, kao uspravan štap. Danas ćemo uz njega upoznati i hemzu — poseban harf koji se na početku riječi može pisati iznad ili ispod elifa." },
+         { speaker: "narator", text: "Amir se napravio važan i ispravio leđa." },
+         { speaker: "amir",    text: "I šta on govori, taj Elif? Nećemo valjda svaki put kazati elif kada ga vidimo — to su četiri slova: E – L – I – F." },
+-        { speaker: "otac",    text: "Ne. Ovo slovo nema svoj glas. On je tih, ne govori ako je sam." },
++        { speaker: "otac",    text: "Ime harfa je elif. Sam elif najčešće služi za produžavanje glasa, a kratki početni glas u oblicima أَ، إِ، أُ nosi hemza." },
+         { speaker: "amir",    text: "Čekaj, kako može slovo biti tiho?" },
+-        { speaker: "otac",    text: "Lijepo razmišljaš. Vi znate engleski, zar ne. Džana, koja su ovo slova u engleskom alfabetu? — upitao je otac pokazujući riječ WHEN." },
+-        { speaker: "dzana",   text: "DABLJU, EIČ, I, EN." },
+-        { speaker: "otac",    text: "Super. DABLJU se čita kao V, a H se često uopće ne čuje. Tako i u arapskom — ELIF nema glas, ali kada mu dodamo crticu iznad ili ispod, ili zarez iznad njega — onda progovori." },
++        { speaker: "otac",    text: "U arapskom razlikujemo elif, hemzu i kratki glas koji daje hareket. Zato pažljivo gledamo šta je napisano i slušamo pravilan izgovor." },
+         { speaker: "narator", text: "Djeca su gledala iznenađeno." },
+-        { speaker: "otac",    text: "Crticu iznad zovemo FETHA — i elif čujemo kao kratko E. Crticu ispod KESRA — i čujemo kratko I. A mali zarez iznad je DAMMA — i čujemo kratko U." },
++        { speaker: "otac",    text: "Crticu iznad zovemo fetha, crticu ispod kesra, a mali zarez iznad damma. To su kratki glasovi. Latinica je samo pomoć; izgovor uvijek učimo slušanjem učača." },
+         { speaker: "amir",    text: "A imaju li te crtice zajednički naziv?" },
+         { speaker: "otac",    text: "Naravno. Zajedno se zovu HAREKETI — znaci koji harfovima daju glas!" },
+       ]
+     },
+     letterData: [
+       {
+-        arabic: "ا", name: "Elif", transliteration: "E / I / U",
++        arabic: "ا", name: "Elif", transliteration: "dugo a / nosač hemze",
+         forms: { isolated: "ا", initial: "ا", medial: "ـا", final: "ـا" },
+         nonConnecting: true,
+         visualAssociation: "Kao uspravan štap — jednostavan i snažan",
+@@ -141,7 +142,7 @@ export const LESSONS: LessonData[] = [
+       },
+       {
+         type: "koji-znak",
+-        title: "Koji glas?", description: "Pogledaj elif s harekom — koji glas daje?",
++        title: "Koji glas?", description: "Pogledaj hemzu na ili ispod elifa — koji kratki glas čuješ?",
+         icon: "🔤", hasanatReward: 15,
+         choices: ["e", "i", "u"],
+         items: [
+@@ -184,7 +185,7 @@ export const LESSONS: LessonData[] = [
+       },
+       {
+         type: "napiši",
+-        title: "Napiši slovo/glas", description: "Pogledaj elif — napiši latinično slovo (e, i ili u)",
++        title: "Napiši glas", description: "Pogledaj hemzu s hareketom — napiši pomoćni latinični glas (e, i ili u)",
+         icon: "✏️", hasanatReward: 10,
+         choices: [],
+         items: [
+@@ -222,7 +223,7 @@ export const LESSONS: LessonData[] = [
+         { speaker: "amir",    text: "Ko iz čitanke!" },
+         { speaker: "otac",    text: "Upravo tako. Dok budete učili ostale harfove, vidjet ćete da su tačkice veoma, veoma važne — iako su veoma, veoma male." },
+         { speaker: "amir",    text: "Znači, ima još slova s tačkicama?" },
+-        { speaker: "otac",    text: "Naravno. Ako ovaj tvoj čamac, Amire, ima dvije tačkice iznad — onda je to harf TA, glas kao naše T. A ako ima tri tačkice iznad — onda je harf SA, čiji glas ne postoji u bosanskom, ali ga ima u engleskom. Kao kada kažete THREE — nešto između T i S, mehko slovo S. Poslušajte vježbe i naučite kako se ispravno izgovara." },
++        { speaker: "otac",    text: "Naravno. Ako ovaj tvoj čamac, Amire, ima dvije tačkice iznad — onda je to harf TA, glas kao naše T. A ako ima tri tačkice iznad — onda je harf SA. Taj glas ne postoji u bosanskom. Vrh jezika lagano stavimo između zuba i izgovorimo bez glasa, slično engleskom 'th' u riječi 'three'. Poslušajte snimak i ponovite." },
+       ]
+     },
+     letterData: [
+@@ -239,7 +240,7 @@ export const LESSONS: LessonData[] = [
+         soundFile: "ta.mp3",
+       },
+       {
+-        arabic: "ث", name: "Sa", transliteration: "S (meko)",
++        arabic: "ث", name: "Sa", transliteration: "TH / θ",
+         forms: { isolated: "ث", initial: "ثـ", medial: "ـثـ", final: "ـث" },
+         visualAssociation: "Isti čamac s tri tačkice iznad — kao mali krovčić od zvjezdica",
+         soundFile: "sa.mp3",
+@@ -559,7 +560,7 @@ export const LESSONS: LessonData[] = [
+         { speaker: "amir",    text: "Sedam harfova. A tek sam počeo." },
+         { speaker: "narator", text: "Džana mu je prišla i bacila pogled na otvorenu sufaru i upaljeni tablet." },
+         { speaker: "dzana",   text: "Hajde da i ja poslušam kako se ispravno izgovaraju harfovi kojih nema u bosanskom jeziku. To je ثَ..." },
+-        { speaker: "amir",    text: "Čekaj... Znam i ja. Ono hrapavo slovo حَ, kao kada neko hrče dok spava. I drugo خَ, ono kad se stisne grlo. Poslušaj!" },
++        { speaker: "amir",    text: "Čekaj... Znam i ja. حَ je duboki, blagi glas iz sredine grla, a خَ je hrapaviji glas iz gornjeg dijela grla. Poslušaj!" },
+         { speaker: "narator", text: "Amir je nekoliko puta pokušavao izgovoriti harf حَ." },
+         { speaker: "dzana",   text: "Super. Nije loše, Amire." },
+         { speaker: "narator", text: "U međuvremenu majka je zastala na vratima i ponosno gledala djecu kako uče svoje prve harfove. Prišla im je, zagrlila ih i kazala:" },
+@@ -699,38 +700,145 @@ export const LESSONS: LessonData[] = [
+     ]
+   },
+ 
+-  // ── LEKCIJA 6: SUKUN ────────────────────────────────────────
++  // ── LEKCIJA 6: DAL, ZAL, RA I ZEJN ─────────────────────────
++  {
++    id: 6, orderNum: 6, slug: "dal-zal-ra-zejn",
++    title: "Dal, Zal, Ra i Zejn",
++    letters: ["د", "ذ", "ر", "ز"],
++    isCompleted: false,
++    story: {
++      lines: [
++        { speaker: "narator", text: "Muallim je na tabli napisao četiri nova harfa: د ذ ر ز. Zatim je između njih dodao kratke linije da pokaže gdje se prekida spajanje." },
++        { speaker: "muallim", text: "Ova četiri harfa imaju važno zajedničko pravilo: ne spajaju se s harfom koji dolazi poslije njih. Mogu se spojiti s harfom prije sebe, ali poslije njih počinje novi potez." },
++        { speaker: "amir", text: "Znači li to da riječ prekidamo dok je čitamo?" },
++        { speaker: "muallim", text: "Ne. Prekida se samo pisana linija, a čitanje ostaje povezano. Zato razlikujemo spajanje u pisanju od tečnog čitanja." },
++        { speaker: "dzana", text: "Dal i Zal izgledaju isto, ali Zal ima tačku iznad." },
++        { speaker: "muallim", text: "Tačno. Kod harfa Dal vrh jezika dodiruje područje iza gornjih prednjih zuba. Glas je sličan našem D, ali ga učimo slušanjem i ponavljanjem." },
++        { speaker: "muallim", text: "Kod harfa Zal vrh jezika lagano dodiruje rub gornjih prednjih zuba i malo se vidi između zuba. Glas je zvučan, sličan engleskom 'th' u riječi 'this'. Nemojte ga pretvoriti u obično Z." },
++        { speaker: "amir", text: "A Ra i Zejn također imaju isti osnovni oblik, samo Zejn ima tačku?" },
++        { speaker: "muallim", text: "Da. Kod harfa Ra vrh jezika prilazi desnima iza gornjih prednjih zuba. Ne treba ga dugo tresti niti ponavljati. Pravila kada se Ra čita krupnije ili tanje učit ćemo kasnije." },
++        { speaker: "muallim", text: "Zejn je zvučan glas sličan našem Z. Zrak prolazi uskim putem između jezika i prednjih zuba, bez dodavanja glasa D ispred njega." },
++        { speaker: "dzana", text: "Dakle, tačke razlikuju Dal od Zala i Ra od Zejna, a sva četiri prekidaju pisanu vezu s narednim harfom." },
++        { speaker: "muallim", text: "Odlično. Sada ih prvo prepoznajemo po obliku, zatim po tački, a pravilan izgovor potvrđujemo snimkom učača." },
++      ],
++    },
++    letterData: [
++      {
++        arabic: "د", name: "Dal", transliteration: "D",
++        forms: { isolated: "د", initial: "د", medial: "ـد", final: "ـد" },
++        nonConnecting: true,
++        visualAssociation: "Savijena linija bez tačke; ne spaja se s harfom poslije sebe",
++        soundFile: "dal.mp3",
++      },
++      {
++        arabic: "ذ", name: "Zal", transliteration: "DH / ð",
++        forms: { isolated: "ذ", initial: "ذ", medial: "ـذ", final: "ـذ" },
++        nonConnecting: true,
++        visualAssociation: "Isti oblik kao Dal, ali s jednom tačkom iznad",
++        soundFile: "zal.mp3",
++      },
++      {
++        arabic: "ر", name: "Ra", transliteration: "R",
++        forms: { isolated: "ر", initial: "ر", medial: "ـر", final: "ـر" },
++        nonConnecting: true,
++        visualAssociation: "Kratka savijena linija bez tačke; ne spaja se s narednim harfom",
++        soundFile: "ra.mp3",
++      },
++      {
++        arabic: "ز", name: "Zejn", transliteration: "Z",
++        forms: { isolated: "ز", initial: "ز", medial: "ـز", final: "ـز" },
++        nonConnecting: true,
++        visualAssociation: "Isti oblik kao Ra, ali s jednom tačkom iznad",
++        soundFile: "zejn.mp3",
++      },
++    ],
++    exercises: [
++      {
++        type: "koji-harf",
++        title: "Prepoznaj harf", description: "Pogledaj oblik i tačku — koji je ovo harf?",
++        icon: "🔡", hasanatReward: 15,
++        choices: ["Dal", "Zal", "Ra", "Zejn"],
++        items: [
++          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
++          { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" },
++          { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" },
++          { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" }, { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" },
++          { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" },
++        ],
++      },
++      {
++        type: "pronadi-harf",
++        title: "Pronađi Dal", description: "Pronađi sva slova د — Dal nema tačku.",
++        icon: "🔍", hasanatReward: 20,
++        choices: [], items: [{ show: "د", answer: "Dal" }],
++        pool: ["ذ", "ر", "ز", "ب", "ت"],
++        targetCount: 6,
++      },
++      {
++        type: "pronadi-harf",
++        title: "Pronađi Zal", description: "Pronađi sva slova ذ — Zal ima jednu tačku iznad.",
++        icon: "🔍", hasanatReward: 20,
++        choices: [], items: [{ show: "ذ", answer: "Zal" }],
++        pool: ["د", "ر", "ز", "ج", "خ"],
++        targetCount: 6,
++      },
++      {
++        type: "koji-harf",
++        title: "Harf u spojenom obliku", description: "Harf je spojen s prethodnim harfom. Prepoznaj njegov oblik.",
++        icon: "🔗", hasanatReward: 20,
++        choices: ["Dal", "Zal", "Ra", "Zejn"],
++        items: [
++          { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" }, { show: "ـز", answer: "Zejn" },
++          { show: "ـز", answer: "Zejn" }, { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" },
++          { show: "ـر", answer: "Ra" }, { show: "ـذ", answer: "Zal" }, { show: "ـد", answer: "Dal" }, { show: "ـز", answer: "Zejn" },
++        ],
++      },
++      {
++        type: "napiši",
++        title: "Napiši ime harfa", description: "Pogledaj harf i napiši njegovo ime: Dal, Zal, Ra ili Zejn.",
++        icon: "✏️", hasanatReward: 15,
++        choices: [],
++        items: [
++          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
++          { show: "ذ", answer: "Zal" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ر", answer: "Ra" },
++        ],
++      },
++    ],
++  },
++
++  // ── LEKCIJA 7: SUKUN — RAZVOJNI NACRT ──────────────────────
+   {
+-    id: 6, orderNum: 6, slug: "sukun",
++    id: 7, orderNum: 7, slug: "sukun",
+     title: "Sukun",
+     letters: ["\u0640\u0640\u0652"],
+     isCompleted: false,
++    isDraft: true,
+     story: {
+       lines: [
+         { speaker: "narator", text: "Muallim ulazi u učionicu s pitanjem za razred." },
+         { speaker: "muallim", text: "Djeco, danas učimo o sukunu. Ali prvo — sukun NIJE harf. Sukun je znak koji stoji na harfu kad taj harf nema hareketa." },
+         { speaker: "amir",    text: "A šta znači da nema hareketa?" },
+         { speaker: "muallim", text: "Zamislite: harf je auto. Hareketi — fetha, kesra, damma — su motor i točkovi. Kad ih stavimo na harf, auto se pokrene i čujemo glas: 'be', 'bi', 'bu'." },
+-        { speaker: "muallim", text: "A harf sa sukunom? To je auto bez motora. Stoji, miruje. Nema glasa 'e', 'i' ili 'u' — samo dodirnemo taj harf i odmah idemo na sljedeći." },
++        { speaker: "muallim", text: "Harf sa sukunom nema svoj samoglasnik. Vežemo ga za glas koji dolazi prije njega i njime zatvaramo slog: أَبْ čitamo 'eb', a بَتْ čitamo 'bet'." },
+         { speaker: "dzana",   text: "Oo! I zato sukun izgleda kao krug — kao nula! Nula hareketa!" },
+-        { speaker: "muallim", text: "Odlično, Džana! Kad harf dobije hareket, čujemo glas. Kad dobije sukun — harf miruje i odmah prelazimo dalje." },
+-        { speaker: "amir",    text: "Dakle: بَ = 'be', بِ = 'bi', بُ = 'bu', a بْ = samo 'b'. Kapiraoo!" },
++        { speaker: "muallim", text: "Odlično, Džana! Sukun ne čitamo samostalno. Uvijek ga vježbamo u slogu, zajedno s glasom koji mu prethodi." },
++        { speaker: "amir",    text: "Dakle: بَ je otvoren slog, a u أَبْ harf بْ zatvara slog. Sad razumijem!" },
+       ]
+     },
+     letterData: [],
+     hareketi: [],
+     sukunExplainer: {
+-      sentence: "Kad harf dobije hareket, on se pokrene i čujemo glas (ba, bi, bu), a kad dobije sukun, harf miruje — izgovorimo ga bez ikakvog samoglasnika i odmah prelazimo na sljedeći harf.",
++      sentence: "Sukun pokazuje da harf nema vlastiti samoglasnik. Takav harf ne čitamo samostalno, nego ga vežemo za prethodni glas i njime zatvaramo slog: أَبْ = eb, بَتْ = bet.",
+       metaphor: {
+         auto:     "🚗  Harf je auto",
+         hareketi: "⚙️  Hareketi (fetha, kesra, damma) su motor i točkovi — pokreću harf, čujemo glas",
+-        sukun:    "🔇  Sukun = auto bez motora — harf stoji, miruje, nema samoglasnika",
++        sukun:    "🔇  Sukun = nema samoglasnika — harf se veže za prethodni glas i zatvara slog",
+       },
+     },
+     exercises: [
+       {
+         type: "prepoznaj-hareket",
+-        title: "Prepoznaj znak", description: "Pogledaj znak na tatweelu — koji je hareket ili sukun?",
++        title: "Prepoznaj znak", description: "Pogledaj znak na pomoćnoj crti — koji je hareket ili sukun?",
+         icon: "🔍", hasanatReward: 15,
+         choices: ["Fetha", "Kesra", "Damma", "Sukun"],
+         items: [
+@@ -758,9 +866,9 @@ export const LESSONS: LessonData[] = [
+       },
+       {
+         type: "slušaj",
+-        title: "Slušaj i odaberi", description: "Pritisni 🔊 — čuješ li fetha (e), kesra (i), damma (u)? Odaberi hareket.",
++        title: "Ponovi harekete slušanjem", description: "Pritisni 🔊 — čuješ li fethu, kesru ili dammu?",
+         icon: "🎧", hasanatReward: 20,
+-        choices: ["Fetha", "Kesra", "Damma", "Sukun"],
++        choices: ["Fetha", "Kesra", "Damma"],
+         items: [
+           { show: "🔊", answer: "Fetha", audio: "بَ" },
+           { show: "🔊", answer: "Damma", audio: "جُ" },
+@@ -784,9 +892,9 @@ export const LESSONS: LessonData[] = [
+       },
+       {
+         type: "slušaj",
+-        title: "Slušaj i odaberi harf", description: "Čuješ slog — odaberi ispravan harf s harekom ili sukunom",
++        title: "Slušaj kratki slog", description: "Čuješ slog — odaberi ispravan harf s hareketom",
+         icon: "🎯", hasanatReward: 20,
+-        choices: ["بَ", "بِ", "بُ", "بْ"],
++        choices: ["بَ", "بِ", "بُ"],
+         items: [
+           { show: "🔊", answer: "بَ", audio: "بَ" },
+           { show: "🔊", answer: "بِ", audio: "بِ" },
+@@ -822,39 +930,34 @@ export const LESSONS: LessonData[] = [
+     ]
+   },
+ 
+-  // ── LEKCIJA 7: TEŠDID ───────────────────────────────────────
++  // ── LEKCIJA 8: TEŠDID — RAZVOJNI NACRT ─────────────────────
+   {
+-    id: 7, orderNum: 7, slug: "tesdid",
++    id: 8, orderNum: 8, slug: "tesdid",
+     title: "Tešdid",
+     letters: ["\u0640\u0640\u0651"],
+     isCompleted: false,
++    isDraft: true,
+     story: {
+       lines: [
+-        { speaker: "dzana", text: "Amir, zamisli da jedno slovo mora reći svoje ime dva puta. To je tešdid!" },
++        { speaker: "dzana", text: "Amir, tešdid pokazuje da isti suglasnik izgovaramo udvojeno, bez pauze." },
+         { speaker: "amir",  text: "Dva puta? Pa zašto ne napišu slovo dva puta?" },
+         { speaker: "dzana", text: "Zato što u arapskom postoji poseban znak koji to označava — tešdid. Izgleda kao mali 'w' iznad slova." },
+         { speaker: "amir",  text: "Mali 'w'? Gdje se stavlja — iznad slova?" },
+-        { speaker: "dzana", text: "Da, iznad. I slovo se tada izgovara duže, kao da ga kažeš dvaput bez pauze." },
+-        { speaker: "amir",  text: "Pa — ba s tešdidom je... 'bb'? Kao u 'sabbah'?" },
+-        { speaker: "dzana", text: "Upravo! A uz hareket: bba, bbi, bbu. Tešdid i hareket idu zajedno." },
++        { speaker: "dzana", text: "Da, iznad. Prvi od ta dva ista harfa zamišljamo sa sukunom, a drugi nosi hareket. Zato أَبَّ čitamo povezano: eb-be." },
++        { speaker: "amir",  text: "Znači, ne produžavam samoglasnik, nego jasno udvostručim suglasnik?" },
++        { speaker: "dzana", text: "Upravo! U riječima إِنَّ i ثُمَّ jasno čujemo udvojene glasove n i m. Tešdid i hareket rade zajedno." },
+         { speaker: "amir",  text: "Dakle tešdid = udvojenost, a hareket kaže koji samoglasnik ide uz to. Jasno!" },
+       ]
+     },
+-    letterData: [
+-      {
+-        arabic: "بَّ", name: "Tešdid na Ba (s fethom)", transliteration: "bba",
+-        forms: { isolated: "بَّ", initial: "بَّ", medial: "ـبَّـ", final: "ـبَّ" },
+-        visualAssociation: "Mali 'w' iznad slova — slovo se kaže dvaput, kao eho",
+-        soundFile: "hareke-sedda.mp3",
+-      },
+-    ],
++    letterData: [],
++    hareketiTitle: "Tešdid — udvojeni suglasnik",
+     hareketi: [
+       {
+-        arabic: "بَّ", hareke: "ّ", name: "Tešdid",
+-        sound: "×2", colour: "teal",
+-        description: "Mali 'w' znak iznad slova — slovo se izgovara udvostručeno",
+-        napomena: "Uvijek dolazi uz hareket koji kaže koji samoglasnik ide uz udvostručenje",
+-        soundFile: "hareke-sedda.mp3",
++        arabic: "أَبَّ", hareke: "ّ", name: "Tešdid",
++        sound: "eb-be", colour: "teal",
++        description: "Tešdid udvostručuje suglasnik: prvi je bez samoglasnika, drugi nosi hareket",
++        napomena: "Ne produžavaj samoglasnik. Jasno izgovori udvojeni suglasnik bez pauze.",
++        soundFile: null,
+       },
+     ],
+     exercises: [
+@@ -888,37 +991,9 @@ export const LESSONS: LessonData[] = [
+           { show: "ثَّ", answer: "Fetha" }, { show: "جِّ", answer: "Kesra" },
+         ]
+       },
+-      {
+-        type: "slušaj",
+-        title: "Slušaj i odaberi", description: "Čuješ li tešdid ili obični hareket?",
+-        icon: "🎧", hasanatReward: 20,
+-        choices: ["Tešdid", "Fetha", "Kesra", "Damma"],
+-        items: [
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
+-          { show: "🔊", answer: "Kesra",  audio: "hareke-kasra.mp3" },
+-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Kesra",  audio: "hareke-kasra.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
+-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Kesra",  audio: "hareke-kasra.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
+-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
+-        ]
+-      },
+       {
+         type: "napiši",
+-        title: "Napiši glas", description: "Napiši glas hareka koji je uz tešdid (e/i/u)",
++        title: "Koji je hareket?", description: "Napiši pomoćni glas hareketa koji stoji uz tešdid (e/i/u)",
+         icon: "✏️", hasanatReward: 10,
+         choices: [],
+         items: [
+@@ -934,68 +1009,50 @@ export const LESSONS: LessonData[] = [
+     ]
+   },
+ 
+-  // ── LEKCIJA 8: TENVIN ───────────────────────────────────────
++  // ── LEKCIJA 9: TENVIN — RAZVOJNI NACRT ─────────────────────
+   {
+-    id: 8, orderNum: 8, slug: "tenvin",
++    id: 9, orderNum: 9, slug: "tenvin",
+     title: "Tenvin",
+     letters: ["ـًـٍـٌ"],
+     isCompleted: false,
++    isDraft: true,
+     story: {
+       lines: [
+         { speaker: "dzana", text: "Amir, tenvin je poseban znak koji dodaje glas 'n' na kraj riječi." },
+-        { speaker: "amir",  text: "Znači kao da kažeš fetha ali dodaš 'n' na kraj — 'en'?" },
+-        { speaker: "dzana", text: "Tačno! Tenvin fetha daje '-en', tenvin kesra daje '-in', a tenvin damma '-un'." },
++        { speaker: "amir",  text: "Znači kao da izgovorim kratki glas i na kraju dodam 'n'?" },
++        { speaker: "dzana", text: "Tačno! U povezanim riječima tenvin fetha daje '-an', tenvin kesra '-in', a tenvin damma '-un'." },
+         { speaker: "amir",  text: "A kako izgledaju? Kao dupli hareketi?" },
+         { speaker: "dzana", text: "Upravo! Tenvin fetha su dvije crtice iznad, tenvin kesra dvije ispod, a tenvin damma dva zareza iznad." },
+         { speaker: "amir",  text: "Ima li nešto posebno kod tenvin fethe?" },
+-        { speaker: "dzana", text: "Da — tenvin fetha uvijek dolazi zajedno s elifom! Piše se بًا, a ne samo بً. Elif je tu uvijek." },
+-        { speaker: "amir",  text: "Znači HARAM se piše حَرَامًا — sa elifom na kraju! A izgovara se HARAM — bez 'n'?" },
+-        { speaker: "dzana", text: "Odlično! U pisanju pišemo 'un', 'in', 'an' — ali u govoru tenvin na kraju ne izgovaramo. HARAMUN izgovaramo kao HARAM." },
+-        { speaker: "amir",  text: "Super! Pišem sa 'n', čitam bez 'n'. Onda nema zabune — ako vidim duple harekete, znam da je tenvin." },
++        { speaker: "dzana", text: "Tenvin fetha se najčešće piše uz dodatni elif, kao u بًا. Postoje i izuzeci koje ćemo kasnije učiti, zato ne kažemo 'uvijek'." },
++        { speaker: "amir",  text: "A izgovaramo li glas n?" },
++        { speaker: "dzana", text: "Kada nastavljamo čitanje, izgovaramo ga. Kada se zaustavimo na kraju riječi, primjenjujemo pravila stajanja. Tenvin fetha tada se najčešće zaustavlja dugim glasom a, dok se kod tenvin kesre i damme završni n ne izgovara." },
++        { speaker: "amir",  text: "Dakle, povezano čitanje i stajanje nisu isto. Pratim snimak učača i ne pogađam samo po latinici." },
+       ]
+     },
+-    letterData: [
+-      {
+-        arabic: "بًا", name: "Tenvin fetha", transliteration: "-en",
+-        forms: { isolated: "بًا", initial: "—", medial: "—", final: "ـبًا" },
+-        visualAssociation: "Dvije crtice iznad slova + elif — tenvin fetha UVIJEK dolazi s elifom na kraju",
+-        soundFile: "hareke-fatha.mp3",
+-      },
+-      {
+-        arabic: "بٍ", name: "Tenvin kesra", transliteration: "-in",
+-        forms: { isolated: "بٍ", initial: "بٍ", medial: "ـبٍ", final: "ـبٍ" },
+-        visualAssociation: "Dvije crtice ispod slova — kao kesra, ali duplirana → dodaje 'n'",
+-        soundFile: "hareke-kasra.mp3",
+-      },
+-      {
+-        arabic: "بٌ", name: "Tenvin damma", transliteration: "-un",
+-        forms: { isolated: "بٌ", initial: "بٌ", medial: "ـبٌ", final: "ـبٌ" },
+-        visualAssociation: "Dva zareza iznad slova — kao damma, ali duplirano → dodaje 'n'",
+-        soundFile: "hareke-damma.mp3",
+-      },
+-    ],
++    letterData: [],
+     hareketiTitle: "Tenvin — dupli znakovi za glas N",
+     hareketi: [
+       {
+         arabic: "بًا", hareke: "ً", name: "Tenvin fetha",
+-        sound: "-en", colour: "teal",
+-        description: "Dvije crtice iznad + UVIJEK dolazi s elifom (ا) — glas '-en' na kraju",
+-        napomena: "⚠️ Tenvin fetha uvijek piše s elifom: بًا, ne بً — u govoru se 'en' izostavlja",
+-        soundFile: "hareke-fatha.mp3",
++        sound: "-an", colour: "teal",
++        description: "Dvije crtice iznad — u povezanom čitanju daju glas '-an'",
++        napomena: "Najčešće se piše uz dodatni elif. Pri stajanju se '-an' najčešće mijenja u dugo 'a'; izuzeci se uče zasebno.",
++        soundFile: null,
+       },
+       {
+         arabic: "بٍ", hareke: "ٍ", name: "Tenvin kesra",
+         sound: "-in", colour: "blue",
+         description: "Dvije crtice ispod — hareket kesra + glas 'n' na kraju",
+         napomena: null,
+-        soundFile: "hareke-kasra.mp3",
++        soundFile: null,
+       },
+       {
+         arabic: "بٌ", hareke: "ٌ", name: "Tenvin damma",
+         sound: "-un", colour: "violet",
+         description: "Dva zareza iznad — hareket damma + glas 'n' na kraju",
+         napomena: null,
+-        soundFile: "hareke-damma.mp3",
++        soundFile: null,
+       },
+     ],
+     exercises: [
+@@ -1016,17 +1073,17 @@ export const LESSONS: LessonData[] = [
+       },
+       {
+         type: "prepoznaj-hareket",
+-        title: "Koji glas tenvin?", description: "Pogledaj tenvin — koji glas daje na kraju?",
++        title: "Koji glas daje tenvin?", description: "Pogledaj tenvin — koji glas daje u povezanom čitanju?",
+         icon: "🔤", hasanatReward: 15,
+-        choices: ["-en", "-in", "-un"],
++        choices: ["-an", "-in", "-un"],
+         items: [
+-          { show: "بًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+-          { show: "حًا", answer: "-en" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
+-          { show: "بًا", answer: "-en" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
+-          { show: "خًا", answer: "-en" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
+-          { show: "ثًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+-          { show: "حًا", answer: "-en" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
+-          { show: "ثًا", answer: "-en" }, { show: "جٍ", answer: "-in" },
++          { show: "بًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
++          { show: "حًا", answer: "-an" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
++          { show: "بًا", answer: "-an" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
++          { show: "خًا", answer: "-an" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
++          { show: "ثًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
++          { show: "حًا", answer: "-an" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
++          { show: "ثًا", answer: "-an" }, { show: "جٍ", answer: "-in" },
+         ]
+       },
+       {
+@@ -1046,17 +1103,17 @@ export const LESSONS: LessonData[] = [
+       },
+       {
+         type: "napiši",
+-        title: "Napiši glas tenvin", description: "Napiši glas tenvin (-en, -in ili -un)",
++        title: "Napiši glas tenvina", description: "Napiši glas tenvina u povezanom čitanju (-an, -in ili -un)",
+         icon: "✏️", hasanatReward: 10,
+         choices: [],
+         items: [
+-          { show: "بًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+-          { show: "حًا", answer: "-en" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
+-          { show: "بًا", answer: "-en" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
+-          { show: "خًا", answer: "-en" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
+-          { show: "ثًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+-          { show: "حًا", answer: "-en" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
+-          { show: "ثًا", answer: "-en" }, { show: "جٍ", answer: "-in" },
++          { show: "بًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
++          { show: "حًا", answer: "-an" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
++          { show: "بًا", answer: "-an" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
++          { show: "خًا", answer: "-an" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
++          { show: "ثًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
++          { show: "حًا", answer: "-an" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
++          { show: "ثًا", answer: "-an" }, { show: "جٍ", answer: "-in" },
+         ]
+       },
+     ]
+diff --git a/artifacts/mekteb-arapsko-pismo/src/index.css b/artifacts/mekteb-arapsko-pismo/src/index.css
+index 081736e..9692371 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/index.css
++++ b/artifacts/mekteb-arapsko-pismo/src/index.css
+@@ -121,6 +121,16 @@
+     overflow-x: hidden;
+   }
+ 
++  body.sufara-exercise-open {
++    overflow: hidden;
++  }
++
++  body.sufara-exercise-open [data-testid="cookie-consent"],
++  body.sufara-exercise-open [data-testid="install-prompt"],
++  body.sufara-exercise-open [data-testid="push-prompt"] {
++    display: none !important;
++  }
++
+   /* Stariji iPad Safari računa 100vh preko pune visine browser chrome-a.
+      -webkit-fill-available drži fullscreen mapu u stvarno vidljivom prostoru. */
+   .mapa-fullscreen {
+diff --git a/artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts b/artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts
+new file mode 100644
+index 0000000..d468d12
+--- /dev/null
++++ b/artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts
+@@ -0,0 +1,27 @@
++import {
++  canPlaySufaraAudio,
++  getSufaraAudioApproval,
++  getSufaraAudioUrl,
++} from "@/data/audio-approval";
++
++const BASE = import.meta.env.BASE_URL;
++
++export interface SufaraPlaybackResult {
++  played: boolean;
++  reason: "playing" | "missing" | "needs_review" | "rejected";
++}
++
++export function playSufaraAudio(file: string, adminPreview = false): SufaraPlaybackResult {
++  const approval = getSufaraAudioApproval(file);
++  if (!approval) return { played: false, reason: "missing" };
++  if (approval.status === "rejected") return { played: false, reason: "rejected" };
++  if (!canPlaySufaraAudio(file, adminPreview)) {
++    return { played: false, reason: "needs_review" };
++  }
++
++  const url = getSufaraAudioUrl(file, BASE);
++  if (!url) return { played: false, reason: "missing" };
++  const audio = new Audio(url);
++  audio.play().catch(() => {});
++  return { played: true, reason: "playing" };
++}
+diff --git a/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx b/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx
+index 1e277b2..c26d7cb 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx
+@@ -5,10 +5,10 @@ import { Layout } from "@/components/layout";
+ import { goBackOr } from "@/lib/back-navigation";
+ import { useLanguage } from "@/context/language";
+ import { useAuth } from "@/context/auth";
+-import { BookOpen, Search, Volume2, Lock, PlayCircle } from "lucide-react";
++import { BookOpen, Search, Volume2, Lock, PlayCircle, ShieldCheck } from "lucide-react";
+ import { LESSONS } from "@/data/lessons";
+-
+-const BASE = import.meta.env.BASE_URL;
++import { getSufaraAudioApproval, getSufaraAudioSummary } from "@/data/audio-approval";
++import { playSufaraAudio } from "@/lib/sufara-audio";
+ 
+ interface Harf {
+   id: number;
+@@ -61,17 +61,13 @@ const DOT_COLORS: Record<number, string> = {
+   3: "bg-purple-50 text-purple-700",
+ };
+ 
+-function playHarf(file: string) {
+-  const audio = new Audio(`${BASE}audio/harfovi/${file}`);
+-  audio.play().catch(() => {});
+-}
+-
+ export default function ArapskoPismoPage() {
+   const { t } = useLanguage();
+   const { user } = useAuth();
+   const [, setLocation] = useLocation();
+   const [search, setSearch] = useState("");
+   const [activeGroup, setActiveGroup] = useState<string | null>(null);
++  const audioSummary = getSufaraAudioSummary();
+ 
+   // Sufara modul nije završen — pristup ima samo administrator za interni
+   // pregled. Direct URL za sve ostale (učenik, mualim, roditelj, gost)
+@@ -126,6 +122,23 @@ export default function ArapskoPismoPage() {
+           </div>
+         </div>
+ 
++        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 mb-6">
++          <div className="flex items-start gap-3">
++            <ShieldCheck className="w-6 h-6 text-amber-700 shrink-0 mt-0.5" />
++            <div>
++              <p className="font-extrabold text-amber-950">Audio kontrola kvaliteta</p>
++              <p className="text-sm text-amber-900 mt-1 leading-relaxed">
++                Administratorski pregled može preslušati razvojne snimke. Učenicima se smiju otvoriti samo snimci koje je odobrio učač Kur'ana za kiraet Hafs od Asima.
++              </p>
++              <div className="flex flex-wrap gap-2 mt-3 text-xs font-bold">
++                <span className="rounded-full bg-emerald-100 text-emerald-800 px-3 py-1">Odobreno: {audioSummary.approved}</span>
++                <span className="rounded-full bg-amber-200 text-amber-900 px-3 py-1">Čeka provjeru: {audioSummary.needs_review}</span>
++                <span className="rounded-full bg-red-100 text-red-800 px-3 py-1">Odbijeno: {audioSummary.rejected}</span>
++              </div>
++            </div>
++          </div>
++        </div>
++
+         {/* ── Karta harfova banner ── */}
+         <Link href="/karta-harfova">
+           <div className="mb-6 flex items-center gap-4 p-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-2xl cursor-pointer shadow-md transition-all group">
+@@ -162,6 +175,11 @@ export default function ArapskoPismoPage() {
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <p className="font-extrabold text-foreground text-base leading-tight">{lesson.title}</p>
++                          {lesson.isDraft && (
++                            <span className="inline-flex mt-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide">
++                              Razvojni nacrt
++                            </span>
++                          )}
+                           <div className="flex items-center gap-2 mt-1" dir="rtl">
+                             {lesson.letters.map(l => (
+                               <span key={l} className="text-3xl font-bold text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
+@@ -245,9 +263,9 @@ export default function ArapskoPismoPage() {
+             >
+               {/* Play button — stops propagation so card navigation doesn't trigger */}
+               <button
+-                onClick={e => { e.preventDefault(); e.stopPropagation(); playHarf(harf.audioFile); }}
++                onClick={e => { e.preventDefault(); e.stopPropagation(); playSufaraAudio(harf.audioFile, true); }}
+                 className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-teal-100 hover:bg-teal-200 text-teal-700 flex items-center justify-center transition-colors shadow-sm"
+-                title={`${t("sufara.cujIzgovor")}: ${harf.name}`}
++                title={`${t("sufara.cujIzgovor")}: ${harf.name} · ${getSufaraAudioApproval(harf.audioFile)?.status === "approved" ? "odobreno" : "razvojni snimak"}`}
+               >
+                 <Volume2 className="w-4 h-4" />
+               </button>
+diff --git a/artifacts/mekteb-arapsko-pismo/src/pages/karta-harfova.tsx b/artifacts/mekteb-arapsko-pismo/src/pages/karta-harfova.tsx
+index 84961fb..a006ea5 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/pages/karta-harfova.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/pages/karta-harfova.tsx
+@@ -5,52 +5,15 @@ import { BackLink } from "@/components/back-link";
+ import { useLanguage } from "@/context/language";
+ import { ArrowLeft, Volume2 } from "lucide-react";
+ import { LESSONS } from "@/data/lessons";
+-
+-const BASE = import.meta.env.BASE_URL;
++import { getSufaraAudioApproval } from "@/data/audio-approval";
++import { playSufaraAudio } from "@/lib/sufara-audio";
+ 
+ function playAudio(file: string) {
+-  const audio = new Audio(`${BASE}audio/harfovi/${file}`);
+-  audio.play().catch(() => {});
+-}
+-
+-const MAGHREB = /^ar-(MA|DZ|TN|LY|MR)/i;
+-const GULF_PREF = ["ar-SA", "ar-EG", "ar-KW", "ar-QA", "ar-AE", "ar-BH", "ar-IQ", "ar-JO"];
+-
+-function pickArabicVoice(): SpeechSynthesisVoice | null {
+-  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("ar"));
+-  for (const pref of GULF_PREF) {
+-    const v = voices.find(v => v.lang === pref);
+-    if (v) return v;
+-  }
+-  return voices.find(v => !MAGHREB.test(v.lang)) ?? voices[0] ?? null;
+-}
+-
+-function speakArabic(text: string) {
+-  window.speechSynthesis.cancel();
+-  const u = new SpeechSynthesisUtterance(text);
+-  u.lang = "ar-SA";
+-  u.rate = 0.75;
+-  const voice = pickArabicVoice();
+-  if (voice) u.voice = voice;
+-  window.speechSynthesis.speak(u);
+-}
+-
+-function speakGlas(glas: string) {
+-  window.speechSynthesis.cancel();
+-  const u = new SpeechSynthesisUtterance(glas.replace(/^-/, ""));
+-  u.lang = "bs-BA";
+-  u.rate = 0.8;
+-  window.speechSynthesis.speak(u);
++  playSufaraAudio(file, true);
+ }
+ 
+-function playHareketiSound(h: { sound: string; soundFile: string; speakText?: string }) {
+-  if (h.speakText) {
+-    speakGlas(h.speakText);
+-  } else if (h.sound.startsWith("-")) {
+-    speakGlas(h.sound);
+-  } else {
+-    playAudio(h.soundFile);
+-  }
++function playHareketiSound(h: { soundFile: string | null }) {
++  if (h.soundFile) playAudio(h.soundFile);
+ }
+ 
+ const LESSON_COLORS = [
+@@ -91,7 +54,7 @@ export default function KartaHarfova() {
+         <div className="text-5xl mb-3">🗺️</div>
+         <h1 className="text-4xl font-black mb-2">{t("Karta harfova")}</h1>
+         <p className="text-teal-100 text-lg flex items-center justify-center gap-2">
+-          {t("Svi harfovi koje smo učili — klikni za izgovor")}
++          {t("Svi harfovi koje smo učili — razvojni snimci su jasno označeni")}
+           <Volume2 className="w-5 h-5 text-teal-300" />
+         </p>
+       </div>
+@@ -120,8 +83,14 @@ export default function KartaHarfova() {
+                   key={i}
+                   whileHover={{ scale: 1.06, y: -3 }}
+                   whileTap={{ scale: 0.93 }}
+-                  onClick={() => ld.soundFile ? playAudio(ld.soundFile) : speakArabic(ld.arabic)}
+-                  className={`relative group bg-white border-2 border-border/40 hover:border-teal-400 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all`}
++                  onClick={() => ld.soundFile && playAudio(ld.soundFile)}
++                  disabled={!ld.soundFile}
++                  title={ld.soundFile
++                    ? getSufaraAudioApproval(ld.soundFile)?.status === "approved"
++                      ? t("Poslušaj odobreni izgovor")
++                      : t("Poslušaj razvojni snimak — čeka provjeru učača")
++                    : t("Provjeren snimak je u pripremi")}
++                  className="relative group bg-white border-2 border-border/40 hover:border-teal-400 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-60"
+                 >
+                   <Volume2 className="absolute top-2 right-2 w-3.5 h-3.5 text-teal-300 group-hover:text-teal-500 transition-colors" />
+                   <span
+@@ -143,7 +112,13 @@ export default function KartaHarfova() {
+                   whileHover={{ scale: 1.06, y: -3 }}
+                   whileTap={{ scale: 0.93 }}
+                   onClick={() => playHareketiSound(h)}
+-                  className="relative group bg-teal-50 border-2 border-teal-200 hover:border-teal-500 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all"
++                  disabled={!h.soundFile}
++                  title={h.soundFile
++                    ? getSufaraAudioApproval(h.soundFile)?.status === "approved"
++                      ? t("Poslušaj odobreni izgovor")
++                      : t("Poslušaj razvojni snimak — čeka provjeru učača")
++                    : t("Provjeren snimak je u pripremi")}
++                  className="relative group bg-teal-50 border-2 border-teal-200 hover:border-teal-500 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-60"
+                 >
+                   <Volume2 className="absolute top-2 right-2 w-3.5 h-3.5 text-teal-300 group-hover:text-teal-600 transition-colors" />
+                   <span
+@@ -167,7 +142,7 @@ export default function KartaHarfova() {
+ 
+       <div className="mt-12 text-center">
+         <p className="text-base text-muted-foreground font-medium">
+-          {t("{n} lekcija · klikni svaki harf da čuješ izgovor 🔊", { n: String(LESSONS.length) })}
++          {t("{n} lekcija · administratorski pregled razvojnih snimaka", { n: String(LESSONS.length) })}
+         </p>
+       </div>
+     </Layout>
+diff --git a/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx b/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx
+index 7bd6b10..cd90e14 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx
+@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
+ import { Card } from "@/components/ui/card";
+ import { getLessonById, LESSONS, type Exercise, type ExerciseItem } from "@/data/lessons";
+ import { SLOGOVI_AUDIO } from "@/data/slogovi-mapping";
++import { getSufaraAudioApproval } from "@/data/audio-approval";
++import { playSufaraAudio } from "@/lib/sufara-audio";
+ import { useLanguage } from "@/context/language";
+ 
+ const BASE = import.meta.env.BASE_URL;
+@@ -26,63 +28,41 @@ function isArabicChar(s: string) {
+ function playAudio(file: string) {
+   const slogoviMp3 = SLOGOVI_AUDIO[file];
+   if (slogoviMp3) {
+-    const audio = new Audio(`${BASE}audio/slogovi/${slogoviMp3}`);
+-    audio.play().catch(() => {});
++    playSufaraAudio(slogoviMp3, true);
+     return;
+   }
+-  const audio = new Audio(`${BASE}audio/harfovi/${file}`);
+-  audio.play().catch(() => {});
++  playSufaraAudio(file, true);
+ }
+ 
+ function playSlog(text: string) {
+   const mp3 = SLOGOVI_AUDIO[text];
+   if (mp3) {
+-    const audio = new Audio(`${BASE}audio/slogovi/${mp3}`);
+-    audio.play().catch(() => {});
++    playSufaraAudio(mp3, true);
+   } else {
+-    speakArabic(text);
++    // Ne koristimo browser TTS za kiraet: glas zavisi od uređaja i nije
++    // dovoljno pouzdan za poučavanje mahredža. Nedostajući slog mora dobiti
++    // odobren snimak učača i unos u SLOGOVI_AUDIO.
++    console.warn(`[Sufara] Nedostaje provjeren audio za: ${text}`);
+   }
+ }
+ 
+-// Preferiramo Gulf/Egipatski glas — izbjegavamo Magrebiški (MA/DZ/TN) koji ج čita kao Ž
+-const MAGHREB = /^ar-(MA|DZ|TN|LY|MR)/i;
+-const GULF_PREF = ["ar-SA", "ar-EG", "ar-KW", "ar-QA", "ar-AE", "ar-BH", "ar-IQ", "ar-JO"];
+-
+-function pickArabicVoice(): SpeechSynthesisVoice | null {
+-  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("ar"));
+-  for (const pref of GULF_PREF) {
+-    const v = voices.find(v => v.lang === pref);
+-    if (v) return v;
+-  }
+-  return voices.find(v => !MAGHREB.test(v.lang)) ?? voices[0] ?? null;
++function playLetter(text: string) {
++  const soundFile = LESSONS
++    .flatMap((lesson) => lesson.letterData)
++    .find((letter) => letter.arabic === text)?.soundFile;
++  if (soundFile) playAudio(soundFile);
+ }
+ 
+-function speakArabic(text: string) {
+-  window.speechSynthesis.cancel();
+-  const utter = new SpeechSynthesisUtterance(text);
+-  utter.lang = "ar-SA";
+-  utter.rate = 0.75;
+-  const voice = pickArabicVoice();
+-  if (voice) utter.voice = voice;
+-  window.speechSynthesis.speak(utter);
++function playHareketiSound(h: { soundFile: string | null }) {
++  if (h.soundFile) playAudio(h.soundFile);
+ }
+ 
+-function speakGlas(glas: string) {
+-  window.speechSynthesis.cancel();
+-  const utter = new SpeechSynthesisUtterance(glas.replace(/^-/, ""));
+-  utter.lang = "bs-BA";
+-  utter.rate = 0.8;
+-  window.speechSynthesis.speak(utter);
+-}
+-
+-function playHareketiSound(h: { sound: string; soundFile: string; speakText?: string }) {
+-  if (h.speakText) {
+-    speakGlas(h.speakText);
+-  } else if (h.sound.startsWith("-")) {
+-    speakGlas(h.sound);
+-  } else {
+-    playAudio(h.soundFile);
+-  }
++/** Fullscreen vježba preuzima viewport i privremeno skriva globalne bannere. */
++function useSufaraExerciseOverlay() {
++  useEffect(() => {
++    document.body.classList.add("sufara-exercise-open");
++    return () => document.body.classList.remove("sufara-exercise-open");
++  }, []);
+ }
+ 
+ 
+@@ -95,6 +75,7 @@ function ReadingGridModal({
+   onClose: () => void;
+   onComplete: () => void;
+ }) {
++  useSufaraExerciseOverlay();
+   const { t } = useLanguage();
+   const [played, setPlayed] = useState<Set<number>>(new Set());
+   const [shuffled] = useState<ExerciseItem[]>(() =>
+@@ -114,7 +95,7 @@ function ReadingGridModal({
+   const pct = shuffled.length > 0 ? Math.round((played.size / shuffled.length) * 100) : 0;
+ 
+   return (
+-    <div className="fixed inset-0 z-50 bg-teal-900 flex flex-col">
++    <div className="fixed inset-0 z-[80] h-[100dvh] min-h-[100svh] overflow-hidden bg-teal-900 flex flex-col">
+       {/* Header */}
+       <div className="flex items-center gap-4 px-5 pt-5 pb-4 shrink-0 border-b border-white/10">
+         <button
+@@ -204,6 +185,7 @@ function PronadiModal({
+   onClose: () => void;
+   onComplete: () => void;
+ }) {
++  useSufaraExerciseOverlay();
+   const { t } = useLanguage();
+   const target     = exercise.items[0]?.show ?? "ب";
+   const targetName = exercise.items[0]?.answer ?? "?";
+@@ -232,7 +214,7 @@ function PronadiModal({
+     const cell = cells[idx];
+     if (cell.found) return;
+     if (cell.isTarget) {
+-      speakArabic(target);
++      playLetter(target);
+       setCells(prev => prev.map((c, i) => i === idx ? { ...c, found: true } : c));
+     } else {
+       setCells(prev => prev.map((c, i) => i === idx ? { ...c, shake: true } : c));
+@@ -243,7 +225,7 @@ function PronadiModal({
+   const pct = Math.round((foundCount / targetCount) * 100);
+ 
+   return (
+-    <div className="fixed inset-0 z-50 bg-indigo-900 flex flex-col">
++    <div className="fixed inset-0 z-[80] h-[100dvh] min-h-[100svh] overflow-hidden bg-indigo-900 flex flex-col">
+       {/* Header */}
+       <div className="flex items-center gap-4 px-5 pt-5 pb-4 shrink-0 border-b border-white/10">
+         <button onClick={onClose} className="text-white/60 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">
+@@ -326,6 +308,7 @@ function QuizModal({
+   onClose: () => void;
+   onComplete: () => void;
+ }) {
++  useSufaraExerciseOverlay();
+   const { t } = useLanguage();
+   const isTypeInput   = exercise.type === "napiši";
+   const isListening   = exercise.type === "slušaj";
+@@ -413,7 +396,7 @@ function QuizModal({
+   const showIsAr = isArabicChar(item.show);
+ 
+   return (
+-    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-br from-teal-800 via-teal-700 to-teal-900">
++    <div className="fixed inset-0 z-[80] h-[100dvh] min-h-[100svh] overflow-hidden flex flex-col bg-gradient-to-br from-teal-800 via-teal-700 to-teal-900">
+       {/* Top bar */}
+       <div className="flex items-center gap-4 px-5 pt-5 pb-3 shrink-0">
+         <button onClick={onClose}
+@@ -438,7 +421,7 @@ function QuizModal({
+       </p>
+ 
+       {/* Question area */}
+-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
++      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-4 gap-4">
+         <p className="text-white/80 text-xl font-semibold text-center">{exercise.description}</p>
+ 
+         {isListening ? (
+@@ -527,7 +510,7 @@ function QuizModal({
+       </div>
+ 
+       {/* Answer section */}
+-      <div className="px-5 pb-8 shrink-0">
++      <div className="px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] shrink-0">
+         {isTypeInput ? (
+           <div className="flex gap-3 max-w-xs mx-auto">
+             <input
+@@ -802,6 +785,13 @@ export default function LessonDetail() {
+         </div>
+       </div>
+ 
++      <div className="mb-8 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-950">
++        <p className="font-extrabold">{t("Razvojna audio-verzija")}</p>
++        <p className="mt-1 text-sm leading-relaxed">
++          {t("Postojeći snimci služe za razvoj i moraju proći provjeru učača Kur'ana prije javnog otvaranja. Automatski glas uređaja nije zamjena za pravilan mahredž.")}
++        </p>
++      </div>
++
+       {/* Priča */}
+       <Card className="p-6 mb-8 bg-gradient-to-r from-orange-50 to-pink-50 border-orange-100">
+ 
+@@ -1063,7 +1053,13 @@ export default function LessonDetail() {
+                         <div className="flex items-center gap-2 mt-3">
+                           <button
+                             onClick={() => playHareketiSound(h)}
+-                            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${c.sound}`}
++                            disabled={!h.soundFile}
++                            title={!h.soundFile
++                              ? t("Audio čeka stručnu provjeru")
++                              : getSufaraAudioApproval(h.soundFile)?.status === "approved"
++                                ? t("Poslušaj odobreni izgovor")
++                                : t("Poslušaj razvojni snimak — čeka provjeru učača")}
++                            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${c.sound} disabled:cursor-not-allowed disabled:opacity-40`}
+                           >
+                             <Volume2 className="w-4 h-4" />
+                           </button>
+diff --git a/artifacts/mekteb-arapsko-pismo/src/pages/login.tsx b/artifacts/mekteb-arapsko-pismo/src/pages/login.tsx
+index f23e636..62fe315 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/pages/login.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/pages/login.tsx
+@@ -19,6 +19,10 @@ export default function LoginPage() {
+   const { t } = useLanguage();
+   const [, setLocation] = useLocation();
+   const search = useSearch();
++  const requestedNext = new URLSearchParams(search).get("next");
++  const safeNext = requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
++    ? requestedNext
++    : "/";
+   const [username, setUsername] = useState("");
+   const [password, setPassword] = useState("");
+   const [error, setError] = useState("");
+@@ -56,7 +60,7 @@ export default function LoginPage() {
+     setIsLoading(true);
+     try {
+       await login(username.trim(), password);
+-      setLocation("/");
++      setLocation(safeNext);
+     } catch (err: unknown) {
+       setError(err instanceof Error ? err.message : t("login.greskaLogin"));
+       resetCaptcha();
+diff --git a/docs/SUFARA_AUDIO_STANDARD.md b/docs/SUFARA_AUDIO_STANDARD.md
+new file mode 100644
+index 0000000..0b2a82b
+--- /dev/null
++++ b/docs/SUFARA_AUDIO_STANDARD.md
+@@ -0,0 +1,71 @@
++# Standard audiozapisa za Sufaru
++
++Sufara se priprema za čitanje Kur'ana prema kiraetu **Hafs od Asima**. Browser
++TTS i generički arapski AI glasovi ne smiju biti izvor istine za mahredž,
++dužinu glasa, sukun, tešdid ili tenvin.
++
++## Status postojećih snimaka
++
++Postojeći fajlovi u `public/audio/harfovi` i `public/audio/slogovi` nastali su u
++razvojnoj fazi. Prije javnog otvaranja Sufare svaki snimak mora preslušati i
++odobriti kvalificirani učač Kur'ana. Neodobren snimak se ne označava kao
++provjeren samo zato što tehnički radi.
++
++## Pravila snimanja
++
++- Jedan učač za cijeli početni nivo, bez promjene dijalekta i boje glasa.
++- Snimati neutralno i razgovijetno, bez melodijskog pretjerivanja i bez eha.
++- Master: mono WAV, 48 kHz, 24-bit. Web kopija: MP3 128–192 kbps.
++- Početna i završna tišina: približno 120–200 ms.
++- Harf se snima kao naziv harfa i, zasebno, kao glas u slogu.
++- Sukun se nikada ne snima samostalno; koristi se u zatvorenom slogu, npr.
++  `أَبْ`, `بَتْ`.
++- Tešdid se snima u kontekstu, npr. `أَبَّ`, `إِنَّ`, `ثُمَّ`; ne kao
++  izolirano `بّ`.
++- Tenvin se snima najmanje dvaput: u povezanom čitanju i pri stajanju.
++- Svaki fajl moraju potvrditi učač i drugi preslušavač prije statusa
++  `approved`.
++
++## Imenovanje
++
++Koristiti stabilne, opisne nazive:
++
++```text
++harf-ba-name.mp3
++ba-fatha.mp3
++ba-kesra.mp3
++ba-damma.mp3
++ab-sukun.mp3
++abba-tesdid.mp3
++ba-tanwin-fatha-connected.mp3
++ba-tanwin-fatha-stop.mp3
++```
++
++## Evidencija odobrenja
++
++Uz snimke treba održavati CSV ili JSON sa poljima:
++
++```text
++id, arabic, latin_help, file, reciter, reviewer, qiraah, status, reviewed_at
++```
++
++Dozvoljeni statusi su `draft`, `needs_review`, `approved` i `rejected`.
++Produkcijski interfejs smije koristiti samo zapise sa statusom `approved`.
++
++## Procjena vanjskih izvora
++
++- [Quran Foundation Audio API](https://api-docs.quran.foundation/docs/sdk/javascript/audio/)
++  daje provjerljive metapodatke i snimke ajeta, ali zahtijeva backend i pristupne
++  podatke. Prikladan je za kasnije kur'anske primjere, ne za izolirane harfove.
++- [Quran Foundation word timestamps](https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/audio-reciter-timestamp/)
++  omogućavaju ponavljanje cijele riječi. Ne treba rezati jedan glas iz sredine
++  riječi jer susjedni harfovi utiču na njegov zvuk.
++- [MP3Quran](https://www.mp3quran.net/eng/) omogućava izbor predaje Hafs od
++  Asima, ali nudi cjelovite recitacije, ne komplet Sufara slogova.
++- [EveryAyah](https://everyayah.com/) nudi kvalitetne snimke po ajetima, ali
++  prije lokalnog kopiranja treba posebno potvrditi prava korištenja odabranog
++  snimka.
++
++Zaključak: vanjske recitacije koristiti za cijele kur'anske riječi i ajete tek
++nakon provjere uslova izvora. Izolirane harfove, hemze, harekete, sukun, tešdid
++i tenvin treba snimiti kao vlastiti, ujednačen komplet s jednim učačem.
+diff --git a/docs/SUFARA_CURRICULUM_REVIEW.md b/docs/SUFARA_CURRICULUM_REVIEW.md
+new file mode 100644
+index 0000000..b7eef6c
+--- /dev/null
++++ b/docs/SUFARA_CURRICULUM_REVIEW.md
+@@ -0,0 +1,54 @@
++# Stručni i tehnički pregled Sufare
++
++## Trenutno stanje
++
++Postojeće lekcije obrađuju elif i hemze te harfove `ب ت ث ج ح خ د ذ ر ز`. Lekcije
++sukuna, tešdida i tenvina postoje kao razvojni nacrti, ali ih ne treba otvoriti
++učenicima prije završetka osnovnih harfova, njihovih spojenih oblika i vježbi
++čitanja. Zato su u podacima označene sa `isDraft: true`, a cijeli modul ostaje
++dostupan samo administratoru.
++
++## Preporučeni redoslijed
++
++1. Elif, hemze i tri osnovna hareketa.
++2. `ب ت ث`
++3. `ج ح خ`
++4. Ponavljanje prvih sedam harfova.
++5. `د ذ ر ز` — izrađen funkcionalni uzorak lekcije
++6. `س ش`
++7. `ص ض`
++8. `ط ظ`
++9. `ع غ`
++10. `ف ق`
++11. `ك ل م`
++12. `ن ه و ي`
++13. Spojeni oblici i miješano čitanje svih harfova.
++14. Sukun u zatvorenom slogu.
++15. Tešdid u slogu i riječi.
++16. Tenvin u povezanom čitanju i pri stajanju.
++17. Dugi glasovi i harfovi medda.
++18. Kontrolirano čitanje kur'anskih riječi.
++
++## Pravila sadržaja
++
++- Latinica je pomoć za početnika, a ne izvor tačnog izgovora.
++- Mahredž se opisuje položajem jezika, usana ili grla i potvrđuje snimkom
++  učača; ne svodi se na „slično našem slovu“.
++- Sukun se ne poučava kao samostalan glas.
++- Tešdid je udvajanje suglasnika, ne produžavanje samoglasnika.
++- Tenvin se prvo poučava u povezanom čitanju; pravila stajanja prikazuju se
++  odvojeno.
++- Pravila nuna sakina i tenvina, medda i detaljnog stajanja pripadaju kasnijem
++  nivou i ne treba ih ubacivati u početne vježbe bez pripreme.
++
++## Referentni materijali korišteni za provjeru modela
++
++- [Quran Foundation – Audio API](https://api-docs.quran.foundation/docs/sdk/javascript/audio/)
++- [Quran Foundation – word timestamps](https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/audio-reciter-timestamp/)
++- [Madina Quran Academy – Articulation Points](https://madinaquranacademy.com/wp-content/uploads/2024/05/Tajweed-Course-Articulation-Points.pdf)
++- [Tajweed.us – Shadda/tešdid](https://tajweed.us/lesson/shadda/)
++- [Tanzil – licenca kur'anskog teksta](https://tanzil.net/docs/text_license)
++
++Ovi izvori služe za provjeru strukture i pravila. Završnu bosansku terminologiju,
++svaki opis mahredža i svaki snimak prije javne objave mora potvrditi odgovorni
++muallim ili kvalificirani učač Kur'ana.
+diff --git a/pnpm-workspace.yaml b/pnpm-workspace.yaml
+index d172882..a24d1d1 100644
+--- a/pnpm-workspace.yaml
++++ b/pnpm-workspace.yaml
+@@ -127,4 +127,3 @@ overrides:
+   rollup>@rollup/rollup-win32-ia32-msvc: '-'
+   rollup>@rollup/rollup-win32-x64-gnu: '-'
+   rollup>@rollup/rollup-win32-x64-msvc: '-'
+-
+-- 
+2.51.1
+

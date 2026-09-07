@@ -1,0 +1,227 @@
+From f216384464f7cae02c854755425c058a80a9a56c Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Mon, 7 Sep 2026 23:48:01 +0200
+Subject: [PATCH] Dodaj oglednu lekciju za Dal, Zal, Ra i Zejn
+
+---
+ .../scripts/check-sufara.mjs                  |  10 +-
+ .../src/data/audio-approval.ts                |   1 -
+ .../mekteb-arapsko-pismo/src/data/lessons.ts  | 118 +++++++++++++++++-
+ .../src/lib/sufara-audio.ts                   |   1 -
+ docs/SUFARA_CURRICULUM_REVIEW.md              |   4 +-
+ 5 files changed, 123 insertions(+), 11 deletions(-)
+
+diff --git a/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs b/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
+index 8800c82..33c6fa0 100644
+--- a/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
++++ b/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
+@@ -30,6 +30,14 @@ for (const path of sourceFiles) {
+ }
+ 
+ const lessonsSource = readFileSync(lessonsPath, "utf8");
++const lessonIds = [...lessonsSource.matchAll(/id:\s*(\d+),\s*orderNum:/g)].map((match) => Number(match[1]));
++if (new Set(lessonIds).size !== lessonIds.length) {
++  failures.push("ID-jevi lekcija moraju biti jedinstveni.");
++}
++const lessonSlugs = [...lessonsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((match) => match[1]);
++if (new Set(lessonSlugs).size !== lessonSlugs.length) {
++  failures.push("Slugovi lekcija moraju biti jedinstveni.");
++}
+ if (/\b(?:šedda|šedde|shadda)\b/i.test(lessonsSource)) {
+   failures.push("Korisnički sadržaj mora koristiti naziv tešdid.");
+ }
+@@ -69,4 +77,4 @@ if (failures.length) {
+   process.exit(1);
+ }
+ 
+-console.log(`✓ Sufara provjera prošla: ${referencedFiles.size} direktnih audio putanja i ${Object.keys(mapping).length} slogova.`);
++console.log(`✓ Sufara provjera prošla: ${lessonIds.length} lekcija, ${referencedFiles.size} direktnih audio putanja i ${Object.keys(mapping).length} slogova.`);
+diff --git a/artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts b/artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts
+index 75cbdfd..adb4561 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts
++++ b/artifacts/mekteb-arapsko-pismo/src/data/audio-approval.ts
+@@ -102,4 +102,3 @@ export function getSufaraAudioUrl(file: string, basePath: string): string | null
+   const record = getSufaraAudioApproval(file);
+   return record ? `${basePath}audio/${record.folder}/${record.file}` : null;
+ }
+-
+diff --git a/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts b/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
+index 40e7275..f01f9ed 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
++++ b/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
+@@ -700,9 +700,115 @@ export const LESSONS: LessonData[] = [
+     ]
+   },
+ 
+-  // ── LEKCIJA 6: SUKUN ────────────────────────────────────────
++  // ── LEKCIJA 6: DAL, ZAL, RA I ZEJN ─────────────────────────
+   {
+-    id: 6, orderNum: 6, slug: "sukun",
++    id: 6, orderNum: 6, slug: "dal-zal-ra-zejn",
++    title: "Dal, Zal, Ra i Zejn",
++    letters: ["د", "ذ", "ر", "ز"],
++    isCompleted: false,
++    story: {
++      lines: [
++        { speaker: "narator", text: "Muallim je na tabli napisao četiri nova harfa: د ذ ر ز. Zatim je između njih dodao kratke linije da pokaže gdje se prekida spajanje." },
++        { speaker: "muallim", text: "Ova četiri harfa imaju važno zajedničko pravilo: ne spajaju se s harfom koji dolazi poslije njih. Mogu se spojiti s harfom prije sebe, ali poslije njih počinje novi potez." },
++        { speaker: "amir", text: "Znači li to da riječ prekidamo dok je čitamo?" },
++        { speaker: "muallim", text: "Ne. Prekida se samo pisana linija, a čitanje ostaje povezano. Zato razlikujemo spajanje u pisanju od tečnog čitanja." },
++        { speaker: "dzana", text: "Dal i Zal izgledaju isto, ali Zal ima tačku iznad." },
++        { speaker: "muallim", text: "Tačno. Kod harfa Dal vrh jezika dodiruje područje iza gornjih prednjih zuba. Glas je sličan našem D, ali ga učimo slušanjem i ponavljanjem." },
++        { speaker: "muallim", text: "Kod harfa Zal vrh jezika lagano dodiruje rub gornjih prednjih zuba i malo se vidi između zuba. Glas je zvučan, sličan engleskom 'th' u riječi 'this'. Nemojte ga pretvoriti u obično Z." },
++        { speaker: "amir", text: "A Ra i Zejn također imaju isti osnovni oblik, samo Zejn ima tačku?" },
++        { speaker: "muallim", text: "Da. Kod harfa Ra vrh jezika prilazi desnima iza gornjih prednjih zuba. Ne treba ga dugo tresti niti ponavljati. Pravila kada se Ra čita krupnije ili tanje učit ćemo kasnije." },
++        { speaker: "muallim", text: "Zejn je zvučan glas sličan našem Z. Zrak prolazi uskim putem između jezika i prednjih zuba, bez dodavanja glasa D ispred njega." },
++        { speaker: "dzana", text: "Dakle, tačke razlikuju Dal od Zala i Ra od Zejna, a sva četiri prekidaju pisanu vezu s narednim harfom." },
++        { speaker: "muallim", text: "Odlično. Sada ih prvo prepoznajemo po obliku, zatim po tački, a pravilan izgovor potvrđujemo snimkom učača." },
++      ],
++    },
++    letterData: [
++      {
++        arabic: "د", name: "Dal", transliteration: "D",
++        forms: { isolated: "د", initial: "د", medial: "ـد", final: "ـد" },
++        nonConnecting: true,
++        visualAssociation: "Savijena linija bez tačke; ne spaja se s harfom poslije sebe",
++        soundFile: "dal.mp3",
++      },
++      {
++        arabic: "ذ", name: "Zal", transliteration: "DH / ð",
++        forms: { isolated: "ذ", initial: "ذ", medial: "ـذ", final: "ـذ" },
++        nonConnecting: true,
++        visualAssociation: "Isti oblik kao Dal, ali s jednom tačkom iznad",
++        soundFile: "zal.mp3",
++      },
++      {
++        arabic: "ر", name: "Ra", transliteration: "R",
++        forms: { isolated: "ر", initial: "ر", medial: "ـر", final: "ـر" },
++        nonConnecting: true,
++        visualAssociation: "Kratka savijena linija bez tačke; ne spaja se s narednim harfom",
++        soundFile: "ra.mp3",
++      },
++      {
++        arabic: "ز", name: "Zejn", transliteration: "Z",
++        forms: { isolated: "ز", initial: "ز", medial: "ـز", final: "ـز" },
++        nonConnecting: true,
++        visualAssociation: "Isti oblik kao Ra, ali s jednom tačkom iznad",
++        soundFile: "zejn.mp3",
++      },
++    ],
++    exercises: [
++      {
++        type: "koji-harf",
++        title: "Prepoznaj harf", description: "Pogledaj oblik i tačku — koji je ovo harf?",
++        icon: "🔡", hasanatReward: 15,
++        choices: ["Dal", "Zal", "Ra", "Zejn"],
++        items: [
++          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
++          { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" },
++          { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" },
++          { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" }, { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" },
++          { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" },
++        ],
++      },
++      {
++        type: "pronadi-harf",
++        title: "Pronađi Dal", description: "Pronađi sva slova د — Dal nema tačku.",
++        icon: "🔍", hasanatReward: 20,
++        choices: [], items: [{ show: "د", answer: "Dal" }],
++        pool: ["ذ", "ر", "ز", "ب", "ت"],
++        targetCount: 6,
++      },
++      {
++        type: "pronadi-harf",
++        title: "Pronađi Zal", description: "Pronađi sva slova ذ — Zal ima jednu tačku iznad.",
++        icon: "🔍", hasanatReward: 20,
++        choices: [], items: [{ show: "ذ", answer: "Zal" }],
++        pool: ["د", "ر", "ز", "ج", "خ"],
++        targetCount: 6,
++      },
++      {
++        type: "koji-harf",
++        title: "Harf u spojenom obliku", description: "Harf je spojen s prethodnim harfom. Prepoznaj njegov oblik.",
++        icon: "🔗", hasanatReward: 20,
++        choices: ["Dal", "Zal", "Ra", "Zejn"],
++        items: [
++          { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" }, { show: "ـز", answer: "Zejn" },
++          { show: "ـز", answer: "Zejn" }, { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" },
++          { show: "ـر", answer: "Ra" }, { show: "ـذ", answer: "Zal" }, { show: "ـد", answer: "Dal" }, { show: "ـز", answer: "Zejn" },
++        ],
++      },
++      {
++        type: "napiši",
++        title: "Napiši ime harfa", description: "Pogledaj harf i napiši njegovo ime: Dal, Zal, Ra ili Zejn.",
++        icon: "✏️", hasanatReward: 15,
++        choices: [],
++        items: [
++          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
++          { show: "ذ", answer: "Zal" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ر", answer: "Ra" },
++        ],
++      },
++    ],
++  },
++
++  // ── LEKCIJA 7: SUKUN — RAZVOJNI NACRT ──────────────────────
++  {
++    id: 7, orderNum: 7, slug: "sukun",
+     title: "Sukun",
+     letters: ["\u0640\u0640\u0652"],
+     isCompleted: false,
+@@ -824,9 +930,9 @@ export const LESSONS: LessonData[] = [
+     ]
+   },
+ 
+-  // ── LEKCIJA 7: TEŠDID ───────────────────────────────────────
++  // ── LEKCIJA 8: TEŠDID — RAZVOJNI NACRT ─────────────────────
+   {
+-    id: 7, orderNum: 7, slug: "tesdid",
++    id: 8, orderNum: 8, slug: "tesdid",
+     title: "Tešdid",
+     letters: ["\u0640\u0640\u0651"],
+     isCompleted: false,
+@@ -903,9 +1009,9 @@ export const LESSONS: LessonData[] = [
+     ]
+   },
+ 
+-  // ── LEKCIJA 8: TENVIN ───────────────────────────────────────
++  // ── LEKCIJA 9: TENVIN — RAZVOJNI NACRT ─────────────────────
+   {
+-    id: 8, orderNum: 8, slug: "tenvin",
++    id: 9, orderNum: 9, slug: "tenvin",
+     title: "Tenvin",
+     letters: ["ـًـٍـٌ"],
+     isCompleted: false,
+diff --git a/artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts b/artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts
+index a2dae06..d468d12 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts
++++ b/artifacts/mekteb-arapsko-pismo/src/lib/sufara-audio.ts
+@@ -25,4 +25,3 @@ export function playSufaraAudio(file: string, adminPreview = false): SufaraPlayb
+   audio.play().catch(() => {});
+   return { played: true, reason: "playing" };
+ }
+-
+diff --git a/docs/SUFARA_CURRICULUM_REVIEW.md b/docs/SUFARA_CURRICULUM_REVIEW.md
+index 4db8b3b..b7eef6c 100644
+--- a/docs/SUFARA_CURRICULUM_REVIEW.md
++++ b/docs/SUFARA_CURRICULUM_REVIEW.md
+@@ -2,7 +2,7 @@
+ 
+ ## Trenutno stanje
+ 
+-Postojeće lekcije obrađuju elif i hemze te harfove `ب ت ث ج ح خ`. Lekcije
++Postojeće lekcije obrađuju elif i hemze te harfove `ب ت ث ج ح خ د ذ ر ز`. Lekcije
+ sukuna, tešdida i tenvina postoje kao razvojni nacrti, ali ih ne treba otvoriti
+ učenicima prije završetka osnovnih harfova, njihovih spojenih oblika i vježbi
+ čitanja. Zato su u podacima označene sa `isDraft: true`, a cijeli modul ostaje
+@@ -14,7 +14,7 @@ dostupan samo administratoru.
+ 2. `ب ت ث`
+ 3. `ج ح خ`
+ 4. Ponavljanje prvih sedam harfova.
+-5. `د ذ ر ز`
++5. `د ذ ر ز` — izrađen funkcionalni uzorak lekcije
+ 6. `س ش`
+ 7. `ص ض`
+ 8. `ط ظ`
+-- 
+2.51.1
+
