@@ -10,6 +10,7 @@ const harfoviDir = join(projectRoot, "public", "audio", "harfovi");
 const slogoviDir = join(projectRoot, "public", "audio", "slogovi");
 
 const failures = [];
+const warnings = [];
 const sourceFiles = [];
 
 function walk(dir) {
@@ -51,7 +52,11 @@ const mapping = Object.fromEntries(
 );
 for (const [arabic, file] of Object.entries(mapping)) {
   if (!existsSync(join(slogoviDir, file))) {
-    failures.push(`Nedostaje audio za ${arabic}: audio/slogovi/${file}`);
+    if (file.startsWith("openai-")) {
+      warnings.push(`OpenAI kandidat još nije generiran za ${arabic}: audio/slogovi/${file}`);
+    } else {
+      failures.push(`Nedostaje audio za ${arabic}: audio/slogovi/${file}`);
+    }
   }
 }
 
@@ -75,6 +80,10 @@ for (const file of readdirSync(harfoviDir).filter((name) => name.endsWith(".mp3"
 if (failures.length) {
   console.error(failures.map((failure) => `✗ ${failure}`).join("\n"));
   process.exit(1);
+}
+
+if (warnings.length) {
+  console.warn(`⚠ ${warnings.length} OpenAI audio-kandidata čeka generiranje (pnpm audio:sufara:openai).`);
 }
 
 console.log(`✓ Sufara provjera prošla: ${lessonIds.length} lekcija, ${referencedFiles.size} direktnih audio putanja i ${Object.keys(mapping).length} slogova.`);

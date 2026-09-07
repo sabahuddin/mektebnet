@@ -78,9 +78,16 @@ function ReadingGridModal({
   useSufaraExerciseOverlay();
   const { t } = useLanguage();
   const [played, setPlayed] = useState<Set<number>>(new Set());
-  const [shuffled] = useState<ExerciseItem[]>(() =>
-    [...exercise.items].sort(() => Math.random() - 0.5)
-  );
+  const [isMixed, setIsMixed] = useState(false);
+  const [items, setItems] = useState<ExerciseItem[]>(() => [...exercise.items]);
+
+  function setReadingOrder(mixed: boolean) {
+    setIsMixed(mixed);
+    setPlayed(new Set());
+    setItems(mixed
+      ? [...exercise.items].sort(() => Math.random() - 0.5)
+      : [...exercise.items]);
+  }
 
   function handleSpeak(text: string, idx: number) {
     playSlog(text);
@@ -92,12 +99,12 @@ function ReadingGridModal({
     onClose();
   }
 
-  const pct = shuffled.length > 0 ? Math.round((played.size / shuffled.length) * 100) : 0;
+  const pct = items.length > 0 ? Math.round((played.size / items.length) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-[80] h-[100dvh] min-h-[100svh] overflow-hidden bg-teal-900 flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-4 px-5 pt-5 pb-4 shrink-0 border-b border-white/10">
+      <div className="flex items-center gap-3 px-4 py-3 shrink-0 border-b border-white/10">
         <button
           onClick={onClose}
           className="text-white/60 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -105,11 +112,11 @@ function ReadingGridModal({
           <X className="w-6 h-6" />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-white font-black text-xl leading-tight">{exercise.title}</h2>
-          <p className="text-white/60 text-base">{t("Pročitaj svaki slog naglas — klikni za izgovor")}</p>
+          <h2 className="text-white font-black text-lg leading-tight">{exercise.title}</h2>
+          <p className="text-white/70 text-sm">{t("Prvo pročitaj sam, zatim klikni da provjeriš izgovor")}</p>
         </div>
         <div className="text-white font-extrabold text-lg shrink-0 bg-white/15 px-3 py-1 rounded-full">
-          {played.size}/{shuffled.length}
+          {played.size}/{items.length}
         </div>
       </div>
 
@@ -123,26 +130,41 @@ function ReadingGridModal({
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <p className="text-center text-white/40 text-base mb-4">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <button
+            onClick={() => setReadingOrder(false)}
+            className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${!isMixed ? "bg-white text-teal-900" : "bg-white/10 text-white/70 hover:bg-white/20"}`}
+          >
+            {t("Uči redom")}
+          </button>
+          <button
+            onClick={() => setReadingOrder(true)}
+            className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${isMixed ? "bg-white text-teal-900" : "bg-white/10 text-white/70 hover:bg-white/20"}`}
+          >
+            {t("Ponovi izmiješano")}
+          </button>
+        </div>
+        <p className="text-center text-white/50 text-sm mb-3">
           {played.size === 0
-            ? t("👆 Klikni na slog da čuješ izgovor")
-            : played.size === shuffled.length
+            ? t("1. Pročitaj bez pomoći  ·  2. Klikni i provjeri")
+            : played.size === items.length
             ? t("✅ Sve pročitano! Možeš završiti vježbu.")
-            : t("Nastavi čitati — ostalo {n} slogova", { n: String(shuffled.length - played.size) })}
+            : t("Nastavi čitati — ostalo {n}", { n: String(items.length - played.size) })}
         </p>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-w-3xl mx-auto">
-          {shuffled.map((item, i) => {
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 max-w-4xl mx-auto" dir="rtl">
+          {items.map((item, i) => {
             const isPlayed = played.has(i);
             const len = item.show.length;
-            const fontSize = len <= 2 ? "2.8rem" : len <= 4 ? "2.1rem" : len <= 6 ? "1.6rem" : "1.3rem";
+            const fontSize = len <= 2 ? "2.25rem" : len <= 4 ? "1.8rem" : len <= 6 ? "1.45rem" : "1.2rem";
             return (
               <motion.button
                 key={i}
                 onClick={() => handleSpeak(item.show, i)}
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.93 }}
-                className={`aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 shadow-lg transition-colors ${
+                aria-label={t("Pročitaj pa provjeri: {tekst}", { tekst: item.show })}
+                className={`min-h-[76px] sm:min-h-[84px] rounded-xl flex flex-col items-center justify-center gap-0.5 shadow transition-colors ${
                   isPlayed
                     ? "bg-green-500 shadow-green-500/30"
                     : "bg-white/15 hover:bg-white/25"
@@ -162,14 +184,14 @@ function ReadingGridModal({
       </div>
 
       {/* Footer */}
-      <div className="px-5 pb-6 pt-4 shrink-0 border-t border-white/10">
+      <div className="px-4 py-3 shrink-0 border-t border-white/10">
         <Button
           onClick={handleFinish}
-          className="w-full game-button text-lg py-6"
+          className="w-full game-button text-base py-5"
         >
-          {played.size === shuffled.length
+          {played.size === items.length
             ? t("Odlično! Završi vježbu ✓")
-            : t("Završi vježbu ({n}/{total} pročitano)", { n: String(played.size), total: String(shuffled.length) })}
+            : t("Završi vježbu ({n}/{total} provjereno)", { n: String(played.size), total: String(items.length) })}
         </Button>
       </div>
     </div>
@@ -599,6 +621,11 @@ export default function LessonDetail() {
     );
   }
 
+  const readingExercises = data.exercises
+    .map((exercise, index) => ({ exercise, index }))
+    .filter(({ exercise }) => exercise.type === "čitaj-slog");
+  const additionalExerciseCount = data.exercises.length - readingExercises.length;
+
   function getLetterAudio(idx: number): string {
     if (!data) return "elif.mp3";
     const ld = data.letterData[idx];
@@ -753,7 +780,7 @@ export default function LessonDetail() {
       )}
 
       {/* Nazad */}
-      <div className="mb-6">
+      <div className="mb-3">
         <BackLink fallback="/arapsko-pismo" className="inline-flex items-center gap-2 text-primary hover:text-teal-700 font-bold bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors text-base">
           <ArrowLeft className="w-5 h-5" />
           {t("Nazad na lekcije")}
@@ -761,39 +788,93 @@ export default function LessonDetail() {
       </div>
 
       {/* Hero */}
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-border mb-8 relative overflow-hidden">
+      <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-border mb-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+        <div className="relative z-10 flex flex-row justify-between items-center gap-4">
           <div>
             <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wider">
               {t("Lekcija")} {data.orderNum}
             </span>
-            <h1 className="text-4xl md:text-6xl font-black text-foreground mt-2">{data.title}</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground mt-1">{data.title}</h1>
           </div>
           <div className="flex flex-wrap gap-3" dir="rtl">
             {data.letters.map((letter, i) => (
               <button
                 key={i}
                 onClick={() => playAudio(getLetterAudio(i))}
-                className="w-24 h-24 bg-gradient-to-br from-primary to-teal-600 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-primary/20 text-white gap-1 hover:scale-105 transition-transform"
+                className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-teal-600 rounded-xl flex flex-col items-center justify-center shadow shadow-primary/20 text-white hover:scale-105 transition-transform"
               >
-                <span className="text-5xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{letter}</span>
-                <Volume2 className="w-4 h-4 opacity-70" />
+                <span className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{letter}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="mb-8 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-950">
-        <p className="font-extrabold">{t("Razvojna audio-verzija")}</p>
-        <p className="mt-1 text-sm leading-relaxed">
-          {t("Postojeći snimci služe za razvoj i moraju proći provjeru učača Kur'ana prije javnog otvaranja. Automatski glas uređaja nije zamjena za pravilan mahredž.")}
-        </p>
+      <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-950">
+        <strong>{t("Razvojni audio:")}</strong>{" "}
+        {t("OpenAI snimci bit će jasno označeni kao AI i preslušani prije objave.")}
       </div>
 
+      {/* Čitanje je glavni sadržaj lekcije, zato dolazi prije priče i teorije. */}
+      {readingExercises.length > 0 && (
+        <section className="mb-5 rounded-2xl border-2 border-teal-500 bg-teal-950 p-4 sm:p-5 shadow-lg shadow-teal-900/10">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <p className="text-teal-300 text-xs font-black uppercase tracking-widest">{t("Glavni dio lekcije")}</p>
+              <h2 className="text-white text-xl sm:text-2xl font-black flex items-center gap-2">
+                <PlayCircle className="w-6 h-6 text-green-400" />
+                {t("Vježbe čitanja")}
+              </h2>
+            </div>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-white/80 text-sm font-bold shrink-0">
+              {readingExercises.reduce((sum, { exercise }) => sum + exercise.items.length, 0)} {t("primjera")}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {readingExercises.map(({ exercise: ex, index: ei }) => {
+              const isDone = completedExercises.has(ei);
+              return (
+                <div key={ei} className={`rounded-xl border p-3 sm:p-4 ${isDone ? "border-green-400 bg-green-500/15" : "border-white/15 bg-white/10"}`}>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="min-w-0">
+                      <h3 className="text-white font-extrabold text-base sm:text-lg">{ex.title}</h3>
+                      <p className="text-white/60 text-sm truncate">{ex.description}</p>
+                    </div>
+                    {isDone && <Check className="w-5 h-5 text-green-400 shrink-0" />}
+                  </div>
+                  <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5 mb-3" dir="rtl">
+                    {ex.items.slice(0, 10).map((item, wi) => (
+                      <div key={wi} className="min-h-[48px] rounded-lg bg-white flex items-center justify-center px-1">
+                        <span
+                          className="font-bold text-teal-950 text-center leading-none"
+                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: item.show.length <= 2 ? "1.55rem" : "1.15rem" }}
+                        >
+                          {item.show}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full bg-green-500 hover:bg-green-400 text-white font-black py-5" onClick={() => setActiveReading(ei)}>
+                    <PlayCircle className="w-5 h-5 mr-2" />
+                    {isDone ? t("Čitaj ponovo") : t("Počni čitati")}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Priča */}
-      <Card className="p-6 mb-8 bg-gradient-to-r from-orange-50 to-pink-50 border-orange-100">
+      <details className="group mb-5 rounded-2xl border border-orange-200 bg-orange-50">
+        <summary className="cursor-pointer list-none px-5 py-3 font-extrabold text-orange-900 flex items-center justify-between">
+          <span>{t("Priča i uvodno objašnjenje")}</span>
+          <span className="text-sm font-bold text-orange-700 group-open:hidden">{t("Otvori")}</span>
+          <span className="text-sm font-bold text-orange-700 hidden group-open:inline">{t("Zatvori")}</span>
+        </summary>
+      <Card className="p-4 border-0 border-t border-orange-200 rounded-none rounded-b-2xl bg-gradient-to-r from-orange-50 to-pink-50 shadow-none">
 
         {/* Story renderer — novinski stupci na desktopu, single-column na mobitelu */}
         {(() => {
@@ -865,9 +946,10 @@ export default function LessonDetail() {
           );
         })()}
       </Card>
+      </details>
 
       {/* Harfovi i hareketi — skriveno ako je letterData prazan (npr. lekcija sukuna) */}
-      <div className="mb-8">
+      <div className="mb-5">
         {data.letterData.length === 0 ? null : data.isRevision ? (
           /* ── Revision lesson: compact reminder, no full letter breakdown ── */
           <div className="bg-teal-50 border-2 border-teal-200 rounded-2xl p-5">
@@ -897,17 +979,17 @@ export default function LessonDetail() {
           </div>
         ) : (
         <>
-        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-5">
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2 mb-3">
           <Info className="w-6 h-6 text-primary" />
           {data.hareketi ? t("Upoznajmo slovo i harekete") : t("Upoznajmo harfove")}
         </h2>
 
         {data.letterData.map((letter, i) => (
-          <Card key={i} className="p-6 border-2 border-border/50 mb-6">
-            <div className="flex justify-between items-start mb-6">
+          <Card key={i} className="p-4 border border-border/60 mb-3">
+            <div className="flex justify-between items-start mb-3">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-3xl font-extrabold text-foreground">{letter.name}</h3>
+                  <h3 className="text-xl font-extrabold text-foreground">{letter.name}</h3>
                   <button
                     onClick={() => playAudio(letter.soundFile)}
                     className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center text-primary transition-colors"
@@ -915,30 +997,30 @@ export default function LessonDetail() {
                     <Volume2 className="w-5 h-5" />
                   </button>
                 </div>
-                <p className="text-xl text-muted-foreground font-medium">{t("Izgovor:")} /{letter.transliteration}/</p>
-                <p className="text-base text-muted-foreground mt-1 italic">{letter.visualAssociation}</p>
+                <p className="text-base text-muted-foreground font-medium">{t("Izgovor:")} /{letter.transliteration}/</p>
+                <p className="text-sm text-muted-foreground mt-1 italic">{letter.visualAssociation}</p>
                 {letter.nonConnecting && (
                   <span className="inline-block mt-3 bg-red-100 text-red-700 text-sm font-bold px-3 py-1 rounded-lg uppercase">
                     {t("Ne spaja se ulijevo")}
                   </span>
                 )}
               </div>
-              <div className="text-9xl text-primary shrink-0" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
+              <div className="text-6xl text-primary shrink-0" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
                 {letter.arabic}
               </div>
             </div>
-            <div className="bg-muted rounded-xl p-5">
-              <p className="text-base font-bold text-muted-foreground mb-4 text-center uppercase tracking-wider">{t("Oblici slova")}</p>
-              <div className="grid grid-cols-4 gap-3 text-center" dir="rtl">
+            <div className="bg-muted rounded-xl p-3">
+              <p className="text-xs font-bold text-muted-foreground mb-2 text-center uppercase tracking-wider">{t("Oblici slova")}</p>
+              <div className="grid grid-cols-4 gap-2 text-center" dir="rtl">
                 {[
                   { form: letter.forms.isolated, label: t("Samostalan") },
                   { form: letter.forms.initial,  label: t("Početak") },
                   { form: letter.forms.medial,   label: t("Sredina") },
                   { form: letter.forms.final,    label: t("Kraj") },
                 ].map(({ form, label }) => (
-                  <div key={label} className="bg-white rounded-xl p-3">
-                    <div className="text-5xl font-bold text-foreground mb-2" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
-                    <div className="text-base font-bold text-muted-foreground">{label}</div>
+                  <div key={label} className="bg-white rounded-lg p-2">
+                    <div className="text-3xl font-bold text-foreground" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
+                    <div className="text-xs font-bold text-muted-foreground">{label}</div>
                   </div>
                 ))}
               </div>
@@ -946,7 +1028,7 @@ export default function LessonDetail() {
 
             {/* Hareketi slogovi — BE/BI/BU kartice (samo za lekcije bez posebne hareketi sekcije) */}
             {!data.hareketi && !data.isRevision && (
-              <div className="mt-5">
+              <div className="mt-3">
                 <p className="text-base font-bold text-muted-foreground mb-3 text-center uppercase tracking-wider">
                   {t("🔊 Klikni i pročitaj naglas")}
                 </p>
@@ -965,10 +1047,10 @@ export default function LessonDetail() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.93 }}
                         onClick={() => playSlog(combined)}
-                        className="bg-teal-50 hover:bg-teal-100 border-2 border-teal-200 hover:border-teal-400 rounded-2xl py-5 px-2 flex flex-col items-center gap-1 transition-all group"
+                        className="bg-teal-50 hover:bg-teal-100 border border-teal-200 hover:border-teal-400 rounded-xl py-2 px-2 flex items-center justify-center gap-2 transition-all group"
                       >
                         <span
-                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "2.8rem", lineHeight: 1.5 }}
+                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "2rem", lineHeight: 1.5 }}
                           className="text-teal-800 font-bold"
                         >
                           {combined}
@@ -1079,14 +1161,15 @@ export default function LessonDetail() {
         )}
       </div>
 
-      {/* Vježbe */}
+      {/* Dodatne vježbe — čitanje je već prikazano kao glavni dio iznad. */}
       <div className="mb-12">
-        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mb-6">
+        {additionalExerciseCount > 0 && <h2 className="text-xl font-bold text-foreground flex items-center gap-2 mb-4">
           <Gamepad2 className="w-6 h-6 text-accent" />
-          {t("Vježbe")}
-        </h2>
-        <div className="grid sm:grid-cols-2 gap-6">
+          {t("Dodatne vježbe")}
+        </h2>}
+        <div className="grid sm:grid-cols-2 gap-4">
           {data.exercises.map((ex, ei) => {
+            if (ex.type === "čitaj-slog") return null;
             const isDone = completedExercises.has(ei);
             return (
             <Card key={ei} className={`p-5 flex flex-col transition-all ${isDone ? "border-2 border-green-400 bg-green-50/30" : "border-2 border-border/50"}`}>
@@ -1139,41 +1222,6 @@ export default function LessonDetail() {
                   >
                     <Search className="w-5 h-5 mr-2" />
                     {isDone ? t("Igraj ponovo") : t("Pronađi harfove")}
-                  </Button>
-                </>
-              ) : ex.type === "čitaj-slog" ? (
-                <>
-                  {(() => {
-                    const n = ex.items.length;
-                    const step = Math.max(1, Math.floor(n / 8));
-                    const sample = n <= 8 ? ex.items : Array.from({ length: 8 }, (_, i) => ex.items[Math.min(i * step, n - 1)]);
-                    return (
-                      <div className="grid grid-cols-4 gap-2 mb-3 flex-1">
-                        {sample.map((item, wi) => (
-                          <div key={wi} className="bg-teal-50 border border-teal-200 rounded-xl p-2 flex items-center justify-center">
-                            <span
-                              className="font-bold text-teal-900 text-center leading-none"
-                              style={{
-                                fontFamily: "Noto Naskh Arabic, serif",
-                                fontSize: item.show.length <= 2 ? "1.8rem" : item.show.length <= 4 ? "1.4rem" : "1.1rem",
-                              }}
-                            >
-                              {item.show}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                  <div className="text-center text-base text-muted-foreground mb-4 font-medium">
-                    {t("📖 {n} slogova — klikni da čuješ izgovor", { n: String(ex.items.length) })}
-                  </div>
-                  <Button
-                    className="w-full game-button text-base py-5"
-                    size="sm"
-                    onClick={() => setActiveReading(ei)}
-                  >
-                    <PlayCircle className="w-5 h-5 mr-2" /> {isDone ? t("Čitaj ponovo") : t("Čitaj slogove")}
                   </Button>
                 </>
               ) : (
