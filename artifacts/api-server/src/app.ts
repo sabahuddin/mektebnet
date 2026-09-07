@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app: Express = express();
 
 function normalizeBosnianDashes<T>(value: T): T {
-  if (typeof value === "string") return value.replaceAll("—", "-") as T;
+  if (typeof value === "string") return value.replaceAll("—", "–") as T;
   if (Array.isArray(value)) return value.map(normalizeBosnianDashes) as T;
   if (value && typeof value === "object") {
     const normalized = Object.fromEntries(

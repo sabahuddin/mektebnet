@@ -27,7 +27,7 @@ if (!basePath) {
   );
 }
 
-// Bosanski UI koristi običnu kratku crticu umjesto engleske duge crtice.
+// Bosanski UI koristi srednju crticu umjesto engleske duge crtice.
 // Primjenjuje se na sav frontend source pri buildu, uključujući tekstove koji
 // dolaze iz statičkih komponenti i lokalizacija.
 function normalizeBosnianDashPlugin() {
@@ -39,7 +39,7 @@ function normalizeBosnianDashPlugin() {
         return null;
       }
       if (!code.includes("—")) return null;
-      return { code: code.replaceAll("—", "-"), map: null };
+      return { code: code.replaceAll("—", "–"), map: null };
     },
   };
 }
@@ -67,10 +67,10 @@ export default defineConfig({
       ],
       manifest: {
         id: `${basePath}?source=pwa`,
-        name: "Mekteb - Islamska edukacija",
+        name: "Mekteb – Islamska edukacija",
         short_name: "Mekteb",
         description:
-          "Mekteb.net - interaktivna islamska edukacija: ilmihal, kvizovi, čitaonica i igrice za djecu i porodicu.",
+          "Mekteb.net – interaktivna islamska edukacija: ilmihal, kvizovi, čitaonica i igrice za djecu i porodicu.",
         lang: "bs",
         dir: "ltr",
         start_url: basePath,
