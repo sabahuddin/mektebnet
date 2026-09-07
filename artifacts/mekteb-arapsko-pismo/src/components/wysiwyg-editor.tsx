@@ -782,6 +782,101 @@ function LessonPauseModal({ onClose, onInsert }: LessonPauseModalProps) {
   );
 }
 
+interface EmbedExerciseModalProps {
+  onClose: () => void;
+  onInsert: (src: string) => void;
+}
+
+function EmbedExerciseModal({ onClose, onInsert }: EmbedExerciseModalProps) {
+  const { t } = useLanguage();
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+
+  const handleInsert = () => {
+    const src = extractEmbedSrc(input);
+    if (!src || !isWhitelistedEmbedHost(src)) {
+      setError(t("Unesi dozvoljeni URL ili iframe kod za LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org."));
+      return;
+    }
+    onInsert(src);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("Umetni interaktivnu vježbu")}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-xl flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <Puzzle className="w-5 h-5 text-purple-600" />
+            <h3 className="text-base font-bold text-gray-800">{t("Umetni interaktivnu vježbu")}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("Zatvori")}
+            className="p-1.5 rounded-lg hover:bg-gray-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {t("Zalijepi URL vježbe ili iframe kod sa dozvoljenog izvora.")}
+          </p>
+          <textarea
+            value={input}
+            onChange={e => {
+              setInput(e.target.value);
+              setError("");
+            }}
+            rows={4}
+            autoFocus
+            placeholder={t("https://wordwall.net/... ili <iframe ...></iframe>")}
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none text-sm"
+            data-testid="embed-exercise-input"
+          />
+          <p className="text-xs text-gray-500">
+            {t("Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter i H5P.org.")}
+          </p>
+          {error && (
+            <p className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-semibold" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-5 py-3.5 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            {t("Odustani")}
+          </button>
+          <button
+            type="button"
+            onClick={handleInsert}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
+            data-testid="embed-exercise-insert-btn"
+          >
+            <Puzzle className="w-4 h-4" />
+            {t("Umetni vježbu")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ParsedSection {
   id: string;
   title: string;
@@ -1038,6 +1133,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
   const [audioFiles, setAudioFiles] = useState<{name:string;url:string;size:number;modified:string}[]>([]);
   const [audioGalleryLoading, setAudioGalleryLoading] = useState(false);
   const docInputRef = useRef<HTMLInputElement>(null);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
 
   const loadGallery = useCallback(async () => {
@@ -1476,6 +1572,13 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     toast({ title: "Pauza dodana ✓", description: `Tip: ${PAUSE_TYPE_LABELS[config.type]}` });
   }, [editor, toast]);
 
+  const insertEmbedExercise = useCallback((src: string) => {
+    if (!editor) return;
+    editor.chain().focus().insertContent({ type: "embedExercise", attrs: { src } }).run();
+    setShowEmbedModal(false);
+    toast({ title: t("Vježba dodana ✓"), description: t("Interaktivna vježba je umetnuta u lekciju.") });
+  }, [editor, toast, t]);
+
   const [showTablePicker, setShowTablePicker] = useState(false);
   const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
 
@@ -1621,6 +1724,12 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
             </div>
           </div>
         </div>
+      )}
+      {showEmbedModal && (
+        <EmbedExerciseModal
+          onClose={() => setShowEmbedModal(false)}
+          onInsert={insertEmbedExercise}
+        />
       )}
       {showPauseModal && (
         <LessonPauseModal
@@ -1817,16 +1926,7 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
           <YoutubeIcon className="w-4 h-4 text-red-600" />
         </MenuButton>
         <MenuButton
-          onClick={() => {
-            const input = window.prompt(t("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org:"));
-            if (!input) return;
-            const src = extractEmbedSrc(input);
-            if (!src || !isWhitelistedEmbedHost(src)) {
-              toast({ title: t("Neispravan ili nedozvoljen embed"), description: t("Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org."), variant: "destructive" });
-              return;
-            }
-            editor.chain().focus().insertContent({ type: "embedExercise", attrs: { src } }).run();
-          }}
+          onClick={() => setShowEmbedModal(true)}
           title={t("Umetni interaktivnu vježbu (embed)")}
         >
           <Puzzle className="w-4 h-4 text-purple-600" />
