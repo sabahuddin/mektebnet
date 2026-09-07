@@ -72,7 +72,7 @@ export const SUFARA_AUDIO_APPROVALS: SufaraAudioApproval[] = [
       arabic,
       "slog",
       file.startsWith("openai-")
-        ? "OpenAI gpt-4o-mini-tts kandidat (AI glas)"
+        ? "OpenAI gpt-audio kandidat (AI glas)"
         : "Razvojni ElevenLabs snimak (Anas, multilingual_v2)",
     ),
   ),
