@@ -118,7 +118,10 @@ export function PushPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 rounded-2xl bg-white border border-mekteb-teal/30 shadow-xl p-4 animate-in slide-in-from-bottom-4">
+    <div
+      data-testid="push-prompt"
+      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 rounded-2xl bg-white border border-mekteb-teal/30 shadow-xl p-4 animate-in slide-in-from-bottom-4"
+    >
       <button
         onClick={onDismiss}
         className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1"

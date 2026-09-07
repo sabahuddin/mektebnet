@@ -19,6 +19,10 @@ export default function LoginPage() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const search = useSearch();
+  const requestedNext = new URLSearchParams(search).get("next");
+  const safeNext = requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
+    ? requestedNext
+    : "/";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -56,7 +60,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(username.trim(), password);
-      setLocation("/");
+      setLocation(safeNext);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t("login.greskaLogin"));
       resetCaptcha();

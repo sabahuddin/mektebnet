@@ -5,52 +5,15 @@ import { BackLink } from "@/components/back-link";
 import { useLanguage } from "@/context/language";
 import { ArrowLeft, Volume2 } from "lucide-react";
 import { LESSONS } from "@/data/lessons";
-
-const BASE = import.meta.env.BASE_URL;
+import { getSufaraAudioApproval } from "@/data/audio-approval";
+import { playSufaraAudio } from "@/lib/sufara-audio";
 
 function playAudio(file: string) {
-  const audio = new Audio(`${BASE}audio/harfovi/${file}`);
-  audio.play().catch(() => {});
+  playSufaraAudio(file, true);
 }
 
-const MAGHREB = /^ar-(MA|DZ|TN|LY|MR)/i;
-const GULF_PREF = ["ar-SA", "ar-EG", "ar-KW", "ar-QA", "ar-AE", "ar-BH", "ar-IQ", "ar-JO"];
-
-function pickArabicVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("ar"));
-  for (const pref of GULF_PREF) {
-    const v = voices.find(v => v.lang === pref);
-    if (v) return v;
-  }
-  return voices.find(v => !MAGHREB.test(v.lang)) ?? voices[0] ?? null;
-}
-
-function speakArabic(text: string) {
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "ar-SA";
-  u.rate = 0.75;
-  const voice = pickArabicVoice();
-  if (voice) u.voice = voice;
-  window.speechSynthesis.speak(u);
-}
-
-function speakGlas(glas: string) {
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(glas.replace(/^-/, ""));
-  u.lang = "bs-BA";
-  u.rate = 0.8;
-  window.speechSynthesis.speak(u);
-}
-
-function playHareketiSound(h: { sound: string; soundFile: string; speakText?: string }) {
-  if (h.speakText) {
-    speakGlas(h.speakText);
-  } else if (h.sound.startsWith("-")) {
-    speakGlas(h.sound);
-  } else {
-    playAudio(h.soundFile);
-  }
+function playHareketiSound(h: { soundFile: string | null }) {
+  if (h.soundFile) playAudio(h.soundFile);
 }
 
 const LESSON_COLORS = [
@@ -91,7 +54,7 @@ export default function KartaHarfova() {
         <div className="text-5xl mb-3">🗺️</div>
         <h1 className="text-4xl font-black mb-2">{t("Karta harfova")}</h1>
         <p className="text-teal-100 text-lg flex items-center justify-center gap-2">
-          {t("Svi harfovi koje smo učili — klikni za izgovor")}
+          {t("Svi harfovi koje smo učili — razvojni snimci su jasno označeni")}
           <Volume2 className="w-5 h-5 text-teal-300" />
         </p>
       </div>
@@ -120,8 +83,14 @@ export default function KartaHarfova() {
                   key={i}
                   whileHover={{ scale: 1.06, y: -3 }}
                   whileTap={{ scale: 0.93 }}
-                  onClick={() => ld.soundFile ? playAudio(ld.soundFile) : speakArabic(ld.arabic)}
-                  className={`relative group bg-white border-2 border-border/40 hover:border-teal-400 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all`}
+                  onClick={() => ld.soundFile && playAudio(ld.soundFile)}
+                  disabled={!ld.soundFile}
+                  title={ld.soundFile
+                    ? getSufaraAudioApproval(ld.soundFile)?.status === "approved"
+                      ? t("Poslušaj odobreni izgovor")
+                      : t("Poslušaj razvojni snimak — čeka provjeru učača")
+                    : t("Provjeren snimak je u pripremi")}
+                  className="relative group bg-white border-2 border-border/40 hover:border-teal-400 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Volume2 className="absolute top-2 right-2 w-3.5 h-3.5 text-teal-300 group-hover:text-teal-500 transition-colors" />
                   <span
@@ -143,7 +112,13 @@ export default function KartaHarfova() {
                   whileHover={{ scale: 1.06, y: -3 }}
                   whileTap={{ scale: 0.93 }}
                   onClick={() => playHareketiSound(h)}
-                  className="relative group bg-teal-50 border-2 border-teal-200 hover:border-teal-500 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all"
+                  disabled={!h.soundFile}
+                  title={h.soundFile
+                    ? getSufaraAudioApproval(h.soundFile)?.status === "approved"
+                      ? t("Poslušaj odobreni izgovor")
+                      : t("Poslušaj razvojni snimak — čeka provjeru učača")
+                    : t("Provjeren snimak je u pripremi")}
+                  className="relative group bg-teal-50 border-2 border-teal-200 hover:border-teal-500 rounded-2xl pt-6 pb-4 px-3 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Volume2 className="absolute top-2 right-2 w-3.5 h-3.5 text-teal-300 group-hover:text-teal-600 transition-colors" />
                   <span
@@ -167,7 +142,7 @@ export default function KartaHarfova() {
 
       <div className="mt-12 text-center">
         <p className="text-base text-muted-foreground font-medium">
-          {t("{n} lekcija · klikni svaki harf da čuješ izgovor 🔊", { n: String(LESSONS.length) })}
+          {t("{n} lekcija · administratorski pregled razvojnih snimaka", { n: String(LESSONS.length) })}
         </p>
       </div>
     </Layout>

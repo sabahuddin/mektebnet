@@ -121,6 +121,16 @@
     overflow-x: hidden;
   }
 
+  body.sufara-exercise-open {
+    overflow: hidden;
+  }
+
+  body.sufara-exercise-open [data-testid="cookie-consent"],
+  body.sufara-exercise-open [data-testid="install-prompt"],
+  body.sufara-exercise-open [data-testid="push-prompt"] {
+    display: none !important;
+  }
+
   /* Stariji iPad Safari računa 100vh preko pune visine browser chrome-a.
      -webkit-fill-available drži fullscreen mapu u stvarno vidljivom prostoru. */
   .mapa-fullscreen {

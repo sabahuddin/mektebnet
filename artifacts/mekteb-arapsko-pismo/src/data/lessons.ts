@@ -34,7 +34,8 @@ export interface HarekeData {
   colour: string;
   description: string;
   napomena: string | null;
-  soundFile: string;
+  /** Null dok snimak učača nije stručno provjeren i odobren. */
+  soundFile: string | null;
   speakText?: string;
 }
 
@@ -51,6 +52,8 @@ export interface LessonData {
   letters: string[];
   isCompleted: boolean;
   isRevision?: boolean;
+  /** Napredna lekcija koja je dostupna samo za administratorski pregled. */
+  isDraft?: boolean;
   story: { lines: { speaker: "dzana" | "amir" | "narator" | "otac" | "majka" | "muallim"; text: string }[] };
   letterData: HarfData[];
   hareketi?: HarekeData[];
@@ -88,7 +91,7 @@ export const LESSONS: LessonData[] = [
   // ── LEKCIJA 2 ───────────────────────────────────────────────
   {
     id: 2, orderNum: 2, slug: "elif-hareketi",
-    title: "Elif i hareketi",
+    title: "Elif, hemze i hareketi",
     letters: ["ا"],
     isCompleted: false,
     story: {
@@ -99,23 +102,21 @@ export const LESSONS: LessonData[] = [
         { speaker: "narator", text: "Otac je odmaknuo pogled od ekrana i nasmijao se." },
         { speaker: "otac",    text: "Nisu naopako, dušo. Idu s desna na lijevo. Kao što svaka rijeka teče na svoju stranu. A vi biste mogli naučiti ovu rijeku čitati, a jednog dana možda je i napamet znati." },
         { speaker: "narator", text: "Otac je otvorio Mushaf. Prstom je pokazao jedno tanko, uspravno slovo." },
-        { speaker: "otac",    text: "Ovo je Elif. Prvo slovo. Stoji ravno, ponosno — kao kada vi stojite uspravno ispred učitelja u školi, muallima u mektebu ili kod mame i mene kod kuće." },
+        { speaker: "otac",    text: "Ovo je elif. Stoji ravno, kao uspravan štap. Danas ćemo uz njega upoznati i hemzu — poseban harf koji se na početku riječi može pisati iznad ili ispod elifa." },
         { speaker: "narator", text: "Amir se napravio važan i ispravio leđa." },
         { speaker: "amir",    text: "I šta on govori, taj Elif? Nećemo valjda svaki put kazati elif kada ga vidimo — to su četiri slova: E – L – I – F." },
-        { speaker: "otac",    text: "Ne. Ovo slovo nema svoj glas. On je tih, ne govori ako je sam." },
+        { speaker: "otac",    text: "Ime harfa je elif. Sam elif najčešće služi za produžavanje glasa, a kratki početni glas u oblicima أَ، إِ، أُ nosi hemza." },
         { speaker: "amir",    text: "Čekaj, kako može slovo biti tiho?" },
-        { speaker: "otac",    text: "Lijepo razmišljaš. Vi znate engleski, zar ne. Džana, koja su ovo slova u engleskom alfabetu? — upitao je otac pokazujući riječ WHEN." },
-        { speaker: "dzana",   text: "DABLJU, EIČ, I, EN." },
-        { speaker: "otac",    text: "Super. DABLJU se čita kao V, a H se često uopće ne čuje. Tako i u arapskom — ELIF nema glas, ali kada mu dodamo crticu iznad ili ispod, ili zarez iznad njega — onda progovori." },
+        { speaker: "otac",    text: "U arapskom razlikujemo elif, hemzu i kratki glas koji daje hareket. Zato pažljivo gledamo šta je napisano i slušamo pravilan izgovor." },
         { speaker: "narator", text: "Djeca su gledala iznenađeno." },
-        { speaker: "otac",    text: "Crticu iznad zovemo FETHA — i elif čujemo kao kratko E. Crticu ispod KESRA — i čujemo kratko I. A mali zarez iznad je DAMMA — i čujemo kratko U." },
+        { speaker: "otac",    text: "Crticu iznad zovemo fetha, crticu ispod kesra, a mali zarez iznad damma. To su kratki glasovi. Latinica je samo pomoć; izgovor uvijek učimo slušanjem učača." },
         { speaker: "amir",    text: "A imaju li te crtice zajednički naziv?" },
         { speaker: "otac",    text: "Naravno. Zajedno se zovu HAREKETI — znaci koji harfovima daju glas!" },
       ]
     },
     letterData: [
       {
-        arabic: "ا", name: "Elif", transliteration: "E / I / U",
+        arabic: "ا", name: "Elif", transliteration: "dugo a / nosač hemze",
         forms: { isolated: "ا", initial: "ا", medial: "ـا", final: "ـا" },
         nonConnecting: true,
         visualAssociation: "Kao uspravan štap — jednostavan i snažan",
@@ -141,7 +142,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "koji-znak",
-        title: "Koji glas?", description: "Pogledaj elif s harekom — koji glas daje?",
+        title: "Koji glas?", description: "Pogledaj hemzu na ili ispod elifa — koji kratki glas čuješ?",
         icon: "🔤", hasanatReward: 15,
         choices: ["e", "i", "u"],
         items: [
@@ -184,7 +185,7 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši slovo/glas", description: "Pogledaj elif — napiši latinično slovo (e, i ili u)",
+        title: "Napiši glas", description: "Pogledaj hemzu s hareketom — napiši pomoćni latinični glas (e, i ili u)",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
@@ -222,7 +223,7 @@ export const LESSONS: LessonData[] = [
         { speaker: "amir",    text: "Ko iz čitanke!" },
         { speaker: "otac",    text: "Upravo tako. Dok budete učili ostale harfove, vidjet ćete da su tačkice veoma, veoma važne — iako su veoma, veoma male." },
         { speaker: "amir",    text: "Znači, ima još slova s tačkicama?" },
-        { speaker: "otac",    text: "Naravno. Ako ovaj tvoj čamac, Amire, ima dvije tačkice iznad — onda je to harf TA, glas kao naše T. A ako ima tri tačkice iznad — onda je harf SA, čiji glas ne postoji u bosanskom, ali ga ima u engleskom. Kao kada kažete THREE — nešto između T i S, mehko slovo S. Poslušajte vježbe i naučite kako se ispravno izgovara." },
+        { speaker: "otac",    text: "Naravno. Ako ovaj tvoj čamac, Amire, ima dvije tačkice iznad — onda je to harf TA, glas kao naše T. A ako ima tri tačkice iznad — onda je harf SA. Taj glas ne postoji u bosanskom. Vrh jezika lagano stavimo između zuba i izgovorimo bez glasa, slično engleskom 'th' u riječi 'three'. Poslušajte snimak i ponovite." },
       ]
     },
     letterData: [
@@ -239,7 +240,7 @@ export const LESSONS: LessonData[] = [
         soundFile: "ta.mp3",
       },
       {
-        arabic: "ث", name: "Sa", transliteration: "S (meko)",
+        arabic: "ث", name: "Sa", transliteration: "TH / θ",
         forms: { isolated: "ث", initial: "ثـ", medial: "ـثـ", final: "ـث" },
         visualAssociation: "Isti čamac s tri tačkice iznad — kao mali krovčić od zvjezdica",
         soundFile: "sa.mp3",
@@ -559,7 +560,7 @@ export const LESSONS: LessonData[] = [
         { speaker: "amir",    text: "Sedam harfova. A tek sam počeo." },
         { speaker: "narator", text: "Džana mu je prišla i bacila pogled na otvorenu sufaru i upaljeni tablet." },
         { speaker: "dzana",   text: "Hajde da i ja poslušam kako se ispravno izgovaraju harfovi kojih nema u bosanskom jeziku. To je ثَ..." },
-        { speaker: "amir",    text: "Čekaj... Znam i ja. Ono hrapavo slovo حَ, kao kada neko hrče dok spava. I drugo خَ, ono kad se stisne grlo. Poslušaj!" },
+        { speaker: "amir",    text: "Čekaj... Znam i ja. حَ je duboki, blagi glas iz sredine grla, a خَ je hrapaviji glas iz gornjeg dijela grla. Poslušaj!" },
         { speaker: "narator", text: "Amir je nekoliko puta pokušavao izgovoriti harf حَ." },
         { speaker: "dzana",   text: "Super. Nije loše, Amire." },
         { speaker: "narator", text: "U međuvremenu majka je zastala na vratima i ponosno gledala djecu kako uče svoje prve harfove. Prišla im je, zagrlila ih i kazala:" },
@@ -705,32 +706,33 @@ export const LESSONS: LessonData[] = [
     title: "Sukun",
     letters: ["\u0640\u0640\u0652"],
     isCompleted: false,
+    isDraft: true,
     story: {
       lines: [
         { speaker: "narator", text: "Muallim ulazi u učionicu s pitanjem za razred." },
         { speaker: "muallim", text: "Djeco, danas učimo o sukunu. Ali prvo — sukun NIJE harf. Sukun je znak koji stoji na harfu kad taj harf nema hareketa." },
         { speaker: "amir",    text: "A šta znači da nema hareketa?" },
         { speaker: "muallim", text: "Zamislite: harf je auto. Hareketi — fetha, kesra, damma — su motor i točkovi. Kad ih stavimo na harf, auto se pokrene i čujemo glas: 'be', 'bi', 'bu'." },
-        { speaker: "muallim", text: "A harf sa sukunom? To je auto bez motora. Stoji, miruje. Nema glasa 'e', 'i' ili 'u' — samo dodirnemo taj harf i odmah idemo na sljedeći." },
+        { speaker: "muallim", text: "Harf sa sukunom nema svoj samoglasnik. Vežemo ga za glas koji dolazi prije njega i njime zatvaramo slog: أَبْ čitamo 'eb', a بَتْ čitamo 'bet'." },
         { speaker: "dzana",   text: "Oo! I zato sukun izgleda kao krug — kao nula! Nula hareketa!" },
-        { speaker: "muallim", text: "Odlično, Džana! Kad harf dobije hareket, čujemo glas. Kad dobije sukun — harf miruje i odmah prelazimo dalje." },
-        { speaker: "amir",    text: "Dakle: بَ = 'be', بِ = 'bi', بُ = 'bu', a بْ = samo 'b'. Kapiraoo!" },
+        { speaker: "muallim", text: "Odlično, Džana! Sukun ne čitamo samostalno. Uvijek ga vježbamo u slogu, zajedno s glasom koji mu prethodi." },
+        { speaker: "amir",    text: "Dakle: بَ je otvoren slog, a u أَبْ harf بْ zatvara slog. Sad razumijem!" },
       ]
     },
     letterData: [],
     hareketi: [],
     sukunExplainer: {
-      sentence: "Kad harf dobije hareket, on se pokrene i čujemo glas (ba, bi, bu), a kad dobije sukun, harf miruje — izgovorimo ga bez ikakvog samoglasnika i odmah prelazimo na sljedeći harf.",
+      sentence: "Sukun pokazuje da harf nema vlastiti samoglasnik. Takav harf ne čitamo samostalno, nego ga vežemo za prethodni glas i njime zatvaramo slog: أَبْ = eb, بَتْ = bet.",
       metaphor: {
         auto:     "🚗  Harf je auto",
         hareketi: "⚙️  Hareketi (fetha, kesra, damma) su motor i točkovi — pokreću harf, čujemo glas",
-        sukun:    "🔇  Sukun = auto bez motora — harf stoji, miruje, nema samoglasnika",
+        sukun:    "🔇  Sukun = nema samoglasnika — harf se veže za prethodni glas i zatvara slog",
       },
     },
     exercises: [
       {
         type: "prepoznaj-hareket",
-        title: "Prepoznaj znak", description: "Pogledaj znak na tatweelu — koji je hareket ili sukun?",
+        title: "Prepoznaj znak", description: "Pogledaj znak na pomoćnoj crti — koji je hareket ili sukun?",
         icon: "🔍", hasanatReward: 15,
         choices: ["Fetha", "Kesra", "Damma", "Sukun"],
         items: [
@@ -758,9 +760,9 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "slušaj",
-        title: "Slušaj i odaberi", description: "Pritisni 🔊 — čuješ li fetha (e), kesra (i), damma (u)? Odaberi hareket.",
+        title: "Ponovi harekete slušanjem", description: "Pritisni 🔊 — čuješ li fethu, kesru ili dammu?",
         icon: "🎧", hasanatReward: 20,
-        choices: ["Fetha", "Kesra", "Damma", "Sukun"],
+        choices: ["Fetha", "Kesra", "Damma"],
         items: [
           { show: "🔊", answer: "Fetha", audio: "بَ" },
           { show: "🔊", answer: "Damma", audio: "جُ" },
@@ -784,9 +786,9 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "slušaj",
-        title: "Slušaj i odaberi harf", description: "Čuješ slog — odaberi ispravan harf s harekom ili sukunom",
+        title: "Slušaj kratki slog", description: "Čuješ slog — odaberi ispravan harf s hareketom",
         icon: "🎯", hasanatReward: 20,
-        choices: ["بَ", "بِ", "بُ", "بْ"],
+        choices: ["بَ", "بِ", "بُ"],
         items: [
           { show: "🔊", answer: "بَ", audio: "بَ" },
           { show: "🔊", answer: "بِ", audio: "بِ" },
@@ -828,33 +830,28 @@ export const LESSONS: LessonData[] = [
     title: "Tešdid",
     letters: ["\u0640\u0640\u0651"],
     isCompleted: false,
+    isDraft: true,
     story: {
       lines: [
-        { speaker: "dzana", text: "Amir, zamisli da jedno slovo mora reći svoje ime dva puta. To je tešdid!" },
+        { speaker: "dzana", text: "Amir, tešdid pokazuje da isti suglasnik izgovaramo udvojeno, bez pauze." },
         { speaker: "amir",  text: "Dva puta? Pa zašto ne napišu slovo dva puta?" },
         { speaker: "dzana", text: "Zato što u arapskom postoji poseban znak koji to označava — tešdid. Izgleda kao mali 'w' iznad slova." },
         { speaker: "amir",  text: "Mali 'w'? Gdje se stavlja — iznad slova?" },
-        { speaker: "dzana", text: "Da, iznad. I slovo se tada izgovara duže, kao da ga kažeš dvaput bez pauze." },
-        { speaker: "amir",  text: "Pa — ba s tešdidom je... 'bb'? Kao u 'sabbah'?" },
-        { speaker: "dzana", text: "Upravo! A uz hareket: bba, bbi, bbu. Tešdid i hareket idu zajedno." },
+        { speaker: "dzana", text: "Da, iznad. Prvi od ta dva ista harfa zamišljamo sa sukunom, a drugi nosi hareket. Zato أَبَّ čitamo povezano: eb-be." },
+        { speaker: "amir",  text: "Znači, ne produžavam samoglasnik, nego jasno udvostručim suglasnik?" },
+        { speaker: "dzana", text: "Upravo! U riječima إِنَّ i ثُمَّ jasno čujemo udvojene glasove n i m. Tešdid i hareket rade zajedno." },
         { speaker: "amir",  text: "Dakle tešdid = udvojenost, a hareket kaže koji samoglasnik ide uz to. Jasno!" },
       ]
     },
-    letterData: [
-      {
-        arabic: "بَّ", name: "Tešdid na Ba (s fethom)", transliteration: "bba",
-        forms: { isolated: "بَّ", initial: "بَّ", medial: "ـبَّـ", final: "ـبَّ" },
-        visualAssociation: "Mali 'w' iznad slova — slovo se kaže dvaput, kao eho",
-        soundFile: "hareke-sedda.mp3",
-      },
-    ],
+    letterData: [],
+    hareketiTitle: "Tešdid — udvojeni suglasnik",
     hareketi: [
       {
-        arabic: "بَّ", hareke: "ّ", name: "Tešdid",
-        sound: "×2", colour: "teal",
-        description: "Mali 'w' znak iznad slova — slovo se izgovara udvostručeno",
-        napomena: "Uvijek dolazi uz hareket koji kaže koji samoglasnik ide uz udvostručenje",
-        soundFile: "hareke-sedda.mp3",
+        arabic: "أَبَّ", hareke: "ّ", name: "Tešdid",
+        sound: "eb-be", colour: "teal",
+        description: "Tešdid udvostručuje suglasnik: prvi je bez samoglasnika, drugi nosi hareket",
+        napomena: "Ne produžavaj samoglasnik. Jasno izgovori udvojeni suglasnik bez pauze.",
+        soundFile: null,
       },
     ],
     exercises: [
@@ -889,36 +886,8 @@ export const LESSONS: LessonData[] = [
         ]
       },
       {
-        type: "slušaj",
-        title: "Slušaj i odaberi", description: "Čuješ li tešdid ili obični hareket?",
-        icon: "🎧", hasanatReward: 20,
-        choices: ["Tešdid", "Fetha", "Kesra", "Damma"],
-        items: [
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Kesra",  audio: "hareke-kasra.mp3" },
-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Kesra",  audio: "hareke-kasra.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Kesra",  audio: "hareke-kasra.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Damma",  audio: "hareke-damma.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-          { show: "🔊", answer: "Fetha",  audio: "hareke-fatha.mp3" },
-          { show: "🔊", answer: "Tešdid", audio: "hareke-sedda.mp3" },
-        ]
-      },
-      {
         type: "napiši",
-        title: "Napiši glas", description: "Napiši glas hareka koji je uz tešdid (e/i/u)",
+        title: "Koji je hareket?", description: "Napiši pomoćni glas hareketa koji stoji uz tešdid (e/i/u)",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
@@ -940,62 +909,44 @@ export const LESSONS: LessonData[] = [
     title: "Tenvin",
     letters: ["ـًـٍـٌ"],
     isCompleted: false,
+    isDraft: true,
     story: {
       lines: [
         { speaker: "dzana", text: "Amir, tenvin je poseban znak koji dodaje glas 'n' na kraj riječi." },
-        { speaker: "amir",  text: "Znači kao da kažeš fetha ali dodaš 'n' na kraj — 'en'?" },
-        { speaker: "dzana", text: "Tačno! Tenvin fetha daje '-en', tenvin kesra daje '-in', a tenvin damma '-un'." },
+        { speaker: "amir",  text: "Znači kao da izgovorim kratki glas i na kraju dodam 'n'?" },
+        { speaker: "dzana", text: "Tačno! U povezanim riječima tenvin fetha daje '-an', tenvin kesra '-in', a tenvin damma '-un'." },
         { speaker: "amir",  text: "A kako izgledaju? Kao dupli hareketi?" },
         { speaker: "dzana", text: "Upravo! Tenvin fetha su dvije crtice iznad, tenvin kesra dvije ispod, a tenvin damma dva zareza iznad." },
         { speaker: "amir",  text: "Ima li nešto posebno kod tenvin fethe?" },
-        { speaker: "dzana", text: "Da — tenvin fetha uvijek dolazi zajedno s elifom! Piše se بًا, a ne samo بً. Elif je tu uvijek." },
-        { speaker: "amir",  text: "Znači HARAM se piše حَرَامًا — sa elifom na kraju! A izgovara se HARAM — bez 'n'?" },
-        { speaker: "dzana", text: "Odlično! U pisanju pišemo 'un', 'in', 'an' — ali u govoru tenvin na kraju ne izgovaramo. HARAMUN izgovaramo kao HARAM." },
-        { speaker: "amir",  text: "Super! Pišem sa 'n', čitam bez 'n'. Onda nema zabune — ako vidim duple harekete, znam da je tenvin." },
+        { speaker: "dzana", text: "Tenvin fetha se najčešće piše uz dodatni elif, kao u بًا. Postoje i izuzeci koje ćemo kasnije učiti, zato ne kažemo 'uvijek'." },
+        { speaker: "amir",  text: "A izgovaramo li glas n?" },
+        { speaker: "dzana", text: "Kada nastavljamo čitanje, izgovaramo ga. Kada se zaustavimo na kraju riječi, primjenjujemo pravila stajanja. Tenvin fetha tada se najčešće zaustavlja dugim glasom a, dok se kod tenvin kesre i damme završni n ne izgovara." },
+        { speaker: "amir",  text: "Dakle, povezano čitanje i stajanje nisu isto. Pratim snimak učača i ne pogađam samo po latinici." },
       ]
     },
-    letterData: [
-      {
-        arabic: "بًا", name: "Tenvin fetha", transliteration: "-en",
-        forms: { isolated: "بًا", initial: "—", medial: "—", final: "ـبًا" },
-        visualAssociation: "Dvije crtice iznad slova + elif — tenvin fetha UVIJEK dolazi s elifom na kraju",
-        soundFile: "hareke-fatha.mp3",
-      },
-      {
-        arabic: "بٍ", name: "Tenvin kesra", transliteration: "-in",
-        forms: { isolated: "بٍ", initial: "بٍ", medial: "ـبٍ", final: "ـبٍ" },
-        visualAssociation: "Dvije crtice ispod slova — kao kesra, ali duplirana → dodaje 'n'",
-        soundFile: "hareke-kasra.mp3",
-      },
-      {
-        arabic: "بٌ", name: "Tenvin damma", transliteration: "-un",
-        forms: { isolated: "بٌ", initial: "بٌ", medial: "ـبٌ", final: "ـبٌ" },
-        visualAssociation: "Dva zareza iznad slova — kao damma, ali duplirano → dodaje 'n'",
-        soundFile: "hareke-damma.mp3",
-      },
-    ],
+    letterData: [],
     hareketiTitle: "Tenvin — dupli znakovi za glas N",
     hareketi: [
       {
         arabic: "بًا", hareke: "ً", name: "Tenvin fetha",
-        sound: "-en", colour: "teal",
-        description: "Dvije crtice iznad + UVIJEK dolazi s elifom (ا) — glas '-en' na kraju",
-        napomena: "⚠️ Tenvin fetha uvijek piše s elifom: بًا, ne بً — u govoru se 'en' izostavlja",
-        soundFile: "hareke-fatha.mp3",
+        sound: "-an", colour: "teal",
+        description: "Dvije crtice iznad — u povezanom čitanju daju glas '-an'",
+        napomena: "Najčešće se piše uz dodatni elif. Pri stajanju se '-an' najčešće mijenja u dugo 'a'; izuzeci se uče zasebno.",
+        soundFile: null,
       },
       {
         arabic: "بٍ", hareke: "ٍ", name: "Tenvin kesra",
         sound: "-in", colour: "blue",
         description: "Dvije crtice ispod — hareket kesra + glas 'n' na kraju",
         napomena: null,
-        soundFile: "hareke-kasra.mp3",
+        soundFile: null,
       },
       {
         arabic: "بٌ", hareke: "ٌ", name: "Tenvin damma",
         sound: "-un", colour: "violet",
         description: "Dva zareza iznad — hareket damma + glas 'n' na kraju",
         napomena: null,
-        soundFile: "hareke-damma.mp3",
+        soundFile: null,
       },
     ],
     exercises: [
@@ -1016,17 +967,17 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "prepoznaj-hareket",
-        title: "Koji glas tenvin?", description: "Pogledaj tenvin — koji glas daje na kraju?",
+        title: "Koji glas daje tenvin?", description: "Pogledaj tenvin — koji glas daje u povezanom čitanju?",
         icon: "🔤", hasanatReward: 15,
-        choices: ["-en", "-in", "-un"],
+        choices: ["-an", "-in", "-un"],
         items: [
-          { show: "بًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-en" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
-          { show: "بًا", answer: "-en" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
-          { show: "خًا", answer: "-en" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
-          { show: "ثًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-en" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
-          { show: "ثًا", answer: "-en" }, { show: "جٍ", answer: "-in" },
+          { show: "بًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-an" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
+          { show: "بًا", answer: "-an" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
+          { show: "خًا", answer: "-an" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
+          { show: "ثًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-an" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
+          { show: "ثًا", answer: "-an" }, { show: "جٍ", answer: "-in" },
         ]
       },
       {
@@ -1046,17 +997,17 @@ export const LESSONS: LessonData[] = [
       },
       {
         type: "napiši",
-        title: "Napiši glas tenvin", description: "Napiši glas tenvin (-en, -in ili -un)",
+        title: "Napiši glas tenvina", description: "Napiši glas tenvina u povezanom čitanju (-an, -in ili -un)",
         icon: "✏️", hasanatReward: 10,
         choices: [],
         items: [
-          { show: "بًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-en" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
-          { show: "بًا", answer: "-en" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
-          { show: "خًا", answer: "-en" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
-          { show: "ثًا", answer: "-en" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
-          { show: "حًا", answer: "-en" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
-          { show: "ثًا", answer: "-en" }, { show: "جٍ", answer: "-in" },
+          { show: "بًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-an" }, { show: "خٍ", answer: "-in" }, { show: "ثٌ", answer: "-un" },
+          { show: "بًا", answer: "-an" }, { show: "جٍ", answer: "-in" }, { show: "تٌ", answer: "-un" },
+          { show: "خًا", answer: "-an" }, { show: "حٍ", answer: "-in" }, { show: "بٌ", answer: "-un" },
+          { show: "ثًا", answer: "-an" }, { show: "تٍ", answer: "-in" }, { show: "جٌ", answer: "-un" },
+          { show: "حًا", answer: "-an" }, { show: "خٌ", answer: "-un" }, { show: "بٍ", answer: "-in" },
+          { show: "ثًا", answer: "-an" }, { show: "جٍ", answer: "-in" },
         ]
       },
     ]

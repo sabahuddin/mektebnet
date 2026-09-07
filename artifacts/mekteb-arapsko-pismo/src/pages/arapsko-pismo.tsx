@@ -5,10 +5,10 @@ import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
-import { BookOpen, Search, Volume2, Lock, PlayCircle } from "lucide-react";
+import { BookOpen, Search, Volume2, Lock, PlayCircle, ShieldCheck } from "lucide-react";
 import { LESSONS } from "@/data/lessons";
-
-const BASE = import.meta.env.BASE_URL;
+import { getSufaraAudioApproval, getSufaraAudioSummary } from "@/data/audio-approval";
+import { playSufaraAudio } from "@/lib/sufara-audio";
 
 interface Harf {
   id: number;
@@ -61,17 +61,13 @@ const DOT_COLORS: Record<number, string> = {
   3: "bg-purple-50 text-purple-700",
 };
 
-function playHarf(file: string) {
-  const audio = new Audio(`${BASE}audio/harfovi/${file}`);
-  audio.play().catch(() => {});
-}
-
 export default function ArapskoPismoPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const audioSummary = getSufaraAudioSummary();
 
   // Sufara modul nije završen — pristup ima samo administrator za interni
   // pregled. Direct URL za sve ostale (učenik, mualim, roditelj, gost)
@@ -126,6 +122,23 @@ export default function ArapskoPismoPage() {
           </div>
         </div>
 
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="w-6 h-6 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-extrabold text-amber-950">Audio kontrola kvaliteta</p>
+              <p className="text-sm text-amber-900 mt-1 leading-relaxed">
+                Administratorski pregled može preslušati razvojne snimke. Učenicima se smiju otvoriti samo snimci koje je odobrio učač Kur'ana za kiraet Hafs od Asima.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3 text-xs font-bold">
+                <span className="rounded-full bg-emerald-100 text-emerald-800 px-3 py-1">Odobreno: {audioSummary.approved}</span>
+                <span className="rounded-full bg-amber-200 text-amber-900 px-3 py-1">Čeka provjeru: {audioSummary.needs_review}</span>
+                <span className="rounded-full bg-red-100 text-red-800 px-3 py-1">Odbijeno: {audioSummary.rejected}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ── Karta harfova banner ── */}
         <Link href="/karta-harfova">
           <div className="mb-6 flex items-center gap-4 p-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-2xl cursor-pointer shadow-md transition-all group">
@@ -162,6 +175,11 @@ export default function ArapskoPismoPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-extrabold text-foreground text-base leading-tight">{lesson.title}</p>
+                          {lesson.isDraft && (
+                            <span className="inline-flex mt-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide">
+                              Razvojni nacrt
+                            </span>
+                          )}
                           <div className="flex items-center gap-2 mt-1" dir="rtl">
                             {lesson.letters.map(l => (
                               <span key={l} className="text-3xl font-bold text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
@@ -245,9 +263,9 @@ export default function ArapskoPismoPage() {
             >
               {/* Play button — stops propagation so card navigation doesn't trigger */}
               <button
-                onClick={e => { e.preventDefault(); e.stopPropagation(); playHarf(harf.audioFile); }}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); playSufaraAudio(harf.audioFile, true); }}
                 className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-teal-100 hover:bg-teal-200 text-teal-700 flex items-center justify-center transition-colors shadow-sm"
-                title={`${t("sufara.cujIzgovor")}: ${harf.name}`}
+                title={`${t("sufara.cujIzgovor")}: ${harf.name} · ${getSufaraAudioApproval(harf.audioFile)?.status === "approved" ? "odobreno" : "razvojni snimak"}`}
               >
                 <Volume2 className="w-4 h-4" />
               </button>

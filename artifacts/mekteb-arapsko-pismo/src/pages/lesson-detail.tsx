@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getLessonById, LESSONS, type Exercise, type ExerciseItem } from "@/data/lessons";
 import { SLOGOVI_AUDIO } from "@/data/slogovi-mapping";
+import { getSufaraAudioApproval } from "@/data/audio-approval";
+import { playSufaraAudio } from "@/lib/sufara-audio";
 import { useLanguage } from "@/context/language";
 
 const BASE = import.meta.env.BASE_URL;
@@ -26,63 +28,41 @@ function isArabicChar(s: string) {
 function playAudio(file: string) {
   const slogoviMp3 = SLOGOVI_AUDIO[file];
   if (slogoviMp3) {
-    const audio = new Audio(`${BASE}audio/slogovi/${slogoviMp3}`);
-    audio.play().catch(() => {});
+    playSufaraAudio(slogoviMp3, true);
     return;
   }
-  const audio = new Audio(`${BASE}audio/harfovi/${file}`);
-  audio.play().catch(() => {});
+  playSufaraAudio(file, true);
 }
 
 function playSlog(text: string) {
   const mp3 = SLOGOVI_AUDIO[text];
   if (mp3) {
-    const audio = new Audio(`${BASE}audio/slogovi/${mp3}`);
-    audio.play().catch(() => {});
+    playSufaraAudio(mp3, true);
   } else {
-    speakArabic(text);
+    // Ne koristimo browser TTS za kiraet: glas zavisi od uređaja i nije
+    // dovoljno pouzdan za poučavanje mahredža. Nedostajući slog mora dobiti
+    // odobren snimak učača i unos u SLOGOVI_AUDIO.
+    console.warn(`[Sufara] Nedostaje provjeren audio za: ${text}`);
   }
 }
 
-// Preferiramo Gulf/Egipatski glas — izbjegavamo Magrebiški (MA/DZ/TN) koji ج čita kao Ž
-const MAGHREB = /^ar-(MA|DZ|TN|LY|MR)/i;
-const GULF_PREF = ["ar-SA", "ar-EG", "ar-KW", "ar-QA", "ar-AE", "ar-BH", "ar-IQ", "ar-JO"];
-
-function pickArabicVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("ar"));
-  for (const pref of GULF_PREF) {
-    const v = voices.find(v => v.lang === pref);
-    if (v) return v;
-  }
-  return voices.find(v => !MAGHREB.test(v.lang)) ?? voices[0] ?? null;
+function playLetter(text: string) {
+  const soundFile = LESSONS
+    .flatMap((lesson) => lesson.letterData)
+    .find((letter) => letter.arabic === text)?.soundFile;
+  if (soundFile) playAudio(soundFile);
 }
 
-function speakArabic(text: string) {
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "ar-SA";
-  utter.rate = 0.75;
-  const voice = pickArabicVoice();
-  if (voice) utter.voice = voice;
-  window.speechSynthesis.speak(utter);
+function playHareketiSound(h: { soundFile: string | null }) {
+  if (h.soundFile) playAudio(h.soundFile);
 }
 
-function speakGlas(glas: string) {
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(glas.replace(/^-/, ""));
-  utter.lang = "bs-BA";
-  utter.rate = 0.8;
-  window.speechSynthesis.speak(utter);
-}
-
-function playHareketiSound(h: { sound: string; soundFile: string; speakText?: string }) {
-  if (h.speakText) {
-    speakGlas(h.speakText);
-  } else if (h.sound.startsWith("-")) {
-    speakGlas(h.sound);
-  } else {
-    playAudio(h.soundFile);
-  }
+/** Fullscreen vježba preuzima viewport i privremeno skriva globalne bannere. */
+function useSufaraExerciseOverlay() {
+  useEffect(() => {
+    document.body.classList.add("sufara-exercise-open");
+    return () => document.body.classList.remove("sufara-exercise-open");
+  }, []);
 }
 
 
@@ -95,6 +75,7 @@ function ReadingGridModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
+  useSufaraExerciseOverlay();
   const { t } = useLanguage();
   const [played, setPlayed] = useState<Set<number>>(new Set());
   const [shuffled] = useState<ExerciseItem[]>(() =>
@@ -114,7 +95,7 @@ function ReadingGridModal({
   const pct = shuffled.length > 0 ? Math.round((played.size / shuffled.length) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-teal-900 flex flex-col">
+    <div className="fixed inset-0 z-[80] h-[100dvh] min-h-[100svh] overflow-hidden bg-teal-900 flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-4 px-5 pt-5 pb-4 shrink-0 border-b border-white/10">
         <button
@@ -204,6 +185,7 @@ function PronadiModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
+  useSufaraExerciseOverlay();
   const { t } = useLanguage();
   const target     = exercise.items[0]?.show ?? "ب";
   const targetName = exercise.items[0]?.answer ?? "?";
@@ -232,7 +214,7 @@ function PronadiModal({
     const cell = cells[idx];
     if (cell.found) return;
     if (cell.isTarget) {
-      speakArabic(target);
+      playLetter(target);
       setCells(prev => prev.map((c, i) => i === idx ? { ...c, found: true } : c));
     } else {
       setCells(prev => prev.map((c, i) => i === idx ? { ...c, shake: true } : c));
@@ -243,7 +225,7 @@ function PronadiModal({
   const pct = Math.round((foundCount / targetCount) * 100);
 
   return (
-    <div className="fixed inset-0 z-50 bg-indigo-900 flex flex-col">
+    <div className="fixed inset-0 z-[80] h-[100dvh] min-h-[100svh] overflow-hidden bg-indigo-900 flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-4 px-5 pt-5 pb-4 shrink-0 border-b border-white/10">
         <button onClick={onClose} className="text-white/60 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">
@@ -326,6 +308,7 @@ function QuizModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
+  useSufaraExerciseOverlay();
   const { t } = useLanguage();
   const isTypeInput   = exercise.type === "napiši";
   const isListening   = exercise.type === "slušaj";
@@ -413,7 +396,7 @@ function QuizModal({
   const showIsAr = isArabicChar(item.show);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-br from-teal-800 via-teal-700 to-teal-900">
+    <div className="fixed inset-0 z-[80] h-[100dvh] min-h-[100svh] overflow-hidden flex flex-col bg-gradient-to-br from-teal-800 via-teal-700 to-teal-900">
       {/* Top bar */}
       <div className="flex items-center gap-4 px-5 pt-5 pb-3 shrink-0">
         <button onClick={onClose}
@@ -438,7 +421,7 @@ function QuizModal({
       </p>
 
       {/* Question area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-4 gap-4">
         <p className="text-white/80 text-xl font-semibold text-center">{exercise.description}</p>
 
         {isListening ? (
@@ -527,7 +510,7 @@ function QuizModal({
       </div>
 
       {/* Answer section */}
-      <div className="px-5 pb-8 shrink-0">
+      <div className="px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] shrink-0">
         {isTypeInput ? (
           <div className="flex gap-3 max-w-xs mx-auto">
             <input
@@ -802,6 +785,13 @@ export default function LessonDetail() {
         </div>
       </div>
 
+      <div className="mb-8 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-950">
+        <p className="font-extrabold">{t("Razvojna audio-verzija")}</p>
+        <p className="mt-1 text-sm leading-relaxed">
+          {t("Postojeći snimci služe za razvoj i moraju proći provjeru učača Kur'ana prije javnog otvaranja. Automatski glas uređaja nije zamjena za pravilan mahredž.")}
+        </p>
+      </div>
+
       {/* Priča */}
       <Card className="p-6 mb-8 bg-gradient-to-r from-orange-50 to-pink-50 border-orange-100">
 
@@ -1063,7 +1053,13 @@ export default function LessonDetail() {
                         <div className="flex items-center gap-2 mt-3">
                           <button
                             onClick={() => playHareketiSound(h)}
-                            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${c.sound}`}
+                            disabled={!h.soundFile}
+                            title={!h.soundFile
+                              ? t("Audio čeka stručnu provjeru")
+                              : getSufaraAudioApproval(h.soundFile)?.status === "approved"
+                                ? t("Poslušaj odobreni izgovor")
+                                : t("Poslušaj razvojni snimak — čeka provjeru učača")}
+                            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${c.sound} disabled:cursor-not-allowed disabled:opacity-40`}
                           >
                             <Volume2 className="w-4 h-4" />
                           </button>

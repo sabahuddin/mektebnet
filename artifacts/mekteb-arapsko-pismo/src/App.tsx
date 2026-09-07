@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect, type ReactNode } from "react";
+import { Redirect, Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -130,9 +130,16 @@ function KuranAdminPageRoute() {
   return user?.role === "admin" ? <KuranStranicaPage /> : <NotFound />;
 }
 
+function SufaraAdminGate({ children }: { children: ReactNode }) {
+  const { user, isLoading } = useAuth();
+  const [location] = useLocation();
+  if (isLoading) return null;
+  if (!user) return <Redirect to={`/login?next=${encodeURIComponent(location)}`} replace />;
+  return user.role === "admin" ? <>{children}</> : <NotFound />;
+}
+
 function SufaraAdminRoute() {
-  const { user } = useAuth();
-  return user?.role === "admin" ? <ArapskoPismoPage /> : <NotFound />;
+  return <SufaraAdminGate><ArapskoPismoPage /></SufaraAdminGate>;
 }
 
 function KvizoviAdminRoute() {
@@ -167,10 +174,10 @@ function Router() {
 
       {/* Arapsko pismo */}
       <Route path="/arapsko-pismo" component={SufaraAdminRoute} />
-      <Route path="/lesson/:id" component={LessonDetail} />
-      <Route path="/lesson/:id/exercise/:type" component={Exercise} />
-      <Route path="/karta-harfova" component={KartaHarfova} />
-      <Route path="/napredak" component={Progress} />
+      <Route path="/lesson/:id" component={() => <SufaraAdminGate><LessonDetail /></SufaraAdminGate>} />
+      <Route path="/lesson/:id/exercise/:type" component={() => <SufaraAdminGate><Exercise /></SufaraAdminGate>} />
+      <Route path="/karta-harfova" component={() => <SufaraAdminGate><KartaHarfova /></SufaraAdminGate>} />
+      <Route path="/napredak" component={() => <SufaraAdminGate><Progress /></SufaraAdminGate>} />
 
       {/* Ilmihal */}
       <Route path="/ilmihal" component={IlmihalPage} />
