@@ -181,9 +181,13 @@ export default function ArapskoPismoPage() {
                             </span>
                           )}
                           <div className="flex items-center gap-2 mt-1" dir="rtl">
-                            {lesson.letters.map(l => (
-                              <span key={l} className="text-3xl font-bold text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
-                            ))}
+                            {lesson.id === 17 ? (
+                              <span className="text-base font-bold text-primary" dir="ltr">Svi harfovi</span>
+                            ) : (
+                              lesson.letters.map(l => (
+                                <span key={l} className="text-3xl font-bold text-primary" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{l}</span>
+                              ))
+                            )}
                           </div>
                         </div>
                         <PlayCircle className="w-6 h-6 text-primary opacity-60 group-hover:opacity-100 shrink-0 transition-opacity" />
