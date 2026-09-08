@@ -86,6 +86,11 @@ const HAREKETI_L2: HarekeData[] = [
   },
 ];
 
+const ALL_ARABIC_LETTERS = [
+  "ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش", "ص",
+  "ض", "ط", "ظ", "ع", "غ", "ف", "ق", "ك", "ل", "م", "ن", "ه", "و", "ي",
+];
+
 export const LESSONS: LessonData[] = [
 
   // ── LEKCIJA 2 ───────────────────────────────────────────────
@@ -1205,7 +1210,637 @@ export const LESSONS: LessonData[] = [
       },
     ]
   },
+
+  // ── LEKCIJA 10: SIN I ŠIN ──────────────────────────────────
+  {
+    id: 10, orderNum: 10, slug: "sin-shin",
+    title: "Sin i Šin",
+    letters: ["س", "ش"],
+    isCompleted: false,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "muallim", text: "Sin i Šin imaju isti osnovni oblik. Sin nema tačke, a Šin ima tri tačke iznad." },
+        { speaker: "dzana", text: "Kod oba harfa mogu pratiti tri mala zupca, a tačke mi kažu koji harf čitam." },
+        { speaker: "muallim", text: "Kod Sina vrh jezika je blizu unutrašnje strane donjih prednjih zuba. Zrak prolazi uskim putem i čuje se čisto S, bez krupnog tona." },
+        { speaker: "muallim", text: "Kod Šina sredina jezika približava se srednjem dijelu nepca, a zrak se širi. Glas je sličan našem Š, ali izgovor potvrđujemo slušanjem." },
+        { speaker: "amir", text: "Prvo gledam tačke, zatim hareket, pa harf čitam u spoju s onim prije i poslije njega." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "س", name: "Sin", transliteration: "S",
+        forms: { isolated: "س", initial: "سـ", medial: "ـسـ", final: "ـس" },
+        visualAssociation: "Tri zupca bez tačaka; tanak glas S uz strujanje zraka",
+        soundFile: "sin.mp3",
+      },
+      {
+        arabic: "ش", name: "Šin", transliteration: "Š",
+        forms: { isolated: "ش", initial: "شـ", medial: "ـشـ", final: "ـش" },
+        visualAssociation: "Isti oblik kao Sin, s tri tačke iznad; glas Š",
+        soundFile: "sin2.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf", title: "Sin ili Šin?", description: "Prepoznaj harf po tačkama.",
+        icon: "🔡", hasanatReward: 15, choices: ["Sin", "Šin"],
+        items: [
+          { show: "س", answer: "Sin" }, { show: "ش", answer: "Šin" },
+          { show: "ش", answer: "Šin" }, { show: "س", answer: "Sin" },
+          { show: "س", answer: "Sin" }, { show: "ش", answer: "Šin" },
+          { show: "ش", answer: "Šin" }, { show: "س", answer: "Sin" },
+        ],
+      },
+      {
+        type: "koji-harf", title: "Prepoznaj spojeni oblik", description: "Harf može biti na početku, u sredini ili na kraju spoja.",
+        icon: "🔗", hasanatReward: 20, choices: ["Sin", "Šin"],
+        items: [
+          { show: "سـ", answer: "Sin" }, { show: "ـشـ", answer: "Šin" },
+          { show: "ـس", answer: "Sin" }, { show: "شـ", answer: "Šin" },
+          { show: "ـش", answer: "Šin" }, { show: "ـسـ", answer: "Sin" },
+          { show: "ـشـ", answer: "Šin" }, { show: "سـ", answer: "Sin" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj Sin i Šin s hareketima", description: "Čitaj redom, zatim izmiješaj kartice i ponovi.",
+        icon: "📖", hasanatReward: 25, choices: [],
+        items: [
+          { show: "سَ", answer: "Sin + fetha" }, { show: "سِ", answer: "Sin + kesra" }, { show: "سُ", answer: "Sin + damma" },
+          { show: "شَ", answer: "Šin + fetha" }, { show: "شِ", answer: "Šin + kesra" }, { show: "شُ", answer: "Šin + damma" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj spojeve i riječi", description: "Primijeni sukun, tešdid i tenvin, zatim pročitaj kratke riječi.",
+        icon: "📖", hasanatReward: 35, choices: [],
+        items: [
+          { show: "أَسْ", answer: "Hemza–Sin sa sukunom" }, { show: "أَشْ", answer: "Hemza–Šin sa sukunom" },
+          { show: "أَسَّ", answer: "Sin s tešdidom" }, { show: "أَشَّ", answer: "Šin s tešdidom" },
+          { show: "سٌ", answer: "Sin + tenvin damma" }, { show: "شٍ", answer: "Šin + tenvin kesra" },
+          { show: "سَبَ", answer: "Sin–Ba" }, { show: "شَرَ", answer: "Šin–Ra" },
+          { show: "سَجَدَ", answer: "Sin–Džim–Dal" }, { show: "بَشَرَ", answer: "Ba–Šin–Ra" },
+          { show: "حَسَدَ", answer: "Ha–Sin–Dal" }, { show: "شَجَرَ", answer: "Šin–Džim–Ra" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 11: SAD I DAD ──────────────────────────────────
+  {
+    id: 11, orderNum: 11, slug: "sad-dad",
+    title: "Sad i Dad",
+    letters: ["ص", "ض"],
+    isCompleted: false,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "muallim", text: "Sad i Dad imaju isti osnovni oblik. Sad nema tačku, a Dad ima jednu tačku iznad." },
+        { speaker: "muallim", text: "Sad je krupan harf. Prednji dio jezika oblikuje prolaz sličan Sinu, ali se zadnji dio jezika podiže pa glas ispuni usta. Ne čitamo ga kao obično S." },
+        { speaker: "muallim", text: "Dad je krupan harf koji izlazi uz jednu bočnu stranu jezika i gornje kutnjake. To nije obično D; pravilan glas zahtijeva slušanje i vježbu s muallimom." },
+        { speaker: "dzana", text: "Tačka razlikuje Dad od Sada, ali položaj jezika razlikuje oba od tankih harfova Sin i Dal." },
+        { speaker: "amir", text: "Neću pokušavati pogoditi glas samo po latinici. Slušam snimak, ponavljam i tražim ispravku." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "ص", name: "Sad", transliteration: "krupno S",
+        forms: { isolated: "ص", initial: "صـ", medial: "ـصـ", final: "ـص" },
+        visualAssociation: "Zatvoren prednji oblik bez tačke; krupan glas S",
+        soundFile: "sad.mp3",
+      },
+      {
+        arabic: "ض", name: "Dad", transliteration: "krupno D",
+        forms: { isolated: "ض", initial: "ضـ", medial: "ـضـ", final: "ـض" },
+        visualAssociation: "Isti oblik kao Sad, s jednom tačkom iznad",
+        soundFile: "dad.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf", title: "Sad ili Dad?", description: "Pogledaj tačku i prepoznaj harf.",
+        icon: "🔡", hasanatReward: 15, choices: ["Sad", "Dad"],
+        items: [
+          { show: "ص", answer: "Sad" }, { show: "ض", answer: "Dad" },
+          { show: "ض", answer: "Dad" }, { show: "ص", answer: "Sad" },
+          { show: "ص", answer: "Sad" }, { show: "ض", answer: "Dad" },
+          { show: "ض", answer: "Dad" }, { show: "ص", answer: "Sad" },
+        ],
+      },
+      {
+        type: "koji-harf", title: "Razlikuj slične glasove", description: "Razlikuj tanke Sin i Dal od krupnih Sad i Dad.",
+        icon: "🔍", hasanatReward: 20, choices: ["Sin", "Dal", "Sad", "Dad"],
+        items: [
+          { show: "س", answer: "Sin" }, { show: "ص", answer: "Sad" },
+          { show: "د", answer: "Dal" }, { show: "ض", answer: "Dad" },
+          { show: "ـسـ", answer: "Sin" }, { show: "ـصـ", answer: "Sad" },
+          { show: "د", answer: "Dal" }, { show: "ـض", answer: "Dad" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj Sad i Dad s hareketima", description: "Sačuvaj krupan izgovor uz sva tri kratka glasa.",
+        icon: "📖", hasanatReward: 25, choices: [],
+        items: [
+          { show: "صَ", answer: "Sad + fetha" }, { show: "صِ", answer: "Sad + kesra" }, { show: "صُ", answer: "Sad + damma" },
+          { show: "ضَ", answer: "Dad + fetha" }, { show: "ضِ", answer: "Dad + kesra" }, { show: "ضُ", answer: "Dad + damma" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj spojeve i riječi", description: "Vježbaj krupne glasove sa sukunom, tešdidom, tenvinom i u riječima.",
+        icon: "📖", hasanatReward: 35, choices: [],
+        items: [
+          { show: "أَصْ", answer: "Hemza–Sad sa sukunom" }, { show: "أَضْ", answer: "Hemza–Dad sa sukunom" },
+          { show: "أَصَّ", answer: "Sad s tešdidom" }, { show: "أَضَّ", answer: "Dad s tešdidom" },
+          { show: "صٌ", answer: "Sad + tenvin damma" }, { show: "ضٍ", answer: "Dad + tenvin kesra" },
+          { show: "صَبَرَ", answer: "Sad–Ba–Ra" }, { show: "ضَرَبَ", answer: "Dad–Ra–Ba" },
+          { show: "حَضَرَ", answer: "Ha–Dad–Ra" }, { show: "بَصَرَ", answer: "Ba–Sad–Ra" },
+          { show: "صَدَرَ", answer: "Sad–Dal–Ra" }, { show: "حَرَصَ", answer: "Ha–Ra–Sad" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 12: TÂ I ZÂ ────────────────────────────────────
+  {
+    id: 12, orderNum: 12, slug: "ta-za-krupni",
+    title: "Tâ i Zâ",
+    letters: ["ط", "ظ"],
+    isCompleted: false,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "muallim", text: "Tâ i Zâ imaju isti osnovni oblik. Tâ nema tačku, a Zâ ima jednu tačku iznad." },
+        { speaker: "muallim", text: "Kod Tâ vrh jezika dodiruje područje iza gornjih prednjih zuba, kao kod Ta, ali se zadnji dio jezika podiže. Zato je Tâ krupan i snažan glas, a kada nosi sukun čuje se odskok glasa." },
+        { speaker: "muallim", text: "Kod Zâ vrh jezika lagano izlazi između prednjih zuba, kao kod Zala, ali se zadnji dio jezika podiže. Glas je zvučan i krupan; nije obično Z niti obično D." },
+        { speaker: "dzana", text: "Tačka razlikuje Tâ od Zâ, a krupan izgovor ih razlikuje od tankih Ta i Zal." },
+        { speaker: "amir", text: "Pazit ću i na mjesto jezika i na krupnoću, a kod Tâ sa sukunom neću dodavati novi hareket." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "ط", name: "Tâ", transliteration: "krupno T",
+        forms: { isolated: "ط", initial: "طـ", medial: "ـطـ", final: "ـط" },
+        visualAssociation: "Uspravan potez u zatvorenom obliku, bez tačke; krupan T",
+        soundFile: "ta2.mp3",
+      },
+      {
+        arabic: "ظ", name: "Zâ", transliteration: "krupno Zâ",
+        forms: { isolated: "ظ", initial: "ظـ", medial: "ـظـ", final: "ـظ" },
+        visualAssociation: "Isti oblik kao Tâ, s jednom tačkom iznad",
+        soundFile: "za.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf", title: "Tâ ili Zâ?", description: "Prepoznaj harf po tački.",
+        icon: "🔡", hasanatReward: 15, choices: ["Tâ", "Zâ"],
+        items: [
+          { show: "ط", answer: "Tâ" }, { show: "ظ", answer: "Zâ" },
+          { show: "ظ", answer: "Zâ" }, { show: "ط", answer: "Tâ" },
+          { show: "ط", answer: "Tâ" }, { show: "ظ", answer: "Zâ" },
+          { show: "ظ", answer: "Zâ" }, { show: "ط", answer: "Tâ" },
+        ],
+      },
+      {
+        type: "koji-harf", title: "Tanko ili krupno?", description: "Razlikuj Ta i Zal od krupnih Tâ i Zâ.",
+        icon: "🔍", hasanatReward: 20, choices: ["Ta", "Zal", "Tâ", "Zâ"],
+        items: [
+          { show: "ت", answer: "Ta" }, { show: "ط", answer: "Tâ" },
+          { show: "ذ", answer: "Zal" }, { show: "ظ", answer: "Zâ" },
+          { show: "ـتـ", answer: "Ta" }, { show: "ـطـ", answer: "Tâ" },
+          { show: "ذ", answer: "Zal" }, { show: "ـظ", answer: "Zâ" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj Tâ i Zâ s hareketima", description: "Sačuvaj krupan izgovor uz fethu, kesru i dammu.",
+        icon: "📖", hasanatReward: 25, choices: [],
+        items: [
+          { show: "طَ", answer: "Tâ + fetha" }, { show: "طِ", answer: "Tâ + kesra" }, { show: "طُ", answer: "Tâ + damma" },
+          { show: "ظَ", answer: "Zâ + fetha" }, { show: "ظِ", answer: "Zâ + kesra" }, { show: "ظُ", answer: "Zâ + damma" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj spojeve i riječi", description: "Čitaj polako, bez dodavanja glasa uz sukun, pa prijeđi na riječi.",
+        icon: "📖", hasanatReward: 35, choices: [],
+        items: [
+          { show: "أَطْ", answer: "Hemza–Tâ sa sukunom" }, { show: "أَظْ", answer: "Hemza–Zâ sa sukunom" },
+          { show: "أَطَّ", answer: "Tâ s tešdidom" }, { show: "أَظَّ", answer: "Zâ s tešdidom" },
+          { show: "طٌ", answer: "Tâ + tenvin damma" }, { show: "ظٍ", answer: "Zâ + tenvin kesra" },
+          { show: "طَرَدَ", answer: "Tâ–Ra–Dal" }, { show: "بَطَشَ", answer: "Ba–Tâ–Šin" },
+          { show: "ضَبَطَ", answer: "Dad–Ba–Tâ" }, { show: "حَظَرَ", answer: "Ha–Zâ–Ra" },
+          { show: "طَبَخَ", answer: "Tâ–Ba–Hâ" }, { show: "ظَبَ", answer: "Zâ–Ba" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 13: AJN I GAJN ─────────────────────────────────
+  {
+    id: 13, orderNum: 13, slug: "ajn-gajn",
+    title: "Ajn i Gajn",
+    letters: ["ع", "غ"],
+    isCompleted: false,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "muallim", text: "Ajn i Gajn imaju isti osnovni oblik. Ajn nema tačku, a Gajn ima jednu tačku iznad." },
+        { speaker: "muallim", text: "Ajn izlazi iz srednjeg dijela grla. Grlo se umjereno stegne i glas prolazi bez pretvaranja u hemzu, A ili H. U našem jeziku nema potpuno jednakog glasa." },
+        { speaker: "muallim", text: "Gajn izlazi iz gornjeg dijela grla, blizu mekog nepca. To je zvučan, krupan glas sa strujanjem; ne čitamo ga kao naše G." },
+        { speaker: "dzana", text: "Kod ovih harfova oblik mogu naučiti očima, ali mahredž moram naučiti slušanjem i ponavljanjem." },
+        { speaker: "amir", text: "Najprije ću vježbati kratak čist glas, a zatim ga spajati s poznatim harfovima." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "ع", name: "Ajn", transliteration: "grleni glas",
+        forms: { isolated: "ع", initial: "عـ", medial: "ـعـ", final: "ـع" },
+        visualAssociation: "Oblik bez tačke; poseban zvučni glas iz sredine grla",
+        soundFile: "ajn.mp3",
+      },
+      {
+        arabic: "غ", name: "Gajn", transliteration: "krupni grleni glas",
+        forms: { isolated: "غ", initial: "غـ", medial: "ـغـ", final: "ـغ" },
+        visualAssociation: "Isti oblik kao Ajn, s jednom tačkom iznad",
+        soundFile: "gajn.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf", title: "Ajn ili Gajn?", description: "Prepoznaj harf po tački.",
+        icon: "🔡", hasanatReward: 15, choices: ["Ajn", "Gajn"],
+        items: [
+          { show: "ع", answer: "Ajn" }, { show: "غ", answer: "Gajn" },
+          { show: "غ", answer: "Gajn" }, { show: "ع", answer: "Ajn" },
+          { show: "ع", answer: "Ajn" }, { show: "غ", answer: "Gajn" },
+          { show: "غ", answer: "Gajn" }, { show: "ع", answer: "Ajn" },
+        ],
+      },
+      {
+        type: "koji-harf", title: "Prepoznaj spojeni oblik", description: "Ajn i Gajn mijenjaju oblik u spoju.",
+        icon: "🔗", hasanatReward: 20, choices: ["Ajn", "Gajn"],
+        items: [
+          { show: "عـ", answer: "Ajn" }, { show: "ـغـ", answer: "Gajn" },
+          { show: "ـع", answer: "Ajn" }, { show: "غـ", answer: "Gajn" },
+          { show: "ـغ", answer: "Gajn" }, { show: "ـعـ", answer: "Ajn" },
+          { show: "ـغـ", answer: "Gajn" }, { show: "عـ", answer: "Ajn" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj Ajn i Gajn s hareketima", description: "Ne zamjenjuj Ajn hemzom niti Gajn našim glasom G.",
+        icon: "📖", hasanatReward: 25, choices: [],
+        items: [
+          { show: "عَ", answer: "Ajn + fetha" }, { show: "عِ", answer: "Ajn + kesra" }, { show: "عُ", answer: "Ajn + damma" },
+          { show: "غَ", answer: "Gajn + fetha" }, { show: "غِ", answer: "Gajn + kesra" }, { show: "غُ", answer: "Gajn + damma" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj spojeve i riječi", description: "Vježbaj grleni mahredž u kratkim spojevima, zatim u riječima.",
+        icon: "📖", hasanatReward: 35, choices: [],
+        items: [
+          { show: "أَعْ", answer: "Hemza–Ajn sa sukunom" }, { show: "أَغْ", answer: "Hemza–Gajn sa sukunom" },
+          { show: "أَعَّ", answer: "Ajn s tešdidom" }, { show: "أَغَّ", answer: "Gajn s tešdidom" },
+          { show: "عٌ", answer: "Ajn + tenvin damma" }, { show: "غٍ", answer: "Gajn + tenvin kesra" },
+          { show: "عَبَدَ", answer: "Ajn–Ba–Dal" }, { show: "بَعَثَ", answer: "Ba–Ajn–Sa" },
+          { show: "رَجَعَ", answer: "Ra–Džim–Ajn" }, { show: "غَرَسَ", answer: "Gajn–Ra–Sin" },
+          { show: "دَبَغَ", answer: "Dal–Ba–Gajn" }, { show: "بَغَضَ", answer: "Ba–Gajn–Dad" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 14: FA I KAF ───────────────────────────────────
+  {
+    id: 14, orderNum: 14, slug: "fa-kaf",
+    title: "Fa i Kaf",
+    letters: ["ف", "ق"],
+    isCompleted: false,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "muallim", text: "Fa i Kaf imaju sličan zaobljen oblik. Fa ima jednu tačku iznad, a Kaf dvije." },
+        { speaker: "muallim", text: "Kod Fa unutrašnja strana donje usne lagano dodiruje rub gornjih prednjih zuba. Zrak prolazi bez glasa, kao čisto F." },
+        { speaker: "muallim", text: "Kod Kafa zadnji dio jezika dodiruje područje mekog nepca. Kaf je krupan i snažan glas; nije isto što i Kef, koji ćemo učiti poslije." },
+        { speaker: "muallim", text: "Kada Kaf nosi sukun, čuje se jasan odskok glasa, ali mu ne dodajemo novi hareket." },
+        { speaker: "dzana", text: "Dakle, tačke razlikuju oblik, a usna i zadnji dio jezika pokazuju potpuno različita mjesta izgovora." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "ف", name: "Fa", transliteration: "F",
+        forms: { isolated: "ف", initial: "فـ", medial: "ـفـ", final: "ـف" },
+        visualAssociation: "Jedna tačka iznad; donja usna i gornji prednji zubi daju F",
+        soundFile: "fa.mp3",
+      },
+      {
+        arabic: "ق", name: "Kaf", transliteration: "krupno K",
+        forms: { isolated: "ق", initial: "قـ", medial: "ـقـ", final: "ـق" },
+        visualAssociation: "Dvije tačke iznad; snažan glas iz zadnjeg dijela jezika",
+        soundFile: "kaf.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf", title: "Fa ili Kaf?", description: "Jedna tačka označava Fa, a dvije Kaf.",
+        icon: "🔡", hasanatReward: 15, choices: ["Fa", "Kaf"],
+        items: [
+          { show: "ف", answer: "Fa" }, { show: "ق", answer: "Kaf" },
+          { show: "ق", answer: "Kaf" }, { show: "ف", answer: "Fa" },
+          { show: "ف", answer: "Fa" }, { show: "ق", answer: "Kaf" },
+          { show: "ق", answer: "Kaf" }, { show: "ف", answer: "Fa" },
+        ],
+      },
+      {
+        type: "koji-harf", title: "Prepoznaj spojeni oblik", description: "Pazi na broj tačaka u svim položajima.",
+        icon: "🔗", hasanatReward: 20, choices: ["Fa", "Kaf"],
+        items: [
+          { show: "فـ", answer: "Fa" }, { show: "ـقـ", answer: "Kaf" },
+          { show: "ـف", answer: "Fa" }, { show: "قـ", answer: "Kaf" },
+          { show: "ـق", answer: "Kaf" }, { show: "ـفـ", answer: "Fa" },
+          { show: "ـقـ", answer: "Kaf" }, { show: "فـ", answer: "Fa" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj Fa i Kaf s hareketima", description: "Razlikuj lagani Fa od krupnog Kafa.",
+        icon: "📖", hasanatReward: 25, choices: [],
+        items: [
+          { show: "فَ", answer: "Fa + fetha" }, { show: "فِ", answer: "Fa + kesra" }, { show: "فُ", answer: "Fa + damma" },
+          { show: "قَ", answer: "Kaf + fetha" }, { show: "قِ", answer: "Kaf + kesra" }, { show: "قُ", answer: "Kaf + damma" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj spojeve i riječi", description: "Čitaj Fa i Kaf sa sukunom, tešdidom i tenvinom, zatim u riječima.",
+        icon: "📖", hasanatReward: 35, choices: [],
+        items: [
+          { show: "أَفْ", answer: "Hemza–Fa sa sukunom" }, { show: "أَقْ", answer: "Hemza–Kaf sa sukunom" },
+          { show: "أَفَّ", answer: "Fa s tešdidom" }, { show: "أَقَّ", answer: "Kaf s tešdidom" },
+          { show: "فٌ", answer: "Fa + tenvin damma" }, { show: "قٍ", answer: "Kaf + tenvin kesra" },
+          { show: "فَتَحَ", answer: "Fa–Ta–Ha" }, { show: "قَرَأَ", answer: "Kaf–Ra–Hemza" },
+          { show: "رَزَقَ", answer: "Ra–Za–Kaf" }, { show: "غَفَرَ", answer: "Gajn–Fa–Ra" },
+          { show: "فَرَضَ", answer: "Fa–Ra–Dad" }, { show: "بَقَرَ", answer: "Ba–Kaf–Ra" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 15: KEF, LAM I MIM ─────────────────────────────
+  {
+    id: 15, orderNum: 15, slug: "kef-lam-mim",
+    title: "Kef, Lam i Mim",
+    letters: ["ك", "ل", "م"],
+    isCompleted: false,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "muallim", text: "Danas učimo Kef, Lam i Mim. Sva tri harfa spajaju se i s prethodnim i s narednim harfom." },
+        { speaker: "muallim", text: "Kod Kefa zadnji dio jezika dodiruje nepce malo ispred mjesta izgovora Kafa. Kef je tanak glas sličan našem K; ne smijemo ga čitati krupno kao Kaf." },
+        { speaker: "muallim", text: "Kod Lama vrh i prednje bočne strane jezika dodiruju područje desni iza gornjih prednjih zuba. Osnovni glas je jasan L; posebna pravila za Lam u Allahovom imenu učit ćemo kasnije." },
+        { speaker: "muallim", text: "Mim nastaje potpunim spajanjem usana. Glas prolazi uz prirodnu nosnu rezonancu, a naročito je čuvamo kada Mim nosi tešdid." },
+        { speaker: "dzana", text: "Kef razlikujem od Kafa po obliku i tankom glasu, a Lam i Mim pratim kroz njihove različite oblike u spoju." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "ك", name: "Kef", transliteration: "K (tanko)",
+        forms: { isolated: "ك", initial: "كـ", medial: "ـكـ", final: "ـك" },
+        visualAssociation: "Tanak glas K; mjesto jezika je ispred mjesta krupnog Kafa",
+        soundFile: "kef.mp3",
+      },
+      {
+        arabic: "ل", name: "Lam", transliteration: "L",
+        forms: { isolated: "ل", initial: "لـ", medial: "ـلـ", final: "ـل" },
+        visualAssociation: "Visoka uspravna linija sa zaobljenim završetkom",
+        soundFile: "lam.mp3",
+      },
+      {
+        arabic: "م", name: "Mim", transliteration: "M",
+        forms: { isolated: "م", initial: "مـ", medial: "ـمـ", final: "ـم" },
+        visualAssociation: "Usne se potpuno sastave i daju glas M",
+        soundFile: "mim.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf", title: "Kef, Lam ili Mim?", description: "Prepoznaj novi harf u samostalnom i spojenom obliku.",
+        icon: "🔡", hasanatReward: 15, choices: ["Kef", "Lam", "Mim"],
+        items: [
+          { show: "ك", answer: "Kef" }, { show: "ل", answer: "Lam" }, { show: "م", answer: "Mim" },
+          { show: "ـكـ", answer: "Kef" }, { show: "ـل", answer: "Lam" }, { show: "مـ", answer: "Mim" },
+          { show: "ـمـ", answer: "Mim" }, { show: "كـ", answer: "Kef" }, { show: "ـلـ", answer: "Lam" },
+          { show: "ـك", answer: "Kef" }, { show: "لـ", answer: "Lam" }, { show: "ـم", answer: "Mim" },
+        ],
+      },
+      {
+        type: "koji-harf", title: "Kaf ili Kef?", description: "Razlikuj krupni Kaf od tankog Kefa po obliku i broju tačaka.",
+        icon: "🔍", hasanatReward: 20, choices: ["Kaf", "Kef"],
+        items: [
+          { show: "ق", answer: "Kaf" }, { show: "ك", answer: "Kef" },
+          { show: "ـقـ", answer: "Kaf" }, { show: "ـكـ", answer: "Kef" },
+          { show: "كـ", answer: "Kef" }, { show: "قـ", answer: "Kaf" },
+          { show: "ـك", answer: "Kef" }, { show: "ـق", answer: "Kaf" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj Kef, Lam i Mim s hareketima", description: "Čitaj svaki harf s fethom, kesrom i dammom.",
+        icon: "📖", hasanatReward: 30, choices: [],
+        items: [
+          { show: "كَ", answer: "Kef + fetha" }, { show: "كِ", answer: "Kef + kesra" }, { show: "كُ", answer: "Kef + damma" },
+          { show: "لَ", answer: "Lam + fetha" }, { show: "لِ", answer: "Lam + kesra" }, { show: "لُ", answer: "Lam + damma" },
+          { show: "مَ", answer: "Mim + fetha" }, { show: "مِ", answer: "Mim + kesra" }, { show: "مُ", answer: "Mim + damma" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj spojeve i riječi", description: "Primijeni sukun, tešdid i tenvin, zatim pročitaj riječi s poznatim harfovima.",
+        icon: "📖", hasanatReward: 40, choices: [],
+        items: [
+          { show: "أَكْ", answer: "Hemza–Kef sa sukunom" }, { show: "أَلْ", answer: "Hemza–Lam sa sukunom" }, { show: "أَمْ", answer: "Hemza–Mim sa sukunom" },
+          { show: "أَكَّ", answer: "Kef s tešdidom" }, { show: "أَلَّ", answer: "Lam s tešdidom" }, { show: "أَمَّ", answer: "Mim s tešdidom" },
+          { show: "كٌ", answer: "Kef + tenvin damma" }, { show: "لٍ", answer: "Lam + tenvin kesra" }, { show: "مٌ", answer: "Mim + tenvin damma" },
+          { show: "كَتَبَ", answer: "Kef–Ta–Ba" }, { show: "لَبِسَ", answer: "Lam–Ba–Sin" }, { show: "مَلَكَ", answer: "Mim–Lam–Kef" },
+          { show: "سَلِمَ", answer: "Sin–Lam–Mim" }, { show: "عَلِمَ", answer: "Ajn–Lam–Mim" }, { show: "خَلَقَ", answer: "Hâ–Lam–Kaf" },
+          { show: "كَلَّمَ", answer: "Kef–Lam s tešdidom–Mim" }, { show: "مَسَكَ", answer: "Mim–Sin–Kef" }, { show: "حَمَلَ", answer: "Ha–Mim–Lam" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 16: NUN, HE, VAV I JA ──────────────────────────
+  {
+    id: 16, orderNum: 16, slug: "nun-he-vav-ja",
+    title: "Nun, He, Vav i Ja",
+    letters: ["ن", "ه", "و", "ي"],
+    isCompleted: false,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "muallim", text: "Ovo su posljednja četiri osnovna harfa: Nun, He, Vav i Ja." },
+        { speaker: "muallim", text: "Kod Nuna vrh jezika dodiruje desni iza gornjih prednjih zuba, a dio glasa odzvanja kroz nos. Kod Nuna s tešdidom nosnu rezonancu jasno zadržavamo." },
+        { speaker: "muallim", text: "He je blag dah iz najdubljeg dijela grla. Ne stežemo grlo kao kod Ha i ne stvaramo hrapavost kao kod Hâ." },
+        { speaker: "muallim", text: "Kod Vava usne se zaokruže bez potpunog zatvaranja i daju suglasnički glas sličan W. Kasnije ćemo naučiti kada Vav produžava glas u." },
+        { speaker: "muallim", text: "Kod Ja sredina jezika približava se srednjem dijelu nepca i daje glas sličan J. Kasnije ćemo naučiti kada Ja produžava glas i." },
+        { speaker: "amir", text: "Sada poznajemo sve osnovne harfove, ali prije dugih glasova moramo ih sigurno čitati s kratkim hareketima." },
+      ],
+    },
+    letterData: [
+      {
+        arabic: "ن", name: "Nun", transliteration: "N",
+        forms: { isolated: "ن", initial: "نـ", medial: "ـنـ", final: "ـن" },
+        visualAssociation: "Jedna tačka iznad; glas N uz prirodnu nosnu rezonancu",
+        soundFile: "nun.mp3",
+      },
+      {
+        arabic: "ه", name: "He", transliteration: "blago H",
+        forms: { isolated: "ه", initial: "هـ", medial: "ـهـ", final: "ـه" },
+        visualAssociation: "Blag dah iz najdubljeg dijela grla",
+        soundFile: "he.mp3",
+      },
+      {
+        arabic: "و", name: "Vav", transliteration: "W / dugo U",
+        forms: { isolated: "و", initial: "و", medial: "ـو", final: "ـو" },
+        nonConnecting: true,
+        visualAssociation: "Zaokružene usne; ne spaja se s harfom poslije sebe",
+        soundFile: "waw.mp3",
+      },
+      {
+        arabic: "ي", name: "Ja", transliteration: "J / dugo I",
+        forms: { isolated: "ي", initial: "يـ", medial: "ـيـ", final: "ـي" },
+        visualAssociation: "Dvije tačke ispod; sredina jezika približava se nepcu",
+        soundFile: "ja.mp3",
+      },
+    ],
+    exercises: [
+      {
+        type: "koji-harf", title: "Nun, He, Vav ili Ja?", description: "Prepoznaj posljednja četiri harfa u različitim oblicima.",
+        icon: "🔡", hasanatReward: 20, choices: ["Nun", "He", "Vav", "Ja"],
+        items: [
+          { show: "ن", answer: "Nun" }, { show: "ه", answer: "He" }, { show: "و", answer: "Vav" }, { show: "ي", answer: "Ja" },
+          { show: "ـنـ", answer: "Nun" }, { show: "هـ", answer: "He" }, { show: "ـو", answer: "Vav" }, { show: "يـ", answer: "Ja" },
+          { show: "ـه", answer: "He" }, { show: "ـيـ", answer: "Ja" }, { show: "نـ", answer: "Nun" }, { show: "و", answer: "Vav" },
+        ],
+      },
+      {
+        type: "koji-harf", title: "Razlikuj slične oblike", description: "Pazi na tačke i promjenu oblika u spoju.",
+        icon: "🔍", hasanatReward: 20, choices: ["Ba", "Ta", "Sa", "Nun", "Ja"],
+        items: [
+          { show: "بـ", answer: "Ba" }, { show: "تـ", answer: "Ta" }, { show: "ثـ", answer: "Sa" },
+          { show: "نـ", answer: "Nun" }, { show: "يـ", answer: "Ja" },
+          { show: "ـبـ", answer: "Ba" }, { show: "ـنـ", answer: "Nun" }, { show: "ـيـ", answer: "Ja" },
+          { show: "ـتـ", answer: "Ta" }, { show: "ـثـ", answer: "Sa" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj Nun, He, Vav i Ja s hareketima", description: "Čitaj svaki novi harf s fethom, kesrom i dammom.",
+        icon: "📖", hasanatReward: 35, choices: [],
+        items: [
+          { show: "نَ", answer: "Nun + fetha" }, { show: "نِ", answer: "Nun + kesra" }, { show: "نُ", answer: "Nun + damma" },
+          { show: "هَ", answer: "He + fetha" }, { show: "هِ", answer: "He + kesra" }, { show: "هُ", answer: "He + damma" },
+          { show: "وَ", answer: "Vav + fetha" }, { show: "وِ", answer: "Vav + kesra" }, { show: "وُ", answer: "Vav + damma" },
+          { show: "يَ", answer: "Ja + fetha" }, { show: "يِ", answer: "Ja + kesra" }, { show: "يُ", answer: "Ja + damma" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj spojeve i riječi", description: "Primijeni ranija pravila i čitaj nove harfove u kratkim riječima.",
+        icon: "📖", hasanatReward: 45, choices: [],
+        items: [
+          { show: "أَنْ", answer: "Hemza–Nun sa sukunom" }, { show: "أَهْ", answer: "Hemza–He sa sukunom" },
+          { show: "أَنَّ", answer: "Nun s tešdidom" }, { show: "أَهَّ", answer: "He s tešdidom" },
+          { show: "أَوَّ", answer: "Vav s tešdidom" }, { show: "أَيَّ", answer: "Ja s tešdidom" },
+          { show: "نٌ", answer: "Nun + tenvin damma" }, { show: "هٍ", answer: "He + tenvin kesra" },
+          { show: "وٌ", answer: "Vav + tenvin damma" }, { show: "يٍ", answer: "Ja + tenvin kesra" },
+          { show: "نَصَرَ", answer: "Nun–Sad–Ra" }, { show: "وَجَدَ", answer: "Vav–Džim–Dal" },
+          { show: "وَلَدَ", answer: "Vav–Lam–Dal" }, { show: "نَعَمْ", answer: "Nun–Ajn–Mim sa sukunom" },
+          { show: "مَنَعَ", answer: "Mim–Nun–Ajn" }, { show: "يَدٌ", answer: "Ja–Dal s tenvinom" },
+          { show: "هُوَ", answer: "He–Vav" }, { show: "يَعْمَلُ", answer: "Ja–Ajn–Mim–Lam" },
+        ],
+      },
+    ],
+  },
+
+  // ── LEKCIJA 17: PONAVLJANJE SVIH HARFOVA ──────────────────
+  {
+    id: 17, orderNum: 17, slug: "ponavljanje-svih-harfova",
+    title: "Ponavljanje svih harfova",
+    letters: ALL_ARABIC_LETTERS,
+    isCompleted: false,
+    isRevision: true,
+    isDraft: true,
+    story: {
+      lines: [
+        { speaker: "narator", text: "Džana i Amir su otvorili Mushaf i polako prešli prstom preko redova. Sada su mogli prepoznati svaki osnovni harf, ali pravi posao tek je počinjao." },
+        { speaker: "muallim", text: "Poznavanje imena harfa nije isto što i čitanje. Harf morate prepoznati u svakom obliku, spojiti ga s hareketom i sačuvati njegov mahredž." },
+        { speaker: "dzana", text: "Zato ćemo ponoviti sve harfove, zatim sukun, tešdid i tenvin, pa čitati kratke riječi iz kur'anskog jezika." },
+        { speaker: "muallim", text: "Čitajte prvo bez pomoći. Zatim poslušajte snimak, uporedite svoj izgovor i ponovite ono što nije bilo tačno." },
+        { speaker: "amir", text: "Kada sigurno savladamo ovo ponavljanje, spremni smo za duge glasove i sve ozbiljnije kur'anske riječi." },
+      ],
+    },
+    letterData: [],
+    exercises: [
+      {
+        type: "koji-harf", title: "Prepoznaj svih 28 harfova", description: "Pogledaj harf i odaberi njegovo ime.",
+        icon: "🔡", hasanatReward: 40,
+        choices: ["Elif", "Ba", "Ta", "Sa", "Džim", "Ha", "Hâ", "Dal", "Zal", "Ra", "Za", "Sin", "Šin", "Sad", "Dad", "Tâ", "Zâ", "Ajn", "Gajn", "Fa", "Kaf", "Kef", "Lam", "Mim", "Nun", "He", "Vav", "Ja"],
+        items: [
+          { show: "ا", answer: "Elif" }, { show: "ب", answer: "Ba" }, { show: "ت", answer: "Ta" }, { show: "ث", answer: "Sa" },
+          { show: "ج", answer: "Džim" }, { show: "ح", answer: "Ha" }, { show: "خ", answer: "Hâ" }, { show: "د", answer: "Dal" },
+          { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Za" }, { show: "س", answer: "Sin" },
+          { show: "ش", answer: "Šin" }, { show: "ص", answer: "Sad" }, { show: "ض", answer: "Dad" }, { show: "ط", answer: "Tâ" },
+          { show: "ظ", answer: "Zâ" }, { show: "ع", answer: "Ajn" }, { show: "غ", answer: "Gajn" }, { show: "ف", answer: "Fa" },
+          { show: "ق", answer: "Kaf" }, { show: "ك", answer: "Kef" }, { show: "ل", answer: "Lam" }, { show: "م", answer: "Mim" },
+          { show: "ن", answer: "Nun" }, { show: "ه", answer: "He" }, { show: "و", answer: "Vav" }, { show: "ي", answer: "Ja" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj sve harfove s hareketima", description: "Svaki naučeni harf pojavljuje se najmanje jednom.",
+        icon: "📖", hasanatReward: 50, choices: [],
+        items: [
+          { show: "أَ", answer: "Hemza + fetha" }, { show: "بِ", answer: "Ba + kesra" }, { show: "تُ", answer: "Ta + damma" }, { show: "ثَ", answer: "Sa + fetha" },
+          { show: "جِ", answer: "Džim + kesra" }, { show: "حُ", answer: "Ha + damma" }, { show: "خَ", answer: "Hâ + fetha" }, { show: "دِ", answer: "Dal + kesra" },
+          { show: "ذُ", answer: "Zal + damma" }, { show: "رَ", answer: "Ra + fetha" }, { show: "زِ", answer: "Za + kesra" }, { show: "سُ", answer: "Sin + damma" },
+          { show: "شَ", answer: "Šin + fetha" }, { show: "صِ", answer: "Sad + kesra" }, { show: "ضُ", answer: "Dad + damma" }, { show: "طَ", answer: "Tâ + fetha" },
+          { show: "ظِ", answer: "Zâ + kesra" }, { show: "عُ", answer: "Ajn + damma" }, { show: "غَ", answer: "Gajn + fetha" }, { show: "فِ", answer: "Fa + kesra" },
+          { show: "قُ", answer: "Kaf + damma" }, { show: "كَ", answer: "Kef + fetha" }, { show: "لِ", answer: "Lam + kesra" }, { show: "مُ", answer: "Mim + damma" },
+          { show: "نَ", answer: "Nun + fetha" }, { show: "هِ", answer: "He + kesra" }, { show: "وُ", answer: "Vav + damma" }, { show: "يَ", answer: "Ja + fetha" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Ponovi sukun, tešdid i tenvin", description: "Čitaj znak tačno: bez dodanog glasa uz sukun, s udvajanjem uz tešdid i s glasom n uz tenvin.",
+        icon: "📖", hasanatReward: 55, choices: [],
+        items: [
+          { show: "أَبْ", answer: "Ba sa sukunom" }, { show: "مِنْ", answer: "Nun sa sukunom" }, { show: "قُلْ", answer: "Lam sa sukunom" }, { show: "هَلْ", answer: "Lam sa sukunom" },
+          { show: "لَمْ", answer: "Mim sa sukunom" }, { show: "كُنْ", answer: "Nun sa sukunom" }, { show: "عَنْ", answer: "Nun sa sukunom" }, { show: "هُمْ", answer: "Mim sa sukunom" },
+          { show: "رَبَّ", answer: "Ba s tešdidom" }, { show: "إِنَّ", answer: "Nun s tešdidom" }, { show: "ثُمَّ", answer: "Mim s tešdidom" }, { show: "حَقٌّ", answer: "Kaf s tešdidom i tenvinom" },
+          { show: "شَرٍّ", answer: "Ra s tešdidom i tenvinom" }, { show: "حَجٌّ", answer: "Džim s tešdidom i tenvinom" }, { show: "كَذَّبَ", answer: "Zal s tešdidom" }, { show: "عَلَّمَ", answer: "Lam s tešdidom" },
+          { show: "قَمَرٌ", answer: "Tenvin damma" }, { show: "بَشَرٌ", answer: "Tenvin damma" }, { show: "وَلَدٌ", answer: "Tenvin damma" }, { show: "جَبَلٌ", answer: "Tenvin damma" },
+          { show: "نَهَرٌ", answer: "Tenvin damma" }, { show: "عِلْمٌ", answer: "Lam sa sukunom, Mim s tenvinom" }, { show: "خَبَرٍ", answer: "Tenvin kesra" }, { show: "أَجْرًا", answer: "Tenvin fetha" },
+        ],
+      },
+      {
+        type: "čitaj-slog", title: "Čitaj kratke kur'anske riječi", description: "Čitaj povezano i oslanjaj se na arapski zapis i audio, ne na latiničnu pomoć.",
+        icon: "📖", hasanatReward: 60, choices: [],
+        items: [
+          { show: "خَلَقَ", answer: "Hâ–Lam–Kaf" }, { show: "عَبَدَ", answer: "Ajn–Ba–Dal" }, { show: "سَجَدَ", answer: "Sin–Džim–Dal" }, { show: "ذَكَرَ", answer: "Zal–Kef–Ra" },
+          { show: "غَفَرَ", answer: "Gajn–Fa–Ra" }, { show: "رَزَقَ", answer: "Ra–Za–Kaf" }, { show: "كَتَبَ", answer: "Kef–Ta–Ba" }, { show: "نَصَرَ", answer: "Nun–Sad–Ra" },
+          { show: "حَمِدَ", answer: "Ha–Mim–Dal" }, { show: "عَلِمَ", answer: "Ajn–Lam–Mim" }, { show: "مَلَكَ", answer: "Mim–Lam–Kef" }, { show: "جَعَلَ", answer: "Džim–Ajn–Lam" },
+          { show: "فَتَحَ", answer: "Fa–Ta–Ha" }, { show: "صَبَرَ", answer: "Sad–Ba–Ra" }, { show: "شَكَرَ", answer: "Šin–Kef–Ra" }, { show: "وَجَدَ", answer: "Vav–Džim–Dal" },
+          { show: "دَخَلَ", answer: "Dal–Hâ–Lam" }, { show: "خَرَجَ", answer: "Hâ–Ra–Džim" }, { show: "بَلَغَ", answer: "Ba–Lam–Gajn" }, { show: "سَمِعَ", answer: "Sin–Mim–Ajn" },
+        ],
+      },
+    ],
+  },
 ];
+
+// Završno ponavljanje automatski koristi po jedan podatak za svaki harf iz
+// prethodnih lekcija. Tako se naziv, oblik i audio ne mogu razići između
+// pojedinačnih lekcija i kumulativnog pregleda.
+const allLettersRevision = LESSONS.find((lesson) => lesson.id === 17);
+if (allLettersRevision) {
+  allLettersRevision.letterData = Array.from(
+    new Map(
+      LESSONS
+        .filter((lesson) => lesson.id < 17)
+        .flatMap((lesson) => lesson.letterData)
+        .map((letter) => [letter.arabic, letter]),
+    ).values(),
+  );
+}
 
 export function getLessonById(id: number): LessonData | undefined {
   return LESSONS.find(l => l.id === id);

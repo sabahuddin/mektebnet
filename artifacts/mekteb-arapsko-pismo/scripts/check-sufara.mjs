@@ -31,9 +31,19 @@ for (const path of sourceFiles) {
 }
 
 const lessonsSource = readFileSync(lessonsPath, "utf8");
+const alphabetSource = lessonsSource.match(/const ALL_ARABIC_LETTERS = \[([\s\S]*?)\];/)?.[1] ?? "";
+const alphabet = [...alphabetSource.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+if (alphabet.length !== 28 || new Set(alphabet).size !== 28) {
+  failures.push("Završna lista mora sadržavati tačno 28 jedinstvenih arapskih harfova.");
+}
 const lessonIds = [...lessonsSource.matchAll(/id:\s*(\d+),\s*orderNum:/g)].map((match) => Number(match[1]));
 if (new Set(lessonIds).size !== lessonIds.length) {
   failures.push("ID-jevi lekcija moraju biti jedinstveni.");
+}
+for (let index = 1; index < lessonIds.length; index += 1) {
+  if (lessonIds[index] !== lessonIds[index - 1] + 1) {
+    failures.push(`Nedostaje lekcija između ${lessonIds[index - 1]} i ${lessonIds[index]}.`);
+  }
 }
 const lessonSlugs = [...lessonsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((match) => match[1]);
 if (new Set(lessonSlugs).size !== lessonSlugs.length) {
@@ -48,6 +58,11 @@ for (let index = 0; index < lessonStarts.length; index += 1) {
   if (!/type:\s*"čitaj-slog"/.test(lessonSource)) {
     failures.push(`Lekcija ${start[1]} nema završnu vježbu čitanja.`);
   }
+  const exerciseTypes = [...lessonSource.matchAll(/type:\s*"([^"]+)"/g)].map((match) => match[1]);
+  const readingCount = exerciseTypes.filter((type) => type === "čitaj-slog").length;
+  if (Number(start[1]) >= 10 && readingCount < 2) {
+    failures.push(`Lekcija ${start[1]} mora imati najmanje dvije vježbe čitanja.`);
+  }
 }
 if (/\b(?:šedda|šedde|shadda)\b/i.test(lessonsSource)) {
   failures.push("Korisnički sadržaj mora koristiti naziv tešdid.");
@@ -55,11 +70,29 @@ if (/\b(?:šedda|šedde|shadda)\b/i.test(lessonsSource)) {
 if (/\bhamz(?:a|e|u|om)\b/i.test(lessonsSource)) {
   failures.push("Korisnički sadržaj mora koristiti naziv hemza/hemze.");
 }
+if (/\bZejn\b/.test(lessonsSource)) {
+  failures.push("Korisnički sadržaj mora koristiti naziv Za, ne Zejn.");
+}
 
 const mappingSource = readFileSync(mappingPath, "utf8");
-const mapping = Object.fromEntries(
-  [...mappingSource.matchAll(/^\s*"([^"]+)":\s*"([^"]+\.mp3)"/gm)].map((match) => [match[1], match[2]]),
-);
+const mappingEntries = [...mappingSource.matchAll(/^\s*"([^"]+)":\s*"([^"]+\.mp3)"/gm)]
+  .map((match) => [match[1], match[2]]);
+if (new Set(mappingEntries.map(([arabic]) => arabic)).size !== mappingEntries.length) {
+  failures.push("Audio-mapa ne smije sadržavati isti arapski zapis više puta.");
+}
+if (new Set(mappingEntries.map(([, file]) => file)).size !== mappingEntries.length) {
+  failures.push("Svaki arapski zapis mora imati vlastiti audio-fajl.");
+}
+const mapping = Object.fromEntries(mappingEntries);
+const readingBlocks = [...lessonsSource.matchAll(
+  /type:\s*"čitaj-slog"[\s\S]*?items:\s*\[([\s\S]*?)\]\s*,?\n\s*\}/g,
+)];
+for (const block of readingBlocks) {
+  const readingItems = [...block[1].matchAll(/show:\s*"([^"]+)"/g)].map((match) => match[1]);
+  for (const arabic of readingItems) {
+    if (!mapping[arabic]) failures.push(`Kartica čitanja nema audio-mapiranje: ${arabic}`);
+  }
+}
 for (const [arabic, file] of Object.entries(mapping)) {
   if (!existsSync(join(slogoviDir, file))) {
     if (file.startsWith("openai-")) {

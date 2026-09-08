@@ -28,7 +28,7 @@ const HARFOVI_POOL: Harf[] = [
   { id: 21, arabic: "ق", name: "Kaf" },   { id: 22, arabic: "ك", name: "Kef" },
   { id: 23, arabic: "ل", name: "Lam" },   { id: 24, arabic: "م", name: "Mim" },
   { id: 25, arabic: "ن", name: "Nun" },   { id: 26, arabic: "ه", name: "He" },
-  { id: 27, arabic: "و", name: "Waw" },   { id: 28, arabic: "ي", name: "Ja" },
+  { id: 27, arabic: "و", name: "Vav" },   { id: 28, arabic: "ي", name: "Ja" },
 ];
 
 // Svaki par = jedna arapska kartica + jedna kartica sa imenom harfa.
