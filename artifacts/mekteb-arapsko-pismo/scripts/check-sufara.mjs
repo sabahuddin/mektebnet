@@ -97,7 +97,7 @@ const introducedInLesson = new Map(Object.entries({
   ك: 15, ل: 15, م: 15, ن: 16, ه: 16, و: 16, ي: 16,
 }));
 for (const { lessonId, words } of wordBanks) {
-  if (words.length < 20) failures.push(`Lekcija ${lessonId} mora imati najmanje 20 čitalačkih primjera.`);
+  if (words.length !== 30) failures.push(`Lekcija ${lessonId} mora imati tačno 30 čitalačkih primjera.`);
   if (new Set(words).size !== words.length) failures.push(`Lekcija ${lessonId} ima ponovljen čitalački primjer.`);
   for (const word of words) {
     const baseLetters = [...word.normalize("NFD").replace(/\p{M}/gu, "")]
@@ -107,7 +107,7 @@ for (const { lessonId, words } of wordBanks) {
   }
 }
 if (wordBanks.length !== lessonIds.length) {
-  failures.push("Svaka lekcija mora imati vlastitu banku od najmanje 20 čitalačkih primjera.");
+  failures.push("Svaka lekcija mora imati vlastitu banku od 30 čitalačkih primjera.");
 }
 const readingWordAudioFile = (text) =>
   `openai-reading-${Array.from(text, (character) => character.codePointAt(0).toString(16)).join("-")}.mp3`;

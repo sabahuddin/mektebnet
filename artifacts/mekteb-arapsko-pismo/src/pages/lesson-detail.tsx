@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Download, Gamepad2, Info, Map, PlayCircle, RotateCcw,
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getLessonById, LESSONS, type Exercise, type ExerciseItem } from "@/data/lessons";
+import { READING_SESSION_SIZE } from "@/data/reading-word-bank";
 import { SLOGOVI_AUDIO } from "@/data/slogovi-mapping";
 import { getSufaraAudioApproval } from "@/data/audio-approval";
 import { playSufaraAudio } from "@/lib/sufara-audio";
@@ -55,6 +56,15 @@ function playLetter(text: string) {
 
 function playHareketiSound(h: { soundFile: string | null }) {
   if (h.soundFile) playAudio(h.soundFile);
+}
+
+function shuffledReadingItems(items: ExerciseItem[]): ExerciseItem[] {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled.slice(0, Math.min(READING_SESSION_SIZE, shuffled.length));
 }
 
 /** Fullscreen vježba preuzima viewport i privremeno skriva globalne bannere. */
@@ -610,6 +620,19 @@ export default function LessonDetail() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
+  // Izbor ostaje isti tokom jedne posjete lekciji; novi izbor nastaje tek pri novom učitavanju.
+  const readingExercises = useMemo(() => {
+    if (!data) return [];
+    return data.exercises
+      .map((exercise, index) => ({
+        exercise: exercise.type === "čitaj-slog"
+          ? { ...exercise, items: shuffledReadingItems(exercise.items) }
+          : exercise,
+        index,
+      }))
+      .filter(({ exercise }) => exercise.type === "čitaj-slog");
+  }, [data?.id]);
+
   if (!data) {
     return (
       <Layout>
@@ -621,10 +644,10 @@ export default function LessonDetail() {
     );
   }
 
-  const readingExercises = data.exercises
-    .map((exercise, index) => ({ exercise, index }))
-    .filter(({ exercise }) => exercise.type === "čitaj-slog");
   const additionalExerciseCount = data.exercises.length - readingExercises.length;
+  const activeReadingExercise = activeReading === null
+    ? undefined
+    : readingExercises.find(({ index }) => index === activeReading)?.exercise;
   const letterGridClass = data.letterData.length >= 4
     ? "lg:grid-cols-4"
     : data.letterData.length === 3
@@ -705,9 +728,9 @@ export default function LessonDetail() {
         />
       )}
 
-      {activeReading !== null && (
+      {activeReading !== null && activeReadingExercise && (
         <ReadingGridModal
-          exercise={data.exercises[activeReading]}
+          exercise={activeReadingExercise}
           onClose={() => setActiveReading(null)}
           onComplete={() => markExerciseComplete(activeReading)}
         />
@@ -1233,8 +1256,8 @@ export default function LessonDetail() {
             <div className="space-y-3">
               {readingExercises.map(({ exercise: ex, index: ei }) => {
                 const isDone = completedExercises.has(ei);
-                const isTwentyWordBlock = ex.title.startsWith("Čitaj 20");
-                const previewItems = isTwentyWordBlock ? ex.items : ex.items.slice(0, 10);
+                const isReadingPool = ex.items.length === READING_SESSION_SIZE;
+                const previewItems = ex.items;
                 return (
                   <div key={ei} className={`rounded-xl border p-3 ${isDone ? "border-green-400 bg-green-500/15" : "border-white/15 bg-white/10"}`}>
                     <div className="flex items-center justify-between gap-3 mb-2">
@@ -1244,7 +1267,7 @@ export default function LessonDetail() {
                       </div>
                       {isDone && <Check className="w-5 h-5 text-green-400 shrink-0" />}
                     </div>
-                    <div className={`grid gap-1.5 mb-3 ${isTwentyWordBlock ? "grid-cols-4 sm:grid-cols-5" : "grid-cols-5 sm:grid-cols-10"}`} dir="rtl">
+                    <div className={`grid gap-1.5 mb-3 ${isReadingPool ? "grid-cols-3 sm:grid-cols-5" : "grid-cols-5 sm:grid-cols-10"}`} dir="rtl">
                       {previewItems.map((item, wi) => (
                         <div key={wi} className="min-h-[44px] rounded-lg bg-white flex items-center justify-center px-1">
                           <span

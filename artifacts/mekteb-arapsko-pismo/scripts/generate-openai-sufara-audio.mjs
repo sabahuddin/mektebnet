@@ -74,13 +74,17 @@ for (const [index, target] of targets.entries()) {
       model: MODEL,
       modalities: ["text", "audio"],
       audio: { voice: VOICE, format: "mp3" },
+      temperature: 0,
       messages: [
         {
           role: "system",
           content: [
+            "You are the single Bosnian-speaking Qur'an-reading instructor for the entire Sufara course.",
+            "Keep exactly the same neutral voice, microphone distance, volume, pace, and dry studio sound in every recording.",
             "Pronounce only the fully vowelled Arabic text provided.",
             "Use clear Quranic Arabic articulation suitable for a beginner reading exercise.",
             "Do not name the letters, translate, explain, sing, or add any other word.",
+            "Never insert a consonant, glide, diphthong, or tashdid that is not written.",
             "Read the text exactly once, slowly but as one connected unit.",
           ].join(" "),
         },
