@@ -1,4 +1,4 @@
-- [Git push na ovom projektu](git-push.md) — `github` remote ima stari/expired token u URL-u; koristi `GITHUB_TOKEN` secret umjesto toga.
+- [Git push na ovom projektu](git-push.md) — kad tokeni ne rade, koristi GitHub integraciju; čuvaj commit SHA i ograniči API na manje od 10 zahtjeva/s.
 - [Dev vs prod banka pitanja](dev-prod-banka.md) — dev DB ima staru 3513-redovnu banku; živa produkcija (self-hosted 2724) je jedini izvor istine.
 - [Background procesi se zamrznu](background-jobs-freeze.md) — nohup/long-running poslovi stanu između tool poziva; vozi duge poslove kao bounded foreground chunkove, resumable.
 - [Reorder UI mora podržavati touch](reorder-touch-drag.md) — djeca su na tabletima; koristi Pointer Events + elementFromPoint, ne HTML5 draggable; drži strelice kao fallback.

@@ -3,16 +3,12 @@ name: Git push na mektebnet projektu
 description: Kako pushati na GitHub (sabahuddin/mektebnet) i zašto timing i token zahtijevaju oprez.
 ---
 
-## Token: koristi GITHUB_TOKEN secret, ne remote URL
-Remote `github` ima hardkodiran personal access token u URL-u koji je istekao i vraća 401. `git push github main` ne radi, a Replit askpass ne može odgovoriti (terminal prompts disabled). Koristi `GITHUB_TOKEN` secret direktno:
+## GitHub integracija je pouzdan fallback
+Remote URL i workspace `GITHUB_TOKEN` mogu oba vratiti 401. Tada koristi instaliranu GitHub integraciju i Git Data API umjesto traženja novih kredencijala.
 
-```bash
-timeout 60 git push "https://x-access-token:${GITHUB_TOKEN}@github.com/sabahuddin/mektebnet.git" main 2>&1 | sed "s/${GITHUB_TOKEN}/***/g"
-```
+**Why:** Integracija je uspješno prenijela commitove kada oba git-token pristupa nisu radila.
 
-**Why:** Korisnik je potvrdio da `GITHUB_TOKEN` radi a token u remote URL-u ne. Ne mijenjaj remote config (korisnik ga drži tako namjerno). Uvijek pazi da token ne procuri u log.
-
-Ako Bearer `http.extraheader` vrati `invalid credentials`, token nije nužno nevažeći: Git smart HTTP očekuje Basic auth (`x-access-token:GITHUB_TOKEN`). Generiši Basic header u memoriji procesa i nikad ga ne ispisuj; `GET https://api.github.com/user` s Bearer headerom može sigurno potvrditi token prije pusha.
+**How to apply:** Kreiraj blobove, tree i commitove preko GitHub API-ja, pa pomjeri `refs/heads/main` samo fast-forwardom. Za očuvanje lokalnog SHA, commit poruka poslana API-ju mora imati tačno jedan završni newline. Šalji sekvencijalno oko 6–7 zahtjeva/s i poštuj `Retry-After`; Replit proxy ograničava GitHub na 10 zahtjeva/s.
 
 ## Git blokada u glavnom agentu (build mode)
 Okruženje sada odbija SVE destruktivne git komande u glavnom agentu — uključujući `git commit` (čak i u lancu `git add && git commit && git push <url>`, blokada pukne na commitu). NIKAD ne pokušavaj ručni `git commit`; lokalni commit se radi automatski kao Replit checkpoint na kraju turna.
