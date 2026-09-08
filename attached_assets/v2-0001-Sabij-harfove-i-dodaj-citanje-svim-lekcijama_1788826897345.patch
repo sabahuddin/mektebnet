@@ -1,0 +1,634 @@
+From b9bb43f0a9514663de411c34078a846b0f370518 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Mon, 7 Sep 2026 20:08:29 -0400
+Subject: [PATCH v2] Sabij harfove i dodaj citanje svim lekcijama
+
+---
+ .../scripts/check-sufara.mjs                  |  10 +
+ .../mekteb-arapsko-pismo/src/data/lessons.ts  | 168 ++++++++-----
+ .../src/data/slogovi-mapping.ts               |  53 +++++
+ .../src/pages/arapsko-pismo.tsx               |   2 +-
+ .../src/pages/lesson-detail.tsx               | 221 +++++++++---------
+ 5 files changed, 276 insertions(+), 178 deletions(-)
+
+diff --git a/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs b/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
+index a0cce78..5e85ec3 100644
+--- a/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
++++ b/artifacts/mekteb-arapsko-pismo/scripts/check-sufara.mjs
+@@ -39,6 +39,16 @@ const lessonSlugs = [...lessonsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((match
+ if (new Set(lessonSlugs).size !== lessonSlugs.length) {
+   failures.push("Slugovi lekcija moraju biti jedinstveni.");
+ }
++
++const lessonStarts = [...lessonsSource.matchAll(/id:\s*(\d+),\s*orderNum:/g)];
++for (let index = 0; index < lessonStarts.length; index += 1) {
++  const start = lessonStarts[index];
++  const end = lessonStarts[index + 1]?.index ?? lessonsSource.indexOf("export function", start.index);
++  const lessonSource = lessonsSource.slice(start.index, end);
++  if (!/type:\s*"čitaj-slog"/.test(lessonSource)) {
++    failures.push(`Lekcija ${start[1]} nema završnu vježbu čitanja.`);
++  }
++}
+ if (/\b(?:šedda|šedde|shadda)\b/i.test(lessonsSource)) {
+   failures.push("Korisnički sadržaj mora koristiti naziv tešdid.");
+ }
+diff --git a/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts b/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
+index 6b454e2..4fcbd4e 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
++++ b/artifacts/mekteb-arapsko-pismo/src/data/lessons.ts
+@@ -198,6 +198,20 @@ export const LESSONS: LessonData[] = [
+           { show: "أَ", answer: "e" }, { show: "إِ", answer: "i" },
+         ]
+       },
++      {
++        type: "čitaj-slog",
++        title: "Čitaj hemzu s hareketima",
++        description: "Prepoznaj položaj hemze i pročitaj kratki glas.",
++        icon: "📖", hasanatReward: 25, choices: [],
++        items: [
++          { show: "أَ", answer: "Hemza + fetha" }, { show: "إِ", answer: "Hemza + kesra" }, { show: "أُ", answer: "Hemza + damma" },
++          { show: "أَ", answer: "Hemza + fetha" }, { show: "أُ", answer: "Hemza + damma" }, { show: "إِ", answer: "Hemza + kesra" },
++          { show: "إِ", answer: "Hemza + kesra" }, { show: "أَ", answer: "Hemza + fetha" }, { show: "أُ", answer: "Hemza + damma" },
++          { show: "أُ", answer: "Hemza + damma" }, { show: "إِ", answer: "Hemza + kesra" }, { show: "أَ", answer: "Hemza + fetha" },
++          { show: "أَ", answer: "Hemza + fetha" }, { show: "إِ", answer: "Hemza + kesra" }, { show: "أُ", answer: "Hemza + damma" },
++          { show: "إِ", answer: "Hemza + kesra" }, { show: "أُ", answer: "Hemza + damma" }, { show: "أَ", answer: "Hemza + fetha" },
++        ],
++      },
+     ]
+   },
+ 
+@@ -247,47 +261,6 @@ export const LESSONS: LessonData[] = [
+       },
+     ],
+     exercises: [
+-      {
+-        type: "čitaj-slog",
+-        title: "Čitaj nove harfove s hareketima",
+-        description: "Prvo pročitaj bez pomoći, zatim klikni i provjeri izgovor.",
+-        icon: "📖", hasanatReward: 30,
+-        choices: [],
+-        items: [
+-          { show: "دَ", answer: "Dal + fetha" }, { show: "دِ", answer: "Dal + kesra" }, { show: "دُ", answer: "Dal + damma" },
+-          { show: "ذَ", answer: "Zal + fetha" }, { show: "ذِ", answer: "Zal + kesra" }, { show: "ذُ", answer: "Zal + damma" },
+-          { show: "رَ", answer: "Ra + fetha" },  { show: "رِ", answer: "Ra + kesra" },  { show: "رُ", answer: "Ra + damma" },
+-          { show: "زَ", answer: "Zejn + fetha" }, { show: "زِ", answer: "Zejn + kesra" }, { show: "زُ", answer: "Zejn + damma" },
+-          { show: "ذِ", answer: "Zal + kesra" }, { show: "رَ", answer: "Ra + fetha" }, { show: "دُ", answer: "Dal + damma" },
+-          { show: "زِ", answer: "Zejn + kesra" }, { show: "دَ", answer: "Dal + fetha" }, { show: "رُ", answer: "Ra + damma" },
+-          { show: "ذُ", answer: "Zal + damma" }, { show: "زَ", answer: "Zejn + fetha" }, { show: "رِ", answer: "Ra + kesra" },
+-          { show: "دِ", answer: "Dal + kesra" }, { show: "ذَ", answer: "Zal + fetha" }, { show: "زُ", answer: "Zejn + damma" },
+-        ],
+-      },
+-      {
+-        type: "čitaj-slog",
+-        title: "Čitaj spojeve i kratke riječi",
+-        description: "Čitaj povezano; prekid pisane linije poslije د ذ ر ز nije prekid glasa.",
+-        icon: "📖", hasanatReward: 35,
+-        choices: [],
+-        items: [
+-          { show: "بَدَ", answer: "Ba–Dal" },   { show: "دَبَ", answer: "Dal–Ba" },
+-          { show: "تَرَ", answer: "Ta–Ra" },    { show: "رَتَ", answer: "Ra–Ta" },
+-          { show: "بَذَ", answer: "Ba–Zal" },   { show: "ذَبَ", answer: "Zal–Ba" },
+-          { show: "جَزَ", answer: "Džim–Zejn" }, { show: "زَجَ", answer: "Zejn–Džim" },
+-          { show: "حَدَ", answer: "Ha–Dal" },   { show: "دَحَ", answer: "Dal–Ha" },
+-          { show: "خَرَ", answer: "Hâ–Ra" },    { show: "رَخَ", answer: "Ra–Hâ" },
+-          { show: "بِدُ", answer: "Ba–Dal" },   { show: "دُبِ", answer: "Dal–Ba" },
+-          { show: "تُرِ", answer: "Ta–Ra" },    { show: "رِتُ", answer: "Ra–Ta" },
+-          { show: "ثِذُ", answer: "Sa–Zal" },   { show: "ذُثِ", answer: "Zal–Sa" },
+-          { show: "جُزِ", answer: "Džim–Zejn" }, { show: "زِجُ", answer: "Zejn–Džim" },
+-          { show: "بَدَرَ", answer: "Ba–Dal–Ra" }, { show: "دَرَجَ", answer: "Dal–Ra–Džim" },
+-          { show: "ذَبَحَ", answer: "Zal–Ba–Ha" }, { show: "رَجَبَ", answer: "Ra–Džim–Ba" },
+-          { show: "بَحَرَ", answer: "Ba–Ha–Ra" }, { show: "حَذَرَ", answer: "Ha–Zal–Ra" },
+-          { show: "خَرَجَ", answer: "Hâ–Ra–Džim" }, { show: "بَرَزَ", answer: "Ba–Ra–Zejn" },
+-          { show: "جَذَرَ", answer: "Džim–Zal–Ra" }, { show: "حَجَرَ", answer: "Ha–Džim–Ra" },
+-        ],
+-      },
+       {
+         type: "koji-harf",
+         title: "Ba, Ta ili Sa?",
+@@ -741,10 +714,10 @@ export const LESSONS: LessonData[] = [
+     ]
+   },
+ 
+-  // ── LEKCIJA 6: DAL, ZAL, RA I ZEJN ─────────────────────────
++  // ── LEKCIJA 6: DAL, ZAL, RA I ZA ───────────────────────────
+   {
+-    id: 6, orderNum: 6, slug: "dal-zal-ra-zejn",
+-    title: "Dal, Zal, Ra i Zejn",
++    id: 6, orderNum: 6, slug: "dal-zal-ra-za",
++    title: "Dal, Zal, Ra i Za",
+     letters: ["د", "ذ", "ر", "ز"],
+     isCompleted: false,
+     story: {
+@@ -756,10 +729,10 @@ export const LESSONS: LessonData[] = [
+         { speaker: "dzana", text: "Dal i Zal izgledaju isto, ali Zal ima tačku iznad." },
+         { speaker: "muallim", text: "Tačno. Kod harfa Dal vrh jezika dodiruje područje iza gornjih prednjih zuba. Glas je sličan našem D, ali ga učimo slušanjem i ponavljanjem." },
+         { speaker: "muallim", text: "Kod harfa Zal vrh jezika lagano dodiruje rub gornjih prednjih zuba i malo se vidi između zuba. Glas je zvučan, sličan engleskom 'th' u riječi 'this'. Nemojte ga pretvoriti u obično Z." },
+-        { speaker: "amir", text: "A Ra i Zejn također imaju isti osnovni oblik, samo Zejn ima tačku?" },
++        { speaker: "amir", text: "A Ra i Za također imaju isti osnovni oblik, samo Za ima tačku?" },
+         { speaker: "muallim", text: "Da. Kod harfa Ra vrh jezika prilazi desnima iza gornjih prednjih zuba. Ne treba ga dugo tresti niti ponavljati. Pravila kada se Ra čita krupnije ili tanje učit ćemo kasnije." },
+-        { speaker: "muallim", text: "Zejn je zvučan glas sličan našem Z. Zrak prolazi uskim putem između jezika i prednjih zuba, bez dodavanja glasa D ispred njega." },
+-        { speaker: "dzana", text: "Dakle, tačke razlikuju Dal od Zala i Ra od Zejna, a sva četiri prekidaju pisanu vezu s narednim harfom." },
++        { speaker: "muallim", text: "Za je zvučan glas sličan našem Z. Zrak prolazi uskim putem između jezika i prednjih zuba, bez dodavanja glasa D ispred njega." },
++        { speaker: "dzana", text: "Dakle, tačke razlikuju Dal od Zala i Ra od Za, a sva četiri prekidaju pisanu vezu s narednim harfom." },
+         { speaker: "muallim", text: "Odlično. Sada ih prvo prepoznajemo po obliku, zatim po tački, a pravilan izgovor potvrđujemo snimkom učača." },
+       ],
+     },
+@@ -786,7 +759,7 @@ export const LESSONS: LessonData[] = [
+         soundFile: "ra.mp3",
+       },
+       {
+-        arabic: "ز", name: "Zejn", transliteration: "Z",
++        arabic: "ز", name: "Za", transliteration: "Z",
+         forms: { isolated: "ز", initial: "ز", medial: "ـز", final: "ـز" },
+         nonConnecting: true,
+         visualAssociation: "Isti oblik kao Ra, ali s jednom tačkom iznad",
+@@ -798,13 +771,13 @@ export const LESSONS: LessonData[] = [
+         type: "koji-harf",
+         title: "Prepoznaj harf", description: "Pogledaj oblik i tačku — koji je ovo harf?",
+         icon: "🔡", hasanatReward: 15,
+-        choices: ["Dal", "Zal", "Ra", "Zejn"],
++        choices: ["Dal", "Zal", "Ra", "Za"],
+         items: [
+-          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
+-          { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" },
+-          { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" },
+-          { show: "ز", answer: "Zejn" }, { show: "ر", answer: "Ra" }, { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" },
+-          { show: "د", answer: "Dal" }, { show: "ز", answer: "Zejn" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" },
++          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Za" },
++          { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" }, { show: "ز", answer: "Za" }, { show: "ر", answer: "Ra" },
++          { show: "ر", answer: "Ra" }, { show: "ز", answer: "Za" }, { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" },
++          { show: "ز", answer: "Za" }, { show: "ر", answer: "Ra" }, { show: "ذ", answer: "Zal" }, { show: "د", answer: "Dal" },
++          { show: "د", answer: "Dal" }, { show: "ز", answer: "Za" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" },
+         ],
+       },
+       {
+@@ -827,21 +800,60 @@ export const LESSONS: LessonData[] = [
+         type: "koji-harf",
+         title: "Harf u spojenom obliku", description: "Harf je spojen s prethodnim harfom. Prepoznaj njegov oblik.",
+         icon: "🔗", hasanatReward: 20,
+-        choices: ["Dal", "Zal", "Ra", "Zejn"],
++        choices: ["Dal", "Zal", "Ra", "Za"],
+         items: [
+-          { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" }, { show: "ـز", answer: "Zejn" },
+-          { show: "ـز", answer: "Zejn" }, { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" },
+-          { show: "ـر", answer: "Ra" }, { show: "ـذ", answer: "Zal" }, { show: "ـد", answer: "Dal" }, { show: "ـز", answer: "Zejn" },
++          { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" }, { show: "ـز", answer: "Za" },
++          { show: "ـز", answer: "Za" }, { show: "ـد", answer: "Dal" }, { show: "ـذ", answer: "Zal" }, { show: "ـر", answer: "Ra" },
++          { show: "ـر", answer: "Ra" }, { show: "ـذ", answer: "Zal" }, { show: "ـد", answer: "Dal" }, { show: "ـز", answer: "Za" },
+         ],
+       },
+       {
+         type: "napiši",
+-        title: "Napiši ime harfa", description: "Pogledaj harf i napiši njegovo ime: Dal, Zal, Ra ili Zejn.",
++        title: "Napiši ime harfa", description: "Pogledaj harf i napiši njegovo ime: Dal, Zal, Ra ili Za.",
+         icon: "✏️", hasanatReward: 15,
+         choices: [],
+         items: [
+-          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Zejn" },
+-          { show: "ذ", answer: "Zal" }, { show: "ز", answer: "Zejn" }, { show: "د", answer: "Dal" }, { show: "ر", answer: "Ra" },
++          { show: "د", answer: "Dal" }, { show: "ذ", answer: "Zal" }, { show: "ر", answer: "Ra" }, { show: "ز", answer: "Za" },
++          { show: "ذ", answer: "Zal" }, { show: "ز", answer: "Za" }, { show: "د", answer: "Dal" }, { show: "ر", answer: "Ra" },
++        ],
++      },
++      {
++        type: "čitaj-slog",
++        title: "Čitaj harfove s hareketima",
++        description: "Pročitaj bez pomoći, zatim klikni i provjeri izgovor.",
++        icon: "📖", hasanatReward: 30, choices: [],
++        items: [
++          { show: "دَ", answer: "Dal + fetha" }, { show: "دِ", answer: "Dal + kesra" }, { show: "دُ", answer: "Dal + damma" },
++          { show: "ذَ", answer: "Zal + fetha" }, { show: "ذِ", answer: "Zal + kesra" }, { show: "ذُ", answer: "Zal + damma" },
++          { show: "رَ", answer: "Ra + fetha" }, { show: "رِ", answer: "Ra + kesra" }, { show: "رُ", answer: "Ra + damma" },
++          { show: "زَ", answer: "Za + fetha" }, { show: "زِ", answer: "Za + kesra" }, { show: "زُ", answer: "Za + damma" },
++          { show: "ذِ", answer: "Zal + kesra" }, { show: "رَ", answer: "Ra + fetha" }, { show: "دُ", answer: "Dal + damma" },
++          { show: "زِ", answer: "Za + kesra" }, { show: "دَ", answer: "Dal + fetha" }, { show: "رُ", answer: "Ra + damma" },
++          { show: "ذُ", answer: "Zal + damma" }, { show: "زَ", answer: "Za + fetha" }, { show: "رِ", answer: "Ra + kesra" },
++          { show: "دِ", answer: "Dal + kesra" }, { show: "ذَ", answer: "Zal + fetha" }, { show: "زُ", answer: "Za + damma" },
++        ],
++      },
++      {
++        type: "čitaj-slog",
++        title: "Čitaj spojeve i kratke riječi",
++        description: "Čitaj povezano; prekid pisane linije poslije د ذ ر ز nije prekid glasa.",
++        icon: "📖", hasanatReward: 35, choices: [],
++        items: [
++          { show: "بَدَ", answer: "Ba–Dal" }, { show: "دَبَ", answer: "Dal–Ba" },
++          { show: "تَرَ", answer: "Ta–Ra" }, { show: "رَتَ", answer: "Ra–Ta" },
++          { show: "بَذَ", answer: "Ba–Zal" }, { show: "ذَبَ", answer: "Zal–Ba" },
++          { show: "جَزَ", answer: "Džim–Za" }, { show: "زَجَ", answer: "Za–Džim" },
++          { show: "حَدَ", answer: "Ha–Dal" }, { show: "دَحَ", answer: "Dal–Ha" },
++          { show: "خَرَ", answer: "Hâ–Ra" }, { show: "رَخَ", answer: "Ra–Hâ" },
++          { show: "بِدُ", answer: "Ba–Dal" }, { show: "دُبِ", answer: "Dal–Ba" },
++          { show: "تُرِ", answer: "Ta–Ra" }, { show: "رِتُ", answer: "Ra–Ta" },
++          { show: "ثِذُ", answer: "Sa–Zal" }, { show: "ذُثِ", answer: "Zal–Sa" },
++          { show: "جُزِ", answer: "Džim–Za" }, { show: "زِجُ", answer: "Za–Džim" },
++          { show: "بَدَرَ", answer: "Ba–Dal–Ra" }, { show: "دَرَجَ", answer: "Dal–Ra–Džim" },
++          { show: "ذَبَحَ", answer: "Zal–Ba–Ha" }, { show: "رَجَبَ", answer: "Ra–Džim–Ba" },
++          { show: "بَحَرَ", answer: "Ba–Ha–Ra" }, { show: "حَذَرَ", answer: "Ha–Zal–Ra" },
++          { show: "خَرَجَ", answer: "Hâ–Ra–Džim" }, { show: "بَرَزَ", answer: "Ba–Ra–Za" },
++          { show: "جَذَرَ", answer: "Džim–Zal–Ra" }, { show: "حَجَرَ", answer: "Ha–Džim–Ra" },
+         ],
+       },
+     ],
+@@ -1047,6 +1059,23 @@ export const LESSONS: LessonData[] = [
+           { show: "ثَّ", answer: "e" }, { show: "جِّ", answer: "i" },
+         ]
+       },
++      {
++        type: "čitaj-slog",
++        title: "Čitaj s tešdidom",
++        description: "Jasno udvostruči suglasnik; ne produžavaj samoglasnik.",
++        icon: "📖", hasanatReward: 30, choices: [],
++        items: [
++          { show: "أَبَّ", answer: "Tešdid na Ba" }, { show: "أَبِّ", answer: "Tešdid na Ba" }, { show: "أَبُّ", answer: "Tešdid na Ba" },
++          { show: "أَتَّ", answer: "Tešdid na Ta" }, { show: "أَتِّ", answer: "Tešdid na Ta" }, { show: "أَتُّ", answer: "Tešdid na Ta" },
++          { show: "أَثَّ", answer: "Tešdid na Sa" }, { show: "أَثِّ", answer: "Tešdid na Sa" }, { show: "أَثُّ", answer: "Tešdid na Sa" },
++          { show: "أَجَّ", answer: "Tešdid na Džim" }, { show: "أَجِّ", answer: "Tešdid na Džim" }, { show: "أَجُّ", answer: "Tešdid na Džim" },
++          { show: "أَحَّ", answer: "Tešdid na Ha" }, { show: "أَحِّ", answer: "Tešdid na Ha" }, { show: "أَحُّ", answer: "Tešdid na Ha" },
++          { show: "أَخَّ", answer: "Tešdid na Hâ" }, { show: "أَخِّ", answer: "Tešdid na Hâ" }, { show: "أَخُّ", answer: "Tešdid na Hâ" },
++          { show: "رَبَّ", answer: "Ra–Ba s tešdidom" }, { show: "حَبَّ", answer: "Ha–Ba s tešdidom" },
++          { show: "رَدَّ", answer: "Ra–Dal s tešdidom" }, { show: "بَثَّ", answer: "Ba–Sa s tešdidom" },
++          { show: "حَجَّ", answer: "Ha–Džim s tešdidom" }, { show: "خَرَّ", answer: "Hâ–Ra s tešdidom" },
++        ],
++      },
+     ]
+   },
+ 
+@@ -1157,6 +1186,23 @@ export const LESSONS: LessonData[] = [
+           { show: "ثًا", answer: "-an" }, { show: "جٍ", answer: "-in" },
+         ]
+       },
++      {
++        type: "čitaj-slog",
++        title: "Čitaj s tenvinom",
++        description: "Čitaj povezano: tenvin fetha -an, kesra -in, damma -un.",
++        icon: "📖", hasanatReward: 30, choices: [],
++        items: [
++          { show: "بًا", answer: "Tenvin fetha" }, { show: "بٍ", answer: "Tenvin kesra" }, { show: "بٌ", answer: "Tenvin damma" },
++          { show: "تًا", answer: "Tenvin fetha" }, { show: "تٍ", answer: "Tenvin kesra" }, { show: "تٌ", answer: "Tenvin damma" },
++          { show: "ثًا", answer: "Tenvin fetha" }, { show: "ثٍ", answer: "Tenvin kesra" }, { show: "ثٌ", answer: "Tenvin damma" },
++          { show: "جًا", answer: "Tenvin fetha" }, { show: "جٍ", answer: "Tenvin kesra" }, { show: "جٌ", answer: "Tenvin damma" },
++          { show: "حًا", answer: "Tenvin fetha" }, { show: "حٍ", answer: "Tenvin kesra" }, { show: "حٌ", answer: "Tenvin damma" },
++          { show: "خًا", answer: "Tenvin fetha" }, { show: "خٍ", answer: "Tenvin kesra" }, { show: "خٌ", answer: "Tenvin damma" },
++          { show: "دًا", answer: "Tenvin fetha" }, { show: "دٍ", answer: "Tenvin kesra" }, { show: "دٌ", answer: "Tenvin damma" },
++          { show: "رًا", answer: "Tenvin fetha" }, { show: "رٍ", answer: "Tenvin kesra" }, { show: "رٌ", answer: "Tenvin damma" },
++          { show: "زًا", answer: "Tenvin fetha" }, { show: "زٍ", answer: "Tenvin kesra" }, { show: "زٌ", answer: "Tenvin damma" },
++        ],
++      },
+     ]
+   },
+ ];
+diff --git a/artifacts/mekteb-arapsko-pismo/src/data/slogovi-mapping.ts b/artifacts/mekteb-arapsko-pismo/src/data/slogovi-mapping.ts
+index 036f6fa..ddda166 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/data/slogovi-mapping.ts
++++ b/artifacts/mekteb-arapsko-pismo/src/data/slogovi-mapping.ts
+@@ -60,6 +60,8 @@ export const SLOGOVI_AUDIO: Record<string, string> = {
+   "جِبَثَ": "d4e62e5206f1.mp3",
+   "بُجُحَ": "d2810c6ae9d4.mp3",
+   "أَ": "1e0b8ca9d945.mp3",
++  "إِ": "openai-hemza-kesra.mp3",
++  "أُ": "openai-hemza-damma.mp3",
+   "خَثَ": "39652a39c489.mp3",
+   "بِحَ": "a664b3e73df0.mp3",
+   "تُخَ": "0bd9dfc070a4.mp3",
+@@ -132,4 +134,55 @@ export const SLOGOVI_AUDIO: Record<string, string> = {
+   "بَرَزَ": "openai-baraza.mp3",
+   "جَذَرَ": "openai-jadhara.mp3",
+   "حَجَرَ": "openai-hajara.mp3",
++  "أَبَّ": "openai-tesdid-abba.mp3",
++  "أَبِّ": "openai-tesdid-abbi.mp3",
++  "أَبُّ": "openai-tesdid-abbu.mp3",
++  "أَتَّ": "openai-tesdid-atta.mp3",
++  "أَتِّ": "openai-tesdid-atti.mp3",
++  "أَتُّ": "openai-tesdid-attu.mp3",
++  "أَثَّ": "openai-tesdid-aththa.mp3",
++  "أَثِّ": "openai-tesdid-aththi.mp3",
++  "أَثُّ": "openai-tesdid-aththu.mp3",
++  "أَجَّ": "openai-tesdid-ajjah.mp3",
++  "أَجِّ": "openai-tesdid-ajji.mp3",
++  "أَجُّ": "openai-tesdid-ajju.mp3",
++  "أَحَّ": "openai-tesdid-ahha.mp3",
++  "أَحِّ": "openai-tesdid-ahhi.mp3",
++  "أَحُّ": "openai-tesdid-ahhu.mp3",
++  "أَخَّ": "openai-tesdid-akha.mp3",
++  "أَخِّ": "openai-tesdid-akhi.mp3",
++  "أَخُّ": "openai-tesdid-akhu.mp3",
++  "رَبَّ": "openai-tesdid-rabba.mp3",
++  "حَبَّ": "openai-tesdid-habba.mp3",
++  "رَدَّ": "openai-tesdid-radda.mp3",
++  "بَثَّ": "openai-tesdid-baththa.mp3",
++  "حَجَّ": "openai-tesdid-hajja.mp3",
++  "خَرَّ": "openai-tesdid-kharra.mp3",
++  "بًا": "openai-tenvin-ban.mp3",
++  "بٍ": "openai-tenvin-bin.mp3",
++  "بٌ": "openai-tenvin-bun.mp3",
++  "تًا": "openai-tenvin-tan.mp3",
++  "تٍ": "openai-tenvin-tin.mp3",
++  "تٌ": "openai-tenvin-tun.mp3",
++  "ثًا": "openai-tenvin-than.mp3",
++  "ثٍ": "openai-tenvin-thin.mp3",
++  "ثٌ": "openai-tenvin-thun.mp3",
++  "جًا": "openai-tenvin-jan.mp3",
++  "جٍ": "openai-tenvin-jin.mp3",
++  "جٌ": "openai-tenvin-jun.mp3",
++  "حًا": "openai-tenvin-han.mp3",
++  "حٍ": "openai-tenvin-hin.mp3",
++  "حٌ": "openai-tenvin-hun.mp3",
++  "خًا": "openai-tenvin-khan.mp3",
++  "خٍ": "openai-tenvin-khin.mp3",
++  "خٌ": "openai-tenvin-khun.mp3",
++  "دًا": "openai-tenvin-dan.mp3",
++  "دٍ": "openai-tenvin-din.mp3",
++  "دٌ": "openai-tenvin-dun.mp3",
++  "رًا": "openai-tenvin-ran.mp3",
++  "رٍ": "openai-tenvin-rin.mp3",
++  "رٌ": "openai-tenvin-run.mp3",
++  "زًا": "openai-tenvin-zan.mp3",
++  "زٍ": "openai-tenvin-zin.mp3",
++  "زٌ": "openai-tenvin-zun.mp3",
+ };
+diff --git a/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx b/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx
+index c26d7cb..010ae74 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/pages/arapsko-pismo.tsx
+@@ -32,7 +32,7 @@ const HARFOVI: Harf[] = [
+   { id: 8,  arabic: "د", name: "Dal",  trans: "D",          dots: 0, connecting: false, group: "Grupa 3",  audioFile: "dal.mp3" },
+   { id: 9,  arabic: "ذ", name: "Zal",  trans: "Z (meko)",   dots: 1, connecting: false, group: "Grupa 3",  audioFile: "zal.mp3" },
+   { id: 10, arabic: "ر", name: "Ra",   trans: "R",          dots: 0, connecting: false, group: "Grupa 3",  audioFile: "ra.mp3" },
+-  { id: 11, arabic: "ز", name: "Zejn", trans: "Z",          dots: 1, connecting: false, group: "Grupa 3",  audioFile: "zejn.mp3" },
++  { id: 11, arabic: "ز", name: "Za", trans: "Z",            dots: 1, connecting: false, group: "Grupa 3",  audioFile: "zejn.mp3" },
+   { id: 12, arabic: "س", name: "Sin",  trans: "S",          dots: 0, connecting: true,  group: "Grupa 4",  audioFile: "sin.mp3" },
+   { id: 13, arabic: "ش", name: "Šin",  trans: "Š",          dots: 3, connecting: true,  group: "Grupa 4",  audioFile: "sin2.mp3" },
+   { id: 14, arabic: "ص", name: "Sad",  trans: "S (jako)",   dots: 0, connecting: true,  group: "Grupa 5",  audioFile: "sad.mp3" },
+diff --git a/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx b/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx
+index 46deec5..a56ecca 100644
+--- a/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx
++++ b/artifacts/mekteb-arapsko-pismo/src/pages/lesson-detail.tsx
+@@ -625,6 +625,13 @@ export default function LessonDetail() {
+     .map((exercise, index) => ({ exercise, index }))
+     .filter(({ exercise }) => exercise.type === "čitaj-slog");
+   const additionalExerciseCount = data.exercises.length - readingExercises.length;
++  const letterGridClass = data.letterData.length >= 4
++    ? "lg:grid-cols-4"
++    : data.letterData.length === 3
++      ? "lg:grid-cols-3"
++      : data.letterData.length === 2
++        ? "lg:grid-cols-2"
++        : "lg:grid-cols-1";
+ 
+   function getLetterAudio(idx: number): string {
+     if (!data) return "elif.mp3";
+@@ -816,57 +823,6 @@ export default function LessonDetail() {
+         {t("OpenAI snimci bit će jasno označeni kao AI i preslušani prije objave.")}
+       </div>
+ 
+-      {/* Čitanje je glavni sadržaj lekcije, zato dolazi prije priče i teorije. */}
+-      {readingExercises.length > 0 && (
+-        <section className="mb-5 rounded-2xl border-2 border-teal-500 bg-teal-950 p-4 sm:p-5 shadow-lg shadow-teal-900/10">
+-          <div className="flex items-center justify-between gap-3 mb-4">
+-            <div>
+-              <p className="text-teal-300 text-xs font-black uppercase tracking-widest">{t("Glavni dio lekcije")}</p>
+-              <h2 className="text-white text-xl sm:text-2xl font-black flex items-center gap-2">
+-                <PlayCircle className="w-6 h-6 text-green-400" />
+-                {t("Vježbe čitanja")}
+-              </h2>
+-            </div>
+-            <span className="rounded-full bg-white/10 px-3 py-1 text-white/80 text-sm font-bold shrink-0">
+-              {readingExercises.reduce((sum, { exercise }) => sum + exercise.items.length, 0)} {t("primjera")}
+-            </span>
+-          </div>
+-
+-          <div className="space-y-3">
+-            {readingExercises.map(({ exercise: ex, index: ei }) => {
+-              const isDone = completedExercises.has(ei);
+-              return (
+-                <div key={ei} className={`rounded-xl border p-3 sm:p-4 ${isDone ? "border-green-400 bg-green-500/15" : "border-white/15 bg-white/10"}`}>
+-                  <div className="flex items-center justify-between gap-3 mb-3">
+-                    <div className="min-w-0">
+-                      <h3 className="text-white font-extrabold text-base sm:text-lg">{ex.title}</h3>
+-                      <p className="text-white/60 text-sm truncate">{ex.description}</p>
+-                    </div>
+-                    {isDone && <Check className="w-5 h-5 text-green-400 shrink-0" />}
+-                  </div>
+-                  <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5 mb-3" dir="rtl">
+-                    {ex.items.slice(0, 10).map((item, wi) => (
+-                      <div key={wi} className="min-h-[48px] rounded-lg bg-white flex items-center justify-center px-1">
+-                        <span
+-                          className="font-bold text-teal-950 text-center leading-none"
+-                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: item.show.length <= 2 ? "1.55rem" : "1.15rem" }}
+-                        >
+-                          {item.show}
+-                        </span>
+-                      </div>
+-                    ))}
+-                  </div>
+-                  <Button className="w-full bg-green-500 hover:bg-green-400 text-white font-black py-5" onClick={() => setActiveReading(ei)}>
+-                    <PlayCircle className="w-5 h-5 mr-2" />
+-                    {isDone ? t("Čitaj ponovo") : t("Počni čitati")}
+-                  </Button>
+-                </div>
+-              );
+-            })}
+-          </div>
+-        </section>
+-      )}
+-
+       {/* Priča */}
+       <details className="group mb-5 rounded-2xl border border-orange-200 bg-orange-50">
+         <summary className="cursor-pointer list-none px-5 py-3 font-extrabold text-orange-900 flex items-center justify-between">
+@@ -984,87 +940,69 @@ export default function LessonDetail() {
+           {data.hareketi ? t("Upoznajmo slovo i harekete") : t("Upoznajmo harfove")}
+         </h2>
+ 
+-        {data.letterData.map((letter, i) => (
+-          <Card key={i} className="p-4 border border-border/60 mb-3">
+-            <div className="flex justify-between items-start mb-3">
+-              <div>
+-                <div className="flex items-center gap-3 mb-2">
+-                  <h3 className="text-xl font-extrabold text-foreground">{letter.name}</h3>
+-                  <button
+-                    onClick={() => playAudio(letter.soundFile)}
+-                    className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center text-primary transition-colors"
+-                  >
+-                    <Volume2 className="w-5 h-5" />
+-                  </button>
++        <div className={`grid grid-cols-1 sm:grid-cols-2 ${letterGridClass} gap-3`}>
++          {data.letterData.map((letter, i) => (
++            <Card key={i} className="p-3 border border-border/60 min-w-0">
++              <div className="flex items-center justify-between gap-2 mb-2">
++                <div className="min-w-0">
++                  <div className="flex items-center gap-2">
++                    <h3 className="text-lg font-extrabold text-foreground">{letter.name}</h3>
++                    <button
++                      onClick={() => playAudio(letter.soundFile)}
++                      className="w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center text-primary"
++                      aria-label={t("Poslušaj {ime}", { ime: letter.name })}
++                    >
++                      <Volume2 className="w-4 h-4" />
++                    </button>
++                  </div>
++                  <p className="text-xs text-muted-foreground font-semibold">/{letter.transliteration}/</p>
++                </div>
++                <div className="text-5xl text-primary leading-none shrink-0" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
++                  {letter.arabic}
+                 </div>
+-                <p className="text-base text-muted-foreground font-medium">{t("Izgovor:")} /{letter.transliteration}/</p>
+-                <p className="text-sm text-muted-foreground mt-1 italic">{letter.visualAssociation}</p>
+-                {letter.nonConnecting && (
+-                  <span className="inline-block mt-3 bg-red-100 text-red-700 text-sm font-bold px-3 py-1 rounded-lg uppercase">
+-                    {t("Ne spaja se ulijevo")}
+-                  </span>
+-                )}
+-              </div>
+-              <div className="text-6xl text-primary shrink-0" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
+-                {letter.arabic}
+               </div>
+-            </div>
+-            <div className="bg-muted rounded-xl p-3">
+-              <p className="text-xs font-bold text-muted-foreground mb-2 text-center uppercase tracking-wider">{t("Oblici slova")}</p>
+-              <div className="grid grid-cols-4 gap-2 text-center" dir="rtl">
++
++              <p className="text-xs text-muted-foreground italic leading-snug min-h-8">{letter.visualAssociation}</p>
++              {letter.nonConnecting && (
++                <span className="inline-block my-2 bg-red-50 text-red-700 text-[10px] font-black px-2 py-0.5 rounded uppercase">
++                  {t("Ne spaja se ulijevo")}
++                </span>
++              )}
++
++              <div className="grid grid-cols-4 gap-1 text-center bg-muted rounded-lg p-1.5" dir="rtl">
+                 {[
+-                  { form: letter.forms.isolated, label: t("Samostalan") },
+-                  { form: letter.forms.initial,  label: t("Početak") },
+-                  { form: letter.forms.medial,   label: t("Sredina") },
++                  { form: letter.forms.isolated, label: t("Sam.") },
++                  { form: letter.forms.initial,  label: t("Poč.") },
++                  { form: letter.forms.medial,   label: t("Sred.") },
+                   { form: letter.forms.final,    label: t("Kraj") },
+                 ].map(({ form, label }) => (
+-                  <div key={label} className="bg-white rounded-lg p-2">
+-                    <div className="text-3xl font-bold text-foreground" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
+-                    <div className="text-xs font-bold text-muted-foreground">{label}</div>
++                  <div key={label} className="bg-white rounded p-1">
++                    <div className="text-2xl font-bold leading-tight" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
++                    <div className="text-[9px] font-bold text-muted-foreground">{label}</div>
+                   </div>
+                 ))}
+               </div>
+-            </div>
+ 
+-            {/* Hareketi slogovi — BE/BI/BU kartice (samo za lekcije bez posebne hareketi sekcije) */}
+-            {!data.hareketi && !data.isRevision && (
+-              <div className="mt-3">
+-                <p className="text-base font-bold text-muted-foreground mb-3 text-center uppercase tracking-wider">
+-                  {t("🔊 Klikni i pročitaj naglas")}
+-                </p>
+-                <div className="grid grid-cols-3 gap-3" dir="rtl">
+-                  {[
+-                    { hareke: "\u064E", sound: "E" },
+-                    { hareke: "\u0650", sound: "I" },
+-                    { hareke: "\u064F", sound: "U" },
+-                  ].map(({ hareke, sound }) => {
++              {!data.hareketi && !data.isRevision && (
++                <div className="grid grid-cols-3 gap-1 mt-2" dir="rtl">
++                  {["\u064E", "\u0650", "\u064F"].map((hareke) => {
+                     const combined = letter.arabic + hareke;
+-                    const short = letter.transliteration.split(" ")[0].replace(/[^A-ZČĆŽŠĐa-zčćžšđ]/g, "");
+-                    const label = (short || letter.name[0]) + sound;
+                     return (
+-                      <motion.button
+-                        key={sound}
+-                        whileHover={{ scale: 1.05 }}
+-                        whileTap={{ scale: 0.93 }}
++                      <button
++                        key={hareke}
+                         onClick={() => playSlog(combined)}
+-                        className="bg-teal-50 hover:bg-teal-100 border border-teal-200 hover:border-teal-400 rounded-xl py-2 px-2 flex items-center justify-center gap-2 transition-all group"
++                        className="bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg py-1 flex items-center justify-center gap-1"
+                       >
+-                        <span
+-                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "2rem", lineHeight: 1.5 }}
+-                          className="text-teal-800 font-bold"
+-                        >
+-                          {combined}
+-                        </span>
+-                        <span className="text-base font-extrabold text-teal-600 group-hover:text-teal-800">{label}</span>
+-                        <Volume2 className="w-4 h-4 text-teal-400 group-hover:text-teal-600" />
+-                      </motion.button>
++                        <span className="text-2xl text-teal-900" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{combined}</span>
++                        <Volume2 className="w-3 h-3 text-teal-500" />
++                      </button>
+                     );
+                   })}
+                 </div>
+-              </div>
+-            )}
+-          </Card>
+-        ))}
++              )}
++            </Card>
++          ))}
++        </div>
+ 
+         {/* Sukun objašnjenje (samo za lekciju sukuna) */}
+         {data.sukunExplainer && (
+@@ -1276,6 +1214,57 @@ export default function LessonDetail() {
+           })}
+         </div>
+ 
++        {/* Završna vježba svake lekcije: učenik čita bez pomoći, pa provjerava audio. */}
++        {readingExercises.length > 0 && (
++          <section className="mt-6 rounded-2xl border-2 border-teal-500 bg-teal-950 p-4 sm:p-5 shadow-lg shadow-teal-900/10">
++            <div className="flex items-center justify-between gap-3 mb-4">
++              <div>
++                <p className="text-teal-300 text-xs font-black uppercase tracking-widest">{t("Završni dio lekcije")}</p>
++                <h2 className="text-white text-xl sm:text-2xl font-black flex items-center gap-2">
++                  <PlayCircle className="w-6 h-6 text-green-400" />
++                  {t("Vježba čitanja")}
++                </h2>
++              </div>
++              <span className="rounded-full bg-white/10 px-3 py-1 text-white/80 text-sm font-bold shrink-0">
++                {readingExercises.reduce((sum, { exercise }) => sum + exercise.items.length, 0)} {t("primjera")}
++              </span>
++            </div>
++
++            <div className="space-y-3">
++              {readingExercises.map(({ exercise: ex, index: ei }) => {
++                const isDone = completedExercises.has(ei);
++                return (
++                  <div key={ei} className={`rounded-xl border p-3 ${isDone ? "border-green-400 bg-green-500/15" : "border-white/15 bg-white/10"}`}>
++                    <div className="flex items-center justify-between gap-3 mb-2">
++                      <div className="min-w-0">
++                        <h3 className="text-white font-extrabold text-base sm:text-lg">{ex.title}</h3>
++                        <p className="text-white/60 text-sm">{ex.description}</p>
++                      </div>
++                      {isDone && <Check className="w-5 h-5 text-green-400 shrink-0" />}
++                    </div>
++                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 mb-3" dir="rtl">
++                      {ex.items.slice(0, 10).map((item, wi) => (
++                        <div key={wi} className="min-h-[44px] rounded-lg bg-white flex items-center justify-center px-1">
++                          <span
++                            className="font-bold text-teal-950 text-center leading-none"
++                            style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: item.show.length <= 2 ? "1.5rem" : "1.1rem" }}
++                          >
++                            {item.show}
++                          </span>
++                        </div>
++                      ))}
++                    </div>
++                    <Button className="w-full bg-green-500 hover:bg-green-400 text-white font-black py-5" onClick={() => setActiveReading(ei)}>
++                      <PlayCircle className="w-5 h-5 mr-2" />
++                      {isDone ? t("Čitaj ponovo") : t("Počni čitati")}
++                    </Button>
++                  </div>
++                );
++              })}
++            </div>
++          </section>
++        )}
++
+         <div className={`mt-6 p-6 rounded-2xl border text-center transition-all ${allDone ? "bg-green-50 border-green-300" : "bg-muted/40 border-border"}`}>
+           {/* Progress dots */}
+           <div className="flex items-center justify-center gap-3 mb-4">
+-- 
+2.51.1
+
