@@ -1233,6 +1233,8 @@ export default function LessonDetail() {
             <div className="space-y-3">
               {readingExercises.map(({ exercise: ex, index: ei }) => {
                 const isDone = completedExercises.has(ei);
+                const isTwentyWordBlock = ex.title.startsWith("Čitaj 20");
+                const previewItems = isTwentyWordBlock ? ex.items : ex.items.slice(0, 10);
                 return (
                   <div key={ei} className={`rounded-xl border p-3 ${isDone ? "border-green-400 bg-green-500/15" : "border-white/15 bg-white/10"}`}>
                     <div className="flex items-center justify-between gap-3 mb-2">
@@ -1242,8 +1244,8 @@ export default function LessonDetail() {
                       </div>
                       {isDone && <Check className="w-5 h-5 text-green-400 shrink-0" />}
                     </div>
-                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 mb-3" dir="rtl">
-                      {ex.items.slice(0, 10).map((item, wi) => (
+                    <div className={`grid gap-1.5 mb-3 ${isTwentyWordBlock ? "grid-cols-4 sm:grid-cols-5" : "grid-cols-5 sm:grid-cols-10"}`} dir="rtl">
+                      {previewItems.map((item, wi) => (
                         <div key={wi} className="min-h-[44px] rounded-lg bg-white flex items-center justify-center px-1">
                           <span
                             className="font-bold text-teal-950 text-center leading-none"

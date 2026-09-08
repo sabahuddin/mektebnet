@@ -1,3 +1,5 @@
+import { READING_WORDS_BY_LESSON } from "@/data/reading-word-bank";
+
 export interface ExerciseItem {
   show: string;
   answer: string;
@@ -1840,6 +1842,18 @@ if (allLettersRevision) {
         .map((letter) => [letter.arabic, letter]),
     ).values(),
   );
+}
+
+for (const lesson of LESSONS) {
+  const words = READING_WORDS_BY_LESSON[lesson.id];
+  if (!words) continue;
+  lesson.exercises.push({
+    type: "čitaj-slog",
+    title: lesson.id < 6 ? "Čitaj 20 slogova i spojeva" : "Čitaj 20 riječi i spojeva",
+    description: "Čitaj prvo samostalno, zatim klikni svaku karticu i provjeri izgovor slušanjem.",
+    icon: "📖", hasanatReward: 60, choices: [],
+    items: words.map((show) => ({ show, answer: "" })),
+  });
 }
 
 export function getLessonById(id: number): LessonData | undefined {

@@ -6,6 +6,7 @@ const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 const srcRoot = join(projectRoot, "src");
 const lessonsPath = join(srcRoot, "data", "lessons.ts");
 const mappingPath = join(srcRoot, "data", "slogovi-mapping.ts");
+const wordBankPath = join(srcRoot, "data", "reading-word-bank.ts");
 const harfoviDir = join(projectRoot, "public", "audio", "harfovi");
 const slogoviDir = join(projectRoot, "public", "audio", "slogovi");
 
@@ -84,6 +85,37 @@ if (new Set(mappingEntries.map(([, file]) => file)).size !== mappingEntries.leng
   failures.push("Svaki arapski zapis mora imati vlastiti audio-fajl.");
 }
 const mapping = Object.fromEntries(mappingEntries);
+const wordBankSource = readFileSync(wordBankPath, "utf8");
+const wordBanks = [...wordBankSource.matchAll(/^\s*(\d+):\s*\[([\s\S]*?)\],/gm)]
+  .map((match) => ({
+    lessonId: Number(match[1]),
+    words: [...match[2].matchAll(/"([^"]+)"/g)].map((word) => word[1]),
+  }));
+const introducedInLesson = new Map(Object.entries({
+  ا: 2, ب: 3, ت: 3, ث: 3, ج: 4, ح: 4, خ: 4, د: 6, ذ: 6, ر: 6, ز: 6,
+  س: 10, ش: 10, ص: 11, ض: 11, ط: 12, ظ: 12, ع: 13, غ: 13, ف: 14, ق: 14,
+  ك: 15, ل: 15, م: 15, ن: 16, ه: 16, و: 16, ي: 16,
+}));
+for (const { lessonId, words } of wordBanks) {
+  if (words.length < 20) failures.push(`Lekcija ${lessonId} mora imati najmanje 20 čitalačkih primjera.`);
+  if (new Set(words).size !== words.length) failures.push(`Lekcija ${lessonId} ima ponovljen čitalački primjer.`);
+  for (const word of words) {
+    const baseLetters = [...word.normalize("NFD").replace(/\p{M}/gu, "")]
+      .filter((character) => introducedInLesson.has(character));
+    const unseen = baseLetters.find((character) => introducedInLesson.get(character) > lessonId);
+    if (unseen) failures.push(`Lekcija ${lessonId} prerano koristi harf ${unseen} u primjeru ${word}.`);
+  }
+}
+if (wordBanks.length !== lessonIds.length) {
+  failures.push("Svaka lekcija mora imati vlastitu banku od najmanje 20 čitalačkih primjera.");
+}
+const readingWordAudioFile = (text) =>
+  `openai-reading-${Array.from(text, (character) => character.codePointAt(0).toString(16)).join("-")}.mp3`;
+for (const { words } of wordBanks) {
+  for (const arabic of words) {
+    if (!mapping[arabic]) mapping[arabic] = readingWordAudioFile(arabic);
+  }
+}
 const readingBlocks = [...lessonsSource.matchAll(
   /type:\s*"čitaj-slog"[\s\S]*?items:\s*\[([\s\S]*?)\]\s*,?\n\s*\}/g,
 )];

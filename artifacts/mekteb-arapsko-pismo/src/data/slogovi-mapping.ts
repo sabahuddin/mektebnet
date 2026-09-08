@@ -1,4 +1,6 @@
-export const SLOGOVI_AUDIO: Record<string, string> = {
+import { READING_WORD_AUDIO } from "@/data/reading-word-bank";
+
+const BASE_SLOGOVI_AUDIO: Record<string, string> = {
   "بَ": "d983a102c1a8.mp3",
   "بِ": "73de9c42f0d3.mp3",
   "بُ": "636e7ef570ad.mp3",
@@ -366,4 +368,9 @@ export const SLOGOVI_AUDIO: Record<string, string> = {
   "دَخَلَ": "openai-dakhala.mp3",
   "بَلَغَ": "openai-balagha.mp3",
   "سَمِعَ": "openai-samia.mp3",
+};
+
+export const SLOGOVI_AUDIO: Record<string, string> = {
+  ...READING_WORD_AUDIO,
+  ...BASE_SLOGOVI_AUDIO,
 };

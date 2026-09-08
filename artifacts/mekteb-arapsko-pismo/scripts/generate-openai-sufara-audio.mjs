@@ -5,6 +5,7 @@ import path from "node:path";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MAPPING_FILE = path.join(ROOT, "src/data/slogovi-mapping.ts");
+const WORD_BANK_FILE = path.join(ROOT, "src/data/reading-word-bank.ts");
 const OUTPUT_DIR = path.join(ROOT, "public/audio/slogovi");
 const API_BASE_URL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
 const API_KEY = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
@@ -14,8 +15,20 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const OVERWRITE = process.argv.includes("--overwrite");
 
 const source = await readFile(MAPPING_FILE, "utf8");
-const targets = [...source.matchAll(/"([^"]+)":\s*"(openai-[^"]+\.mp3)"/g)]
+const baseEntries = [...source.matchAll(/"([^"]+)":\s*"([^"]+\.mp3)"/g)];
+const baseArabic = new Set(baseEntries.map(([, arabic]) => arabic));
+const baseTargets = baseEntries
+  .filter(([, , file]) => file.startsWith("openai-"))
   .map(([, arabic, file]) => ({ arabic, file }));
+const wordBankSource = await readFile(WORD_BANK_FILE, "utf8");
+const readingWords = [...wordBankSource.matchAll(/^\s*\d+:\s*\[([\s\S]*?)\],/gm)]
+  .flatMap(([, block]) => [...block.matchAll(/"([^"]+)"/g)].map((match) => match[1]));
+const readingWordAudioFile = (text) =>
+  `openai-reading-${Array.from(text, (character) => character.codePointAt(0).toString(16)).join("-")}.mp3`;
+const readingTargets = [...new Set(readingWords)]
+  .filter((arabic) => !baseArabic.has(arabic))
+  .map((arabic) => ({ arabic, file: readingWordAudioFile(arabic) }));
+const targets = [...baseTargets, ...readingTargets];
 
 if (targets.length === 0) {
   throw new Error("Nema OpenAI audio ciljeva u slogovi-mapping.ts.");
