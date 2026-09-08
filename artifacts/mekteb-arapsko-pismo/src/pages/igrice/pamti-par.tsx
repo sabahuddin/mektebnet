@@ -20,7 +20,7 @@ const HARFOVI_POOL: Harf[] = [
   { id: 5,  arabic: "ج", name: "Džim" },  { id: 6,  arabic: "ح", name: "Ha" },
   { id: 7,  arabic: "خ", name: "Hâ" },    { id: 8,  arabic: "د", name: "Dal" },
   { id: 9,  arabic: "ذ", name: "Zel" },   { id: 10, arabic: "ر", name: "Ra" },
-  { id: 11, arabic: "ز", name: "Ze" },    { id: 12, arabic: "س", name: "Sin" },
+  { id: 11, arabic: "ز", name: "Za" },    { id: 12, arabic: "س", name: "Sin" },
   { id: 13, arabic: "ش", name: "Šin" },   { id: 14, arabic: "ص", name: "Sad" },
   { id: 15, arabic: "ض", name: "Dad" },   { id: 16, arabic: "ط", name: "Tâ" },
   { id: 17, arabic: "ظ", name: "Zâ" },    { id: 18, arabic: "ع", name: "Ajn" },

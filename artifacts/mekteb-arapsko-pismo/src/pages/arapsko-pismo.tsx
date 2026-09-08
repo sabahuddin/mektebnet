@@ -38,7 +38,7 @@ const HARFOVI: Harf[] = [
   { id: 14, arabic: "ص", name: "Sad",  trans: "S (jako)",   dots: 0, connecting: true,  group: "Grupa 5",  audioFile: "sad.mp3" },
   { id: 15, arabic: "ض", name: "Dad",  trans: "D (jako)",   dots: 1, connecting: true,  group: "Grupa 5",  audioFile: "dad.mp3" },
   { id: 16, arabic: "ط", name: "Ta",   trans: "T (jako)",   dots: 0, connecting: true,  group: "Grupa 6",  audioFile: "ta2.mp3" },
-  { id: 17, arabic: "ظ", name: "Za",   trans: "Z (jako)",   dots: 1, connecting: true,  group: "Grupa 6",  audioFile: "za.mp3" },
+  { id: 17, arabic: "ظ", name: "Zâ",   trans: "Z (jako)",   dots: 1, connecting: true,  group: "Grupa 6",  audioFile: "za.mp3" },
   { id: 18, arabic: "ع", name: "Ajn",  trans: "' (grlo)",   dots: 0, connecting: true,  group: "Grupa 7",  audioFile: "ajn.mp3" },
   { id: 19, arabic: "غ", name: "Gajn", trans: "G (grlo)",   dots: 1, connecting: true,  group: "Grupa 7",  audioFile: "gajn.mp3" },
   { id: 20, arabic: "ف", name: "Fa",   trans: "F",          dots: 1, connecting: true,  group: "Grupa 8",  audioFile: "fa.mp3" },
