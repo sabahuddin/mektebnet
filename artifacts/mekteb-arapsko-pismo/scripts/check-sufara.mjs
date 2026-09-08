@@ -39,6 +39,16 @@ const lessonSlugs = [...lessonsSource.matchAll(/slug:\s*"([^"]+)"/g)].map((match
 if (new Set(lessonSlugs).size !== lessonSlugs.length) {
   failures.push("Slugovi lekcija moraju biti jedinstveni.");
 }
+
+const lessonStarts = [...lessonsSource.matchAll(/id:\s*(\d+),\s*orderNum:/g)];
+for (let index = 0; index < lessonStarts.length; index += 1) {
+  const start = lessonStarts[index];
+  const end = lessonStarts[index + 1]?.index ?? lessonsSource.indexOf("export function", start.index);
+  const lessonSource = lessonsSource.slice(start.index, end);
+  if (!/type:\s*"čitaj-slog"/.test(lessonSource)) {
+    failures.push(`Lekcija ${start[1]} nema završnu vježbu čitanja.`);
+  }
+}
 if (/\b(?:šedda|šedde|shadda)\b/i.test(lessonsSource)) {
   failures.push("Korisnički sadržaj mora koristiti naziv tešdid.");
 }

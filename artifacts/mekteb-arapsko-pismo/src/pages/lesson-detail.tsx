@@ -625,6 +625,13 @@ export default function LessonDetail() {
     .map((exercise, index) => ({ exercise, index }))
     .filter(({ exercise }) => exercise.type === "čitaj-slog");
   const additionalExerciseCount = data.exercises.length - readingExercises.length;
+  const letterGridClass = data.letterData.length >= 4
+    ? "lg:grid-cols-4"
+    : data.letterData.length === 3
+      ? "lg:grid-cols-3"
+      : data.letterData.length === 2
+        ? "lg:grid-cols-2"
+        : "lg:grid-cols-1";
 
   function getLetterAudio(idx: number): string {
     if (!data) return "elif.mp3";
@@ -816,57 +823,6 @@ export default function LessonDetail() {
         {t("OpenAI snimci bit će jasno označeni kao AI i preslušani prije objave.")}
       </div>
 
-      {/* Čitanje je glavni sadržaj lekcije, zato dolazi prije priče i teorije. */}
-      {readingExercises.length > 0 && (
-        <section className="mb-5 rounded-2xl border-2 border-teal-500 bg-teal-950 p-4 sm:p-5 shadow-lg shadow-teal-900/10">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <p className="text-teal-300 text-xs font-black uppercase tracking-widest">{t("Glavni dio lekcije")}</p>
-              <h2 className="text-white text-xl sm:text-2xl font-black flex items-center gap-2">
-                <PlayCircle className="w-6 h-6 text-green-400" />
-                {t("Vježbe čitanja")}
-              </h2>
-            </div>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-white/80 text-sm font-bold shrink-0">
-              {readingExercises.reduce((sum, { exercise }) => sum + exercise.items.length, 0)} {t("primjera")}
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {readingExercises.map(({ exercise: ex, index: ei }) => {
-              const isDone = completedExercises.has(ei);
-              return (
-                <div key={ei} className={`rounded-xl border p-3 sm:p-4 ${isDone ? "border-green-400 bg-green-500/15" : "border-white/15 bg-white/10"}`}>
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div className="min-w-0">
-                      <h3 className="text-white font-extrabold text-base sm:text-lg">{ex.title}</h3>
-                      <p className="text-white/60 text-sm truncate">{ex.description}</p>
-                    </div>
-                    {isDone && <Check className="w-5 h-5 text-green-400 shrink-0" />}
-                  </div>
-                  <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5 mb-3" dir="rtl">
-                    {ex.items.slice(0, 10).map((item, wi) => (
-                      <div key={wi} className="min-h-[48px] rounded-lg bg-white flex items-center justify-center px-1">
-                        <span
-                          className="font-bold text-teal-950 text-center leading-none"
-                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: item.show.length <= 2 ? "1.55rem" : "1.15rem" }}
-                        >
-                          {item.show}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <Button className="w-full bg-green-500 hover:bg-green-400 text-white font-black py-5" onClick={() => setActiveReading(ei)}>
-                    <PlayCircle className="w-5 h-5 mr-2" />
-                    {isDone ? t("Čitaj ponovo") : t("Počni čitati")}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
       {/* Priča */}
       <details className="group mb-5 rounded-2xl border border-orange-200 bg-orange-50">
         <summary className="cursor-pointer list-none px-5 py-3 font-extrabold text-orange-900 flex items-center justify-between">
@@ -984,87 +940,69 @@ export default function LessonDetail() {
           {data.hareketi ? t("Upoznajmo slovo i harekete") : t("Upoznajmo harfove")}
         </h2>
 
-        {data.letterData.map((letter, i) => (
-          <Card key={i} className="p-4 border border-border/60 mb-3">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-xl font-extrabold text-foreground">{letter.name}</h3>
-                  <button
-                    onClick={() => playAudio(letter.soundFile)}
-                    className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center text-primary transition-colors"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${letterGridClass} gap-3`}>
+          {data.letterData.map((letter, i) => (
+            <Card key={i} className="p-3 border border-border/60 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-extrabold text-foreground">{letter.name}</h3>
+                    <button
+                      onClick={() => playAudio(letter.soundFile)}
+                      className="w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center text-primary"
+                      aria-label={t("Poslušaj {ime}", { ime: letter.name })}
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground font-semibold">/{letter.transliteration}/</p>
                 </div>
-                <p className="text-base text-muted-foreground font-medium">{t("Izgovor:")} /{letter.transliteration}/</p>
-                <p className="text-sm text-muted-foreground mt-1 italic">{letter.visualAssociation}</p>
-                {letter.nonConnecting && (
-                  <span className="inline-block mt-3 bg-red-100 text-red-700 text-sm font-bold px-3 py-1 rounded-lg uppercase">
-                    {t("Ne spaja se ulijevo")}
-                  </span>
-                )}
+                <div className="text-5xl text-primary leading-none shrink-0" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
+                  {letter.arabic}
+                </div>
               </div>
-              <div className="text-6xl text-primary shrink-0" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>
-                {letter.arabic}
-              </div>
-            </div>
-            <div className="bg-muted rounded-xl p-3">
-              <p className="text-xs font-bold text-muted-foreground mb-2 text-center uppercase tracking-wider">{t("Oblici slova")}</p>
-              <div className="grid grid-cols-4 gap-2 text-center" dir="rtl">
+
+              <p className="text-xs text-muted-foreground italic leading-snug min-h-8">{letter.visualAssociation}</p>
+              {letter.nonConnecting && (
+                <span className="inline-block my-2 bg-red-50 text-red-700 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                  {t("Ne spaja se ulijevo")}
+                </span>
+              )}
+
+              <div className="grid grid-cols-4 gap-1 text-center bg-muted rounded-lg p-1.5" dir="rtl">
                 {[
-                  { form: letter.forms.isolated, label: t("Samostalan") },
-                  { form: letter.forms.initial,  label: t("Početak") },
-                  { form: letter.forms.medial,   label: t("Sredina") },
+                  { form: letter.forms.isolated, label: t("Sam.") },
+                  { form: letter.forms.initial,  label: t("Poč.") },
+                  { form: letter.forms.medial,   label: t("Sred.") },
                   { form: letter.forms.final,    label: t("Kraj") },
                 ].map(({ form, label }) => (
-                  <div key={label} className="bg-white rounded-lg p-2">
-                    <div className="text-3xl font-bold text-foreground" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
-                    <div className="text-xs font-bold text-muted-foreground">{label}</div>
+                  <div key={label} className="bg-white rounded p-1">
+                    <div className="text-2xl font-bold leading-tight" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{form}</div>
+                    <div className="text-[9px] font-bold text-muted-foreground">{label}</div>
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* Hareketi slogovi — BE/BI/BU kartice (samo za lekcije bez posebne hareketi sekcije) */}
-            {!data.hareketi && !data.isRevision && (
-              <div className="mt-3">
-                <p className="text-base font-bold text-muted-foreground mb-3 text-center uppercase tracking-wider">
-                  {t("🔊 Klikni i pročitaj naglas")}
-                </p>
-                <div className="grid grid-cols-3 gap-3" dir="rtl">
-                  {[
-                    { hareke: "\u064E", sound: "E" },
-                    { hareke: "\u0650", sound: "I" },
-                    { hareke: "\u064F", sound: "U" },
-                  ].map(({ hareke, sound }) => {
+              {!data.hareketi && !data.isRevision && (
+                <div className="grid grid-cols-3 gap-1 mt-2" dir="rtl">
+                  {["\u064E", "\u0650", "\u064F"].map((hareke) => {
                     const combined = letter.arabic + hareke;
-                    const short = letter.transliteration.split(" ")[0].replace(/[^A-ZČĆŽŠĐa-zčćžšđ]/g, "");
-                    const label = (short || letter.name[0]) + sound;
                     return (
-                      <motion.button
-                        key={sound}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.93 }}
+                      <button
+                        key={hareke}
                         onClick={() => playSlog(combined)}
-                        className="bg-teal-50 hover:bg-teal-100 border border-teal-200 hover:border-teal-400 rounded-xl py-2 px-2 flex items-center justify-center gap-2 transition-all group"
+                        className="bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg py-1 flex items-center justify-center gap-1"
                       >
-                        <span
-                          style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: "2rem", lineHeight: 1.5 }}
-                          className="text-teal-800 font-bold"
-                        >
-                          {combined}
-                        </span>
-                        <span className="text-base font-extrabold text-teal-600 group-hover:text-teal-800">{label}</span>
-                        <Volume2 className="w-4 h-4 text-teal-400 group-hover:text-teal-600" />
-                      </motion.button>
+                        <span className="text-2xl text-teal-900" style={{ fontFamily: "Noto Naskh Arabic, serif" }}>{combined}</span>
+                        <Volume2 className="w-3 h-3 text-teal-500" />
+                      </button>
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </Card>
-        ))}
+              )}
+            </Card>
+          ))}
+        </div>
 
         {/* Sukun objašnjenje (samo za lekciju sukuna) */}
         {data.sukunExplainer && (
@@ -1275,6 +1213,57 @@ export default function LessonDetail() {
           );
           })}
         </div>
+
+        {/* Završna vježba svake lekcije: učenik čita bez pomoći, pa provjerava audio. */}
+        {readingExercises.length > 0 && (
+          <section className="mt-6 rounded-2xl border-2 border-teal-500 bg-teal-950 p-4 sm:p-5 shadow-lg shadow-teal-900/10">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <p className="text-teal-300 text-xs font-black uppercase tracking-widest">{t("Završni dio lekcije")}</p>
+                <h2 className="text-white text-xl sm:text-2xl font-black flex items-center gap-2">
+                  <PlayCircle className="w-6 h-6 text-green-400" />
+                  {t("Vježba čitanja")}
+                </h2>
+              </div>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-white/80 text-sm font-bold shrink-0">
+                {readingExercises.reduce((sum, { exercise }) => sum + exercise.items.length, 0)} {t("primjera")}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {readingExercises.map(({ exercise: ex, index: ei }) => {
+                const isDone = completedExercises.has(ei);
+                return (
+                  <div key={ei} className={`rounded-xl border p-3 ${isDone ? "border-green-400 bg-green-500/15" : "border-white/15 bg-white/10"}`}>
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="min-w-0">
+                        <h3 className="text-white font-extrabold text-base sm:text-lg">{ex.title}</h3>
+                        <p className="text-white/60 text-sm">{ex.description}</p>
+                      </div>
+                      {isDone && <Check className="w-5 h-5 text-green-400 shrink-0" />}
+                    </div>
+                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 mb-3" dir="rtl">
+                      {ex.items.slice(0, 10).map((item, wi) => (
+                        <div key={wi} className="min-h-[44px] rounded-lg bg-white flex items-center justify-center px-1">
+                          <span
+                            className="font-bold text-teal-950 text-center leading-none"
+                            style={{ fontFamily: "Noto Naskh Arabic, serif", fontSize: item.show.length <= 2 ? "1.5rem" : "1.1rem" }}
+                          >
+                            {item.show}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <Button className="w-full bg-green-500 hover:bg-green-400 text-white font-black py-5" onClick={() => setActiveReading(ei)}>
+                      <PlayCircle className="w-5 h-5 mr-2" />
+                      {isDone ? t("Čitaj ponovo") : t("Počni čitati")}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <div className={`mt-6 p-6 rounded-2xl border text-center transition-all ${allDone ? "bg-green-50 border-green-300" : "bg-muted/40 border-border"}`}>
           {/* Progress dots */}
