@@ -278,6 +278,14 @@ const attachUpload = multer({
   },
 });
 
+async function nextPrilogRedoslijed(lekcijaId: number): Promise<number> {
+  const [row] = await db
+    .select({ value: sql<number>`coalesce(min(${prilozi.redoslijed}), 1)::int - 1` })
+    .from(prilozi)
+    .where(eq(prilozi.lekcijaId, lekcijaId));
+  return Number(row?.value ?? 0);
+}
+
 router.post("/prilozi/:lekcijaId", (req, res) => {
   attachUpload.single("file")(req, res, async (err) => {
     if (err) {
@@ -318,8 +326,10 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
       }
       const uploaderRole = req.user?.role ?? "muallim";
       const uploaderUserId = req.user?.userId ?? null;
+      const redoslijed = await nextPrilogRedoslijed(lekcijaId);
       const [inserted] = await db.insert(prilozi).values({
         lekcijaId,
+        redoslijed,
         originalName: req.file.originalname,
         storedName: req.file.filename,
         fileSize: storedFileSize,
@@ -360,8 +370,10 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
     const displayName = (label && label.trim()) || url.replace(/^https?:\/\//i, "").slice(0, 120);
     const uploaderRole = req.user?.role ?? "muallim";
     const uploaderUserId = req.user?.userId ?? null;
+    const redoslijed = await nextPrilogRedoslijed(lekcijaId);
     const [inserted] = await db.insert(prilozi).values({
       lekcijaId,
+      redoslijed,
       originalName: displayName,
       storedName: "",
       fileSize: 0,
@@ -511,8 +523,10 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
     const displayName = (label && label.trim()) || `${provider} vježba`;
     const uploaderRole = req.user?.role ?? "muallim";
     const uploaderUserId = req.user?.userId ?? null;
+    const redoslijed = await nextPrilogRedoslijed(lekcijaId);
     const [inserted] = await db.insert(prilozi).values({
       lekcijaId,
+      redoslijed,
       originalName: displayName.slice(0, 200),
       storedName: "",
       fileSize: 0,
@@ -532,24 +546,57 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
   return;
 });
 
-// PUT /api/admin/prilozi/:id — uredi embed prilog (samo admin).
-// Trenutno podržava: label (originalName) + hasanatReward + opciono novi
-// embedCode (URL ili iframe — prolazi kroz isti extractEmbedSrc + whitelist).
-// Ostali tipovi priloga (file/url/h5p) se NE mogu uređivati ovim endpointom —
-// fajl bi zahtijevao re-upload, URL bi mogao biti dodan kasnije.
-router.put("/prilozi/:id", async (req, res) => {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({ error: "Samo admin može uređivati materijale" });
+// PUT /api/admin/prilozi/:lekcijaId/redoslijed — trajno preuredi nastavne
+// materijale (file/url) unutar jedne lekcije.
+router.put("/prilozi/:lekcijaId/redoslijed", async (req, res) => {
+  try {
+    const lekcijaId = Number(req.params.lekcijaId);
+    const ids = (req.body as { ids?: unknown })?.ids;
+    if (!Number.isInteger(lekcijaId) || lekcijaId < 1) {
+      return res.status(400).json({ error: "Nevažeći ID lekcije" });
+    }
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every(id => Number.isInteger(id) && Number(id) > 0)) {
+      return res.status(400).json({ error: "Pošalji ispravan redoslijed materijala" });
+    }
+    const normalizedIds = ids.map(Number);
+    if (new Set(normalizedIds).size !== normalizedIds.length) {
+      return res.status(400).json({ error: "Materijal se ne smije ponavljati u redoslijedu" });
+    }
+
+    const materials = await db
+      .select({ id: prilozi.id, kind: prilozi.kind })
+      .from(prilozi)
+      .where(and(eq(prilozi.lekcijaId, lekcijaId), inArray(prilozi.id, normalizedIds)));
+    if (
+      materials.length !== normalizedIds.length
+      || materials.some(item => item.kind !== "file" && item.kind !== "url")
+    ) {
+      return res.status(400).json({ error: "Redoslijed sadrži materijal koji ne pripada ovoj lekciji" });
+    }
+
+    await db.transaction(async tx => {
+      for (const [index, id] of normalizedIds.entries()) {
+        await tx.update(prilozi)
+          .set({ redoslijed: index + 1 })
+          .where(and(eq(prilozi.id, id), eq(prilozi.lekcijaId, lekcijaId)));
+      }
+    });
+    res.json({ ids: normalizedIds });
+  } catch (e: any) {
+    console.error("[PUT /prilozi/:lekcijaId/redoslijed] failed:", e?.message);
+    res.status(500).json({ error: "Nije moguće sačuvati redoslijed materijala" });
   }
+  return;
+});
+
+// PUT /api/admin/prilozi/:id — uredi naslov priloga; admin dodatno može
+// uređivati nagradu i izvor embed vježbe.
+router.put("/prilozi/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID" });
     const [existing] = await db.select().from(prilozi).where(eq(prilozi.id, id));
     if (!existing) return res.status(404).json({ error: "Prilog nije pronađen" });
-    if (existing.kind !== "embed") {
-      return res.status(400).json({ error: "Trenutno se može uređivati samo embed vježba" });
-    }
-
     const { label, hasanatReward, embedCode } = (req.body || {}) as {
       label?: string;
       hasanatReward?: number;
@@ -560,12 +607,23 @@ router.put("/prilozi/:id", async (req, res) => {
     if (typeof label === "string") {
       const trimmed = label.trim();
       if (!trimmed) return res.status(400).json({ error: "Naziv ne može biti prazan" });
-      updates.originalName = trimmed.slice(0, 200);
+      const extension = existing.kind === "file" ? path.extname(existing.originalName) : "";
+      const title = extension && trimmed.toLowerCase().endsWith(extension.toLowerCase())
+        ? trimmed.slice(0, -extension.length)
+        : trimmed;
+      if (!title.trim()) return res.status(400).json({ error: "Naziv ne može biti prazan" });
+      updates.originalName = `${title.trim().slice(0, Math.max(1, 200 - extension.length))}${extension}`;
     }
     if (hasanatReward !== undefined) {
+      if (req.user?.role !== "admin" || existing.kind !== "embed") {
+        return res.status(403).json({ error: "Nemaš dozvolu za promjenu nagrade" });
+      }
       updates.hasanatReward = normalizeEmbedReward(hasanatReward);
     }
     if (typeof embedCode === "string" && embedCode.trim()) {
+      if (req.user?.role !== "admin" || existing.kind !== "embed") {
+        return res.status(403).json({ error: "Nemaš dozvolu za promjenu embed koda" });
+      }
       if (embedCode.length > 5000) {
         return res.status(400).json({ error: "Embed kod je predugačak (max 5000 znakova)" });
       }
@@ -595,7 +653,7 @@ router.put("/prilozi/:id", async (req, res) => {
 router.get("/prilozi/:lekcijaId", async (req, res) => {
   try {
     const lekcijaId = parseInt(req.params.lekcijaId);
-    const files = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcijaId)).orderBy(desc(prilozi.createdAt));
+    const files = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcijaId)).orderBy(asc(prilozi.redoslijed), desc(prilozi.createdAt));
     res.json(files.map(f => ({
       ...f,
       url: f.kind === "url" ? (f.externalUrl || "") : `/uploads/${f.storedName}`,
@@ -823,8 +881,10 @@ router.post("/prilozi/:lekcijaId/h5p", (req, res) => {
       // 1. Insert prazan h5p prilog (placeholder) da dobijemo ID za direktorij
       const h5pUploaderRole = req.user?.role ?? "muallim";
       const h5pUploaderUserId = req.user?.userId ?? null;
+      const redoslijed = await nextPrilogRedoslijed(lekcijaId);
       const [pre] = await db.insert(prilozi).values({
         lekcijaId,
+        redoslijed,
         originalName: req.file.originalname,
         storedName: "h5p/pending",
         fileSize: req.file.size,

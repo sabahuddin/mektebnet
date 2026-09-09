@@ -547,6 +547,22 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS approved boolean NOT NULL DEFAULT false;`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_role varchar(20);`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_user_id integer;`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS redoslijed integer NOT NULL DEFAULT 0;`);
+    await db.execute(sql`
+      WITH ranked AS (
+        SELECT id, row_number() OVER (
+          PARTITION BY lekcija_id
+          ORDER BY created_at DESC NULLS LAST, id DESC
+        )::integer AS novi_redoslijed
+        FROM prilozi
+      )
+      UPDATE prilozi
+      SET redoslijed = ranked.novi_redoslijed
+      FROM ranked
+      WHERE prilozi.id = ranked.id
+        AND prilozi.redoslijed = 0;
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS prilozi_lekcija_redoslijed_idx ON prilozi (lekcija_id, redoslijed);`);
     // hasanat_reward — kapi meda koje učenik dobija kad klikne "Završio sam"
     // na embed vježbi (LearningApps, Wordwall, Quizizz...). Admin postavlja
     // pri dodavanju/uređivanju. Dozvoljene vrijednosti: 0, 3, 5, 10.

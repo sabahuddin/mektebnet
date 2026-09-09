@@ -436,6 +436,7 @@ export const posjeteTable = pgTable("posjete", {
 export const prilozi = pgTable("prilozi", {
   id: serial("id").primaryKey(),
   lekcijaId: integer("lekcija_id").notNull(),
+  redoslijed: integer("redoslijed").notNull().default(0),
   originalName: text("original_name").notNull(),
   storedName: varchar("stored_name", { length: 300 }).notNull().default(""),
   fileSize: integer("file_size").notNull().default(0),

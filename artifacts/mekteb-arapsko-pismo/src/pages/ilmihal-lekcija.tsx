@@ -16,7 +16,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
   ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2, Users, UserCog, Maximize2,
-  ImageIcon, FileVideo, FileSpreadsheet, Presentation, File
+  ImageIcon, FileVideo, FileSpreadsheet, Presentation, File, ArrowUp, ArrowDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -53,6 +53,7 @@ interface Prilog {
   mimeType: string;
   url: string;
   createdAt: string;
+  redoslijed?: number;
   kind?: "file" | "url" | "h5p" | "embed";
   externalUrl?: string | null;
   h5pPath?: string | null;
@@ -1759,6 +1760,10 @@ function PriloziSection({
   const [editEmbedLabel, setEditEmbedLabel] = useState("");
   const [editEmbedReward, setEditEmbedReward] = useState<0 | 3 | 5 | 10>(0);
   const [savingEditEmbed, setSavingEditEmbed] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Prilog | null>(null);
+  const [editingMaterialTitle, setEditingMaterialTitle] = useState("");
+  const [savingMaterialTitle, setSavingMaterialTitle] = useState(false);
+  const [savingMaterialOrder, setSavingMaterialOrder] = useState(false);
   // "Završio sam" claim — koje je učenik već claim-ovao u ovoj sesiji
   // (poslije refresh-a server svejedno odbije sa alreadyClaimed:true).
   const [claimedEmbeds, setClaimedEmbeds] = useState<Set<number>>(new Set());
@@ -2100,6 +2105,66 @@ function PriloziSection({
     }
   };
 
+  const saveMaterialTitle = async () => {
+    if (!editingMaterial || !token || !editingMaterialTitle.trim()) return;
+    setSavingMaterialTitle(true);
+    try {
+      const result = await apiRequest<Prilog>(
+        "PUT",
+        `/admin/prilozi/${editingMaterial.id}`,
+        { label: editingMaterialTitle.trim() },
+        token,
+      );
+      setAttachments(prev => prev.map(item =>
+        item.id === editingMaterial.id ? { ...item, ...result } : item
+      ));
+      setEditingMaterial(null);
+      toast({ title: t("Sačuvano"), description: t("Naslov materijala je izmijenjen.") });
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+    } finally {
+      setSavingMaterialTitle(false);
+    }
+  };
+
+  const moveMaterial = async (materialId: number, delta: -1 | 1) => {
+    if (!token || savingMaterialOrder) return;
+    const materialIds = attachments
+      .filter(item => item.kind === "file" || item.kind === "url")
+      .map(item => item.id);
+    const fromIndex = materialIds.indexOf(materialId);
+    const toIndex = fromIndex + delta;
+    if (fromIndex < 0 || toIndex < 0 || toIndex >= materialIds.length) return;
+
+    const reorderedIds = [...materialIds];
+    [reorderedIds[fromIndex], reorderedIds[toIndex]] = [reorderedIds[toIndex], reorderedIds[fromIndex]];
+    const order = new Map(reorderedIds.map((id, index) => [id, index]));
+    const previous = attachments;
+    const next = [...attachments].sort((a, b) => {
+      const aOrder = order.get(a.id);
+      const bOrder = order.get(b.id);
+      if (aOrder === undefined && bOrder === undefined) return 0;
+      if (aOrder === undefined) return 1;
+      if (bOrder === undefined) return -1;
+      return aOrder - bOrder;
+    });
+    setAttachments(next);
+    setSavingMaterialOrder(true);
+    try {
+      await apiRequest(
+        "PUT",
+        `/admin/prilozi/${lekcija.id}/redoslijed`,
+        { ids: reorderedIds },
+        token,
+      );
+    } catch (err: any) {
+      setAttachments(previous);
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+    } finally {
+      setSavingMaterialOrder(false);
+    }
+  };
+
   // attachment.url vraca /api/admin/... pa NE dodajemo apiBase — to bi dalo
   // /api/api/admin/... (dvostruki prefix) i 404 koji je izgledao kao 4KB download.
   const downloadFile = async (attachment: Prilog, openInTab = false) => {
@@ -2244,11 +2309,45 @@ function PriloziSection({
           </div>
         )}
         <div className="flex flex-col gap-2">
-          {materijali.map(a => (
+          {materijali.map((a, index) => (
             <div key={a.id} className="flex items-center gap-3 rounded-xl border border-teal-100 bg-teal-50/60 p-3">
+              <div className="flex shrink-0 flex-col">
+                <button
+                  type="button"
+                  onClick={() => void moveMaterial(a.id, -1)}
+                  disabled={savingMaterialOrder || index === 0}
+                  className="rounded p-0.5 text-teal-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-25"
+                  title={t("Pomjeri gore")}
+                  aria-label={t("Pomjeri gore")}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void moveMaterial(a.id, 1)}
+                  disabled={savingMaterialOrder || index === materijali.length - 1}
+                  className="rounded p-0.5 text-teal-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-25"
+                  title={t("Pomjeri dolje")}
+                  aria-label={t("Pomjeri dolje")}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </button>
+              </div>
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
                 {a.kind === "url" ? <ExternalLink className="h-5 w-5 text-teal-600" aria-label="Link" /> : getFileIcon(a.mimeType, a.originalName)}
               </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingMaterial(a);
+                  setEditingMaterialTitle(a.kind === "file" ? displayMaterialName(a.originalName) : a.originalName);
+                }}
+                className="shrink-0 rounded-lg p-1.5 text-teal-700 hover:bg-white"
+                title={t("Uredi naslov")}
+                aria-label={t("Uredi naslov")}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
               <span className="min-w-0 flex-1 break-words text-sm font-semibold" title={a.originalName}>
                 {a.kind === "file" ? displayMaterialName(a.originalName) : a.originalName}
               </span>
@@ -2271,6 +2370,38 @@ function PriloziSection({
           {materijali.length === 0 && <p className="text-sm italic text-muted-foreground">{t("Nema materijala za nastavu.")}</p>}
         </div>
       </div>
+      <Dialog open={!!editingMaterial} onOpenChange={open => { if (!open) setEditingMaterial(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>{t("Uredi naslov materijala")}</DialogTitle>
+          <div className="space-y-4">
+            <input
+              type="text"
+              value={editingMaterialTitle}
+              onChange={event => setEditingMaterialTitle(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === "Enter") void saveMaterialTitle();
+              }}
+              className="w-full rounded-xl border border-teal-200 px-3 py-2"
+              autoFocus
+              maxLength={200}
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditingMaterial(null)}>
+                {t("Odustani")}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void saveMaterialTitle()}
+                disabled={savingMaterialTitle || !editingMaterialTitle.trim()}
+                className="bg-teal-700 text-white hover:bg-teal-800"
+              >
+                {savingMaterialTitle ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {t("Sačuvaj")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <AnimatePresence>
         {activeGalleryItem && (
           <motion.div

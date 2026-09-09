@@ -636,7 +636,7 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
         const isAdmin = decoded.role === "admin";
         const isMuallim = decoded.role === "muallim";
         const myId = typeof decoded.userId === "number" ? decoded.userId : null;
-        const all = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(desc(prilozi.createdAt));
+        const all = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(asc(prilozi.redoslijed), desc(prilozi.createdAt));
         // Vidljivost:
         // - admin vidi sve (i odobrene i one koje čekaju)
         // - muallim vidi sve odobrene + svoje neodobrene (one koje je sam dodao)
@@ -668,6 +668,7 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
             url,
             approved: a.approved,
             hasanatReward: a.hasanatReward,
+            redoslijed: a.redoslijed,
             createdAt: a.createdAt,
           };
         });
