@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "./lib/jwt-secret";
+import { normalizeBosnianDashes } from "./lib/normalize-json";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { trackVisit } from "./middlewares/visitTracker.js";
@@ -12,18 +13,6 @@ import { trackVisit } from "./middlewares/visitTracker.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
-
-function normalizeBosnianDashes<T>(value: T): T {
-  if (typeof value === "string") return value.replaceAll("—", "–") as T;
-  if (Array.isArray(value)) return value.map(normalizeBosnianDashes) as T;
-  if (value && typeof value === "object") {
-    const normalized = Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, normalizeBosnianDashes(item)]),
-    );
-    return normalized as T;
-  }
-  return value;
-}
 
 // Centralna zaštita od engleske duge crtice u svim JSON odgovorima. Ovo
 // obuhvata i tekst iz baze (lekcije, prijevode, poruke i objašnjenja), pa nije
