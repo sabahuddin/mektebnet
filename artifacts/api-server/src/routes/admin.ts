@@ -272,9 +272,9 @@ const attachUpload = multer({
   storage,
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = /\.(pdf|docx|doc|xlsx|xls|pptx|ppt|txt|rtf|jpg|jpeg)$/i;
+    const allowed = /\.(pdf|docx|doc|xlsx|xls|pptx|ppt|txt|rtf|jpg|jpeg|webp)$/i;
     if (allowed.test(path.extname(file.originalname))) cb(null, true);
-    else cb(new Error("Dozvoljeni formati: PDF, DOCX, DOC, XLSX, PPTX, TXT, JPG"));
+    else cb(new Error("Dozvoljeni formati: PDF, DOCX, DOC, XLSX, PPTX, TXT, JPG, WEBP"));
   },
 });
 
@@ -304,6 +304,7 @@ router.post("/prilozi/:lekcijaId", (req, res) => {
         ".rtf": "application/rtf",
         ".jpg": "image/jpeg",
         ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
       };
       const ext = path.extname(req.file.originalname).toLowerCase();
       let storedFileSize = req.file.size;

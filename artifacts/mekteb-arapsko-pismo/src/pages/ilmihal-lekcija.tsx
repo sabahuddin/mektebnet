@@ -15,7 +15,8 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2, Users, UserCog, Maximize2
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2, Users, UserCog, Maximize2,
+  ImageIcon, FileVideo, FileSpreadsheet, Presentation, File
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -1600,13 +1601,33 @@ function formatFileSize(bytes: number) {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-function getFileIcon(mimeType: string) {
-  if (mimeType.includes("pdf")) return "📄";
-  if (mimeType.includes("word") || mimeType.includes("document")) return "📝";
-  if (mimeType.includes("sheet") || mimeType.includes("excel")) return "📊";
-  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "📑";
-  if (mimeType.includes("text")) return "📃";
-  return "📎";
+function getFileIcon(mimeType: string, fileName = "") {
+  const type = mimeType.toLowerCase();
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+  if (type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(extension)) {
+    return <ImageIcon className="h-5 w-5 text-sky-600" aria-label="Slika" />;
+  }
+  if (type.startsWith("video/") || ["mp4", "webm", "mov", "m4v"].includes(extension)) {
+    return <FileVideo className="h-5 w-5 text-violet-600" aria-label="Video" />;
+  }
+  if (type.includes("pdf") || extension === "pdf") {
+    return <span className="inline-flex h-5 min-w-7 items-center justify-center rounded bg-red-600 px-1 text-[9px] font-black text-white" aria-label="PDF">PDF</span>;
+  }
+  if (type.includes("sheet") || type.includes("excel") || ["xlsx", "xls"].includes(extension)) {
+    return <FileSpreadsheet className="h-5 w-5 text-emerald-600" aria-label="Tabela" />;
+  }
+  if (type.includes("presentation") || type.includes("powerpoint") || ["pptx", "ppt"].includes(extension)) {
+    return <Presentation className="h-5 w-5 text-orange-600" aria-label="Prezentacija" />;
+  }
+  if (type.includes("word") || type.includes("document") || type.includes("text")) {
+    return <FileText className="h-5 w-5 text-blue-600" aria-label="Dokument" />;
+  }
+  return <File className="h-5 w-5 text-slate-500" aria-label="Fajl" />;
+}
+
+function displayMaterialName(fileName: string) {
+  const withoutExtension = fileName.replace(/\.[^.]+$/, "");
+  return withoutExtension || fileName;
 }
 
 // Memoizovan YouTube iframe — izolovan od parent re-rendera (npr. heartbeat
@@ -2174,7 +2195,7 @@ function PriloziSection({
     if (!canManage) return null;
     const materijali = attachments.filter(a => a.kind === "file" || a.kind === "url");
     const slike = materijali.filter(a =>
-      a.kind === "file" && (a.mimeType === "image/jpeg" || /\.jpe?g$/i.test(a.originalName))
+      a.kind === "file" && (a.mimeType.startsWith("image/") || /\.(jpe?g|webp|png|gif)$/i.test(a.originalName))
     );
     return (
       <>
@@ -2189,9 +2210,9 @@ function PriloziSection({
         <p className="mb-3 text-xs text-muted-foreground">
           {t("Ovi materijali su dio pripreme za nastavu i vidljivi su samo muallimu i administratoru.")}
           {" "}
-          {t("JPG mape i slike čuvaju se u originalnoj rezoluciji i mogu se otvoriti preko cijelog ekrana.")}
+          {t("JPG i WEBP mape i slike čuvaju se u originalnoj rezoluciji i mogu se otvoriti preko cijelog ekrana.")}
         </p>
-        <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf,.jpg,.jpeg,image/jpeg" onChange={handleUpload} className="hidden" />
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf,.jpg,.jpeg,.webp,image/jpeg,image/webp" onChange={handleUpload} className="hidden" />
         <div className="mb-3 flex flex-wrap gap-2">
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
             {uploading ? (
@@ -2225,11 +2246,15 @@ function PriloziSection({
         <div className="flex flex-col gap-2">
           {materijali.map(a => (
             <div key={a.id} className="flex items-center gap-3 rounded-xl border border-teal-100 bg-teal-50/60 p-3">
-              <span className="text-xl">{a.kind === "url" ? "🔗" : getFileIcon(a.mimeType)}</span>
-              <span className="min-w-0 flex-1 break-words text-sm font-semibold">{a.originalName}</span>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                {a.kind === "url" ? <ExternalLink className="h-5 w-5 text-teal-600" aria-label="Link" /> : getFileIcon(a.mimeType, a.originalName)}
+              </span>
+              <span className="min-w-0 flex-1 break-words text-sm font-semibold" title={a.originalName}>
+                {a.kind === "file" ? displayMaterialName(a.originalName) : a.originalName}
+              </span>
               {a.kind === "url" ? (
                 <a href={a.externalUrl || a.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-teal-700">{t("Otvori")}</a>
-              ) : a.mimeType === "image/jpeg" || /\.jpe?g$/i.test(a.originalName) ? (
+              ) : a.mimeType.startsWith("image/") || /\.(jpe?g|webp|png|gif)$/i.test(a.originalName) ? (
                 <button
                   onClick={() => openGallery(slike, slike.findIndex(slika => slika.id === a.id))}
                   className="inline-flex items-center gap-1 text-sm font-bold text-teal-700"
@@ -2510,7 +2535,7 @@ function PriloziSection({
                           <span className="text-2xl flex-shrink-0">
                             {isH5p ? (
                               <img src={`${LESSON_ICON_BASE}vjezba-kapi-meda.svg`} alt="" className="w-12 h-12 object-contain" />
-                            ) : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType)}
+                            ) : isEmbed ? "🎯" : isUrl ? (ytEmbed ? "▶️" : "🔗") : getFileIcon(a.mimeType, a.originalName)}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
