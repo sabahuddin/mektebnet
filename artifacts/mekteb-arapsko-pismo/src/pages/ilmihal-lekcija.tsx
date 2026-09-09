@@ -1742,8 +1742,10 @@ function PriloziSection({
   // (poslije refresh-a server svejedno odbije sa alreadyClaimed:true).
   const [claimedEmbeds, setClaimedEmbeds] = useState<Set<number>>(new Set());
   const [claimingEmbed, setClaimingEmbed] = useState(false);
-  const [openMaterialImage, setOpenMaterialImage] = useState<{ name: string; url: string } | null>(null);
-  const [openingImageId, setOpeningImageId] = useState<number | null>(null);
+  const [galleryItems, setGalleryItems] = useState<Prilog[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [galleryImageUrl, setGalleryImageUrl] = useState<string | null>(null);
+  const [galleryLoading, setGalleryLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const h5pInputRef = useRef<HTMLInputElement>(null);
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
@@ -2103,37 +2105,77 @@ function PriloziSection({
     }
   };
 
-  const openImageFullscreen = async (attachment: Prilog) => {
-    setOpeningImageId(attachment.id);
-    try {
-      const res = await fetch(attachment.url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error(t("Greška pri otvaranju slike ({status})", { status: String(res.status) }));
-      const blobUrl = URL.createObjectURL(await res.blob());
-      setOpenMaterialImage({ name: attachment.originalName, url: blobUrl });
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
-    } finally {
-      setOpeningImageId(null);
-    }
+  const openGallery = (items: Prilog[], startIndex = 0) => {
+    if (items.length === 0) return;
+    setGalleryIndex(Math.min(Math.max(startIndex, 0), items.length - 1));
+    setGalleryItems(items);
   };
 
+  const activeGalleryItem = galleryItems[galleryIndex] ?? null;
+
   useEffect(() => {
-    if (!openMaterialImage) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenMaterialImage(null);
+    if (!activeGalleryItem) {
+      setGalleryImageUrl(null);
+      return;
+    }
+    const controller = new AbortController();
+    let blobUrl: string | null = null;
+    setGalleryLoading(true);
+    setGalleryImageUrl(null);
+    void fetch(activeGalleryItem.url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal,
+    })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(t("Greška pri otvaranju slike ({status})", { status: String(res.status) }));
+        }
+        return res.blob();
+      })
+      .then(blob => {
+        blobUrl = URL.createObjectURL(blob);
+        setGalleryImageUrl(blobUrl);
+      })
+      .catch((err: Error) => {
+        if (err.name === "AbortError") return;
+        toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+        setGalleryItems([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setGalleryLoading(false);
+      });
+    return () => {
+      controller.abort();
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
+  }, [activeGalleryItem, token, t, toast]);
+
+  useEffect(() => {
+    if (galleryItems.length === 0) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setGalleryItems([]);
+      if (event.key === "ArrowLeft") {
+        setGalleryIndex(index => (index - 1 + galleryItems.length) % galleryItems.length);
+      }
+      if (event.key === "ArrowRight") {
+        setGalleryIndex(index => (index + 1) % galleryItems.length);
+      }
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       window.removeEventListener("keydown", closeOnEscape);
-      URL.revokeObjectURL(openMaterialImage.url);
+      document.body.style.overflow = previousOverflow;
     };
-  }, [openMaterialImage]);
+  }, [galleryItems.length]);
 
   if (mode === "materijali") {
     if (!canManage) return null;
     const materijali = attachments.filter(a => a.kind === "file" || a.kind === "url");
+    const slike = materijali.filter(a =>
+      a.kind === "file" && (a.mimeType === "image/jpeg" || /\.jpe?g$/i.test(a.originalName))
+    );
     return (
       <>
       <div className="mt-5 rounded-xl border border-teal-200 bg-white/80 p-4" data-testid="priprema-materijali">
@@ -2164,6 +2206,12 @@ function PriloziSection({
           <Button onClick={() => setShowUrlForm(v => !v)} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
             <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}
           </Button>
+          {slike.length > 0 && (
+            <Button onClick={() => openGallery(slike)} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
+              <ImagePlus className="w-4 h-4 mr-2" />
+              {t("Otvori galeriju")} ({slike.length})
+            </Button>
+          )}
         </div>
         {showUrlForm && (
           <div className="mb-3 flex flex-col gap-2 rounded-xl border border-teal-200 bg-teal-50 p-3">
@@ -2183,11 +2231,10 @@ function PriloziSection({
                 <a href={a.externalUrl || a.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-teal-700">{t("Otvori")}</a>
               ) : a.mimeType === "image/jpeg" || /\.jpe?g$/i.test(a.originalName) ? (
                 <button
-                  onClick={() => openImageFullscreen(a)}
-                  disabled={openingImageId === a.id}
-                  className="inline-flex items-center gap-1 text-sm font-bold text-teal-700 disabled:opacity-50"
+                  onClick={() => openGallery(slike, slike.findIndex(slika => slika.id === a.id))}
+                  className="inline-flex items-center gap-1 text-sm font-bold text-teal-700"
                 >
-                  {openingImageId === a.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Maximize2 className="h-4 w-4" />}
+                  <Maximize2 className="h-4 w-4" />
                   {t("Puni ekran")}
                 </button>
               ) : (
@@ -2200,7 +2247,7 @@ function PriloziSection({
         </div>
       </div>
       <AnimatePresence>
-        {openMaterialImage && (
+        {activeGalleryItem && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -2208,27 +2255,59 @@ function PriloziSection({
             className="fixed inset-0 z-[100] flex flex-col bg-black/95"
             role="dialog"
             aria-modal="true"
-            aria-label={openMaterialImage.name}
-            onClick={() => setOpenMaterialImage(null)}
+            aria-label={activeGalleryItem.originalName}
+            onClick={() => setGalleryItems([])}
           >
             <div className="flex items-center justify-between gap-3 border-b border-white/15 px-4 py-3 text-white">
-              <p className="min-w-0 truncate font-bold">{openMaterialImage.name}</p>
+              <p className="min-w-0 flex-1 truncate font-bold">{activeGalleryItem.originalName}</p>
+              <span className="shrink-0 text-sm text-white/70">
+                {galleryIndex + 1} / {galleryItems.length}
+              </span>
               <button
                 type="button"
-                onClick={() => setOpenMaterialImage(null)}
+                onClick={() => setGalleryItems([])}
                 className="rounded-full bg-white/10 p-2 hover:bg-white/20"
                 aria-label={t("Zatvori")}
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="flex min-h-0 flex-1 items-center justify-center p-2 sm:p-5">
-              <img
-                src={openMaterialImage.url}
-                alt={openMaterialImage.name}
-                className="max-h-full max-w-full object-contain"
-                onClick={event => event.stopPropagation()}
-              />
+            <div className="relative flex min-h-0 flex-1 items-center justify-center p-2 sm:p-5">
+              {galleryLoading && <Loader2 className="h-10 w-10 animate-spin text-white" />}
+              {!galleryLoading && galleryImageUrl && (
+                <img
+                  src={galleryImageUrl}
+                  alt={activeGalleryItem.originalName}
+                  className="max-h-full max-w-full object-contain"
+                  onClick={event => event.stopPropagation()}
+                />
+              )}
+              {galleryItems.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      setGalleryIndex(index => (index - 1 + galleryItems.length) % galleryItems.length);
+                    }}
+                    className="absolute left-2 rounded-full bg-black/55 p-3 text-white hover:bg-black/75 sm:left-5"
+                    aria-label={t("Prethodna slika")}
+                  >
+                    <ChevronLeft className="h-7 w-7" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      setGalleryIndex(index => (index + 1) % galleryItems.length);
+                    }}
+                    className="absolute right-2 rounded-full bg-black/55 p-3 text-white hover:bg-black/75 sm:right-5"
+                    aria-label={t("Sljedeća slika")}
+                  >
+                    <ChevronRight className="h-7 w-7" />
+                  </button>
+                </>
+              )}
             </div>
           </motion.div>
         )}
