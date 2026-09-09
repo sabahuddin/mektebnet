@@ -15,7 +15,7 @@ import {
   ArrowLeft, CheckCircle2, BookOpen, BookMarked,
   ChevronDown, ChevronLeft, ChevronRight, MessageSquare, PenLine,
   HelpCircle, Sparkles, Trophy, FilePen, Save, X, Loader2, Code,
-  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2, Users, UserCog
+  ImagePlus, Camera, Printer, FileDown, FileText, ExternalLink, Trash2, Upload, Paperclip, Lock, Unlock, Plus, Pencil, Clock, Link2, Users, UserCog, Maximize2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -1742,6 +1742,8 @@ function PriloziSection({
   // (poslije refresh-a server svejedno odbije sa alreadyClaimed:true).
   const [claimedEmbeds, setClaimedEmbeds] = useState<Set<number>>(new Set());
   const [claimingEmbed, setClaimingEmbed] = useState(false);
+  const [openMaterialImage, setOpenMaterialImage] = useState<{ name: string; url: string } | null>(null);
+  const [openingImageId, setOpeningImageId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const h5pInputRef = useRef<HTMLInputElement>(null);
   const [h5pAttemptKey, setH5pAttemptKey] = useState<Record<number, number>>({});
@@ -1790,7 +1792,10 @@ function PriloziSection({
           const fd = new FormData();
           fd.append("file", file);
           const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}`, fd, token, true);
-          setAttachments(prev => [{ ...result, url: `/uploads/${(result as any).storedName || ""}` }, ...prev]);
+          setAttachments(prev => [{
+            ...result,
+            url: `/api/admin/prilozi/download/${result.id}`,
+          }, ...prev]);
           uploadedCount++;
         } catch (err) {
           console.error(`Upload priloga nije uspio: ${file.name}`, err);
@@ -2098,10 +2103,39 @@ function PriloziSection({
     }
   };
 
+  const openImageFullscreen = async (attachment: Prilog) => {
+    setOpeningImageId(attachment.id);
+    try {
+      const res = await fetch(attachment.url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(t("Greška pri otvaranju slike ({status})", { status: String(res.status) }));
+      const blobUrl = URL.createObjectURL(await res.blob());
+      setOpenMaterialImage({ name: attachment.originalName, url: blobUrl });
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
+    } finally {
+      setOpeningImageId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!openMaterialImage) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenMaterialImage(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      URL.revokeObjectURL(openMaterialImage.url);
+    };
+  }, [openMaterialImage]);
+
   if (mode === "materijali") {
     if (!canManage) return null;
     const materijali = attachments.filter(a => a.kind === "file" || a.kind === "url");
     return (
+      <>
       <div className="mt-5 rounded-xl border border-teal-200 bg-white/80 p-4" data-testid="priprema-materijali">
         <div className="mb-3 flex items-center gap-2">
           <FileText className="h-5 w-5 text-teal-700" />
@@ -2112,8 +2146,10 @@ function PriloziSection({
         </div>
         <p className="mb-3 text-xs text-muted-foreground">
           {t("Ovi materijali su dio pripreme za nastavu i vidljivi su samo muallimu i administratoru.")}
+          {" "}
+          {t("JPG mape i slike čuvaju se u originalnoj rezoluciji i mogu se otvoriti preko cijelog ekrana.")}
         </p>
-        <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf" onChange={handleUpload} className="hidden" />
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf,.jpg,.jpeg,image/jpeg" onChange={handleUpload} className="hidden" />
         <div className="mb-3 flex flex-wrap gap-2">
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
             {uploading ? (
@@ -2143,15 +2179,61 @@ function PriloziSection({
             <div key={a.id} className="flex items-center gap-3 rounded-xl border border-teal-100 bg-teal-50/60 p-3">
               <span className="text-xl">{a.kind === "url" ? "🔗" : getFileIcon(a.mimeType)}</span>
               <span className="min-w-0 flex-1 break-words text-sm font-semibold">{a.originalName}</span>
-              {a.kind === "url"
-                ? <a href={a.externalUrl || a.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-teal-700">{t("Otvori")}</a>
-                : <button onClick={() => downloadFile(a, true)} className="text-sm font-bold text-teal-700">{t("Otvori")}</button>}
+              {a.kind === "url" ? (
+                <a href={a.externalUrl || a.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-teal-700">{t("Otvori")}</a>
+              ) : a.mimeType === "image/jpeg" || /\.jpe?g$/i.test(a.originalName) ? (
+                <button
+                  onClick={() => openImageFullscreen(a)}
+                  disabled={openingImageId === a.id}
+                  className="inline-flex items-center gap-1 text-sm font-bold text-teal-700 disabled:opacity-50"
+                >
+                  {openingImageId === a.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Maximize2 className="h-4 w-4" />}
+                  {t("Puni ekran")}
+                </button>
+              ) : (
+                <button onClick={() => downloadFile(a, true)} className="text-sm font-bold text-teal-700">{t("Otvori")}</button>
+              )}
               {canDelete && <button onClick={() => handleDelete(a.id, a.originalName)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>}
             </div>
           ))}
           {materijali.length === 0 && <p className="text-sm italic text-muted-foreground">{t("Nema materijala za nastavu.")}</p>}
         </div>
       </div>
+      <AnimatePresence>
+        {openMaterialImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex flex-col bg-black/95"
+            role="dialog"
+            aria-modal="true"
+            aria-label={openMaterialImage.name}
+            onClick={() => setOpenMaterialImage(null)}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-white/15 px-4 py-3 text-white">
+              <p className="min-w-0 truncate font-bold">{openMaterialImage.name}</p>
+              <button
+                type="button"
+                onClick={() => setOpenMaterialImage(null)}
+                className="rounded-full bg-white/10 p-2 hover:bg-white/20"
+                aria-label={t("Zatvori")}
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 items-center justify-center p-2 sm:p-5">
+              <img
+                src={openMaterialImage.url}
+                alt={openMaterialImage.name}
+                className="max-h-full max-w-full object-contain"
+                onClick={event => event.stopPropagation()}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </>
     );
   }
 
