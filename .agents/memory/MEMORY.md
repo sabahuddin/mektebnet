@@ -59,3 +59,4 @@
 - [Nagrade za etape, bedževe i krunisanje](nagrade-za-etape-bedzeve-i-krunisanje.md) — Etape daju 80/90/100, Krunisanje 1000, a svaki novi bedž 50 kapi; sve samo prvi put.
 - [Sufara audio batch poslovi](sufara-audio-batch.md) — overwrite i FFmpeg normalizacija prelaze Replit timeout; koristi resumable foreground chunkove.
 - [JSON normalizacija i Date](json-normalizacija-date.md) — globalni rekurzivni formatter smije obilaziti samo plain objekte; Date inače postane {} i frontend prikaže Invalid Date.
+- [Popuni prazninu — ključni pojmovi](fillin-kljucni-pojmovi.md) — praznina provjerava riječ koja nosi znanje, ne slučajnu ili pretežno završnu riječ.
