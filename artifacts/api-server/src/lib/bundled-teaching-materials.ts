@@ -12,6 +12,7 @@ type BundledMaterial = {
 
 const MATERIAL_DIR = "nivo2-popuni-prazninu";
 const MATERIAL_DIR_31_60 = "nivo2-popuni-prazninu-31-60";
+const MATERIAL_DIR_61_68 = "nivo2-popuni-prazninu-61-68";
 
 const NIV0_2_FILL_IN_MATERIALS: BundledMaterial[] = [
   { slug: "adem-as", title: "Adem, a.s." },
@@ -73,6 +74,14 @@ const NIV0_2_FILL_IN_MATERIALS: BundledMaterial[] = [
   { slug: "prevara", title: "Prevara, laž i krađa", directory: MATERIAL_DIR_31_60 },
   { slug: "ponasanje-drustvo", title: "Ponašanje u društvu", directory: MATERIAL_DIR_31_60 },
   { slug: "elif-lam-mim", title: "Elif-lām-mīm", directory: MATERIAL_DIR_31_60 },
+  { slug: "mubarek-noci", title: "Važnost mubarek-noći", directory: MATERIAL_DIR_61_68 },
+  { slug: "nafila", title: "Vrste nafila-namaza", directory: MATERIAL_DIR_61_68 },
+  { slug: "alimi", title: "Poznati alimi u BiH", directory: MATERIAL_DIR_61_68 },
+  { slug: "bih", title: "Moja domovina — Bosna i Hercegovina", directory: MATERIAL_DIR_61_68 },
+  { slug: "bosanski-jezik", title: "Bosanski jezik", directory: MATERIAL_DIR_61_68 },
+  { slug: "kultura", title: "Kultura i tradicija", directory: MATERIAL_DIR_61_68 },
+  { slug: "bosnjak", title: "Ja sam Bošnjak/Bošnjakinja", directory: MATERIAL_DIR_61_68 },
+  { slug: "lekad-dzaekum", title: "Lekad džāekum", directory: MATERIAL_DIR_61_68 },
 ];
 
 export async function seedBundledNivo2FillInMaterials(): Promise<{

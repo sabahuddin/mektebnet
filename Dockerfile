@@ -50,6 +50,7 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=base /app/artifacts/api-server/uploads/nivo2-popuni-prazninu ./bundled-teaching-materials/nivo2-popuni-prazninu
 COPY --from=base /app/artifacts/api-server/uploads/nivo2-popuni-prazninu-31-60 ./bundled-teaching-materials/nivo2-popuni-prazninu-31-60
+COPY --from=base /app/artifacts/api-server/uploads/nivo2-popuni-prazninu-61-68 ./bundled-teaching-materials/nivo2-popuni-prazninu-61-68
 COPY --from=base /app/artifacts/api-server/scripts/apply-npp2018-lesson-subjects.mjs ./artifacts/api-server/scripts/apply-npp2018-lesson-subjects.mjs
 COPY --from=base /app/artifacts/mekteb-arapsko-pismo/dist ./artifacts/mekteb-arapsko-pismo/dist
 COPY --from=base /app/scripts/content-seed.json.gz ./scripts/content-seed.json.gz
