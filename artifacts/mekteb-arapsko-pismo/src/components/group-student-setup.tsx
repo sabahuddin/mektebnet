@@ -5,6 +5,16 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Ucenik {
   id: number;
@@ -37,6 +47,17 @@ interface GroupStudentSetupProps {
   grupaNaziv: string;
 }
 
+interface BulkDuplicate {
+  index: number;
+  type: "ucenik" | "roditelj";
+  name: string;
+}
+
+interface DuplicatePrompt {
+  duplicate: BulkDuplicate;
+  resolve: (samePerson: boolean) => void;
+}
+
 function parseBulkEntries(text: string) {
   return text.split("\n").map(line => {
     const [u, r] = line.split("|");
@@ -57,6 +78,18 @@ export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProp
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [addingStudentId, setAddingStudentId] = useState<number | null>(null);
   const [printLoading, setPrintLoading] = useState(false);
+  const [duplicatePrompt, setDuplicatePrompt] = useState<DuplicatePrompt | null>(null);
+
+  function askIfSamePerson(duplicate: BulkDuplicate): Promise<boolean> {
+    return new Promise(resolve => {
+      setDuplicatePrompt({ duplicate, resolve });
+    });
+  }
+
+  function answerDuplicatePrompt(samePerson: boolean) {
+    duplicatePrompt?.resolve(samePerson);
+    setDuplicatePrompt(null);
+  }
 
   async function loadAvailableStudents() {
     if (!token) return;
@@ -95,15 +128,58 @@ export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProp
     }
     setBulkLoading(true);
     try {
-      const results = await apiRequest<CreatedUcenik[]>("POST", "/muallim/ucenici/bulk", {
-        entries,
-        grupaId,
-      }, token);
+      const duplicateDecisions: Array<{ index: number; type: BulkDuplicate["type"]; save: boolean }> = [];
+      const rememberDecision = (duplicate: BulkDuplicate, save: boolean) => {
+        const existingIndex = duplicateDecisions.findIndex(
+          decision => decision.index === duplicate.index && decision.type === duplicate.type,
+        );
+        const decision = { index: duplicate.index, type: duplicate.type, save };
+        if (existingIndex >= 0) duplicateDecisions[existingIndex] = decision;
+        else duplicateDecisions.push(decision);
+      };
+
+      for (let checked = 0; checked <= entries.length * 2; checked++) {
+        const duplicateCheck = await apiRequest<{ duplicates: BulkDuplicate[] }>(
+          "POST",
+          "/muallim/ucenici/bulk/check-duplicates",
+          { entries, grupaId, duplicateDecisions },
+          token,
+        );
+        const duplicate = duplicateCheck.duplicates[0];
+        if (!duplicate) break;
+        const samePerson = await askIfSamePerson(duplicate);
+        rememberDecision(duplicate, !samePerson);
+      }
+
+      let results: CreatedUcenik[] | null = null;
+      let raceConfirmations = 0;
+      while (!results && raceConfirmations <= entries.length * 2) {
+        try {
+          results = await apiRequest<CreatedUcenik[]>("POST", "/muallim/ucenici/bulk", {
+            entries,
+            grupaId,
+            duplicateDecisions,
+          }, token);
+        } catch (error: any) {
+          const duplicate = error?.data?.code === "DUPLICATE_NAME_CONFIRMATION_REQUIRED"
+            ? error.data.duplicates?.[0] as BulkDuplicate | undefined
+            : undefined;
+          if (!duplicate) throw error;
+          const samePerson = await askIfSamePerson(duplicate);
+          rememberDecision(duplicate, !samePerson);
+          raceConfirmations++;
+        }
+      }
+      if (!results) throw new Error(t("Neuspješno dodavanje"));
       setCreatedStudents(results);
       const withParent = results.filter(result => result.roditelj).length;
       toast({
         title: t("{n} učenika dodano!", { n: String(results.length) }),
-        description: withParent > 0 ? t("{n} sa nalogom za roditelja", { n: String(withParent) }) : undefined,
+        description: duplicateDecisions.length > 0
+          ? t("Spojite učenika i njegovog roditelja naknadno.")
+          : withParent > 0
+            ? t("{n} sa nalogom za roditelja", { n: String(withParent) })
+            : undefined,
       });
       await Promise.all([loadAvailableStudents(), loadGroupStudents()]);
     } catch (error: any) {
@@ -213,6 +289,7 @@ export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProp
   const withParent = entries.filter(entry => entry.roditelj).length;
 
   return (
+    <>
     <section className="bg-white border border-border/50 rounded-2xl p-4 sm:p-6 space-y-5">
       <div>
         <h2 className="font-extrabold text-foreground flex items-center gap-2">
@@ -365,5 +442,28 @@ export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProp
         </div>
       )}
     </section>
+    <AlertDialog open={duplicatePrompt !== null}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t("Osoba s istim imenom i prezimenom postoji. Da li se radi o istoj osobi?")}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {duplicatePrompt
+              ? `${duplicatePrompt.duplicate.name} · ${t(duplicatePrompt.duplicate.type === "ucenik" ? "Učenik" : "Roditelj")}`
+              : ""}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => answerDuplicatePrompt(false)}>
+            {t("NE")}
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={() => answerDuplicatePrompt(true)}>
+            {t("DA")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

@@ -1795,31 +1795,218 @@ router.post("/ucenici", async (req, res) => {
 // Body shape (preferirano): { entries: Array<{ ucenik: string; roditelj?: string }>, grupaId? }
 // Back-compat: { imena: string[], grupaId? } — bez roditelja.
 // Roditelji NE ulaze u kvotu licenci.
+type BulkPersonType = "ucenik" | "roditelj";
+type BulkEntry = { ucenik: string; roditelj: string | null };
+type BulkDuplicate = { index: number; type: BulkPersonType; name: string };
+type BulkDuplicateDecision = { index: number; type: BulkPersonType; save: boolean };
+
+function parseBulkDuplicateDecisions(value: unknown): BulkDuplicateDecision[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const decisions: BulkDuplicateDecision[] = [];
+  const keys = new Set<string>();
+  for (const raw of value) {
+    if (
+      !raw
+      || !Number.isInteger(raw.index)
+      || raw.index < 0
+      || (raw.type !== "ucenik" && raw.type !== "roditelj")
+      || typeof raw.save !== "boolean"
+    ) {
+      return null;
+    }
+    const key = `${raw.index}:${raw.type}`;
+    if (keys.has(key)) return null;
+    keys.add(key);
+    decisions.push({ index: raw.index, type: raw.type, save: raw.save });
+  }
+  return decisions;
+}
+
+function normalizeBulkPersonName(name: string): string {
+  return name.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("bs");
+}
+
+async function findBulkDuplicates(
+  userId: number,
+  grupaId: number | undefined,
+  entries: BulkEntry[],
+  duplicateDecisions: BulkDuplicateDecision[] = [],
+): Promise<{ unresolved: BulkDuplicate | null; duplicateKeys: Set<string> }> {
+  const ctx = await getMektebCtx(userId);
+  let scopeMektebId = ctx?.mektebId ?? null;
+  let scopeMuallimId = userId;
+
+  if (grupaId) {
+    const groupScope = await db.execute(sql`
+      SELECT g.muallim_id, mp.mekteb_id
+      FROM grupe g
+      LEFT JOIN muallim_profili mp ON mp.user_id = g.muallim_id
+      WHERE g.id = ${grupaId}
+      LIMIT 1
+    `);
+    const row = groupScope.rows[0] as { muallim_id?: number; mekteb_id?: number | null } | undefined;
+    if (row?.muallim_id) scopeMuallimId = Number(row.muallim_id);
+    if (row?.mekteb_id) scopeMektebId = Number(row.mekteb_id);
+  }
+
+  const studentScope = scopeMektebId
+    ? sql`mp.mekteb_id = ${scopeMektebId}`
+    : sql`up.muallim_id = ${scopeMuallimId}`;
+
+  const existingStudents = await db.execute(sql`
+    SELECT DISTINCT u.display_name
+    FROM users u
+    JOIN ucenik_profili up ON up.user_id = u.id
+    LEFT JOIN muallim_profili mp ON mp.user_id = up.muallim_id
+    WHERE u.role = 'ucenik'
+      AND COALESCE(u.is_active, true) = true
+      AND COALESCE(up.is_archived, false) = false
+      AND ${studentScope}
+  `);
+  const existingParents = await db.execute(sql`
+    SELECT DISTINCT r.display_name
+    FROM users r
+    JOIN roditelj_ucenik ru ON ru.roditelj_id = r.id
+    JOIN ucenik_profili up ON up.user_id = ru.ucenik_id
+    LEFT JOIN muallim_profili mp ON mp.user_id = up.muallim_id
+    WHERE r.role = 'roditelj'
+      AND COALESCE(r.is_active, true) = true
+      AND ${studentScope}
+  `);
+
+  const seenStudents = new Set(
+    existingStudents.rows.map(row => normalizeBulkPersonName(String((row as { display_name: unknown }).display_name))),
+  );
+  const seenParents = new Set(
+    existingParents.rows.map(row => normalizeBulkPersonName(String((row as { display_name: unknown }).display_name))),
+  );
+  const decisions = new Map(
+    duplicateDecisions.map(decision => [`${decision.index}:${decision.type}`, decision.save]),
+  );
+  const duplicateKeys = new Set<string>();
+
+  for (const [index, entry] of entries.entries()) {
+    const studentKey = normalizeBulkPersonName(entry.ucenik);
+    if (seenStudents.has(studentKey)) {
+      const decisionKey = `${index}:ucenik`;
+      duplicateKeys.add(decisionKey);
+      const save = decisions.get(decisionKey);
+      if (save === undefined) {
+        return {
+          unresolved: { index, type: "ucenik", name: entry.ucenik },
+          duplicateKeys,
+        };
+      }
+      if (!save) continue;
+    }
+    seenStudents.add(studentKey);
+
+    if (entry.roditelj) {
+      const parentKey = normalizeBulkPersonName(entry.roditelj);
+      if (seenParents.has(parentKey)) {
+        const decisionKey = `${index}:roditelj`;
+        duplicateKeys.add(decisionKey);
+        const save = decisions.get(decisionKey);
+        if (save === undefined) {
+          return {
+            unresolved: { index, type: "roditelj", name: entry.roditelj },
+            duplicateKeys,
+          };
+        }
+        if (!save) continue;
+      }
+      seenParents.add(parentKey);
+    }
+  }
+
+  return { unresolved: null, duplicateKeys };
+}
+
+function normalizeBulkEntries(body: {
+  entries?: Array<{ ucenik?: string; roditelj?: string | null }>;
+  imena?: string[];
+}): BulkEntry[] {
+  if (Array.isArray(body.entries) && body.entries.length > 0) {
+    return body.entries
+      .map(entry => ({
+        ucenik: (entry?.ucenik || "").trim(),
+        roditelj: entry?.roditelj ? String(entry.roditelj).trim() : null,
+      }))
+      .filter(entry => entry.ucenik.length > 0)
+      .map(entry => ({
+        ucenik: entry.ucenik,
+        roditelj: entry.roditelj && entry.roditelj.length > 0 ? entry.roditelj : null,
+      }));
+  }
+  if (Array.isArray(body.imena) && body.imena.length > 0) {
+    return body.imena
+      .map(name => ({ ucenik: (name || "").trim(), roditelj: null }))
+      .filter(entry => entry.ucenik.length > 0);
+  }
+  return [];
+}
+
+router.post("/ucenici/bulk/check-duplicates", async (req, res) => {
+  try {
+    const body = req.body as {
+      entries?: Array<{ ucenik?: string; roditelj?: string | null }>;
+      imena?: string[];
+      grupaId?: number;
+      duplicateDecisions?: BulkDuplicateDecision[];
+    };
+    const entries = normalizeBulkEntries(body);
+    if (entries.length === 0) {
+      res.status(400).json({ error: "Lista učenika je obavezna" });
+      return;
+    }
+    const duplicateDecisions = parseBulkDuplicateDecisions(body.duplicateDecisions);
+    if (!duplicateDecisions) {
+      res.status(400).json({ error: "Neispravne odluke o duplikatima" });
+      return;
+    }
+    if (body.grupaId) {
+      const bulkCtx = await getMektebCtx(req.user!.userId);
+      const grupaErr = await validateTargetGrupa(
+        parseInt(String(body.grupaId)), req.user!.userId, req.user!.role === "admin",
+        bulkCtx?.mektebId ? { mektebId: bulkCtx.mektebId, isGlavni: bulkCtx.isGlavni } : null,
+      );
+      if (grupaErr) {
+        res.status(grupaErr.status).json({ error: grupaErr.error });
+        return;
+      }
+    }
+    const evaluation = await findBulkDuplicates(
+      req.user!.userId,
+      body.grupaId,
+      entries,
+      duplicateDecisions,
+    );
+    res.json({ duplicates: evaluation.unresolved ? [evaluation.unresolved] : [] });
+  } catch (err) {
+    req.log.error({ err }, "Bulk duplicate check failed");
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 router.post("/ucenici/bulk", async (req, res) => {
   try {
     const body = req.body as {
       entries?: Array<{ ucenik?: string; roditelj?: string | null }>;
       imena?: string[];
       grupaId?: number;
+      duplicateDecisions?: BulkDuplicateDecision[];
     };
 
-    let normalized: Array<{ ucenik: string; roditelj: string | null }> = [];
-    if (Array.isArray(body.entries) && body.entries.length > 0) {
-      normalized = body.entries
-        .map(e => ({
-          ucenik: (e?.ucenik || "").trim(),
-          roditelj: e?.roditelj ? String(e.roditelj).trim() : null,
-        }))
-        .filter(e => e.ucenik.length > 0)
-        .map(e => ({ ucenik: e.ucenik, roditelj: e.roditelj && e.roditelj.length > 0 ? e.roditelj : null }));
-    } else if (Array.isArray(body.imena) && body.imena.length > 0) {
-      normalized = body.imena
-        .map(n => ({ ucenik: (n || "").trim(), roditelj: null }))
-        .filter(e => e.ucenik.length > 0);
-    }
+    const normalized = normalizeBulkEntries(body);
 
     if (normalized.length === 0) {
       res.status(400).json({ error: "Lista učenika je obavezna" });
+      return;
+    }
+    const duplicateDecisions = parseBulkDuplicateDecisions(body.duplicateDecisions);
+    if (!duplicateDecisions) {
+      res.status(400).json({ error: "Neispravne odluke o duplikatima" });
       return;
     }
 
@@ -1833,9 +2020,40 @@ router.post("/ucenici/bulk", async (req, res) => {
     }
 
     const muallimId = req.user!.userId;
+    const decisions = new Map(
+      duplicateDecisions.map(decision => [`${decision.index}:${decision.type}`, decision.save]),
+    );
+    const evaluation = await findBulkDuplicates(
+      muallimId,
+      body.grupaId,
+      normalized,
+      duplicateDecisions,
+    );
+    if (evaluation.unresolved) {
+      res.status(409).json({
+        error: "Potrebna je potvrda za osobe s istim imenom i prezimenom",
+        code: "DUPLICATE_NAME_CONFIRMATION_REQUIRED",
+        duplicates: [evaluation.unresolved],
+      });
+      return;
+    }
+    const invalidDecision = [...decisions.keys()].find(key => !evaluation.duplicateKeys.has(key));
+    if (invalidDecision) {
+      res.status(400).json({ error: "Odluka o duplikatu više nije važeća" });
+      return;
+    }
+
+    const entriesToCreate = normalized
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ index }) => decisions.get(`${index}:ucenik`) !== false)
+      .map(({ entry, index }) => ({
+        ...entry,
+        roditelj: decisions.get(`${index}:roditelj`) === false ? null : entry.roditelj,
+      }));
+
     const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
     const remaining = profil ? profil.licenceCount - profil.licencesUsed : 999;
-    if (normalized.length > remaining) {
+    if (entriesToCreate.length > remaining) {
       res.status(403).json({ error: `Možete dodati još ${remaining} učenika (limit licenci)` });
       return;
     }
@@ -1848,7 +2066,7 @@ router.post("/ucenici/bulk", async (req, res) => {
     }> = [];
 
     let kreiranoUcenika = 0;
-    for (const e of normalized) {
+    for (const e of entriesToCreate) {
       // Po jedan učenik (sa opcionim roditeljem) — retry petlja garantuje
       // da par dijeli sufiks i lozinku i kad postoji kolizija username-a.
       let createdEntry: typeof results[number] | null = null;
