@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { db } from "@workspace/db";
 import { ilmihalLekcijeTable, prilozi } from "@workspace/db/schema";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 type BundledMaterial = {
   slug: string;
@@ -13,6 +13,7 @@ type BundledMaterial = {
 const MATERIAL_DIR = "nivo2-popuni-prazninu";
 const MATERIAL_DIR_31_60 = "nivo2-popuni-prazninu-31-60";
 const MATERIAL_DIR_61_68 = "nivo2-popuni-prazninu-61-68";
+const LEGACY_DUPLICATE_STORED_NAME = `${MATERIAL_DIR_31_60}/namaz-cuva.pdf`;
 
 const NIV0_2_FILL_IN_MATERIALS: BundledMaterial[] = [
   { slug: "adem-as", title: "Adem, a.s." },
@@ -86,6 +87,8 @@ const NIV0_2_FILL_IN_MATERIALS: BundledMaterial[] = [
 
 export async function seedBundledNivo2FillInMaterials(): Promise<{
   inserted: number;
+  updated: number;
+  removedLegacyDuplicates: number;
   skipped: number;
   missingFiles: string[];
   missingLessons: string[];
@@ -99,11 +102,13 @@ export async function seedBundledNivo2FillInMaterials(): Promise<{
   const lessonIds = lessonRows.map(lesson => lesson.id);
   const existingRows = lessonIds.length > 0
     ? await db
-        .select({ lekcijaId: prilozi.lekcijaId, storedName: prilozi.storedName })
+        .select({ id: prilozi.id, lekcijaId: prilozi.lekcijaId, storedName: prilozi.storedName })
         .from(prilozi)
         .where(inArray(prilozi.lekcijaId, lessonIds))
     : [];
-  const existing = new Set(existingRows.map(row => `${row.lekcijaId}:${row.storedName}`));
+  const existingByKey = new Map(
+    existingRows.map(row => [`${row.lekcijaId}:${row.storedName}`, row]),
+  );
 
   const uploadsDir = process.env["UPLOADS_DIR"]
     ? path.resolve(process.env["UPLOADS_DIR"])
@@ -114,7 +119,17 @@ export async function seedBundledNivo2FillInMaterials(): Promise<{
   const missingFiles: string[] = [];
   const missingLessons: string[] = [];
   const rows: Array<typeof prilozi.$inferInsert> = [];
+  let updated = 0;
   let skipped = 0;
+
+  const legacyDuplicateRows = await db
+    .delete(prilozi)
+    .where(eq(prilozi.storedName, LEGACY_DUPLICATE_STORED_NAME))
+    .returning({ id: prilozi.id });
+  const legacyDuplicatePath = path.join(uploadsDir, LEGACY_DUPLICATE_STORED_NAME);
+  if (fs.existsSync(legacyDuplicatePath)) {
+    fs.unlinkSync(legacyDuplicatePath);
+  }
 
   for (const material of NIV0_2_FILL_IN_MATERIALS) {
     const lessonId = lessonIdBySlug.get(material.slug);
@@ -125,7 +140,9 @@ export async function seedBundledNivo2FillInMaterials(): Promise<{
     const storedName = `${material.directory || MATERIAL_DIR}/${material.slug}.pdf`;
     const filePath = path.join(uploadsDir, storedName);
     const bundledFilePath = path.join(bundledMaterialsDir, storedName);
-    if (!fs.existsSync(filePath) && fs.existsSync(bundledFilePath)) {
+    const bundledFileExists = fs.existsSync(bundledFilePath);
+    const bundledAndUploadAreSameFile = path.resolve(bundledFilePath) === path.resolve(filePath);
+    if (bundledFileExists && !bundledAndUploadAreSameFile) {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.copyFileSync(bundledFilePath, filePath);
     }
@@ -133,8 +150,22 @@ export async function seedBundledNivo2FillInMaterials(): Promise<{
       missingFiles.push(storedName);
       continue;
     }
-    if (existing.has(`${lessonId}:${storedName}`)) {
-      skipped++;
+    const fileSize = fs.statSync(filePath).size;
+    const existingRow = existingByKey.get(`${lessonId}:${storedName}`);
+    if (existingRow) {
+      await db
+        .update(prilozi)
+        .set({
+          originalName: `${material.title} — popuni prazninu.pdf`,
+          fileSize,
+          mimeType: "application/pdf",
+          approved: true,
+        })
+        .where(and(
+          eq(prilozi.lekcijaId, lessonId),
+          eq(prilozi.storedName, storedName),
+        ));
+      updated++;
       continue;
     }
     rows.push({
@@ -142,7 +173,7 @@ export async function seedBundledNivo2FillInMaterials(): Promise<{
       redoslijed: -1000,
       originalName: `${material.title} — popuni prazninu.pdf`,
       storedName,
-      fileSize: fs.statSync(filePath).size,
+      fileSize,
       mimeType: "application/pdf",
       kind: "file",
       approved: true,
@@ -158,6 +189,8 @@ export async function seedBundledNivo2FillInMaterials(): Promise<{
 
   return {
     inserted: rows.length,
+    updated,
+    removedLegacyDuplicates: legacyDuplicateRows.length,
     skipped,
     missingFiles,
     missingLessons,
