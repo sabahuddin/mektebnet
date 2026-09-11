@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { bootstrapDrizzleMigrations, runDrizzleMigrate } from "./lib/drizzle-migrate";
 import { applyBundledGermanOverlays } from "./lib/bundled-german-overlay";
+import { seedBundledNivo2FillInMaterials } from "./lib/bundled-teaching-materials";
 
 interface DbExecResult<T = Record<string, unknown>> {
   rows: T[];
@@ -1686,6 +1687,12 @@ async function startup() {
 
   await applyBundledGermanOverlays();
   await runDataBootstrap();
+  try {
+    const result = await seedBundledNivo2FillInMaterials();
+    logger.info(result, "Nivo 2 Popuni prazninu materijali provjereni");
+  } catch (e) {
+    logger.error({ err: e }, "Nivo 2 Popuni prazninu materijali nisu registrirani");
+  }
   await normalizePitanjaPoLekcijama();
   try {
     const { seedHalalHaramLesson } = await import("./routes/halal-haram-seed.js");
