@@ -7,7 +7,11 @@ import { inArray } from "drizzle-orm";
 type BundledMaterial = {
   slug: string;
   title: string;
+  directory?: string;
 };
+
+const MATERIAL_DIR = "nivo2-popuni-prazninu";
+const MATERIAL_DIR_31_60 = "nivo2-popuni-prazninu-31-60";
 
 const NIV0_2_FILL_IN_MATERIALS: BundledMaterial[] = [
   { slug: "adem-as", title: "Adem, a.s." },
@@ -40,9 +44,36 @@ const NIV0_2_FILL_IN_MATERIALS: BundledMaterial[] = [
   { slug: "braca-sestre", title: "Pažnja prema sestrama i braći" },
   { slug: "rodbina", title: "Dužnosti prema rodbini" },
   { slug: "namaz-cuva", title: "Namaz čuva i odgaja" },
+  { slug: "podne-namaz", title: "Podne-namaz", directory: MATERIAL_DIR_31_60 },
+  { slug: "tejemum", title: "Tejemum — simbolično čišćenje", directory: MATERIAL_DIR_31_60 },
+  { slug: "mesh", title: "Mesh po mestvama i zavoju", directory: MATERIAL_DIR_31_60 },
+  { slug: "el-kevser", title: "Učenje sure El-Kevser", directory: MATERIAL_DIR_31_60 },
+  { slug: "mali-grijesi", title: "Vrste grijeha — mali grijesi", directory: MATERIAL_DIR_31_60 },
+  { slug: "veliki-grijesi", title: "Veliki grijesi", directory: MATERIAL_DIR_31_60 },
+  { slug: "teski-grijesi", title: "Teški grijesi", directory: MATERIAL_DIR_31_60 },
+  { slug: "posljedice-grijeha", title: "Posljedice grijeha", directory: MATERIAL_DIR_31_60 },
+  { slug: "tevba", title: "Tevba — pokajanje", directory: MATERIAL_DIR_31_60 },
+  { slug: "cestitost", title: "Čestitost i odgovornost", directory: MATERIAL_DIR_31_60 },
+  { slug: "iskrenost", title: "Iskrenost i saosjećajnost", directory: MATERIAL_DIR_31_60 },
+  { slug: "skromnost", title: "Skromnost i umjerenost", directory: MATERIAL_DIR_31_60 },
+  { slug: "ikindija-namaz", title: "Ikindija-namaz", directory: MATERIAL_DIR_31_60 },
+  { slug: "namaz-putnika", title: "Namaz putnika", directory: MATERIAL_DIR_31_60 },
+  { slug: "namaz-bolesnika", title: "Namaz bolesnika", directory: MATERIAL_DIR_31_60 },
+  { slug: "jacija-namaz", title: "Jacija-namaz", directory: MATERIAL_DIR_31_60 },
+  { slug: "kunut-dova", title: "Učenje Kunut-dove", directory: MATERIAL_DIR_31_60 },
+  { slug: "namaska-dova", title: "Namaska dova", directory: MATERIAL_DIR_31_60 },
+  { slug: "el-maun", title: "Učenje sure El-Maun", directory: MATERIAL_DIR_31_60 },
+  { slug: "radne-navike", title: "Razvijanje radne navike", directory: MATERIAL_DIR_31_60 },
+  { slug: "srednji-put", title: "Uloga i važnost srednjeg puta", directory: MATERIAL_DIR_31_60 },
+  { slug: "dzuma-namaz", title: "Džuma-namaz", directory: MATERIAL_DIR_31_60 },
+  { slug: "bajram-namaz", title: "Bajram-namaz", directory: MATERIAL_DIR_31_60 },
+  { slug: "el-kurejs", title: "Učenje sure El-Kurejš", directory: MATERIAL_DIR_31_60 },
+  { slug: "teravih-namaz", title: "Teravih-namaz", directory: MATERIAL_DIR_31_60 },
+  { slug: "istina", title: "Važnost i snaga istine", directory: MATERIAL_DIR_31_60 },
+  { slug: "prevara", title: "Prevara, laž i krađa", directory: MATERIAL_DIR_31_60 },
+  { slug: "ponasanje-drustvo", title: "Ponašanje u društvu", directory: MATERIAL_DIR_31_60 },
+  { slug: "elif-lam-mim", title: "Elif-lām-mīm", directory: MATERIAL_DIR_31_60 },
 ];
-
-const MATERIAL_DIR = "nivo2-popuni-prazninu";
 
 export async function seedBundledNivo2FillInMaterials(): Promise<{
   inserted: number;
@@ -82,7 +113,7 @@ export async function seedBundledNivo2FillInMaterials(): Promise<{
       missingLessons.push(material.slug);
       continue;
     }
-    const storedName = `${MATERIAL_DIR}/${material.slug}.pdf`;
+    const storedName = `${material.directory || MATERIAL_DIR}/${material.slug}.pdf`;
     const filePath = path.join(uploadsDir, storedName);
     const bundledFilePath = path.join(bundledMaterialsDir, storedName);
     if (!fs.existsSync(filePath) && fs.existsSync(bundledFilePath)) {
