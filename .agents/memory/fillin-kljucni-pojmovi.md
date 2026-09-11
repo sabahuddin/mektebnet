@@ -3,8 +3,8 @@ name: Popuni prazninu — ključni pojmovi
 description: Pravilo za izradu nastavnih vježbi Popuni prazninu.
 ---
 
-Praznina mora tražiti glavnu riječ koja nosi znanje izjave ili pitanja: naziv pojma, propisa, obreda, broj, definiciju ili ključni zaključak lekcije. Ne koristiti obične gramatičke ili usputne riječi samo da bi rečenica imala prazninu.
+Svaka vježba ima 10 rečenica i svaka rečenica tačno jednu prazninu. Praznina mora tražiti glavnu riječ koja nosi znanje: naziv pojma, propisa, obreda, broj, definiciju ili ključni zaključak. Ne koristiti obične gramatičke ili usputne riječi samo da bi rečenica imala prazninu.
 
-**Why:** Materijal sa smislenim sadržajem ipak je bio loš jer je 87% praznina automatski završilo na posljednjoj riječi rečenice, a mnoge nisu provjeravale glavno znanje.
+**Why:** Raniji materijali imali su samo 7 rečenica ili su zadnje tri rečenice ostavljali bez praznina; drugi pokušaj je 87% praznina stavio na kraj. Korisnik traži puni set od 10 aktivnih pitanja.
 
-**How to apply:** Prvo odabrati 6–7 ključnih odgovora po lekciji, pa tek onda oko njih napisati rečenice. Rasporediti ih na početak, sredinu i kraj; prije predaje automatski izmjeriti položaje i ručno provjeriti da svaki odgovor nosi nastavno znanje.
+**How to apply:** Prvo odabrati 10 ključnih odgovora po lekciji, pa oko njih napisati 10 rečenica. Svaka rečenica dobija jednu prazninu; u svakoj lekciji moraju biti zastupljeni početak, sredina i kraj. Prije predaje automatski provjeriti 10/10/tri položaja i ručno pregledati odgovore.
