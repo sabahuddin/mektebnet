@@ -518,6 +518,13 @@ export default function RegisterRoditeljPage() {
                           </button>
                         ))}
                       </div>
+                      {isBiH !== null && (
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                          {isBiH
+                            ? t("Dodatni muallim: 30 KM godišnje. (1 učenik i 1 roditelj: 2 KM godišnje.)")
+                            : t("Dodatni muallim: 30 € godišnje. (1 učenik i 1 roditelj: 2 € godišnje.)")}
+                        </p>
+                      )}
                     </div>
 
                     <div>
