@@ -9,6 +9,29 @@ import type { NapametStavka } from "@/components/NapametPregled";
 
 type LokalnaStavka = NapametStavka & { isVisible?: boolean };
 
+function NapametUceniciLinija({ item, compact = false }: { item: NapametStavka; compact?: boolean }) {
+  const { t } = useLanguage();
+  if (typeof item.ukupnoUcenika !== "number") return null;
+  const ukupno = Math.max(0, item.ukupnoUcenika);
+  const naucilo = Math.min(ukupno, Math.max(0, item.ocijenjenoUcenika ?? 0));
+  const nijeNaucilo = Math.max(0, ukupno - naucilo);
+  const procenat = ukupno ? (naucilo / ukupno) * 100 : 0;
+
+  return <div className={compact ? "w-28 shrink-0" : "mt-2 w-full"}>
+    <div className="mb-1 flex items-center justify-between gap-2 text-[10px] font-extrabold">
+      <span className="text-emerald-700">{t("Naučeno")}: {naucilo}</span>
+      <span className="text-red-600">{t("Još nije naučeno")}: {nijeNaucilo}</span>
+    </div>
+    <div
+      className="flex h-2 w-full overflow-hidden rounded-full bg-red-500"
+      role="img"
+      aria-label={`${t("Naučeno")}: ${naucilo}. ${t("Još nije naučeno")}: ${nijeNaucilo}.`}
+    >
+      <div className="h-full bg-emerald-500" style={{ width: `${procenat}%` }} />
+    </div>
+  </div>;
+}
+
 export function NapametLokalniProgramEditor({
   grupaId,
   globalItems = [],
@@ -104,7 +127,7 @@ export function NapametLokalniProgramEditor({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
              {section.map((item) => <button type="button" key={item.id} onClick={() => onItemClick?.(item)} className="min-w-0 rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-2 text-left text-sm font-semibold leading-snug text-emerald-950 hover:border-emerald-300 hover:bg-emerald-100 transition-colors">
                <span className="block">{item.naziv}</span>
-               {typeof item.ukupnoUcenika === "number" && <span className="mt-1 block text-xs font-extrabold text-emerald-700">{item.ocijenjenoUcenika ?? 0}/{item.ukupnoUcenika}</span>}
+                <NapametUceniciLinija item={item} />
               </button>)}
           </div>
         </div> : null;
@@ -126,7 +149,7 @@ export function NapametLokalniProgramEditor({
              }} className={`flex gap-2 items-center rounded-xl border px-3 py-2 ${item.isVisible === false ? "opacity-60 bg-slate-50" : ""}`}>
             <div className="flex flex-col"><button disabled={saving || index === 0} onClick={() => void reorder(sectionNivo, index, -1)} aria-label={t("Pomjeri gore")}><ChevronUp className="w-3 h-3" /></button><button disabled={saving || index === section.length - 1} onClick={() => void reorder(sectionNivo, index, 1)} aria-label={t("Pomjeri dolje")}><ChevronDown className="w-3 h-3" /></button></div>
              <input defaultValue={item.naziv} onClick={(event) => event.stopPropagation()} onBlur={(event) => { const value = event.target.value.trim(); if (value && value !== item.naziv) void update(item, { naziv: value }); }} className="min-w-0 flex-1 rounded-lg border border-border px-2 py-1.5 text-sm font-semibold" aria-label={t("Naziv lokalne stavke")} />
-             {typeof item.ukupnoUcenika === "number" && <span className="shrink-0 text-xs font-extrabold text-emerald-700">{item.ocijenjenoUcenika ?? 0}/{item.ukupnoUcenika}</span>}
+             <NapametUceniciLinija item={item} compact />
             <select value={item.nivo} disabled={saving} onChange={(event) => void update(item, { nivo: Number(event.target.value) })} className="rounded-lg border border-border px-2 py-1.5 text-sm">{[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value}</option>)}</select>
             <button disabled={saving} onClick={() => void update(item, { isVisible: item.isVisible === false })} className="rounded-lg px-2 py-1.5 text-xs font-bold bg-slate-100">{item.isVisible === false ? t("Prikaži") : t("Sakrij")}</button>
           </div>)}
