@@ -399,8 +399,8 @@ export default function MuallimTutorijalPage() {
             icon={Users}
             accent="bg-[#3d8a73]"
             click={<><strong>Otvori svaku grupu → Podešavanja → Učenici grupe.</strong> Za veći broj djece koristi masovni unos. Za pojedinačno dijete možeš koristiti postojeći obrazac.</>}
-            action={<>Glavni muallim u tekstualno polje upiše svako dijete u novi red. Roditelja prvi put unese uz jedno dijete pomoću znaka <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">|</code>, a zatim sam pronađe tog roditelja i poveže ga sa svom ostalom djecom iz iste porodice.</>}
-            why={<>Masovni unos štedi vrijeme, a jedan roditeljski nalog omogućava roditelju da prati svu svoju djecu. Glavni muallim ovim redom rada sprečava duplikate i osigurava da svako dijete bude povezano s pravim roditeljem i svojim muallimom.</>}
+            action={<>Glavni muallim u tekstualno polje upiše svako dijete u novi red. Roditelja unese iza znaka <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">|</code>. Ako sistem pronađe isto ime i prezime u džematu, glavni muallim potvrđuje da li je to ista ili druga osoba.</>}
+            why={<>Masovni unos štedi vrijeme, a provjera istih imena sprečava slučajno pravljenje duplih naloga. Provjera ostaje unutar jednog džemata, tako da se podaci osoba iz drugih džemata ne prikazuju.</>}
             next={<>Tek kada su djeca, roditelji, grupe i muallimi povezani, glavni muallim štampa pristupne kartice sa korisničkim imenima i šiframa.</>}
             important={<>Glavni muallim treba prvi unijeti djecu i roditelje za cijeli mekteb. <strong>Roditelj ne treba naknadno slati zahtjev za drugo dijete:</strong> glavni muallim sam povezuje svu djecu sa roditeljem i sa odgovarajućim muallimom prije štampanja kartica. Pristupne podatke uruči sigurno, pojedinačno i bez javnog dijeljenja.</>}
           >
@@ -413,7 +413,10 @@ export default function MuallimTutorijalPage() {
               <p className="mt-3 text-xs leading-5 text-[#55706a]">Lijevo od znaka je učenik, desno je roditelj. Roditeljski nalog je opcionalan.</p>
             </div>
             <p>
-              Ako dijete već postoji u mektebu, ne pravi novi nalog. Izaberi <strong>Dodaj postojećeg</strong> i poveži ga s ovom grupom. Kada je grupa popunjena, u istom dijelu <strong>Podešavanja → Učenici grupe</strong> koristi <strong>Printaj kartice</strong> za čuvanje i štampanje pristupnih podataka.
+              Ako se tokom spremanja pojavi poruka <strong>„Osoba s istim imenom i prezimenom postoji. Da li se radi o istoj osobi?“</strong>, izaberi <strong>DA</strong> kada se radi o istoj osobi ili <strong>NE</strong> kada dvije različite osobe imaju isto ime i prezime. Odgovor <strong>DA</strong> za učenika preskače cijeli taj red. Odgovor <strong>DA</strong> za roditelja sprema učenika bez pravljenja novog roditeljskog naloga, pa učenika i postojećeg roditelja treba spojiti naknadno. Odgovor <strong>NE</strong> sprema novu osobu.
+            </p>
+            <p className="mt-4">
+              Sistem provjerava samo osobe iz istog džemata. Osobe s istim imenom iz drugih džemata neće se prikazati u upozorenju. Ako dijete već postoji i želiš ga dodati u grupu, izaberi <strong>Dodaj postojećeg</strong>. Kada je grupa popunjena, koristi <strong>Printaj kartice</strong> za čuvanje i štampanje pristupnih podataka.
             </p>
             <div className="mt-5 rounded-2xl border border-[#e8c98d] bg-[#fff8e9] p-4 sm:p-5">
               <div className="flex items-start gap-3">

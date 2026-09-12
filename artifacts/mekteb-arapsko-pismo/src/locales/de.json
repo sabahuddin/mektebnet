@@ -3238,5 +3238,8 @@
   "Poruke muallima": "Nachrichten des Muallims",
   "Pročitaj obavijesti i komuniciraj s muallimom kada ti treba pomoć.": "Lies Mitteilungen und kommuniziere mit dem Muallim, wenn du Hilfe brauchst.",
   "Ocjene djeteta": "Noten des Kindes",
-  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "Sieh für jedes Kind die Noten, die Art der Note, den Kommentar des Muallims und den bewerteten Lernstoff."
+  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "Sieh für jedes Kind die Noten, die Art der Note, den Kommentar des Muallims und den bewerteten Lernstoff.",
+  "Učenike i njihove roditelje možeš dodati pojedinačno ili masovno, a zatim ih rasporediti u odgovarajuće grupe.": "Du kannst Schüler und ihre Eltern einzeln oder gesammelt hinzufügen und sie anschließend den passenden Gruppen zuordnen.",
+  "U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu.": "Öffne in der Gruppe Einstellungen → Schüler der Gruppe → Neue Schüler hinzufügen. Trage jeden Schüler in eine neue Zeile und den Elternteil hinter dem Zeichen | ein. Wenn derselbe Vor- und Nachname erscheint, wähle JA für dieselbe Person oder NEIN für eine andere Person.",
+  "Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno.": "Die Prüfung erfolgt nur innerhalb derselben Džemat-Gemeinde. JA überspringt die bestehende Person, NEIN erstellt ein neues Konto. Ist die bestehende Person ein Elternteil, wird der Schüler ohne neuen Elternteil erstellt und kann später verknüpft werden."
 }

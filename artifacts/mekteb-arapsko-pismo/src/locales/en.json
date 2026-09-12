@@ -3238,5 +3238,8 @@
   "Poruke muallima": "Messages from the muallim",
   "Pročitaj obavijesti i komuniciraj s muallimom kada ti treba pomoć.": "Read notices and communicate with the muallim when you need help.",
   "Ocjene djeteta": "Child's grades",
-  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "For each child, see grades, the grade type, the muallim's comment, and the material that was assessed."
+  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "For each child, see grades, the grade type, the muallim's comment, and the material that was assessed.",
+  "Učenike i njihove roditelje možeš dodati pojedinačno ili masovno, a zatim ih rasporediti u odgovarajuće grupe.": "You can add students and their parents individually or in bulk, then assign them to the appropriate groups.",
+  "U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu.": "In the group, open Settings → Group students → Add new students. Enter each student on a new line and the parent after the | symbol. If the same first and last name appears, choose YES for the same person or NO for a different person.",
+  "Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno.": "The check only covers the same jamaat. YES skips the existing person, while NO creates a new account. If the existing person is a parent, the student is created without a new parent and you can link them later."
 }

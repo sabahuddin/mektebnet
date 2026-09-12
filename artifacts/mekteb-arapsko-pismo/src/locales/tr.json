@@ -2473,5 +2473,8 @@
   "Poruke muallima": "Muallimin mesajları",
   "Pročitaj obavijesti i komuniciraj s muallimom kada ti treba pomoć.": "Bildirimleri okuyun ve yardıma ihtiyacınız olduğunda muallimle iletişim kurun.",
   "Ocjene djeteta": "Çocuğun notları",
-  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "Her çocuk için notları, not türünü, muallimin yorumunu ve değerlendirilen konuyu görün."
+  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "Her çocuk için notları, not türünü, muallimin yorumunu ve değerlendirilen konuyu görün.",
+  "Učenike i njihove roditelje možeš dodati pojedinačno ili masovno, a zatim ih rasporediti u odgovarajuće grupe.": "Öğrencileri ve velilerini tek tek veya toplu olarak ekleyebilir, ardından uygun gruplara yerleştirebilirsiniz.",
+  "U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu.": "Grupta Ayarlar → Grup öğrencileri → Yeni öğrenciler ekle bölümünü açın. Her öğrenciyi yeni bir satıra, veliyi ise | işaretinden sonra yazın. Aynı ad ve soyad görünürse aynı kişi için EVET, farklı kişi için HAYIR seçin.",
+  "Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno.": "Kontrol yalnızca aynı cemaat içinde yapılır. EVET mevcut kişiyi atlar, HAYIR yeni bir hesap oluşturur. Mevcut kişi bir veliyse öğrenci yeni veli oluşturulmadan kaydedilir ve daha sonra birbirine bağlanabilir."
 }

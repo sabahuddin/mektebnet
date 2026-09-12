@@ -3426,5 +3426,8 @@
   "Poruke muallima": "Mesazhet e mualimit",
   "Pročitaj obavijesti i komuniciraj s muallimom kada ti treba pomoć.": "Lexo njoftimet dhe komuniko me mualimin kur të duhet ndihmë.",
   "Ocjene djeteta": "Vlerësimet e fëmijës",
-  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "Për secilin fëmijë shiko vlerësimet, llojin e vlerësimit, komentin e mualimit dhe lëndën e vlerësuar."
+  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "Për secilin fëmijë shiko vlerësimet, llojin e vlerësimit, komentin e mualimit dhe lëndën e vlerësuar.",
+  "Učenike i njihove roditelje možeš dodati pojedinačno ili masovno, a zatim ih rasporediti u odgovarajuće grupe.": "Nxënësit dhe prindërit e tyre mund t'i shtoni veçmas ose në grup, pastaj t'i caktoni në grupet përkatëse.",
+  "U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu.": "Në grup hapni Cilësimet → Nxënësit e grupit → Shto nxënës të rinj. Shkruani çdo nxënës në rresht të ri dhe prindin pas shenjës |. Nëse shfaqet i njëjti emër dhe mbiemër, zgjidhni PO për të njëjtin person ose JO për një person tjetër.",
+  "Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno.": "Kontrolli bëhet vetëm brenda të njëjtit xhemat. PO e anashkalon personin ekzistues, ndërsa JO krijon një llogari të re. Nëse personi ekzistues është prind, nxënësi krijohet pa prind të ri dhe mund t'i lidhni më vonë."
 }

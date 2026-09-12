@@ -146,9 +146,9 @@ function MuallimGuide() {
       phase: t("ORGANIZACIJA"),
       title: t("Dodavanje učenika"),
       icon: GraduationCap,
-      intro: t("Učenike možeš dodati u mekteb i rasporediti u odgovarajuće grupe, uz njihove pristupne podatke i profil napretka."),
-      action: t("U panelu izaberi Dodaj učenika ili dodaj učenika iz grupe. Podijeli pristupne podatke i po potrebi ga premjesti u drugu grupu."),
-      result: t("Svaki učenik dobija svoj kontinuitet rada, a muallim može pratiti pojedinca bez ručnog spajanja podataka iz različitih evidencija."),
+      intro: t("Učenike i njihove roditelje možeš dodati pojedinačno ili masovno, a zatim ih rasporediti u odgovarajuće grupe."),
+      action: t("U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu."),
+      result: t("Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno."),
     },
     {
       value: "plan",

@@ -2473,5 +2473,8 @@
   "Poruke muallima": "رسائل المعلّم",
   "Pročitaj obavijesti i komuniciraj s muallimom kada ti treba pomoć.": "اقرأ الإشعارات وتواصل مع المعلّم عندما تحتاج إلى مساعدة.",
   "Ocjene djeteta": "درجات الطفل",
-  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "اطّلع لكل طفل على الدرجات ونوع التقييم وتعليق المعلّم والمادة التي تم تقييمها."
+  "Za svako dijete vidi ocjene, vrstu ocjene, komentar muallima i gradivo koje je ocijenjeno.": "اطّلع لكل طفل على الدرجات ونوع التقييم وتعليق المعلّم والمادة التي تم تقييمها.",
+  "Učenike i njihove roditelje možeš dodati pojedinačno ili masovno, a zatim ih rasporediti u odgovarajuće grupe.": "يمكنك إضافة الطلاب وأولياء أمورهم فردياً أو دفعة واحدة، ثم توزيعهم على المجموعات المناسبة.",
+  "U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu.": "داخل المجموعة افتح الإعدادات ← طلاب المجموعة ← إضافة طلاب جدد. أدخل كل طالب في سطر جديد وولي الأمر بعد الرمز |. إذا ظهر الاسم واللقب نفسيهما، اختر نعم للشخص نفسه أو لا لشخص آخر.",
+  "Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno.": "يتم التحقق داخل الجماعة نفسها فقط. نعم تتجاوز الشخص الموجود، بينما لا تنشئ حساباً جديداً. إذا كان الشخص الموجود ولي أمر، يُنشأ الطالب دون ولي أمر جديد ويمكن ربطهما لاحقاً."
 }
