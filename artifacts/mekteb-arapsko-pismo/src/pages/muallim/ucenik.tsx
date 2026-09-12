@@ -9,7 +9,7 @@ import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardLis
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { isOnline, formatScreentime, kategorijaOcjeneLabel } from "@/lib/utils";
+import { isOnline, formatScreentime } from "@/lib/utils";
 import { goBackOr } from "@/lib/back-navigation";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 
@@ -31,7 +31,7 @@ interface Prisustvo {
 
 interface Ocjena {
   id: number;
-  kategorija: string;
+  predmet?: string | null;
   ocjena: number;
   lekcijaNaziv?: string;
   napomena?: string;
@@ -48,6 +48,8 @@ interface IlmihalLekcija {
   id: number;
   naslov: string;
   nivo: number;
+  slug?: string;
+  predmet?: string | null;
 }
 
 interface ZadacaPregled {
@@ -138,18 +140,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const OCJENA_COLORS = ["", "bg-red-100 text-red-700", "bg-orange-100 text-orange-700", "bg-amber-100 text-amber-700", "bg-blue-100 text-blue-700", "bg-emerald-100 text-emerald-700", "bg-emerald-200 text-emerald-800"];
-// Aktivne kategorije ocjena (vrijednost -> prikaz). Vrijednosti su stabilne radi
-// kompatibilnosti sa starim ocjenama; mijenja se samo prikazni naziv.
-const OCJENA_KATEGORIJE: { value: string; label: string }[] = [
-  { value: "vladanje", label: "Učenje" },
-  { value: "usmeno", label: "Usmeno" },
-  { value: "pismeno", label: "Pismeno" },
-  { value: "prakticno", label: "Praktično" },
-  { value: "zadaća", label: "Zadaća" },
-  { value: "test", label: "Test" },
-  { value: "napamet", label: "Napamet" },
-];
-
 export default function UcenikPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -442,6 +432,15 @@ export default function UcenikPage() {
   const opravdano = prisustvo.filter(p => p.status === "opravdan").length;
   const prisustvoPct = prisustvo.length > 0 ? Math.round((prisutnih / prisustvo.length) * 100) : null;
   const prosjecnaOcjena = ocjene.length ? (ocjene.reduce((s, o) => s + o.ocjena, 0) / ocjene.length).toFixed(2) : null;
+  const ocjenePoPredmetu = Object.entries(ocjene.reduce<Record<string, number[]>>((acc, o) => {
+    const predmet = o.predmet || t("Nije određeno");
+    (acc[predmet] ||= []).push(o.ocjena);
+    return acc;
+  }, {})).map(([predmet, vrijednosti]) => ({
+    predmet,
+    broj: vrijednosti.length,
+    prosjek: (vrijednosti.reduce((sum, ocjena) => sum + ocjena, 0) / vrijednosti.length).toFixed(2),
+  }));
   const ukupnoBodova = kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
   const kvizProsjek = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : null;
 
@@ -1275,6 +1274,16 @@ export default function UcenikPage() {
                 {ocjene.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">{t("Nema unesenih ocjena")}</p>
                 ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                      {ocjenePoPredmetu.map(item => (
+                        <div key={item.predmet} className="rounded-xl bg-muted/30 p-3">
+                          <p className="text-xs font-bold text-muted-foreground">{item.predmet}</p>
+                          <p className="mt-1 text-lg font-extrabold text-foreground">{item.prosjek}</p>
+                          <p className="text-xs text-muted-foreground">{t("{n} ocjena", { n: String(item.broj) })}</p>
+                        </div>
+                      ))}
+                    </div>
                   <div className="max-h-80 overflow-y-auto -mx-1">
                     <table className="w-full text-sm border-collapse">
                       <thead>
@@ -1286,15 +1295,10 @@ export default function UcenikPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {ocjene.map(o => {
-                          const izZadace = o.kategorija === "zadaća";
-                          return (
+                        {ocjene.map(o => (
                             <tr key={o.id} className="border-t border-border/50 align-top">
                               <td className="py-2 px-2">
-                                <span className="font-bold text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
-                                {izZadace && (
-                                  <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary align-middle">{t("Zadaća")}</span>
-                                )}
+                                <span className="font-bold text-foreground">{o.predmet || t("Nije određeno")}</span>
                               </td>
                               <td className="py-2 px-2 text-foreground">
                                 {o.lekcijaNaziv || <span className="text-muted-foreground">—</span>}
@@ -1307,10 +1311,10 @@ export default function UcenikPage() {
                                 </span>
                               </td>
                             </tr>
-                          );
-                        })}
+                          ))}
                       </tbody>
                     </table>
+                  </div>
                   </div>
                 )}
               </div>

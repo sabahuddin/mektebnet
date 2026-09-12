@@ -22,7 +22,7 @@ const REPORT_SECTIONS: { id: ReportSection; label: string }[] = [
 ];
 
 interface Prisustvo { id: number; datum: string; status: string; napomena?: string }
-interface Ocjena { id: number; kategorija: string; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string }
+interface Ocjena { id: number; predmet?: string | null; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string }
 interface KvizRezultat { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }
 
 interface UcenikIzvjestaj {
@@ -58,16 +58,6 @@ const STATUS_LABELS: Record<string, string> = {
   odsutan: "Odsutan",
   zakasnio: "Zakasnio",
   opravdan: "Opravdan",
-};
-
-const KATEGORIJA_LABELS: Record<string, string> = {
-  usmeno: "Usmeno",
-  pismeno: "Pismeno",
-  zadaca: "Zadaća",
-  test: "Test",
-  ponasanje: "Napamet",
-  vladanje: "Napamet",
-  aktivnost: "Aktivnost",
 };
 
 function statsForUcenik(u: UcenikIzvjestaj) {
@@ -229,7 +219,7 @@ export default function MuallimIzvjestajPage() {
       const attendance = selectedSections.has("attendance")
         ? `<h2>${t("Prisustvo")}</h2>${rows([t("Učenik"), t("Datum"), t("Status"), t("Napomena")], filteredUcenici.flatMap(u => u.prisustvo.map(p => [u.ucenik.displayName, p.datum, statusLabel(p.status), p.napomena || ""])))}` : "";
       const grades = selectedSections.has("grades")
-        ? `<h2>${t("Ocjene")}</h2>${rows([t("Učenik"), t("Datum"), t("Kategorija"), t("Ocjena"), t("Lekcija"), t("Napomena")], filteredUcenici.flatMap(u => u.ocjene.map(o => [u.ucenik.displayName, o.datum, kategorijaLabel(o.kategorija), o.ocjena, o.lekcijaNaziv || "", o.napomena || ""])))}` : "";
+        ? `<h2>${t("Ocjene")}</h2>${rows([t("Učenik"), t("Datum"), t("Predmet"), t("Ocjena"), t("Lekcija"), t("Napomena")], filteredUcenici.flatMap(u => u.ocjene.map(o => [u.ucenik.displayName, o.datum, o.predmet || t("Nije određeno"), o.ocjena, o.lekcijaNaziv || "", o.napomena || ""])))}` : "";
       const quizzes = selectedSections.has("quizzes")
         ? `<h2>${t("Kvizovi")}</h2>${rows([t("Učenik"), t("Datum"), t("Kviz"), t("Tačno"), "%", t("Bodovi")], filteredUcenici.flatMap(u => u.kvizRezultati.map(r => [u.ucenik.displayName, r.completedAt, r.kvizNaslov, `${r.tacniOdgovori}/${r.ukupnoPitanja}`, r.procenat, r.bodovi])))}` : "";
       const blob = new Blob([
@@ -788,7 +778,7 @@ function UcenikSekcija({ ucenik, firstOnPage, sections }: { ucenik: UcenikIzvjes
               <thead>
                 <tr className="border-b border-border/40">
                   <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Datum")}</th>
-                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Kategorija")}</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Predmet")}</th>
                   <th className="text-center py-1.5 px-2 font-bold text-foreground">{t("Ocjena")}</th>
                   <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Lekcija / napomena")}</th>
                 </tr>
@@ -797,7 +787,7 @@ function UcenikSekcija({ ucenik, firstOnPage, sections }: { ucenik: UcenikIzvjes
                 {ucenik.ocjene.map(o => (
                   <tr key={o.id} className="border-b border-border/20">
                     <td className="py-1 px-2 text-foreground">{fmtDate(o.datum)}</td>
-                    <td className="py-1 px-2 text-foreground">{KATEGORIJA_LABELS[o.kategorija] || o.kategorija}</td>
+                    <td className="py-1 px-2 text-foreground">{o.predmet || t("Nije određeno")}</td>
                     <td className="py-1 px-2 text-center font-extrabold text-violet-700">{o.ocjena}</td>
                     <td className="py-1 px-2 text-muted-foreground">
                       {o.lekcijaNaziv && <span className="font-medium text-foreground">{o.lekcijaNaziv}</span>}

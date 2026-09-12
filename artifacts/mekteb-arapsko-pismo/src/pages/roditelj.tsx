@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MaskotaPrazanState } from "@/components/maskota";
-import { formatScreentime, isOnline, kategorijaOcjeneLabel } from "@/lib/utils";
+import { formatScreentime, isOnline } from "@/lib/utils";
 import { useLanguage } from "@/context/language";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 
@@ -67,6 +67,7 @@ interface Prisustvo {
 interface Ocjena {
   id: number;
   kategorija: string;
+  predmet?: string | null;
   ocjena: number;
   napomena?: string;
   datum: string;
@@ -647,7 +648,7 @@ function DijeteContent({
                 <thead className="sticky top-0 bg-white">
                   <tr className="text-left text-xs text-muted-foreground border-b border-border/60">
                     <th className="py-2 px-2 font-bold">{t("Lekcija")}</th>
-                    <th className="py-2 px-2 font-bold">{t("Kategorija")}</th>
+                    <th className="py-2 px-2 font-bold">{t("Predmet")}</th>
                     <th className="py-2 px-2 font-bold whitespace-nowrap">{t("Datum")}</th>
                     <th className="py-2 px-2 font-bold text-right">{t("Ocjena")}</th>
                   </tr>
@@ -660,7 +661,7 @@ function DijeteContent({
                       title={o.napomena ? `${t("Napomena")}: ${o.napomena}` : undefined}
                     >
                       <td className="py-2 px-2 text-foreground">{o.lekcijaNaziv || <span className="text-muted-foreground">—</span>}</td>
-                      <td className="py-2 px-2 text-muted-foreground">{kategorijaOcjeneLabel(o.kategorija)}</td>
+                      <td className="py-2 px-2 text-muted-foreground">{o.predmet || t("Nije određeno")}</td>
                       <td className="py-2 px-2 text-muted-foreground whitespace-nowrap tabular-nums">{o.datum}</td>
                       <td className="py-2 px-2 text-right">
                         <span className={`inline-block text-sm font-extrabold px-2.5 py-0.5 rounded-full ${OCJENA_COLOR[o.ocjena] || "bg-gray-100 text-gray-700"}`}>

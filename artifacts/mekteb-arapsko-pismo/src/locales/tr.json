@@ -2478,5 +2478,10 @@
   "U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu.": "Grupta Ayarlar → Grup öğrencileri → Yeni öğrenciler ekle bölümünü açın. Her öğrenciyi yeni bir satıra, veliyi ise | işaretinden sonra yazın. Aynı ad ve soyad görünürse aynı kişi için EVET, farklı kişi için HAYIR seçin.",
   "Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno.": "Kontrol yalnızca aynı cemaat içinde yapılır. EVET mevcut kişiyi atlar, HAYIR yeni bir hesap oluşturur. Mevcut kişi bir veliyse öğrenci yeni veli oluşturulmadan kaydedilir ve daha sonra birbirine bağlanabilir.",
   "Ocjene se mogu unositi za učenje, usmeno, pismeno, praktično, zadaću, test i napamet, a mogu se povezati i s lekcijom.": "Notlar öğrenme, sözlü, yazılı, uygulama, ödev, test ve ezber kategorilerinde girilebilir ve bir dersle ilişkilendirilebilir.",
-  "Otvori račun kao učenik, roditelj ili mekteb. 30 dana besplatno.": "Öğrenci, veli veya mektep olarak hesap açın. 30 gün ücretsiz."
+  "Otvori račun kao učenik, roditelj ili mekteb. 30 dana besplatno.": "Öğrenci, veli veya mektep olarak hesap açın. 30 gün ücretsiz.",
+  "Predmet se automatski preuzima iz odabrane lekcije.": "Ders alanı seçilen dersten otomatik olarak alınır.",
+  "Dodaj u napamet": "Ezbere ekle",
+  "Svaka ocjena se veže za lekciju, a predmet se automatski preuzima iz predmeta te lekcije.": "Her not bir derse bağlanır ve alanı o dersten otomatik olarak alınır.",
+  "Odaberi ocjenu, lekciju i datum. Napomenu dodaj po želji, a opciju „Dodaj u napamet“ označi samo kada želiš evidentirati i Napamet procjenu.": "Notu, dersi ve tarihi seçin. İsterseniz not ekleyin; ezber değerlendirmesi de kaydedilecekse “Ezbere ekle”yi işaretleyin.",
+  "Na profilu učenika vidi se broj ocjena i prosjek za svaki predmet, kao i ukupni prosjek svih ocjena.": "Öğrenci profilinde her alanın not sayısı ve ortalaması ile genel ortalama gösterilir."
 }

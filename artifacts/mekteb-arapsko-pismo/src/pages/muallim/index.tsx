@@ -221,7 +221,7 @@ interface StatistikaUcenik {
   ukupnoPrisustvo: number;
   prisustvoPoDatumu: Record<string, string>;
   mjesecnoStats: { mjesec: string; prisutan: number; ukupno: number; pct: number | null }[];
-  prosjecneOcjene: Record<string, number>;
+  prosjecneOcjene: Record<string, { prosjek: number; broj: number }>;
   ukupnaProsjecna: number | null;
   brojOcjena: number;
   kvizCount: number;
@@ -1225,9 +1225,9 @@ export default function MuallimPanel() {
 
       // === OCJENE ===
       lines.push("OCJENE");
-      lines.push(["Datum", "Učenik", "Kategorija", "Ocjena", "Lekcija", "Napomena"].map(esc).join(sep));
+      lines.push(["Datum", "Učenik", "Predmet", "Ocjena", "Lekcija", "Napomena"].map(esc).join(sep));
       for (const o of (data.ocjene ?? [])) {
-        lines.push([o.datum, o.ucenikIme, o.kategorija, o.ocjena, o.lekcijaNaziv, o.napomena].map(esc).join(sep));
+        lines.push([o.datum, o.ucenikIme, o.predmet || "Nije određeno", o.ocjena, o.lekcijaNaziv, o.napomena].map(esc).join(sep));
       }
       if (!data.ocjene?.length) lines.push("(nema evidentiranih ocjena)");
       lines.push("");
@@ -2926,19 +2926,20 @@ export default function MuallimPanel() {
                         </div>
                       )}
 
-                      {/* Ocjene po kategorijama */}
+                      {/* Ocjene po predmetima */}
                       {Object.keys(u.prosjecneOcjene).length > 0 && (
                         <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
                           <div className="px-4 py-3 bg-muted/30 border-b border-border/30">
                             <h4 className="font-extrabold text-foreground flex items-center gap-2">
-                              <Star className="w-4 h-4 text-violet-600" /> {t("Ocjene po kategorijama")}
+                              <Star className="w-4 h-4 text-violet-600" /> {t("Ocjene po predmetima")}
                             </h4>
                           </div>
                           <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {Object.entries(u.prosjecneOcjene).map(([kat, ocj]) => (
-                              <div key={kat} className="bg-muted/20 rounded-xl p-3">
-                                <div className="text-xs text-muted-foreground font-medium mb-1">{kat}</div>
-                                <div className={`text-xl font-extrabold ${ocj >= 4 ? "text-emerald-600" : ocj >= 2.5 ? "text-amber-600" : "text-red-600"}`}>{ocj}</div>
+                            {Object.entries(u.prosjecneOcjene).map(([predmet, podatak]) => (
+                              <div key={predmet} className="bg-muted/20 rounded-xl p-3">
+                                <div className="text-xs text-muted-foreground font-medium mb-1">{predmet}</div>
+                                <div className={`text-xl font-extrabold ${podatak.prosjek >= 4 ? "text-emerald-600" : podatak.prosjek >= 2.5 ? "text-amber-600" : "text-red-600"}`}>{podatak.prosjek}</div>
+                                <div className="text-xs text-muted-foreground mt-1">{t("{n} ocjena", { n: String(podatak.broj) })}</div>
                               </div>
                             ))}
                           </div>

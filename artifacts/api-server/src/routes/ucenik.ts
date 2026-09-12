@@ -65,7 +65,10 @@ router.get("/profil", async (req, res) => {
     const filterGrupe = odabir.grupaIds; // null = bez filtera (prikaži sve)
 
     let ocjene = await db.select().from(ocjeneTable)
-      .where(eq(ocjeneTable.ucenikId, userId))
+      .where(and(
+        eq(ocjeneTable.ucenikId, userId),
+        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+      ))
       .orderBy(desc(ocjeneTable.createdAt));
 
     let prisustvo = await db.select().from(priustvoTable)

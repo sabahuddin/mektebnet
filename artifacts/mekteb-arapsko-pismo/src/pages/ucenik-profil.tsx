@@ -23,7 +23,6 @@ import {
 } from "@/lib/sound-prefs";
 import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
-import { kategorijaOcjeneLabel } from "@/lib/utils";
 import { useLanguage } from "@/context/language";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 
@@ -236,7 +235,7 @@ interface ProfilData {
   profil: { grupaId: number; muallimId: number } | null;
   grupa: { id: number; naziv: string; skolskaGodina: string } | null;
   muallim: { id: number; displayName: string } | null;
-  ocjene: { id: number; kategorija: string; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string; napametStavkaId?: string | null }[];
+  ocjene: { id: number; kategorija: string; predmet?: string | null; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string; napametStavkaId?: string | null }[];
   prisustvo: { id: number; datum: string; status: string }[];
   kvizovi: { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }[];
   napredak?: {
@@ -1073,7 +1072,7 @@ export default function UcenikProfilPage() {
                         {profil.ocjene.slice(0, 8).map(o => (
                           <div key={o.id} className="flex items-center justify-between text-sm">
                             <div>
-                              <span className="font-medium text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
+                              <span className="font-medium text-foreground">{o.predmet || t("Nije određeno")}</span>
                               {o.lekcijaNaziv && <span className="text-primary text-xs ml-1">({o.lekcijaNaziv})</span>}
                               <div className="text-xs text-muted-foreground">{o.datum}</div>
                             </div>
@@ -1121,7 +1120,7 @@ export default function UcenikProfilPage() {
                       {profil.ocjene.filter(o => o.kategorija !== "napamet").map(o => (
                         <div key={o.id} className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
                           <div>
-                            <span className="font-bold text-foreground">{kategorijaOcjeneLabel(o.kategorija)}</span>
+                            <span className="font-bold text-foreground">{o.predmet || t("Nije određeno")}</span>
                             {o.lekcijaNaziv && <span className="text-primary text-sm ml-2">({o.lekcijaNaziv})</span>}
                             {o.napomena && <span className="text-muted-foreground ml-2 text-sm">— {o.napomena}</span>}
                             <div className="text-xs text-muted-foreground mt-0.5">{o.datum}</div>

@@ -21,6 +21,9 @@ export const ocjeneTable = pgTable("ocjene", {
   muallimId: integer("muallim_id").notNull(),
   grupaId: integer("grupa_id"),
   kategorija: varchar("kategorija", { length: 50 }).notNull(),
+  // Predmet se automatski preuzima iz odabrane Ilmihal lekcije. `kategorija`
+  // ostaje samo radi kompatibilnosti sa starim zapisima i internim NAPAMET redovima.
+  predmet: varchar("predmet", { length: 60 }),
   ocjena: integer("ocjena").notNull(),
   lekcijaNaziv: varchar("lekcija_naziv", { length: 200 }),
   napomena: text("napomena"),

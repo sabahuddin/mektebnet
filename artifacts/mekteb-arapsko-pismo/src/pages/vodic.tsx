@@ -175,9 +175,9 @@ function MuallimGuide() {
       phase: t("TOK NASTAVE"),
       title: t("Ocjene"),
       icon: Star,
-      intro: t("Ocjene se mogu unositi za učenje, usmeno, pismeno, praktično, zadaću, test i napamet, a mogu se povezati i s lekcijom."),
-      action: t("U grupi otvori učenika ili tabelu ocjena, odaberi vrstu ocjene, unesi rezultat i po potrebi dodaj lekciju i komentar."),
-      result: t("Muallim više ne mora pamtiti ili naknadno prepisivati procjene — napredak i povratna informacija ostaju dostupni uz učenikov profil."),
+      intro: t("Svaka ocjena se veže za lekciju, a predmet se automatski preuzima iz predmeta te lekcije."),
+      action: t("Odaberi ocjenu, lekciju i datum. Napomenu dodaj po želji, a opciju „Dodaj u napamet“ označi samo kada želiš evidentirati i Napamet procjenu."),
+      result: t("Na profilu učenika vidi se broj ocjena i prosjek za svaki predmet, kao i ukupni prosjek svih ocjena."),
     },
     {
       value: "zadaca",

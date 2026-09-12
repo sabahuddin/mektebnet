@@ -1322,11 +1322,12 @@ router.get("/grupe/:id/izvjestaj", async (req, res) => {
       `),
       db.execute(sql`
         SELECT o.datum, o.ucenik_id AS "ucenikId", u.display_name AS "ucenikIme",
-               o.kategorija, o.ocjena,
+               o.predmet, o.ocjena,
                o.lekcija_naziv AS "lekcijaNaziv", o.napomena
         FROM ocjene o
         JOIN users u ON u.id = o.ucenik_id
         WHERE o.grupa_id = ${grupaId}
+          AND o.napamet_stavka_id IS NULL
         ORDER BY o.datum ASC, u.display_name ASC
       `),
       db.execute(sql`
@@ -2554,16 +2555,23 @@ router.get("/prisustvo", async (req, res) => {
 // POST /api/muallim/ocjene - add grade
 router.post("/ocjene", async (req, res) => {
   try {
-    const { ucenikId, grupaId, kategorija, ocjena, lekcijaNaziv, lekcijaSlug, napomena, napametStavkaId } = req.body;
+    const { ucenikId, grupaId, ocjena, lekcijaNaziv, lekcijaSlug, napomena, napametStavkaId } = req.body;
     const datum = typeof req.body.datum === "string" && req.body.datum.trim()
       ? req.body.datum.trim()
       : new Date().toISOString().slice(0, 10);
-    const automatskaStavka = lekcijaSlug
-      ? (await getGlobalNapametKatalog(false)).find((item) => item.sourceLessonSlug === String(lekcijaSlug))
-      : undefined;
-    // Ručni izbor ima prednost (npr. muallim želi ocijeniti drugu stavku uz
-    // lekciju), a bez njega povezani slug automatski aktivira NAPAMET.
-    const effectiveNapametStavkaId = napametStavkaId || automatskaStavka?.id;
+    const [odabranaLekcija] = lekcijaSlug
+      ? await db.select({
+          naslov: ilmihalLekcijeTable.naslov,
+          predmet: ilmihalLekcijeTable.predmet,
+        }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, String(lekcijaSlug)))
+      : [];
+    if (!napametStavkaId && (!odabranaLekcija || !lekcijaNaziv)) {
+      res.status(400).json({ error: "Odaberite lekciju za ocjenu" });
+      return;
+    }
+    const predmet = odabranaLekcija?.predmet || (odabranaLekcija ? "Ostali sadržaji" : null);
+    // Napamet se dodaje isključivo kada muallim označi tu opciju.
+    const effectiveNapametStavkaId = napametStavkaId || undefined;
     const isNapamet = Boolean(effectiveNapametStavkaId);
     const ctx = await getMektebCtx(req.user!.userId);
     if (isNapamet && (!ucenikId || !grupaId)) {
@@ -2602,6 +2610,7 @@ router.post("/ocjene", async (req, res) => {
           muallimId: req.user!.userId,
           grupaId,
           kategorija: "napamet",
+          predmet: null,
           ocjena,
           lekcijaNaziv: lekcijaNaziv || null,
           napomena,
@@ -2615,7 +2624,8 @@ router.post("/ocjene", async (req, res) => {
         ucenikId,
         muallimId: req.user!.userId,
         grupaId,
-        kategorija,
+        kategorija: "ocjena",
+        predmet,
         ocjena,
         lekcijaNaziv: lekcijaNaziv || null,
         napomena,
@@ -2629,6 +2639,7 @@ router.post("/ocjene", async (req, res) => {
           muallimId: req.user!.userId,
           grupaId,
           kategorija: "napamet",
+          predmet: null,
           ocjena,
           lekcijaNaziv: null,
           napomena,
@@ -2649,7 +2660,7 @@ router.post("/ocjene", async (req, res) => {
         .where(eq(usersTable.id, ucenikId));
       const ime = ucenik?.displayName || "vaše dijete";
       const naslov = `Nova ocjena za ${ime}`;
-      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjena}) iz ${kategorija}.`;
+      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjena}) iz predmeta ${predmet || "Ostali sadržaji"}.`;
       await notifyApprovedRoditelji({
         ucenikId,
         posiljateljId: req.user!.userId,
@@ -2916,7 +2927,11 @@ router.get("/napamet/:ucenikId", async (req, res) => {
 router.get("/ocjene/:ucenikId", async (req, res) => {
   try {
     const ocjene = await db.select().from(ocjeneTable)
-      .where(and(eq(ocjeneTable.ucenikId, parseInt(req.params.ucenikId)), eq(ocjeneTable.muallimId, req.user!.userId)));
+      .where(and(
+        eq(ocjeneTable.ucenikId, parseInt(req.params.ucenikId)),
+        eq(ocjeneTable.muallimId, req.user!.userId),
+        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+      ));
     res.json(ocjene);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -3510,6 +3525,7 @@ router.get("/lekcije-za-plan", async (req, res) => {
       naslov: ilmihalLekcijeTable.naslov,
       nivo: ilmihalLekcijeTable.nivo,
       slug: ilmihalLekcijeTable.slug,
+      predmet: ilmihalLekcijeTable.predmet,
       dostupnost: ilmihalLekcijeTable.dostupnost,
     }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
 
@@ -3685,7 +3701,10 @@ async function getGrupaFullStats(grupaId: number) {
     ucenikIds.includes(p.ucenikId) && isFromCurrentSchoolYear(p.datum),
   );
   const sveOcjeneRaw = await db.select().from(ocjeneTable)
-    .where(eq(ocjeneTable.grupaId, grupaId));
+    .where(and(
+      eq(ocjeneTable.grupaId, grupaId),
+      sql`${ocjeneTable.napametStavkaId} IS NULL`,
+    ));
   const sveOcjene = sveOcjeneRaw.filter(o =>
     ucenikIds.includes(o.ucenikId) && isFromCurrentSchoolYear(o.datum),
   );
@@ -3721,14 +3740,18 @@ async function getGrupaFullStats(grupaId: number) {
     });
 
     const ocjeneRec = sveOcjene.filter(o => o.ucenikId === uid);
-    const kategorije: Record<string, number[]> = {};
+    const predmeti: Record<string, number[]> = {};
     for (const o of ocjeneRec) {
-      if (!kategorije[o.kategorija]) kategorije[o.kategorija] = [];
-      kategorije[o.kategorija].push(o.ocjena);
+      const predmet = o.predmet || "Nije određeno";
+      if (!predmeti[predmet]) predmeti[predmet] = [];
+      predmeti[predmet].push(o.ocjena);
     }
-    const prosjecneOcjene: Record<string, number> = {};
-    for (const [kat, vals] of Object.entries(kategorije)) {
-      prosjecneOcjene[kat] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+    const prosjecneOcjene: Record<string, { prosjek: number; broj: number }> = {};
+    for (const [predmet, vals] of Object.entries(predmeti)) {
+      prosjecneOcjene[predmet] = {
+        prosjek: Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10,
+        broj: vals.length,
+      };
     }
     const ukupnaProsjecna = ocjeneRec.length > 0
       ? Math.round((ocjeneRec.reduce((a, o) => a + o.ocjena, 0) / ocjeneRec.length) * 10) / 10
@@ -4643,13 +4666,16 @@ router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
     ws1b["!cols"] = [{ wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 6 }];
     XLSX.utils.book_append_sheet(wb, ws1b, "Prisustvo po mjesecu");
 
-    const sveOcjeneExcel = await db.select().from(ocjeneTable).where(eq(ocjeneTable.grupaId, grupaId));
+    const sveOcjeneExcel = await db.select().from(ocjeneTable).where(and(
+      eq(ocjeneTable.grupaId, grupaId),
+      sql`${ocjeneTable.napametStavkaId} IS NULL`,
+    ));
     const activeIds = new Set(stats.ucenici.map(u => u.id));
-    const ocjeneRows: any[] = [["Učenik", "Datum", "Kategorija", "Ocjena", "Lekcija", "Napomena"]];
+    const ocjeneRows: any[] = [["Učenik", "Datum", "Predmet", "Ocjena", "Lekcija", "Napomena"]];
     for (const u of stats.ucenici) {
       const uocjene = sveOcjeneExcel.filter(o => o.ucenikId === u.id && activeIds.has(o.ucenikId)).sort((a, b) => b.datum.localeCompare(a.datum));
       for (const o of uocjene) {
-        ocjeneRows.push([sanitizeExcelCell(u.ime), o.datum, sanitizeExcelCell(o.kategorija), o.ocjena, sanitizeExcelCell(o.lekcijaNaziv || ""), sanitizeExcelCell(o.napomena || "")]);
+        ocjeneRows.push([sanitizeExcelCell(u.ime), o.datum, sanitizeExcelCell(o.predmet || "Nije određeno"), o.ocjena, sanitizeExcelCell(o.lekcijaNaziv || ""), sanitizeExcelCell(o.napomena || "")]);
       }
     }
     const ws2 = XLSX.utils.aoa_to_sheet(ocjeneRows);
@@ -5480,6 +5506,12 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     // ponovna ocjena ažurira isti red; brisanje ocjene uklanja red.
     let ocjeneSyncOk = true;
     try {
+      const [zadacaLekcija] = zadaca.lekcijaSlug
+        ? await db.select({ predmet: ilmihalLekcijeTable.predmet })
+            .from(ilmihalLekcijeTable)
+            .where(eq(ilmihalLekcijeTable.slug, zadaca.lekcijaSlug))
+        : [];
+      const zadacaPredmet = zadacaLekcija?.predmet || (zadacaLekcija ? "Ostali sadržaji" : null);
       const [postojecaOcjena] = await db.select({ id: ocjeneTable.id }).from(ocjeneTable)
         .where(and(eq(ocjeneTable.zadacaId, id), eq(ocjeneTable.ucenikId, ucenikId)));
       if (ocjenaVal === null) {
@@ -5493,6 +5525,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
           await db.update(ocjeneTable).set({
             ocjena: ocjenaVal,
             lekcijaNaziv: ocjenaNaziv,
+            predmet: zadacaPredmet,
             grupaId: zadaca.grupaId,
             muallimId: req.user!.userId,
             ...napametGrade,
@@ -5503,6 +5536,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             muallimId: req.user!.userId,
             grupaId: zadaca.grupaId,
             kategorija: "zadaća",
+            predmet: zadacaPredmet,
             ocjena: ocjenaVal,
             lekcijaNaziv: ocjenaNaziv,
             napomena: null,
@@ -5787,8 +5821,15 @@ async function buildUcenikIzvjestaj(ucenikId: number, muallimId?: number) {
     ? and(eq(priustvoTable.ucenikId, ucenikId), eq(priustvoTable.muallimId, muallimId))
     : eq(priustvoTable.ucenikId, ucenikId);
   const ocjeneWhere = muallimId
-    ? and(eq(ocjeneTable.ucenikId, ucenikId), eq(ocjeneTable.muallimId, muallimId))
-    : eq(ocjeneTable.ucenikId, ucenikId);
+    ? and(
+        eq(ocjeneTable.ucenikId, ucenikId),
+        eq(ocjeneTable.muallimId, muallimId),
+        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+      )
+    : and(
+        eq(ocjeneTable.ucenikId, ucenikId),
+        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+      );
 
   const [prisustvo, ocjene, kvizRezultati, napredak, zvjezdiceMap] = await Promise.all([
     db.select().from(priustvoTable).where(prisustvoWhere).orderBy(asc(priustvoTable.datum)),

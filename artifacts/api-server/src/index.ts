@@ -50,7 +50,16 @@ async function runResidualSchema() {
   try {
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS napamet_nivo integer;`);
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS napamet_stavka_id varchar(80);`);
+    await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS predmet varchar(60);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS ocjene_napamet_ucenik_idx ON ocjene (ucenik_id, napamet_stavka_id) WHERE napamet_stavka_id IS NOT NULL;`);
+    await db.execute(sql`
+      UPDATE ocjene o
+      SET predmet = COALESCE(l.predmet, 'Ostali sadržaji')
+      FROM ilmihal_lekcije l
+      WHERE o.predmet IS NULL
+        AND o.napamet_stavka_id IS NULL
+        AND o.lekcija_naziv = l.naslov
+    `);
     // Interaktivni blokovi u lekciji: pokušaji se čuvaju odvojeno od nagrada i
     // zvjezdica, da muallim dobije pedagoški pregled bez rangiranja učenika.
     // Verziona Drizzle migracija je primarni put; ovaj idempotentni korak

@@ -66,6 +66,7 @@ interface IlmihalLekcija {
   naslov: string;
   nivo: number;
   slug?: string;
+  predmet?: string | null;
   dostupnost?: "svi" | "muallimi";
 }
 interface NastavniMaterijal {
@@ -172,7 +173,7 @@ export default function GrupaPage() {
   // Ocjena modal
   const [ocjenaTarget, setOcjenaTarget] = useState<Ucenik | null>(null);
   const [newOcjena, setNewOcjena] = useState({
-    kategorija: "usmeno", ocjena: 6, lekcijaNaziv: "", napomena: "",
+    ocjena: 6, lekcijaNaziv: "", napomena: "",
     datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
   });
   const [napametKatalog, setNapametKatalog] = useState<NapametStavka[]>([]);
@@ -434,7 +435,7 @@ export default function GrupaPage() {
     setOcjenaTarget(u);
     setBrzaNapametOcjena(null);
     setNewOcjena({
-      kategorija: "usmeno", ocjena: 6, lekcijaNaziv: "", napomena: "",
+      ocjena: 6, lekcijaNaziv: "", napomena: "",
       datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
     });
   }
@@ -447,7 +448,6 @@ export default function GrupaPage() {
     setOcjenaTarget({ id: student.id, displayName: student.displayName, username: "" });
     setBrzaNapametOcjena({ stavka });
     setNewOcjena({
-      kategorija: "napamet",
       ocjena: existingGrade ?? 6,
       lekcijaNaziv: stavka.naziv,
       napomena: "",
@@ -459,11 +459,14 @@ export default function GrupaPage() {
 
   async function saveOcjena() {
     if (!token || !ocjenaTarget) return;
+    if (!brzaNapametOcjena && !newOcjena.lekcijaSlug) {
+      toast({ title: t("Odaberi lekciju"), description: t("Predmet se automatski preuzima iz odabrane lekcije."), variant: "destructive" });
+      return;
+    }
     setSavingOcjena(true);
     try {
       await apiRequest("POST", "/muallim/ocjene", {
         ucenikId: ocjenaTarget.id,
-        kategorija: newOcjena.kategorija,
         ocjena: parseInt(String(newOcjena.ocjena)),
         lekcijaNaziv: newOcjena.lekcijaNaziv || null,
         lekcijaSlug: newOcjena.lekcijaSlug || null,
@@ -1189,7 +1192,7 @@ export default function GrupaPage() {
                 <Star className="w-5 h-5 text-amber-500" /> {t("Ocjena za {ime}", { ime: ocjenaTarget.displayName })}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {brzaNapametOcjena ? brzaNapametOcjena.stavka.naziv : t("Unesi ocjenu i pripadajuću kategoriju.")}
+                {brzaNapametOcjena ? brzaNapametOcjena.stavka.naziv : t("Predmet se automatski preuzima iz odabrane lekcije.")}
               </p>
               {brzaNapametOcjena ? (
                 <div className="space-y-3">
@@ -1208,27 +1211,13 @@ export default function GrupaPage() {
                 </div>
               ) : (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Kategorija")}</label>
-                    <select value={newOcjena.kategorija}
-                      onChange={e => setNewOcjena(o => ({ ...o, kategorija: e.target.value }))}
-                      className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-                      <option value="usmeno">{t("Usmeno")}</option>
-                      <option value="ucenje">{t("Učenje")}</option>
-                      <option value="prakticno">{t("Praktično")}</option>
-                       <option value="test">{t("Test")}</option>
-                       <option value="ponasanje">{t("Napamet")}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–6)")}</label>
-                    <select value={newOcjena.ocjena}
-                      onChange={e => setNewOcjena(o => ({ ...o, ocjena: parseInt(e.target.value) }))}
-                      className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-bold">
-                      {[6,5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–6)")}</label>
+                  <select value={newOcjena.ocjena}
+                    onChange={e => setNewOcjena(o => ({ ...o, ocjena: parseInt(e.target.value) }))}
+                    className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-bold">
+                    {[6,5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
                 </div>
                 <label className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 cursor-pointer">
                   <input type="checkbox" checked={!!newOcjena.napametStavkaId}
@@ -1240,12 +1229,13 @@ export default function GrupaPage() {
                         katalog = data.katalog;
                         setNapametKatalog(data.katalog);
                       }
-                      setNewOcjena(o => ({ ...o, napametStavkaId: katalog[0]?.id || "" }));
+                      const povezana = newOcjena.lekcijaSlug
+                        ? katalog.find(stavka => stavka.sourceLessonSlug === newOcjena.lekcijaSlug)
+                        : undefined;
+                      setNewOcjena(o => ({ ...o, napametStavkaId: povezana?.id || katalog[0]?.id || "" }));
                     }} />
                   <span className="text-sm font-bold text-emerald-900">
-                    {newOcjena.lekcijaSlug && napametKatalog.some(s => s.sourceLessonSlug === newOcjena.lekcijaSlug)
-                      ? t("Povezana lekcija će se automatski dodati u Napamet")
-                      : t("Dodaj u Napamet tab")}
+                    {t("Dodaj u napamet")}
                   </span>
                 </label>
                 {!!newOcjena.napametStavkaId && (
@@ -1270,14 +1260,11 @@ export default function GrupaPage() {
                     value={newOcjena.lekcijaNaziv}
                     onChange={v => setNewOcjena(o => ({ ...o, lekcijaNaziv: v, lekcijaSlug: "" }))}
                     onSelectLesson={lekcija => {
-                      const source = lekcija?.slug
-                        ? napametKatalog.find(s => s.sourceLessonSlug === lekcija.slug)
-                        : undefined;
                       setNewOcjena(o => ({
                         ...o,
                         lekcijaNaziv: lekcija?.naslov || "",
                         lekcijaSlug: lekcija?.slug || "",
-                        napametStavkaId: source?.id || "",
+                        napametStavkaId: "",
                       }));
                     }}
                     placeholder={t("Pretraži lekciju ili upiši broj…")}
@@ -1301,7 +1288,7 @@ export default function GrupaPage() {
                 <Button variant="outline" onClick={() => { setOcjenaTarget(null); setBrzaNapametOcjena(null); }} disabled={savingOcjena} className="flex-1 rounded-xl">
                   {t("Otkaži")}
                 </Button>
-                <Button onClick={saveOcjena} disabled={savingOcjena} className="flex-1 rounded-xl font-bold">
+                <Button onClick={saveOcjena} disabled={savingOcjena || (!brzaNapametOcjena && !newOcjena.lekcijaSlug)} className="flex-1 rounded-xl font-bold">
                   {savingOcjena ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Spremi")}
                 </Button>
               </div>

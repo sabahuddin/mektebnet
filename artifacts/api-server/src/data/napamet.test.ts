@@ -5,6 +5,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   grupeTable,
+  ilmihalLekcijeTable,
   mektebiTable,
   muallimProfiliTable,
   napametGlobalProgramTable,
@@ -271,19 +272,31 @@ test("ručni izbor iste povezane stavke ne pravi duplu NAPAMET ocjenu", async ()
   assert.equal(rows.filter((row) => row.napametStavkaId === povezano.id).length, 1);
 });
 
-test("nepovezana lekcija ostaje jedna obična ocjena", async () => {
+test("obična ocjena preuzima predmet lekcije i ne pravi NAPAMET zapis", async () => {
+  const napametSlugs = new Set((await getGlobalNapametKatalog()).map(item => item.sourceLessonSlug).filter(Boolean));
+  const lekcije = await db.select({
+    naslov: ilmihalLekcijeTable.naslov,
+    slug: ilmihalLekcijeTable.slug,
+    predmet: ilmihalLekcijeTable.predmet,
+  }).from(ilmihalLekcijeTable);
+  const lekcija = lekcije.find(item => item.predmet && !napametSlugs.has(item.slug));
+  assert.ok(lekcija?.predmet);
   const datum = "2026-08-25";
   const response = await authed("/api/muallim/ocjene", muallimToken, {
     method: "POST",
     body: JSON.stringify({
-      ucenikId, grupaId, kategorija: "test", ocjena: 4,
-      lekcijaNaziv: "Nepovezana testna lekcija", lekcijaSlug: `nepovezana-${SUFFIX}`, datum,
+      ucenikId, grupaId, ocjena: 4,
+      lekcijaNaziv: lekcija.naslov, lekcijaSlug: lekcija.slug, datum,
     }),
   });
   assert.equal(response.status, 201);
-  const rows = await db.select({ kategorija: ocjeneTable.kategorija, napametStavkaId: ocjeneTable.napametStavkaId })
+  const rows = await db.select({
+    kategorija: ocjeneTable.kategorija,
+    predmet: ocjeneTable.predmet,
+    napametStavkaId: ocjeneTable.napametStavkaId,
+  })
     .from(ocjeneTable).where(and(eq(ocjeneTable.ucenikId, ucenikId), eq(ocjeneTable.datum, datum)));
-  assert.deepEqual(rows, [{ kategorija: "test", napametStavkaId: null }]);
+  assert.deepEqual(rows, [{ kategorija: "ocjena", predmet: lekcija.predmet, napametStavkaId: null }]);
 });
 
 test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i roditelj", async () => {

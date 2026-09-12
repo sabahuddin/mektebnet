@@ -354,7 +354,10 @@ router.get("/ocjene/:ucenikId", async (req, res) => {
       ));
     if (!veza) { res.status(403).json({ error: "Nemate pristup" }); return; }
 
-    let ocjene = await db.select().from(ocjeneTable).where(eq(ocjeneTable.ucenikId, ucenikId));
+    let ocjene = await db.select().from(ocjeneTable).where(and(
+      eq(ocjeneTable.ucenikId, ucenikId),
+      sql`${ocjeneTable.napametStavkaId} IS NULL`,
+    ));
 
     const godineInfo = await getStudentGodine(ucenikId);
     const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);

@@ -2478,5 +2478,10 @@
   "U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu.": "داخل المجموعة افتح الإعدادات ← طلاب المجموعة ← إضافة طلاب جدد. أدخل كل طالب في سطر جديد وولي الأمر بعد الرمز |. إذا ظهر الاسم واللقب نفسيهما، اختر نعم للشخص نفسه أو لا لشخص آخر.",
   "Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno.": "يتم التحقق داخل الجماعة نفسها فقط. نعم تتجاوز الشخص الموجود، بينما لا تنشئ حساباً جديداً. إذا كان الشخص الموجود ولي أمر، يُنشأ الطالب دون ولي أمر جديد ويمكن ربطهما لاحقاً.",
   "Ocjene se mogu unositi za učenje, usmeno, pismeno, praktično, zadaću, test i napamet, a mogu se povezati i s lekcijom.": "يمكن إدخال الدرجات للتعلّم والشفهي والكتابي والتطبيقي والواجب والاختبار والحفظ، كما يمكن ربطها بالدرس.",
-  "Otvori račun kao učenik, roditelj ili mekteb. 30 dana besplatno.": "افتح حساباً كطالب أو ولي أمر أو كتّاب. 30 يوماً مجاناً."
+  "Otvori račun kao učenik, roditelj ili mekteb. 30 dana besplatno.": "افتح حساباً كطالب أو ولي أمر أو كتّاب. 30 يوماً مجاناً.",
+  "Predmet se automatski preuzima iz odabrane lekcije.": "تُؤخذ المادة تلقائياً من الدرس المحدد.",
+  "Dodaj u napamet": "أضف إلى الحفظ",
+  "Svaka ocjena se veže za lekciju, a predmet se automatski preuzima iz predmeta te lekcije.": "ترتبط كل درجة بدرس، وتُؤخذ المادة تلقائياً من ذلك الدرس.",
+  "Odaberi ocjenu, lekciju i datum. Napomenu dodaj po želji, a opciju „Dodaj u napamet“ označi samo kada želiš evidentirati i Napamet procjenu.": "اختر الدرجة والدرس والتاريخ. أضف ملاحظة عند الحاجة، وحدد «أضف إلى الحفظ» فقط إذا أردت تسجيل تقييم الحفظ أيضاً.",
+  "Na profilu učenika vidi se broj ocjena i prosjek za svaki predmet, kao i ukupni prosjek svih ocjena.": "يعرض ملف الطالب عدد الدرجات ومتوسطها لكل مادة، بالإضافة إلى المتوسط العام."
 }

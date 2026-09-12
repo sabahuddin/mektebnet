@@ -532,16 +532,16 @@ export default function MuallimTutorijalPage() {
             icon={Star}
             accent="bg-[#c38a30]"
             click={<><strong>Na kartici učenika izaberi Ocjene</strong> za procjenu, <strong>Zvjezdice</strong> za pozitivne i negativne bilješke, a <strong>Zadaće</strong> za rad koji treba uraditi.</>}
-            action={<>Odaberi kategoriju <strong>Usmeno, Učenje, Praktično, Test</strong> ili <strong>Napamet</strong>, po potrebi veži je za lekciju i dodaj kratku konstruktivnu povratnu informaciju.</>}
+            action={<>Odaberi <strong>ocjenu, lekciju i datum</strong>. Predmet se automatski preuzima iz lekcije, napomena je opcionalna, a <strong>Dodaj u napamet</strong> označi samo kada je potrebno.</>}
             why={<>Učenik i roditelj ne dobijaju samo broj. Dobijaju objašnjenje šta je dobro, šta treba vježbati i zašto je određena lekcija važna. Pozitivne i negativne zvjezdice sada rješavaju praćenje ponašanja.</>}
             next={<>Iz ocjena, zvjezdica i zadaća dobijaš materijal za individualni razgovor i kasniji izvještaj, umjesto da se oslanjaš na utisak.</>}
             important={<>Kapi meda u zadaći predstavljaju znanje. One nisu valuta igrica niti razlog da se učenik poredi kao da se takmiči za novac.</>}
           >
             <p>
-              Na grupnoj kartici svaki učenik ima svoje brze akcije. U <strong>Ocjene</strong> odaberi kategoriju koja odgovara onome što procjenjuješ: <strong>Usmeno, Učenje, Praktično, Test</strong> ili <strong>Napamet</strong>. Ocjenu možeš vezati za konkretnu lekciju, pa kasnije znaš da li je teškoća bila u jednoj temi ili u kontinuitetu.
+              Na grupnoj kartici svaki učenik ima svoje brze akcije. U <strong>Ocjene</strong> odaberi ocjenu, konkretnu lekciju i datum. Predmet se preuzima iz lekcije, pa se automatski računaju broj ocjena i prosjek za svaki predmet, kao i ukupni prosjek.
             </p>
             <p className="mt-4">
-              Povratna informacija neka bude konstruktivna: napiši šta je učenik uradio dobro i koji je sljedeći mali korak. Za pamćenje koristi <strong>Napamet</strong>, a za ponašanje koristi pozitivne ili negativne kategorije u <strong>Zvjezdicama</strong>. Zvjezdica treba pomoći razgovoru, ne zamijeniti razgovor.
+              Napomenu dodaj samo kada je korisna: napiši šta je učenik uradio dobro i koji je sljedeći mali korak. Ako ocjena treba ući i u evidenciju pamćenja, označi <strong>Dodaj u napamet</strong>. Za ponašanje koristi pozitivne ili negativne kategorije u <strong>Zvjezdicama</strong>.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <MiniLabel icon={Star}>Ocjene</MiniLabel>
