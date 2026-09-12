@@ -975,6 +975,17 @@ async function runResidualSchema() {
 // Data bootstrap (NOT schema). Produkcija je jedini izvor istine za sadržaj.
 // NIKAKAV seed, backup, ili auto-restore ne smije dirati content_html lekcija.
 async function runDataBootstrap() {
+  try {
+    const { convertLegacyUploadsToWebp } = await import("./routes/admin");
+    const result = await convertLegacyUploadsToWebp();
+    logger.info(
+      { converted: result.converted.length, failed: result.failed },
+      "Uploads WebP konverzija završena",
+    );
+  } catch (uploadImageErr) {
+    logger.error({ err: uploadImageErr }, "Uploads WebP konverzija nije uspjela (non-fatal)");
+  }
+
   // BANKA PITANJA: prebaci sva kvizovska pitanja iz `kvizovi.pitanja` JSONB-a
   // u centralnu `pitanja_banka` + napravi `kviz_pitanja` veze. Idempotentno
   // (ON CONFLICT DO NOTHING/UPDATE), pa je sigurno pokretati na svaki start.

@@ -1008,7 +1008,7 @@ router.get("/uploads", (_req, res) => {
 // Napravi nezavisnu fizičku kopiju postojeće slike iz galerije prije nego što
 // se koristi kao hero slika. Lekcija tako ne zavisi od starog URL-a/fajla koji
 // se kasnije može obrisati ili zamijeniti.
-router.post("/uploads/copy-image", (req, res) => {
+router.post("/uploads/copy-image", async (req, res) => {
   try {
     const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
     const match = url.match(/^\/uploads\/([^/?#]+)$/);
@@ -1024,9 +1024,20 @@ router.post("/uploads/copy-image", (req, res) => {
     }
 
     const ext = path.extname(sourceName).toLowerCase();
-    const targetName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-hero${ext}`;
-    fs.copyFileSync(sourcePath, path.join(uploadsDir, targetName));
-    res.json({ url: `/uploads/${targetName}` });
+    const copiedName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-hero${ext}`;
+    const copiedPath = path.join(uploadsDir, copiedName);
+    fs.copyFileSync(sourcePath, copiedPath);
+    const optimized = await optimizeUploadedImage(copiedPath, copiedName);
+    if (optimized.skipped || !optimized.filename.toLowerCase().endsWith(".webp")) {
+      try { fs.unlinkSync(copiedPath); } catch {}
+      return res.status(422).json({ error: "Hero sliku nije moguće pretvoriti u WebP" });
+    }
+    res.json({
+      url: `/uploads/${optimized.filename}`,
+      originalSize: optimized.bytesBefore,
+      finalSize: optimized.bytesAfter,
+      optimized: true,
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message || "Kopiranje slike nije uspjelo" });
   }
@@ -1184,12 +1195,12 @@ router.delete("/uploads/:filename", async (req, res) => {
   return;
 });
 
-router.post("/uploads/convert-webp", async (_req, res) => {
+export async function convertLegacyUploadsToWebp() {
   try {
     const candidates = fs.existsSync(uploadsDir)
       ? fs.readdirSync(uploadsDir).filter(name => /\.(jpg|jpeg|png|gif)$/i.test(name))
       : [];
-    if (candidates.length === 0) return res.json({ ok: true, converted: [], failed: [] });
+    if (candidates.length === 0) return { ok: true, converted: [], failed: [] };
 
     const sharp = (await import("sharp")).default;
     const occupied = new Set(fs.readdirSync(uploadsDir));
@@ -1237,7 +1248,15 @@ router.post("/uploads/convert-webp", async (_req, res) => {
         failed.push({ name: sourceName, error: error instanceof Error ? error.message : String(error) });
       }
     }
-    res.json({ ok: failed.length === 0, converted, failed });
+    return { ok: failed.length === 0, converted, failed };
+  } catch (e: any) {
+    throw new Error(e.message);
+  }
+}
+
+router.post("/uploads/convert-webp", async (_req, res) => {
+  try {
+    res.json(await convertLegacyUploadsToWebp());
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
