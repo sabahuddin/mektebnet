@@ -507,9 +507,16 @@ export default function RegisterRoditeljPage() {
                                 ? "border-primary bg-primary/5"
                                 : "border-border/50 hover:border-primary/30"
                             }`}>
-                            <div>
+                            <div className="min-w-0 flex-1 pr-2">
                               <div className="font-bold text-foreground text-sm">{p.naziv}</div>
                               <div className="text-xs text-muted-foreground">{p.opis}</div>
+                              {isBiH !== null && (
+                                <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
+                                  {isBiH
+                                    ? t("1 učenik + 1 roditelj = 2 KM godišnje.")
+                                    : t("1 učenik + 1 roditelj = 2 € godišnje.")}
+                                </div>
+                              )}
                             </div>
                             <span className="text-xs font-bold text-primary shrink-0 ml-2 text-right">
                               {isBiH === null ? "..." : (isBiH ? p.cijenaBih : p.cijenaEur)}
@@ -521,8 +528,8 @@ export default function RegisterRoditeljPage() {
                       {isBiH !== null && (
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                           {isBiH
-                            ? t("Dodatni muallim: 30 KM godišnje. (1 učenik i 1 roditelj: 2 KM godišnje.)")
-                            : t("Dodatni muallim: 30 € godišnje. (1 učenik i 1 roditelj: 2 € godišnje.)")}
+                            ? t("Dodatni muallim: 30 KM godišnje.")
+                            : t("Dodatni muallim: 30 € godišnje.")}
                         </p>
                       )}
                     </div>

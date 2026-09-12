@@ -3250,5 +3250,11 @@
   "Odaberi ocjenu, lekciju i datum. Napomenu dodaj po želji, a opciju „Dodaj u napamet“ označi samo kada želiš evidentirati i Napamet procjenu.": "Select the grade, lesson and date. Add a note if needed, and select “Add to memorisation” only when you also want to record a memorisation assessment.",
   "Na profilu učenika vidi se broj ocjena i prosjek za svaki predmet, kao i ukupni prosjek svih ocjena.": "The student profile shows the number of grades and average for each subject, as well as the overall average.",
   "Dodatni muallim: 30 KM godišnje. (1 učenik i 1 roditelj: 2 KM godišnje.)": "Additional teacher: 30 KM per year. (1 student and 1 parent: 2 KM per year.)",
-  "Dodatni muallim: 30 € godišnje. (1 učenik i 1 roditelj: 2 € godišnje.)": "Additional teacher: €30 per year. (1 student and 1 parent: €2 per year.)"
+  "Dodatni muallim: 30 € godišnje. (1 učenik i 1 roditelj: 2 € godišnje.)": "Additional teacher: €30 per year. (1 student and 1 parent: €2 per year.)",
+  "Naučeno": "Learned",
+  "Još nije naučeno": "Not learned yet",
+  "1 učenik + 1 roditelj = 2 KM godišnje.": "1 student + 1 parent = 2 KM per year.",
+  "1 učenik + 1 roditelj = 2 € godišnje.": "1 student + 1 parent = €2 per year.",
+  "Dodatni muallim: 30 KM godišnje.": "Additional teacher: 30 KM per year.",
+  "Dodatni muallim: 30 € godišnje.": "Additional teacher: €30 per year."
 }

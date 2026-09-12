@@ -112,6 +112,23 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
             ))}
           </div>
 
+          <div className="rounded-2xl border border-border/70 bg-white p-3.5">
+            <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold">
+              <span className="text-emerald-700">{t("Naučeno")}: {gradedCount}</span>
+              <span className="text-red-600">{t("Još nije naučeno")}: {remainingCount}</span>
+            </div>
+            <div
+              className="flex h-3 w-full overflow-hidden rounded-full bg-red-500"
+              role="img"
+              aria-label={`${t("Naučeno")}: ${gradedCount}. ${t("Još nije naučeno")}: ${remainingCount}.`}
+            >
+              <div
+                className="h-full bg-emerald-500 transition-[width] duration-500"
+                style={{ width: totalCount ? `${(gradedCount / totalCount) * 100}%` : "0%" }}
+              />
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <label className="relative flex-1">
               <span className="sr-only">{t("Pretraži stavke Napamet")}</span>
