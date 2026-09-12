@@ -1023,7 +1023,7 @@ async function runDataBootstrap() {
         ? fs.readdirSync(uploadsDir).filter(name => name.toLowerCase().endsWith(".webp"))
         : [],
     );
-    const bundledImagePattern = /(?:\.\.\/\.\.\/|\/edu\/|\/)assets\/images\/([^"'?#/]+\.webp)/gi;
+    const bundledImagePattern = /(?:\.\.\/\.\.\/|\/edu\/|\/)assets\/images\/(?:[^"'?#/]+\/)*([^"'?#/]+\.webp)/gi;
     const useUploadedCopy = (value: string | null): string | null => {
       if (!value) return value;
       return value.replace(bundledImagePattern, (original, filename: string) =>
@@ -1033,6 +1033,9 @@ async function runDataBootstrap() {
 
     let lessonUpdates = 0;
     let translationUpdates = 0;
+    let questionUpdates = 0;
+    let legacyQuizUpdates = 0;
+    let bookUpdates = 0;
     await db.transaction(async tx => {
       const lessonRows = (await tx.execute(sql`
         SELECT id, content_html
@@ -1061,9 +1064,57 @@ async function runDataBootstrap() {
         `);
         translationUpdates++;
       }
+
+      const questionRows = (await tx.execute(sql`
+        SELECT id, slika
+        FROM pitanja_banka
+        WHERE slika LIKE '%assets/images/%'
+      `)) as unknown as DbExecResult<{ id: number; slika: string }>;
+      for (const row of questionRows.rows) {
+        const updated = useUploadedCopy(row.slika);
+        if (updated === row.slika || updated === null) continue;
+        await tx.execute(sql`UPDATE pitanja_banka SET slika = ${updated} WHERE id = ${row.id}`);
+        questionUpdates++;
+      }
+
+      const legacyQuizRows = (await tx.execute(sql`
+        SELECT id, pitanja::text AS pitanja_text
+        FROM kvizovi
+        WHERE pitanja::text LIKE '%assets/images/%'
+      `)) as unknown as DbExecResult<{ id: number; pitanja_text: string }>;
+      for (const row of legacyQuizRows.rows) {
+        const updated = useUploadedCopy(row.pitanja_text);
+        if (updated === row.pitanja_text || updated === null) continue;
+        await tx.execute(sql`UPDATE kvizovi SET pitanja = ${updated}::jsonb WHERE id = ${row.id}`);
+        legacyQuizUpdates++;
+      }
+
+      const bookRows = (await tx.execute(sql`
+        SELECT id, cover_image, content_html
+        FROM knjige
+        WHERE cover_image LIKE '%assets/images/%' OR content_html LIKE '%assets/images/%'
+      `)) as unknown as DbExecResult<{ id: number; cover_image: string | null; content_html: string | null }>;
+      for (const row of bookRows.rows) {
+        const coverImage = useUploadedCopy(row.cover_image);
+        const contentHtml = useUploadedCopy(row.content_html);
+        if (coverImage === row.cover_image && contentHtml === row.content_html) continue;
+        await tx.execute(sql`
+          UPDATE knjige
+          SET cover_image = ${coverImage}, content_html = ${contentHtml}
+          WHERE id = ${row.id}
+        `);
+        bookUpdates++;
+      }
     });
     logger.info(
-      { lessonUpdates, translationUpdates, uploadedWebpFiles: uploadedWebpNames.size },
+      {
+        lessonUpdates,
+        translationUpdates,
+        questionUpdates,
+        legacyQuizUpdates,
+        bookUpdates,
+        uploadedWebpFiles: uploadedWebpNames.size,
+      },
       "Bundlane hero reference povezane sa istoimenim /uploads WebP fajlovima",
     );
   } catch (heroReferenceErr) {
@@ -1804,6 +1855,62 @@ async function startup() {
     logger.info("Lekcija 'Pojam i smisao halala i harama' postavljena na kraj nivoa 3");
   } catch (e) {
     logger.error({ err: e }, "Urednička migracija lekcije halal-haram nije uspjela");
+  }
+  try {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const uploadsDir = process.env["UPLOADS_DIR"]
+      ? path.resolve(process.env["UPLOADS_DIR"])
+      : path.resolve(process.cwd(), "uploads");
+    const uploadedWebpNames = fs.existsSync(uploadsDir)
+      ? fs.readdirSync(uploadsDir).filter(name => name.toLowerCase().endsWith(".webp"))
+      : [];
+    const uploadedNamePattern = uploadedWebpNames.length
+      ? uploadedWebpNames
+          .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+          .join("|")
+      : "a^";
+    const bundledRootWebpPattern = `(\\.\\./\\.\\./assets/images/|/edu/assets/images/|/assets/images/)(${uploadedNamePattern})`;
+    const uploadedWebpReplacement = "/uploads/\\2";
+    await db.transaction(async tx => {
+      await tx.execute(sql`
+        UPDATE ilmihal_lekcije
+        SET content_html = regexp_replace(content_html, ${bundledRootWebpPattern}, ${uploadedWebpReplacement}, 'gi')
+        WHERE content_html ~* ${bundledRootWebpPattern}
+      `);
+      await tx.execute(sql`
+        UPDATE content_prijevodi
+        SET prijevod = regexp_replace(prijevod, ${bundledRootWebpPattern}, ${uploadedWebpReplacement}, 'gi'),
+            updated_at = NOW()
+        WHERE prijevod ~* ${bundledRootWebpPattern}
+      `);
+      await tx.execute(sql`
+        UPDATE pitanja_banka
+        SET slika = regexp_replace(slika, ${bundledRootWebpPattern}, ${uploadedWebpReplacement}, 'gi')
+        WHERE slika ~* ${bundledRootWebpPattern}
+      `);
+      await tx.execute(sql`
+        UPDATE kvizovi
+        SET pitanja = regexp_replace(pitanja::text, ${bundledRootWebpPattern}, ${uploadedWebpReplacement}, 'gi')::jsonb
+        WHERE pitanja::text ~* ${bundledRootWebpPattern}
+      `);
+      await tx.execute(sql`
+        UPDATE knjige
+        SET cover_image = regexp_replace(cover_image, ${bundledRootWebpPattern}, ${uploadedWebpReplacement}, 'gi')
+        WHERE cover_image ~* ${bundledRootWebpPattern}
+      `);
+      await tx.execute(sql`
+        UPDATE knjige
+        SET content_html = regexp_replace(content_html, ${bundledRootWebpPattern}, ${uploadedWebpReplacement}, 'gi')
+        WHERE content_html ~* ${bundledRootWebpPattern}
+      `);
+    });
+    logger.info(
+      { uploadedWebpFiles: uploadedWebpNames.length },
+      "Sve preostale bundlane WebP reference prebačene na potvrđene /uploads duplikate",
+    );
+  } catch (e) {
+    logger.error({ err: e }, "Završno povezivanje /uploads WebP duplikata nije uspjelo");
   }
   await seedDemoUspjeh();
 
