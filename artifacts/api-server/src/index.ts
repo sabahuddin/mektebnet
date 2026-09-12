@@ -986,6 +986,32 @@ async function runDataBootstrap() {
     logger.error({ err: uploadImageErr }, "Uploads WebP konverzija nije uspjela (non-fatal)");
   }
 
+  try {
+    const legacyAssetPattern = "(assets/images/[^\"'?#]+)\\.jpe?g";
+    const webpReplacement = "\\1.webp";
+    await db.transaction(async tx => {
+      await tx.execute(sql`
+        UPDATE ilmihal_lekcije
+        SET content_html = regexp_replace(content_html, ${legacyAssetPattern}, ${webpReplacement}, 'gi')
+        WHERE content_html ~* ${legacyAssetPattern}
+      `);
+      await tx.execute(sql`
+        UPDATE pitanja_banka
+        SET slika = regexp_replace(slika, ${legacyAssetPattern}, ${webpReplacement}, 'gi')
+        WHERE slika ~* ${legacyAssetPattern}
+      `);
+      await tx.execute(sql`
+        UPDATE content_prijevodi
+        SET prijevod = regexp_replace(prijevod, ${legacyAssetPattern}, ${webpReplacement}, 'gi'),
+            updated_at = NOW()
+        WHERE prijevod ~* ${legacyAssetPattern}
+      `);
+    });
+    logger.info("Bundlane JPG reference zamijenjene odgovarajućim WebP putanjama");
+  } catch (bundledImageErr) {
+    logger.error({ err: bundledImageErr }, "Zamjena bundlanih JPG referenci nije uspjela (non-fatal)");
+  }
+
   // BANKA PITANJA: prebaci sva kvizovska pitanja iz `kvizovi.pitanja` JSONB-a
   // u centralnu `pitanja_banka` + napravi `kviz_pitanja` veze. Idempotentno
   // (ON CONFLICT DO NOTHING/UPDATE), pa je sigurno pokretati na svaki start.

@@ -1210,12 +1210,7 @@ export async function convertLegacyUploadsToWebp() {
     for (const sourceName of candidates) {
       const sourcePath = path.join(uploadsDir, sourceName);
       const base = path.basename(sourceName, path.extname(sourceName));
-      let targetName = `${base}.webp`;
-      let suffix = 2;
-      while (occupied.has(targetName) && targetName !== sourceName) {
-        targetName = `${base}-${suffix}.webp`;
-        suffix++;
-      }
+      const targetName = `${base}.webp`;
       const targetPath = path.join(uploadsDir, targetName);
       try {
         const bytesBefore = fs.statSync(sourcePath).size;
