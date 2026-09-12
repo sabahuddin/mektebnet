@@ -141,13 +141,13 @@ const OCJENA_COLORS = ["", "bg-red-100 text-red-700", "bg-orange-100 text-orange
 // Aktivne kategorije ocjena (vrijednost -> prikaz). Vrijednosti su stabilne radi
 // kompatibilnosti sa starim ocjenama; mijenja se samo prikazni naziv.
 const OCJENA_KATEGORIJE: { value: string; label: string }[] = [
-  { value: "napamet", label: "Učenje" },
+  { value: "vladanje", label: "Učenje" },
   { value: "usmeno", label: "Usmeno" },
   { value: "pismeno", label: "Pismeno" },
   { value: "prakticno", label: "Praktično" },
   { value: "zadaća", label: "Zadaća" },
   { value: "test", label: "Test" },
-  { value: "vladanje", label: "Napamet" },
+  { value: "napamet", label: "Napamet" },
 ];
 
 export default function UcenikPage() {

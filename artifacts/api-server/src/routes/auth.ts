@@ -88,7 +88,7 @@ router.post("/login", async (req, res) => {
     if (!user.isActive && !trialActive) {
       res.status(403).json({
         error: user.trialUntil
-          ? "Vaš 7-dnevni probni period je istekao. Kontaktirajte administratora kako bi odobrio pretplatu."
+          ? "Vaš 30-dnevni probni period je istekao. Kontaktirajte administratora kako bi odobrio pretplatu."
           : "Vaš račun još nije aktivan. Kontaktirajte administratora.",
       });
       return;

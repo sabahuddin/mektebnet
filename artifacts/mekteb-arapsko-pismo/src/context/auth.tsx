@@ -10,7 +10,7 @@ export interface AuthUser {
   email?: string;
   /** Da li je admin odobrio pretplatu. Kada je true, baner probnog perioda nestaje. */
   isActive?: boolean;
-  /** ISO datum do kojeg traje 7-dnevni probni period (null nakon aktivacije). */
+  /** ISO datum do kojeg traje 30-dnevni probni period (null nakon aktivacije). */
   trialUntil?: string | null;
 }
 

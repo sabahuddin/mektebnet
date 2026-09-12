@@ -175,7 +175,7 @@ function MuallimGuide() {
       phase: t("TOK NASTAVE"),
       title: t("Ocjene"),
       icon: Star,
-      intro: t("Ocjene bilježe praktično znanje, teorijsko znanje i ponašanje učenika, a mogu se povezati i s lekcijom."),
+      intro: t("Ocjene se mogu unositi za učenje, usmeno, pismeno, praktično, zadaću, test i napamet, a mogu se povezati i s lekcijom."),
       action: t("U grupi otvori učenika ili tabelu ocjena, odaberi vrstu ocjene, unesi rezultat i po potrebi dodaj lekciju i komentar."),
       result: t("Muallim više ne mora pamtiti ili naknadno prepisivati procjene — napredak i povratna informacija ostaju dostupni uz učenikov profil."),
     },
@@ -671,7 +671,7 @@ export default function VodicPage() {
             <div className="bg-white rounded-2xl border border-border/40 p-6 text-center">
               <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-black">1</div>
               <h4 className="font-bold text-foreground mb-1">{t("Registracija")}</h4>
-              <p className="text-sm text-muted-foreground">{t("Otvori račun kao učenik, roditelj ili mekteb. 7 dana besplatno.")}</p>
+              <p className="text-sm text-muted-foreground">{t("Otvori račun kao učenik, roditelj ili mekteb. 30 dana besplatno.")}</p>
             </div>
             <div className="bg-white rounded-2xl border border-border/40 p-6 text-center">
               <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-black">2</div>

@@ -72,7 +72,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 
   // Re-check user status iz DB (cached). Token je dugotrajan (30d), pa moramo
-  // poštovati admin deaktivaciju i istek 7-dnevnog triala u realnom vremenu.
+  // poštovati admin deaktivaciju i istek 30-dnevnog triala u realnom vremenu.
   try {
     const status = await fetchUserStatus(payload.userId);
     if (!status) {
@@ -83,7 +83,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     if (!status.isActive && !trialActive) {
       res.status(403).json({
         error: status.trialUntilMs
-          ? "Vaš 7-dnevni probni period je istekao. Kontaktirajte administratora."
+          ? "Vaš 30-dnevni probni period je istekao. Kontaktirajte administratora."
           : "Vaš račun nije aktivan. Kontaktirajte administratora.",
       });
       return;

@@ -534,7 +534,7 @@ async function runResidualSchema() {
 
     // Probni period za self-registration. Login dozvoljen ako je
     // `is_active=true` (admin odobrio pretplatu) ILI `trial_until > now`
-    // (probnih 7 dana još nije isteklo).
+    // (probnih 30 dana još nije isteklo).
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_until timestamp;`);
 
     // Prilozi catch-up (idempotent). Tabela prilozi je nastala prije Drizzle
