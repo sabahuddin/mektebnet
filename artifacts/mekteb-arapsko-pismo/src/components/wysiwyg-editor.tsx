@@ -1175,20 +1175,44 @@ export function WysiwygEditor({ content, onChange, token }: WysiwygEditorProps) 
     },
   });
 
-  const selectGalleryImage = useCallback((url: string) => {
+  const selectGalleryImage = useCallback(async (url: string) => {
     if (galleryMode === "hero") {
-      setHeroImage(url);
-      setParsed(prev => ({
-        ...prev,
-        beforeAccordions: replaceHeroImage(prev.beforeAccordions, url),
-      }));
-      onChange("");
-      toast({ title: t("Hero slika postavljena ✓") });
-    } else if (editor) {
-      editor.chain().focus().setImage({ src: url }).run();
+      setGalleryLoading(true);
+      try {
+        const response = await fetch(`${getApiBase()}/admin/uploads/copy-image`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url }),
+        });
+        const copied = await response.json();
+        if (!response.ok || typeof copied?.url !== "string") {
+          throw new Error(copied?.error || t("Kopiranje slike nije uspjelo"));
+        }
+        setHeroImage(copied.url);
+        setParsed(prev => ({
+          ...prev,
+          beforeAccordions: replaceHeroImage(prev.beforeAccordions, copied.url),
+        }));
+        onChange("");
+        setShowGallery(false);
+        toast({ title: t("Hero slika sačuvana ✓") });
+      } catch (error: any) {
+        toast({
+          title: t("Greška"),
+          description: error?.message || t("Kopiranje slike nije uspjelo"),
+          variant: "destructive",
+        });
+      } finally {
+        setGalleryLoading(false);
+      }
+      return;
     }
+    if (editor) editor.chain().focus().setImage({ src: url }).run();
     setShowGallery(false);
-  }, [galleryMode, editor, onChange, toast]);
+  }, [galleryMode, editor, onChange, toast, t, token]);
 
   const onDocumentUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

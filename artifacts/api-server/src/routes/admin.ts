@@ -1005,6 +1005,34 @@ router.get("/uploads", (_req, res) => {
   return;
 });
 
+// Napravi nezavisnu fizičku kopiju postojeće slike iz galerije prije nego što
+// se koristi kao hero slika. Lekcija tako ne zavisi od starog URL-a/fajla koji
+// se kasnije može obrisati ili zamijeniti.
+router.post("/uploads/copy-image", (req, res) => {
+  try {
+    const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+    const match = url.match(/^\/uploads\/([^/?#]+)$/);
+    if (!match) return res.status(400).json({ error: "Dozvoljena je samo slika iz lokalne galerije" });
+
+    const sourceName = decodeURIComponent(match[1]);
+    if (sourceName !== path.basename(sourceName) || !/\.(jpg|jpeg|png|gif|webp)$/i.test(sourceName)) {
+      return res.status(400).json({ error: "Nevažeći naziv slike" });
+    }
+    const sourcePath = path.join(uploadsDir, sourceName);
+    if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+      return res.status(404).json({ error: "Izabrana slika više ne postoji" });
+    }
+
+    const ext = path.extname(sourceName).toLowerCase();
+    const targetName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-hero${ext}`;
+    fs.copyFileSync(sourcePath, path.join(uploadsDir, targetName));
+    res.json({ url: `/uploads/${targetName}` });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || "Kopiranje slike nije uspjelo" });
+  }
+  return;
+});
+
 // GET /api/admin/uploads-audio — već uploadovani audio fajlovi (za ponovnu
 // upotrebu u drugim lekcijama bez ponovnog uploada).
 router.get("/uploads-audio", (_req, res) => {
