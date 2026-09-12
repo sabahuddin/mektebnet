@@ -1012,6 +1012,64 @@ async function runDataBootstrap() {
     logger.error({ err: bundledImageErr }, "Zamjena bundlanih JPG referenci nije uspjela (non-fatal)");
   }
 
+  try {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const uploadsDir = process.env["UPLOADS_DIR"]
+      ? path.resolve(process.env["UPLOADS_DIR"])
+      : path.resolve(process.cwd(), "uploads");
+    const uploadedWebpNames = new Set(
+      fs.existsSync(uploadsDir)
+        ? fs.readdirSync(uploadsDir).filter(name => name.toLowerCase().endsWith(".webp"))
+        : [],
+    );
+    const bundledImagePattern = /(?:\.\.\/\.\.\/|\/edu\/|\/)assets\/images\/([^"'?#/]+\.webp)/gi;
+    const useUploadedCopy = (value: string | null): string | null => {
+      if (!value) return value;
+      return value.replace(bundledImagePattern, (original, filename: string) =>
+        uploadedWebpNames.has(filename) ? `/uploads/${filename}` : original
+      );
+    };
+
+    let lessonUpdates = 0;
+    let translationUpdates = 0;
+    await db.transaction(async tx => {
+      const lessonRows = (await tx.execute(sql`
+        SELECT id, content_html
+        FROM ilmihal_lekcije
+        WHERE content_html LIKE '%assets/images/%'
+      `)) as unknown as DbExecResult<{ id: number; content_html: string }>;
+      for (const row of lessonRows.rows) {
+        const updated = useUploadedCopy(row.content_html);
+        if (updated === row.content_html || updated === null) continue;
+        await tx.execute(sql`UPDATE ilmihal_lekcije SET content_html = ${updated} WHERE id = ${row.id}`);
+        lessonUpdates++;
+      }
+
+      const translationRows = (await tx.execute(sql`
+        SELECT id, prijevod
+        FROM content_prijevodi
+        WHERE prijevod LIKE '%assets/images/%'
+      `)) as unknown as DbExecResult<{ id: number; prijevod: string }>;
+      for (const row of translationRows.rows) {
+        const updated = useUploadedCopy(row.prijevod);
+        if (updated === row.prijevod || updated === null) continue;
+        await tx.execute(sql`
+          UPDATE content_prijevodi
+          SET prijevod = ${updated}, updated_at = NOW()
+          WHERE id = ${row.id}
+        `);
+        translationUpdates++;
+      }
+    });
+    logger.info(
+      { lessonUpdates, translationUpdates, uploadedWebpFiles: uploadedWebpNames.size },
+      "Bundlane hero reference povezane sa istoimenim /uploads WebP fajlovima",
+    );
+  } catch (heroReferenceErr) {
+    logger.error({ err: heroReferenceErr }, "Povezivanje hero slika sa /uploads nije uspjelo (non-fatal)");
+  }
+
   // BANKA PITANJA: prebaci sva kvizovska pitanja iz `kvizovi.pitanja` JSONB-a
   // u centralnu `pitanja_banka` + napravi `kviz_pitanja` veze. Idempotentno
   // (ON CONFLICT DO NOTHING/UPDATE), pa je sigurno pokretati na svaki start.
