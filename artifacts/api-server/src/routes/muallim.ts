@@ -2746,20 +2746,23 @@ router.get("/napamet-program", async (req, res) => {
         ? await db.select({
             ucenikId: ocjeneTable.ucenikId,
             napametStavkaId: ocjeneTable.napametStavkaId,
+            lekcijaNaziv: ocjeneTable.lekcijaNaziv,
             datum: ocjeneTable.datum,
             id: ocjeneTable.id,
-          }).from(ocjeneTable).where(and(
-            inArray(ocjeneTable.ucenikId, studentIds),
-            sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
-          )).orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
+          }).from(ocjeneTable).where(inArray(ocjeneTable.ucenikId, studentIds))
+            .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
         : [];
+      const stavkaPoNazivu = new Map(katalog.map((item) => [item.naziv.trim().toLocaleLowerCase("bs"), item.id]));
       const latestByStudentAndItem = new Set<string>();
       const assessedByItem = new Map<string, number>();
       for (const grade of grades) {
-        const key = `${grade.ucenikId}:${grade.napametStavkaId}`;
-        if (latestByStudentAndItem.has(key) || !grade.napametStavkaId) continue;
+        const stavkaId = grade.napametStavkaId
+          || (grade.lekcijaNaziv ? stavkaPoNazivu.get(grade.lekcijaNaziv.trim().toLocaleLowerCase("bs")) : undefined);
+        if (!stavkaId) continue;
+        const key = `${grade.ucenikId}:${stavkaId}`;
+        if (latestByStudentAndItem.has(key)) continue;
         latestByStudentAndItem.add(key);
-        assessedByItem.set(grade.napametStavkaId, (assessedByItem.get(grade.napametStavkaId) ?? 0) + 1);
+        assessedByItem.set(stavkaId, (assessedByItem.get(stavkaId) ?? 0) + 1);
       }
       res.json({
         katalog: katalog.map((item) => ({
@@ -2804,14 +2807,19 @@ router.get("/napamet-program/:stavkaId/detalji", async (req, res) => {
     const grades = studentIds.length ? await db.select({
       ucenikId: ocjeneTable.ucenikId,
       ocjena: ocjeneTable.ocjena,
+      napametStavkaId: ocjeneTable.napametStavkaId,
+      lekcijaNaziv: ocjeneTable.lekcijaNaziv,
       datum: ocjeneTable.datum,
       id: ocjeneTable.id,
-    }).from(ocjeneTable).where(and(
-      inArray(ocjeneTable.ucenikId, studentIds),
-      eq(ocjeneTable.napametStavkaId, stavkaId),
-    )).orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id)) : [];
+    }).from(ocjeneTable).where(inArray(ocjeneTable.ucenikId, studentIds))
+      .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id)) : [];
+    const itemNaziv = item.naziv.trim().toLocaleLowerCase("bs");
+    const relevantGrades = grades.filter((grade) =>
+      grade.napametStavkaId === stavkaId
+      || (!grade.napametStavkaId && grade.lekcijaNaziv?.trim().toLocaleLowerCase("bs") === itemNaziv)
+    );
     const latest = new Map<number, typeof grades[number]>();
-    for (const grade of grades) if (!latest.has(grade.ucenikId)) latest.set(grade.ucenikId, grade);
+    for (const grade of relevantGrades) if (!latest.has(grade.ucenikId)) latest.set(grade.ucenikId, grade);
     const assessed = students.filter((student) => latest.has(student.id)).map((student) => {
       const grade = latest.get(student.id)!;
       return { id: student.id, displayName: student.displayName, ocjena: grade.ocjena, datum: grade.datum };
@@ -2952,16 +2960,24 @@ router.get("/napamet/:ucenikId", async (req, res) => {
     }
     const grupa = await verifyGrupaAccess(profilUcenika.grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return; }
-    const ocjene = await db.select().from(ocjeneTable).where(and(
-      eq(ocjeneTable.ucenikId, ucenikId),
-      sql`${ocjeneTable.napametStavkaId} IS NOT NULL`,
-    )).orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
-    const latest = new Map<string, typeof ocjene[number]>();
-    for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
-    res.json({ katalog: await getNapametKatalog({
+    const katalog = await getNapametKatalog({
       mektebId: ctx.mektebId,
       grupaId: profilUcenika.grupaId,
-    }), ocjene: [...latest.values()] });
+    });
+    const stavkaPoNazivu = new Map(katalog.map((item) => [item.naziv.trim().toLocaleLowerCase("bs"), item]));
+    const sveOcjene = await db.select().from(ocjeneTable)
+      .where(eq(ocjeneTable.ucenikId, ucenikId))
+      .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
+    const ocjene = sveOcjene.flatMap((ocjena) => {
+      if (ocjena.napametStavkaId) return [ocjena];
+      const stavka = ocjena.lekcijaNaziv
+        ? stavkaPoNazivu.get(ocjena.lekcijaNaziv.trim().toLocaleLowerCase("bs"))
+        : undefined;
+      return stavka ? [{ ...ocjena, napametStavkaId: stavka.id, napametNivo: stavka.nivo }] : [];
+    });
+    const latest = new Map<string, typeof ocjene[number]>();
+    for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
+    res.json({ katalog, ocjene: [...latest.values()] });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
