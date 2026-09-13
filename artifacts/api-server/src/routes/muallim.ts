@@ -1618,50 +1618,86 @@ router.get("/ucenici", async (req, res) => {
       return;
     }
 
-    // Obični muallim — vlastiti učenici
-    const profiliRaw = await db.select().from(ucenikProfiliTable)
-      .where(eq(ucenikProfiliTable.muallimId, userId));
-    const activeGrupaRows = await db.select({ id: grupeTable.id }).from(grupeTable)
-      .where(and(
-        eq(grupeTable.muallimId, userId),
-        sql`COALESCE(is_archived, false) = false`,
-        sql`COALESCE(is_active, true) = true`,
-      ));
-    const activeGrupaIds = new Set(activeGrupaRows.map(g => g.id));
-    const profili = profiliRaw.filter(p =>
-      !p.isArchived && (!p.grupaId || activeGrupaIds.has(p.grupaId)),
-    );
-    if (profili.length === 0) { res.json([]); return; }
+    // Grupisani učenik pripada spisku svakog muallima koji ima pristup toj
+    // aktivnoj grupi (glavni ili sekundarni). `up.muallim_id` je pouzdan samo
+    // za učenike koji još nisu raspoređeni u grupu.
+    const rows = await db.execute(sql`
+      SELECT
+        up.user_id,
+        up.muallim_id AS profil_muallim_id,
+        COALESCE(g.muallim_id, up.muallim_id) AS muallim_id,
+        up.grupa_id,
+        up.mekteb_id,
+        up.is_archived,
+        u.display_name,
+        u.username,
+        u.email,
+        u.role,
+        u.last_seen_at,
+        u.total_screentime_sec,
+        g.naziv AS grupa_naziv,
+        mu.display_name AS muallim_display_name,
+        EXISTS (
+          SELECT 1
+          FROM roditelj_ucenik ru
+          WHERE ru.ucenik_id = up.user_id
+            AND ru.status = 'approved'
+        ) AS roditelj_povezan
+      FROM ucenik_profili up
+      JOIN users u ON u.id = up.user_id
+      LEFT JOIN grupe g ON g.id = up.grupa_id
+      LEFT JOIN users mu ON mu.id = COALESCE(g.muallim_id, up.muallim_id)
+      WHERE (up.is_archived = false OR up.is_archived IS NULL)
+        AND (
+          (up.grupa_id IS NULL AND up.muallim_id = ${userId})
+          OR (
+            up.grupa_id IS NOT NULL
+            AND COALESCE(g.is_archived, false) = false
+            AND COALESCE(g.is_active, true) = true
+            AND (
+              g.muallim_id = ${userId}
+              OR EXISTS (
+                SELECT 1
+                FROM grupa_muallimi gm
+                WHERE gm.grupa_id = g.id
+                  AND gm.muallim_id = ${userId}
+              )
+            )
+          )
+        )
+      ORDER BY u.display_name ASC
+    `);
 
-    const userIds = profili.map(p => p.userId);
-    const korisnici = await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
-    const roditeljskeVeze = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
-      .from(roditeljUcenikTable)
-      .where(and(
-        inArray(roditeljUcenikTable.ucenikId, userIds),
-        eq(roditeljUcenikTable.status, "approved"),
-      ));
-    const uceniciSPovezanimRoditeljem = new Set(roditeljskeVeze.map(v => v.ucenikId));
-    const grupe = await db.select().from(grupeTable).where(and(
-      eq(grupeTable.muallimId, userId),
-      sql`COALESCE(is_archived, false) = false`,
-      sql`COALESCE(is_active, true) = true`,
-    ));
-    const grupaMap = Object.fromEntries(grupe.map(g => [g.id, g.naziv]));
-
-    const result = korisnici.map(u => {
-      const profil = profili.find(p => p.userId === u.id);
-      return {
-        ...u,
-        passwordHash: undefined,
-        profil,
-        grupaId: profil?.grupaId || null,
-        grupaIme: profil?.grupaId ? grupaMap[profil.grupaId] || null : null,
-        roditeljPovezan: uceniciSPovezanimRoditeljem.has(u.id),
-        aktivanStatus: profil ? !profil.isArchived : true,
-      };
-    });
-    res.json(result);
+    type OwnStudentRow = {
+      user_id: number; profil_muallim_id: number; muallim_id: number;
+      grupa_id: number | null; mekteb_id: number | null; is_archived: boolean | null;
+      display_name: string; username: string; email: string | null; role: string;
+      last_seen_at: string | null; total_screentime_sec: number | null;
+      grupa_naziv: string | null; muallim_display_name: string | null;
+      roditelj_povezan: boolean;
+    };
+    res.json((rows.rows as OwnStudentRow[]).map(r => ({
+      id: r.user_id,
+      displayName: r.display_name,
+      username: r.username,
+      email: r.email,
+      role: r.role,
+      lastSeenAt: r.last_seen_at,
+      totalScreentimeSec: r.total_screentime_sec,
+      grupaId: r.grupa_id,
+      grupaIme: r.grupa_naziv,
+      muallimId: r.muallim_id,
+      muallimDisplayName: r.muallim_display_name,
+      roditeljPovezan: r.roditelj_povezan,
+      aktivanStatus: true,
+      profil: {
+        userId: r.user_id,
+        muallimId: r.profil_muallim_id,
+        grupaId: r.grupa_id,
+        mektebId: r.mekteb_id,
+        isArchived: r.is_archived ?? false,
+      },
+    })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
