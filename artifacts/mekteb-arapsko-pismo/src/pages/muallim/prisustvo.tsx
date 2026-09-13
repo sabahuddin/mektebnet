@@ -40,7 +40,11 @@ const STATUS_OPTIONS: { value: Status; label: string; icon: React.ReactNode; col
 ];
 
 function todayStr() {
-  return new Date().toISOString().split("T")[0];
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function PrisustvoPage() {
@@ -55,6 +59,8 @@ export default function PrisustvoPage() {
   const [statusi, setStatusi] = useState<Record<number, Status>>({});
   const [napomene, setNapomene] = useState<Record<number, string>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
+  const [hasExistingRecords, setHasExistingRecords] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -74,20 +80,42 @@ export default function PrisustvoPage() {
   }, [token, grupaId]);
 
   useEffect(() => {
-    if (!token || !grupaId || ucenici.length === 0) return;
+    if (!token || !grupaId || ucenici.length === 0) {
+      setHasExistingRecords(false);
+      return;
+    }
+    let ignore = false;
+    const defaultStatusi: Record<number, Status> = {};
+    ucenici.forEach(u => { defaultStatusi[u.id] = "prisutan"; });
+    setStatusi(defaultStatusi);
+    setNapomene({});
+    setHasExistingRecords(false);
+    setIsAttendanceLoading(true);
+
     apiRequest<PrisustvoRecord[]>("GET", `/muallim/prisustvo?grupaId=${grupaId}&datum=${datum}`, undefined, token)
       .then(records => {
-        if (records.length === 0) return;
-        const newStatusi: Record<number, Status> = {};
+        if (ignore) return;
+        const newStatusi = { ...defaultStatusi };
         const newNapomene: Record<number, string> = {};
         for (const r of records) {
           newStatusi[r.ucenikId] = r.status as Status;
           if (r.napomena) newNapomene[r.ucenikId] = r.napomena;
         }
-        setStatusi(prev => ({ ...prev, ...newStatusi }));
-        setNapomene(prev => ({ ...prev, ...newNapomene }));
-      }).catch(() => {});
-  }, [datum, ucenici.length, token, grupaId]);
+        setStatusi(newStatusi);
+        setNapomene(newNapomene);
+        setHasExistingRecords(records.length > 0);
+      })
+      .catch(() => {
+        if (!ignore) {
+          toast({ title: t("Greška"), description: t("Nije moguće učitati prisustvo za odabrani datum"), variant: "destructive" });
+        }
+      })
+      .finally(() => {
+        if (!ignore) setIsAttendanceLoading(false);
+      });
+
+    return () => { ignore = true; };
+  }, [datum, ucenici, token, grupaId, toast, t]);
 
   async function handleSave() {
     if (!token || !grupaId) return;
@@ -99,7 +127,10 @@ export default function PrisustvoPage() {
         napomena: napomene[u.id] || null,
       }));
       await apiRequest("POST", "/muallim/prisustvo", { grupaId: parseInt(grupaId), datum, prisustvo: prisustvoData }, token);
-      toast({ title: t("Prisustvo sačuvano!"), description: t("Evidentirano za {datum}", { datum }) });
+      toast({
+        title: hasExistingRecords ? t("Prisustvo ažurirano!") : t("Prisustvo sačuvano!"),
+        description: t("Evidentirano za {datum}", { datum }),
+      });
       setLocation(`/muallim/grupa/${grupaId}`);
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće sačuvati prisustvo"), variant: "destructive" });
@@ -139,9 +170,18 @@ export default function PrisustvoPage() {
               type="date"
               value={datum}
               onChange={e => setDatum(e.target.value)}
+              max={todayStr()}
               className="border border-border rounded-xl px-4 py-2.5 font-bold text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
+            <p className="mt-1.5 max-w-sm text-xs text-muted-foreground">
+              {t("Odaberi raniji datum da pregledaš i ispraviš već uneseno prisustvo.")}
+            </p>
           </div>
+          {hasExistingRecords && !isAttendanceLoading && (
+            <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+              {t("Postojeći zapis — izmjene će ga ažurirati")}
+            </span>
+          )}
           {ucenici.length > 0 && (
             <div className="flex gap-4 text-sm font-bold">
               <span className="text-emerald-600">✓ {t("{n} prisutnih", { n: String(prisutnih) })}</span>
@@ -173,6 +213,7 @@ export default function PrisustvoPage() {
                       {STATUS_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
+                          disabled={isAttendanceLoading}
                           onClick={() => setStatusi(prev => ({ ...prev, [u.id]: opt.value }))}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
                             currentStatus === opt.value
@@ -189,6 +230,7 @@ export default function PrisustvoPage() {
                     <div className="mt-3">
                       <input
                         type="text"
+                        disabled={isAttendanceLoading}
                         placeholder={t("Napomena (opcionalno)")}
                         value={napomene[u.id] || ""}
                         onChange={e => setNapomene(prev => ({ ...prev, [u.id]: e.target.value }))}
@@ -201,9 +243,9 @@ export default function PrisustvoPage() {
             })}
 
             <div className="flex justify-end mt-4">
-              <Button onClick={handleSave} disabled={isSaving} className="rounded-xl font-bold px-8 flex items-center gap-2">
+              <Button onClick={handleSave} disabled={isSaving || isAttendanceLoading} className="rounded-xl font-bold px-8 flex items-center gap-2">
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {t("Sačuvaj prisustvo")}
+                {hasExistingRecords ? t("Sačuvaj izmjene") : t("Sačuvaj prisustvo")}
               </Button>
             </div>
           </div>
