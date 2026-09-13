@@ -34,9 +34,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    const storedUser = localStorage.getItem(USER_KEY);
-    if (storedToken && storedUser) {
+    let active = true;
+
+    async function restoreAuth() {
+      const storedToken = localStorage.getItem(TOKEN_KEY);
+      const storedUser = localStorage.getItem(USER_KEY);
+      if (!storedToken || !storedUser) {
+        if (active) setIsLoading(false);
+        return;
+      }
+
       try {
         const parsedUser = JSON.parse(storedUser) as AuthUser;
         setToken(storedToken);
@@ -45,28 +52,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginPushUser(parsedUser.id).catch(() => {});
         // Osvježi status sa servera (isActive/trialUntil/uloga) — npr. admin je
         // u međuvremenu odobrio pretplatu, pa baner probnog perioda treba
-        // nestati bez ponovne prijave. Mrežnu/auth grešku tiho ignorišemo.
-        apiRequest<AuthUser>("GET", "/auth/me", undefined, storedToken)
-          .then((fresh) => {
+        // nestati bez ponovne prijave. Auth hidratacija završava tek nakon ove
+        // provjere da zaštićena stranica ne montira i ruši sadržaj na refreshu.
+        try {
+          const fresh = await apiRequest<AuthUser>("GET", "/auth/me", undefined, storedToken);
+          if (active) {
             const merged = { ...parsedUser, ...fresh };
             setUser(merged);
             localStorage.setItem(USER_KEY, JSON.stringify(merged));
-          })
-          .catch((err) => {
-            // Token istekao/nevažeći ili probni period istekao (401/403) →
-            // očisti lokalni auth state da UI ne tvrdi da smo prijavljeni dok
-            // API odbija. Mrežne/privremene greške tiho ignorišemo.
-            const status = (err as { status?: number })?.status;
-            if (status === 401 || status === 403) {
+          }
+        } catch (err) {
+          // Token istekao/nevažeći ili probni period istekao (401/403) →
+          // očisti lokalni auth state da UI ne tvrdi da smo prijavljeni dok
+          // API odbija. Mrežne/privremene greške tiho ignorišemo.
+          const status = (err as { status?: number })?.status;
+          if ((status === 401 || status === 403) && active) {
               localStorage.removeItem(TOKEN_KEY);
               localStorage.removeItem(USER_KEY);
               setToken(null);
               setUser(null);
-            }
-          });
-      } catch {}
+          }
+        }
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        if (active) {
+          setToken(null);
+          setUser(null);
+        }
+      } finally {
+        if (active) setIsLoading(false);
+      }
     }
-    setIsLoading(false);
+
+    void restoreAuth();
+    return () => { active = false; };
   }, []);
 
   const login = async (username: string, password: string) => {

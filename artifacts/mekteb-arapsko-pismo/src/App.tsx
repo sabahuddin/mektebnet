@@ -280,10 +280,19 @@ function HeartbeatMount() {
  */
 function AppRoutes() {
   const { lang } = useLanguage();
+  const { isLoading } = useAuth();
 
   useEffect(() => {
     markCurrentAppHistoryEntry();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fffaf3]">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" aria-label="Učitavanje" />
+      </div>
+    );
+  }
 
   return (
     <WouterRouter

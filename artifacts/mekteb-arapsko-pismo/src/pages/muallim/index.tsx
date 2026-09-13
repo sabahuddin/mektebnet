@@ -504,6 +504,8 @@ export default function MuallimPanel() {
   const [opisInput, setOpisInput] = useState("");
   const [dostupneLekcije, setDostupneLekcije] = useState<IlmihalLekcija[]>([]);
   const [showLekcijaSelect, setShowLekcijaSelect] = useState(false);
+  const [kalendarAktivnostOpis, setKalendarAktivnostOpis] = useState("");
+  const [kalendarAktivnostTip, setKalendarAktivnostTip] = useState("ponavljanje");
   const [batchMode, setBatchMode] = useState(false);
   const [batchDatumi, setBatchDatumi] = useState<string[]>([]);
   const [batchSaving, setBatchSaving] = useState(false);
@@ -579,6 +581,7 @@ export default function MuallimPanel() {
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [planDatum, setPlanDatum] = useState(new Date().toISOString().split("T")[0]);
   const [planLekcijaNaslov, setPlanLekcijaNaslov] = useState("");
+  const [planAktivnostOpis, setPlanAktivnostOpis] = useState("");
   const [planVrstaCasa, setPlanVrstaCasa] = useState("obrada");
   const [savingPlanLekcija, setSavingPlanLekcija] = useState(false);
 
@@ -964,16 +967,18 @@ export default function MuallimPanel() {
   }, [token, planGrupaId]);
 
   async function savePlanLekcija() {
-    if (!token || !planGrupaId || !planLekcijaNaslov.trim()) return;
+    const naslov = planLekcijaNaslov.trim() || planAktivnostOpis.trim();
+    if (!token || !planGrupaId || !naslov) return;
     setSavingPlanLekcija(true);
     try {
       const nova = await apiRequest<PlanLekcija>("POST", "/muallim/plan-lekcija", {
-        grupaId: planGrupaId, datum: planDatum, lekcijaNaslov: planLekcijaNaslov.trim(), lekcijaTip: planVrstaCasa, redoslijed: planLekcijaSep.filter(p => p.datum === planDatum).length,
+        grupaId: planGrupaId, datum: planDatum, lekcijaNaslov: naslov, lekcijaTip: planVrstaCasa, redoslijed: planLekcijaSep.filter(p => p.datum === planDatum).length,
       }, token);
       setPlanLekcijaSep(prev => [...prev, nova]);
       setPlanLekcijaNaslov("");
+      setPlanAktivnostOpis("");
       setShowPlanForm(false);
-      toast({ title: t("Lekcija dodana u plan!") });
+      toast({ title: t("Stavka dodana u plan!") });
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
     finally { setSavingPlanLekcija(false); }
   }
@@ -2417,7 +2422,10 @@ export default function MuallimPanel() {
                         </div>
                         <div>
                           <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
-                          <select value={planLekcijaNaslov} onChange={e => setPlanLekcijaNaslov(e.target.value)}
+                          <select value={planLekcijaNaslov} onChange={e => {
+                            setPlanLekcijaNaslov(e.target.value);
+                            if (e.target.value) setPlanAktivnostOpis("");
+                          }}
                             className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300">
                             <option value="">{t("— Odaberi lekciju —")}</option>
                             {[1, 2, 3, 4].map(nivo => {
@@ -2433,13 +2441,26 @@ export default function MuallimPanel() {
                             })}
                           </select>
                         </div>
-                        {!planLekcijaNaslov && (
-                          <input type="text" placeholder={t("Ili upišite naziv lekcije ručno")} value={planLekcijaNaslov}
-                            onChange={e => setPlanLekcijaNaslov(e.target.value)}
-                            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
-                        )}
+                        <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground">
+                          <div className="h-px flex-1 bg-violet-200" />
+                          {t("ILI")}
+                          <div className="h-px flex-1 bg-violet-200" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Aktivnost / obnavljanje")}</label>
+                          <input
+                            type="text"
+                            placeholder={t("Npr. test, provjera gradiva, praktično klanjanje")}
+                            value={planAktivnostOpis}
+                            onChange={e => {
+                              setPlanAktivnostOpis(e.target.value);
+                              if (e.target.value) setPlanLekcijaNaslov("");
+                            }}
+                            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+                          />
+                        </div>
                         <div className="flex gap-2">
-                          <Button onClick={savePlanLekcija} disabled={savingPlanLekcija || !planLekcijaNaslov.trim()}
+                          <Button onClick={savePlanLekcija} disabled={savingPlanLekcija || !(planLekcijaNaslov.trim() || planAktivnostOpis.trim())}
                             className="rounded-xl font-bold text-sm bg-violet-600 hover:bg-violet-700">
                             {savingPlanLekcija ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Sačuvaj")}
                           </Button>
@@ -4605,6 +4626,46 @@ export default function MuallimPanel() {
                                       </div>
                                     );
                                   })}
+                                </div>
+                                <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 space-y-2">
+                                  <label className="text-xs font-extrabold text-violet-800 block">
+                                    {t("Ili upiši aktivnost / obnavljanje")}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={kalendarAktivnostOpis}
+                                    onChange={e => setKalendarAktivnostOpis(e.target.value)}
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter" && kalendarAktivnostOpis.trim()) {
+                                        void addLekcija(selectedDate!, kalendarAktivnostOpis.trim(), kalendarAktivnostTip);
+                                        setKalendarAktivnostOpis("");
+                                      }
+                                    }}
+                                    placeholder={t("Npr. test, provjera gradiva, praktično klanjanje")}
+                                    className="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+                                  />
+                                  <div className="flex flex-col gap-2 sm:flex-row">
+                                    <select
+                                      value={kalendarAktivnostTip}
+                                      onChange={e => setKalendarAktivnostTip(e.target.value)}
+                                      className="flex-1 border border-violet-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+                                    >
+                                      <option value="ponavljanje">{t("Ponavljanje")}</option>
+                                      <option value="test">{t("Test")}</option>
+                                      <option value="prakticno">{t("Praktično")}</option>
+                                      <option value="obrada">{t("Obrada")}</option>
+                                    </select>
+                                    <Button
+                                      onClick={() => {
+                                        void addLekcija(selectedDate!, kalendarAktivnostOpis.trim(), kalendarAktivnostTip);
+                                        setKalendarAktivnostOpis("");
+                                      }}
+                                      disabled={!kalendarAktivnostOpis.trim()}
+                                      className="rounded-lg font-bold"
+                                    >
+                                      <Plus className="w-4 h-4 mr-1" /> {t("Dodaj aktivnost")}
+                                    </Button>
+                                  </div>
                                 </div>
                                 <button onClick={() => setShowLekcijaSelect(false)} className="text-sm text-muted-foreground hover:text-foreground font-medium">
                                   {t("Zatvori")}
