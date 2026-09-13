@@ -85,6 +85,10 @@ interface UcenikZadaca {
   rokDo?: string | null;
   efektivniRok?: string | null;
   ocjena?: number | null;
+  uradjeno?: boolean;
+  kapiMeda?: number;
+  noviRok?: string | null;
+  prolongCount?: number;
   status: string;
   kategorija: "aktivne" | "zavrsene" | "neuradjene";
   istekao?: boolean;
@@ -207,6 +211,7 @@ export default function GrupaPage() {
   const [zadacaModalTab, setZadacaModalTab] = useState<"pregled" | "nova">("pregled");
   const [zadaceTargeta, setZadaceTargeta] = useState<UcenikZadaca[]>([]);
   const [zadaceTargetaLoading, setZadaceTargetaLoading] = useState(false);
+  const [savingZadacaStatusId, setSavingZadacaStatusId] = useState<number | null>(null);
 
   // Brisanje učenika (hard delete)
   const [deleteTarget, setDeleteTarget] = useState<Ucenik | null>(null);
@@ -518,6 +523,40 @@ export default function GrupaPage() {
       toast({ title: t("Greška pri učitavanju zadaća"), variant: "destructive" });
     } finally {
       setZadaceTargetaLoading(false);
+    }
+  }
+
+  async function saveZadacaStatus(zadaca: UcenikZadaca) {
+    if (!token || !zadacaTarget) return;
+    setSavingZadacaStatusId(zadaca.id);
+    try {
+      await apiRequest(
+        "PUT",
+        `/muallim/zadace/${zadaca.id}/status/${zadacaTarget.id}`,
+        {
+          uradjeno: zadaca.uradjeno ?? false,
+          ocjena: zadaca.ocjena ?? null,
+          kapiMeda: zadaca.kapiMeda ?? 0,
+          noviRok: zadaca.noviRok || null,
+        },
+        token,
+      );
+      const data = await apiRequest<UcenikZadaca[]>(
+        "GET",
+        `/muallim/ucenik/${zadacaTarget.id}/zadace`,
+        undefined,
+        token,
+      );
+      setZadaceTargeta(data);
+      toast({ title: t("Zadaća je ažurirana") });
+    } catch (e: any) {
+      toast({
+        title: t("Greška"),
+        description: e?.message || t("Nije moguće ažurirati zadaću"),
+        variant: "destructive",
+      });
+    } finally {
+      setSavingZadacaStatusId(null);
     }
   }
 
@@ -1382,6 +1421,45 @@ export default function GrupaPage() {
                             </span>}
                       </div>
                       {(z.efektivniRok || z.rokDo) && <p className="text-xs text-muted-foreground mt-2"><Calendar className="inline w-3 h-3 mr-1" />{t("Rok:")} {fmtDatum(z.efektivniRok || z.rokDo)}</p>}
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="mb-1 block text-xs font-bold text-muted-foreground">{t("Ocijeni")}</label>
+                          <select
+                            value={z.ocjena ?? ""}
+                            onChange={e => {
+                              const value = e.target.value ? Number(e.target.value) : null;
+                              setZadaceTargeta(prev => prev.map(item => item.id === z.id ? { ...item, ocjena: value } : item));
+                            }}
+                            className="w-full rounded-lg border border-border bg-white px-2 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          >
+                            <option value="">{t("Bez ocjene")}</option>
+                            {[6, 5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-bold text-muted-foreground">{t("Prolongiraj do")}</label>
+                          <input
+                            type="date"
+                            value={z.noviRok?.slice(0, 10) || ""}
+                            onChange={e => setZadaceTargeta(prev => prev.map(item => item.id === z.id ? { ...item, noviRok: e.target.value || null } : item))}
+                            className="w-full rounded-lg border border-border bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        </div>
+                      </div>
+                      {Boolean(z.prolongCount) && (
+                        <p className="mt-1 text-xs font-semibold text-violet-700">
+                          {t("Prolongirano ×{n}", { n: String(z.prolongCount) })}
+                        </p>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => saveZadacaStatus(z)}
+                        disabled={savingZadacaStatusId === z.id}
+                        className="mt-2 w-full rounded-lg font-bold"
+                      >
+                        {savingZadacaStatusId === z.id ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Sačuvaj ocjenu i rok")}
+                      </Button>
                     </div>
                   ))}
                 </div>
