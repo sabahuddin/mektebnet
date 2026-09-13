@@ -1407,8 +1407,21 @@ export default function GrupaPage() {
                         <Plus className="w-4 h-4 mr-1" /> {t("Dodaj zadaću")}
                       </Button>
                     </div>
-                  ) : zadaceTargeta.map(z => (
-                    <div key={z.id} className="rounded-xl border border-border/70 p-3">
+                  ) : ([
+                    { kategorija: "aktivne", naslov: t("Aktivne") },
+                    { kategorija: "zavrsene", naslov: t("Završene – realizirane") },
+                    { kategorija: "neuradjene", naslov: t("Završene – neurađene") },
+                  ] as const).map(sekcija => {
+                    const stavke = zadaceTargeta.filter(z => z.kategorija === sekcija.kategorija);
+                    if (stavke.length === 0) return null;
+                    return (
+                    <section key={sekcija.kategorija} className="space-y-2">
+                      <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                        <h4 className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">{sekcija.naslov}</h4>
+                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-muted-foreground">{stavke.length}</span>
+                      </div>
+                      {stavke.map(z => (
+                    <div key={z.id} className={`rounded-xl border p-3 ${z.kategorija === "zavrsene" ? "border-emerald-200 bg-emerald-50/30" : z.kategorija === "neuradjene" ? "border-red-200 bg-red-50/20" : "border-border/70"}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="font-extrabold text-sm text-foreground">{z.naslov}</p>
@@ -1461,7 +1474,10 @@ export default function GrupaPage() {
                         {savingZadacaStatusId === z.id ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Sačuvaj ocjenu i rok")}
                       </Button>
                     </div>
-                  ))}
+                      ))}
+                    </section>
+                    );
+                  })}
                 </div>
               ) : (
               <div className="space-y-3">
