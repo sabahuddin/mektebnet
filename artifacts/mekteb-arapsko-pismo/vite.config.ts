@@ -116,7 +116,9 @@ export default defineConfig({
         navigateFallback: `${basePath.replace(/\/$/, "")}/index.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/vaktija\//, /^\/edu\//, /OneSignalSDKWorker\.js$/],
         cleanupOutdatedCaches: true,
-        clientsClaim: false,
+        // Nakon korisnikovog klika novi SW mora odmah preuzeti i browser tab
+        // i instalirani app webview; inače isti waiting worker ponovo pali banner.
+        clientsClaim: true,
         skipWaiting: false,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [

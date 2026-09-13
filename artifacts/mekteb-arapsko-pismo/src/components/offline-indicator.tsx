@@ -43,6 +43,7 @@ export function OfflineIndicator() {
   const t = I18N[lang as keyof typeof I18N] ?? I18N.bs;
   const [showBackOnline, setShowBackOnline] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
+  const [applyingUpdate, setApplyingUpdate] = useState(false);
   const [wasOffline, setWasOffline] = useState(false);
 
   useEffect(() => {
@@ -68,10 +69,15 @@ export function OfflineIndicator() {
   }, []);
 
   function applyUpdate() {
+    if (applyingUpdate) return;
+    setApplyingUpdate(true);
+    setUpdateReady(false);
     const fn = (window as unknown as { __mektebUpdateSW?: () => Promise<void> })
       .__mektebUpdateSW;
     if (fn) {
-      void fn();
+      void fn().catch(() => {
+        window.location.reload();
+      });
     } else {
       window.location.reload();
     }
@@ -124,6 +130,7 @@ export function OfflineIndicator() {
             <button
               type="button"
               onClick={applyUpdate}
+              disabled={applyingUpdate}
               className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wide hover:bg-white/30"
             >
               {t.refresh}

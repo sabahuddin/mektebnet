@@ -49,6 +49,21 @@ export function initPWA(): void {
     });
 
     (window as unknown as { __mektebUpdateSW?: () => Promise<void> }).__mektebUpdateSW =
-      () => updateSW(true);
+      async () => {
+        let controllerChanged = false;
+        const markControllerChanged = () => {
+          controllerChanged = true;
+        };
+        navigator.serviceWorker.addEventListener("controllerchange", markControllerChanged, { once: true });
+        try {
+          await updateSW(true);
+          // workbox-window u pravilu sam osvježi stranicu nakon controllerchange.
+          // Ako browser/app webview to ne uradi, osiguraj jedan završni reload.
+          await new Promise((resolve) => window.setTimeout(resolve, 1200));
+          if (!controllerChanged) window.location.reload();
+        } finally {
+          navigator.serviceWorker.removeEventListener("controllerchange", markControllerChanged);
+        }
+      };
   });
 }
