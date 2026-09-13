@@ -5045,17 +5045,27 @@ router.get("/zadace", async (req, res) => {
     // Završeni statusi po zadaći (status = 'zavrseno') — čuvamo i ucenikId
     // da bismo brojali SAMO trenutne adresate (stari statusi za nekadašnje
     // adresate / arhivirane učenike ne smiju lažno označiti zadaću završenom).
-    const statusi = await db.select({ zadacaId: zadaceStatusTable.zadacaId, ucenikId: zadaceStatusTable.ucenikId })
+    const statusi = await db.select({
+      zadacaId: zadaceStatusTable.zadacaId,
+      ucenikId: zadaceStatusTable.ucenikId,
+      status: zadaceStatusTable.status,
+      ocjena: zadaceStatusTable.ocjena,
+    })
       .from(zadaceStatusTable)
-      .where(and(
-        inArray(zadaceStatusTable.zadacaId, zadace.map(z => z.id)),
-        eq(zadaceStatusTable.status, "zavrseno"),
-      ));
+      .where(inArray(zadaceStatusTable.zadacaId, zadace.map(z => z.id)));
     const doneMap = new Map<number, Set<number>>();
+    const gradedMap = new Map<number, Set<number>>();
     for (const s of statusi) {
-      const set = doneMap.get(s.zadacaId) || new Set<number>();
-      set.add(s.ucenikId);
-      doneMap.set(s.zadacaId, set);
+      if (s.status === "zavrseno") {
+        const set = doneMap.get(s.zadacaId) || new Set<number>();
+        set.add(s.ucenikId);
+        doneMap.set(s.zadacaId, set);
+      }
+      if (s.ocjena !== null) {
+        const set = gradedMap.get(s.zadacaId) || new Set<number>();
+        set.add(s.ucenikId);
+        gradedMap.set(s.zadacaId, set);
+      }
     }
 
     res.json(zadace.map(z => {
@@ -5064,6 +5074,8 @@ router.get("/zadace", async (req, res) => {
       const ukupno = recipients.length;
       const doneSet = doneMap.get(z.id);
       const zavrsenih = doneSet ? recipients.filter(uid => doneSet.has(uid)).length : 0;
+      const gradedSet = gradedMap.get(z.id);
+      const ocijenjenih = gradedSet ? recipients.filter(uid => gradedSet.has(uid)).length : 0;
       const lessonId = z.lekcijaSlug ? lessonIdBySlug.get(z.lekcijaSlug) : undefined;
       const lekcijaZavrsenih = lessonId
         ? recipients.filter(uid => lessonProgressMap.has(`${uid}:${lessonId}`)).length
@@ -5074,6 +5086,7 @@ router.get("/zadace", async (req, res) => {
         prilozi: prilogMap.get(z.id) || [],
         ucenikIds,
         zavrsenih,
+        ocijenjenih,
         ukupno,
         completed,
         lekcijaZavrsenih,
@@ -5102,6 +5115,12 @@ router.post("/zadace", async (req, res) => {
     }
     if (individualna && (!Array.isArray(ucenikIds) || ucenikIds.length === 0)) {
       res.status(400).json({ error: "Odaberi najmanje jednog učenika za pojedinačnu zadaću" }); return;
+    }
+    // Glavni modul eksplicitno šalje tipDodjele i služi za grupu ili najmanje
+    // dva učenika. Izostavljen tipDodjele ostaje kompatibilan s karticom jednog
+    // učenika, gdje je pojedinačna zadaća namjerna.
+    if (tipDodjele === "pojedinacno" && Array.isArray(ucenikIds) && ucenikIds.length < 2) {
+      res.status(400).json({ error: "U glavnom modulu odaberi najmanje dva učenika" }); return;
     }
     const naslovFinal = (naslov && String(naslov).trim()) || (lekcijaNaslov && String(lekcijaNaslov).trim()) || null;
     if (!naslovFinal) { res.status(400).json({ error: "Odaberi lekciju ili unesi naslov" }); return; }
@@ -5211,6 +5230,9 @@ router.put("/zadace/:id", async (req, res) => {
     }
     if (individualna && (!Array.isArray(ucenikIds) || ucenikIds.length === 0)) {
       res.status(400).json({ error: "Odaberi najmanje jednog učenika za pojedinačnu zadaću" }); return;
+    }
+    if (tipDodjele === "pojedinacno" && Array.isArray(ucenikIds) && ucenikIds.length < 2) {
+      res.status(400).json({ error: "U glavnom modulu odaberi najmanje dva učenika" }); return;
     }
 
     const [existing] = await db.select().from(zadaceTable)
@@ -5335,7 +5357,7 @@ router.get("/zadace/:id/pregled", async (req, res) => {
 
     const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId);
     if (recipientIds.length === 0) {
-      res.json({ zadaca: { ...zadaca, prilozi: (await getHomeworkAttachments([id])).get(id) || [] }, lekcija: null, lekcijaZavrsenih: 0, lekcijaUkupno: null, ucenici: [] });
+      res.json({ zadaca: { ...zadaca, prilozi: (await getHomeworkAttachments([id])).get(id) || [] }, ocijenjenih: 0, ukupno: 0, lekcija: null, lekcijaZavrsenih: 0, lekcijaUkupno: null, ucenici: [] });
       return;
     }
 
@@ -5391,6 +5413,8 @@ router.get("/zadace/:id/pregled", async (req, res) => {
 
     res.json({
       zadaca: { ...zadaca, prilozi: (await getHomeworkAttachments([id])).get(id) || [] },
+      ocijenjenih: ucenici.filter(u => u.ocjena !== null).length,
+      ukupno: ucenici.length,
       lekcija: linkedLesson ?? null,
       lekcijaZavrsenih: linkedLesson ? ucenici.filter(u => u.lekcijaZavrsena).length : 0,
       lekcijaUkupno: linkedLesson ? ucenici.length : null,
@@ -5409,13 +5433,12 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
     const ucenikId = parseInt(req.params.id);
     if (!ucenikId) { res.status(400).json({ error: "ID učenika nevalidan" }); return; }
 
-    // Vlasništvo: učenik mora biti u grupi ovog muallima (admin zaobilazi).
     const [profil] = await db.select().from(ucenikProfiliTable)
-      .where(req.user!.role === "admin"
-        ? eq(ucenikProfiliTable.userId, ucenikId)
-        : and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, muallimId)));
+      .where(eq(ucenikProfiliTable.userId, ucenikId));
     if (!profil) { res.status(403).json({ error: "Učenik nije vaš" }); return; }
     if (!profil.grupaId) { res.json([]); return; }
+    const grupa = await verifyGrupaAccess(profil.grupaId, muallimId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nemate pristup grupi učenika" }); return; }
 
     const grupneZadace = await db.select().from(zadaceTable)
       .where(and(

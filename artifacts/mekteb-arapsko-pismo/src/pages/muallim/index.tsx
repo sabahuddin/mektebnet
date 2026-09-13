@@ -279,6 +279,7 @@ interface Zadaca {
   createdAt: string;
   ucenikIds?: number[];
   zavrsenih?: number;
+  ocijenjenih?: number;
   ukupno?: number;
   completed?: boolean;
   lekcijaZavrsenih?: number;
@@ -1013,8 +1014,8 @@ export default function MuallimPanel() {
       toast({ title: t("Odaberi lekciju ili upiši opis"), variant: "destructive" });
       return;
     }
-    if (zadDodjela === "pojedinacno" && zadUcenikIds.size === 0) {
-      toast({ title: t("Odaberi najmanje jednog učenika"), variant: "destructive" });
+    if (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2) {
+      toast({ title: t("Odaberi najmanje dva učenika"), variant: "destructive" });
       return;
     }
     setSavingZadaca(true);
@@ -3660,12 +3661,12 @@ export default function MuallimPanel() {
 
                     {/* Vrsta zadaće: pojedinačna ili za cijelu grupu */}
                     {(() => {
-                      const pojedinacne = zadace.filter(z => (z.ucenikIds?.length ?? 0) > 0);
+                       const pojedinacne = zadace.filter(z => (z.ucenikIds?.length ?? 0) > 1);
                       const zaSve = zadace.filter(z => !z.ucenikIds?.length);
                       return (
                         <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/50 p-1.5">
                           {([
-                            { id: "pojedinacno" as const, label: t("Pojedinačne"), broj: pojedinacne.length },
+                             { id: "pojedinacno" as const, label: t("Odabrani učenici"), broj: pojedinacne.length },
                             { id: "svi" as const, label: t("Svi"), broj: zaSve.length },
                           ]).map(tab => {
                             const aktivan = zadTipTab === tab.id;
@@ -3694,7 +3695,7 @@ export default function MuallimPanel() {
 
                     {/* Pod-tabovi: Nova zadaća / U toku / Završeno */}
                     {(() => {
-                      const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 0);
+                       const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 1);
                       const uTokuBroj = zadacePoTipu.filter(z => z.isActive !== false && !z.completed).length;
                       const zavrsenoBroj = zadacePoTipu.filter(z => z.completed || z.isActive === false).length;
                       const tabovi: { id: "nova" | "utoku" | "zavrseno"; label: string; broj?: number }[] = [
@@ -3751,7 +3752,7 @@ export default function MuallimPanel() {
                                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${zadDodjela === "pojedinacno" ? "border-amber-400 bg-amber-50 text-amber-800 ring-2 ring-amber-200" : "border-border bg-white text-muted-foreground hover:bg-muted/30"}`}
                                >
                                  <span className="block text-sm font-extrabold">{t("Odabrani učenici")}</span>
-                                 <span className="block text-xs mt-1 opacity-80">{t("Jedan ili više učenika")}</span>
+                                  <span className="block text-xs mt-1 opacity-80">{t("Najmanje dva učenika")}</span>
                                </button>
                              </div>
                            </div>
@@ -3785,7 +3786,7 @@ export default function MuallimPanel() {
                           </div>
                           <div className={`sm:col-span-2 ${zadDodjela === "svi" ? "hidden" : ""}`}>
                             <label className="text-sm font-bold text-muted-foreground block mb-1">
-                              {t("Učenici")} {zadUcenikIds.size === 0 ? t("(cijela grupa)") : t("({n} učenik/a)", { n: String(zadUcenikIds.size) })}
+                               {t("Učenici")} {t("({n} odabrano)", { n: String(zadUcenikIds.size) })}
                             </label>
                             {(() => {
                               const grupaUcenici = ucenici.filter(u => u.grupaId === zadGrupaId && u.aktivanStatus);
@@ -3797,7 +3798,7 @@ export default function MuallimPanel() {
                                 <div className="border border-border rounded-xl p-3 bg-muted/20">
                         <div className="flex flex-col items-start gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
                                     <p className="text-xs text-muted-foreground">
-                                      {t("Odaberi jednog ili više učenika za pojedinačnu zadaću.")}
+                                       {t("Odaberi najmanje dva učenika. Pojedinačna zadaća zadaje se s kartice učenika.")}
                                     </p>
                                     <div className="flex gap-2">
                                       <button type="button" onClick={() => setZadUcenikIds(allSelected ? new Set() : new Set(grupaUcenici.map(u => u.id)))}
@@ -3845,7 +3846,7 @@ export default function MuallimPanel() {
                           <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
                             {t("Otkaži")}
                           </button>
-                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size === 0)} className="w-full rounded-xl font-bold sm:w-auto">
+                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2)} className="w-full rounded-xl font-bold sm:w-auto">
                             {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> {editingZadaca ? t("Sačuvaj izmjene") : t("Sačuvaj")}</>}
                           </Button>
                         </div>
@@ -3853,7 +3854,7 @@ export default function MuallimPanel() {
                     )}
 
                     {zadSubTab !== "nova" && (() => {
-                      const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 0);
+                       const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 1);
                       const filtrirane = zadacePoTipu.filter(z => zadSubTab === "zavrseno"
                         ? z.completed || z.isActive === false
                         : z.isActive !== false && !z.completed);
@@ -3880,7 +3881,7 @@ export default function MuallimPanel() {
                                     {z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t("Završeno")}</span>}
                                      {isArchived && !z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 flex items-center gap-1"><Archive className="w-3 h-3" /> {t("Arhivirano")}</span>}
                                      {typeof z.ukupno === "number" && z.ukupno > 0 && (
-                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{t("Pregledano: {zavrsenih}/{ukupno}", { zavrsenih: String(z.zavrsenih ?? 0), ukupno: String(z.ukupno) })}</span>
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{t("Ispitano: {ocijenjenih}/{ukupno}", { ocijenjenih: String(z.ocijenjenih ?? 0), ukupno: String(z.ukupno) })}</span>
                                      )}
                                      {z.lekcijaSlug && typeof z.lekcijaUkupno === "number" && z.lekcijaUkupno > 0 && (
                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 flex items-center gap-1">
@@ -3892,7 +3893,7 @@ export default function MuallimPanel() {
                                     {z.ucenikIds && z.ucenikIds.length > 0 ? (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700" title={
                                         z.ucenikIds.map(id => ucenici.find(u => u.id === id)?.displayName || `#${id}`).join(", ")
-                                      }>{t("Pojedinačno · {n}", { n: String(z.ucenikIds.length) })}</span>
+                                       }>{t("Odabrano · {n}", { n: String(z.ucenikIds.length) })}</span>
                                     ) : (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{t("Cijela grupa")}</span>
                                     )}
@@ -3965,22 +3966,22 @@ export default function MuallimPanel() {
                            <p className="text-xs text-muted-foreground mt-0.5">
                              {t("Pregled za adresate zadaće — automatski završetak lekcije je odvojen od ručnog pregleda.")}
                            </p>
-                           {pregledZadaca.lekcijaSlug && (
-                             <div className="flex flex-wrap gap-2 mt-2">
+                           <div className="flex flex-wrap gap-2 mt-2">
+                              {pregledZadaca.lekcijaSlug && (
                                <span className="text-xs font-bold px-2 py-1 rounded-lg bg-violet-100 text-violet-700">
                                  {t("Lekcija završena: {zavrsenih}/{ukupno}", {
                                    zavrsenih: String(pregledUcenici.filter(u => u.lekcijaZavrsena).length),
                                    ukupno: String(pregledUcenici.length),
                                  })}
                                </span>
+                              )}
                                <span className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-100 text-blue-700">
-                                 {t("Ručno pregledano: {zavrsenih}/{ukupno}", {
-                                   zavrsenih: String(pregledUcenici.filter(u => u.status === "zavrseno").length),
+                                  {t("Ispitano: {ocijenjenih}/{ukupno}", {
+                                    ocijenjenih: String(pregledUcenici.filter(u => u.ocjena !== null).length),
                                    ukupno: String(pregledUcenici.length),
                                  })}
                                </span>
                              </div>
-                           )}
                         </div>
                         <button onClick={() => setPregledZadaca(null)} className="text-muted-foreground hover:text-foreground p-1 shrink-0">
                           <X className="w-5 h-5" />

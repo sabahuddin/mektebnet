@@ -78,6 +78,18 @@ interface NastavniMaterijal {
   externalUrl?: string | null;
 }
 
+interface UcenikZadaca {
+  id: number;
+  naslov: string;
+  opis?: string | null;
+  rokDo?: string | null;
+  efektivniRok?: string | null;
+  ocjena?: number | null;
+  status: string;
+  kategorija: "aktivne" | "zavrsene" | "neuradjene";
+  istekao?: boolean;
+}
+
 interface PlanLekcija {
   id: number;
   datum: string;
@@ -192,6 +204,9 @@ export default function GrupaPage() {
   const [zadMaterijali, setZadMaterijali] = useState<NastavniMaterijal[]>([]);
   const [zadPriloziIds, setZadPriloziIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
+  const [zadacaModalTab, setZadacaModalTab] = useState<"pregled" | "nova">("pregled");
+  const [zadaceTargeta, setZadaceTargeta] = useState<UcenikZadaca[]>([]);
+  const [zadaceTargetaLoading, setZadaceTargetaLoading] = useState(false);
 
   // Brisanje učenika (hard delete)
   const [deleteTarget, setDeleteTarget] = useState<Ucenik | null>(null);
@@ -487,11 +502,23 @@ export default function GrupaPage() {
     }
   }
 
-  function openZadacaForOne(u: Ucenik) {
+  async function openZadacaForOne(u: Ucenik) {
     setZadacaTarget(u);
+    setZadacaModalTab("pregled");
+    setZadaceTargeta([]);
     setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
     setZadMaterijali([]); setZadPriloziIds(new Set());
     setShowZadacaModal(true);
+    if (!token) return;
+    setZadaceTargetaLoading(true);
+    try {
+      const data = await apiRequest<UcenikZadaca[]>("GET", `/muallim/ucenik/${u.id}/zadace`, undefined, token);
+      setZadaceTargeta(data);
+    } catch {
+      toast({ title: t("Greška pri učitavanju zadaća"), variant: "destructive" });
+    } finally {
+      setZadaceTargetaLoading(false);
+    }
   }
 
   async function saveZadaca() {
@@ -516,8 +543,14 @@ export default function GrupaPage() {
         title: t("Zadaća dodana!"),
         description: zadacaTarget ? t("Pojedinačna za {ime}", { ime: zadacaTarget.displayName }) : t("Za cijelu grupu ({n} učenika)", { n: String(studentiGrupe.length) }),
       });
-      setShowZadacaModal(false);
-      setZadacaTarget(null);
+      if (zadacaTarget) {
+        const data = await apiRequest<UcenikZadaca[]>("GET", `/muallim/ucenik/${zadacaTarget.id}/zadace`, undefined, token);
+        setZadaceTargeta(data);
+        setZadacaModalTab("pregled");
+      } else {
+        setShowZadacaModal(false);
+        setZadacaTarget(null);
+      }
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće dodati zadaću"), variant: "destructive" });
     } finally {
@@ -1312,6 +1345,47 @@ export default function GrupaPage() {
                   ? t("Vidljivo samo ovom učeniku.")
                   : t("Vidljivo svim učenicima u grupi ({n}).", { n: String(studentiGrupe.length) })}
               </p>
+              {zadacaTarget && (
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1 mb-4">
+                  <button type="button" onClick={() => setZadacaModalTab("pregled")}
+                    className={`rounded-lg px-3 py-2 text-sm font-bold ${zadacaModalTab === "pregled" ? "bg-white text-violet-700 shadow-sm" : "text-muted-foreground"}`}>
+                    {t("Pregled zadaća")} ({zadaceTargeta.length})
+                  </button>
+                  <button type="button" onClick={() => setZadacaModalTab("nova")}
+                    className={`rounded-lg px-3 py-2 text-sm font-bold ${zadacaModalTab === "nova" ? "bg-white text-violet-700 shadow-sm" : "text-muted-foreground"}`}>
+                    <Plus className="inline w-4 h-4 mr-1" />{t("Dodaj novu")}
+                  </button>
+                </div>
+              )}
+              {zadacaTarget && zadacaModalTab === "pregled" ? (
+                <div className="max-h-[55vh] overflow-y-auto space-y-2">
+                  {zadaceTargetaLoading ? (
+                    <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-violet-600" /></div>
+                  ) : zadaceTargeta.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                      <p className="text-sm text-muted-foreground">{t("Učenik nema dodijeljenih zadaća.")}</p>
+                      <Button variant="outline" size="sm" onClick={() => setZadacaModalTab("nova")} className="mt-3 rounded-xl">
+                        <Plus className="w-4 h-4 mr-1" /> {t("Dodaj zadaću")}
+                      </Button>
+                    </div>
+                  ) : zadaceTargeta.map(z => (
+                    <div key={z.id} className="rounded-xl border border-border/70 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-extrabold text-sm text-foreground">{z.naslov}</p>
+                          {z.opis && <p className="text-xs text-muted-foreground mt-1">{z.opis}</p>}
+                        </div>
+                        {z.ocjena != null
+                          ? <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-1 text-xs font-extrabold">{t("Ocjena")} {z.ocjena}</span>
+                          : <span className={`rounded-full px-2 py-1 text-xs font-bold ${z.kategorija === "neuradjene" || z.istekao ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                              {z.kategorija === "neuradjene" ? t("Neurađeno") : z.istekao ? t("Isteklo") : t("Čeka ispitivanje")}
+                            </span>}
+                      </div>
+                      {(z.efektivniRok || z.rokDo) && <p className="text-xs text-muted-foreground mt-2"><Calendar className="inline w-3 h-3 mr-1" />{t("Rok:")} {fmtDatum(z.efektivniRok || z.rokDo)}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="space-y-3">
                 <div>
                   <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Naslov *")}</label>
@@ -1371,15 +1445,16 @@ export default function GrupaPage() {
                   </div>
                 )}
               </div>
+              )}
               <div className="flex gap-3 mt-4">
                 <Button variant="outline" onClick={() => setShowZadacaModal(false)} disabled={savingZadaca} className="flex-1 rounded-xl">
                   {t("Otkaži")}
                 </Button>
-                <Button onClick={saveZadaca} disabled={savingZadaca || !newZadaca.naslov.trim()} className="flex-1 rounded-xl font-bold"
+                {(!zadacaTarget || zadacaModalTab === "nova") && <Button onClick={saveZadaca} disabled={savingZadaca || !newZadaca.naslov.trim()} className="flex-1 rounded-xl font-bold"
                   data-testid="btn-save-zadaca"
                 >
                   {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Dodaj zadaću")}
-                </Button>
+                </Button>}
               </div>
             </motion.div>
           </div>

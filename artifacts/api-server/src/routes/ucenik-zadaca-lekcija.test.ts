@@ -637,15 +637,22 @@ test("nastavnički file/url materijali ne mogu se dodijeliti niti izložiti uče
   });
   assert.equal(rejected.status, 400);
 
-  const create = await teacherPost("/api/muallim/zadace", {
+  const oneStudentRejected = await teacherPost("/api/muallim/zadace", {
     grupaId: groupId, naslov: "Zadaća bez nastavničkih materijala",
     lekcijaNaslov: `Zadata lekcija ${suffix}`, lekcijaSlug: assignedSlug,
     tipDodjele: "pojedinacno", ucenikIds: [studentId],
   });
+  assert.equal(oneStudentRejected.status, 400);
+
+  const create = await teacherPost("/api/muallim/zadace", {
+    grupaId: groupId, naslov: "Zadaća bez nastavničkih materijala",
+    lekcijaNaslov: `Zadata lekcija ${suffix}`, lekcijaSlug: assignedSlug,
+    tipDodjele: "pojedinacno", ucenikIds: [studentId, otherStudentId],
+  });
   assert.equal(create.status, 201);
   const created = await create.json() as { id: number; ucenikIds: number[] };
   attachmentHomeworkId = created.id;
-  assert.deepEqual(created.ucenikIds, [studentId]);
+  assert.deepEqual(new Set(created.ucenikIds), new Set([studentId, otherStudentId]));
 
   const zaSve = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}`, {
     tipDodjele: "svi",
@@ -654,12 +661,21 @@ test("nastavnički file/url materijali ne mogu se dodijeliti niti izložiti uče
   assert.equal(zaSve.status, 200);
   assert.deepEqual((await zaSve.json() as { ucenikIds: number[] }).ucenikIds, []);
 
-  const pojedinacna = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}`, {
+  const jedanUcenikEditRejected = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}`, {
     tipDodjele: "pojedinacno",
     ucenikIds: [studentId],
   });
+  assert.equal(jedanUcenikEditRejected.status, 400);
+
+  const pojedinacna = await teacherPut(`/api/muallim/zadace/${attachmentHomeworkId}`, {
+    tipDodjele: "pojedinacno",
+    ucenikIds: [studentId, otherStudentId],
+  });
   assert.equal(pojedinacna.status, 200);
-  assert.deepEqual((await pojedinacna.json() as { ucenikIds: number[] }).ucenikIds, [studentId]);
+  assert.deepEqual(
+    new Set((await pojedinacna.json() as { ucenikIds: number[] }).ucenikIds),
+    new Set([studentId, otherStudentId]),
+  );
 
   // Simuliraj historijske veze koje su nastale prije zabrane.
   await db.execute(sql`
