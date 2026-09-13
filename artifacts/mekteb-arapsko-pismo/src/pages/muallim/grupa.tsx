@@ -1260,11 +1260,14 @@ export default function GrupaPage() {
                     value={newOcjena.lekcijaNaziv}
                     onChange={v => setNewOcjena(o => ({ ...o, lekcijaNaziv: v, lekcijaSlug: "" }))}
                     onSelectLesson={lekcija => {
+                      const povezanaNapametStavka = lekcija?.slug
+                        ? napametKatalog.find(stavka => stavka.sourceLessonSlug === lekcija.slug)
+                        : undefined;
                       setNewOcjena(o => ({
                         ...o,
                         lekcijaNaziv: lekcija?.naslov || "",
                         lekcijaSlug: lekcija?.slug || "",
-                        napametStavkaId: "",
+                        napametStavkaId: povezanaNapametStavka?.id || "",
                       }));
                     }}
                     placeholder={t("Pretraži lekciju ili upiši broj…")}

@@ -2606,10 +2606,22 @@ router.post("/ocjene", async (req, res) => {
       return;
     }
     const predmet = odabranaLekcija?.predmet || (odabranaLekcija ? "Ostali sadržaji" : null);
-    // Napamet se dodaje isključivo kada muallim označi tu opciju.
-    const effectiveNapametStavkaId = napametStavkaId || undefined;
-    const isNapamet = Boolean(effectiveNapametStavkaId);
     const ctx = await getMektebCtx(req.user!.userId);
+    const program = grupaId
+      ? await getNapametKatalog({
+          mektebId: ctx?.mektebId,
+          grupaId: Number(grupaId),
+          muallimId: req.user!.userId,
+          includeHidden: true,
+        })
+      : [];
+    // Ako je odabrana lekcija dio Napamet programa, veza se postavlja
+    // automatski. Muallim je i dalje može eksplicitno odabrati za ručne stavke.
+    const povezanaNapametStavka = lekcijaSlug
+      ? program.find((item) => item.sourceLessonSlug === String(lekcijaSlug))
+      : undefined;
+    const effectiveNapametStavkaId = napametStavkaId || povezanaNapametStavka?.id || undefined;
+    const isNapamet = Boolean(effectiveNapametStavkaId);
     if (isNapamet && (!ucenikId || !grupaId)) {
       res.status(400).json({ error: "NAPAMET ocjena mora pripadati grupi" });
       return;
@@ -2618,12 +2630,6 @@ router.post("/ocjene", async (req, res) => {
       const grupa = await verifyGrupaAccess(Number(grupaId), req.user!.userId, req.user!.role);
       if (!grupa) { res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return; }
     }
-    const program = isNapamet ? await getNapametKatalog({
-      mektebId: ctx?.mektebId,
-      grupaId: Number(grupaId),
-      muallimId: req.user!.userId,
-      includeHidden: true,
-    }) : [];
     const stavka = isNapamet ? program.find(item => item.id === String(effectiveNapametStavkaId)) : undefined;
     if (isNapamet && (!stavka || stavka.isVisible === false)) {
       res.status(400).json({ error: "Neispravna NAPAMET stavka" });

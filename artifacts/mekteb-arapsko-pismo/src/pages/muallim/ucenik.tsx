@@ -39,6 +39,10 @@ interface Ocjena {
   napametStavkaId?: string | null;
 }
 
+interface ProfilOcjena extends Ocjena {
+  isNapamet?: boolean;
+}
+
 interface Grupa {
   id: number;
   naziv: string;
@@ -441,6 +445,34 @@ export default function UcenikPage() {
     broj: vrijednosti.length,
     prosjek: (vrijednosti.reduce((sum, ocjena) => sum + ocjena, 0) / vrijednosti.length).toFixed(2),
   }));
+  // Napamet ocjene prikazujemo i u historiji profila, ali ih ne dodajemo u
+  // prosjek: ocjenePoPredmetu i prosjecnaOcjena i dalje koriste samo `ocjene`.
+  const napametNazivPoId = new Map((napamet?.katalog || []).map(stavka => [stavka.id, stavka.naziv]));
+  const profilOcjene: ProfilOcjena[] = [
+    ...ocjene,
+    ...(napamet?.ocjene || [])
+      .filter(napametOcjena => {
+        if (ocjene.some(ocjena => ocjena.id === napametOcjena.id)) return false;
+        const naziv = napametOcjena.napametStavkaId
+          ? napametNazivPoId.get(napametOcjena.napametStavkaId)
+          : undefined;
+        return !ocjene.some(ocjena =>
+          ocjena.datum === napametOcjena.datum
+          && ocjena.ocjena === napametOcjena.ocjena
+          && naziv
+          && ocjena.lekcijaNaziv?.trim().toLocaleLowerCase("bs-BA") === naziv.trim().toLocaleLowerCase("bs-BA")
+        );
+      })
+      .map(napametOcjena => ({
+        ...napametOcjena,
+        napomena: napametOcjena.napomena ?? undefined,
+        lekcijaNaziv: napametOcjena.napametStavkaId
+          ? napametNazivPoId.get(napametOcjena.napametStavkaId)
+          : undefined,
+        predmet: t("Napamet"),
+        isNapamet: true,
+      })),
+  ].sort((a, b) => b.datum.localeCompare(a.datum) || b.id - a.id);
   const ukupnoBodova = kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
   const kvizProsjek = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : null;
 
@@ -1271,7 +1303,7 @@ export default function UcenikPage() {
                   </h2>
                 </div>
 
-                {ocjene.length === 0 ? (
+                {profilOcjene.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">{t("Nema unesenih ocjena")}</p>
                 ) : (
                   <div className="space-y-4">
@@ -1295,10 +1327,12 @@ export default function UcenikPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {ocjene.map(o => (
+                        {profilOcjene.map(o => (
                             <tr key={o.id} className="border-t border-border/50 align-top">
                               <td className="py-2 px-2">
-                                <span className="font-bold text-foreground">{o.predmet || t("Nije određeno")}</span>
+                                <span className={`font-bold ${o.isNapamet ? "text-emerald-700" : "text-foreground"}`}>
+                                  {o.isNapamet ? t("Napamet") : (o.predmet || t("Nije određeno"))}
+                                </span>
                               </td>
                               <td className="py-2 px-2 text-foreground">
                                 {o.lekcijaNaziv || <span className="text-muted-foreground">—</span>}
