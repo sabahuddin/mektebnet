@@ -52,10 +52,9 @@ export default defineConfig({
     tailwindcss(),
     runtimeErrorOverlay(),
     VitePWA({
-      // Nova verzija se aktivira tek nakon korisnikovog klika na obavijest.
-      // Automatsko preuzimanje aktivnog taba može izazvati reload/remount petlju
-      // kada browser nakon refresh-a još drži prethodni service worker.
-      registerType: "prompt",
+      // Nova verzija se preuzima tiho; korisniku se više ne prikazuje trajni
+      // banner koji može ostati zaglavljen u browseru ili instaliranom appu.
+      registerType: "autoUpdate",
       injectRegister: false,
       strategies: "generateSW",
       includeAssets: [
@@ -116,10 +115,8 @@ export default defineConfig({
         navigateFallback: `${basePath.replace(/\/$/, "")}/index.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/vaktija\//, /^\/edu\//, /OneSignalSDKWorker\.js$/],
         cleanupOutdatedCaches: true,
-        // Nakon korisnikovog klika novi SW mora odmah preuzeti i browser tab
-        // i instalirani app webview; inače isti waiting worker ponovo pali banner.
         clientsClaim: true,
-        skipWaiting: false,
+        skipWaiting: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {

@@ -28,11 +28,8 @@ export function initPWA(): void {
   if (import.meta.env.DEV) return;
 
   void import("virtual:pwa-register").then(({ registerSW }) => {
-    const updateSW = registerSW({
+    registerSW({
       immediate: true,
-      onNeedRefresh() {
-        window.dispatchEvent(new CustomEvent("mekteb:pwa-update-available"));
-      },
       onOfflineReady() {
         window.dispatchEvent(new CustomEvent("mekteb:pwa-offline-ready"));
       },
@@ -47,23 +44,5 @@ export function initPWA(): void {
         console.warn("[PWA] Service worker registration failed:", error);
       },
     });
-
-    (window as unknown as { __mektebUpdateSW?: () => Promise<void> }).__mektebUpdateSW =
-      async () => {
-        let controllerChanged = false;
-        const markControllerChanged = () => {
-          controllerChanged = true;
-        };
-        navigator.serviceWorker.addEventListener("controllerchange", markControllerChanged, { once: true });
-        try {
-          await updateSW(true);
-          // workbox-window u pravilu sam osvježi stranicu nakon controllerchange.
-          // Ako browser/app webview to ne uradi, osiguraj jedan završni reload.
-          await new Promise((resolve) => window.setTimeout(resolve, 1200));
-          if (!controllerChanged) window.location.reload();
-        } finally {
-          navigator.serviceWorker.removeEventListener("controllerchange", markControllerChanged);
-        }
-      };
   });
 }
