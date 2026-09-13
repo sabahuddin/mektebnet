@@ -3878,7 +3878,12 @@ export default function MuallimPanel() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-extrabold text-foreground text-base">{z.naslov}</h4>
-                                    {z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t("Završeno")}</span>}
+                                    {z.completed && (
+                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${(z.ocijenjenih ?? 0) === z.ukupno ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}`}>
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        {(z.ocijenjenih ?? 0) === z.ukupno ? t("Realizirano") : t("Nerealizirano")}
+                                      </span>
+                                    )}
                                      {isArchived && !z.completed && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 flex items-center gap-1"><Archive className="w-3 h-3" /> {t("Arhivirano")}</span>}
                                      {typeof z.ukupno === "number" && z.ukupno > 0 && (
                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{t("Ispitano: {ocijenjenih}/{ukupno}", { ocijenjenih: String(z.ocijenjenih ?? 0), ukupno: String(z.ukupno) })}</span>

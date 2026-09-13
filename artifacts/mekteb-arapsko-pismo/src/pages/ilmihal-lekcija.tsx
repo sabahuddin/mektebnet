@@ -4185,7 +4185,7 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {/* Accordion sections — ordered: story → ilmihal → Provjeri znanje → pitanja → zadatak → other */}
+        {/* Accordion sections — "Provjeri znanje" je uvijek posljednja stavka. */}
         {parsed.sections.length > 0 ? (
           <div className="flex flex-col gap-3 mb-6">
             {(() => {
@@ -4236,7 +4236,6 @@ export default function IlmihalLekcijaPage() {
               };
 
               const items: React.ReactNode[] = [];
-              let kvizInserted = false;
               for (const section of visibleSections) {
                 items.push(
                   <React.Fragment key={`${slug}-${section.id}`}>
@@ -4259,15 +4258,9 @@ export default function IlmihalLekcijaPage() {
                     )}
                   </React.Fragment>
                 );
-                if (!kvizInserted && section.type === "ilmihal") {
-                  const node = renderKvizOrCta();
-                  if (node) { items.push(node); kvizInserted = true; }
-                }
               }
-              if (!kvizInserted) {
-                const node = renderKvizOrCta();
-                if (node) items.push(node);
-              }
+              const kvizNode = renderKvizOrCta();
+              if (kvizNode) items.push(kvizNode);
               return items;
             })()}
           </div>

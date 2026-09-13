@@ -1930,6 +1930,13 @@ async function startup() {
     logger.error({ err: e }, "Mission reminder cron start failed");
   }
 
+  try {
+    const { startHomeworkLifecycleCron } = await import("./lib/homework-lifecycle.js");
+    startHomeworkLifecycleCron();
+  } catch (e) {
+    logger.error({ err: e }, "Homework lifecycle cron start failed");
+  }
+
   app.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

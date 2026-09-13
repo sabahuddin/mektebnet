@@ -5477,7 +5477,7 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
       const status = s?.status ?? "na_cekanju";
       const efektivniRok = s?.noviRok ?? z.rokDo ?? null;
       const kategorija = status === "zavrseno"
-        ? "zavrsene"
+        ? (s?.ocjena !== null && s?.ocjena !== undefined ? "zavrsene" : "neuradjene")
         : z.isActive === false
           ? "neuradjene"
           : "aktivne";

@@ -1410,7 +1410,7 @@ export default function GrupaPage() {
                   ) : ([
                     { kategorija: "aktivne", naslov: t("Aktivne") },
                     { kategorija: "zavrsene", naslov: t("Završene – realizirane") },
-                    { kategorija: "neuradjene", naslov: t("Završene – neurađene") },
+                    { kategorija: "neuradjene", naslov: t("Završene – nerealizirane") },
                   ] as const).map(sekcija => {
                     const stavke = zadaceTargeta.filter(z => z.kategorija === sekcija.kategorija);
                     if (stavke.length === 0) return null;
