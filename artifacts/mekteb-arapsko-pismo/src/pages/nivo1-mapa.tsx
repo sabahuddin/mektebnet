@@ -105,7 +105,7 @@ interface NivoConfig {
 }
 
 const NIVO_CONFIGS: Record<number, NivoConfig> = {
-  1: { totalCells: 64, medaljonCount: 6, doorTo: "/nivo2-mapa", doorLabel: "Vrata u Zlatnu košnicu", fallbackTotal: 64 },
+  1: { totalCells: 63, medaljonCount: 6, doorTo: "/nivo2-mapa", doorLabel: "Vrata u Zlatnu košnicu", fallbackTotal: 63 },
   2: { totalCells: 69, medaljonCount: 6, doorTo: "/nivo3-mapa", doorLabel: "Vrata u Košnicu mudrosti", fallbackTotal: 69 },
   3: { totalCells: 0,  medaljonCount: 10, doorTo: null,         doorLabel: "",                         fallbackTotal: 50 }, // totalCells=0 ⇒ koristi data.length
 };
@@ -127,7 +127,9 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
   }, [token, nivo]);
 
   const lekcijeSorted = useMemo(
-    () => [...(data?.lekcije ?? [])].sort((a, b) => a.redoslijed - b.redoslijed),
+    () => [...(data?.lekcije ?? [])]
+      .filter((lekcija) => lekcija.redoslijed > 0)
+      .sort((a, b) => a.redoslijed - b.redoslijed),
     [data],
   );
   const medaljoniSorted = useMemo(
@@ -143,13 +145,14 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     ? cfg.totalCells
     : Math.max(lekcijeSorted.length, cfg.fallbackTotal);
   const LESSON_ROWS = Math.ceil(TOTAL_CELLS / COLS);
-  // INLINE MEDALJON-REDOVI: nakon svakih 10 lekcija (10, 20, 30...) ubacujemo
-  // poseban red u kojem stoji samo medaljon (srednja kolona). Klik vodi na
-  // "praznu lekciju" sa slug-om `medaljon-nivo{N}-{NN}` koju admin kreira i
-  // popuni akordionima/vježbama.
-  // 10 lekcija = 2 lekcijska reda → medaljon-red ide IZMEĐU svaka 2 lekcijska
-  // reda (između lr=1 i lr=2, između lr=3 i lr=4, ...).
-  const MED_COUNT = Math.floor(TOTAL_CELLS / 10);
+  // Svaki medaljon dobija vlastiti red nakon reda u kojem se nalazi njegova
+  // stvarna posAfterRedoslijed pozicija. Tako posljednja etapa može završiti
+  // nakon djelimičnog reda (npr. nakon lekcije 63), a putanja i cvjetići ostaju
+  // u tačnom redoslijedu.
+  const MED_COUNT = medaljoniSorted.length;
+  const medaljonBreakRows = medaljoniSorted.map((m) =>
+    Math.ceil(Math.min(m.posAfterRedoslijed, TOTAL_CELLS) / COLS),
+  );
   // Vrata zauzimaju prazno mjesto u zadnjem redu lekcija; ako je zadnji red pun
   // (totalCells je višekratnik 5), vrata dobiju zaseban red iznad.
   const needsExtraDoorRow = !!cfg.doorTo && TOTAL_CELLS % COLS === 0;
@@ -225,15 +228,14 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
     const col = logicalRow % 2 === 0 ? within : COLS - 1 - within;
     return { logicalRow, col };
   }
-  // Bottom-up render uz INLINE medaljone: stack pozicija (od dna, 0-idx) je
-  //   - za lekcijski red lr: lr + floor(lr/2)  (svaki par lekcijskih redova
-  //     dobije medaljon ispod sljedećeg para)
-  //   - za medaljon r:       2 + 3*r           (medaljon 0 je 3. red od dna)
+  // Bottom-up render uz INLINE medaljone. Svaki medaljon se umeće nakon
+  // lekcijskog reda koji sadrži njegovu stvarnu završnu poziciju.
   function stackPosForLessonRow(lr: number): number {
-    return lr + Math.floor(lr / 2);
+    const medalsBeforeRow = medaljonBreakRows.filter((breakRow) => breakRow <= lr).length;
+    return lr + medalsBeforeRow;
   }
   function stackPosForMedaljon(r: number): number {
-    return 2 + 3 * r;
+    return medaljonBreakRows[r] + r;
   }
   function displayRowFor(logicalRow: number): number {
     return TOTAL_ROWS - 1 - stackPosForLessonRow(logicalRow);
@@ -355,7 +357,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
         <div className="flex-1 flex items-center justify-center gap-0.5 sm:gap-2">
           {Array.from({ length: cfg.medaljonCount }).map((_, i) => {
             const m = medaljoniSorted[i] ?? null;
-            const required = (i + 1) * 10;
+            const required = m?.posAfterRedoslijed ?? (i + 1) * 10;
             const unlocked = m
               ? completedCount >= m.posAfterRedoslijed
               : completedCount >= required;
@@ -401,7 +403,7 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
             displayRowForMedaljon={displayRowForMedaljon}
             totalCells={TOTAL_CELLS}
             totalRows={TOTAL_ROWS}
-            medCount={MED_COUNT}
+            medaljonPositions={medaljoniSorted.map((m) => m.posAfterRedoslijed)}
           />
           <div
             className="relative grid items-center flex-1"
@@ -461,12 +463,12 @@ export default function Nivo1MapaPage({ nivo = 1 }: { nivo?: 1 | 2 | 3 } = {}) {
                 1-indexed CSS gridu). Klik vodi na "praznu lekciju" sa
                 standardiziranim slug-om koji admin kreira u bazi. */}
             {Array.from({ length: MED_COUNT }).map((_, r) => {
-              const required = (r + 1) * 10;
+              const realMed = medaljoniSorted[r] ?? null;
+              const required = realMed?.posAfterRedoslijed ?? (r + 1) * 10;
               const unlocked = isPrivilegedRole || completedCount >= required;
               // Opcija B: medaljon JESTE puna lekcija. Klik vodi na
               // `/ilmihal/medaljon-nivo{N}-{ord}` (ord = redni broj medaljona).
               // Završetak te lekcije osvaja medaljon i otključava sljedećih 10.
-              const realMed = medaljoniSorted[r] ?? null;
               const earned = realMed ? osvojeniSet.has(realMed.id) : false;
               const state: "locked" | "unlocked" | "earned" = earned
                 ? "earned"
@@ -759,14 +761,14 @@ function PathSvg({
   displayRowForMedaljon,
   totalCells,
   totalRows,
-  medCount,
+  medaljonPositions,
 }: {
   rowColFor: (i: number) => { logicalRow: number; col: number };
   displayRowFor: (lr: number) => number;
   displayRowForMedaljon: (r: number) => number;
   totalCells: number;
   totalRows: number;
-  medCount: number;
+  medaljonPositions: number[];
 }) {
   const points: string[] = [];
   for (let i = 0; i < totalCells; i++) {
@@ -775,10 +777,10 @@ function PathSvg({
     const xPct = ((col + 0.5) / COLS) * 100;
     const yPct = ((displayRow + 0.5) / totalRows) * 100;
     points.push(`${xPct},${yPct}`);
-    // Nakon svake 10. lekcije ubaci medaljon-tačku (srednja kolona) prije
-    // sljedeće lekcije — tako linija prolazi kroz medaljon.
-    const medIdx = (i + 1) / 10 - 1;
-    if (Number.isInteger(medIdx) && medIdx < medCount && i + 1 < totalCells) {
+    // Nakon stvarne završne lekcije etape ubaci medaljon-tačku, uključujući
+    // medaljon poslije posljednjeg cvjetića.
+    const medIdx = medaljonPositions.findIndex((position) => position === i + 1);
+    if (medIdx >= 0) {
       const medX = ((2 + 0.5) / COLS) * 100;
       const medY = ((displayRowForMedaljon(medIdx) + 0.5) / totalRows) * 100;
       points.push(`${medX},${medY}`);
