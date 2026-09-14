@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -24,11 +24,18 @@ interface EtapaDetail {
 export default function MedaljonDetailPage() {
   const [, params] = useRoute<{ slug: string }>("/medaljon/:slug");
   const [, setLocation] = useLocation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLanguage();
   const slug = params?.slug ?? "";
   const [data, setData] = useState<EtapaDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const handledEventsRef = useRef(new Set<string>());
+  const [vjezbaNagrada, setVjezbaNagrada] = useState<{
+    attemptNo: number;
+    hasanatGained: number;
+    totalHasanat: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -40,6 +47,41 @@ export default function MedaljonDetailPage() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [slug, token]);
+
+  useEffect(() => {
+    if (!token || user?.role !== "ucenik") return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const payload = event.data as {
+        protocol?: string;
+        type?: string;
+        exerciseKey?: string;
+        eventId?: string;
+        score?: number;
+        maxScore?: number;
+      };
+      if (payload?.protocol !== "mekteb.exercise.v1" || payload.type !== "complete") return;
+      if (!payload.exerciseKey || !payload.eventId) return;
+      const iframe = Array.from(contentRef.current?.querySelectorAll<HTMLIFrameElement>("iframe[data-vjezba-kljuc]") ?? [])
+        .find(item => item.dataset.vjezbaKljuc === payload.exerciseKey);
+      if (!iframe || event.source !== iframe.contentWindow) return;
+      if (handledEventsRef.current.has(payload.eventId)) return;
+      handledEventsRef.current.add(payload.eventId);
+
+      apiRequest<{
+        attemptNo: number;
+        hasanatGained: number;
+        totalHasanat: number;
+      }>("POST", `/vjezbe/${encodeURIComponent(payload.exerciseKey)}/result`, {
+        score: payload.score,
+        maxScore: payload.maxScore,
+      }, token)
+        .then(setVjezbaNagrada)
+        .catch(() => handledEventsRef.current.delete(payload.eventId!));
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [token, user?.role]);
 
   if (loading) {
     return <Layout><div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-amber-600" /></div></Layout>;
@@ -75,7 +117,17 @@ export default function MedaljonDetailPage() {
             </div>
           </div>
           {data.medaljon.contentHtml && (
-            <div className="prose prose-amber mt-5 max-w-none" dangerouslySetInnerHTML={{ __html: data.medaljon.contentHtml }} />
+            <div ref={contentRef} className="prose prose-amber mt-5 max-w-none" dangerouslySetInnerHTML={{ __html: data.medaljon.contentHtml }} />
+          )}
+          {vjezbaNagrada && (
+            <div className="mt-4 rounded-xl border border-amber-300 bg-white/80 px-4 py-3 text-sm font-bold text-amber-950">
+              {vjezbaNagrada.hasanatGained > 0
+                ? t("Završena vježba: osvojio/la si {broj} kapi meda. Pokušaj {pokusaj}.", {
+                    broj: String(vjezbaNagrada.hasanatGained),
+                    pokusaj: String(vjezbaNagrada.attemptNo),
+                  })
+                : t("Vježba je evidentirana. Ovaj pokušaj ne donosi nove kapi meda.")}
+            </div>
           )}
         </header>
 

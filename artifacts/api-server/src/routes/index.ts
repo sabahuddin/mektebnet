@@ -21,6 +21,7 @@ import aktivnostRouter from "./aktivnost";
 import ocjeneRouter from "./ocjene";
 import etapeRouter from "./etape";
 import krunisanjaRouter from "./krunisanja";
+import vjezbeRouter from "./vjezbe";
 
 const router: IRouter = Router();
 
@@ -57,6 +58,7 @@ router.use("/aktivnost", aktivnostRouter);
 router.use("/ocjene", ocjeneRouter);
 router.use("/etape", etapeRouter);
 router.use("/krunisanja", krunisanjaRouter);
+router.use("/vjezbe", vjezbeRouter);
 
 export default router;
 

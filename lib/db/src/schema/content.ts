@@ -499,6 +499,24 @@ export const h5pPokusajiTable = pgTable("h5p_pokusaji", {
 
 export type H5pPokusaj = typeof h5pPokusajiTable.$inferSelect;
 
+// Pokušaji samostalnih statičkih HTML vježbi. exerciseKey dolazi iz
+// serverskog registra, a attemptNo i nagrada računaju se isključivo na serveru.
+export const staticVjezbaPokusajiTable = pgTable("static_vjezba_pokusaji", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  exerciseKey: varchar("exercise_key", { length: 120 }).notNull(),
+  attemptNo: integer("attempt_no").notNull(),
+  score: integer("score").notNull(),
+  maxScore: integer("max_score").notNull(),
+  procenat: integer("procenat").notNull(),
+  hasanatGained: integer("hasanat_gained").notNull().default(0),
+  completedAt: timestamp("completed_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("static_vjezba_user_key_attempt_uidx").on(table.userId, table.exerciseKey, table.attemptNo),
+]);
+
+export type StaticVjezbaPokusaj = typeof staticVjezbaPokusajiTable.$inferSelect;
+
 export const insertIlmihalLekcijaSchema = createInsertSchema(ilmihalLekcijeTable).omit({ id: true, createdAt: true });
 export const insertKvizSchema = createInsertSchema(kvizoviTable).omit({ id: true, createdAt: true });
 export const insertPitanjeBankaSchema = createInsertSchema(pitanjaBankaTable).omit({ id: true, createdAt: true, updatedAt: true });

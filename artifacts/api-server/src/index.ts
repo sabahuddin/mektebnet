@@ -599,6 +599,25 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS embed_completions_student_prilozi_uidx ON embed_completions (student_id, prilozi_id);`);
 
+    // Generički pokušaji za samostalne HTML vježbe iz public/vjezbe.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS static_vjezba_pokusaji (
+        id serial PRIMARY KEY,
+        user_id integer NOT NULL,
+        exercise_key varchar(120) NOT NULL,
+        attempt_no integer NOT NULL,
+        score integer NOT NULL,
+        max_score integer NOT NULL,
+        procenat integer NOT NULL,
+        hasanat_gained integer NOT NULL DEFAULT 0,
+        completed_at timestamptz NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS static_vjezba_user_key_attempt_uidx
+      ON static_vjezba_pokusaji (user_id, exercise_key, attempt_no);
+    `);
+
     // Model 1 učenik = 1 roditelj: parcijalni unique indeks je atomska zaštita
     // od dva istovremena odobravanja. Prije kreiranja uskladimo eventualne stare
     // duplikate tako da zadržimo najranije odobrenu vezu, a ostale odbijemo.
@@ -869,7 +888,7 @@ async function runResidualSchema() {
     // dio frontend public/ builda; ne utiče na pitanja niti prag polaganja.
     await db.execute(sql`
       UPDATE medaljoni
-      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-1-10.html" title="Ponavljanje lekcija 1–10" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-1-10.html" data-vjezba-kljuc="etapa-lekcije-1-10" title="Ponavljanje lekcija 1–10" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
       WHERE slug = 'm1-pocetnik';
     `);
     // Očisti stare Nivo 1 medaljone (bez PNG ikona). Najprije ukloni FK reference.
