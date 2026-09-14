@@ -865,6 +865,13 @@ async function runResidualSchema() {
         (1, 'm6-majstor',    'Majstor meda',        '60 lekcija Nivoa 1 — majstor zlatnog meda.',      60, 'medal', 'bronze')
       ON CONFLICT (slug) DO NOTHING;
     `);
+    // Pripremna interaktivna vježba za prvu etapu Nivoa 1. Statički HTML je
+    // dio frontend public/ builda; ne utiče na pitanja niti prag polaganja.
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-1-10.html" title="Ponavljanje lekcija 1–10" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm1-pocetnik';
+    `);
     // Očisti stare Nivo 1 medaljone (bez PNG ikona). Najprije ukloni FK reference.
     await db.execute(sql`
       DELETE FROM student_medaljoni WHERE medaljon_id IN (

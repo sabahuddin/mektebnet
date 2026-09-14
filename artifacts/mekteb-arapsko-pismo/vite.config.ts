@@ -113,7 +113,7 @@ export default defineConfig({
         // offline stranicu i kad korisnik IMA internet. offline.html ostaje
         // dostupan kao public asset za stvarnu offline situaciju.
         navigateFallback: `${basePath.replace(/\/$/, "")}/index.html`,
-        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/vaktija\//, /^\/edu\//, /OneSignalSDKWorker\.js$/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/vaktija\//, /^\/edu\//, /^\/vjezbe\//, /OneSignalSDKWorker\.js$/],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
