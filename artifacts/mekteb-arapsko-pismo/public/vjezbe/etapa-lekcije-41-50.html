@@ -152,11 +152,10 @@ protocol: mekteb.exercise.v1
   <header class="glava">
     <p class="kicker">Mekteb.net · etapna vježba 5</p>
     <h1 id="naslovVjezbe">Ponavljanje lekcija 41–50</h1>
-    <p class="podnaslov">Zekat i hadž, bajrami i džuma, mubarek noći — i ahlak davanja: sadaka, voda, briga o životinjama. Osam zadataka vraća se na prethodne etape. Pogrešan odgovor daje uputu i novi pokušaj.</p>
+    <p class="podnaslov">Prođi kroz pet krugova, odgovori na pitanja i pokaži šta si naučio/la. Ako pogriješiš, dobit ćeš pomoć i možeš pokušati ponovo.</p>
     <div class="oznake">
       <span class="oznaka">Nivo 1 · lekcije 41–50</span>
       <span class="oznaka">30 zadataka</span>
-      <span class="oznaka">8 zadataka ponavljanja</span>
       <span class="oznaka">40–45 minuta</span>
     </div>
     <div class="stanje">
@@ -169,7 +168,7 @@ protocol: mekteb.exercise.v1
         <span class="nat">Bodovi vježbe</span>
         <div><span class="vr" id="brBodovi">0</span> <span class="uz" id="brMaxBodovi">/ 150</span></div>
       </div>
-      <div class="brojka">
+      <div class="brojka" hidden>
         <span class="nat">Zadržano iz prethodnih etapa</span>
         <div><span class="vr" id="brPonav">0</span> <span class="uz" id="brPonavUk">/ 8</span></div>
       </div>
@@ -208,8 +207,8 @@ function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? 
 
 /* ---------- SADRŽAJ ---------- */
 
-const PITANJA = [
-  /* --- jedan tačan odgovor --- */
+const PITANJA = [{"id":"z1","vrsta":"single","tip":"prisjecanje","lekcija":"sura-el-felek","tekst":"Šta znači El-Felek?","opcije":["Svitanje","Mrak","Zavidnik"],"tacno":0,"obj":"El-Felek znači svitanje.","uputa":"Poveži sa izlaskom sunca."},{"id":"z2","vrsta":"single","tip":"prisjecanje","lekcija":"sura-el-felek","tekst":"Koliko ajeta ima sura El-Felek?","opcije":["Četiri","Pet","Šest"],"tacno":1,"obj":"Sura El-Felek ima pet ajeta.","uputa":"Izbroj ajet po ajet."},{"id":"z3","vrsta":"single","tip":"prisjecanje","lekcija":"gusulski-sarti","tekst":"Šta znači riječ gusul?","opcije":["Kupanje","Pranje zuba","Čišćenje odjeće"],"tacno":0,"obj":"Riječ gusul znači kupanje.","uputa":"To je vjersko kupanje."},{"id":"z4","vrsta":"single","tip":"prisjecanje","lekcija":"gusulski-sarti","tekst":"Koliko ima gusulskih šarta?","opcije":["Dva","Tri","Četiri"],"tacno":1,"obj":"Gusulskih šarta ima tri.","uputa":"Gargara, istinšak i pranje tijela."},{"id":"z5","vrsta":"single","tip":"prisjecanje","lekcija":"tejemumski-sarti","tekst":"Šta je tejemum?","opcije":["Čišćenje vodom","Čišćenje zemljom","Čišćenje zrakom"],"tacno":1,"obj":"Tejemum je čišćenje zemljom.","uputa":"Koristi se kada nema vode."},{"id":"z6","vrsta":"single","tip":"prisjecanje","lekcija":"tejemumski-sarti","tekst":"Koji je prvi šart tejemuma?","opcije":["Nijet","Pranje ruku","Učenje sure"],"tacno":0,"obj":"Nijet je prvi šart tejemuma.","uputa":"Sve počinje sa namjerom."},{"id":"z7","vrsta":"single","tip":"prisjecanje","lekcija":"et-tehijatu","tekst":"Šta znači Et-tehijatu?","opcije":["Pozdravi","Molitva","Sura"],"tacno":0,"obj":"Et-tehijatu znači pozdravi.","uputa":"To je poseban zikr u namazu."},{"id":"z8","vrsta":"single","tip":"prisjecanje","lekcija":"et-tehijatu","tekst":"Gdje se Et-tehijatu uči?","opcije":["Na svakom sjedenju u namazu","Samo na početku","Samo na kraju"],"tacno":0,"obj":"Uči se na svakom sjedenju u namazu.","uputa":"To je dio namaskog sjedenja."},{"id":"z9","vrsta":"single","tip":"prisjecanje","lekcija":"salavati","tekst":"Kada učimo salavate?","opcije":["Poslije Et-tehijatu","Prije Et-tehijatu","Na početku namaza"],"tacno":0,"obj":"Salavate učimo poslije Et-tehijatu.","uputa":"Slijede nakon pozdrava."},{"id":"z10","vrsta":"single","tip":"prisjecanje","lekcija":"dove","tekst":"Šta se uči u dovi Rabbena atina?","opcije":["Molba za dobro na oba svijeta","Oprost roditeljima","Oboje je tačno"],"tacno":2,"obj":"U dovi tražimo dobro na oba svijeta i oprost.","uputa":"Ova dova je veoma sadržajna."},{"id":"z11","vrsta":"single","tip":"prisjecanje","lekcija":"mubarek-dani","tekst":"Koji je datum rođenja Muhammeda, a.s. (Mevlud)?","opcije":["1. muharrem","12. rebiul-evvel","1. ševval"],"tacno":1,"obj":"12. rebiul-evvel je datum rođenja Poslanika.","uputa":"To je dan Mevluda."},{"id":"z12","vrsta":"single","tip":"prisjecanje","lekcija":"ramazanski-bajram","tekst":"Koliko traje Ramazanski bajram?","opcije":["Jedan dan","Tri dana","Četiri dana"],"tacno":1,"obj":"Ramazanski bajram traje tri dana.","uputa":"Počinje 1. ševvala."},{"id":"z13","vrsta":"single","tip":"prisjecanje","lekcija":"kurban-bajram","tekst":"Koliko traje Kurban-bajram?","opcije":["Tri dana","Četiri dana","Pet dana"],"tacno":1,"obj":"Kurban-bajram traje četiri dana.","uputa":"Jedan dan duže od Ramazanskog."},{"id":"m1","vrsta":"multiple","tip":"prisjecanje","lekcija":"gusulski-sarti","tekst":"Šta su gusulski šarti?","opcije":["Gargara","Istinšak","Pranje cijelog tijela","Učenje Kur'ana"],"tacniVise":[0,1,2],"obj":"Gusulski šarti su gargara, istinšak i pranje cijelog tijela.","uputa":"Tri obavezne radnje."},{"id":"m2","vrsta":"multiple","tip":"prisjecanje","lekcija":"tejemumski-sarti","tekst":"Kada se uzima tejemum?","opcije":["Kada nema vode","Kada je voda štetna","Kada je voda hladna","Kada imamo dovoljno vode"],"tacniVise":[0,1,2],"obj":"Tejemum se uzima kad nema vode ili je voda štetna ili hladna.","uputa":"Kada je upotreba vode otežana."},{"id":"m3","vrsta":"multiple","tip":"prisjecanje","lekcija":"pravila-ponasanja","tekst":"Kada se kaže Bismillah?","opcije":["Kad nešto radimo","Kad ulazimo u kuću","Prije svakog dobrog posla","Kad se divimo"],"tacniVise":[0,2],"obj":"Bismillah se uči prije svakog dobrog posla.","uputa":"Prva stvar koju učinimo."},{"id":"m4","vrsta":"multiple","tip":"prisjecanje","lekcija":"mubarek-dani","tekst":"Nabroj mubarek-dane.","opcije":["Nova hidžretska godina","Mevlud","Ramazanski bajram","Džuma"],"tacniVise":[0,1,2],"obj":"To su Nova godina, Mevlud i Ramazanski bajram.","uputa":"Džuma je sedmični mubarek dan, ali nije među četiri glavna godišnja."},{"id":"t1","vrsta":"truefalse","tip":"prisjecanje","lekcija":"sura-el-felek","tekst":"Sura El-Felek i En-Nas su Zaštitnice?","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Tačno, to su dvije zaštitnice.","uputa":"Muhammed, a.s., nas je tome naučio."},{"id":"t2","vrsta":"truefalse","tip":"prisjecanje","lekcija":"gusulski-sarti","tekst":"Gusul je obavezno vjersko kupanje?","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Tačno, gusul je obavezan u određenim prilikama.","uputa":"Vjerski propisano kupanje."},{"id":"t3","vrsta":"truefalse","tip":"prisjecanje","lekcija":"kurban-bajram","tekst":"Tekbiri-tešrik se uči samo na Kurban-bajram?","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Tačno, to je specifičnost ovog bajrama.","uputa":"Veličanje Allaha tokom bajramskih dana."},{"id":"t4","vrsta":"truefalse","tip":"prisjecanje","lekcija":"ramazanski-bajram","tekst":"Drugi dan Ramazanskog bajrama je Dan šehida?","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Tačno, u BiH se tada obilježava Dan šehida.","uputa":"Posjeta mezarjima."},{"id":"r1","vrsta":"reorder","tip":"prisjecanje","lekcija":"gusulski-sarti","tekst":"Poredaj gusulske šarte.","stavke":[{"ime":"Nijet","opis":"Srcem zanijetiti prije kupanja"},{"ime":"Gargara","opis":"Isprati usta i grlo tri puta"},{"ime":"Istinšak","opis":"Isprati nos tri puta"},{"ime":"Gasli vudžud","opis":"Oprati cijelo tijelo da nigdje suho ne ostane"}],"tacanRedoslijed":[0,1,2,3],"obj":"Nijetimo, zatim izvršimo tri gusulska šarta: gargaru, istinšak i pranje cijelog tijela.","uputa":"Poslije nijeta kreni od ispiranja usta."},{"id":"r2","vrsta":"reorder","tip":"prisjecanje","lekcija":"tejemumski-sarti","tekst":"Poredaj tejemumske šarte.","stavke":[{"ime":"Nijet","opis":"Namjera"},{"ime":"Potiranje lica","opis":"Prvi udarac dlanovima"},{"ime":"Potiranje ruku","opis":"Drugi udarac dlanovima"}],"tacanRedoslijed":[0,1,2],"obj":"Nijet, lice, ruke.","uputa":"Slijed radnji tejemuma."},{"id":"r3","vrsta":"reorder","tip":"prisjecanje","lekcija":"salavati","tekst":"Poredaj dijelove namaskog sjedenja.","stavke":[{"ime":"Et-tehijatu","opis":"Prvi dio"},{"ime":"Salavati","opis":"Drugi dio"},{"ime":"Dove","opis":"Treći dio"}],"tacanRedoslijed":[0,1,2],"obj":"Et-tehijatu, salavati, pa dove.","uputa":"Redoslijed učenja na sjedenju."},{"id":"r4","vrsta":"reorder","tip":"prisjecanje","lekcija":"mubarek-dani","tekst":"Poredaj mubarek-dane u godini.","stavke":[{"ime":"Nova godina","opis":"1. muharrem"},{"ime":"Mevlud","opis":"12. rebiul-evvel"},{"ime":"Ramazanski bajram","opis":"1. ševval"},{"ime":"Kurban-bajram","opis":"10. zul-hidže"}],"tacanRedoslijed":[0,1,2,3],"obj":"Nova godina, Mevlud, Ramazanski, pa Kurban-bajram.","uputa":"Hronološki kroz hidžretsku godinu."}];
+/*
   { id:"z1", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 4", lekcija:"muhammed-as-poslanik",
     tekst:"Ko je posljednji Allahov poslanik?",
     opcije:["Muhammed, a.s.","Isa, a.s.","Adem, a.s."], tacno:0,
@@ -276,7 +275,6 @@ const PITANJA = [
     obj:"Lejletul-kadr je Noć Sudbine, najvrednija noć u godini, i nalazi se u mjesecu ramazanu.",
     uputa:"Ta noć je u ramazanu — mjesecu posta." },
 
-  /* --- više tačnih odgovora --- */
   { id:"m1", vrsta:"multiple", tip:"razlikovanje", lekcija:"sadaka",
     tekst:"Šta se sve računa kao sadaka? Odaberi sve tačne odgovore.",
     opcije:["Novac koji daš siromašnom","Lijepa riječ nekome kome je teško","Pomoć starijoj osobi da pređe ulicu","Ogovaranje drugova"], tacniVise:[0,1,2],
@@ -298,7 +296,6 @@ const PITANJA = [
     obj:"Farz, sunnet i nafila su vrste namaza. Hutba je govor koji imam drži na džumi.",
     uputa:"Jedan odgovor nije namaz, nego govor u džamiji." },
 
-  /* --- tačno/netačno --- */
   { id:"t1", vrsta:"truefalse", tip:"razlikovanje", lekcija:"zekat",
     tekst:"Tačno ili netačno: zekat se daje dobrovoljno, kad čovjek želi.",
     opcije:["Tačno","Netačno"], tacno:1,
@@ -320,7 +317,6 @@ const PITANJA = [
     obj:"Tejemmum je čišćenje čistom zemljom kada nema vode.",
     uputa:"Sjeti se putnika koji nigdje ne može naći vodu." },
 
-  /* --- redoslijed --- */
   { id:"r1", vrsta:"reorder", tip:"redoslijed", lekcija:"islamski-sarti",
     tekst:"Poredaj pet islamskih šarta.",
     stavke:[
@@ -363,7 +359,9 @@ const PITANJA = [
     uputa:"Poredaj knjige kako su poredani i poslanici kojima su objavljene." }
 ];
 
-const SITUACIJE = [
+*/
+const SITUACIJE = [{"id":"s1","naslov":"Učenje sure","meta":"ibadet · sura-el-felek","uvod":"Spremaš se za spavanje i želiš se zaštititi Allahovom zaštitom.","koraci":[{"tekst":"Šta prvo učiniš?","izbori":[{"tekst":"Proučim suru El-Felek","ok":true,"obj":"Odlično, to je štit dok spavaš."},{"tekst":"Upalim svjetlo","uputa":"Potraži ono što nas čuva iz Kur'ana."}]},{"tekst":"Koliko puta je preporučeno učiti zaštitnice?","izbori":[{"tekst":"Tri puta","ok":true,"obj":"Tako je, bit će ti dovoljne."},{"tekst":"Jedanput","uputa":"Poslanik je rekao tri puta."}]}],"zavrsna":"Siguran san uz Allahovu zaštitu."},{"id":"s2","naslov":"Nestašica vode","meta":"ibadet · tejemum","uvod":"Na izletu si u prirodi i nema vode za abdest.","koraci":[{"tekst":"Kako obaviti čišćenje?","izbori":[{"tekst":"Uzmem tejemum","ok":true,"obj":"Tako je, to je olakšica."},{"tekst":"Ne klanjam","uputa":"Allah je dao tejemum kao zamjenu."}]},{"tekst":"Kako se uzima tejemum?","izbori":[{"tekst":"Nijet, udarac o zemlju za lice, udarac za ruke","ok":true,"obj":"Upravo tako."},{"tekst":"Samo operem ruke","uputa":"Tejemum ima tri šarta."}]}],"zavrsna":"Spreman za namaz uz tejemum."},{"id":"s3","naslov":"Lijepe riječi","meta":"ahlak · pravila-ponasanja","uvod":"Prijatelj ti je poklonio knjigu, a zatim pokazao lijep crtež.","koraci":[{"tekst":"Šta kažeš kada ti učini dobro?","izbori":[{"tekst":"Džezakellahu hajren","ok":true,"obj":"Tako zahvaljujemo i molimo Allaha da ga nagradi dobrom."},{"tekst":"Ne kažem ništa","uputa":"Islam nas uči da zahvalimo onome ko nam učini dobro."}]},{"tekst":"Šta kažeš kada se diviš njegovom crtežu?","izbori":[{"tekst":"Mašallah","ok":true,"obj":"Mašallah kažemo kada se nečemu divimo."},{"tekst":"Estagfirullah","uputa":"Estagfirullah kažemo kada tražimo oprost."}]}],"zavrsna":"Lijepe i prikladne riječi pokazuju pažnju i lijepo ponašanje."},{"id":"s4","naslov":"Bajramska radost","meta":"ibadet · ramazanski-bajram","uvod":"Jutro je Bajrama, spreman si za džamiju.","koraci":[{"tekst":"Šta dijeliš prije namaza?","izbori":[{"tekst":"Sadekatul-fitr","ok":true,"obj":"To je vaša bajramska obaveza."},{"tekst":"Ništa","uputa":"Sjeti se milostinje."}]},{"tekst":"Šta kažeš nakon namaza?","izbori":[{"tekst":"Bajram šerif mubarek olsun","ok":true,"obj":"Tako se čestita."},{"tekst":"Zdravo","uputa":"Imamo islamski način čestitanja."}]}],"zavrsna":"Bajramska sreća u džematu."},{"id":"s5","naslov":"Kurban","meta":"ibadet · kurban-bajram","uvod":"Kurban-bajram je, imaš priliku pomoći siromašnima.","koraci":[{"tekst":"Kako dijelimo kurban?","izbori":[{"tekst":"Na tri dijela","ok":true,"obj":"Porodica, rodbina i siromašni."},{"tekst":"Sve zadržim","uputa":"Kurban nas uči dijeljenju."}]},{"tekst":"Šta se uči u dane bajrama?","izbori":[{"tekst":"Tekbiri-tešrik","ok":true,"obj":"Tako se veliča Allah."},{"tekst":"Učim suru El-Felek","uputa":"Za ovaj bajram postoji poseban zikr."}]}],"zavrsna":"Kurban je vrhunac humanosti."}];
+/*
   { id:"s1", naslov:"Novčić u džepu", meta:"ahlak · dobrota, sadaka",
     uvod:"Dobio si novac za užinu. Pred džamijom stoji čovjek koji traži pomoć.",
     koraci:[
@@ -451,21 +449,22 @@ const SITUACIJE = [
     zavrsna:"Džuma prije igre i tišina na hutbi — tako izgleda petak." }
 ];
 
+*/
 const RAZGOVOR = [
-  { pitanje:"Koju sadaku možeš dati, a da nije novac?",
-    napomena:"Traži konkretno: lijepa riječ, pomoć kod kuće, voda mački, mjesto u autobusu." },
-  { pitanje:"Šta ti je najljepše na bajram, a šta bi dodao ili dodala?",
-    napomena:"Poveži s posjetama i onima koji su sami — često djeca sama predlože komšiju." },
-  { pitanje:"Kako u svojoj kući možete manje rasipati vodu?",
-    napomena:"Neka svako dijete predloži jednu mjeru; zapiši ih na tablu kao dogovor razreda." }
+  { pitanje:"Kada nam tejemum pomaže da se pripremimo za namaz?",
+    napomena:"Učenici trebaju povezati tejemum s nedostatkom vode ili nemogućnošću njene upotrebe." },
+  { pitanje:"Koju lijepu islamsku riječ najčešće koristiš i kada je izgovaraš?",
+    napomena:"Poveži odgovore s Bismillom, Mašallah, El-hamdu lillah i drugim izrazima iz lekcije." },
+  { pitanje:"Kako možemo obradovati porodicu, komšije i potrebne za Bajram?",
+    napomena:"Traži konkretna djela: čestitanje, posjeta, dijeljenje i pomoć." }
 ];
 
 const PLAN = [
-  ["1 · Znanje", "Trinaest pitanja — tri su ponavljanje prethodnih etapa", "12 min"],
-  ["2 · Razlikovanje", "Zekat i sadaka, obredi hadža, i četiri zadatka ponavljanja", "9 min"],
-  ["3 · Redoslijed", "Islamski šarti, ramazan do bajrama, džuma, Božije knjige", "8 min"],
-  ["4 · Situacije", "Pet slučajeva — davanje, voda, životinje, bajram, džuma", "14 min"],
-  ["5 · Razgovor", "Tri pitanja bez bodova — svako dijete kaže jednu rečenicu", "6 min"],
+  ["1 · Znanje", "Sura El-Felek, gusul, tejemum, namaske dove i mubarek-dani", "12 min"],
+  ["2 · Razlikovanje", "Gusulski i tejemumski šarti, lijepe riječi i bajramski propisi", "9 min"],
+  ["3 · Redoslijed", "Gusul, tejemum, namasko sjedenje i mubarek-dani", "8 min"],
+  ["4 · Situacije", "Pet primjera zaštite, tejemuma, lijepog govora i Bajrama", "14 min"],
+  ["5 · Razgovor", "Tri pitanja za povezivanje ibadeta i lijepog ponašanja", "6 min"],
   ["Radni list", "Zadaća za kuću ili za djecu bez uređaja", "—"]
 ];
 
@@ -847,7 +846,7 @@ function iscrtajPlan(){
 
   const nap = el("div", "napomene");
   nap.appendChild(el("h3", null, "Tri napomene"));
-  nap.appendChild(el("p", null, "Brojač „zadržano iz prethodnih etapa“ pokazuje koliko se zadržalo iz etapa 1 do 4. Ako je nizak, ponovite starije lekcije prije nego se ide dalje."));
+  nap.appendChild(el("p", null, "Vježba se oslanja samo na lekcije 41–50."));
   nap.appendChild(el("p", null, "Bodovi vježbe idu 5 za tačno iz prvog pokušaja, 3 iz drugog, dalje 0. Profilne kapi meda platforma dodjeljuje zasebno, po završenom pokušaju."));
   nap.appendChild(el("p", null, "Krug razgovora nema tačan odgovor i ne ulazi u broj završenih zadataka."));
   p.appendChild(nap);
@@ -862,7 +861,7 @@ function iscrtajZnanje(){
   p.textContent = "";
   const uvod = el("div");
   uvod.appendChild(el("p", "kicker", "Krug 1 · znanje"));
-  uvod.appendChild(el("h2", null, "Zekat, hadž i mubarek dani"));
+  uvod.appendChild(el("h2", null, "Zaštita, čistoća, dove i mubarek-dani"));
   p.appendChild(uvod);
   let br = 0;
   PITANJA.forEach(function(q, i){
@@ -1010,7 +1009,7 @@ function iscrtajList(){
   for (let i = 0; i < 2; i++) z5.appendChild(el("div", "crta"));
   list.appendChild(z5);
 
-    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 41–50 (s ponavljanjem etapa 1 do 4)"));
+    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 41–50"));
   p.appendChild(list);
 }
 

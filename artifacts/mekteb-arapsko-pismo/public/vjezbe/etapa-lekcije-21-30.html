@@ -152,11 +152,10 @@ protocol: mekteb.exercise.v1
   <header class="glava">
     <p class="kicker">Mekteb.net · etapna vježba 3</p>
     <h1 id="naslovVjezbe">Ponavljanje lekcija 21–30</h1>
-    <p class="podnaslov">Abdest i gusul, ezan i ikamet, namaz u džematu, vrste namaza i post — uz osam zadataka koji se vraćaju na prve dvije etape. Pogrešan odgovor daje uputu i novi pokušaj.</p>
+    <p class="podnaslov">Prođi kroz pet krugova, odgovori na pitanja i pokaži šta si naučio/la. Ako pogriješiš, dobit ćeš pomoć i možeš pokušati ponovo.</p>
     <div class="oznake">
       <span class="oznaka">Nivo 1 · lekcije 21–30</span>
       <span class="oznaka">30 zadataka</span>
-      <span class="oznaka">8 zadataka ponavljanja</span>
       <span class="oznaka">40–45 minuta</span>
     </div>
     <div class="stanje">
@@ -169,7 +168,7 @@ protocol: mekteb.exercise.v1
         <span class="nat">Bodovi vježbe</span>
         <div><span class="vr" id="brBodovi">0</span> <span class="uz" id="brMaxBodovi">/ 150</span></div>
       </div>
-      <div class="brojka">
+      <div class="brojka" hidden>
         <span class="nat">Zadržano iz etapa 1 i 2</span>
         <div><span class="vr" id="brPonav">0</span> <span class="uz" id="brPonavUk">/ 8</span></div>
       </div>
@@ -208,270 +207,25 @@ function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? 
 
 /* ---------- SADRŽAJ ---------- */
 
-const PITANJA = [
-  /* --- jedan tačan odgovor --- */
-  { id:"z1", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 1", lekcija:"euzubilla-i-bismilla",
-    tekst:"Šta znači bismilla?",
-    opcije:["U ime Allaha","Hvala Allahu","Allah je najveći"], tacno:0,
-    obj:"Bismilla — u ime Allaha — rečenica je kojom počinjemo svaki koristan posao.",
-    uputa:"Jedna od tri rečenice otvara posao, a ne zahvaljuje i ne veliča." },
-  { id:"z2", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 1", lekcija:"dove",
-    tekst:"Šta je dova?",
-    opcije:["Molba upućena Allahu","Poziv na namaz","Poglavlje u Kur'anu"], tacno:0,
-    obj:"Dova je molba upućena Allahu. Poziv na namaz je ezan, a poglavlje u Kur'anu je sura.",
-    uputa:"Dvije od tri riječi već znaš: ezan i sura." },
-  { id:"z3", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 2", lekcija:"namaski-sarti",
-    tekst:"Koliko je namaskih šarta?",
-    opcije:["Dvanaest","Šest","Pet"], tacno:0,
-    obj:"Namaskih šarta je dvanaest: šest se ispuni prije namaza, a šest ruknova izvršava se u namazu.",
-    uputa:"Šest prije namaza i šest u namazu — koliko je to zajedno?" },
-  { id:"z4", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 2", lekcija:"kuran-objava",
-    tekst:"Koliko sura ima Kur'an?",
-    opcije:["Stotinu četrnaest","Stotinu","Stotinu dvadeset"], tacno:0,
-    obj:"Kur'an ima stotinu četrnaest sura.",
-    uputa:"Broj je između sto i sto dvadeset i završava na četiri." },
-  { id:"z5", vrsta:"single", tip:"prisjecanje", lekcija:"gusul",
-    tekst:"Šta je gusul?",
-    opcije:["Vjersko kupanje cijelog tijela","Pranje ruku do lakata","Čišćenje čistom zemljom"], tacno:0,
-    obj:"Gusul je vjersko kupanje cijelog tijela radi postizanja potpune čistoće. Čišćenje zemljom je tejemmum.",
-    uputa:"Jedno je dio abdesta, jedno je zamjena za vodu, a jedno je kupanje cijelog tijela." },
-  { id:"z6", vrsta:"single", tip:"razlikovanje", lekcija:"ikamet",
-    tekst:"Šta je ikamet?",
-    opcije:["Poziv koji se uči neposredno pred početak farz-namaza","Poziv na namaz koji se uči s minareta","Dova koja se uči poslije namaza"], tacno:0,
-    obj:"Ikamet se uči neposredno pred početak farz-namaza. Ezan je poziv s minareta.",
-    uputa:"Ezan poziva u džamiju, a ovaj poziv dolazi kad je džemat već spreman." },
-  { id:"z7", vrsta:"single", tip:"prisjecanje", lekcija:"ezan",
-    tekst:"Ko uči ezan?",
-    opcije:["Mujezin","Imam","Hatib"], tacno:0,
-    obj:"Mujezin uči ezan s minareta. Imam predvodi namaz, a hatib drži hutbu na džumi.",
-    uputa:"Sva tri imaju svoju ulogu u džamiji — koja od njih je vezana za minaret?" },
-  { id:"z8", vrsta:"single", tip:"razlikovanje", lekcija:"namaz-u-dzematu",
-    tekst:"Šta je džemat?",
-    opcije:["Zajednica muslimana koji zajedno klanjaju","Red klanjača koji stoje jedan do drugog","Mjesto u džamiji koje pokazuje smjer kible"], tacno:0,
-    obj:"Džemat je zajednica muslimana koji zajedno klanjaju. Red klanjača je saff, a mjesto koje pokazuje kiblu je mihrab.",
-    uputa:"Dva odgovora govore o dijelu prostora, a jedan o ljudima." },
-  { id:"z9", vrsta:"single", tip:"razlikovanje", lekcija:"vaznost-dzemata",
-    tekst:"Šta je saff?",
-    opcije:["Red klanjača koji stoje jedan do drugog","Prostirač na kojem se klanja","Uzvišeno mjesto s kojeg imam drži hutbu"], tacno:0,
-    obj:"Saff je red klanjača. Prostirač je sedžada, a uzvišeno mjesto za hutbu je minber.",
-    uputa:"Riječ opisuje kako klanjači stoje, a ne na čemu stoje." },
-  { id:"z10", vrsta:"single", tip:"prisjecanje", lekcija:"post",
-    tekst:"Koji je treći islamski šart?",
-    opcije:["Post","Namaz","Zekat"], tacno:0,
-    obj:"Islamski šarti po redu: kelimei-šehadet, namaz, post, zekat i hadž.",
-    uputa:"Nabroj ih po redu i stani na trećem." },
-  { id:"z11", vrsta:"single", tip:"razlikovanje", lekcija:"post-propisi",
-    tekst:"Šta je sehur?",
-    opcije:["Obrok pred zoru kojim počinje dnevni post","Obrok kojim se post završava","Vrijeme prestanka jela i pića"], tacno:0,
-    obj:"Sehur je obrok pred zoru. Obrok kojim se post završava je iftar, a vrijeme prestanka jela i pića je imsak.",
-    uputa:"Ovaj obrok se jede dok je još mrak, prije nego post počne." },
-  { id:"z12", vrsta:"single", tip:"razlikovanje", lekcija:"post-propisi",
-    tekst:"Šta je iftar?",
-    opcije:["Obrok kojim se završava dnevni post nakon zalaska sunca","Obrok pred zoru","Noćni namaz u ramazanu"], tacno:0,
-    obj:"Iftar je obrok kojim se završava dnevni post, nakon zalaska sunca. Noćni namaz u ramazanu je teravih.",
-    uputa:"Ovaj obrok dolazi kad sunce zađe." },
-  { id:"z13", vrsta:"single", tip:"razlikovanje", lekcija:"vrste-namaza",
-    tekst:"Šta je farz?",
-    opcije:["Stroga vjerska obaveza koju je Allah naredio","Djelo koje je lijepo i pohvalno uraditi","Djelo koje je dozvoljeno i neutralno"], tacno:0,
-    obj:"Farz je stroga vjerska obaveza. Pohvalno djelo je mustehab, a dozvoljeno i neutralno je mubah.",
-    uputa:"Traži ono što se mora, a ne ono što je samo lijepo uraditi." },
+const PITANJA = [{"id":"z1","vrsta":"single","tip":"prisjecanje","lekcija":"sura-el-ihlas","tekst":"Šta znači sura El-Ihlas?","opcije":["Iskrenost","Milosrđe","Vjerovanje"],"tacno":0,"obj":"Naziv sure El-Ihlas znači Iskrenost.","uputa":"Sura nas uči kako iskreno vjerovati u Allaha."},{"id":"z2","vrsta":"single","tip":"prisjecanje","lekcija":"sura-el-ihlas","tekst":"Koliku vrijednost ima sura El-Ihlas?","opcije":["Kao cijeli Kur'an","Kao trećina Kur'ana","Kao pola Kur'ana"],"tacno":1,"obj":"Sura El-Ihlas vrijedi kao trećina Kur'ana.","uputa":"Poslanik, a.s., je rekao da vrijedi koliko trećina Kur'ana."},{"id":"z3","vrsta":"single","tip":"prisjecanje","lekcija":"islamski-sarti-1","tekst":"Koliko ima islamskih šarta?","opcije":["Tri","Četiri","Pet"],"tacno":2,"obj":"Ima pet islamskih šarta.","uputa":"Oni predstavljaju pet stubova na kojima stoji islam."},{"id":"z4","vrsta":"single","tip":"prisjecanje","lekcija":"islamski-sarti-1","tekst":"Koji je prvi islamski šart?","opcije":["Namaz","Kelimei-šehadet","Post"],"tacno":1,"obj":"Prvi islamski šart je Kelimei-šehadet.","uputa":"To je izjava kojom potvrđujemo svoju vjeru."},{"id":"z5","vrsta":"single","tip":"prisjecanje","lekcija":"namaz-1","tekst":"Šta je namaz za muslimana?","opcije":["Najljepši način zahvalnosti Allahu","Obična navika","Vježba za tijelo"],"tacno":0,"obj":"Namaz je naš poseban način zahvalnosti Allahu.","uputa":"Poslanik, a.s., ga je nazvao radošću svoga oka."},{"id":"z6","vrsta":"single","tip":"prisjecanje","lekcija":"namaski-sarti","tekst":"Koliko ima ukupno namaskih šarta?","opcije":["Šest","Dvanaest","Deset"],"tacno":1,"obj":"Namaskih šarta ima dvanaest.","uputa":"Šest je prije namaza, a šest u namazu."},{"id":"z7","vrsta":"single","tip":"prisjecanje","lekcija":"prvi-namaski-sart","tekst":"Koji je prvi namaski šart?","opcije":["Čistoća","Nijet","Okretanje prema kibli"],"tacno":0,"obj":"Prvi namaski šart je čistoća tijela, odjeće i mjesta.","uputa":"Allah voli čistoću, a Poslanik, a.s., je rekao da je čistoća pola imana."},{"id":"z8","vrsta":"single","tip":"prisjecanje","lekcija":"abdest","tekst":"Šta je abdest?","opcije":["Vjersko pranje dijelova tijela radi namaza","Tuširanje","Obična higijena"],"tacno":0,"obj":"Abdest je vjersko pranje radi namaza i drugih obreda.","uputa":"Potrebno ga je uzeti prije klanjanja."},{"id":"z9","vrsta":"single","tip":"prisjecanje","lekcija":"abdeski-sarti","tekst":"Koliko ima abdeskih farzova?","opcije":["Tri","Četiri","Pet"],"tacno":1,"obj":"Abdest ima četiri obavezna farza.","uputa":"Bez njih abdest nije ispravan."},{"id":"z10","vrsta":"single","tip":"prisjecanje","lekcija":"sta-kvari-abdest","tekst":"Šta će pokvariti abdest?","opcije":["Smijanje","Prirodna nužda","Razgovor"],"tacno":1,"obj":"Prirodna nužda kvari abdest.","uputa":"Abdest se kvari izlaskom nečistoća iz tijela."},{"id":"z11","vrsta":"single","tip":"prisjecanje","lekcija":"sura-en-nas","tekst":"Od koga tražimo zaštitu u suri En-Nas?","opcije":["Od ljudi","Od Gospodara ljudi","Od prirode"],"tacno":1,"obj":"Tražimo zaštitu od Allaha, Gospodara ljudi.","uputa":"Sura se uči za zaštitu od šejtanskog šaputanja."},{"id":"z12","vrsta":"single","tip":"prisjecanje","lekcija":"sura-en-nas","tekst":"Koliko ajeta ima sura En-Nas?","opcije":["Četiri","Pet","Šest"],"tacno":2,"obj":"Sura En-Nas ima šest ajeta.","uputa":"Ona je posljednja sura u Kur'anu."},{"id":"z13","vrsta":"single","tip":"prisjecanje","lekcija":"treci-namaski-sart","tekst":"Šta obavezno pokrivamo u namazu?","opcije":["Samo lice","Stidna mjesta","Samo ruke"],"tacno":1,"obj":"U namazu se obavezno pokrivaju stidna mjesta.","uputa":"To se zove sjetru avret."},{"id":"m1","vrsta":"multiple","tip":"razlikovanje","lekcija":"islamski-sarti-1","tekst":"Koji su stubovi islama obavezni samo za one koji imaju mogućnosti?","opcije":["Kelimei-šehadet","Zekat","Hadž","Namaz"],"tacniVise":[1,2],"obj":"Zekat i hadž su obaveza za one koji imaju imovinske mogućnosti.","uputa":"Prva tri šarta su univerzalna, a ostala dva ovise o mogućnostima."},{"id":"m2","vrsta":"multiple","tip":"razlikovanje","lekcija":"namaski-sarti","tekst":"Šta spada u namaske uvjete (pripreme prije namaza)?","opcije":["Čistoća tijela","Nijet","Učenje Kur'ana","Sedžda"],"tacniVise":[0,1],"obj":"Čistoća i nijet su pripreme koje se rade prije namaza.","uputa":"Kiraet i sedžda se obavljaju tokom samog namaza."},{"id":"m3","vrsta":"multiple","tip":"razlikovanje","lekcija":"abdeski-sarti","tekst":"Koja su četiri abdeska farza?","opcije":["Pranje lica","Pranje ruku","Mesh po glavi","Pranje nogu","Pranje zuba"],"tacniVise":[0,1,2,3],"obj":"Farzovi su pranje lica, ruku, mesh po glavi i pranje nogu.","uputa":"Zubi se peru sunnetom, ali nisu jedan od četiri farza."},{"id":"m4","vrsta":"multiple","tip":"razlikovanje","lekcija":"sta-kvari-abdest","tekst":"Šta od navedenog NE kvari abdest?","opcije":["Razgovor","Smijanje","Povraćanje","Sumnja u gubitak abdesta"],"tacniVise":[0,1,3],"obj":"Razgovor, smijanje i sumnja u gubitak abdesta ga ne kvare.","uputa":"Povraćanje punih usta ipak kvari abdest."},{"id":"t1","vrsta":"truefalse","tip":"razlikovanje","lekcija":"sura-el-ihlas","tekst":"Tačno ili netačno: sura El-Ihlas govori o Božijoj jedinosti.","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Da, sura El-Ihlas nas uči o tevhidu.","uputa":"Zove se još i sura o iskrenosti."},{"id":"t2","vrsta":"truefalse","tip":"razlikovanje","lekcija":"islamski-sarti-1","tekst":"Tačno ili netačno: islam stoji na sedam stubova.","opcije":["Tačno","Netačno"],"tacno":1,"obj":"Islam stoji na pet stubova, koji se zovu islamski šarti.","uputa":"Sjeti se priče o zgradi na pet stubova."},{"id":"t3","vrsta":"truefalse","tip":"razlikovanje","lekcija":"prvi-namaski-sart","tekst":"Tačno ili netačno: na mjestu gdje klanjamo smije biti slika živih bića.","opcije":["Tačno","Netačno"],"tacno":1,"obj":"Na mjestu gdje se klanja ne smije biti slika živih bića.","uputa":"To skreće pažnju klanjača."},{"id":"t4","vrsta":"truefalse","tip":"razlikovanje","lekcija":"abdest","tekst":"Tačno ili netačno: abdest se može uzeti preko nalakiranih noktiju.","opcije":["Tačno","Netačno"],"tacno":1,"obj":"Lak sprječava vodu da dodirne nokte, pa abdest nije ispravan.","uputa":"Voda mora doprijeti do površine nokta."},{"id":"r1","vrsta":"reorder","tip":"redoslijed","lekcija":"islamski-sarti-1","tekst":"Poredaj islamske šarte po redu.","stavke":[{"ime":"Kelimei-šehadet","opis":"Potvrda vjere"},{"ime":"Namaz","opis":"Stub vjere"},{"ime":"Post","opis":"Mjesec ramazan"},{"ime":"Zekat","opis":"Dio imetka"},{"id":"Hadž","ime":"Hadž","opis":"Odlazak u Meku"}],"tacniRedoslijed":["Kelimei-šehadet","Namaz","Post","Zekat","Hadž"],"obj":"Redoslijed je šehadet, namaz, post, zekat i hadž.","uputa":"Prvo potvrdimo vjeru, onda klanjamo, postimo, pa dajemo zekat i obavljamo hadž."},{"id":"r2","vrsta":"reorder","tip":"redoslijed","lekcija":"abdest","tekst":"Poredaj četiri obavezna abdeska farza prema Kur’anu.","stavke":[{"ime":"Pranje lica","opis":"Jedanput"},{"ime":"Pranje ruku","opis":"Do iza lakata"},{"ime":"Mesh","opis":"Potiranje dijela glave"},{"ime":"Pranje nogu","opis":"Do iza članaka"}],"tacniRedoslijed":["Pranje lica","Pranje ruku","Mesh","Pranje nogu"],"obj":"Farzovi abdesta su pranje lica, pranje ruku do iza lakata, mesh po glavi i pranje nogu do iza članaka.","uputa":"Počni pranjem lica."},{"id":"r3","vrsta":"reorder","tip":"redoslijed","lekcija":"namaski-sarti","tekst":"Poredaj namaske ruknove (tokom namaza).","stavke":[{"ime":"Početni tekbir","opis":"Otvaranje namaza"},{"ime":"Stajanje (Kijam)","opis":"Učenje Kur'ana"},{"ime":"Pregibanje (Ruku)","opis":"Naklon"},{"ime":"Sedžda","opis":"Lice na tlu"}],"tacniRedoslijed":["Početni tekbir","Stajanje (Kijam)","Pregibanje (Ruku)","Sedžda"],"obj":"Tekbir, stajanje, ruku, sedžda su osnovni koraci.","uputa":"Počinjemo otvaranjem, onda učimo, pa se klanjamo i spuštamo na sedždu."},{"id":"r4","vrsta":"reorder","tip":"redoslijed","lekcija":"abdeski-sarti","tekst":"Poredaj abdeske farzove prema Kur'anu.","stavke":[{"ime":"Pranje lica","opis":"Prvi farz"},{"ime":"Pranje ruku","opis":"Do iza lakata"},{"ime":"Mesh","opis":"Dio glave"},{"ime":"Pranje nogu","opis":"Do iza članaka"}],"tacniRedoslijed":["Pranje lica","Pranje ruku","Mesh","Pranje nogu"],"obj":"Farzovi slijede redoslijed: lice, ruke, glava, noge.","uputa":"Slijedi ajet iz sure El-Ma'ide."}];
 
-  /* --- više tačnih odgovora --- */
-  { id:"m1", vrsta:"multiple", tip:"razlikovanje", lekcija:"vrste-namaza",
-    tekst:"Koje su vrste namaza po obaveznosti? Odaberi sve tačne odgovore.",
-    opcije:["Farz","Sunnet","Nafila","Ezan"], tacniVise:[0,1,2],
-    obj:"Farz je stroga obaveza, sunnet je ono što je Poslanik, a.s., redovno činio, a nafila je dobrovoljni namaz iznad obaveznog. Ezan je poziv na namaz, a ne vrsta namaza.",
-    uputa:"Jedan odgovor nije namaz, nego poziv na namaz." },
-  { id:"m2", vrsta:"multiple", tip:"razlikovanje", lekcija:"subhaneke",
-    tekst:"Šta se uči u namazu? Odaberi sve tačne odgovore.",
-    opcije:["Subhaneke","Et-tehijjatu","Salavat","Dova poslije jela"], tacniVise:[0,1,2],
-    obj:"Subhaneke se uči na početku, et-tehijjatu i salavat na sjedenju. Dova poslije jela nije namaska dova.",
-    uputa:"Tri se uče u namazu, a jedna za sofrom." },
-  { id:"m3", vrsta:"multiple", tip:"razlikovanje", ponavljanje:"etapa 2", lekcija:"namaski-sarti",
-    tekst:"Šta se ispunjava prije namaza, kao namaski šart? Odaberi sve tačne odgovore.",
-    opcije:["Čistoća tijela — taharet","Nastupilo namasko vrijeme","Okretanje prema kibli","Učenje Kur'ana u namazu"], tacniVise:[0,1,2],
-    obj:"Taharet, namasko vrijeme i kibla ispunjavaju se prije namaza. Kiraet — učenje Kur'ana — je rukn, dio samog namaza.",
-    uputa:"Tri odgovora su priprema prije namaza, a jedan se radi tek u namazu." },
-  { id:"m4", vrsta:"multiple", tip:"razlikovanje", lekcija:"post-propisi",
-    tekst:"Šta kvari post? Odaberi sve tačne odgovore.",
-    opcije:["Jelo","Piće","Spavanje danju"], tacniVise:[0,1],
-    obj:"Post se kvari jelom i pićem. Spavanje danju ne kvari post.",
-    uputa:"Jedan odgovor je samo odmor, a ne kršenje posta." },
-
-  /* --- tačno/netačno --- */
-  { id:"t1", vrsta:"truefalse", tip:"razlikovanje", lekcija:"vaznost-dzemata",
-    tekst:"Tačno ili netačno: namaz u džematu ima veću nagradu od namaza koji se klanja sam.",
-    opcije:["Tačno","Netačno"], tacno:0,
-    obj:"Namaz u džematu ima veću nagradu — zato je i podsticanje na džemat dio naše vjere.",
-    uputa:"Sjeti se zašto se mekteb i džemat uvijek spominju kao zajednica." },
-  { id:"t2", vrsta:"truefalse", tip:"razlikovanje", ponavljanje:"etapa 1", lekcija:"ponasanje-jela",
-    tekst:"Tačno ili netačno: elhamdulillah izgovaramo prije prvog zalogaja.",
-    opcije:["Tačno","Netačno"], tacno:1,
-    obj:"Prije jela izgovaramo bismillu, a elhamdulillah je zahvala poslije jela.",
-    uputa:"Jedna rečenica otvara obrok, a druga ga zatvara. Koja otvara?" },
-  { id:"t3", vrsta:"truefalse", tip:"razlikovanje", ponavljanje:"etapa 2", lekcija:"tejemum",
-    tekst:"Tačno ili netačno: kada nema vode, čistoća za namaz postiže se tejemmumom.",
-    opcije:["Tačno","Netačno"], tacno:0,
-    obj:"Tejemmum je čišćenje čistom zemljom kada nema vode.",
-    uputa:"Sjeti se putnika koji nigdje ne može naći vodu — vjera mu daje rješenje." },
-  { id:"t4", vrsta:"truefalse", tip:"razlikovanje", lekcija:"post-propisi",
-    tekst:"Tačno ili netačno: dnevni post traje od zalaska sunca do izlaska sunca.",
-    opcije:["Tačno","Netačno"], tacno:1,
-    obj:"Post traje od zore, to jest od imsaka, do zalaska sunca.",
-    uputa:"Sehur je pred zoru, iftar o zalasku sunca — šta je onda između njih?" },
-
-  /* --- redoslijed --- */
-  { id:"r1", vrsta:"reorder", tip:"redoslijed", ponavljanje:"etapa 2", lekcija:"pet-namaza",
-    tekst:"Poredaj pet dnevnih namaza od početka dana prema noći.",
-    stavke:[
-      {ime:"Sabah", opis:"Od zore do izlaska sunca"},
-      {ime:"Podne", opis:"Kad sunce pređe najvišu točku"},
-      {ime:"Ikindija", opis:"Kad sjene znatno porastu"},
-      {ime:"Akšam", opis:"Odmah nakon zalaska sunca"},
-      {ime:"Jacija", opis:"Kad padne noć"}
-    ],
-    obj:"Redoslijed je: sabah, podne, ikindija, akšam, pa jacija.",
-    uputa:"Prvo pronađi namaz u zoru, pa nastavi prema večeri." },
-  { id:"r2", vrsta:"reorder", tip:"redoslijed", lekcija:"ikamet",
-    tekst:"Poredaj šta se čuje i radi prije farz-namaza u džematu.",
-    stavke:[
-      {ime:"Ezan", opis:"Poziv s minareta"},
-      {ime:"Ikamet", opis:"Poziv kad je džemat spreman"},
-      {ime:"Farz-namaz", opis:"Imam predvodi"}
-    ],
-    obj:"Prvo ezan, pa ikamet, pa farz-namaz u džematu.",
-    uputa:"Jedan poziv zove ljude u džamiju, drugi najavljuje početak." },
-  { id:"r3", vrsta:"reorder", tip:"redoslijed", lekcija:"subhaneke",
-    tekst:"Poredaj šta se uči u prvom rekatu, poslije tekbira.",
-    stavke:[
-      {ime:"Subhaneke", opis:"Odmah poslije tekbira"},
-      {ime:"Euzubilla i bismilla", opis:"Prije učenja Kur'ana"},
-      {ime:"El-Fatiha", opis:"Uči se u svakom rekatu"},
-      {ime:"Kratka sura", opis:"Poslije El-Fatihe"}
-    ],
-    obj:"Subhaneke, euzubilla i bismilla, El-Fatiha, pa kratka sura.",
-    uputa:"Prvo se Allah veliča, pa se traži zaštita, pa se uči Kur'an." },
-  { id:"r4", vrsta:"reorder", tip:"redoslijed", lekcija:"post-propisi",
-    tekst:"Poredaj ramazanski dan po vremenu.",
-    stavke:[
-      {ime:"Sehur", opis:"Pred zoru"},
-      {ime:"Imsak", opis:"Post počinje"},
-      {ime:"Iftar", opis:"Zalazak sunca"},
-      {ime:"Teravih", opis:"Poslije jacije"}
-    ],
-    obj:"Sehur pred zoru, imsak kad post počinje, iftar o zalasku sunca, teravih poslije jacije.",
-    uputa:"Počni od obroka u mraku prije zore." }
-];
-
-const SITUACIJE = [
-  { id:"s1", naslov:"Ezan za akšam", meta:"ibadet · dova-poslije-ezana",
-    uvod:"Igraš se u dvorištu i s minareta se čuje ezan za akšam.",
-    koraci:[
-      { tekst:"Šta radiš?", izbori:[
-        { tekst:"Prekinem igru i krenem se pripremiti za namaz", ok:true, obj:"Akšam ima kratko vrijeme — zato se na ezan odmah odgovara." },
-        { tekst:"Nastavim igru dok se ne smrači", uputa:"Akšamsko vrijeme je najkraće u danu. Šta je sigurnije?" },
-        { tekst:"Sačekam jaciju pa klanjam oba", uputa:"Svaki namaz se klanja u svom vremenu." }
-      ]},
-      { tekst:"Ezan je proučen do kraja. Ostaje jedna lijepa stvar prije namaza.", izbori:[
-        { tekst:"Proučim dovu poslije ezana", ok:true, obj:"Poslije ezana uči se dova poslije ezana — to je lekcija koju smo učili." },
-        { tekst:"Odmah počnem namaz bez abdesta", uputa:"Bez tahareta nema namaza, a i poslije ezana ide jedna dova." },
-        { tekst:"Ništa, ezan je samo znak", uputa:"Ezan je poziv, ali uz njega ide i jedna dova. Koja?" }
-      ]},
-      { tekst:"Zašto je akšam poseban?", izbori:[
-        { tekst:"Zato što mu je vrijeme kratko, pa se ne odgađa", ok:true, obj:"Akšamsko vrijeme traje kratko — od zalaska sunca do nestanka rumenila." },
-        { tekst:"Zato što se klanja bez abdesta", uputa:"Taharet je šart za svaki namaz, bez izuzetka." }
-      ]}
-    ],
-    zavrsna:"Na ezan si odgovorio odmah, proučio dovu i klanjao u vremenu." },
-
-  { id:"s2", naslov:"Prvi put u džematu", meta:"ibadet · namaz-u-dzematu",
-    uvod:"S ocem si došao u džamiju na podne-namaz. Džemat se skuplja.",
-    koraci:[
-      { tekst:"Na ulasku:", izbori:[
-        { tekst:"Izuvam obuću, uredno je ostavim i nazovem selam", ok:true, obj:"Čistoća i urednost, pa selam — tako se ulazi u džamiju." },
-        { tekst:"Ulazim u obući do prvog reda", uputa:"Prostor u kojem se klanja čuva se od nečistoće." },
-        { tekst:"Ulazim tiho i ne pozdravljam nikoga", uputa:"Selam je pozdrav mira i ne preskače se." }
-      ]},
-      { tekst:"Gdje ćeš stati?", izbori:[
-        { tekst:"U saff, poravnan s ostalim klanjačima", ok:true, obj:"Saff je red klanjača — u džematu se stoji poravnano, rame uz rame." },
-        { tekst:"Sam u ćošku, da me niko ne vidi", uputa:"Džemat znači zajedno. Kako se zove red klanjača?" },
-        { tekst:"Ispred imama", uputa:"Imam predvodi džemat, pa stoji naprijed." }
-      ]},
-      { tekst:"Imam je počeo namaz.", izbori:[
-        { tekst:"Pridružim se i pratim imama", ok:true, obj:"Onaj ko klanja prateći imama zove se muktedija." },
-        { tekst:"Klanjam svojim tempom", uputa:"U džematu se prati imam — zato se i zove džemat." }
-      ]}
-    ],
-    zavrsna:"Uredna obuća, selam, saff i praćenje imama — to je namaz u džematu." },
-
-  { id:"s3", naslov:"Ramazan u školi", meta:"ibadet · post-propisi",
-    uvod:"Ramazan je. Veliki odmor, drugovi vade užinu, a ti postiš.",
-    koraci:[
-      { tekst:"Šta radiš?", izbori:[
-        { tekst:"Mirno sjedim s njima i kažem da postim", ok:true, obj:"Post se ne nosi kao prigovor drugima — nosi se mirno i s poštovanjem." },
-        { tekst:"Ljutim se na njih što jedu pred mnom", uputa:"Oni ne moraju postiti. Kako se ponaša onaj koji posti?" },
-        { tekst:"Krišom pojedem da me ne pitaju", uputa:"Post je između tebe i Allaha. Šta je iskrenije?" }
-      ]},
-      { tekst:"Iz navike si popio gutljaj vode, sasvim zaboravivši da postiš.", izbori:[
-        { tekst:"Nastavim postiti — zaboravom se post ne kvari", ok:true, obj:"Nenamjeran zaboravljeni gutljaj ne kvari post; post se nastavlja do iftara." },
-        { tekst:"Prekinem post, pokvaren je", uputa:"Razlikuj namjerno od zaboravljenog. Šta je bilo ovdje?" },
-        { tekst:"Popijem i ostatak, kad je već pokvaren", uputa:"Prvo provjeri je li post uopće pokvaren." }
-      ]},
-      { tekst:"Sunce zalazi, vrijeme je za iftar.", izbori:[
-        { tekst:"Proučim dovu i prekinem post", ok:true, obj:"Iftarom se završava dnevni post — uz dovu i zahvalu." },
-        { tekst:"Sačekam jaciju", uputa:"Post traje do zalaska sunca, ne do jacije." }
-      ]}
-    ],
-    zavrsna:"Postio si mirno, nisi se zbunio zaboravom i iftario na vrijeme." },
-
-  { id:"s4", naslov:"Abdest se pokvario", meta:"ibadet · sta-kvari-abdest",
-    uvod:"Došao si u džamiju s abdestom, ali ti se abdest pokvario prije ikameta.",
-    koraci:[
-      { tekst:"Šta radiš?", izbori:[
-        { tekst:"Idem uzeti abdest ponovo", ok:true, obj:"Taharet je šart namaza — bez abdesta se ne klanja, pa se on uzima ponovo." },
-        { tekst:"Klanjam ipak, jer sam već u džamiji", uputa:"Mjesto ne zamjenjuje čistoću. Koji šart je pokvaren?" },
-        { tekst:"Idem kući", uputa:"Abdesthana je tu — čemu služi?" }
-      ]},
-      { tekst:"Vratio si se, a džemat je već na drugom rekatu.", izbori:[
-        { tekst:"Pridružim se džematu i naknadno doklanjam propušteno", ok:true, obj:"Prispijevanje u džemat znači pridružiti se, a propušteni dio doklanjati poslije imama." },
-        { tekst:"Čekam da džemat završi, pa klanjam sam", uputa:"Možeš prispjeti u džemat. Sjeti se lekcije o prispijevanju." },
-        { tekst:"Počnem od prvog rekata glasno, svojim tempom", uputa:"U džematu se prati imam, a propušteno se doklanjava poslije." }
-      ]}
-    ],
-    zavrsna:"Novi abdest, prispijevanje u džemat i doklanjavanje — ništa se ne preskače." },
-
-  { id:"s5", naslov:"Slobodno vrijeme poslije škole", meta:"ibadet · nafila",
-    uvod:"Uradio si zadaću, klanjao ikindiju i ostalo ti je slobodnog vremena.",
-    koraci:[
-      { tekst:"Šta možeš uraditi kao dodatni ibadet?", izbori:[
-        { tekst:"Klanjati nafilu ili učiti zikr i salavat", ok:true, obj:"Nafila je dobrovoljni ibadet iznad obaveznog, a zikr je spominjanje Allaha riječima hvale." },
-        { tekst:"Ponovo klanjati ikindijski farz", uputa:"Farz je klanjan i ne ponavlja se. Šta je dobrovoljno?" },
-        { tekst:"Ništa, farzovi su dovoljni", uputa:"Farz je obaveza, ali postoji i ono što se radi dobrovoljno. Kako se to zove?" }
-      ]},
-      { tekst:"Koja je razlika između farza i nafile?", izbori:[
-        { tekst:"Farz je obaveza, a nafila dobrovoljni ibadet iznad obaveznog", ok:true, obj:"Zato se nafile ne mogu klanjati umjesto farza, nego uz njega." },
-        { tekst:"Nema razlike, oba su obavezna", uputa:"Jedno se mora, drugo se dobrovoljno dodaje." },
-        { tekst:"Nafila je obavezna, a farz dobrovoljan", uputa:"Obrnuto je. Šta znači riječ farz?" }
-      ]}
-    ],
-    zavrsna:"Farz je obaveza, a nafila i zikr su ono čime ibadet rasteš dobrovoljno." }
-];
+const SITUACIJE = [{"id":"s1","naslov":"Priprema za namaz","meta":"ibadet · prvi-namaski-sart","uvod":"Spremaš se za namaz, ali si vidio da ti je odjeća malo uprljana.","koraci":[{"tekst":"Šta trebaš uraditi?","izbori":[{"tekst":"Obući čistu odjeću","ok":true,"obj":"Čistoća odjeće je uslov za namaz."},{"tekst":"Nastaviti klanjati u prljavoj","uputa":"Tijelo, odjeća i mjesto moraju biti čisti."}]}],"obj":"Čistoća odjeće je obavezan uslov prije početka namaza.","uputa":"Pazi na higijenu prije svakog namaza.","zavrsna":"Sada si čist i spreman za susret s Allahom."},{"id":"s2","naslov":"Izbor mjesta za klanjanje","meta":"ibadet · prvi-namaski-sart","uvod":"Želiš klanjati u svojoj sobi, ali na zidu ima slika životinja.","koraci":[{"tekst":"Gdje je najbolje klanjati?","izbori":[{"tekst":"Pronaći drugi kutak ili skloniti sliku","ok":true,"obj":"Mjesto za namaz mora biti čisto od onoga što skreće pažnju."},{"tekst":"Klanjati baš tu","uputa":"Slike živih bića ne smiju biti na mjestu namaza."}]}],"obj":"Mjesto klanjanja treba biti čisto i bez predmeta koji ometaju koncentraciju.","uputa":"Kreni s pripremom prostora za namaz.","zavrsna":"Našao si mirno mjesto za namaz bez ometanja."},{"id":"s3","naslov":"Ispravan abdest","meta":"ibadet · abdeski-sarti","uvod":"Uzimaš abdest i razmišljaš o obaveznim dijelovima (farzovima).","koraci":[{"tekst":"Koji korak je obavezan farz?","izbori":[{"tekst":"Pranje lica","ok":true,"obj":"Da, pranje lica je jedan od četiri farza."},{"tekst":"Učenje dove poslije abdesta","uputa":"Dova je lijepa, ali nije farz."}]}],"obj":"Pranje lica je jedan od četiri obavezna farza abdesta.","uputa":"Sjeti se četiri osnovna dijela abdesta.","zavrsna":"Pravilno si izvršio jedan od farzova."},{"id":"s4","naslov":"Čuvanje abdesta","meta":"ibadet · sta-kvari-abdest","uvod":"Klanjao si sabah-namaz i držiš abdest do podneva.","koraci":[{"tekst":"Šta će pokvariti tvoj abdest?","izbori":[{"tekst":"Ako zaspim","ok":true,"obj":"Spavanje kvari abdest jer gubiš svijest."},{"tekst":"Ako čitam knjigu","uputa":"Čitanje ne kvari abdest."}]}],"obj":"Spavanje kvari abdest, pa ga moraš obnoviti prije sljedećeg namaza.","uputa":"Abdest se mora održavati kroz cijeli dan.","zavrsna":"Znaš šta kvari abdest i sada ćeš ga ponovo uzeti."},{"id":"s5","naslov":"Odijevanje za namaz","meta":"ibadet · treci-namaski-sart","uvod":"Spremaš se za ikindiju, a imaš samo sportsku majicu koja je malo tijesna.","koraci":[{"tekst":"Šta je najbolje obući?","izbori":[{"tekst":"Komotnu i čistu odjeću","ok":true,"obj":"Odjeća treba biti pristojna i komotna, ne tijesna."},{"tekst":"Ovu sportsku majicu","uputa":"Tijesna odjeća nije primjerena za susret s Gospodarom."}]}],"obj":"U namazu se trudimo nositi urednu i komotnu odjeću.","uputa":"Sjetru avret je treći namaski šart.","zavrsna":"Odabrao si pristojnu odjeću za svoj namaz."}];
 
 const RAZGOVOR = [
-  { pitanje:"Šta ti je u ramazanu najteže, a šta najljepše?",
-    napomena:"Cilj nije tačan odgovor — svako dijete kaže jednu rečenicu o svom iskustvu." },
-  { pitanje:"Jesi li klanjao ili klanjala u džematu? Opiši kako je bilo.",
-    napomena:"Ako neko nije, pitaj šta ga sprječava — često je to samo nesigurnost gdje stati." },
-  { pitanje:"Koju nafilu ili dobru naviku možeš uvesti ove sedmice?",
-    napomena:"Traži konkretno: jedan zikr dnevno, salavat prije spavanja, dva rekata poslije škole." }
+  { pitanje:"Koji dio pripreme za namaz već možeš uraditi potpuno samostalno?",
+    napomena:"Poveži odgovore s čistoćom, abdestom, odjećom i mjestom za namaz." },
+  { pitanje:"Kako prepoznajemo da je abdest pokvaren i šta tada trebamo uraditi?",
+    napomena:"Neka učenici navedu primjer iz lekcije i objasne da se abdest ponovo uzima." },
+  { pitanje:"Šta nas sure El-Ihlas i En-Nas uče o Allahu i traženju zaštite?",
+    napomena:"Traži kratke odgovore: Allah je Jedan i samo od Njega tražimo zaštitu." }
 ];
 
 const PLAN = [
-  ["1 · Znanje", "Trinaest pitanja — četiri su ponavljanje etapa 1 i 2", "12 min"],
-  ["2 · Razlikovanje", "Više tačnih odgovora i tačno/netačno — tu su tipične greške", "9 min"],
-  ["3 · Redoslijed", "Namazi, ezan i ikamet, dove u rekatu, ramazanski dan", "7 min"],
-  ["4 · Situacije", "Pet slučajeva, svaki u dva do tri koraka", "14 min"],
-  ["5 · Razgovor", "Tri pitanja bez bodova — svako dijete kaže jednu rečenicu", "6 min"],
+  ["1 · Znanje", "Sure El-Ihlas i En-Nas, islamski i namaski šarti, abdest", "12 min"],
+  ["2 · Razlikovanje", "Uvjeti namaza, abdeski farzovi i ono što kvari abdest", "9 min"],
+  ["3 · Redoslijed", "Islamski šarti, abdeski farzovi i priprema za namaz", "7 min"],
+  ["4 · Situacije", "Pet primjera čistoće, abdesta i odijevanja za namaz", "14 min"],
+  ["5 · Razgovor", "Tri pitanja za povezivanje znanja sa svakodnevnim životom", "6 min"],
   ["Radni list", "Zadaća za kuću ili za djecu bez uređaja", "—"]
 ];
 
@@ -853,7 +607,7 @@ function iscrtajPlan(){
 
   const nap = el("div", "napomene");
   nap.appendChild(el("h3", null, "Tri napomene"));
-  nap.appendChild(el("p", null, "Brojač „zadržano iz etapa 1 i 2“ pokazuje koliko se zadržalo iz prethodnih etapa. Ako je nizak, ponovite starije lekcije prije nego se ide dalje."));
+  nap.appendChild(el("p", null, "Vježba se oslanja samo na lekcije 21–30."));
   nap.appendChild(el("p", null, "Bodovi vježbe idu 5 za tačno iz prvog pokušaja, 3 iz drugog, dalje 0. Profilne kapi meda platforma dodjeljuje zasebno, po završenom pokušaju."));
   nap.appendChild(el("p", null, "Krug razgovora nema tačan odgovor i ne ulazi u broj završenih zadataka."));
   p.appendChild(nap);
@@ -868,7 +622,7 @@ function iscrtajZnanje(){
   p.textContent = "";
   const uvod = el("div");
   uvod.appendChild(el("p", "kicker", "Krug 1 · znanje"));
-  uvod.appendChild(el("h2", null, "Brojevi, imena i značenja"));
+  uvod.appendChild(el("h2", null, "Sure, namaz i abdest"));
   p.appendChild(uvod);
   let br = 0;
   PITANJA.forEach(function(q, i){
@@ -1015,7 +769,7 @@ function iscrtajList(){
   for (let i = 0; i < 2; i++) z5.appendChild(el("div", "crta"));
   list.appendChild(z5);
 
-  list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 21–30 (s ponavljanjem etapa 1 i 2)"));
+  list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 21–30"));
   p.appendChild(list);
 }
 

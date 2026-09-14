@@ -152,11 +152,10 @@ protocol: mekteb.exercise.v1
   <header class="glava">
     <p class="kicker">Mekteb.net · etapna vježba 6</p>
     <h1 id="naslovVjezbe">Ponavljanje lekcija 51–63</h1>
-    <p class="podnaslov">Allahova imena i tevhid, meleki i džini, pravedne halife, hidžretska godina i naša tradicija u Bosni — uz ahlak strpljenja, prijateljstva i skromnosti. Osam zadataka vraća se na prethodne etape. Pogrešan odgovor daje uputu i novi pokušaj.</p>
+    <p class="podnaslov">Prođi kroz pet krugova, odgovori na pitanja i pokaži šta si naučio/la. Ako pogriješiš, dobit ćeš pomoć i možeš pokušati ponovo.</p>
     <div class="oznake">
       <span class="oznaka">Nivo 1 · lekcije 51–63</span>
       <span class="oznaka">30 zadataka</span>
-      <span class="oznaka">8 zadataka ponavljanja</span>
       <span class="oznaka">40–45 minuta</span>
     </div>
     <div class="stanje">
@@ -169,7 +168,7 @@ protocol: mekteb.exercise.v1
         <span class="nat">Bodovi vježbe</span>
         <div><span class="vr" id="brBodovi">0</span> <span class="uz" id="brMaxBodovi">/ 150</span></div>
       </div>
-      <div class="brojka">
+      <div class="brojka" hidden>
         <span class="nat">Zadržano iz prethodnih etapa</span>
         <div><span class="vr" id="brPonav">0</span> <span class="uz" id="brPonavUk">/ 8</span></div>
       </div>
@@ -208,8 +207,8 @@ function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? 
 
 /* ---------- SADRŽAJ ---------- */
 
-const PITANJA = [
-  /* --- jedan tačan odgovor --- */
+/*
+  --- jedan tačan odgovor ---
   { id:"z1", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 5", lekcija:"zekat",
     tekst:"Šta je zekat?",
     opcije:["Obavezno davanje dijela imovine siromašnima","Dobrovoljni prilog koji dajemo kad želimo","Poklon dragoj osobi"], tacno:0,
@@ -276,7 +275,7 @@ const PITANJA = [
     obj:"Vakuf je trajna zadužbina u ime Allaha za opće dobro ljudi. Zajednica jednog mjesta je džemat, a škola je medresa.",
     uputa:"Tražimo imovinu koja je zavijek data za dobro ljudi." },
 
-  /* --- više tačnih odgovora --- */
+  --- više tačnih odgovora ---
   { id:"m1", vrsta:"multiple", tip:"razlikovanje", lekcija:"halife",
     tekst:"Ko su četvorica pravednih halifa? Odaberi sve tačne odgovore.",
     opcije:["Ebu Bekr, r.a.","Omer, r.a.","Osman, r.a.","Alija, r.a.","Ebu Leheb"], tacniVise:[0,1,2,3],
@@ -298,7 +297,7 @@ const PITANJA = [
     obj:"Mizan, sirat i proživljenje pripadaju Sudnjem danu. Hidžra je historijski događaj.",
     uputa:"Tri odgovora su o ahiretu, a jedan je historijski događaj." },
 
-  /* --- tačno/netačno --- */
+  --- tačno/netačno ---
   { id:"t1", vrsta:"truefalse", tip:"razlikovanje", lekcija:"melaike",
     tekst:"Tačno ili netačno: meleki su stvoreni od svjetlosti.",
     opcije:["Tačno","Netačno"], tacno:0,
@@ -320,7 +319,7 @@ const PITANJA = [
     obj:"Namaz u džematu ima veću nagradu — zato se na džemat i podstiče.",
     uputa:"Sjeti se zašto se džemat uvijek spominje kao zajednica." },
 
-  /* --- redoslijed --- */
+  --- redoslijed ---
   { id:"r1", vrsta:"reorder", tip:"redoslijed", lekcija:"halife",
     tekst:"Poredaj četvoricu pravednih halifa.",
     stavke:[
@@ -362,9 +361,9 @@ const PITANJA = [
     ],
     obj:"Kelimei-šehadet, namaz, post, zekat, pa hadž.",
     uputa:"Počni od svjedočenja vjere, a završi hodočašćem." }
-];
+]; */
 
-const SITUACIJE = [
+/*
   { id:"s1", naslov:"Ime koje nosiš", meta:"Bosna · muslimanska-imena",
     uvod:"Na novoj sekciji u školi jedan dječak se nasmijao tvom imenu i rekao da je čudno.",
     koraci:[
@@ -444,23 +443,59 @@ const SITUACIJE = [
       ]}
     ],
     zavrsna:"Vakuf je zajedničko dobro — ti si ga odbranio i ponudio da pomogneš." }
+]; */
+
+const PITANJA = [
+{"id":"z1","vrsta":"single","tip":"prisjecanje","lekcija":"za-bajram-je-pohvalno","tekst":"Šta je preporučeno pojesti prije odlaska na Ramazanski bajram-namaz?","opcije":["Hurmu","Hljeb","Jabuku"],"tacno":0,"obj":"Za Ramazanski bajram lijepo je pojesti neparan broj hurmi.","uputa":"Sjeti se sunneta vezanog za hurme."},
+{"id":"z2","vrsta":"single","tip":"prisjecanje","lekcija":"bajramske-aktivnosti","tekst":"Kako polaznici mekteba mogu učestvovati u pripremama za Bajram?","opcije":["Uređuju mekteb i pripremaju bajramsku akademiju","Preskaču nastavu i čekaju Bajram","Takmiče se ko ima najskuplji poklon"],"tacno":0,"obj":"Polaznici uređuju mekteb, okolinu i džamiju te pripremaju bajramsku akademiju.","uputa":"Sjeti se zajedničkih aktivnosti u mektebu prije Bajrama."},
+{"id":"z3","vrsta":"single","tip":"prisjecanje","lekcija":"nova-hidzretska-godina","tekst":"Kojim događajem počinje hidžretsko računanje vremena?","opcije":["Seoba (Hidžra) iz Mekke u Medinu","Rođenje Muhammeda, a.s.","Prva objava Kur'ana"],"tacno":0,"obj":"Hidžretska godina se računa od preseljenja (hidžre) Poslanika, a.s., iz Mekke u Medinu.","uputa":"Šta znači riječ hidžra?"},
+{"id":"z4","vrsta":"single","tip":"prisjecanje","lekcija":"nova-hidzretska-godina","tekst":"Koliko dana otprilike ima hidžretska godina?","opcije":["Oko 354","365","366"],"tacno":0,"obj":"Hidžretska godina je kraća od miladske i ima oko 354 dana.","uputa":"Sjeti se da je lunarna godina kraća."},
+{"id":"z5","vrsta":"single","tip":"prisjecanje","lekcija":"mevlud","tekst":"Kada je rođen Muhammed, alejhis-selam?","opcije":["12. rebiul-evvela 571. godine","1. muharrema 622. godine","10. redžeba"],"tacno":0,"obj":"Muhammed, a.s., rođen je 12. rebiul-evvela 571. godine u Mekki.","uputa":"Mjesec rebiul-evvel je mjesec njegovog rođenja."},
+{"id":"z6","vrsta":"single","tip":"prisjecanje","lekcija":"mevlud","tekst":"Kako nazivamo sok koji se često priprema za mevlud?","opcije":["Šerbe","Limunada","Čaj"],"tacno":0,"obj":"Šerbe je sok koji se priprema za najsvečanije prilike poput mevluda.","uputa":"To je tradicionalno piće za svečanosti."},
+{"id":"z7","vrsta":"single","tip":"prisjecanje","lekcija":"dobro-nam-dos-o","tekst":"Šta je Poslanik, a.s., rekao o onima koji mu najviše prouče salavata?","opcije":["Bit će mu najpreči na Sudnjem danu","Bit će bogati","Bit će najjači"],"tacno":0,"obj":"Rekao je: Meni će najpreči na Sudnjem danu biti oni koji mi najviše prouče salavata.","uputa":"Riječ je o bliskosti na Sudnjem danu."},
+{"id":"z8","vrsta":"single","tip":"prisjecanje","lekcija":"pet-dnevnih-namaza","tekst":"Koliko namaza muslimani klanjaju dnevno?","opcije":["Pet","Tri","Sedam"],"tacno":0,"obj":"Muslimani klanjaju pet dnevnih namaza: sabah, podne, ikindiju, akšam i jaciju.","uputa":"To je druga islamska dužnost."},
+{"id":"z9","vrsta":"single","tip":"prisjecanje","lekcija":"sabah-namaz","tekst":"Sabah-namaz se sastoji od:","opcije":["2 rekata sunneta i 2 rekata farza","4 rekata farza","3 rekata sunneta"],"tacno":0,"obj":"Sabah-namaz ima četiri rekata: dva rekata sunneta i dva rekata farza.","uputa":"Prvo se klanja sunnet, pa onda farz."},
+{"id":"z10","vrsta":"single","tip":"prisjecanje","lekcija":"sura-el-leheb","tekst":"Šta znači naziv sure El-Leheb?","opcije":["Plamen","Pomoć","Ljudska vrsta"],"tacno":0,"obj":"Leheb znači plamen.","uputa":"Sura govori o vatri rasplamsaloj."},
+{"id":"z11","vrsta":"single","tip":"prisjecanje","lekcija":"aksam-namaz","tekst":"Po čemu je akšam-namaz poseban u odnosu na druge namaze?","opcije":["Prvo se klanja farz, pa onda sunnet","Ima najviše rekata","Klanja se samo ujutro"],"tacno":0,"obj":"Kod akšam-namaza prvo se klanja farz pa onda sunnet.","uputa":"Sjeti se redoslijeda namaza."},
+{"id":"z12","vrsta":"single","tip":"prisjecanje","lekcija":"ajetul-kursija","tekst":"Kada je posebno dobro učiti Ajetul-Kursiju prema riječima Poslanika, a.s.?","opcije":["Prije spavanja","Dok jedemo","Dok se igramo"],"tacno":0,"obj":"Poslanik, a.s., je rekao da onome ko prouči ovaj ajet prije spavanja Allah pošalje meleka čuvara.","uputa":"To je zaštita za vrijeme noći."},
+{"id":"z13","vrsta":"single","tip":"prisjecanje","lekcija":"zikr","tekst":"Zikr poslije namaza obično uključuje:","opcije":["Salavat, Ajetul-Kursiju i Tesbih","Samo dovu","Samo suru Fatihu"],"tacno":0,"obj":"Zikr se sastoji od učenja Salavata, Ajetul-Kursije i Tesbiha.","uputa":"To je sjećanje na Allaha nakon namaza."},
+{"id":"m1","vrsta":"multiple","tip":"razlikovanje","lekcija":"za-bajram-je-pohvalno","tekst":"Koje od navedenih su pohvalne radnje za Bajram? (Odaberi sve tačne)","opcije":["Okupati se i namirisati","Obući najljepšu odjeću","Poraniti u džamiju","Svađati se s drugovima"],"tacniVise":[0,1,2],"obj":"Pohvalno je očistiti se, lijepo obući i poraniti u džamiju.","uputa":"Jedan odgovor je negativan."},
+{"id":"m2","vrsta":"multiple","tip":"razlikovanje","lekcija":"pet-dnevnih-namaza","tekst":"Koji su namazi dio pet dnevnih namaza? (Odaberi sve tačne)","opcije":["Sabah","Podne","Ikindija","Džuma"],"tacniVise":[0,1,2],"obj":"Džuma je sedmični, a ne dnevni namaz.","uputa":"Džuma se klanja petkom."},
+{"id":"m3","vrsta":"multiple","tip":"razlikovanje","lekcija":"zikr","tekst":"Koje riječi učimo u Tesbihu? (Odaberi sve tačne)","opcije":["Subhanallah","Elhamdulillah","Allahu ekber","Bismilla"],"tacniVise":[0,1,2],"obj":"Tesbih se sastoji od učenja Subhanallah, Elhamdulillah i Allahu ekber 33 puta.","uputa":"Bismilla je učenje na početku, ne dio tespiha 33 puta."},
+{"id":"m4","vrsta":"multiple","tip":"razlikovanje","lekcija":"sport","tekst":"Koje sportove islam podstiče prema mektebskom tekstu? (Odaberi sve tačne)","opcije":["Trčanje","Plivanje","Streljaštvo","Kockanje"],"tacniVise":[0,1,2],"obj":"Islam podstiče fizičku aktivnost poput trčanja, plivanja i jahanja/streličarstva.","uputa":"Kockanje je strogo zabranjeno."},
+{"id":"t1","vrsta":"truefalse","tip":"razlikovanje","lekcija":"nova-hidzretska-godina","tekst":"Tačno ili netačno: Hidžretska godina ima 12 mjeseci.","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Hidžretski kalendar ima 12 mjeseci.","uputa":"Uporedi sa brojem mjeseci u godini uopšte."},
+{"id":"t2","vrsta":"truefalse","tip":"razlikovanje","lekcija":"mevlud","tekst":"Tačno ili netačno: Mevludom pokazujemo ljubav prema Allahovom poslaniku.","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Obilježavanje mevluda je jedan od načina pokazivanja ljubavi.","uputa":"Sjeti se svrhe mevluda."},
+{"id":"t3","vrsta":"truefalse","tip":"razlikovanje","lekcija":"ajetul-kursija","tekst":"Tačno ili netačno: Ajetul-Kursija je najkraći ajet u Kur'anu.","opcije":["Tačno","Netačno"],"tacno":1,"obj":"Ajetul-Kursija je jedan od najvećih i najveličanstvenijih ajeta.","uputa":"Sjeti se njenog značaja i dužine."},
+{"id":"t4","vrsta":"truefalse","tip":"razlikovanje","lekcija":"sport","tekst":"Tačno ili netačno: Sport nije dozvoljen u islamu jer odvlači od namaza.","opcije":["Tačno","Netačno"],"tacno":1,"obj":"Islam podstiče brigu o tijelu, a sport je dozvoljen dok god ne zanemarujemo vjerske obaveze.","uputa":"Sjeti se da je tijelo emanet od Allaha."},
+{"id":"r1","vrsta":"reorder","tip":"redoslijed","lekcija":"pet-dnevnih-namaza","tekst":"Poredaj dnevne namaze po redoslijedu tokom dana:","stavke":[{"ime":"Sabah","opis":"Prvi namaz"},{"ime":"Podne","opis":"Drugi namaz"},{"ime":"Ikindija","opis":"Treći namaz"},{"ime":"Akšam","opis":"Četvrti namaz"},{"ime":"Jacija","opis":"Peti namaz"}],"obj":"Sabah, podne, ikindija, akšam, jacija.","uputa":"Počni od zore."},
+{"id":"r2","vrsta":"reorder","tip":"redoslijed","lekcija":"zikr","tekst":"Poredaj tesbih 33 puta po redoslijedu:","stavke":[{"ime":"Subhanallah","opis":"Prvi zikr"},{"ime":"El-hamdu lillah","opis":"Drugi zikr"},{"ime":"Allahu ekber","opis":"Treći zikr"}],"obj":"Subhanallah, El-hamdu lillah, Allahu ekber.","uputa":"Prati upute iz ilmihala."},
+{"id":"r3","vrsta":"reorder","tip":"redoslijed","lekcija":"sabah-namaz","tekst":"Poredaj dijelove jednog rekata:","stavke":[{"ime":"Kijam","opis":"Stajanje"},{"ime":"Ruku","opis":"Pregibanje"},{"ime":"Sedžda","opis":"Spuštanje na tlo"}],"obj":"Kijam, ruku, sedžda.","uputa":"Počni od stajanja."},
+{"id":"r4","vrsta":"reorder","tip":"redoslijed","lekcija":"sura-en-nasr","tekst":"Poredaj korake učenja sure:","stavke":[{"ime":"Euzubilla i bismilla","opis":"Početak"},{"ime":"Učenje ajeta","opis":"Sredina"},{"ime":"Ponavljanje i provjera","opis":"Kraj"}],"obj":"Euzubilla, učenje ajeta, provjera.","uputa":"Počni onim čime se počinje svaki posao."}
+];
+
+const SITUACIJE = [
+{"id":"s1","naslov":"Bajramska radost","meta":"ahlak · bajram","uvod":"Tvoji drugovi iz razreda ne znaju mnogo o Bajramu i misle da je to samo jedan običan dan.","koraci":[{"tekst":"Kako ćeš im objasniti šta je Bajram?","izbori":[{"tekst":"Objasnim da je to praznik ljubavi, čistoće i zajedništva","ok":true,"obj":"Bajram je naš najdraži gost, a ne samo običan dan."},{"tekst":"Kažem im da to nije njihova stvar","uputa":"Budi otvoren i podijeli radost vjere."}]},{"tekst":"Jedan drug pita zašto čistimo kuću za Bajram.","izbori":[{"tekst":"Objasnim da naša vjera uči da zablistamo i izvana i iznutra","ok":true,"obj":"Čistoća je dio naše vjere i poštovanja prema prazniku."},{"tekst":"Kažem da moramo jer su roditelji naredili","uputa":"Razmisli o dubljem značenju čišćenja kuće."}]}],"zavrsna":"Bajram je prilika da širimo radost i pokažemo ljepotu islama."},
+{"id":"s2","naslov":"Nova hidžretska godina","meta":"vjeronauka · hidžra","uvod":"U školi su svi čestitali 1. januar, a ti si se sjetio da je uskoro Nova hidžretska godina.","koraci":[{"tekst":"Šta ćeš učiniti?","izbori":[{"tekst":"Podijelim radost sa drugovima i objasnim da mi imamo svoj kalendar","ok":true,"obj":"Važno je biti ponosan na našu tradiciju i historiju."},{"tekst":"Šutim da se ne razlikujem","uputa":"Identitet je važan — ne treba ga skrivati."}]},{"tekst":"Drug te pita šta znači Hidžra.","izbori":[{"tekst":"Kažem da je to preseljenje Poslanika, a.s., iz Mekke u Medinu radi očuvanja vjere","ok":true,"obj":"Hidžra je ključni događaj naše historije."},{"tekst":"Kažem da je to putovanje na odmor","uputa":"Hidžra nije bila radi odmora."}]}],"zavrsna":"Nova hidžretska godina je prilika za novi početak i zahvalnost Allahu."},
+{"id":"s3","naslov":"Mevludski program","meta":"ahlak · mevlud","uvod":"U mektebu se priprema mevludski program, a ti si stidljiv i bojiš se nastupati.","koraci":[{"tekst":"Šta ćeš uraditi?","izbori":[{"tekst":"Prijavim se da pomognem u dijeljenju šerbeta ili ukrašavanju","ok":true,"obj":"Svaki doprinos je važan za mevludsku radost."},{"tekst":"Ne pojavim se tog dana","uputa":"Svi možemo doprinijeti, i oni najstidljiviji."}]},{"tekst":"Muallim te pita da li bi ipak naučio kraću ilahiju.","izbori":[{"tekst":"Pristanem i vježbam uz pomoć drugova","ok":true,"obj":"Učenje ilahija je način da izrazimo ljubav prema Poslaniku, a.s."},{"tekst":"Odbijem bez razmišljanja","uputa":"Pokušaj prevazići stid kroz vježbu."}]}],"zavrsna":"Mevlud je prilika za zajedništvo i izražavanje ljubavi prema Muhammedu, a.s."},
+{"id":"s4","naslov":"Zaboravljeni zikr","meta":"ibadat · zikr","uvod":"Često zaboraviš proučiti zikr poslije namaza jer žuriš na igru.","koraci":[{"tekst":"Kako ćeš promijeniti naviku?","izbori":[{"tekst":"Odlučim da ostanem na sedžadi barem dok ne proučim tesbih","ok":true,"obj":"Zikr smiruje srce i vrijedniji je od žurbe."},{"tekst":"Proučim zikr usput dok trčim","uputa":"Zikr zahtijeva smirenost."}]},{"tekst":"Drug te zove vani odmah nakon predaje selama.","izbori":[{"tekst":"Kažem mu da me sačeka minut dok završim zikr","ok":true,"obj":"Ibadet ima prednost nad igrom."},{"tekst":"Potrčim s njim","uputa":"Ne žuri, Allahovo spominjanje je prioritet."}]}],"zavrsna":"Smirenost poslije namaza donosi bereketa cijelom danu."},
+{"id":"s5","naslov":"Sportsko takmičenje","meta":"ahlak · sport","uvod":"Na mektebskom takmičenju u fudbalu tvoj tim gubi.","koraci":[{"tekst":"Kako ćeš se ponašati?","izbori":[{"tekst":"Čestitam protivničkom timu na fer igri","ok":true,"obj":"Sport nas uči da budemo strpljivi i u porazu."},{"tekst":"Ljutim se i optužujem sudiju","uputa":"To nije ponašanje snažnog vjernika."}]},{"tekst":"Drugovi iz tvog tima žele prekinuti utakmicu zbog ljutnje.","izbori":[{"tekst":"Kažem im da trebamo ostati skromni i završiti časno","ok":true,"obj":"Sport povezuje i zbližava, bez obzira na rezultat."},{"tekst":"Podržim ih u napuštanju terena","uputa":"Pokaži snagu karaktera."}]}],"zavrsna":"Snaga tijela i snaga karaktera idu zajedno."}
 ];
 
 const RAZGOVOR = [
-  { pitanje:"Koja tri lijepa Allahova imena znaš i šta ona znače?",
-    napomena:"Ne traži napamet naučen spisak — dovoljna su tri imena i kratko značenje." },
-  { pitanje:"Šta znači tvoje ime?",
-    napomena:"Ako neko ne zna, zadaj mu da pita kod kuće i kaže na sljedećem času." },
-  { pitanje:"Šta u tvojoj mahali ili gradu je vakuf?",
-    napomena:"Džamija, mekteb, česma, biblioteka — pomozi im prepoznati vakuf u svakodnevnom okruženju." }
+  { pitanje:"Koji bajramski običaj ti je najljepši i kako njime možemo obradovati druge?",
+    napomena:"Poveži odgovore s čestitanjem, posjetama, lijepom odjećom i dijeljenjem." },
+  { pitanje:"Kako nam pet dnevnih namaza i zikr pomažu da se sjećamo Allaha tokom dana?",
+    napomena:"Neka učenici navedu jedan namaz ili zikr koji već redovno obavljaju." },
+  { pitanje:"Kako možemo spojiti sport, lijepo ponašanje i brigu o namazu?",
+    napomena:"Traži konkretna pravila: poštena igra, čuvanje zdravlja i pravovremeni namaz." }
 ];
 
 const PLAN = [
-  ["1 · Znanje", "Trinaest pitanja — četiri su ponavljanje prethodnih etapa", "12 min"],
-  ["2 · Razlikovanje", "Halife, ustanove, vjerovanje — i četiri zadatka ponavljanja", "9 min"],
-  ["3 · Redoslijed", "Halife, dijelovi Kur'ana, učenje sure, islamski šarti", "8 min"],
-  ["4 · Situacije", "Pet slučajeva — ime, strpljenje, prijateljstvo, skromnost, vakuf", "14 min"],
-  ["5 · Razgovor", "Tri pitanja bez bodova — svako dijete kaže jednu rečenicu", "6 min"],
+  ["1 · Znanje", "Bajrami, hidžretska godina, Mevlud, dnevni namazi, sure i zikr", "12 min"],
+  ["2 · Razlikovanje", "Bajramski adabi, pet namaza, zikr i korisni sportovi", "9 min"],
+  ["3 · Redoslijed", "Dnevni namazi, zikr, sabah-namaz i učenje sure En-Nasr", "8 min"],
+  ["4 · Situacije", "Pet primjera Bajrama, hidžretske godine, Mevluda, zikra i sporta", "14 min"],
+  ["5 · Razgovor", "Tri pitanja za povezivanje ibadeta, praznika i zdravog života", "6 min"],
   ["Radni list", "Zadaća za kuću ili za djecu bez uređaja", "—"]
 ];
 
@@ -842,7 +877,7 @@ function iscrtajPlan(){
 
   const nap = el("div", "napomene");
   nap.appendChild(el("h3", null, "Tri napomene"));
-  nap.appendChild(el("p", null, "Brojač „zadržano iz prethodnih etapa“ pokazuje koliko se zadržalo iz etapa 1 do 5. Ako je nizak, ponovite starije lekcije prije nego se ide dalje."));
+  nap.appendChild(el("p", null, "Vježba se oslanja samo na lekcije 51–63."));
   nap.appendChild(el("p", null, "Bodovi vježbe idu 5 za tačno iz prvog pokušaja, 3 iz drugog, dalje 0. Profilne kapi meda platforma dodjeljuje zasebno, po završenom pokušaju."));
   nap.appendChild(el("p", null, "Krug razgovora nema tačan odgovor i ne ulazi u broj završenih zadataka."));
   p.appendChild(nap);
@@ -857,7 +892,7 @@ function iscrtajZnanje(){
   p.textContent = "";
   const uvod = el("div");
   uvod.appendChild(el("p", "kicker", "Krug 1 · znanje"));
-  uvod.appendChild(el("h2", null, "Vjerovanje, halife i naša tradicija"));
+  uvod.appendChild(el("h2", null, "Bajrami, namazi, sure, zikr i sport"));
   p.appendChild(uvod);
   let br = 0;
   PITANJA.forEach(function(q, i){
@@ -1005,7 +1040,7 @@ function iscrtajList(){
   for (let i = 0; i < 2; i++) z5.appendChild(el("div", "crta"));
   list.appendChild(z5);
 
-    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 51–63 (s ponavljanjem etapa 1 do 5)"));
+    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 51–63"));
   p.appendChild(list);
 }
 

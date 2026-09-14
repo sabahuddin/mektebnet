@@ -152,11 +152,10 @@ protocol: mekteb.exercise.v1
   <header class="glava">
     <p class="kicker">Mekteb.net · etapna vježba 4</p>
     <h1 id="naslovVjezbe">Ponavljanje lekcija 31–40</h1>
-    <p class="podnaslov">Šest imanskih šarta, poslanici i Božije knjige, život Muhammeda, a.s., i ahlak prema ljudima — uz devet zadataka koji se vraćaju na prethodne etape. Pogrešan odgovor daje uputu i novi pokušaj.</p>
+    <p class="podnaslov">Prođi kroz pet krugova, odgovori na pitanja i pokaži šta si naučio/la. Ako pogriješiš, dobit ćeš pomoć i možeš pokušati ponovo.</p>
     <div class="oznake">
       <span class="oznaka">Nivo 1 · lekcije 31–40</span>
       <span class="oznaka">30 zadataka</span>
-      <span class="oznaka">9 zadataka ponavljanja</span>
       <span class="oznaka">40–45 minuta</span>
     </div>
     <div class="stanje">
@@ -169,7 +168,7 @@ protocol: mekteb.exercise.v1
         <span class="nat">Bodovi vježbe</span>
         <div><span class="vr" id="brBodovi">0</span> <span class="uz" id="brMaxBodovi">/ 150</span></div>
       </div>
-      <div class="brojka">
+      <div class="brojka" hidden>
         <span class="nat">Zadržano iz prethodnih etapa</span>
         <div><span class="vr" id="brPonav">0</span> <span class="uz" id="brPonavUk">/ 8</span></div>
       </div>
@@ -208,8 +207,8 @@ function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? 
 
 /* ---------- SADRŽAJ ---------- */
 
-const PITANJA = [
-  /* --- jedan tačan odgovor --- */
+/* const PITANJA_IZVORNA = [
+  // --- jedan tačan odgovor ---
   { id:"z1", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 1", lekcija:"selam",
     tekst:"Šta znači selam — Esselamu alejkum?",
     opcije:["Mir s vama","Dobro jutro","Hvala ti"], tacno:0,
@@ -276,7 +275,7 @@ const PITANJA = [
     obj:"Kijamet je Sudnji dan, kraj ovog svijeta i početak vječnog života. Vaga je mizan, a most je sirat.",
     uputa:"Dva odgovora su stvari na Sudnjem danu, a jedan je sam taj dan." },
 
-  /* --- više tačnih odgovora --- */
+  // --- više tačnih odgovora ---
   { id:"m1", vrsta:"multiple", tip:"razlikovanje", lekcija:"imanski-sarti",
     tekst:"Koji su imanski šarti? Odaberi sve tačne odgovore.",
     opcije:["Vjerovanje u Allaha","Vjerovanje u meleke","Vjerovanje u Božije knjige","Vjerovanje u poslanike","Post u ramazanu"], tacniVise:[0,1,2,3],
@@ -298,7 +297,7 @@ const PITANJA = [
     obj:"Farz je stroga obaveza, sunnet je ono što je Poslanik, a.s., redovno činio, a nafila je dobrovoljni namaz. Ezan je poziv na namaz.",
     uputa:"Jedan odgovor nije namaz, nego poziv na namaz." },
 
-  /* --- tačno/netačno --- */
+  // --- tačno/netačno ---
   { id:"t1", vrsta:"truefalse", tip:"razlikovanje", lekcija:"melaike",
     tekst:"Tačno ili netačno: melek Azrail zadužen je za uzimanje duša.",
     opcije:["Tačno","Netačno"], tacno:0,
@@ -320,7 +319,7 @@ const PITANJA = [
     obj:"Namaz u džematu ima veću nagradu — zato se na džemat i podstiče.",
     uputa:"Sjeti se zašto se džemat uvijek spominje kao zajednica." },
 
-  /* --- redoslijed --- */
+  // --- redoslijed ---
   { id:"r1", vrsta:"reorder", tip:"redoslijed", lekcija:"poslanici",
     tekst:"Poredaj poslanike po vremenu u kojem su živjeli.",
     stavke:[
@@ -363,9 +362,23 @@ const PITANJA = [
     ],
     obj:"Sehur pred zoru, imsak kad post počinje, iftar o zalasku sunca, teravih poslije jacije.",
     uputa:"Počni od obroka u mraku prije zore." }
-];
+]; */
 
-const SITUACIJE = [
+const PITANJA = [{"id":"z1","vrsta":"single","tip":"prisjecanje","lekcija":"cetvrti-namaski-sart","tekst":"Šta je četvrti namaski šart?","opcije":["Vrijeme","Nijet","Kibla"],"tacno":0,"obj":"Četvrti namaski šart je namasko vrijeme.","uputa":"Sjeti se uslova za ispravnost namaza."},{"id":"z2","vrsta":"single","tip":"prisjecanje","lekcija":"cetvrti-namaski-sart","tekst":"Koliko ima namaskih vremena?","opcije":["Tri","Četiri","Pet"],"tacno":2,"obj":"Pet namaskih vremena odgovara pet dnevnih namaza.","uputa":"Sabah, podne, ikindija, akšam i jacija."},{"id":"z3","vrsta":"single","tip":"prisjecanje","lekcija":"cetvrti-namaski-sart","tekst":"Kada je pokuđeno klanjati namaz?","opcije":["Kad Sunce izlazi","U vrijeme ručka","Poslije ikindije"],"tacno":0,"obj":"Pokuđeno je klanjati kada Sunce izlazi, zalazi ili je u zenitu.","uputa":"Pokuđeno je dok Sunce mijenja svoj položaj na horizontu."},{"id":"z4","vrsta":"single","tip":"prisjecanje","lekcija":"ezan","tekst":"Šta je ezan?","opcije":["Oglašavanje početka namaskog vremena","Početak namaza u džematu","Dova nakon namaza"],"tacno":0,"obj":"Ezan je poziv kojim se oglašava početak namaskog vremena.","uputa":"On se uči sa munare."},{"id":"z5","vrsta":"single","tip":"prisjecanje","lekcija":"ezan","tekst":"Šta dodajemo u sabahskom ezanu?","opcije":["Allahu Ekber","Es-salatu hajrun minen-nevm","Hajje alel-felah"],"tacno":1,"obj":"U sabahskom ezanu dodajemo riječi da je namaz bolji od spavanja.","uputa":"Sjeti se šta je važnije od sna u rano jutro."},{"id":"z6","vrsta":"single","tip":"prisjecanje","lekcija":"ikamet","tekst":"Šta je ikamet?","opcije":["Poziv pred početak farz-namaza u džematu","Poziv s minareta","Dova poslije ezana"],"tacno":0,"obj":"Ikamet je znak da namaz upravo počinje.","uputa":"Za razliku od ezana, ikamet se uči u džamiji neposredno pred namaz."},{"id":"z7","vrsta":"single","tip":"prisjecanje","lekcija":"dova-poslije-ezana","tekst":"Kada je lijepo proučiti dovu poslije ezana?","opcije":["Odmah nakon ezana","Tokom ezana","Na kijamu"],"tacno":0,"obj":"Dova poslije ezana uči se nakon što mujezin završi učenje.","uputa":"To je trenutak otvorenih vrata Allahove milosti."},{"id":"z8","vrsta":"single","tip":"prisjecanje","lekcija":"peti-namaski-sart","tekst":"Šta je peti namaski šart?","opcije":["Kibla","Nijet","Abdest"],"tacno":0,"obj":"Peti šart je okretanje prema Kibli.","uputa":"To je smjer prema Kabi u Mekki."},{"id":"z9","vrsta":"single","tip":"prisjecanje","lekcija":"peti-namaski-sart","tekst":"U kojem smjeru je Kibla iz BiH?","opcije":["Jugoistok","Sjever","Zapad"],"tacno":0,"obj":"Iz naših krajeva, Kibla je u pravcu jugoistoka.","uputa":"Mekka se nalazi na jugoistoku od nas."},{"id":"z10","vrsta":"single","tip":"prisjecanje","lekcija":"odredjivanje-kible","tekst":"Šta je Kibla-sat?","opcije":["Vrijeme kada sjena pokazuje suprotan pravac od Kible","Vrsta kompasa","Mobilna aplikacija"],"tacno":0,"obj":"Kibla-sat je vrijeme kada položaj sjene pomaže u određivanju pravca Kible.","uputa":"Sjena predmeta pokazuje smjer suprotan Kibli."},{"id":"z11","vrsta":"single","tip":"prisjecanje","lekcija":"sesti-namaski-sart","tekst":"Šta je nijet?","opcije":["Svjesna odluka u srcu za klanjanje","Učenje sure","Podizanje ruku"],"tacno":0,"obj":"Nijet je odluka u srcu koji namaz klanjamo.","uputa":"To je šesti namaski šart."},{"id":"z12","vrsta":"single","tip":"prisjecanje","lekcija":"namaski-ruknovi-1","tekst":"Šta su namaski ruknovi?","opcije":["Sastavni dijelovi namaza","Sunneti namaza","Adabi namaza"],"tacno":0,"obj":"Ruknovi su obavezne radnje unutar samog namaza.","uputa":"Bez njih namaz nije ispravan."},{"id":"z13","vrsta":"single","tip":"prisjecanje","lekcija":"namaski-ruknovi-2","tekst":"Koji je posljednji rukn u namazu?","opcije":["Kadei-ehire","Ruku","Kijam"],"tacno":0,"obj":"Kadei-ehire je posljednje sjedenje u namazu.","uputa":"To je šesti rukn namaza."},{"id":"m1","vrsta":"multiple","tip":"razlikovanje","lekcija":"cetvrti-namaski-sart","tekst":"Kada je namaz pokuđen?","opcije":["Sunce izlazi","Sunce zalazi","Sunce u zenitu","Poslije podneva"],"tacniVise":[0,1,2],"obj":"Namaz je pokuđen u ovim periodima kretanja Sunca.","uputa":"Izaberi tri perioda kada je Sunce na horizontu ili zenitu."},{"id":"m2","vrsta":"multiple","tip":"razlikovanje","lekcija":"odredjivanje-kible","tekst":"Kako možemo odrediti pravac Kible?","opcije":["Kompas","Sunce","Mobilna aplikacija","Mahovina na sjevernoj strani"],"tacniVise":[0,1,2,3],"obj":"Svi ovi načini pomažu u orijentaciji i određivanju Kible.","uputa":"Orijentacija u prirodi nam pomaže da nađemo strane svijeta."},{"id":"m3","vrsta":"multiple","tip":"razlikovanje","lekcija":"namaski-ruknovi-1","tekst":"Šta učimo na prvom rekatu?","opcije":["Subhaneke","Euzu","Bismilla","Fatiha","Et-tehijatu"],"tacniVise":[0,1,2,3],"obj":"Na prvom rekatu učimo Subhaneke, Euzu, Bismillu, Fatihu i suru.","uputa":"Et-tehijatu se uči na sjedenju."},{"id":"m4","vrsta":"multiple","tip":"razlikovanje","lekcija":"ulazak-izlazak","tekst":"Kako ulazimo u prostore?","opcije":["Desnom nogom u džamiju","Lijevom nogom u kupatilo","Desnom nogom u kuću","Lijevom nogom iz kupatila"],"tacniVise":[0,1,2],"obj":"U džamiju i kuću ulazimo desnom, a u kupatilo lijevom.","uputa":"Provjeri sunnete za ulazak u prostorije."},{"id":"t1","vrsta":"truefalse","tip":"razlikovanje","lekcija":"ezan","tekst":"Tačno ili netačno: Ezan se uči samo na arapskom jeziku.","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Ezan je objava na arapskom jeziku.","uputa":"Sjeti se riječi koje mujezin izgovara."},{"id":"t2","vrsta":"truefalse","tip":"razlikovanje","lekcija":"ikamet","tekst":"Tačno ili netačno: Ikamet se uči brže od ezana.","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Ikamet se uči brže jer je to poziv za neposredni početak namaza.","uputa":"Poredi tempo ezana i ikameta."},{"id":"t3","vrsta":"truefalse","tip":"razlikovanje","lekcija":"peti-namaski-sart","tekst":"Tačno ili netačno: Zabranjeno je klanjati prema slici osobe.","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Nije dozvoljeno klanjati prema figuri ili slici osobe ili životinje.","uputa":"Sjeti se propisa o smjeru klanjanja."},{"id":"t4","vrsta":"truefalse","tip":"razlikovanje","lekcija":"ulazak-izlazak","tekst":"Tačno ili netačno: Pri izlasku iz kupatila proučimo Gufraneke.","opcije":["Tačno","Netačno"],"tacno":0,"obj":"Gufraneke je dova koju učimo izlazeći iz kupatila.","uputa":"Sjeti se dove za oprost."},{"id":"r1","vrsta":"reorder","tip":"redoslijed","lekcija":"cetvrti-namaski-sart","tekst":"Poredaj namaze po redu tokom dana.","stavke":[{"ime":"Sabah","opis":"Jutarnji namaz"},{"ime":"Podne","opis":"Dnevni namaz"},{"ime":"Ikindija","opis":"Popodnevni namaz"},{"ime":"Akšam","opis":"Večernji namaz"},{"ime":"Jacija","opis":"Noćni namaz"}],"obj":"Redoslijed: Sabah, Podne, Ikindija, Akšam, Jacija.","uputa":"Kreni od jutarnjeg namaza."},{"id":"r2","vrsta":"reorder","tip":"redoslijed","lekcija":"namaski-ruknovi-1","tekst":"Poredaj prve tri radnje u namazu.","stavke":[{"ime":"Iftitahi-tekbir","opis":"Početni tekbir"},{"ime":"Kijam","opis":"Stajanje"},{"ime":"Kiraet","opis":"Učenje Kur'ana"}],"obj":"Prvo tekbir, pa kijam, pa kiraet.","uputa":"Kreni od početka namaza."},{"id":"r3","vrsta":"reorder","tip":"redoslijed","lekcija":"namaski-ruknovi-2","tekst":"Poredaj ruknove II dijela.","stavke":[{"ime":"Ruku","opis":"Pregibanje"},{"ime":"Sedžda","opis":"Spuštanje na tlo"},{"ime":"Kadei-ehire","opis":"Posljednje sjedenje"}],"obj":"Ruku, sedžda, pa sjedenje.","uputa":"Slijedi redoslijed pokreta u rekatu."},{"id":"r4","vrsta":"reorder","tip":"redoslijed","lekcija":"ulazak-izlazak","tekst":"Poredaj radnje pri ulasku u kuću.","stavke":[{"ime":"Selam","opis":"Pozdrav"},{"ime":"Desna noga","opis":"Ulazak"},{"ime":"Dova","opis":"Zahvala"}],"obj":"Selam, desna noga, dova.","uputa":"Sjeti se adaba ulaska."}];
+
+PITANJA.find(function(p){ return p.id === "z3"; }).opcije = ["Kad Sunce izlazi","Za vrijeme doručka","Tokom spavanja"];
+const r2 = PITANJA.find(function(p){ return p.id === "r2"; });
+r2.lekcija = "namaski-ruknovi-1";
+r2.tekst = "Poredaj početne namaske ruknove onako kako se izvršavaju.";
+r2.stavke = [
+  {ime:"Iftitahi-tekbir", opis:"Početni tekbir"},
+  {ime:"Kijam i kiraet", opis:"Stajanje i učenje"},
+  {ime:"Ruku’", opis:"Pregibanje"}
+];
+r2.obj = "Redoslijed je: tekbir, zatim kijam sa kiraetom, pa ruku’.";
+r2.uputa = "Kreni od početka namaza.";
+
+/* const SITUACIJE_IZVORNA = [
   { id:"s1", naslov:"Majka zove", meta:"ahlak · roditelji",
     uvod:"Igraš igru na telefonu, ostalo je još malo do kraja nivoa. Majka te zove iz druge sobe.",
     koraci:[
@@ -449,23 +462,25 @@ const SITUACIJE = [
       ]}
     ],
     zavrsna:"Zaustavio si ogovaranje jednom mirnom rečenicom." }
-];
+]; */
+
+const SITUACIJE = [{"id":"s1","naslov":"Vrijeme namaza","meta":"namaz · vrijeme","uvod":"Čuješ ezan dok se igraš napolju.","koraci":[{"tekst":"Šta trebaš uraditi?","izbori":[{"tekst":"Prekinem igru i krenem kući","ok":true,"obj":"Namaz je najvažnija obaveza u danu."},{"tekst":"Nastavim igru dok ne završi","uputa":"Namasko vrijeme je važno. Probaj ponovo."}]}],"zavrsna":"Odazvao si se na poziv na namaz."},{"id":"s2","naslov":"Učenje ezana","meta":"ezan","uvod":"Mujezin uči ezan u tvom naselju.","koraci":[{"tekst":"Kako se ponašaš?","izbori":[{"tekst":"Prestanem sa pričom i ponavljam riječi","ok":true,"obj":"To je način da iskažemo poštovanje prema ezanu."},{"tekst":"Glasno pričam","uputa":"Dok ezan uči treba biti pažljiv. Probaj ponovo."}]}],"zavrsna":"Pokazao si poštovanje prema ezanu."},{"id":"s3","naslov":"Određivanje Kible","meta":"kibla","uvod":"Nalaziš se u prirodi i ne znaš gdje je Kibla.","koraci":[{"tekst":"Kako ćeš postupiti?","izbori":[{"tekst":"Istražim položaj Sunca ili sjenke","ok":true,"obj":"Odlično, orijentacija pomaže u nalaženju pravca."},{"tekst":"Samo klanjam bilo gdje","uputa":"Peti šart je okretanje prema Kibli. Probaj ponovo."}]}],"zavrsna":"Pravilno si se orijentisao prema Kibli."},{"id":"s4","naslov":"Nijet u srcu","meta":"nijet","uvod":"Stojiš spreman za namaz.","koraci":[{"tekst":"Šta je najvažnije u tom trenutku?","izbori":[{"tekst":"Odlučim u srcu koji namaz klanjam","ok":true,"obj":"Nijet je obavezan uslov za ispravnost namaza."},{"tekst":"Samo čekam da počne","uputa":"Moraš imati svjesnu odluku. Probaj ponovo."}]}],"zavrsna":"Ispravno si donio nijet."},{"id":"s5","naslov":"Ulazak u džamiju","meta":"adab","uvod":"Prilaziš vratima džamije.","koraci":[{"tekst":"Kojom nogom ulaziš?","izbori":[{"tekst":"Desnom","ok":true,"obj":"Ulazak desnom nogom je sunnet."},{"tekst":"Lijevom","uputa":"Džamija se poštuje ulaskom desnom nogom. Probaj ponovo."}]}],"zavrsna":"Primijenio si sunnet pri ulasku u džamiju."}];
 
 const RAZGOVOR = [
-  { pitanje:"Šta si danas uradio ili uradila za nekoga u svojoj kući?",
-    napomena:"Traži konkretno djelo, ne obećanje. Jedna rečenica od svakog djeteta." },
-  { pitanje:"Koje od šest imanskih šarta ti je najteže objasniti nekome?",
-    napomena:"Obično su to kader i Sudnji dan — iskoristi priliku da ih ponoviš svojim riječima." },
-  { pitanje:"Šta bi rekao prijatelju koji počne ogovarati, a ne želiš se posvađati?",
-    napomena:"Pusti djecu da isprobaju rečenicu naglas; kratka i mirna je najbolja." }
+  { pitanje:"Kako znaš da je nastupilo vrijeme određenog namaza?",
+    napomena:"Poveži odgovore s pet dnevnih namaskih vremena i ezanom." },
+  { pitanje:"Kako možeš odrediti Kiblu kada nisi u džamiji?",
+    napomena:"Učenici mogu navesti kompas, Kibla-sat, Sunce ili provjeru kod pouzdane osobe." },
+  { pitanje:"Koja pravila ulaska i izlaska već primjenjuješ kod kuće, u džamiji ili kupatilu?",
+    napomena:"Traži jedan konkretan primjer i odgovarajuću dovu ili ponašanje." }
 ];
 
 const PLAN = [
-  ["1 · Znanje", "Trinaest pitanja — četiri su ponavljanje etapa 1, 2 i 3", "12 min"],
-  ["2 · Razlikovanje", "Imanski šarti, ahiret, i dva zadatka ponavljanja", "9 min"],
-  ["3 · Redoslijed", "Poslanici, Božije knjige, život Poslanika, ramazanski dan", "8 min"],
-  ["4 · Situacije", "Pet slučajeva iz ahlaka, svaki u dva do tri koraka", "14 min"],
-  ["5 · Razgovor", "Tri pitanja bez bodova — svako dijete kaže jednu rečenicu", "6 min"],
+  ["1 · Znanje", "Namaska vremena, ezan, ikamet, Kibla, nijet i namaski ruknovi", "12 min"],
+  ["2 · Razlikovanje", "Mekruh-vremena, načini određivanja Kible i pravila ulaska", "9 min"],
+  ["3 · Redoslijed", "Dnevni namazi, početni ruknovi i pravila ulaska", "8 min"],
+  ["4 · Situacije", "Pet primjera namaskog vremena, ezana, Kible, nijeta i adaba", "14 min"],
+  ["5 · Razgovor", "Tri pitanja za primjenu znanja u svakodnevnom životu", "6 min"],
   ["Radni list", "Zadaća za kuću ili za djecu bez uređaja", "—"]
 ];
 
@@ -847,7 +862,7 @@ function iscrtajPlan(){
 
   const nap = el("div", "napomene");
   nap.appendChild(el("h3", null, "Tri napomene"));
-  nap.appendChild(el("p", null, "Brojač „zadržano iz prethodnih etapa“ pokazuje koliko se zadržalo iz etapa 1, 2 i 3. Ako je nizak, ponovite starije lekcije prije nego se ide dalje."));
+  nap.appendChild(el("p", null, "Vježba se oslanja samo na lekcije 31–40."));
   nap.appendChild(el("p", null, "Bodovi vježbe idu 5 za tačno iz prvog pokušaja, 3 iz drugog, dalje 0. Profilne kapi meda platforma dodjeljuje zasebno, po završenom pokušaju."));
   nap.appendChild(el("p", null, "Krug razgovora nema tačan odgovor i ne ulazi u broj završenih zadataka."));
   p.appendChild(nap);
@@ -862,7 +877,7 @@ function iscrtajZnanje(){
   p.textContent = "";
   const uvod = el("div");
   uvod.appendChild(el("p", "kicker", "Krug 1 · znanje"));
-  uvod.appendChild(el("h2", null, "Vjerovanje, poslanici i objave"));
+  uvod.appendChild(el("h2", null, "Namaska vremena, Kibla i namaski ruknovi"));
   p.appendChild(uvod);
   let br = 0;
   PITANJA.forEach(function(q, i){
@@ -1005,7 +1020,7 @@ function iscrtajList(){
   for (let i = 0; i < 2; i++) z5.appendChild(el("div", "crta"));
   list.appendChild(z5);
 
-    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 31–40 (s ponavljanjem etapa 1, 2 i 3)"));
+    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 31–40"));
   p.appendChild(list);
 }
 
