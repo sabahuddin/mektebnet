@@ -891,6 +891,11 @@ async function runResidualSchema() {
       SET content_html = '<iframe src="/vjezbe/etapa-lekcije-1-10.html" data-vjezba-kljuc="etapa-lekcije-1-10" title="Ponavljanje lekcija 1–10" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
       WHERE slug = 'm1-pocetnik';
     `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-11-20.html" data-vjezba-kljuc="etapa-lekcije-11-20" title="Ponavljanje lekcija 11–20" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-radilica';
+    `);
     // Očisti stare Nivo 1 medaljone (bez PNG ikona). Najprije ukloni FK reference.
     await db.execute(sql`
       DELETE FROM student_medaljoni WHERE medaljon_id IN (

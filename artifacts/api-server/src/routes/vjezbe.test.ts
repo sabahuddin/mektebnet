@@ -69,3 +69,12 @@ test("nepoznata ili nedovršena vježba ne može dodijeliti nagradu", async () =
   assert.equal((await submit("etapa-lekcije-1-10", 16, 17)).status, 400);
   assert.equal((await submit("etapa-lekcije-1-10", 17, 18)).status, 400);
 });
+
+test("vježba za lekcije 11–20 koristi isti generički sistem", async () => {
+  const response = await submit("etapa-lekcije-11-20", 24, 24);
+  assert.equal(response.status, 200);
+  const body = await response.json() as { attemptNo: number; hasanatGained: number; maxScore: number };
+  assert.equal(body.attemptNo, 1);
+  assert.equal(body.hasanatGained, 5);
+  assert.equal(body.maxScore, 24);
+});
