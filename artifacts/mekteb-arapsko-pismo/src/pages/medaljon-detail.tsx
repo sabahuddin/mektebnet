@@ -83,6 +83,27 @@ export default function MedaljonDetailPage() {
     return () => window.removeEventListener("message", onMessage);
   }, [token, user?.role]);
 
+  useEffect(() => {
+    const isTeacherView = user?.role === "muallim" || user?.role === "admin";
+    const iframes = contentRef.current?.querySelectorAll<HTMLIFrameElement>("iframe[data-vjezba-kljuc]");
+    if (!iframes) return;
+
+    iframes.forEach((iframe) => {
+      const source = iframe.getAttribute("src");
+      if (!source) return;
+
+      const url = new URL(source, window.location.origin);
+      if (isTeacherView) {
+        url.searchParams.set("audience", "teacher");
+      } else {
+        url.searchParams.delete("audience");
+      }
+
+      const nextSource = `${url.pathname}${url.search}${url.hash}`;
+      if (source !== nextSource) iframe.setAttribute("src", nextSource);
+    });
+  }, [data?.medaljon.contentHtml, user?.role]);
+
   if (loading) {
     return <Layout><div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-amber-600" /></div></Layout>;
   }
