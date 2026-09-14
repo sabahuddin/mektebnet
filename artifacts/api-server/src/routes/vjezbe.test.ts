@@ -78,3 +78,19 @@ test("vježba za lekcije 11–20 koristi isti generički sistem", async () => {
   assert.equal(body.hasanatGained, 5);
   assert.equal(body.maxScore, 24);
 });
+
+test("vježbe za lekcije 21–63 koriste isti generički sistem", async () => {
+  for (const key of [
+    "etapa-lekcije-21-30",
+    "etapa-lekcije-31-40",
+    "etapa-lekcije-41-50",
+    "etapa-lekcije-51-63",
+  ]) {
+    const response = await submit(key, 30, 30);
+    assert.equal(response.status, 200);
+    const body = await response.json() as { attemptNo: number; hasanatGained: number; maxScore: number };
+    assert.equal(body.attemptNo, 1);
+    assert.equal(body.hasanatGained, 5);
+    assert.equal(body.maxScore, 30);
+  }
+});

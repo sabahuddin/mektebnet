@@ -881,8 +881,16 @@ async function runResidualSchema() {
         (1, 'm3-istrazivac', 'Istraživač cvijeća',  '30 lekcija Nivoa 1 — istražuješ cvjetna polja.',  30, 'medal', 'bronze'),
         (1, 'm4-cuvar',      'Čuvar košnice',       '40 lekcija Nivoa 1 — čuvaš košnicu znanja.',      40, 'medal', 'bronze'),
         (1, 'm5-mudrac',     'Mudra pčela',         '50 lekcija Nivoa 1 — mudrost te vodi naprijed.',  50, 'medal', 'bronze'),
-        (1, 'm6-majstor',    'Majstor meda',        '60 lekcija Nivoa 1 — majstor zlatnog meda.',      60, 'medal', 'bronze')
+        (1, 'm6-majstor',    'Majstor meda',        '63 lekcije Nivoa 1 — majstor zlatnog meda.',      63, 'medal', 'bronze')
       ON CONFLICT (slug) DO NOTHING;
+    `);
+    // Nivo 1 završava sa 63 redovne lekcije. Pomjeri postojeći posljednji
+    // medaljon i njegov etapni kviz iza lekcije 63 i u već popunjenim bazama.
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET pos_after_redoslijed = 63,
+          opis = '63 lekcije Nivoa 1 — majstor zlatnog meda.'
+      WHERE slug = 'm6-majstor';
     `);
     // Pripremna interaktivna vježba za prvu etapu Nivoa 1. Statički HTML je
     // dio frontend public/ builda; ne utiče na pitanja niti prag polaganja.
@@ -895,6 +903,26 @@ async function runResidualSchema() {
       UPDATE medaljoni
       SET content_html = '<iframe src="/vjezbe/etapa-lekcije-11-20.html" data-vjezba-kljuc="etapa-lekcije-11-20" title="Ponavljanje lekcija 11–20" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
       WHERE slug = 'm2-radilica';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-21-30.html" data-vjezba-kljuc="etapa-lekcije-21-30" title="Ponavljanje lekcija 21–30" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-istrazivac';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-31-40.html" data-vjezba-kljuc="etapa-lekcije-31-40" title="Ponavljanje lekcija 31–40" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm4-cuvar';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-41-50.html" data-vjezba-kljuc="etapa-lekcije-41-50" title="Ponavljanje lekcija 41–50" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm5-mudrac';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-lekcije-51-63.html" data-vjezba-kljuc="etapa-lekcije-51-63" title="Ponavljanje lekcija 51–63" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm6-majstor';
     `);
     // Očisti stare Nivo 1 medaljone (bez PNG ikona). Najprije ukloni FK reference.
     await db.execute(sql`
