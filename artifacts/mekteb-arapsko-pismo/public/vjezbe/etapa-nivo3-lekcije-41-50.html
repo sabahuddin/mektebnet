@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ponavljanje lekcija 1–10 · Mekteb.net</title>
+<title>Ponavljanje lekcija 41–50, nivo 3 · Mekteb.net</title>
 <style>
 :root{
   --tirkiz:#248f92; --tirkiz-tamni:#176f72; --amber:#f59e0b;
@@ -140,34 +140,38 @@ table.plan tr:last-child td{border-bottom:0}
 <body>
 <!--
 MEKTEB_EXERCISE
-key: etapa-lekcije-1-10
-title: Ponavljanje lekcija 1–10
-level: 1
-stage: 1
-medallion: medaljon-nivo1-10
-totalTasks: 23
+key: etapa-nivo3-lekcije-41-50
+title: Ponavljanje lekcija 41–50 (nivo 3)
+level: 3
+stage: 5
+medallion: medaljon-nivo3-50
+totalTasks: 28
 protocol: mekteb.exercise.v1
 -->
 <div class="wrap">
   <header class="glava">
-    <p class="kicker">Mekteb.net · etapna vježba 1</p>
-    <h1 id="naslovVjezbe">Ponavljanje lekcija 1–10</h1>
-    <p class="podnaslov">Prvih deset lekcija: ilmihal i mekteb, bismilla, naša vjera, kelimei-šehadet i voda kao izvor života. Pogrešan odgovor ne zaključava zadatak — daje uputu i novi pokušaj.</p>
+    <p class="kicker">Mekteb.net · nivo 3 · etapna vježba 5</p>
+    <h1 id="naslovVjezbe">Odgovornost, čistoća i porodica</h1>
+    <p class="podnaslov">Lekcije 41–50: mukellef i odgovornost, gusul i propisi čistoće, sahibi-uzur, porodica i brak, odijevanje i hidžab, sura El-Karia i čuvanje zdravlja. Pet zadataka vraća se na ranije etape. Pogrešan odgovor daje uputu i novi pokušaj.</p>
     <div class="oznake">
-      <span class="oznaka">Nivo 1 · lekcije 1–10</span>
-      <span class="oznaka">23 zadatka</span>
-      <span class="oznaka">Prva etapa — bez ponavljanja</span>
-      <span class="oznaka">35–40 minuta</span>
+      <span class="oznaka">Nivo 3 · lekcije 41–50</span>
+      <span class="oznaka">28 zadataka</span>
+      <span class="oznaka">5 zadataka ponavljanja</span>
+      <span class="oznaka">50–55 minuta</span>
     </div>
     <div class="stanje">
       <div class="brojka">
         <span class="nat">Završeno zadataka</span>
-        <div><span class="vr" id="brZavrseno">0</span> <span class="uz" id="brUkupno">/ 23</span></div>
+        <div><span class="vr" id="brZavrseno">0</span> <span class="uz" id="brUkupno">/ 28</span></div>
         <div class="traka"><span id="traka" style="width:0%"></span></div>
       </div>
       <div class="brojka">
         <span class="nat">Bodovi vježbe</span>
-        <div><span class="vr" id="brBodovi">0</span> <span class="uz" id="brMaxBodovi">/ 115</span></div>
+        <div><span class="vr" id="brBodovi">0</span> <span class="uz" id="brMaxBodovi">/ 140</span></div>
+      </div>
+      <div class="brojka">
+        <span class="nat">Zadržano iz prethodnog</span>
+        <div><span class="vr" id="brPonav">0</span> <span class="uz" id="brPonavUk">/ 8</span></div>
       </div>
     </div>
     <p class="vizualno-skriveno" id="objavaNapretka" aria-live="polite"></p>
@@ -190,12 +194,12 @@ protocol: mekteb.exercise.v1
 "use strict";
 
 const MEKTEB_EXERCISE = Object.freeze({
-  key: "etapa-lekcije-1-10",
-  title: "Ponavljanje lekcija 1–10",
-  level: 1,
-  stage: 1,
-  medallion: "medaljon-nivo1-10",
-  totalTasks: 23,
+  key: "etapa-nivo3-lekcije-41-50",
+  title: "Ponavljanje lekcija 41–50 (nivo 3)",
+  level: 3,
+  stage: 5,
+  medallion: "medaljon-nivo3-50",
+  totalTasks: 28,
   protocol: "mekteb.exercise.v1"
 });
 
@@ -205,201 +209,164 @@ function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? 
 /* ---------- SADRŽAJ ---------- */
 
 const PITANJA = [
-  /* --- jedan tačan odgovor --- */
-  { id:"z1", vrsta:"single", tip:"prisjecanje", lekcija:"uvodna-rijec",
-    tekst:"Koja rečenica najbolje opisuje ilmihal?",
-    opcije:["Vodič kroz vjeru i svakodnevni život muslimana","Knjiga samo o historijskim datumima","Zbirka sportskih pravila"], tacno:0,
-    obj:"Ilmihal nas vodi kroz osnovno znanje o vjeri i pokazuje kako to znanje živimo.",
-    uputa:"Prisjeti se čemu služi vodič: samo da nabraja podatke ili da pomaže u životu?" },
-  { id:"z2", vrsta:"single", tip:"prisjecanje", lekcija:"kako-pocinjem-posao",
-    tekst:"Šta izgovaramo kad počinjemo koristan posao?",
-    opcije:["Bismillu","Elhamdulillah","Ništa, samo počnemo"], tacno:0,
-    obj:"Bismilla — u ime Allaha — rečenica je kojom počinjemo svaki koristan posao.",
-    uputa:"Jedna rečenica otvara posao, a druga je zahvala na kraju." },
-  { id:"z3", vrsta:"single", tip:"razlikovanje", lekcija:"covjek-najljepse-stvorenje",
-    tekst:"Koje je Allahovo najljepše stvorenje?",
-    opcije:["Čovjek","Sunce","More"], tacno:0,
-    obj:"Čovjek je najljepše Allahovo stvorenje — zato i sebe i druge treba čuvati i lijepo se ponašati.",
-    uputa:"Sunce i more su Allahove blagodati, ali jedno stvorenje je posebno." },
-  { id:"z4", vrsta:"single", tip:"prisjecanje", lekcija:"ja-idem-u-mekteb",
-    tekst:"Šta je mekteb?",
-    opcije:["Škola u kojoj učimo o vjeri","Ime jedne džamije","Knjiga koju nosimo u torbi"], tacno:0,
-    obj:"Mekteb je škola u kojoj učimo o vjeri — mjesto učenja, prijateljstva i uzajamne podrške.",
-    uputa:"Nije zgrada za namaz i nije knjiga. Gdje si sada?" },
-  { id:"z5", vrsta:"single", tip:"razlikovanje", lekcija:"dova-za-znanje",
-    tekst:"Šta molimo dovom za znanje?",
-    opcije:["Da nam Allah poveća znanje","Da dobijemo igračke","Da ne moramo učiti"], tacno:0,
-    obj:"Dovom za znanje molimo Allaha da nam poveća znanje i olakša učenje.",
-    uputa:"Dova za znanje traži nešto što ostaje cijeli život." },
-  { id:"z6", vrsta:"single", tip:"prisjecanje", lekcija:"nasa-vjera",
-    tekst:"Kako se zove naša vjera?",
-    opcije:["Islam","Iman","Ilmihal"], tacno:0,
-    obj:"Naša vjera zove se islam — predanost i pokornost Jednom Bogu, Allahu, dž.š.",
-    uputa:"Iman je vjerovanje u srcu, a ilmihal je knjiga. Kako se zove sama vjera?" },
-  { id:"z7", vrsta:"single", tip:"razlikovanje", lekcija:"nasa-vjera",
-    tekst:"Kako se zove osoba koja vjeruje u islam?",
-    opcije:["Musliman i muslimanka","Muallim i muallima","Hadžija"], tacno:0,
-    obj:"Onaj ko vjeruje u islam je musliman, a ona koja vjeruje muslimanka. Muallim je naš vjeroučitelj.",
-    uputa:"Muallim je učitelj, a hadžija je onaj ko je obavio hadž." },
-  { id:"z7b", vrsta:"single", tip:"prisjecanje", lekcija:"allahu-rabbi",
-    tekst:"Šta potvrđujemo dovom Allahu Rabbi?",
-    opcije:["Da nam je Allah Gospodar, Muhammed, a.s., poslanik, a islam vjera","Da nam Allah poveća imetak","Zahvalu poslije jela"], tacno:0,
-    obj:"Dovom Allahu Rabbi izgovaramo ono što nosimo u srcu: Allah je naš Gospodar, Muhammed, a.s., naš poslanik, a islam naša vjera.",
-    uputa:"Ta dova govori o tri stvari: o Allahu, o Poslaniku i o vjeri." },
-  { id:"z8", vrsta:"single", tip:"prisjecanje", lekcija:"kelimei-sehadet-1",
-    tekst:"Koliko dijelova ima kelimei-šehadet?",
-    opcije:["Dva","Jedan","Tri"], tacno:0,
-    obj:"Kelimei-šehadet sadrži dva svjedočenja: o Allahovoj jednoći i o poslanstvu Muhammeda, a.s.",
-    uputa:"Prisjeti se da šehadet govori o Allahu i o Njegovom Poslaniku." },
-  { id:"z9", vrsta:"single", tip:"razlikovanje", lekcija:"kelimei-sehadet-1",
-    tekst:"Šta svjedočimo prvim dijelom kelimei-šehadeta?",
-    opcije:["Da nema drugog boga osim Allaha","Da je Muhammed, a.s., Allahov poslanik","Da ima pet dnevnih namaza"], tacno:0,
-    obj:"Prvi dio potvrđuje da samo Allah zaslužuje da bude obožavan, a drugi da je Muhammed, a.s., Njegov poslanik.",
-    uputa:"Prvi dio govori o Stvoritelju, a drugi o Poslaniku." },
-  { id:"z10", vrsta:"single", tip:"razlikovanje", lekcija:"voda-izvor-zivota",
-    tekst:"Zašto je voda posebna Allahova blagodat?",
-    opcije:["Bez vode nema života","Zato što je hladna","Zato što je ima svugdje"], tacno:0,
-    obj:"Voda je izvor života — bez nje ne bi bilo ni ljudi, ni biljaka, ni životinja. Zato je ne rasipamo.",
-    uputa:"Zamisli dan bez ijedne kapi vode. Šta bi se dogodilo?" },
+  { id:"z1", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 4", lekcija:"post-propisi",
+    tekst:"Šta je imsak?", opcije:["Vrijeme kad post počinje","Obrok kojim se post završava","Noćni namaz u ramazanu"], tacno:0,
+    obj:"Imsak je vrijeme kad post počinje, pred zoru.", uputa:"Iftar je na zalasku, a teravih poslije jacije." },
+  { id:"z2", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 4", lekcija:"zekat-bejtul-mal",
+    tekst:"Šta je nisab?", opcije:["Granica imovine od koje se daje zekat","Zajednička blagajna","Vrsta sadake"], tacno:0,
+    obj:"Nisab je granica imovine od koje zekat postaje obaveza.", uputa:"Riječ označava granicu imovine." },
+  { id:"z3", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 1", lekcija:"kufr-sirk-nifak",
+    tekst:"Šta je nifak?", opcije:["Licemjerstvo — pokazivati vjeru, a srcem ne vjerovati","Najveći grijeh","Novotarija u vjeri"], tacno:0,
+    obj:"Nifak je licemjerstvo. Najveći grijeh je širk.", uputa:"Pojam govori o razlici srca i vanjskog izgleda." },
+  { id:"z4", vrsta:"single", tip:"razlikovanje", lekcija:"mukellef",
+    tekst:"Ko je mukellef?", opcije:["Punoljetna i razumna osoba koja odgovara za vjerske propise","Onaj ko zna Kur'an napamet","Osoba koja predvodi namaz"], tacno:0,
+    obj:"Mukellef je punoljetna i razumna osoba — od tada vjerski propisi postaju obaveza.", uputa:"Riječ govori o odgovornosti, ne o znanju." },
+  { id:"z5", vrsta:"single", tip:"prisjecanje", lekcija:"gusul",
+    tekst:"Šta je gusul?", opcije:["Vjersko kupanje cijelog tijela","Pranje ruku do lakata","Čišćenje čistom zemljom"], tacno:0,
+    obj:"Gusul je vjersko kupanje cijelog tijela radi postizanja potpune čistoće.", uputa:"Zemljom se uzima tejemmum." },
+  { id:"z6", vrsta:"single", tip:"razlikovanje", lekcija:"hajz-nifas",
+    tekst:"Šta je propis za ženu u stanju hajza ili nifasa?", opcije:["Ne klanja i ne posti, a propušteni post naklanjava kasnije","Klanja, a ne posti","Nema nikakvih propisa"], tacno:0,
+    obj:"U tom stanju žena ne klanja i ne posti; propušteni post se naklanjava, a namaz se ne naklanjava.", uputa:"Jedno se naklanjava, a drugo ne." },
+  { id:"z7", vrsta:"single", tip:"razlikovanje", lekcija:"sahibi-uzur",
+    tekst:"Ko je sahibi-uzur?", opcije:["Osoba koja ima stalnu fizičku zapreku za obrede","Osoba na putovanju","Osoba koja je zaboravila abdest"], tacno:0,
+    obj:"Sahibi-uzur je osoba sa stalnom zaprekom; za nju vjera propisuje olakšice.", uputa:"Putnik je musafir." },
+  { id:"z8", vrsta:"single", tip:"razlikovanje", lekcija:"porodica",
+    tekst:"Zašto je porodica važna u islamu?", opcije:["Jer je temelj zajednice i prvo mjesto odgoja","Jer se u njoj samo stanuje","Jer donosi imetak"], tacno:0,
+    obj:"Porodica je prvo mjesto odgoja i temelj zdrave zajednice.", uputa:"Gdje dijete prvo uči ahlak?" },
+  { id:"z9", vrsta:"single", tip:"razlikovanje", lekcija:"brak",
+    tekst:"Šta je mehr?", opcije:["Vjenčani dar koji muž daje supruzi","Svadbena gozba","Dokument o braku"], tacno:0,
+    obj:"Mehr je vjenčani dar koji muž obavezno daje supruzi.", uputa:"To je pravo supruge." },
+  { id:"z10", vrsta:"single", tip:"razlikovanje", lekcija:"zenidba-udaja",
+    tekst:"Šta je potrebno za ispravan brak?", opcije:["Pristanak oba supružnika i svjedoci","Samo dogovor roditelja","Samo svadba"], tacno:0,
+    obj:"Brak se sklapa uz pristanak oba supružnika i uz svjedoke — bez prisile.", uputa:"Ključno je slobodno pristajanje." },
+  { id:"z11", vrsta:"single", tip:"razlikovanje", lekcija:"odijevanje-hidzab",
+    tekst:"Šta je hidžab?", opcije:["Odjeća koja ispunjava propise pokrivanja","Naziv za maramu bilo koje vrste","Odjeća samo za namaz"], tacno:0,
+    obj:"Hidžab je odjeća muslimanke koja ispunjava propise o pokrivanju tijela.", uputa:"Riječ opisuje ispunjenje propisa, ne jedan komad odjeće." },
+  { id:"z12", vrsta:"single", tip:"razlikovanje", lekcija:"odijevanje-hidzab",
+    tekst:"Šta znači avret?", opcije:["Dio tijela koji se mora pokriti pred drugima","Vrsta odjeće","Namaska prostirka"], tacno:0,
+    obj:"Avret je dio tijela koji musliman i muslimanka moraju pokriti pred drugima.", uputa:"Prostirka je sedžada." },
+  { id:"z13", vrsta:"single", tip:"razlikovanje", lekcija:"el-kariah",
+    tekst:"O čemu govori sura El-Karia?", opcije:["O Sudnjem danu i vaganju djela","O postu u ramazanu","O odnosu prema roditeljima"], tacno:0,
+    obj:"Sura El-Karia opisuje Sudnji dan i vaganje djela na mizanu.", uputa:"Naziv sure označava dan koji potresa." },
+  { id:"z14", vrsta:"single", tip:"razlikovanje", lekcija:"odgovornost-zdravlje",
+    tekst:"Zašto smo odgovorni za svoje zdravlje?", opcije:["Jer je zdravlje amanet — blagodat koja nam je povjerena","Jer to traži škola","Jer bolestan ne mora klanjati"], tacno:0,
+    obj:"Zdravlje je amanet: čuvamo ga ishranom, kretanjem, higijenom i izbjegavanjem štetnog.", uputa:"Ko nam je dao zdravlje?" },
 
-  /* --- više tačnih odgovora --- */
-  { id:"m1", vrsta:"multiple", tip:"razlikovanje", lekcija:"ja-idem-u-mekteb",
-    tekst:"Po čemu prepoznajemo pravi mekteb? Odaberi sve tačne odgovore.",
-    opcije:["U njemu učimo","U njemu gradimo prijateljstvo","U njemu pomažemo jedni drugima","U njemu je važno samo prepisati lekciju"], tacniVise:[0,1,2],
-    obj:"Mekteb je mjesto učenja, prijateljstva i uzajamne podrške — nije samo prepisivanje.",
-    uputa:"Traži tri odgovora koji opisuju zajednicu, a ne samo školski zadatak." },
-  { id:"m2", vrsta:"multiple", tip:"razlikovanje", lekcija:"dova-za-znanje",
-    tekst:"Šta pomaže da lekciju zaista naučiš? Odaberi sve tačne odgovore.",
-    opcije:["Bismilla na početku","Mir i tišina dok učiš","Ponavljanje svaki dan po malo","Učenje uz upaljenu igricu"], tacniVise:[0,1,2],
-    obj:"Lijep početak, mir i ponavljanje daju rezultat. Igrica u pozadini samo oduzima pažnju.",
-    uputa:"Jedan odgovor ti odvlači pažnju, a ne pomaže." },
-  { id:"m3", vrsta:"multiple", tip:"razlikovanje", lekcija:"voda-izvor-zivota",
-    tekst:"Šta je tačno o vodi? Odaberi sve tačne odgovore.",
-    opcije:["Bez vode nema života","Vodom se čistimo","Vodu ne treba rasipati","Voda je nevažna jer je ima svugdje"], tacniVise:[0,1,2],
-    obj:"Voda je blagodat: daje život, njome se čistimo i zato je ne rasipamo.",
-    uputa:"Tri odgovora čuvaju vodu, a jedan je omalovažava." },
+  { id:"m1", vrsta:"multiple", tip:"razlikovanje", lekcija:"gusul",
+    tekst:"Šta pripada propisima čistoće? Odaberi sve tačne odgovore.",
+    opcije:["Abdest prije namaza","Gusul kad je propisan","Tejemmum kad nema vode","Namaz bez ikakve čistoće"], tacniVise:[0,1,2],
+    obj:"Abdest, gusul i tejemmum su putevi čistoće; namaz bez taharета nije ispravan.", uputa:"Jedan odgovor ukida šart namaza." },
+  { id:"m2", vrsta:"multiple", tip:"razlikovanje", lekcija:"brak",
+    tekst:"Šta je tačno o braku u islamu? Odaberi sve tačne odgovore.",
+    opcije:["Sklapa se uz pristanak oba supružnika","Ima svjedoke","Supruzi pripada mehr","Može se sklopiti prisilom"], tacniVise:[0,1,2],
+    obj:"Pristanak, svjedoci i mehr su uslovi; prisila čini brak neispravnim.", uputa:"Jedan odgovor ruši sam brak." },
+  { id:"m3", vrsta:"multiple", tip:"razlikovanje", lekcija:"odgovornost-zdravlje",
+    tekst:"Šta pripada čuvanju zdravlja? Odaberi sve tačne odgovore.",
+    opcije:["Umjerena i halal ishrana","Dovoljno sna i kretanja","Higijena tijela i zuba","Izlaganje tijela štetnim navikama"], tacniVise:[0,1,2],
+    obj:"Ishrana, san, kretanje i higijena su čuvanje amaneta; štetne navike su njegovo uništavanje.", uputa:"Jedan odgovor šteti tijelu." },
+  { id:"m4", vrsta:"multiple", tip:"razlikovanje", ponavljanje:"etapa 4", lekcija:"hadz-propisi",
+    tekst:"Šta pripada propisima hadža? Odaberi sve tačne odgovore.",
+    opcije:["Ihram","Mikat","Stajanje na Arefatu","Sadekatul-fitr"], tacniVise:[0,1,2],
+    obj:"Ihram, mikat i Arefat pripadaju hadžu; sadekatul-fitr je uz ramazan.", uputa:"Jedan odgovor pripada ramazanu." },
 
-  /* --- tačno/netačno --- */
-  { id:"t1", vrsta:"truefalse", tip:"razlikovanje", lekcija:"uvodna-rijec",
-    tekst:"Tačno ili netačno: učenje o vjeri završava kad se završi mekteb.",
-    opcije:["Tačno","Netačno"], tacno:1,
-    obj:"Mekteb postavlja temelj, a musliman znanje traži i nadograđuje tokom cijelog života.",
-    uputa:"Razmisli završava li potreba za dobrim odlukama kada završi školska godina." },
-  { id:"t2", vrsta:"truefalse", tip:"razlikovanje", lekcija:"kako-pocinjem-posao",
-    tekst:"Tačno ili netačno: bismillu izgovaramo i kad počinjemo učiti lekciju.",
+  { id:"t1", vrsta:"truefalse", tip:"razlikovanje", lekcija:"mukellef",
+    tekst:"Tačno ili netačno: vjerski propisi postaju puna obaveza s punoljetnošću.",
     opcije:["Tačno","Netačno"], tacno:0,
-    obj:"Bismilla se izgovara na početku svakog korisnog posla — pa i na početku učenja.",
-    uputa:"Je li učenje koristan posao?" },
-  { id:"t3", vrsta:"truefalse", tip:"razlikovanje", lekcija:"zuri-mirza-na-pouku",
-    tekst:"Tačno ili netačno: na pouku je dobro doći u zadnji trenutak, dok muallim već govori.",
+    obj:"Mukellef je punoljetna i razumna osoba; djeca vježbaju prije toga i grade naviku.", uputa:"Šta znači riječ mukellef?" },
+  { id:"t2", vrsta:"truefalse", tip:"razlikovanje", lekcija:"hajz-nifas",
+    tekst:"Tačno ili netačno: propušteni namazi iz stanja hajza se naklanjavaju.",
     opcije:["Tačno","Netačno"], tacno:1,
-    obj:"Na pouku se dolazi na vrijeme, mirno i pripremljeno — a ne u zadnji trenutak, trkom.",
-    uputa:"Sjeti se Mirze koji žuri: je li mu žurba pomogla?" },
+    obj:"Namaz iz tog stanja se ne naklanjava, a post se naklanjava kasnije.", uputa:"Jedno se naklanjava, drugo ne." },
+  { id:"t3", vrsta:"truefalse", tip:"razlikovanje", lekcija:"odijevanje-hidzab",
+    tekst:"Tačno ili netačno: propisi o odijevanju odnose se i na muškarce i na žene.",
+    opcije:["Tačno","Netačno"], tacno:0,
+    obj:"I muškarci i žene imaju propise o pokrivanju avreta i o dostojnom odijevanju.", uputa:"Sjeti se šta znači avret." },
 
-  /* --- redoslijed --- */
-  { id:"r1", vrsta:"reorder", tip:"redoslijed", lekcija:"uvodna-rijec",
-    tekst:"Poredaj put od učenja do dobrog djela.",
-    stavke:[
-      {ime:"Saslušam i učim", opis:"Prvo"},
-      {ime:"Razumijem poruku", opis:"Drugo"},
-      {ime:"Primijenim naučeno", opis:"Treće"},
-      {ime:"Pomognem drugome", opis:"Četvrto"}
-    ],
-    obj:"Znanje počinje učenjem, raste razumijevanjem i postaje vrijedno kada ga primijenimo i podijelimo.",
-    uputa:"Možemo li primijeniti nešto prije nego to naučimo i razumijemo?" },
-  { id:"r2", vrsta:"reorder", tip:"redoslijed", lekcija:"zuri-mirza-na-pouku",
-    tekst:"Poredaj kako se spremaš za mekteb.",
-    stavke:[
-      {ime:"Spremim torbu i ilmihal", opis:"Kod kuće"},
-      {ime:"Krenem na vrijeme", opis:"Bez žurbe"},
-      {ime:"Sjednem na svoje mjesto", opis:"U mektebu"},
-      {ime:"Kažem bismillu", opis:"Prije učenja"}
-    ],
-    obj:"Torba, polazak na vrijeme, mirno sjedanje i bismilla — tako počinje dobra pouka.",
-    uputa:"Počni od onoga što radiš još kod kuće." }
+  { id:"r1", vrsta:"reorder", tip:"redoslijed", lekcija:"gusul",
+    tekst:"Poredaj put čistoće kad se ne može koristiti voda.",
+    stavke:[{ime:"Provjerim ima li vode",opis:"Prvo"},{ime:"Ako vode nema — tejemmum",opis:"Drugo"},{ime:"Kad se voda nađe — abdest ili gusul",opis:"Treće"},{ime:"Namaz u svom vremenu",opis:"Četvrto"}],
+    obj:"Voda ima prednost; tejemmum je zamjena dok vode nema.", uputa:"Počni od provjere ima li vode." },
+  { id:"r2", vrsta:"reorder", tip:"redoslijed", lekcija:"zenidba-udaja",
+    tekst:"Poredaj korake sklapanja braka.",
+    stavke:[{ime:"Upoznavanje i pristanak",opis:"Bez prisile"},{ime:"Dogovor o mehru",opis:"Pravo supruge"},{ime:"Nikah pred svjedocima",opis:"Sklapanje braka"},{ime:"Zajednički život i odgovornost",opis:"Poslije nikaha"}],
+    obj:"Pristanak, mehr, nikah pred svjedocima, pa zajednička odgovornost.", uputa:"Počni od slobodnog pristanka." },
+  { id:"r3", vrsta:"reorder", tip:"redoslijed", ponavljanje:"etapa 4", lekcija:"post-propisi",
+    tekst:"Poredaj ramazanski dan po vremenu.",
+    stavke:[{ime:"Sehur",opis:"Pred zoru"},{ime:"Imsak",opis:"Post počinje"},{ime:"Iftar",opis:"Zalazak sunca"},{ime:"Teravih",opis:"Poslije jacije"}],
+    obj:"Sehur, imsak, iftar, pa teravih.", uputa:"Počni od obroka prije zore." }
 ];
 
 const SITUACIJE = [
-  { id:"s1", naslov:"Mirza žuri na pouku", meta:"ahlak · zuri-mirza-na-pouku",
-    uvod:"Pouka počinje za deset minuta, a Mirza se tek sjetio da mu je torba nespremljena.",
+  { id:"s1", naslov:"Sada sam odgovoran", meta:"ibadet · mukellef",
+    uvod:"Napunio si godine u kojima vjerski propisi postaju puna obaveza.",
     koraci:[
-      { tekst:"Šta je Mirza trebao uraditi?", izbori:[
-        { tekst:"Spremiti torbu dan prije", ok:true, obj:"Priprema dan prije je ono što žurbu pretvara u mir." },
-        { tekst:"Ništa, snaći će se", uputa:"Snalaženje u zadnji trenutak obično završi žurbom. Šta je bolje?" },
-        { tekst:"Preskočiti pouku", uputa:"Pouka se ne preskače zbog nespremne torbe." }
+      { tekst:"Šta se mijenja?", izbori:[
+        { tekst:"Namaz, post i ostale obaveze su sada moja odgovornost", ok:true, obj:"Mukellef odgovara za svoje obaveze — to je i čast i odgovornost." },
+        { tekst:"Ništa, roditelji me i dalje trebaju tjerati", uputa:"Odgovornost prelazi na tebe. Šta to znači?" },
+        { tekst:"Sve je isto kao u mektebu", uputa:"Sada se ne vježba nego se odgovara." }
       ]},
-      { tekst:"Mirza je stigao pet minuta poslije početka. Šta sada?", izbori:[
-        { tekst:"Tiho ulazi, sjeda i ne prekida čas", ok:true, obj:"Kad kasniš, uđi mirno — ne prekidaj one koji uče." },
-        { tekst:"Ulazi trkom i priča svima zašto kasni", uputa:"Objašnjenje može čekati. Šta je sada važno?" }
-      ]},
-      { tekst:"Sljedeća pouka je za tri dana.", izbori:[
-        { tekst:"Torbu spremim večer prije i podsjetnik stavim na vrata", ok:true, obj:"Dobra navika se gradi jednim malim dogovorom sa sobom." },
-        { tekst:"Opet ostavim za zadnji trenutak", uputa:"Već znaš kako to završi. Šta je pametnije?" }
+      { tekst:"Kako to izgleda u praksi?", izbori:[
+        { tekst:"Sam pazim na vakat i sam se budim za sabah", ok:true, obj:"Konkretna navika je dokaz odgovornosti." },
+        { tekst:"Čekam da me neko podsjeti", uputa:"Odgovornost se ne prenosi na druge." }
       ]}
     ],
-    zavrsna:"Spremna torba, polazak na vrijeme i mirno ulaženje — Mirza više ne žuri." },
-
-  { id:"s2", naslov:"Prvo učenje kod kuće", meta:"ibadet · kako-pocinjem-posao",
-    uvod:"Sjedaš da naučiš lekciju iz ilmihala. Telefon je na stolu.",
-    koraci:[
-      { tekst:"Šta prvo?", izbori:[
-        { tekst:"Kažem bismillu i ostavim telefon u drugoj sobi", ok:true, obj:"Svaki koristan posao počinjemo bismillom — a pažnju čuvamo od smetnji." },
-        { tekst:"Prvo pogledam poruke, pa učim", uputa:"Poruke obično povuku još poruka. Šta je bolje?" },
-        { tekst:"Učim uz upaljenu igricu", uputa:"Pažnja ne može biti na dva mjesta." }
-      ]},
-      { tekst:"Naučio si lekciju. Šta na kraju?", izbori:[
-        { tekst:"Kažem elhamdulillah i ponovim najteži dio", ok:true, obj:"Bismilla na početku, elhamdulillah na kraju — i jedno ponavljanje da ostane." },
-        { tekst:"Odmah zatvorim knjigu i zaboravim", uputa:"Jedno kratko ponavljanje čuva ono što si naučio." }
-      ]}
-    ],
-    zavrsna:"Bismilla, mir, učenje, pa zahvala — tako se uči." },
-
-  { id:"s3", naslov:"Novi učenik ne razumije", meta:"ahlak · ja-idem-u-mekteb",
-    uvod:"Novi učenik ne razumije zadatak, a stid ga je pitati muallima.",
-    koraci:[
-      { tekst:"Šta najbolje pokazuje duh mekteba?", izbori:[
-        { tekst:"Ponuditi mu pomoć i ohrabriti ga", ok:true, obj:"Uzajamna podrška znači primijetiti kome treba pomoć i pristupiti mu lijepo." },
-        { tekst:"Reći mu da se sam snađe", uputa:"Zamisli kako bi ti želio da se drugi ponašaju kada nešto ne razumiješ." },
-        { tekst:"Nasmijati se njegovoj grešci", uputa:"Mekteb nije mjesto sramoćenja. Probaj ponovo." }
-      ]},
-      { tekst:"On i dalje ne razumije jedan dio.", izbori:[
-        { tekst:"Zajedno pitamo muallima", ok:true, obj:"Kad ni ti ne znaš, pitanje muallimu je najkraći put — i lakše je kad ste dvojica." },
-        { tekst:"Kažem mu da nije važno", uputa:"Ono što danas preskoči, sutra mu fali. Šta je bolje?" }
-      ]}
-    ],
-    zavrsna:"Pomoć, ohrabrenje i zajedničko pitanje — tako radi mekteb." },
-
-  { id:"s4", naslov:"Slavina u abdesthani", meta:"ahlak · voda-izvor-zivota",
-    uvod:"U abdesthani voda teče iz slavine, a niko nije tu.",
+    zavrsna:"Obaveze su moje — i vakat i sabah." },
+  { id:"s2", naslov:"Nema vode u kući", meta:"ibadet · gusul",
+    uvod:"Voda je isključena cijeli dan, a namasko vrijeme prolazi.",
     koraci:[
       { tekst:"Šta radiš?", izbori:[
-        { tekst:"Zatvorim slavinu", ok:true, obj:"Voda je izvor života i Allahova blagodat — ne ostavlja se da teče uzalud." },
-        { tekst:"Pustim, nisam je ja otvorio", uputa:"Blagodat čuvamo i kad nered nije naš." },
-        { tekst:"Pustim jače, zabavno je", uputa:"Rasipanje vode nije igra." }
+        { tekst:"Uzmem tejemmum i klanjam u vremenu", ok:true, obj:"Tejemmum je zamjena dok vode nema; namaz se ne odgađa." },
+        { tekst:"Čekam vodu pa naklanjam", uputa:"Postoji rješenje za sada. Koje?" },
+        { tekst:"Preskočim namaz", uputa:"Namaz se ne preskače." }
       ]},
-      { tekst:"Uzimaš abdest. Koliko vode koristiš?", izbori:[
-        { tekst:"Koliko treba, bez rasipanja", ok:true, obj:"Abdest se uzima s mjerom — voda se ne rasipa ni u ibadetu." },
-        { tekst:"Što više, to bolje", uputa:"Više vode ne znači bolji abdest. Šta je s mjerom?" }
+      { tekst:"Voda je došla nakon dva sata.", izbori:[
+        { tekst:"Za sljedeći namaz uzmem abdest ili gusul, ako je propisan", ok:true, obj:"Kad se voda nađe, ona ima prednost." },
+        { tekst:"Nastavim s tejemmumom cijeli dan", uputa:"Tejemmum važi dok vode nema." }
       ]}
     ],
-    zavrsna:"Zatvorena slavina i abdest s mjerom — tako se čuva blagodat." }
+    zavrsna:"Tejemmum kad vode nema, voda kad je ima." },
+  { id:"s3", naslov:"Odjeća i pritisak društva", meta:"ahlak · odijevanje-hidzab",
+    uvod:"Drugovi se sprdaju s odjećom jednog učenika i govore da nije moderna.",
+    koraci:[
+      { tekst:"Šta radiš?", izbori:[
+        { tekst:"Kažem da dostojna odjeća nije stvar mode i ne pristajem na sprdnju", ok:true, obj:"Propisi odijevanja tiču se dostojnosti, a ne trendova; sprdnja je vrijeđanje." },
+        { tekst:"Smijem se s njima", uputa:"Time postaješ dio vrijeđanja." },
+        { tekst:"Ćutim i gledam u stranu", uputa:"Možeš reći jednu mirnu rečenicu." }
+      ]},
+      { tekst:"Oni pitaju zašto se muslimani tako odijevaju.", izbori:[
+        { tekst:"Objasnim da postoje propisi o pokrivanju avreta, i za muškarce i za žene", ok:true, obj:"Avret se pokriva — to važi za oba pola, a ne samo za djevojke." },
+        { tekst:"Kažem da je to samo tradicija", uputa:"To je propis, ne samo običaj." }
+      ]}
+    ],
+    zavrsna:"Mirno objašnjenje i bez pristajanja na sprdnju." },
+  { id:"s4", naslov:"Energetski napitak", meta:"ahlak · odgovornost-zdravlje",
+    uvod:"Drugovi piju energetske napitke prije treninga i nude ti.",
+    koraci:[
+      { tekst:"Šta radiš?", izbori:[
+        { tekst:"Odbijem i objasnim da je zdravlje amanet", ok:true, obj:"Čuvanje zdravlja je odgovornost; ono što šteti tijelu izbjegavamo." },
+        { tekst:"Popijem, svi piju", uputa:"Grupa nije mjera. Šta kaže odgovornost za zdravlje?" },
+        { tekst:"Popijem samo jedan", uputa:"Navika počinje od jednog." }
+      ]},
+      { tekst:"Pitaju šta ti onda piješ.", izbori:[
+        { tekst:"Vodu, i kažem im koliko je san i ishrana važniji", ok:true, obj:"Voda, san i ishrana su prava priprema — a ne napitak." },
+        { tekst:"Ne odgovorim ništa", uputa:"Imaš odgovor — podijeli ga." }
+      ]}
+    ],
+    zavrsna:"Zdravlje kao amanet — voda, san i ishrana." }
 ];
 
 const RAZGOVOR = [
-  { pitanje:"Šta ti je najljepše u mektebu?",
-    napomena:"Cilj nije tačan odgovor — svako dijete kaže jednu rečenicu o sebi." },
-  { pitanje:"Koji si posao danas počeo bismillom?",
-    napomena:"Ako niko ne nađe primjer, predloži: učenje, jelo, izlazak iz kuće, pomaganje kod kuće." },
-  { pitanje:"Kako u svojoj kući možete manje rasipati vodu?",
-    napomena:"Neka svako dijete predloži jednu mjeru; zapiši ih na tablu kao dogovor razreda." }
+  { pitanje:"Šta se za tebe promijenilo kad su obaveze postale tvoja odgovornost?", napomena:"Traži konkretan primjer, npr. buđenje za sabah." },
+  { pitanje:"Kako u porodici raspoređujete obaveze i pomoć?", napomena:"Poveži s lekcijom o porodici kao prvom mjestu odgoja." },
+  { pitanje:"Koju naviku bi ove sedmice promijenio zbog zdravlja?", napomena:"Jedna mjera po djetetu; provjeri na sljedećem času." }
 ];
 
 const PLAN = [
-  ["1 · Znanje", "Jedanaest pitanja iz prvih deset lekcija — može naglas s razredom", "10 min"],
-  ["2 · Razlikovanje", "Tri zadatka s više tačnih i tri tačno/netačno", "8 min"],
-  ["3 · Redoslijed", "Put od učenja do dobrog djela i priprema za mekteb", "5 min"],
-  ["4 · Situacije", "Četiri slučaja, svaki u dva do tri koraka", "12 min"],
-  ["5 · Razgovor", "Tri pitanja bez bodova — svako dijete kaže jednu rečenicu", "6 min"],
+  ["1 · Znanje", "Četrnaest pitanja — tri su ponavljanje ranijih etapa", "13 min"],
+  ["2 · Razlikovanje", "Propisi čistoće, brak, zdravlje i propisi hadža", "10 min"],
+  ["3 · Redoslijed", "Put čistoće, sklapanje braka, ramazanski dan", "8 min"],
+  ["4 · Situacije", "Četiri slučaja — odgovornost, nema vode, odjeća i društvo, zdravlje", "13 min"],
+  ["5 · Razgovor", "Tri pitanja bez bodova", "6 min"],
   ["Radni list", "Zadaća za kuću ili za djecu bez uređaja", "—"]
 ];
 
@@ -776,7 +743,7 @@ function iscrtajPlan(){
 
   const nap = el("div", "napomene");
   nap.appendChild(el("h3", null, "Tri napomene"));
-  nap.appendChild(el("p", null, "Brojač Ovo je prva etapa, pa nema zadataka ponavljanja. Od druge etape svaka vježba vraća dio pitanja iz prethodnih etapa."));
+  nap.appendChild(el("p", null, "Brojač „zadržano iz prethodnog“ pokazuje koliko se zadržalo iz ranijih etapa."));
   nap.appendChild(el("p", null, "Bodovi vježbe idu 5 za tačno iz prvog pokušaja, 3 iz drugog, dalje 0. Profilne kapi meda platforma dodjeljuje zasebno, po završenom pokušaju."));
   nap.appendChild(el("p", null, "Krug razgovora nema tačan odgovor i ne ulazi u broj završenih zadataka."));
   p.appendChild(nap);
@@ -791,7 +758,7 @@ function iscrtajZnanje(){
   p.textContent = "";
   const uvod = el("div");
   uvod.appendChild(el("p", "kicker", "Krug 1 · znanje"));
-  uvod.appendChild(el("h2", null, "Riječi koje smo naučili"));
+  uvod.appendChild(el("h2", null, "Propisi odraslog muslimana"));
   p.appendChild(uvod);
   let br = 0;
   PITANJA.forEach(function(q, i){
@@ -878,7 +845,7 @@ function iscrtajList(){
   const list = el("div", "list");
 
   const lg = el("div", "listglava");
-  lg.appendChild(el("h3", null, "Ponavljanje lekcija 1–10"));
+  lg.appendChild(el("h3", null, "Odgovornost, čistoća i porodica"));
   lg.appendChild(el("p", null, "Ime i razred: ______________________"));
   list.appendChild(lg);
 
@@ -891,55 +858,39 @@ function iscrtajList(){
   const z1 = zadatakLista("1. Dopuni rečenice.");
   const o1 = el("ol");
   [
-    "Naša vjera zove se ____________________.",
-    "Onaj ko vjeruje u islam je ____________________.",
-    "Ilmihal je ____________________ kroz vjeru i svakodnevni život.",
-    "Kad počinjemo koristan posao, izgovorimo ____________________.",
-    "Kelimei-šehadet ima ________ dijela.",
-    "Bez ____________________ nema života."
+    "Punoljetna i razumna osoba koja odgovara za propise zove se ____________________.",
+    "Vjersko kupanje cijelog tijela zove se ____________________.",
+    "Osoba sa stalnom fizičkom zaprekom zove se ____________________.",
+    "Vjenčani dar koji muž daje supruzi zove se ____________________.",
+    "Dio tijela koji se mora pokriti pred drugima zove se ____________________.",
+    "Zdravlje je ____________________ — blagodat koja nam je povjerena."
   ].forEach(function(t){ o1.appendChild(el("li", null, t)); });
-  z1.appendChild(o1);
-  list.appendChild(z1);
+  z1.appendChild(o1); list.appendChild(z1);
 
-  const z2 = zadatakLista("2. Poveži riječ s objašnjenjem.");
+  const z2 = zadatakLista("2. Poveži pojam s objašnjenjem.");
   const kolone = el("div", "dvokolone");
   const k1 = el("ol");
-  ["Mekteb", "Muallim", "Ilmihal", "Islam"].forEach(function(t){ k1.appendChild(el("li", null, t)); });
-  const k2 = el("ol");
-  k2.type = "a";
-  [
-    "knjiga s osnovnim znanjima o vjeri",
-    "naša vjera",
-    "škola u kojoj učimo o vjeri",
-    "naš vjeroučitelj"
-  ].forEach(function(t){ k2.appendChild(el("li", null, t)); });
-  kolone.appendChild(k1);
-  kolone.appendChild(k2);
-  z2.appendChild(kolone);
-  list.appendChild(z2);
+  ["Mukellef","Sahibi-uzur","Mehr","Hidžab"].forEach(function(t){ k1.appendChild(el("li", null, t)); });
+  const k2 = el("ol"); k2.type = "a";
+  ["odjeća koja ispunjava propise pokrivanja","osoba sa stalnom zaprekom","punoljetna i razumna osoba","vjenčani dar supruzi"].forEach(function(t){ k2.appendChild(el("li", null, t)); });
+  kolone.appendChild(k1); kolone.appendChild(k2); z2.appendChild(kolone); list.appendChild(z2);
 
-  const z3 = zadatakLista("3. Poredaj brojevima od 1 do 4.");
-  const kolone2 = el("div", "dvokolone");
+  const z3 = zadatakLista("3. Poredaj brojevima.");
   const p1 = el("ul", "prazna");
-  ["____ Primijenim naučeno", "____ Saslušam i učim", "____ Pomognem drugome", "____ Razumijem poruku"].forEach(function(t){ p1.appendChild(el("li", null, t)); });
-  const p2 = el("ul", "prazna");
-  ["____ Sjednem na svoje mjesto", "____ Spremim torbu i ilmihal", "____ Kažem bismillu", "____ Krenem na vrijeme"].forEach(function(t){ p2.appendChild(el("li", null, t)); });
-  kolone2.appendChild(p1);
-  kolone2.appendChild(p2);
-  z3.appendChild(kolone2);
-  list.appendChild(z3);
+  ["____ Nikah pred svjedocima","____ Upoznavanje i pristanak","____ Zajednička odgovornost","____ Dogovor o mehru"].forEach(function(t){ p1.appendChild(el("li", null, t)); });
+  z3.appendChild(p1); list.appendChild(z3);
 
   const z4 = zadatakLista("4. Napiši svojim riječima.");
-  z4.appendChild(el("p", null, "Novi učenik u mektebu ne razumije zadatak i stid ga je pitati. Napiši dvije stvari koje bi ti uradio ili uradila."));
+  z4.appendChild(el("p", null, "Šta znači da je zdravlje amanet? Navedi tri stvari kojima ga čuvaš."));
   for (let i = 0; i < 3; i++) z4.appendChild(el("div", "crta"));
   list.appendChild(z4);
 
   const z5 = zadatakLista("5. Za kući.");
-  z5.appendChild(el("p", null, "Tri dana zapisuj kojim si poslovima počeo ili počela bismillom. Donesi spisak na sljedeći čas."));
+  z5.appendChild(el("p", null, "Napiši šta se u tvojim obavezama mijenja kad postaneš mukellef i kako se za to pripremaš."));
   for (let i = 0; i < 2; i++) z5.appendChild(el("div", "crta"));
   list.appendChild(z5);
 
-    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 1 · lekcije 1–10"));
+    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 3 · lekcije 41–50"));
   p.appendChild(list);
 }
 
@@ -997,6 +948,8 @@ function osvjezi(){
   document.getElementById("brUkupno").textContent = "/ " + MEKTEB_EXERCISE.totalTasks;
   document.getElementById("brBodovi").textContent = String(bodovi);
   document.getElementById("brMaxBodovi").textContent = "/ " + MAX_BODOVA;
+  document.getElementById("brPonav").textContent = String(zavrsenihPonavljanja());
+  document.getElementById("brPonavUk").textContent = "/ " + UKUPNO_PONAVLJANJA;
   document.getElementById("traka").style.width =
     Math.round((zavrseno / MEKTEB_EXERCISE.totalTasks) * 100) + "%";
 

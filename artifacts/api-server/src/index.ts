@@ -907,6 +907,57 @@ async function runResidualSchema() {
       SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-61-68.html" data-vjezba-kljuc="etapa-nivo2-lekcije-61-68" title="Ponavljanje lekcija 61–68 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
       WHERE slug = 'm2-7-kraljica';
     `);
+    // Nivo 3 etapne vježbe su statički HTML iz public/vjezbe.
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-1-10.html" data-vjezba-kljuc="etapa-nivo3-lekcije-1-10" title="Ponavljanje lekcija 1–10 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-1-istrazivac';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-11-20.html" data-vjezba-kljuc="etapa-nivo3-lekcije-11-20" title="Ponavljanje lekcija 11–20 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-2-ucitelj';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-21-30.html" data-vjezba-kljuc="etapa-nivo3-lekcije-21-30" title="Ponavljanje lekcija 21–30 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-3-pjesnik';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-31-40.html" data-vjezba-kljuc="etapa-nivo3-lekcije-31-40" title="Ponavljanje lekcija 31–40 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-4-astronom';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-41-50.html" data-vjezba-kljuc="etapa-nivo3-lekcije-41-50" title="Ponavljanje lekcija 41–50 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-5-hafiz';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-51-60.html" data-vjezba-kljuc="etapa-nivo3-lekcije-51-60" title="Ponavljanje lekcija 51–60 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-6-mudrac';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-61-70.html" data-vjezba-kljuc="etapa-nivo3-lekcije-61-70" title="Ponavljanje lekcija 61–70 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-7-kralj';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-71-80.html" data-vjezba-kljuc="etapa-nivo3-lekcije-71-80" title="Ponavljanje lekcija 71–80 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-8-etapa';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-81-90.html" data-vjezba-kljuc="etapa-nivo3-lekcije-81-90" title="Ponavljanje lekcija 81–90 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-9-etapa';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo3-lekcije-91-100.html" data-vjezba-kljuc="etapa-nivo3-lekcije-91-100" title="Ponavljanje lekcija 91–100 (nivo 3)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm3-10-etapa';
+    `);
     // Nivo 1 — 6 novih m1-* medaljona (pos 10..60) sa PNG ikonama.
     // Prod baza ima stare slugove (prvi-koraci, putnik, polovina-puta, ustrajni,
     // prva-kosnica) koji nemaju PNG ikone — čistimo ih i ubacujemo nove.

@@ -45,7 +45,7 @@ after(async () => {
   }
 });
 
-function submit(key = "etapa-lekcije-1-10", score = 17, maxScore = 17) {
+function submit(key = "etapa-lekcije-1-10", score = 23, maxScore = 23) {
   return fetch(`${baseUrl}/api/vjezbe/${key}/result`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -66,8 +66,8 @@ test("statička vježba daje 5, zatim 3, pa 0 kapi meda", async () => {
 
 test("nepoznata ili nedovršena vježba ne može dodijeliti nagradu", async () => {
   assert.equal((await submit("ne-postoji")).status, 404);
-  assert.equal((await submit("etapa-lekcije-1-10", 16, 17)).status, 400);
-  assert.equal((await submit("etapa-lekcije-1-10", 17, 18)).status, 400);
+  assert.equal((await submit("etapa-lekcije-1-10", 22, 23)).status, 400);
+  assert.equal((await submit("etapa-lekcije-1-10", 23, 24)).status, 400);
 });
 
 test("vježba za lekcije 11–20 koristi isti generički sistem", async () => {
@@ -104,6 +104,29 @@ test("vježbe nivoa 2 koriste isti generički sistem sa 28 zadataka", async () =
     "etapa-nivo2-lekcije-41-50",
     "etapa-nivo2-lekcije-51-60",
     "etapa-nivo2-lekcije-61-68",
+  ]) {
+    const response = await submit(key, 28, 28);
+    assert.equal(response.status, 200);
+    const body = await response.json() as { attemptNo: number; hasanatGained: number; score: number; maxScore: number };
+    assert.equal(body.attemptNo, 1);
+    assert.equal(body.hasanatGained, 5);
+    assert.equal(body.score, 28);
+    assert.equal(body.maxScore, 28);
+  }
+});
+
+test("vježbe nivoa 3 koriste isti generički sistem sa 28 zadataka", async () => {
+  for (const key of [
+    "etapa-nivo3-lekcije-1-10",
+    "etapa-nivo3-lekcije-11-20",
+    "etapa-nivo3-lekcije-21-30",
+    "etapa-nivo3-lekcije-31-40",
+    "etapa-nivo3-lekcije-41-50",
+    "etapa-nivo3-lekcije-51-60",
+    "etapa-nivo3-lekcije-61-70",
+    "etapa-nivo3-lekcije-71-80",
+    "etapa-nivo3-lekcije-81-90",
+    "etapa-nivo3-lekcije-91-100",
   ]) {
     const response = await submit(key, 28, 28);
     assert.equal(response.status, 200);
