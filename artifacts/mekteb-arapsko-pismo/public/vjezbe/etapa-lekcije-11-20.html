@@ -77,10 +77,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const shuffleSource = [
       'function fisherYates(items){for(let i=items.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[items[i],items[j]]=[items[j],items[i]];}return items;}',
       'function izmijesajPitanjaPoGrupama(pitanja){const grupe=new Map();pitanja.forEach(function(p){const grupa=p.vrsta||p.tip||"ostalo";if(!grupe.has(grupa))grupe.set(grupa,[]);grupe.get(grupa).push(p);});grupe.forEach(fisherYates);pitanja.splice(0,pitanja.length,...Array.from(grupe.values()).flat());}',
+      'function izmijesajOdgovore(pitanja){pitanja.forEach(function(p){if(!Array.isArray(p.opcije)||p.vrsta==="reorder")return;const originalno=p.opcije.map(function(opcija,index){return{opcija:opcija,index:index};});fisherYates(originalno);p.opcije=originalno.map(function(stavka){return stavka.opcija;});if(p.vrsta==="single"||p.vrsta==="truefalse"){p.tacno=originalno.findIndex(function(stavka){return stavka.index===p.tacno;});}else if(p.vrsta==="multiple"&&Array.isArray(p.tacniVise)){p.tacniVise=p.tacniVise.map(function(index){return originalno.findIndex(function(stavka){return stavka.index===index;});}).sort(function(a,b){return a-b;});}});}',
+      'function izmijesajSituacijskeIzbore(situacije){situacije.forEach(function(situacija){situacija.koraci.forEach(function(korak){fisherYates(korak.izbori);});});}',
     ].join('');
     template = template
       .replace('const Q = [', shuffleSource + 'const Q = [')
-      .replace('];\n\nconst SITUACIJE', '];\n\nizmijesajPitanjaPoGrupama(Q);\n\nconst SITUACIJE');
+      .replace('];\n\nconst SITUACIJE', '];\n\nizmijesajPitanjaPoGrupama(Q);\nizmijesajOdgovore(Q);\n\nconst SITUACIJE')
+      .replace('];\n\nconst RAZGOVOR', '];\n\nizmijesajSituacijskeIzbore(SITUACIJE);\n\nconst RAZGOVOR');
 
     // Nested page bundles (iframe targets). Each ships ONCE, in the ROOT
     // document's manifest; frame srcs carry an about:blank#<uuid> marker

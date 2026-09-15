@@ -458,6 +458,29 @@ function izmijesajPitanjaPoGrupama(pitanja){
   return pitanja;
 }
 
+function izmijesajOdgovore(pitanja){
+  pitanja.forEach(function(p){
+    if (!Array.isArray(p.opcije) || p.vrsta === "reorder") return;
+    const originalno = p.opcije.map(function(opcija, index){ return { opcija: opcija, index: index }; });
+    fisherYates(originalno);
+    p.opcije = originalno.map(function(stavka){ return stavka.opcija; });
+    if (p.vrsta === "single" || p.vrsta === "truefalse"){
+      p.tacno = originalno.findIndex(function(stavka){ return stavka.index === p.tacno; });
+    } else if (p.vrsta === "multiple" && Array.isArray(p.tacniVise)){
+      p.tacniVise = p.tacniVise.map(function(index){
+        return originalno.findIndex(function(stavka){ return stavka.index === index; });
+      }).sort(function(a, b){ return a - b; });
+    }
+  });
+  return pitanja;
+}
+function izmijesajSituacijskeIzbore(situacije){
+  situacije.forEach(function(situacija){
+    situacija.koraci.forEach(function(korak){ fisherYates(korak.izbori); });
+  });
+  return situacije;
+}
+
 const PITANJA = [
 {"id":"z1","vrsta":"single","tip":"prisjecanje","lekcija":"za-bajram-je-pohvalno","tekst":"Šta je preporučeno pojesti prije odlaska na Ramazanski bajram-namaz?","opcije":["Hurmu","Hljeb","Jabuku"],"tacno":0,"obj":"Za Ramazanski bajram lijepo je pojesti neparan broj hurmi.","uputa":"Sjeti se sunneta vezanog za hurme."},
 {"id":"z2","vrsta":"single","tip":"prisjecanje","lekcija":"bajramske-aktivnosti","tekst":"Kako polaznici mekteba mogu učestvovati u pripremama za Bajram?","opcije":["Uređuju mekteb i pripremaju bajramsku akademiju","Preskaču nastavu i čekaju Bajram","Takmiče se ko ima najskuplji poklon"],"tacno":0,"obj":"Polaznici uređuju mekteb, okolinu i džamiju te pripremaju bajramsku akademiju.","uputa":"Sjeti se zajedničkih aktivnosti u mektebu prije Bajrama."},
@@ -487,6 +510,7 @@ const PITANJA = [
 ];
 
 izmijesajPitanjaPoGrupama(PITANJA);
+izmijesajOdgovore(PITANJA);
 
 const SITUACIJE = [
 {"id":"s1","naslov":"Bajramska radost","meta":"ahlak · bajram","uvod":"Tvoji drugovi iz razreda ne znaju mnogo o Bajramu i misle da je to samo jedan običan dan.","koraci":[{"tekst":"Kako ćeš im objasniti šta je Bajram?","izbori":[{"tekst":"Objasnim da je to praznik ljubavi, čistoće i zajedništva","ok":true,"obj":"Bajram je naš najdraži gost, a ne samo običan dan."},{"tekst":"Kažem im da to nije njihova stvar","uputa":"Budi otvoren i podijeli radost vjere."}]},{"tekst":"Jedan drug pita zašto čistimo kuću za Bajram.","izbori":[{"tekst":"Objasnim da naša vjera uči da zablistamo i izvana i iznutra","ok":true,"obj":"Čistoća je dio naše vjere i poštovanja prema prazniku."},{"tekst":"Kažem da moramo jer su roditelji naredili","uputa":"Razmisli o dubljem značenju čišćenja kuće."}]}],"zavrsna":"Bajram je prilika da širimo radost i pokažemo ljepotu islama."},
@@ -495,6 +519,8 @@ const SITUACIJE = [
 {"id":"s4","naslov":"Zaboravljeni zikr","meta":"ibadat · zikr","uvod":"Često zaboraviš proučiti zikr poslije namaza jer žuriš na igru.","koraci":[{"tekst":"Kako ćeš promijeniti naviku?","izbori":[{"tekst":"Odlučim da ostanem na sedžadi barem dok ne proučim tesbih","ok":true,"obj":"Zikr smiruje srce i vrijedniji je od žurbe."},{"tekst":"Proučim zikr usput dok trčim","uputa":"Zikr zahtijeva smirenost."}]},{"tekst":"Drug te zove vani odmah nakon predaje selama.","izbori":[{"tekst":"Kažem mu da me sačeka minut dok završim zikr","ok":true,"obj":"Ibadet ima prednost nad igrom."},{"tekst":"Potrčim s njim","uputa":"Ne žuri, Allahovo spominjanje je prioritet."}]}],"zavrsna":"Smirenost poslije namaza donosi bereketa cijelom danu."},
 {"id":"s5","naslov":"Sportsko takmičenje","meta":"ahlak · sport","uvod":"Na mektebskom takmičenju u fudbalu tvoj tim gubi.","koraci":[{"tekst":"Kako ćeš se ponašati?","izbori":[{"tekst":"Čestitam protivničkom timu na fer igri","ok":true,"obj":"Sport nas uči da budemo strpljivi i u porazu."},{"tekst":"Ljutim se i optužujem sudiju","uputa":"To nije ponašanje snažnog vjernika."}]},{"tekst":"Drugovi iz tvog tima žele prekinuti utakmicu zbog ljutnje.","izbori":[{"tekst":"Kažem im da trebamo ostati skromni i završiti časno","ok":true,"obj":"Sport povezuje i zbližava, bez obzira na rezultat."},{"tekst":"Podržim ih u napuštanju terena","uputa":"Pokaži snagu karaktera."}]}],"zavrsna":"Snaga tijela i snaga karaktera idu zajedno."}
 ];
+
+izmijesajSituacijskeIzbore(SITUACIJE);
 
 const RAZGOVOR = [
   { pitanje:"Koji bajramski običaj ti je najljepši i kako njime možemo obradovati druge?",

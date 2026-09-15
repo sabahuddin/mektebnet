@@ -13,6 +13,46 @@ test("svi bundlovani izvori statičkih vježbi prolaze validaciju", async () => 
   }
 });
 
+test("svih 23 izvora sigurno miješa odgovore, ali ne mijenja reorder", async () => {
+  const bundledKey = "etapa-lekcije-11-20";
+
+  for (const key of Object.keys(STATIC_VJEZBE)) {
+    const sourceHtml = await readBundledStaticVjezba(key);
+    const questionTarget = key === bundledKey ? "Q" : "PITANJA";
+    const answerCall = new RegExp(`izmijesajOdgovore\\(${questionTarget}\\)`, "g");
+    const situationCall = /izmijesajSituacijskeIzbore\(SITUACIJE\)/g;
+
+    assert.equal(
+      (sourceHtml.match(/function izmijesajOdgovore/g) ?? []).length,
+      1,
+      `${key}: helper za odgovore`,
+    );
+    assert.equal(
+      (sourceHtml.match(answerCall) ?? []).length,
+      1,
+      `${key}: odgovor se miješa tačno jednom`,
+    );
+    assert.equal(
+      (sourceHtml.match(/function izmijesajSituacijskeIzbore/g) ?? []).length,
+      1,
+      `${key}: helper za situacije`,
+    );
+    assert.equal(
+      (sourceHtml.match(situationCall) ?? []).length,
+      1,
+      `${key}: izbori situacije se miješaju tačno jednom`,
+    );
+
+    // The helper must preserve answer correctness and explicitly skip
+    // reorder tasks; reorder chips/slots/descriptions are never shuffled.
+    assert.match(sourceHtml, /p\.tacno\s*=/, `${key}: remap single/truefalse`);
+    assert.match(sourceHtml, /p\.tacniVise\s*=/, `${key}: remap multiple`);
+    assert.match(sourceHtml, /p\.vrsta\s*===\s*["']reorder["']/);
+    assert.match(sourceHtml, /korak\.izbori/);
+    assert.doesNotMatch(sourceHtml, /fisherYates\s*\([^)]*\bstavke\b/);
+  }
+});
+
 test("editor odbija prazan ili neispravan HTML bez protokola završetka", () => {
   assert.match(validateStaticVjezbaSource("") ?? "", /prazan/i);
   assert.match(

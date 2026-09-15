@@ -422,6 +422,31 @@ const SITUACIJE = [
     zavrsna:"Nova tevba i jedan dogovor — greška više nema slobodan prolaz." }
 ];
 
+function izmijesajOdgovore(pitanja){
+  pitanja.forEach(function(p){
+    if (!Array.isArray(p.opcije) || p.vrsta === "reorder") return;
+    const originalno = p.opcije.map(function(opcija, index){ return { opcija: opcija, index: index }; });
+    fisherYates(originalno);
+    p.opcije = originalno.map(function(stavka){ return stavka.opcija; });
+    if (p.vrsta === "single" || p.vrsta === "truefalse"){
+      p.tacno = originalno.findIndex(function(stavka){ return stavka.index === p.tacno; });
+    } else if (p.vrsta === "multiple" && Array.isArray(p.tacniVise)){
+      p.tacniVise = p.tacniVise.map(function(index){
+        return originalno.findIndex(function(stavka){ return stavka.index === index; });
+      }).sort(function(a, b){ return a - b; });
+    }
+  });
+  return pitanja;
+}
+function izmijesajSituacijskeIzbore(situacije){
+  situacije.forEach(function(situacija){
+    situacija.koraci.forEach(function(korak){ fisherYates(korak.izbori); });
+  });
+  return situacije;
+}
+izmijesajOdgovore(PITANJA);
+izmijesajSituacijskeIzbore(SITUACIJE);
+
 const RAZGOVOR = [
   { pitanje:"Kako tebe namaz zaustavi ili promijeni tokom dana?",
     napomena:"Traži konkretan primjer iz sedmice, ne opću rečenicu." },
