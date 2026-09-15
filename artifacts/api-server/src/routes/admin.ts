@@ -47,6 +47,7 @@ import {
   etapaPolaganjaTable,
   studentKrunisanjaTable,
   napametGlobalProgramTable,
+  staticVjezbeIzvoriTable,
 } from "@workspace/db/schema";
 import { eq, ne, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
@@ -59,6 +60,13 @@ import { getGlobalNapametKatalog } from "../data/napamet.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 import { contentDisposition, normalizeUploadedFilename } from "../lib/file-names.js";
 import { normalizeSurahNames, normalizeSurahNamesDeep } from "../lib/surah-names.js";
+import {
+  getEffectiveStaticVjezbaSource,
+  readBundledStaticVjezba,
+  validateStaticVjezbaSource,
+  getStaticVjezbaSourceLimit,
+} from "../lib/static-vjezba-source.js";
+import { STATIC_VJEZBE, getStaticVjezba } from "../lib/static-vjezbe.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -103,6 +111,129 @@ router.use((req, res, next) => {
   }
   next();
   return;
+});
+
+// Izvor samostalnih iframe vježbi — strogo admin-only (muallim ne može
+// pristupiti ovom domenu kroz canAccessAdminRoute).
+router.get("/static-vjezbe", async (req, res): Promise<void> => {
+  try {
+    const overrides = await db
+      .select({
+        key: staticVjezbeIzvoriTable.key,
+        updatedBy: staticVjezbeIzvoriTable.updatedBy,
+        updatedAt: staticVjezbeIzvoriTable.updatedAt,
+      })
+      .from(staticVjezbeIzvoriTable);
+    const byKey = new Map(overrides.map(row => [row.key, row]));
+    res.json(Object.values(STATIC_VJEZBE).map(config => {
+      const override = byKey.get(config.key);
+      return {
+        key: config.key,
+        title: config.naslov,
+        naslov: config.naslov,
+        maxScore: config.maxScore,
+        hasOverride: Boolean(override),
+        updatedBy: override?.updatedBy ?? null,
+        updatedAt: override?.updatedAt ?? null,
+      };
+    }));
+  } catch (error) {
+    req.log.error({ error }, "Lista izvora statičkih vježbi nije dostupna");
+    res.status(500).json({ error: "Greška pri učitavanju statičkih vježbi" });
+  }
+});
+
+router.get("/static-vjezbe/:key", async (req, res): Promise<void> => {
+  const key = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
+  const config = getStaticVjezba(key);
+  if (!config) {
+    res.status(404).json({ error: "Vježba nije registrovana" });
+    return;
+  }
+  try {
+    const effective = await getEffectiveStaticVjezbaSource(key);
+    res.json({
+      key: config.key,
+      title: config.naslov,
+      naslov: config.naslov,
+      maxScore: config.maxScore,
+      sourceHtml: effective.sourceHtml,
+      hasOverride: effective.hasOverride,
+    });
+  } catch (error) {
+    req.log.error({ error, key }, "Izvor statičke vježbe nije dostupan");
+    res.status(500).json({ error: "Greška pri učitavanju izvora vježbe" });
+  }
+});
+
+router.put("/static-vjezbe/:key", async (req, res): Promise<void> => {
+  const key = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
+  const config = getStaticVjezba(key);
+  if (!config) {
+    res.status(404).json({ error: "Vježba nije registrovana" });
+    return;
+  }
+  const sourceHtml = (req.body as { sourceHtml?: unknown } | undefined)?.sourceHtml;
+  const validationError = validateStaticVjezbaSource(sourceHtml);
+  if (validationError) {
+    res.status(400).json({ error: validationError, maxBytes: getStaticVjezbaSourceLimit() });
+    return;
+  }
+  try {
+    const [saved] = await db
+      .insert(staticVjezbeIzvoriTable)
+      .values({
+        key,
+        sourceHtml: sourceHtml as string,
+        updatedBy: req.user!.userId,
+      })
+      .onConflictDoUpdate({
+        target: staticVjezbeIzvoriTable.key,
+        set: {
+          sourceHtml: sourceHtml as string,
+          updatedBy: req.user!.userId,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    res.json({
+      key: config.key,
+      title: config.naslov,
+      naslov: config.naslov,
+      maxScore: config.maxScore,
+      sourceHtml: saved.sourceHtml,
+      hasOverride: true,
+      updatedBy: saved.updatedBy,
+      updatedAt: saved.updatedAt,
+    });
+  } catch (error) {
+    req.log.error({ error, key }, "Čuvanje izvora statičke vježbe nije uspjelo");
+    res.status(500).json({ error: "Greška pri čuvanju izvora vježbe" });
+  }
+});
+
+router.delete("/static-vjezbe/:key", async (req, res): Promise<void> => {
+  const key = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
+  const config = getStaticVjezba(key);
+  if (!config) {
+    res.status(404).json({ error: "Vježba nije registrovana" });
+    return;
+  }
+  try {
+    await db.delete(staticVjezbeIzvoriTable).where(eq(staticVjezbeIzvoriTable.key, key));
+    const sourceHtml = await readBundledStaticVjezba(key);
+    res.json({
+      key: config.key,
+      title: config.naslov,
+      naslov: config.naslov,
+      maxScore: config.maxScore,
+      sourceHtml,
+      hasOverride: false,
+    });
+  } catch (error) {
+    req.log.error({ error, key }, "Reset izvora statičke vježbe nije uspio");
+    res.status(500).json({ error: "Greška pri vraćanju izvora vježbe" });
+  }
 });
 
 const __adminDirname = path.dirname(fileURLToPath(import.meta.url));

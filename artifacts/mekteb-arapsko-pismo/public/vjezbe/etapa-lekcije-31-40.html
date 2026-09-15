@@ -204,6 +204,23 @@ const MEKTEB_EXERCISE = Object.freeze({
 
 const BODOVI_PO_POKUSAJU = [5, 3, 0];
 function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? BODOVI_PO_POKUSAJU[1] : BODOVI_PO_POKUSAJU[2]); }
+function fisherYates(items){
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+function izmijesajPitanjaPoGrupama(pitanja){
+  const grupe = new Map();
+  pitanja.forEach(function(pitanje){
+    const grupa = pitanje.vrsta || pitanje.tip || "ostalo";
+    if (!grupe.has(grupa)) grupe.set(grupa, []);
+    grupe.get(grupa).push(pitanje);
+  });
+  grupe.forEach(fisherYates);
+  pitanja.splice(0, pitanja.length, ...Array.from(grupe.values()).flat());
+}
 
 /* ---------- SADRŽAJ ---------- */
 
@@ -465,6 +482,8 @@ r2.uputa = "Kreni od početka namaza.";
 ]; */
 
 const SITUACIJE = [{"id":"s1","naslov":"Vrijeme namaza","meta":"namaz · vrijeme","uvod":"Čuješ ezan dok se igraš napolju.","koraci":[{"tekst":"Šta trebaš uraditi?","izbori":[{"tekst":"Prekinem igru i krenem kući","ok":true,"obj":"Namaz je najvažnija obaveza u danu."},{"tekst":"Nastavim igru dok ne završi","uputa":"Namasko vrijeme je važno. Probaj ponovo."}]}],"zavrsna":"Odazvao si se na poziv na namaz."},{"id":"s2","naslov":"Učenje ezana","meta":"ezan","uvod":"Mujezin uči ezan u tvom naselju.","koraci":[{"tekst":"Kako se ponašaš?","izbori":[{"tekst":"Prestanem sa pričom i ponavljam riječi","ok":true,"obj":"To je način da iskažemo poštovanje prema ezanu."},{"tekst":"Glasno pričam","uputa":"Dok ezan uči treba biti pažljiv. Probaj ponovo."}]}],"zavrsna":"Pokazao si poštovanje prema ezanu."},{"id":"s3","naslov":"Određivanje Kible","meta":"kibla","uvod":"Nalaziš se u prirodi i ne znaš gdje je Kibla.","koraci":[{"tekst":"Kako ćeš postupiti?","izbori":[{"tekst":"Istražim položaj Sunca ili sjenke","ok":true,"obj":"Odlično, orijentacija pomaže u nalaženju pravca."},{"tekst":"Samo klanjam bilo gdje","uputa":"Peti šart je okretanje prema Kibli. Probaj ponovo."}]}],"zavrsna":"Pravilno si se orijentisao prema Kibli."},{"id":"s4","naslov":"Nijet u srcu","meta":"nijet","uvod":"Stojiš spreman za namaz.","koraci":[{"tekst":"Šta je najvažnije u tom trenutku?","izbori":[{"tekst":"Odlučim u srcu koji namaz klanjam","ok":true,"obj":"Nijet je obavezan uslov za ispravnost namaza."},{"tekst":"Samo čekam da počne","uputa":"Moraš imati svjesnu odluku. Probaj ponovo."}]}],"zavrsna":"Ispravno si donio nijet."},{"id":"s5","naslov":"Ulazak u džamiju","meta":"adab","uvod":"Prilaziš vratima džamije.","koraci":[{"tekst":"Kojom nogom ulaziš?","izbori":[{"tekst":"Desnom","ok":true,"obj":"Ulazak desnom nogom je sunnet."},{"tekst":"Lijevom","uputa":"Džamija se poštuje ulaskom desnom nogom. Probaj ponovo."}]}],"zavrsna":"Primijenio si sunnet pri ulasku u džamiju."}];
+
+izmijesajPitanjaPoGrupama(PITANJA);
 
 const RAZGOVOR = [
   { pitanje:"Kako znaš da je nastupilo vrijeme određenog namaza?",

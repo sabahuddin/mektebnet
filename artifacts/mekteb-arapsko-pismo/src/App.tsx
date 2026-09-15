@@ -80,6 +80,7 @@ import AdminEtapePage from "./pages/admin-etape";
 import AdminPrijevodiPage from "./pages/admin-prijevodi";
 import KrunisanjeNivoPage from "./pages/krunisanje";
 import KrunisanjeLekcijaPage from "./pages/krunisanje-lekcija";
+import AdminVjezbePage from "./pages/admin-vjezbe";
 
 // Učenik profil
 import UcenikProfilPage from "./pages/ucenik-profil";
@@ -241,6 +242,7 @@ function Router() {
       <Route path="/admin/citaonica" component={AdminCitaonicaPage} />
       <Route path="/admin/etape" component={AdminEtapePage} />
       <Route path="/admin/prijevodi" component={AdminPrijevodiPage} />
+      <Route path="/admin/vjezbe" component={AdminVjezbePage} />
       <Route path="/admin" component={AdminPage} />
 
       {/* Muallim panel */}

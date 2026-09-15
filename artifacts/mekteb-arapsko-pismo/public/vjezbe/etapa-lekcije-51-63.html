@@ -445,6 +445,25 @@ function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? 
     zavrsna:"Vakuf je zajedničko dobro — ti si ga odbranio i ponudio da pomogneš." }
 ]; */
 
+function fisherYates(items){
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+function izmijesajPitanjaPoGrupama(pitanja){
+  const grupe = new Map();
+  pitanja.forEach(function(pitanje){
+    const grupa = pitanje.vrsta || pitanje.tip || "ostalo";
+    if (!grupe.has(grupa)) grupe.set(grupa, []);
+    grupe.get(grupa).push(pitanje);
+  });
+  grupe.forEach(fisherYates);
+  pitanja.splice(0, pitanja.length, ...Array.from(grupe.values()).flat());
+  return pitanja;
+}
+
 const PITANJA = [
 {"id":"z1","vrsta":"single","tip":"prisjecanje","lekcija":"za-bajram-je-pohvalno","tekst":"Šta je preporučeno pojesti prije odlaska na Ramazanski bajram-namaz?","opcije":["Hurmu","Hljeb","Jabuku"],"tacno":0,"obj":"Za Ramazanski bajram lijepo je pojesti neparan broj hurmi.","uputa":"Sjeti se sunneta vezanog za hurme."},
 {"id":"z2","vrsta":"single","tip":"prisjecanje","lekcija":"bajramske-aktivnosti","tekst":"Kako polaznici mekteba mogu učestvovati u pripremama za Bajram?","opcije":["Uređuju mekteb i pripremaju bajramsku akademiju","Preskaču nastavu i čekaju Bajram","Takmiče se ko ima najskuplji poklon"],"tacno":0,"obj":"Polaznici uređuju mekteb, okolinu i džamiju te pripremaju bajramsku akademiju.","uputa":"Sjeti se zajedničkih aktivnosti u mektebu prije Bajrama."},
@@ -472,6 +491,8 @@ const PITANJA = [
 {"id":"r3","vrsta":"reorder","tip":"redoslijed","lekcija":"sabah-namaz","tekst":"Poredaj dijelove jednog rekata:","stavke":[{"ime":"Kijam","opis":"Stajanje"},{"ime":"Ruku","opis":"Pregibanje"},{"ime":"Sedžda","opis":"Spuštanje na tlo"}],"obj":"Kijam, ruku, sedžda.","uputa":"Počni od stajanja."},
 {"id":"r4","vrsta":"reorder","tip":"redoslijed","lekcija":"sura-en-nasr","tekst":"Poredaj korake učenja sure:","stavke":[{"ime":"Euzubilla i bismilla","opis":"Početak"},{"ime":"Učenje ajeta","opis":"Sredina"},{"ime":"Ponavljanje i provjera","opis":"Kraj"}],"obj":"Euzubilla, učenje ajeta, provjera.","uputa":"Počni onim čime se počinje svaki posao."}
 ];
+
+izmijesajPitanjaPoGrupama(PITANJA);
 
 const SITUACIJE = [
 {"id":"s1","naslov":"Bajramska radost","meta":"ahlak · bajram","uvod":"Tvoji drugovi iz razreda ne znaju mnogo o Bajramu i misle da je to samo jedan običan dan.","koraci":[{"tekst":"Kako ćeš im objasniti šta je Bajram?","izbori":[{"tekst":"Objasnim da je to praznik ljubavi, čistoće i zajedništva","ok":true,"obj":"Bajram je naš najdraži gost, a ne samo običan dan."},{"tekst":"Kažem im da to nije njihova stvar","uputa":"Budi otvoren i podijeli radost vjere."}]},{"tekst":"Jedan drug pita zašto čistimo kuću za Bajram.","izbori":[{"tekst":"Objasnim da naša vjera uči da zablistamo i izvana i iznutra","ok":true,"obj":"Čistoća je dio naše vjere i poštovanja prema prazniku."},{"tekst":"Kažem da moramo jer su roditelji naredili","uputa":"Razmisli o dubljem značenju čišćenja kuće."}]}],"zavrsna":"Bajram je prilika da širimo radost i pokažemo ljepotu islama."},

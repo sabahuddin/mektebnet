@@ -70,6 +70,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     const manifest = JSON.parse(manifestEl.textContent);
     let template = JSON.parse(templateEl.textContent);
 
+    // This legacy exercise is distributed as a compressed bundler template.
+    // Patch the decoded source before the bundler renders it, keeping the
+    // manifest/escaping protocol untouched while retaining stable IDs and
+    // answer options.
+    const shuffleSource = [
+      'function fisherYates(items){for(let i=items.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[items[i],items[j]]=[items[j],items[i]];}return items;}',
+      'function izmijesajPitanjaPoGrupama(pitanja){const grupe=new Map();pitanja.forEach(function(p){const grupa=p.vrsta||p.tip||"ostalo";if(!grupe.has(grupa))grupe.set(grupa,[]);grupe.get(grupa).push(p);});grupe.forEach(fisherYates);pitanja.splice(0,pitanja.length,...Array.from(grupe.values()).flat());}',
+    ].join('');
+    template = template
+      .replace('const Q = [', shuffleSource + 'const Q = [')
+      .replace('];\n\nconst SITUACIJE', '];\n\nizmijesajPitanjaPoGrupama(Q);\n\nconst SITUACIJE');
+
     // Nested page bundles (iframe targets). Each ships ONCE, in the ROOT
     // document's manifest; frame srcs carry an about:blank#<uuid> marker
     // instead of a substitutable uuid. Every document mints the blobs for

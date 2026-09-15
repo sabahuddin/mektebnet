@@ -204,6 +204,25 @@ function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? 
 
 /* ---------- SADRŽAJ ---------- */
 
+function fisherYates(items){
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+function izmijesajPitanjaPoGrupama(pitanja){
+  const grupe = new Map();
+  pitanja.forEach(function(pitanje){
+    const grupa = pitanje.vrsta || pitanje.tip || "ostalo";
+    if (!grupe.has(grupa)) grupe.set(grupa, []);
+    grupe.get(grupa).push(pitanje);
+  });
+  grupe.forEach(fisherYates);
+  pitanja.splice(0, pitanja.length, ...Array.from(grupe.values()).flat());
+  return pitanja;
+}
+
 const PITANJA = [
   /* --- jedan tačan odgovor --- */
   { id:"z1", vrsta:"single", tip:"prisjecanje", lekcija:"uvodna-rijec",
@@ -318,6 +337,8 @@ const PITANJA = [
     obj:"Torba, polazak na vrijeme, mirno sjedanje i bismilla — tako počinje dobra pouka.",
     uputa:"Počni od onoga što radiš još kod kuće." }
 ];
+
+izmijesajPitanjaPoGrupama(PITANJA);
 
 const SITUACIJE = [
   { id:"s1", naslov:"Mirza žuri na pouku", meta:"ahlak · zuri-mirza-na-pouku",

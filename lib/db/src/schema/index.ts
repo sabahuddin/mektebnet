@@ -5,4 +5,5 @@ export * from "./ednevnik";
 export * from "./content";
 export * from "./learning";
 export * from "./notifications";
+export * from "./static-vjezbe";
 

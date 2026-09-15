@@ -204,6 +204,23 @@ const MEKTEB_EXERCISE = Object.freeze({
 
 const BODOVI_PO_POKUSAJU = [5, 3, 0];
 function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? BODOVI_PO_POKUSAJU[1] : BODOVI_PO_POKUSAJU[2]); }
+function fisherYates(items){
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+function izmijesajPitanjaPoGrupama(pitanja){
+  const grupe = new Map();
+  pitanja.forEach(function(pitanje){
+    const grupa = pitanje.vrsta || pitanje.tip || "ostalo";
+    if (!grupe.has(grupa)) grupe.set(grupa, []);
+    grupe.get(grupa).push(pitanje);
+  });
+  grupe.forEach(fisherYates);
+  pitanja.splice(0, pitanja.length, ...Array.from(grupe.values()).flat());
+}
 
 /* ---------- SADRŽAJ ---------- */
 
@@ -450,6 +467,8 @@ const SITUACIJE = [{"id":"s1","naslov":"Učenje sure","meta":"ibadet · sura-el-
 ];
 
 */
+izmijesajPitanjaPoGrupama(PITANJA);
+
 const RAZGOVOR = [
   { pitanje:"Kada nam tejemum pomaže da se pripremimo za namaz?",
     napomena:"Učenici trebaju povezati tejemum s nedostatkom vode ili nemogućnošću njene upotrebe." },

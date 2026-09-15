@@ -4,8 +4,38 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { multiplierForAttempt, rewardCapForAttempt } from "../lib/h5p-rules.js";
 import { getStaticVjezba } from "../lib/static-vjezbe.js";
+import { getEffectiveStaticVjezbaSource } from "../lib/static-vjezba-source.js";
 
 const router = Router();
+
+// Javni endpoint namjerno ne koristi requireAuth: statičke vježbe se učitavaju
+// u iframe-u, koji ne može dodati Authorization header.  Efektivni HTML i dalje
+// prolazi kroz poznati ključ, pa se ne može koristiti za čitanje proizvoljnih
+// fajlova sa servera.
+router.get("/:key/content", async (req: Request, res: Response): Promise<void> => {
+  const key = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
+  if (!getStaticVjezba(key)) {
+    res.status(404).json({ error: "Vježba nije registrovana" });
+    return;
+  }
+  try {
+    const source = await getEffectiveStaticVjezbaSource(key);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    // Admin može mijenjati HTML, ali vježba uvijek ostaje u zasebnom,
+    // opaque-origin sandboxu. Tako greška u izvoru ne može pristupiti
+    // aplikacijskom tokenu, kolačićima niti DOM-u roditeljske stranice.
+    res.setHeader(
+      "Content-Security-Policy",
+      "sandbox allow-scripts; default-src 'self' data: blob:; script-src 'unsafe-inline' 'self' data: blob:; style-src 'unsafe-inline' 'self' data:; img-src 'self' data: blob:",
+    );
+    res.send(source.sourceHtml);
+  } catch (error) {
+    req.log.error({ error, key }, "Čitanje statičke vježbe nije uspjelo");
+    res.status(500).json({ error: "Greška pri učitavanju vježbe" });
+  }
+});
 
 router.post("/:key/result", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
   try {

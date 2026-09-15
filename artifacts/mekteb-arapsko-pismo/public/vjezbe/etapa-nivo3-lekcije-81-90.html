@@ -205,6 +205,8 @@ const MEKTEB_EXERCISE = Object.freeze({
 
 const BODOVI_PO_POKUSAJU = [5, 3, 0];
 function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? BODOVI_PO_POKUSAJU[1] : BODOVI_PO_POKUSAJU[2]); }
+function fisherYates(items){ for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; } return items; }
+function izmijesajPitanjaPoGrupama(pitanja){ const grupe = new Map(); pitanja.forEach(function(p){ const grupa = p.vrsta || p.tip || "ostalo"; if (!grupe.has(grupa)) grupe.set(grupa, []); grupe.get(grupa).push(p); }); grupe.forEach(fisherYates); pitanja.splice(0, pitanja.length, ...Array.from(grupe.values()).flat()); }
 
 /* ---------- SADRŽAJ ---------- */
 
@@ -295,6 +297,8 @@ const PITANJA = [
     stavke:[{ime:"Adem, a.s.",opis:"Prvi čovjek"},{ime:"Nuh, a.s.",opis:"Potop"},{ime:"Ibrahim, a.s.",opis:"Kaba"},{ime:"Muhammed, a.s.",opis:"Posljednji poslanik"}],
     obj:"Adem, Nuh, Ibrahim, pa Muhammed, a.s.", uputa:"Počni od prvog čovjeka." }
 ];
+
+izmijesajPitanjaPoGrupama(PITANJA);
 
 const SITUACIJE = [
   { id:"s1", naslov:"Pitanje o Isau, a.s.", meta:"akaid · isa-as",

@@ -2930,6 +2930,7 @@ export default function AdminPage() {
                 <AdminToolCard icon={<BookOpen />} label="Slike u /uploads/" tone="amber" onClick={() => setLocation("/admin/orphan-uploads")} />
                 <AdminToolCard icon={<Award />} label="Etape i krunisanja" tone="emerald" onClick={() => setLocation("/admin/etape")} testId="button-admin-etape" />
                 <AdminToolCard icon={<Languages />} label="Uređivanje prijevoda" tone="sky" onClick={() => setLocation("/admin/prijevodi")} testId="button-admin-prijevodi" />
+                <AdminToolCard icon={<Wrench />} label="Statičke vježbe" tone="emerald" onClick={() => setLocation("/admin/vjezbe")} testId="button-admin-vjezbe" />
               </div>
             </TabsContent>
 
