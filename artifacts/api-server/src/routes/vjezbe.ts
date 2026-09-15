@@ -26,9 +26,15 @@ router.get("/:key/content", async (req: Request, res: Response): Promise<void> =
     // Admin može mijenjati HTML, ali vježba uvijek ostaje u zasebnom,
     // opaque-origin sandboxu. Tako greška u izvoru ne može pristupiti
     // aplikacijskom tokenu, kolačićima niti DOM-u roditeljske stranice.
+    // Jedini legacy bundler (11–20) koristi ugrađeni Babel/deklarativni
+    // renderer koji zahtijeva eval. Izuzetak ostaje ograničen na njegov
+    // opaque-origin sandbox; ostale vježbe zadržavaju strožiji script-src.
+    const scriptSrc = key === "etapa-lekcije-11-20"
+      ? "script-src 'unsafe-inline' 'unsafe-eval' 'self' data: blob:"
+      : "script-src 'unsafe-inline' 'self' data: blob:";
     res.setHeader(
       "Content-Security-Policy",
-      "sandbox allow-scripts; default-src 'self' data: blob:; script-src 'unsafe-inline' 'self' data: blob:; style-src 'unsafe-inline' 'self' data:; img-src 'self' data: blob:",
+      `sandbox allow-scripts; default-src 'self' data: blob:; ${scriptSrc}; style-src 'unsafe-inline' 'self' data:; img-src 'self' data: blob:`,
     );
     res.send(source.sourceHtml);
   } catch (error) {

@@ -53,6 +53,17 @@ function submit(key = "etapa-lekcije-1-10", score = 23, maxScore = 23) {
   });
 }
 
+test("legacy vježba 11–20 dobija ograničeni CSP izuzetak za svoj renderer", async () => {
+  const legacy = await fetch(`${baseUrl}/api/vjezbe/etapa-lekcije-11-20/content`);
+  assert.equal(legacy.status, 200);
+  assert.match(legacy.headers.get("content-security-policy") ?? "", /script-src[^;]*'unsafe-eval'/);
+  assert.match(legacy.headers.get("content-security-policy") ?? "", /sandbox allow-scripts/);
+
+  const standard = await fetch(`${baseUrl}/api/vjezbe/etapa-lekcije-1-10/content`);
+  assert.equal(standard.status, 200);
+  assert.doesNotMatch(standard.headers.get("content-security-policy") ?? "", /'unsafe-eval'/);
+});
+
 test("statička vježba daje 5, zatim 3, pa 0 kapi meda", async () => {
   for (const [index, expected] of [5, 3, 0].entries()) {
     const response = await submit();
