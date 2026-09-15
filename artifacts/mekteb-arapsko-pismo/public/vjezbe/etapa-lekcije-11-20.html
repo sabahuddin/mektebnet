@@ -83,7 +83,92 @@ document.addEventListener('DOMContentLoaded', async function() {
     template = template
       .replace('const Q = [', shuffleSource + 'const Q = [')
       .replace('];\n\nconst SITUACIJE', '];\n\nizmijesajPitanjaPoGrupama(Q);\nizmijesajOdgovore(Q);\n\nconst SITUACIJE')
-      .replace('];\n\nconst RAZGOVOR', '];\n\nizmijesajSituacijskeIzbore(SITUACIJE);\n\nconst RAZGOVOR');
+      .replace('];\n\nconst RAZGOVOR', '];\n\nizmijesajSituacijskeIzbore(SITUACIJE);\n\nconst RAZGOVOR')
+      .replace(/<div style="display: flex; flex-direction: column; gap: var\(--space-3\); max-width: 78ch">/g, '<div class="zadatak" style="display: flex; flex-direction: column; gap: var(--space-3)">')
+      .replace(/<div style="display: flex; flex-direction: column; gap: var\(--space-4\)">/g, '<div class="zadatak" style="display: flex; flex-direction: column; gap: var(--space-4)">')
+      .replace(/<div style="display: flex; flex-direction: column; gap: var\(--space-4\); max-width: 76ch; border-top: 1px solid var\(--color-divider\); padding-top: var\(--space-6\)">/g, '<div class="zadatak situacija" style="display: flex; flex-direction: column; gap: var(--space-4)">')
+      .replace(/<div style="display: flex; gap: var\(--space-3\); align-items: baseline; max-width: 74ch">/g, '<div class="zadatak razgovor" style="display: flex; gap: var(--space-3); align-items: baseline">')
+      .replace(/<div style="background: var\(--color-neutral-100\); padding: var\(--space-8\) var\(--space-6\); display: flex; flex-direction: column; gap: var\(--space-6\); box-shadow: var\(--shadow-sm\)">/g, '<div class="zadatak list-panel" style="display: flex; flex-direction: column; gap: var(--space-6)">')
+      .replace(/<div style="display: flex; flex-wrap: wrap; gap: var\(--space-6\); align-items: flex-end; padding-top: var\(--space-2\)">/g, '<div class="stanje" style="display: flex; flex-wrap: wrap; gap: var(--space-6)">')
+      .replace(/(color: var\(--color-accent(?:-2)?-300\); min-width: 1\.4em")/g, '$1 class="broj"')
+      .replace(/@import url\('https:\/\/fonts\.googleapis\.com\/[^']+'\);/g, '')
+      .replace('</head>', '<style id="mekteb-nivo3-restyle">' + [
+  ':root {',
+  '  --color-bg: #faf9f5 !important;',
+  '  --color-surface: #ffffff !important;',
+  '  --color-text: #1f2d38 !important;',
+  '  --color-accent: #248f92 !important;',
+  '  --color-accent-700: #176f72 !important;',
+  '  --color-accent-2: #f59e0b !important;',
+  '  --color-divider: #e6e3db !important;',
+  '  --color-neutral-100: #ffffff !important;',
+  '  --color-neutral-200: #fbfaf7 !important;',
+  '  --color-neutral-300: #e6e3db !important;',
+  '  --color-neutral-400: #e6e3db !important;',
+  '  --color-neutral-700: #5f6f76 !important;',
+  '  --color-neutral-800: #5f6f76 !important;',
+  '  --color-accent-100: #e8f3f3 !important;',
+  '  --color-accent-200: #e8f3f3 !important;',
+  '  --color-accent-300: #248f92 !important;',
+  '  --color-accent-400: #248f92 !important;',
+  '  --color-accent-500: #248f92 !important;',
+  '  --color-accent-600: #248f92 !important;',
+  '  --color-accent-2-100: #fdf3e0 !important;',
+  '  --color-accent-2-600: #f59e0b !important;',
+  '  --color-accent-2-700: #8a5a00 !important;',
+  '  --color-accent-2-800: #8a5a00 !important;',
+  '  --radius-md: 12px !important;',
+  '}',
+  'body { color: var(--color-text) !important; font-size: 17px !important; }',
+  'header h1 { font-size: clamp(26px,4.4vw,38px) !important; font-weight: 800 !important; color: var(--color-text) !important; letter-spacing: -0.01em !important; }',
+  'header h1 + p { color: var(--color-neutral-700) !important; font-size: 17px !important; max-width: 62ch !important; }',
+  'nav { margin: 22px 0 !important; gap: 8px !important; }',
+  'nav button { font-weight: 800 !important; font-size: 15.5px !important; border-radius: 12px !important; padding: 11px 16px !important; min-height: 46px !important; border-width: 1.5px !important; transition: background .15s, border-color .15s, color .15s !important; }',
+  'nav button.btn-ghost { color: var(--color-accent-700) !important; background: var(--color-surface) !important; border-color: var(--color-divider) !important; }',
+  'nav button.btn-ghost:hover { background: var(--color-accent-100) !important; border-color: var(--color-accent) !important; }',
+  'nav button.btn-primary { background: var(--color-accent) !important; border-color: var(--color-accent-700) !important; color: #fff !important; }',
+  '.stanje { gap: 12px !important; align-items: stretch !important; padding-top: 22px !important; }',
+  '.stanje > div {',
+  '  background: var(--color-surface) !important; border: 1px solid var(--color-divider) !important;',
+  '  border-radius: 16px !important; box-shadow: 0 1px 2px rgba(31,45,56,.06), 0 4px 12px rgba(31,45,56,.05) !important;',
+  '  padding: 14px 18px !important; min-width: 150px !important; flex: 1 1 150px !important; gap: 0 !important; align-items: flex-start !important;',
+  '}',
+  '.stanje > div > div:first-child { font-size: 12.5px !important; font-weight: 800 !important; letter-spacing: .1em !important; text-transform: uppercase !important; color: var(--color-neutral-700) !important; }',
+  '.stanje > div > div:nth-child(2) { display: block !important; }',
+  '.stanje > div > div:nth-child(2) > span:first-child { font-size: 30px !important; font-weight: 800 !important; color: var(--color-accent-700) !important; line-height: 1.1 !important; }',
+  '.stanje > div > div:nth-child(2) > span:nth-child(2) { font-size: 14px !important; font-weight: 700 !important; color: var(--color-neutral-700) !important; }',
+  '.zadatak {',
+  '  background: var(--color-surface) !important; border: 1px solid var(--color-divider) !important; border-radius: 16px !important;',
+  '  box-shadow: 0 1px 2px rgba(31,45,56,.06), 0 4px 12px rgba(31,45,56,.05) !important; padding: 20px !important; max-width: 100% !important; margin-bottom: 26px !important;',
+  '}',
+  '.zadatak > div:first-child { gap: 14px !important; align-items: flex-start !important; }',
+  '.broj {',
+  '  flex: 0 0 auto !important; width: 36px !important; height: 36px !important; border-radius: 50% !important;',
+  '  background: var(--color-accent-100) !important; color: var(--color-accent-700) !important;',
+  '  font-weight: 800 !important; display: flex !important; align-items: center !important; justify-content: center !important;',
+  '  font-size: 16px !important; min-width: unset !important; font-family: inherit !important;',
+  '}',
+  '.zadatak > div:first-child > div > span:first-child { font-size: 19px !important; font-weight: 800 !important; font-family: inherit !important; color: var(--color-text) !important; }',
+  '.zadatak > div:first-child > div > span:nth-child(2) {',
+  '  font-size: 12.5px !important; font-weight: 700 !important; letter-spacing: .06em !important;',
+  '  text-transform: uppercase !important; color: var(--color-neutral-700) !important; margin-top: 4px !important; display: block !important;',
+  '}',
+  '.zadatak > div:nth-child(2) { padding-left: 0 !important; margin-top: 16px !important; gap: 10px !important; }',
+  '.zadatak > div:nth-child(3) { padding-left: 0 !important; }',
+  'button[style*="min-height: 48px"], div[style*="min-height: 48px"] { border-width: 1.5px !important; font-size: 16.5px !important; font-weight: 400 !important; display: flex !important; align-items: center !important; }',
+  'div[style*="min-height: 48px"] { font-weight: 700 !important; color: var(--color-accent-700) !important; background: var(--color-accent-100) !important; border-color: var(--color-accent) !important; }',
+  'button[style*="min-height: 44px"], div[style*="min-height: 44px"] { font-size: 16px !important; font-weight: 700 !important; border-width: 1.5px !important; }',
+  'button[style*="min-height: 44px"]:not([class*="btn"]) { padding: 11px 16px !important; }',
+  'button[style*="min-height: 56px"], div[style*="min-height: 56px"] { font-size: 16px !important; font-weight: 800 !important; border-width: 2px !important; border-style: dashed !important; border-color: var(--color-neutral-300) !important; color: var(--color-neutral-700) !important; }',
+  'div[style*="min-height: 56px"][style*="color: var(--color-accent-700)"] { border-style: solid !important; background: var(--color-accent-100) !important; border-color: var(--color-accent) !important; }',
+  'div[style*="max-width: 1060px"] { max-width: 1000px !important; margin: 0 auto !important; }',
+  '.zadatak.situacija { border-top: 0 !important; padding-top: 20px !important; }',
+  '.zadatak.situacija h3 { font-size: 19px !important; font-weight: 800 !important; margin-top: 6px !important; }',
+  '.zadatak.situacija p { font-size: 17px !important; color: var(--color-neutral-700) !important; margin-top: 6px !important; }',
+  '.zadatak.razgovor { align-items: baseline !important; }',
+  '.zadatak.razgovor > span:nth-child(2) { font-size: 19px !important; font-weight: 800 !important; }',
+  '.zadatak.list-panel { background: var(--color-surface) !important; border: 1px solid var(--color-divider) !important; border-radius: 16px !important; box-shadow: 0 1px 2px rgba(31,45,56,.06), 0 4px 12px rgba(31,45,56,.05) !important; padding: 26px 22px !important; }',
+  '</style></head>'].join('\n'));
 
     // Nested page bundles (iframe targets). Each ships ONCE, in the ROOT
     // document's manifest; frame srcs carry an about:blank#<uuid> marker
