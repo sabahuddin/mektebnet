@@ -99,10 +99,6 @@ nav.tabovi{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}
 .sit .korakpitanje{font-weight:800;font-size:19px;margin-top:6px}
 .sit .zavrsnica{margin-top:14px;background:var(--amber-svijetli);border-left:4px solid var(--amber);border-radius:0 var(--r-dugme) var(--r-dugme) 0;padding:14px 16px;font-weight:800;font-size:17.5px}
 
-table.plan{width:100%;border-collapse:collapse;background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);overflow:hidden;box-shadow:var(--sjena)}
-table.plan th,table.plan td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--linija);font-size:16px;vertical-align:top}
-table.plan th{background:var(--tirkiz-svijetli);color:var(--tirkiz-tamni);font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
-table.plan tr:last-child td{border-bottom:0}
 
 .list{background:#fff;border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:26px 22px;display:flex;flex-direction:column;gap:24px}
 .list .listglava{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;border-bottom:2px solid var(--tekst);padding-bottom:12px}
@@ -111,7 +107,6 @@ table.plan tr:last-child td{border-bottom:0}
 .crta{border-bottom:1px solid var(--linija);height:28px}
 .dvokolone{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
 
-.napomene{display:flex;flex-direction:column;gap:10px;background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:20px}
 .razgovor{background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:20px;display:flex;gap:14px}
 .razgovor .nap{color:var(--tekst-prigusen);margin-top:6px}
 
@@ -180,7 +175,6 @@ protocol: mekteb.exercise.v1
   <nav class="tabovi" id="tabovi" aria-label="Krugovi vježbe"></nav>
 
   <main>
-    <section class="panel" id="panel-plan" aria-labelledby="tab-plan" role="region"></section>
     <section class="panel" id="panel-znanje" aria-labelledby="tab-znanje" role="region"></section>
     <section class="panel" id="panel-razlika" aria-labelledby="tab-razlika" role="region"></section>
     <section class="panel" id="panel-red" aria-labelledby="tab-red" role="region"></section>
@@ -426,17 +420,7 @@ const RAZGOVOR = [
     napomena:"Traži konkretan primjer iz sedmice, ne opću rečenicu." }
 ];
 
-const PLAN = [
-  ["1 · Znanje", "Četrnaest pitanja — tri su ponavljanje prve etape", "13 min"],
-  ["2 · Razlikovanje", "Meleki, Božije objave, ahiret i Allahova svojstva", "10 min"],
-  ["3 · Redoslijed", "Božije knjige, šta slijedi poslije smrti, imanski šarti", "8 min"],
-  ["4 · Situacije", "Četiri slučaja — strah od džina, tvrdnje o Kur'anu, pet namaza, smrt u mahali", "14 min"],
-  ["5 · Razgovor", "Tri pitanja bez bodova — svako dijete kaže jednu rečenicu", "6 min"],
-  ["Radni list", "Zadaća za kuću ili za djecu bez uređaja", "—"]
-];
-
 const TABOVI = [
-  { id:"plan", ime:"Plan časa", bez:true },
   { id:"znanje", ime:"1 · Znanje" },
   { id:"razlika", ime:"2 · Razlikovanje" },
   { id:"red", ime:"3 · Redoslijed" },
@@ -455,7 +439,7 @@ const UKUPNO_PONAVLJANJA = PITANJA.filter(function(p){ return !!p.ponavljanje; }
 let completionSent = false;
 
 const stanje = {
-  tab: "plan",
+  tab: "znanje",
   z: {},        /* id -> { pokusaji, gotovo, odabrano } */
   odabir: {},   /* id -> [indeksi] za više tačnih */
   red: {},      /* id -> { mjesto: ime } */
@@ -783,41 +767,6 @@ function situacija(s, broj){
 
 /* ---------- PANELI ---------- */
 
-function iscrtajPlan(){
-  const p = document.getElementById("panel-plan");
-  p.textContent = "";
-  const uvod = el("div");
-  uvod.appendChild(el("p", "kicker", "Za muallima"));
-  uvod.appendChild(el("h2", null, "Kako voditi ovaj čas"));
-  p.appendChild(uvod);
-
-  const t = el("table", "plan");
-  const thead = el("thead");
-  const tr = el("tr");
-  ["Krug", "Šta se radi", "Vrijeme"].forEach(function(h){ tr.appendChild(el("th", null, h)); });
-  thead.appendChild(tr);
-  t.appendChild(thead);
-  const tb = el("tbody");
-  PLAN.forEach(function(red){
-    const r = el("tr");
-    red.forEach(function(c){ r.appendChild(el("td", null, c)); });
-    tb.appendChild(r);
-  });
-  t.appendChild(tb);
-  p.appendChild(t);
-
-  const nap = el("div", "napomene");
-  nap.appendChild(el("h3", null, "Tri napomene"));
-  nap.appendChild(el("p", null, "Brojač „zadržano iz prethodnog“ pokazuje koliko se zadržalo iz ranijih etapa."));
-  nap.appendChild(el("p", null, "Bodovi vježbe idu 5 za tačno iz prvog pokušaja, 3 iz drugog, dalje 0. Profilne kapi meda platforma dodjeljuje zasebno, po završenom pokušaju."));
-  nap.appendChild(el("p", null, "Krug razgovora nema tačan odgovor i ne ulazi u broj završenih zadataka."));
-  p.appendChild(nap);
-
-  const akcije = el("div", "akcije noprint");
-  akcije.appendChild(dugme("dugme tiho", "Resetuj vježbu", resetuj));
-  p.appendChild(akcije);
-}
-
 function iscrtajZnanje(){
   const p = document.getElementById("panel-znanje");
   p.textContent = "";
@@ -1005,7 +954,6 @@ function osvjezi(){
     else panel.classList.remove("aktivan");
   });
 
-  if (stanje.tab === "plan") iscrtajPlan();
   if (stanje.tab === "znanje") iscrtajZnanje();
   if (stanje.tab === "razlika") iscrtajRazliku();
   if (stanje.tab === "red") iscrtajRed();
@@ -1043,7 +991,7 @@ function resetuj(){
   stanje.karta = {};
   stanje.sit = {};
   stanje.bodovi = 0;
-  stanje.tab = "plan";
+  stanje.tab = "znanje";
   completionSent = false;
   const panelList = document.getElementById("panel-list");
   if (panelList) panelList.dataset.spremno = "";
