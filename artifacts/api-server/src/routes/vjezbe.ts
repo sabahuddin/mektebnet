@@ -4,7 +4,11 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { multiplierForAttempt, rewardCapForAttempt } from "../lib/h5p-rules.js";
 import { getStaticVjezba } from "../lib/static-vjezbe.js";
-import { getEffectiveStaticVjezbaSource } from "../lib/static-vjezba-source.js";
+import {
+  applyLegacyStaticVjezbaRuntimePatch,
+  getEffectiveStaticVjezbaSource,
+  readBundledStaticVjezba,
+} from "../lib/static-vjezba-source.js";
 
 const router = Router();
 
@@ -20,6 +24,13 @@ router.get("/:key/content", async (req: Request, res: Response): Promise<void> =
   }
   try {
     const source = await getEffectiveStaticVjezbaSource(key);
+    let sourceHtml = source.sourceHtml;
+    if (key === "etapa-lekcije-11-20" && source.hasOverride) {
+      sourceHtml = applyLegacyStaticVjezbaRuntimePatch(
+        sourceHtml,
+        await readBundledStaticVjezba(key),
+      );
+    }
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -36,7 +47,7 @@ router.get("/:key/content", async (req: Request, res: Response): Promise<void> =
       "Content-Security-Policy",
       `sandbox allow-scripts; default-src 'self' data: blob:; ${scriptSrc}; style-src 'unsafe-inline' 'self' data:; img-src 'self' data: blob:`,
     );
-    res.send(source.sourceHtml);
+    res.send(sourceHtml);
   } catch (error) {
     req.log.error({ error, key }, "Čitanje statičke vježbe nije uspjelo");
     res.status(500).json({ error: "Greška pri učitavanju vježbe" });

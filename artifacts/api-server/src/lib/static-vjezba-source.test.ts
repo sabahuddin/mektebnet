@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { STATIC_VJEZBE } from "./static-vjezbe.js";
 import {
+  applyLegacyStaticVjezbaRuntimePatch,
   readBundledStaticVjezba,
   validateStaticVjezbaSource,
 } from "./static-vjezba-source.js";
@@ -59,4 +60,21 @@ test("editor odbija prazan ili neispravan HTML bez protokola završetka", () => 
     validateStaticVjezbaSource("<!doctype html><title>Bez protokola</title>") ?? "",
     /protokol/i,
   );
+});
+
+test("prilagođena vježba 11–20 dobija novi dizajn bez promjene sadržaja", async () => {
+  const bundled = await readBundledStaticVjezba("etapa-lekcije-11-20");
+  const start = bundled.indexOf("    // This legacy exercise is distributed as a compressed bundler template.");
+  const end = bundled.indexOf("    // Nested page bundles (iframe targets).", start);
+  assert.ok(start >= 0 && end > start);
+
+  const customMarker = "MOJ-PRILAGODJENI-SADRZAJ";
+  const customized = (
+    bundled.slice(0, start) + bundled.slice(end)
+  ).replace("Trideset tri šarta, namaz i sure", customMarker);
+  const patched = applyLegacyStaticVjezbaRuntimePatch(customized, bundled);
+
+  assert.match(patched, /id="mekteb-nivo3-restyle"/);
+  assert.match(patched, /izmijesajOdgovore/);
+  assert.match(patched, new RegExp(customMarker));
 });

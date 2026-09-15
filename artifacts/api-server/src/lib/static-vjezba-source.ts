@@ -7,6 +7,9 @@ import { getStaticVjezba } from "./static-vjezbe.js";
 
 const MAX_SOURCE_HTML_BYTES = 2 * 1024 * 1024;
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
+const LEGACY_PATCH_START = "    // This legacy exercise is distributed as a compressed bundler template.";
+const LEGACY_PATCH_END = "    // Nested page bundles (iframe targets).";
+const LEGACY_TEMPLATE_PARSE = "    let template = JSON.parse(templateEl.textContent);";
 
 export function getStaticVjezbaSourceLimit(): number {
   return MAX_SOURCE_HTML_BYTES;
@@ -46,6 +49,29 @@ export async function getEffectiveStaticVjezbaSource(key: string): Promise<{
     .where(eq(staticVjezbeIzvoriTable.key, key));
   if (override) return { sourceHtml: override.sourceHtml, hasOverride: true };
   return { sourceHtml: await readBundledStaticVjezba(key), hasOverride: false };
+}
+
+export function applyLegacyStaticVjezbaRuntimePatch(
+  sourceHtml: string,
+  patchedBundledHtml: string,
+): string {
+  if (sourceHtml.includes('id="mekteb-nivo3-restyle"')) return sourceHtml;
+
+  const patchStart = patchedBundledHtml.indexOf(LEGACY_PATCH_START);
+  const patchEnd = patchedBundledHtml.indexOf(LEGACY_PATCH_END, patchStart);
+  if (patchStart < 0 || patchEnd < 0) return sourceHtml;
+  const patch = patchedBundledHtml.slice(patchStart, patchEnd);
+
+  const currentStart = sourceHtml.indexOf(LEGACY_PATCH_START);
+  const currentEnd = sourceHtml.indexOf(LEGACY_PATCH_END, currentStart);
+  if (currentStart >= 0 && currentEnd >= 0) {
+    return sourceHtml.slice(0, currentStart) + patch + sourceHtml.slice(currentEnd);
+  }
+
+  const parseAt = sourceHtml.indexOf(LEGACY_TEMPLATE_PARSE);
+  if (parseAt < 0) return sourceHtml;
+  const insertAt = parseAt + LEGACY_TEMPLATE_PARSE.length;
+  return sourceHtml.slice(0, insertAt) + "\n\n" + patch + sourceHtml.slice(insertAt);
 }
 
 export function validateStaticVjezbaSource(sourceHtml: unknown): string | null {
