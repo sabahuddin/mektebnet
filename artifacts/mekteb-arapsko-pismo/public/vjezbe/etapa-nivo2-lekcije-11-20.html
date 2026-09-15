@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ponavljanje lekcija 11–20, nivo 2 · Mekteb.net</title>
+<style>
+:root{
+  --tirkiz:#248f92; --tirkiz-tamni:#176f72; --amber:#f59e0b;
+  --pozadina:#faf9f5; --tekst:#1f2d38; --tekst-prigusen:#5f6f76;
+  --kartica:#ffffff; --linija:#e6e3db; --tirkiz-svijetli:#e8f3f3; --amber-svijetli:#fdf3e0;
+  --sjena:0 1px 2px rgba(31,45,56,.06), 0 4px 12px rgba(31,45,56,.05);
+  --r-kartica:16px; --r-dugme:12px;
+  --font:"Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--pozadina);color:var(--tekst);font-family:var(--font);font-size:17px;line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:1000px;margin:0 auto;padding:24px 16px 64px}
+h1,h2,h3{line-height:1.2;margin:0}
+h1{font-size:clamp(26px,4.4vw,38px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(20px,3vw,26px);font-weight:800}
+h3{font-size:clamp(18px,2.4vw,21px);font-weight:800}
+p{margin:0}
+.kicker{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tirkiz-tamni)}
+.podnaslov{color:var(--tekst-prigusen);max-width:62ch}
+
+header.glava{display:flex;flex-direction:column;gap:12px;margin-bottom:22px}
+.oznake{display:flex;flex-wrap:wrap;gap:8px}
+.oznaka{background:var(--tirkiz-svijetli);color:var(--tirkiz-tamni);border-radius:999px;padding:5px 13px;font-size:13.5px;font-weight:700}
+
+.stanje{display:flex;flex-wrap:wrap;gap:12px}
+.brojka{background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:14px 18px;min-width:150px;flex:1 1 150px}
+.brojka .nat{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--tekst-prigusen)}
+.brojka .vr{font-size:30px;font-weight:800;color:var(--tirkiz-tamni);line-height:1.1}
+.brojka .uz{font-size:14px;color:var(--tekst-prigusen);font-weight:700}
+.traka{height:10px;background:var(--tirkiz-svijetli);border-radius:999px;overflow:hidden;margin-top:8px}
+.traka > span{display:block;height:100%;background:var(--tirkiz);border-radius:999px;transition:width .3s ease}
+.gotovo{background:var(--amber-svijetli);border-color:var(--amber)}
+.gotovo .vr{color:#8a5a00}
+
+nav.tabovi{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}
+.tab{font:inherit;font-weight:800;font-size:15.5px;color:var(--tirkiz-tamni);background:var(--kartica);border:1.5px solid var(--linija);border-radius:var(--r-dugme);padding:11px 16px;min-height:46px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.tab:hover{background:var(--tirkiz-svijetli);border-color:var(--tirkiz)}
+.tab[aria-selected="true"]{background:var(--tirkiz);border-color:var(--tirkiz-tamni);color:#fff}
+.tab .cek{color:var(--amber);font-weight:900}
+.tab[aria-selected="true"] .cek{color:#fff}
+
+.panel{display:none;flex-direction:column;gap:26px}
+.panel.aktivan{display:flex}
+
+.zadatak{background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:20px}
+.zglava{display:flex;gap:14px;align-items:flex-start}
+.broj{flex:0 0 auto;width:36px;height:36px;border-radius:50%;background:var(--tirkiz-svijetli);color:var(--tirkiz-tamni);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px}
+.ztekst{font-weight:800;font-size:19px}
+.zmeta{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tekst-prigusen);margin-top:4px}
+.zmeta .ponav{color:#8a5a00;background:var(--amber-svijetli);border-radius:999px;padding:2px 9px;margin-right:6px;letter-spacing:.04em}
+.opcije{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.opcije.uredu{flex-direction:row;flex-wrap:wrap}
+.opcija{font:inherit;font-size:16.5px;text-align:left;color:var(--tekst);background:#fff;border:1.5px solid var(--linija);border-radius:var(--r-dugme);padding:13px 16px;min-height:48px;cursor:pointer;display:flex;gap:10px;align-items:center;transition:background .15s,border-color .15s}
+.opcija:hover:not(:disabled){background:var(--tirkiz-svijetli);border-color:var(--tirkiz)}
+.opcija:disabled{cursor:default}
+.opcija .znak{flex:0 0 auto;font-weight:900;width:1.1em}
+.opcija.oznacena{background:var(--tirkiz-svijetli);border-color:var(--tirkiz);font-weight:700}
+.opcija.tacna{background:var(--tirkiz-svijetli);border-color:var(--tirkiz);font-weight:700;color:var(--tirkiz-tamni)}
+.opcija.netacna{background:#fdecec;border-color:#c0392b;color:#8e2b20;font-weight:700}
+.opcija.blijeda{color:var(--tekst-prigusen);background:#fbfaf7}
+.dvopcija{min-width:8.5em;justify-content:center;font-weight:800;font-size:17px}
+
+.povratna{margin-top:14px;border-left:4px solid var(--tirkiz);background:var(--tirkiz-svijetli);border-radius:0 var(--r-dugme) var(--r-dugme) 0;padding:12px 15px;font-size:16px}
+.povratna.uputa{border-left-color:var(--amber);background:var(--amber-svijetli)}
+.povratna .naslovp{font-weight:800;display:block;margin-bottom:2px}
+.povratna:empty{display:none}
+
+.kartice{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+.karta{font:inherit;font-size:16px;font-weight:700;background:#fff;border:1.5px solid var(--linija);border-radius:var(--r-dugme);padding:11px 16px;min-height:46px;cursor:pointer}
+.karta:hover:not(:disabled){background:var(--tirkiz-svijetli);border-color:var(--tirkiz)}
+.karta.odabrana{background:var(--tirkiz);border-color:var(--tirkiz-tamni);color:#fff}
+.karta.iskoristena{color:var(--tekst-prigusen);background:#fbfaf7;border-style:dashed;text-decoration:line-through;cursor:default}
+.mjesta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+.mjesto{display:flex;flex-direction:column;gap:8px}
+.mjesto .opis{font-size:14px;color:var(--tekst-prigusen);font-weight:700;min-height:2.8em}
+.slot{font:inherit;font-size:16px;font-weight:800;min-height:56px;border-radius:var(--r-dugme);border:2px dashed var(--linija);background:#fff;color:var(--tekst-prigusen);cursor:pointer;padding:10px}
+.slot:hover:not(:disabled){border-color:var(--tirkiz);color:var(--tirkiz-tamni)}
+.slot.pun{border-style:solid;border-color:var(--tirkiz);background:var(--tirkiz-svijetli);color:var(--tirkiz-tamni)}
+.slot.tacan{border-color:var(--tirkiz);background:var(--tirkiz-svijetli);color:var(--tirkiz-tamni);cursor:default}
+.slot.netacan{border-style:solid;border-color:#c0392b;background:#fdecec;color:#8e2b20;text-decoration:line-through;cursor:default}
+
+.akcije{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.dugme{font:inherit;font-weight:800;font-size:16px;border-radius:var(--r-dugme);padding:12px 20px;min-height:46px;cursor:pointer;border:1.5px solid transparent}
+.dugme.glavno{background:var(--tirkiz);border-color:var(--tirkiz-tamni);color:#fff}
+.dugme.glavno:hover{background:var(--tirkiz-tamni)}
+.dugme.tiho{background:#fff;border-color:var(--linija);color:var(--tirkiz-tamni)}
+.dugme.tiho:hover{background:var(--tirkiz-svijetli);border-color:var(--tirkiz)}
+.dugme:active{transform:translateY(1px)}
+
+.sit .uvod{color:var(--tekst-prigusen);margin-top:6px}
+.sit .korakoznaka{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--tekst-prigusen);margin-top:16px}
+.sit .korakpitanje{font-weight:800;font-size:19px;margin-top:6px}
+.sit .zavrsnica{margin-top:14px;background:var(--amber-svijetli);border-left:4px solid var(--amber);border-radius:0 var(--r-dugme) var(--r-dugme) 0;padding:14px 16px;font-weight:800;font-size:17.5px}
+
+table.plan{width:100%;border-collapse:collapse;background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);overflow:hidden;box-shadow:var(--sjena)}
+table.plan th,table.plan td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--linija);font-size:16px;vertical-align:top}
+table.plan th{background:var(--tirkiz-svijetli);color:var(--tirkiz-tamni);font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+table.plan tr:last-child td{border-bottom:0}
+
+.list{background:#fff;border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:26px 22px;display:flex;flex-direction:column;gap:24px}
+.list .listglava{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;border-bottom:2px solid var(--tekst);padding-bottom:12px}
+.list ol,.list ul{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
+.list ul.prazna{list-style:none;padding-left:0}
+.crta{border-bottom:1px solid var(--linija);height:28px}
+.dvokolone{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+
+.napomene{display:flex;flex-direction:column;gap:10px;background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:20px}
+.razgovor{background:var(--kartica);border:1px solid var(--linija);border-radius:var(--r-kartica);box-shadow:var(--sjena);padding:20px;display:flex;gap:14px}
+.razgovor .nap{color:var(--tekst-prigusen);margin-top:6px}
+
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.vizualno-skriveno{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (max-width:420px){
+  body{font-size:16px}
+  .wrap{padding:18px 12px 56px}
+  .zadatak{padding:16px}
+  .brojka{min-width:120px;flex:1 1 120px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important}
+}
+@media print{
+  body{background:#fff}
+  .noprint,nav.tabovi,header.glava .stanje{display:none !important}
+  .panel{display:none !important}
+  .panel.aktivan{display:flex !important}
+  .list{box-shadow:none;border:0;padding:0}
+  .zadatak{break-inside:avoid;box-shadow:none}
+}
+</style>
+</head>
+<body>
+<!--
+MEKTEB_EXERCISE
+key: etapa-nivo2-lekcije-11-20
+title: Ponavljanje lekcija 11–20 (nivo 2)
+level: 2
+stage: 2
+medallion: medaljon-nivo2-20
+totalTasks: 28
+protocol: mekteb.exercise.v1
+-->
+<div class="wrap">
+  <header class="glava">
+    <p class="kicker">Mekteb.net · nivo 2 · etapna vježba 2</p>
+    <h1 id="naslovVjezbe">Islamski šarti i namaz u praksi</h1>
+    <p class="podnaslov">Lekcije 11–20: sura El-Kafirun, islamski šarti, namaz i njegove greške, sehvi-sedžda, naklanjavanje, džemat, post i zekat. Četiri zadatka vraćaju se na prethodne etape. Pogrešan odgovor daje uputu i novi pokušaj.</p>
+    <div class="oznake">
+      <span class="oznaka">Nivo 2 · lekcije 11–20</span>
+      <span class="oznaka">28 zadataka</span>
+      <span class="oznaka">4 zadatka ponavljanja</span>
+      <span class="oznaka">45–50 minuta</span>
+    </div>
+    <div class="stanje">
+      <div class="brojka">
+        <span class="nat">Završeno zadataka</span>
+        <div><span class="vr" id="brZavrseno">0</span> <span class="uz" id="brUkupno">/ 28</span></div>
+        <div class="traka"><span id="traka" style="width:0%"></span></div>
+      </div>
+      <div class="brojka">
+        <span class="nat">Bodovi vježbe</span>
+        <div><span class="vr" id="brBodovi">0</span> <span class="uz" id="brMaxBodovi">/ 140</span></div>
+      </div>
+      <div class="brojka">
+        <span class="nat">Zadržano iz prethodnog</span>
+        <div><span class="vr" id="brPonav">0</span> <span class="uz" id="brPonavUk">/ 8</span></div>
+      </div>
+    </div>
+    <p class="vizualno-skriveno" id="objavaNapretka" aria-live="polite"></p>
+  </header>
+
+  <nav class="tabovi" id="tabovi" aria-label="Krugovi vježbe"></nav>
+
+  <main>
+    <section class="panel" id="panel-plan" aria-labelledby="tab-plan" role="region"></section>
+    <section class="panel" id="panel-znanje" aria-labelledby="tab-znanje" role="region"></section>
+    <section class="panel" id="panel-razlika" aria-labelledby="tab-razlika" role="region"></section>
+    <section class="panel" id="panel-red" aria-labelledby="tab-red" role="region"></section>
+    <section class="panel" id="panel-sit" aria-labelledby="tab-sit" role="region"></section>
+    <section class="panel" id="panel-razgovor" aria-labelledby="tab-razgovor" role="region"></section>
+    <section class="panel" id="panel-list" aria-labelledby="tab-list" role="region"></section>
+  </main>
+</div>
+
+<script>
+"use strict";
+
+const MEKTEB_EXERCISE = Object.freeze({
+  key: "etapa-nivo2-lekcije-11-20",
+  title: "Ponavljanje lekcija 11–20 (nivo 2)",
+  level: 2,
+  stage: 2,
+  medallion: "medaljon-nivo2-20",
+  totalTasks: 28,
+  protocol: "mekteb.exercise.v1"
+});
+
+const BODOVI_PO_POKUSAJU = [5, 3, 0];
+function bodoviZaPokusaj(n){ return n <= 1 ? BODOVI_PO_POKUSAJU[0] : (n === 2 ? BODOVI_PO_POKUSAJU[1] : BODOVI_PO_POKUSAJU[2]); }
+
+/* ---------- SADRŽAJ ---------- */
+
+const PITANJA = [
+  /* --- jedan tačan odgovor --- */
+  { id:"z1", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 1", lekcija:"mentu-billahi",
+    tekst:"Šta znači Āmentu billāhi?",
+    opcije:["Vjerujem u Allaha","Hvala Allahu","Allah je najveći"], tacno:0,
+    obj:"Āmentu billāhi znači: vjerujem u Allaha — prvi imanski šart.",
+    uputa:"Ta rečenica otvara imanske šarte i govori o vjerovanju." },
+  { id:"z2", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 1", lekcija:"ve-bil-kaderi",
+    tekst:"Šta je kader?",
+    opcije:["Allahovo određenje svega što se događa","Naziv za Sudnji dan","Ime jedne sure"], tacno:0,
+    obj:"Kader je Allahovo određenje svega što se događa — šesti imanski šart.",
+    uputa:"To je jedan od šest imanskih šarta." },
+  { id:"z3", vrsta:"single", tip:"prisjecanje", ponavljanje:"etapa 1", lekcija:"adem-as",
+    tekst:"Ko je Adem, a.s.?",
+    opcije:["Prvi čovjek i prvi Allahov poslanik","Melek koji donosi objavu","Prvi halifa"], tacno:0,
+    obj:"Adem, a.s., prvi je čovjek i prvi Božiji poslanik na Zemlji.",
+    uputa:"Nije melek i nije halifa." },
+  { id:"z4", vrsta:"single", tip:"prisjecanje", ponavljanje:"nivo 1", lekcija:"kelimei-sehadet-1",
+    tekst:"Koliko dijelova ima kelimei-šehadet?",
+    opcije:["Dva","Jedan","Tri"], tacno:0,
+    obj:"Kelimei-šehadet sadrži dva svjedočenja: o Allahovoj jednoći i o poslanstvu Muhammeda, a.s.",
+    uputa:"Šehadet govori o Allahu i o Njegovom Poslaniku." },
+  { id:"z5", vrsta:"single", tip:"razlikovanje", lekcija:"el-kafirun",
+    tekst:"O čemu govori sura El-Kafirun?",
+    opcije:["O jasnoj razlici između vjerovanja u Allaha i nevjerovanja","O pet dnevnih namaza","O davanju zekata"], tacno:0,
+    obj:"Sura El-Kafirun jasno razdvaja našu vjeru od nevjerovanja: mi ne obožavamo ono što drugi obožavaju, a njima ostaje njihovo.",
+    uputa:"Naziv sure govori o onima koji ne vjeruju." },
+  { id:"z6", vrsta:"single", tip:"prisjecanje", lekcija:"islamski-sarti",
+    tekst:"Koji je prvi islamski šart?",
+    opcije:["Kelimei-šehadet","Namaz","Post"], tacno:0,
+    obj:"Prvi islamski šart je kelimei-šehadet — svjedočenje vjere. Zatim idu namaz, post, zekat i hadž.",
+    uputa:"Prvo se izgovori i posvjedoči vjera, a onda dolaze djela." },
+  { id:"z7", vrsta:"single", tip:"prisjecanje", lekcija:"namaz",
+    tekst:"Koji je drugi islamski šart?",
+    opcije:["Namaz","Zekat","Hadž"], tacno:0,
+    obj:"Drugi islamski šart je namaz — pet dnevnih namaza koji su farz.",
+    uputa:"To je ibadet koji se obavlja pet puta svaki dan." },
+  { id:"z8", vrsta:"single", tip:"razlikovanje", lekcija:"sta-kvari-namaz",
+    tekst:"Šta od navedenog kvari namaz?",
+    opcije:["Razgovor s nekim u namazu","Tiho učenje El-Fatihe","Spuštanje na sedždu"], tacno:0,
+    obj:"Razgovor u namazu kvari namaz. Učenje Kur'ana i sedžda su dijelovi namaza.",
+    uputa:"Dva odgovora su dijelovi namaza, a jedan ga prekida." },
+  { id:"z9", vrsta:"single", tip:"razlikovanje", lekcija:"sehvi-sedzda",
+    tekst:"Šta je sehvi-sedžda?",
+    opcije:["Dvije sedžde na kraju namaza zbog nehotične greške","Sedžda koja se čini zbog određenih ajeta","Prva sedžda u svakom rekatu"], tacno:0,
+    obj:"Sehvi-sedžda su dvije sedžde na kraju namaza kojima se ispravlja nehotična greška. Sedžda zbog ajeta je sedždei-tilavet.",
+    uputa:"Ta sedžda popravlja grešku koju nismo namjerno napravili." },
+  { id:"z10", vrsta:"single", tip:"razlikovanje", lekcija:"naklanjavanje",
+    tekst:"Šta je naklanjavanje?",
+    opcije:["Klanjanje namaza koji je propušten","Ponavljanje namaza radi veće nagrade","Klanjanje nafile poslije farza"], tacno:0,
+    obj:"Naklanjavanje je obavljanje namaza koji je propušten — propušteni farz se ne zaboravlja, nego naklanja.",
+    uputa:"Riječ govori o namazu koji je ostao neklanjan." },
+  { id:"z11", vrsta:"single", tip:"razlikovanje", lekcija:"namaz-u-dzematu",
+    tekst:"Kako se zove onaj ko klanja prateći imama?",
+    opcije:["Muktedija","Mujezin","Hatib"], tacno:0,
+    obj:"Muktedija je osoba koja klanja namaz prateći imama. Mujezin uči ezan, a hatib drži hutbu.",
+    uputa:"Dva odgovora imaju svoj posao prije namaza i na džumi." },
+  { id:"z12", vrsta:"single", tip:"razlikovanje", lekcija:"prispijevanje",
+    tekst:"Šta znači prispjeti u džemat?",
+    opcije:["Pridružiti se džematu koji je već počeo i poslije doklanjati propušteno","Sačekati da džemat završi, pa klanjati sam","Klanjati brže od imama da se sustigne"], tacno:0,
+    obj:"Ako džemat već klanja, pridružimo se imamu, a propušteni dio doklanjamo poslije njegove predaje selama.",
+    uputa:"Ne čeka se i ne žuri — pridružuje se." },
+  { id:"z13", vrsta:"single", tip:"prisjecanje", lekcija:"post",
+    tekst:"Koji je treći islamski šart?",
+    opcije:["Post","Zekat","Namaz"], tacno:0,
+    obj:"Treći islamski šart je post — post u mjesecu ramazanu.",
+    uputa:"Nabroj ih po redu i stani na trećem." },
+  { id:"z14", vrsta:"single", tip:"razlikovanje", lekcija:"zekat",
+    tekst:"Šta je zekat?",
+    opcije:["Obavezno davanje dijela imovine siromašnima","Dobrovoljni prilog kad čovjek želi","Poklon dragoj osobi"], tacno:0,
+    obj:"Zekat je obavezno davanje dijela imovine siromašnima i četvrti je islamski šart. Dobrovoljni prilog je sadaka.",
+    uputa:"Tražimo ono što je obaveza, a ne ono što je dobrovoljno." },
+
+  /* --- više tačnih odgovora --- */
+  { id:"m1", vrsta:"multiple", tip:"razlikovanje", lekcija:"sta-kvari-namaz",
+    tekst:"Šta kvari namaz? Odaberi sve tačne odgovore.",
+    opcije:["Razgovor u namazu","Jelo ili piće u namazu","Smijeh naglas","Tiho učenje kratke sure"], tacniVise:[0,1,2],
+    obj:"Razgovor, jelo, piće i smijeh naglas kvare namaz. Učenje Kur'ana je dio namaza.",
+    uputa:"Tri odgovora prekidaju namaz, a jedan mu pripada." },
+  { id:"m2", vrsta:"multiple", tip:"razlikovanje", lekcija:"islamski-sarti",
+    tekst:"Koji su islamski šarti? Odaberi sve tačne odgovore.",
+    opcije:["Kelimei-šehadet","Namaz","Post","Zekat","Vjerovanje u meleke"], tacniVise:[0,1,2,3],
+    obj:"Islamski šarti su kelimei-šehadet, namaz, post, zekat i hadž. Vjerovanje u meleke je imanski šart.",
+    uputa:"Jedan odgovor je imanski, a ne islamski šart." },
+  { id:"m3", vrsta:"multiple", tip:"razlikovanje", lekcija:"namaz-u-dzematu",
+    tekst:"Šta je tačno o namazu u džematu? Odaberi sve tačne odgovore.",
+    opcije:["Imam predvodi namaz","Klanjači stoje poravnani u saffu","Namaz u džematu ima veću nagradu","Svaki klanjač klanja svojim tempom"], tacniVise:[0,1,2],
+    obj:"U džematu imam predvodi, klanjači stoje u saffu i nagrada je veća. Svoj tempo bi razbio džemat.",
+    uputa:"Jedan odgovor ruši ono što džemat znači." },
+  { id:"m4", vrsta:"multiple", tip:"razlikovanje", lekcija:"naklanjavanje",
+    tekst:"Šta radimo ako se namaz propusti? Odaberi sve tačne odgovore.",
+    opcije:["Naklanjamo ga","Tražimo oprost od Allaha","Trudimo se da se ne ponovi","Ne radimo ništa, prošlo je"], tacniVise:[0,1,2],
+    obj:"Propušteni namaz se naklanja, traži se oprost i gradi navika da se ne ponovi.",
+    uputa:"Jedan odgovor je odustajanje, a ne rješenje." },
+
+  /* --- tačno/netačno --- */
+  { id:"t1", vrsta:"truefalse", tip:"razlikovanje", lekcija:"sehvi-sedzda",
+    tekst:"Tačno ili netačno: sehvi-sedžda se čini zbog namjerne greške u namazu.",
+    opcije:["Tačno","Netačno"], tacno:1,
+    obj:"Sehvi-sedžda ispravlja nehotičnu grešku. Namjerno pokvaren namaz se ponavlja.",
+    uputa:"Ključna riječ je nehotično." },
+  { id:"t2", vrsta:"truefalse", tip:"razlikovanje", lekcija:"post",
+    tekst:"Tačno ili netačno: post je treći islamski šart.",
+    opcije:["Tačno","Netačno"], tacno:0,
+    obj:"Islamski šarti su: kelimei-šehadet, namaz, post, zekat i hadž.",
+    uputa:"Nabroj ih po redu." },
+  { id:"t3", vrsta:"truefalse", tip:"razlikovanje", lekcija:"zekat",
+    tekst:"Tačno ili netačno: zekat se daje dobrovoljno, kad čovjek želi.",
+    opcije:["Tačno","Netačno"], tacno:1,
+    obj:"Zekat je obaveza za onoga ko ima dovoljno imovine. Dobrovoljno davanje je sadaka.",
+    uputa:"Jedno davanje je obaveza, drugo dobrovoljno." },
+
+  /* --- redoslijed --- */
+  { id:"r1", vrsta:"reorder", tip:"redoslijed", lekcija:"islamski-sarti",
+    tekst:"Poredaj pet islamskih šarta.",
+    stavke:[
+      {ime:"Kelimei-šehadet", opis:"Prvi šart"},
+      {ime:"Namaz", opis:"Drugi šart"},
+      {ime:"Post", opis:"Treći šart"},
+      {ime:"Zekat", opis:"Četvrti šart"},
+      {ime:"Hadž", opis:"Peti šart"}
+    ],
+    obj:"Kelimei-šehadet, namaz, post, zekat, pa hadž.",
+    uputa:"Počni od svjedočenja vjere." },
+  { id:"r2", vrsta:"reorder", tip:"redoslijed", lekcija:"post",
+    tekst:"Poredaj ramazanski dan po vremenu.",
+    stavke:[
+      {ime:"Sehur", opis:"Pred zoru"},
+      {ime:"Imsak", opis:"Post počinje"},
+      {ime:"Iftar", opis:"Zalazak sunca"},
+      {ime:"Teravih", opis:"Poslije jacije"}
+    ],
+    obj:"Sehur pred zoru, imsak kad post počinje, iftar o zalasku sunca, teravih poslije jacije.",
+    uputa:"Počni od obroka u mraku prije zore." },
+  { id:"r3", vrsta:"reorder", tip:"redoslijed", lekcija:"prispijevanje",
+    tekst:"Poredaj kako se prispijeva u džemat koji je već počeo.",
+    stavke:[
+      {ime:"Uzmem abdest i uđem", opis:"Prvo"},
+      {ime:"Donesem nijet i pridružim se imamu", opis:"Drugo"},
+      {ime:"Klanjam s džematom do selama", opis:"Treće"},
+      {ime:"Doklanjam propušteno", opis:"Četvrto"}
+    ],
+    obj:"Pridružimo se imamu, klanjamo s džematom do selama, a propušteni dio doklanjamo poslije.",
+    uputa:"Propušteni dio ne klanja se prije — nego poslije." }
+];
+
+const SITUACIJE = [
+  { id:"s1", naslov:"Smijeh u namazu", meta:"ibadet · sta-kvari-namaz",
+    uvod:"Klanjaš u sobi, a mlađi brat uđe i napravi smiješnu grimasu. Nasmijao si se naglas.",
+    koraci:[
+      { tekst:"Šta se dogodilo s namazom?", izbori:[
+        { tekst:"Namaz je pokvaren i treba ga ponoviti", ok:true, obj:"Smijeh naglas kvari namaz — namaz se tada prekida i klanja iznova." },
+        { tekst:"Ništa, nastavljam gdje sam stao", uputa:"Smijeh naglas nije mala stvar u namazu. Šta se dogodilo?" },
+        { tekst:"Dovoljna je sehvi-sedžda", uputa:"Sehvi-sedžda popravlja nehotičnu grešku, a ne pokvaren namaz." }
+      ]},
+      { tekst:"Brat i dalje stoji u sobi.", izbori:[
+        { tekst:"Lijepo ga zamolim da sačeka vani i ponovo počnem namaz", ok:true, obj:"Mjesto namaza treba biti mirno — a s mlađima se to rješava lijepom riječju." },
+        { tekst:"Izvičem se na njega", uputa:"Ljutnja nije rješenje. Kako ćeš mu to reći?" }
+      ]}
+    ],
+    zavrsna:"Pokvaren namaz se ponavlja, a mir se traži lijepom riječju." },
+
+  { id:"s2", naslov:"Zaboravio sam rekat", meta:"ibadet · sehvi-sedzda",
+    uvod:"U podne-namazu si se zamislio i nisi siguran je li to bio treći ili četvrti rekat.",
+    koraci:[
+      { tekst:"Na kraju namaza sjetiš se da si nešto pogriješio, nenamjerno. Šta radiš?", izbori:[
+        { tekst:"Učinim sehvi-sedždu", ok:true, obj:"Sehvi-sedžda su dvije sedžde kojima se ispravlja nehotična greška u namazu." },
+        { tekst:"Prekinem namaz i počnem iznova", uputa:"Za nehotičnu grešku postoji lakše rješenje. Koje?" },
+        { tekst:"Ne radim ništa", uputa:"Greška se ipak ispravlja. Čime?" }
+      ]},
+      { tekst:"Sljedeći put želiš se bolje koncentrisati.", izbori:[
+        { tekst:"Prije namaza se smirim i isključim smetnje", ok:true, obj:"Pažnja u namazu se priprema prije tekbira — mirom i uklanjanjem smetnji." },
+        { tekst:"Klanjam brže da se ne zamislim", uputa:"Brzina nije pažnja. Šta pomaže?" }
+      ]}
+    ],
+    zavrsna:"Nehotična greška se ispravlja sehvi-sedždom, a pažnja se priprema unaprijed." },
+
+  { id:"s3", naslov:"Propušten sabah", meta:"ibadet · naklanjavanje",
+    uvod:"Prespavao si sabah-namaz i probudio se kad je sunce već izašlo.",
+    koraci:[
+      { tekst:"Šta radiš?", izbori:[
+        { tekst:"Naklanjam sabah kad ustanem", ok:true, obj:"Propušteni farz se naklanjava — ne preskače se." },
+        { tekst:"Preskočim ga, prošlo je vrijeme", uputa:"Propušteno vrijeme ne briše namaz. Šta se radi?" },
+        { tekst:"Klanjam dva podne-namaza", uputa:"Podne se ne udvostručuje. Propušteni namaz ima svoje rješenje." }
+      ]},
+      { tekst:"Šta još treba uraditi?", izbori:[
+        { tekst:"Tražim oprost i namjestim budilnik da se ne ponovi", ok:true, obj:"Naklanjavanje, istigfar i jedna praktična mjera — tako se greška ne ponavlja." },
+        { tekst:"Ništa više, naklanjao sam", uputa:"Jedna mala mjera može spriječiti sljedeće prespavano jutro." }
+      ]},
+      { tekst:"Drug kaže da on sabah nikad ne klanja jer mu je rano.", izbori:[
+        { tekst:"Kažem mu da je farz i ponudim da se budimo porukom", ok:true, obj:"Podsjetnik i dogovor s prijateljem su konkretna pomoć, a ne samo savjet." },
+        { tekst:"Ćutim, njegova stvar", uputa:"Prijatelju se lijepo kaže i pomogne. Šta možeš ponuditi?" }
+      ]}
+    ],
+    zavrsna:"Naklanjano, oprost tražen, budilnik namješten — i drugu ponuđena pomoć." },
+
+  { id:"s4", naslov:"Zekat u našoj kući", meta:"ibadet · zekat",
+    uvod:"Otac kaže da je izračunao zekat i da ga treba dati.",
+    koraci:[
+      { tekst:"Pitaš ga zašto se to mora dati. Koji odgovor je tačan?", izbori:[
+        { tekst:"Zato što je zekat obaveza, četvrti islamski šart", ok:true, obj:"Zekat je obavezno davanje dijela imovine siromašnima — nije dobrovoljni prilog." },
+        { tekst:"Zato što je lijepo pomoći kad se može", uputa:"To važi za sadaku. A šta je zekat?" },
+        { tekst:"Zato što tako traže ljudi u džematu", uputa:"Zekat nije stvar običaja. Šta ga čini obaveznim?" }
+      ]},
+      { tekst:"Ti imaš ušteđenih deset maraka u kasici. Šta možeš uraditi?", izbori:[
+        { tekst:"Dati sadaku od svog dijela, koliko želim", ok:true, obj:"Djeca ne daju zekat, ali sadaka je otvorena svima — i najmanji prilog se računa." },
+        { tekst:"Dati zekat na svoju kasicu", uputa:"Zekat ima svoja pravila i količinu imovine. Šta možeš dati ti?" },
+        { tekst:"Ništa, to je posao odraslih", uputa:"Jedno davanje je otvoreno i tebi. Koje?" }
+      ]}
+    ],
+    zavrsna:"Zekat je obaveza odraslih, a sadaka je za svakoga — pa i za tvoju kasicu." }
+];
+
+const RAZGOVOR = [
+  { pitanje:"Šta ti se najčešće dogodi da ti odvuče pažnju u namazu?",
+    napomena:"Ne traži priznanja greha — traži konkretnu smetnju i jednu mjeru protiv nje." },
+  { pitanje:"Jesi li ikad prispio u džemat koji je već počeo? Kako si se osjećao?",
+    napomena:"Iskoristi da ponoviš postupak: pridružiti se, pa doklanjati poslije." },
+  { pitanje:"Kome bi u svojoj mahali dao sadaku i zašto?",
+    napomena:"Traži konkretnu osobu ili potrebu; naglasi razliku između zekata i sadake." }
+];
+
+const PLAN = [
+  ["1 · Znanje", "Četrnaest pitanja — četiri su ponavljanje prethodnih etapa", "13 min"],
+  ["2 · Razlikovanje", "Šta kvari namaz, islamski šarti, džemat, propušteni namaz", "9 min"],
+  ["3 · Redoslijed", "Islamski šarti, ramazanski dan, prispijevanje u džemat", "8 min"],
+  ["4 · Situacije", "Četiri slučaja — smijeh u namazu, zaboravljen rekat, propušten sabah, zekat", "13 min"],
+  ["5 · Razgovor", "Tri pitanja bez bodova — svako dijete kaže jednu rečenicu", "6 min"],
+  ["Radni list", "Zadaća za kuću ili za djecu bez uređaja", "—"]
+];
+
+const TABOVI = [
+  { id:"plan", ime:"Plan časa", bez:true },
+  { id:"znanje", ime:"1 · Znanje" },
+  { id:"razlika", ime:"2 · Razlikovanje" },
+  { id:"red", ime:"3 · Redoslijed" },
+  { id:"sit", ime:"4 · Situacije" },
+  { id:"razgovor", ime:"5 · Razgovor", bez:true },
+  { id:"list", ime:"Radni list", bez:true }
+];
+
+const TIP_LABEL = { prisjecanje:"prisjećanje", razlikovanje:"razlikovanje", redoslijed:"redoslijed", primjena:"primjena" };
+const MAX_BODOVA = MEKTEB_EXERCISE.totalTasks * BODOVI_PO_POKUSAJU[0];
+const UKUPNO_PONAVLJANJA = PITANJA.filter(function(p){ return !!p.ponavljanje; }).length
+  + SITUACIJE.filter(function(s){ return !!s.ponavljanje; }).length;
+
+/* ---------- STANJE ---------- */
+
+let completionSent = false;
+
+const stanje = {
+  tab: "plan",
+  z: {},        /* id -> { pokusaji, gotovo, odabrano } */
+  odabir: {},   /* id -> [indeksi] za više tačnih */
+  red: {},      /* id -> { mjesto: ime } */
+  karta: {},    /* id -> odabrana kartica */
+  sit: {},      /* id -> { korak, greske, uputa, obj } */
+  bodovi: 0
+};
+
+function zapisi(p, tacno){
+  const prije = stanje.z[p.id] || { pokusaji:0, gotovo:false };
+  if (prije.gotovo) return;
+  const pokusaji = prije.pokusaji + 1;
+  stanje.z[p.id] = { pokusaji: pokusaji, gotovo: tacno, greska: !tacno };
+  if (tacno) stanje.bodovi += bodoviZaPokusaj(pokusaji);
+}
+
+function zavrsenihZadataka(){
+  let n = 0;
+  PITANJA.forEach(function(p){ if ((stanje.z[p.id] || {}).gotovo) n++; });
+  SITUACIJE.forEach(function(s){
+    const st = stanje.sit[s.id] || { korak:0 };
+    if (st.korak >= s.koraci.length) n++;
+  });
+  return n;
+}
+
+function zavrsenihPonavljanja(){
+  let n = 0;
+  PITANJA.forEach(function(p){ if (p.ponavljanje && (stanje.z[p.id] || {}).gotovo) n++; });
+  SITUACIJE.forEach(function(s){
+    if (!s.ponavljanje) return;
+    const st = stanje.sit[s.id] || { korak:0 };
+    if (st.korak >= s.koraci.length) n++;
+  });
+  return n;
+}
+
+/* ---------- PROTOKOL ZAVRŠETKA ---------- */
+
+function sendMektebCompletion(completedTasks){
+  if (completionSent) return;
+  if (completedTasks !== MEKTEB_EXERCISE.totalTasks) return;
+
+  completionSent = true;
+
+  window.parent.postMessage(
+    {
+      protocol: MEKTEB_EXERCISE.protocol,
+      type: "complete",
+      exerciseKey: MEKTEB_EXERCISE.key,
+      eventId:
+        MEKTEB_EXERCISE.key +
+        "-" +
+        Date.now() +
+        "-" +
+        Math.random().toString(36).slice(2),
+      score: completedTasks,
+      maxScore: MEKTEB_EXERCISE.totalTasks
+    },
+    window.location.origin
+  );
+}
+
+/* ---------- POMOĆNE ---------- */
+
+function el(tag, klasa, tekst){
+  const n = document.createElement(tag);
+  if (klasa) n.className = klasa;
+  if (tekst !== undefined && tekst !== null) n.textContent = tekst;
+  return n;
+}
+
+function dugme(klasa, tekst, naKlik){
+  const b = el("button", klasa, tekst);
+  b.type = "button";
+  if (naKlik) b.addEventListener("click", naKlik);
+  return b;
+}
+
+function metaTekst(p){
+  return TIP_LABEL[p.tip] + " · lekcija: " + p.lekcija;
+}
+
+function zglava(broj, p){
+  const g = el("div", "zglava");
+  g.appendChild(el("span", "broj", String(broj)));
+  const desno = el("div");
+  desno.appendChild(el("p", "ztekst", p.tekst));
+  const meta = el("p", "zmeta");
+  if (p.ponavljanje) meta.appendChild(el("span", "ponav", "ponavljanje · " + p.ponavljanje));
+  meta.appendChild(document.createTextNode(metaTekst(p)));
+  desno.appendChild(meta);
+  g.appendChild(desno);
+  return g;
+}
+
+function povratna(p){
+  const st = stanje.z[p.id] || {};
+  const box = el("div");
+  box.setAttribute("aria-live", "polite");
+  if (st.gotovo){
+    const d = el("div", "povratna");
+    d.appendChild(el("span", "naslovp", "Tačno"));
+    d.appendChild(document.createTextNode(p.obj));
+    box.appendChild(d);
+  } else if (st.greska){
+    const d = el("div", "povratna uputa");
+    d.appendChild(el("span", "naslovp", "Nije tačno — probaj ponovo"));
+    d.appendChild(document.createTextNode(p.uputa));
+    box.appendChild(d);
+  }
+  return box;
+}
+
+/* ---------- ISCRTAVANJE ---------- */
+
+function kartaZadatka(broj, p, tijelo){
+  const k = el("article", "zadatak");
+  k.appendChild(zglava(broj, p));
+  k.appendChild(tijelo);
+  k.appendChild(povratna(p));
+  return k;
+}
+
+function jedanTacan(p, broj, dvopcije){
+  const st = stanje.z[p.id] || {};
+  const lista = el("div", dvopcije ? "opcije uredu" : "opcije");
+  lista.setAttribute("role", "group");
+  p.opcije.forEach(function(tekst, i){
+    const b = dugme("opcija" + (dvopcije ? " dvopcija" : ""), null, function(){
+      if ((stanje.z[p.id] || {}).gotovo) return;
+      zapisi(p, i === p.tacno);
+      osvjezi();
+    });
+    const znak = el("span", "znak", "");
+    b.appendChild(znak);
+    b.appendChild(el("span", null, tekst));
+    if (st.gotovo){
+      b.disabled = true;
+      if (i === p.tacno){ b.classList.add("tacna"); znak.textContent = "✓"; }
+      else b.classList.add("blijeda");
+    }
+    lista.appendChild(b);
+  });
+  return kartaZadatka(broj, p, lista);
+}
+
+function viseTacnih(p, broj){
+  const st = stanje.z[p.id] || {};
+  const odabrano = stanje.odabir[p.id] || [];
+  const okvir = el("div");
+  const lista = el("div", "opcije");
+  lista.setAttribute("role", "group");
+  p.opcije.forEach(function(tekst, i){
+    const jeOdabran = odabrano.indexOf(i) !== -1;
+    const b = dugme("opcija", null, function(){
+      if ((stanje.z[p.id] || {}).gotovo) return;
+      const trenutno = stanje.odabir[p.id] || [];
+      const poz = trenutno.indexOf(i);
+      if (poz === -1) trenutno.push(i); else trenutno.splice(poz, 1);
+      stanje.odabir[p.id] = trenutno;
+      osvjezi();
+    });
+    const znak = el("span", "znak", jeOdabran && !st.gotovo ? "✓" : "");
+    b.appendChild(znak);
+    b.appendChild(el("span", null, tekst));
+    b.setAttribute("aria-pressed", jeOdabran ? "true" : "false");
+    if (jeOdabran && !st.gotovo) b.classList.add("oznacena");
+    if (st.gotovo){
+      b.disabled = true;
+      if (p.tacniVise.indexOf(i) !== -1){ b.classList.add("tacna"); znak.textContent = "✓"; }
+      else b.classList.add("blijeda");
+    }
+    lista.appendChild(b);
+  });
+  okvir.appendChild(lista);
+  if (!st.gotovo && odabrano.length > 0){
+    const akcije = el("div", "akcije");
+    akcije.appendChild(dugme("dugme glavno", "Provjeri odabir", function(){
+      if ((stanje.z[p.id] || {}).gotovo) return;
+      const moj = (stanje.odabir[p.id] || []).slice().sort(function(a,b){ return a-b; });
+      const tacni = p.tacniVise.slice().sort(function(a,b){ return a-b; });
+      const ok = moj.length === tacni.length && moj.every(function(v,i){ return v === tacni[i]; });
+      zapisi(p, ok);
+      osvjezi();
+    }));
+    okvir.appendChild(akcije);
+  }
+  return kartaZadatka(broj, p, okvir);
+}
+
+function redoslijed(p, broj){
+  const st = stanje.z[p.id] || {};
+  const mapa = stanje.red[p.id] || {};
+  const postavljeni = Object.keys(mapa).map(function(k){ return mapa[k]; });
+  const odabrana = stanje.karta[p.id] || null;
+  const okvir = el("div");
+
+  const kartice = el("div", "kartice");
+  p.stavke.forEach(function(sv){
+    const iskoristena = postavljeni.indexOf(sv.ime) !== -1;
+    const b = dugme("karta", sv.ime, function(){
+      if ((stanje.z[p.id] || {}).gotovo || iskoristena) return;
+      stanje.karta[p.id] = (stanje.karta[p.id] === sv.ime) ? null : sv.ime;
+      osvjezi();
+    });
+    if (iskoristena){ b.classList.add("iskoristena"); b.disabled = true; }
+    else if (odabrana === sv.ime){ b.classList.add("odabrana"); b.setAttribute("aria-pressed","true"); }
+    if (st.gotovo) b.disabled = true;
+    kartice.appendChild(b);
+  });
+  okvir.appendChild(kartice);
+
+  const mjesta = el("div", "mjesta");
+  p.stavke.forEach(function(sv, i){
+    const ime = mapa[i];
+    const celija = el("div", "mjesto");
+    celija.appendChild(el("span", "opis", sv.opis));
+    const b = dugme("slot", ime ? ime : "postavi ovdje", function(){
+      if ((stanje.z[p.id] || {}).gotovo) return;
+      const trenutno = stanje.red[p.id] || {};
+      if (trenutno[i]){ delete trenutno[i]; stanje.red[p.id] = trenutno; osvjezi(); return; }
+      const izabrana = stanje.karta[p.id];
+      if (!izabrana) return;
+      trenutno[i] = izabrana;
+      stanje.red[p.id] = trenutno;
+      stanje.karta[p.id] = null;
+      osvjezi();
+    });
+    b.setAttribute("aria-label", sv.opis + (ime ? (": " + ime) : ": prazno mjesto"));
+    if (ime) b.classList.add("pun");
+    if (st.gotovo && ime){
+      b.disabled = true;
+      b.classList.remove("pun");
+      b.classList.add(ime === sv.ime ? "tacan" : "netacan");
+      if (ime === sv.ime) b.textContent = "✓ " + ime;
+    }
+    celija.appendChild(b);
+    mjesta.appendChild(celija);
+  });
+  okvir.appendChild(mjesta);
+
+  const akcije = el("div", "akcije");
+  if (!st.gotovo && postavljeni.length === p.stavke.length){
+    akcije.appendChild(dugme("dugme glavno", "Provjeri redoslijed", function(){
+      if ((stanje.z[p.id] || {}).gotovo) return;
+      const trenutno = stanje.red[p.id] || {};
+      const ok = p.stavke.every(function(sv, i){ return trenutno[i] === sv.ime; });
+      zapisi(p, ok);
+      osvjezi();
+    }));
+  }
+  if (!st.gotovo){
+    akcije.appendChild(dugme("dugme tiho", "Očisti", function(){
+      stanje.red[p.id] = {};
+      stanje.karta[p.id] = null;
+      osvjezi();
+    }));
+  }
+  if (akcije.childNodes.length) okvir.appendChild(akcije);
+
+  return kartaZadatka(broj, p, okvir);
+}
+
+function situacija(s, broj){
+  const st = stanje.sit[s.id] || { korak:0, greske:0, uputa:"", obj:"" };
+  const gotova = st.korak >= s.koraci.length;
+  const k = el("article", "zadatak sit");
+
+  const g = el("div", "zglava");
+  g.appendChild(el("span", "broj", String(broj)));
+  const desno = el("div");
+  desno.appendChild(el("h3", null, s.naslov));
+  const meta = el("p", "zmeta");
+  if (s.ponavljanje) meta.appendChild(el("span", "ponav", "ponavljanje · " + s.ponavljanje));
+  meta.appendChild(document.createTextNode("primjena · " + s.meta));
+  desno.appendChild(meta);
+  desno.appendChild(el("p", "uvod", s.uvod));
+  g.appendChild(desno);
+  k.appendChild(g);
+
+  const zivo = el("div");
+  zivo.setAttribute("aria-live", "polite");
+
+  if (!gotova){
+    const korak = s.koraci[st.korak];
+    k.appendChild(el("p", "korakoznaka", "Korak " + (st.korak + 1) + " od " + s.koraci.length));
+    k.appendChild(el("p", "korakpitanje", korak.tekst));
+    const lista = el("div", "opcije");
+    korak.izbori.forEach(function(izbor){
+      lista.appendChild(dugme("opcija", izbor.tekst, function(){
+        const trenutno = stanje.sit[s.id] || { korak:0, greske:0 };
+        if (trenutno.korak >= s.koraci.length) return;
+        if (!izbor.ok){
+          stanje.sit[s.id] = { korak: trenutno.korak, greske: (trenutno.greske || 0) + 1, uputa: izbor.uputa, obj: "" };
+          osvjezi();
+          return;
+        }
+        const noviKorak = trenutno.korak + 1;
+        const zavrseno = noviKorak >= s.koraci.length;
+        stanje.sit[s.id] = { korak: noviKorak, greske: trenutno.greske || 0, uputa: "", obj: zavrseno ? "" : (izbor.obj || "") };
+        if (zavrseno) stanje.bodovi += bodoviZaPokusaj((trenutno.greske || 0) + 1);
+        osvjezi();
+      }));
+    });
+    k.appendChild(lista);
+
+    if (st.uputa){
+      const d = el("div", "povratna uputa");
+      d.appendChild(el("span", "naslovp", "Nije tačno — probaj ponovo"));
+      d.appendChild(document.createTextNode(st.uputa));
+      zivo.appendChild(d);
+    } else if (st.obj){
+      const d = el("div", "povratna");
+      d.appendChild(el("span", "naslovp", "Tačno"));
+      d.appendChild(document.createTextNode(st.obj));
+      zivo.appendChild(d);
+    }
+  } else {
+    zivo.appendChild(el("p", "zavrsnica", s.zavrsna));
+  }
+  k.appendChild(zivo);
+  return k;
+}
+
+/* ---------- PANELI ---------- */
+
+function iscrtajPlan(){
+  const p = document.getElementById("panel-plan");
+  p.textContent = "";
+  const uvod = el("div");
+  uvod.appendChild(el("p", "kicker", "Za muallima"));
+  uvod.appendChild(el("h2", null, "Kako voditi ovaj čas"));
+  p.appendChild(uvod);
+
+  const t = el("table", "plan");
+  const thead = el("thead");
+  const tr = el("tr");
+  ["Krug", "Šta se radi", "Vrijeme"].forEach(function(h){ tr.appendChild(el("th", null, h)); });
+  thead.appendChild(tr);
+  t.appendChild(thead);
+  const tb = el("tbody");
+  PLAN.forEach(function(red){
+    const r = el("tr");
+    red.forEach(function(c){ r.appendChild(el("td", null, c)); });
+    tb.appendChild(r);
+  });
+  t.appendChild(tb);
+  p.appendChild(t);
+
+  const nap = el("div", "napomene");
+  nap.appendChild(el("h3", null, "Tri napomene"));
+  nap.appendChild(el("p", null, "Brojač „zadržano iz prethodnog“ pokazuje koliko se zadržalo iz prve etape i nivoa 1. Ako je nizak, vrijedi ponoviti starije lekcije prije nego se ide dalje."));
+  nap.appendChild(el("p", null, "Bodovi vježbe idu 5 za tačno iz prvog pokušaja, 3 iz drugog, dalje 0. Profilne kapi meda platforma dodjeljuje zasebno, po završenom pokušaju."));
+  nap.appendChild(el("p", null, "Krug razgovora nema tačan odgovor i ne ulazi u broj završenih zadataka."));
+  p.appendChild(nap);
+
+  const akcije = el("div", "akcije noprint");
+  akcije.appendChild(dugme("dugme tiho", "Resetuj vježbu", resetuj));
+  p.appendChild(akcije);
+}
+
+function iscrtajZnanje(){
+  const p = document.getElementById("panel-znanje");
+  p.textContent = "";
+  const uvod = el("div");
+  uvod.appendChild(el("p", "kicker", "Krug 1 · znanje"));
+  uvod.appendChild(el("h2", null, "Šarti, namaz i propisi"));
+  p.appendChild(uvod);
+  let br = 0;
+  PITANJA.forEach(function(q, i){
+    if (q.vrsta !== "single") return;
+    br++;
+    p.appendChild(jedanTacan(q, i + 1));
+  });
+}
+
+function iscrtajRazliku(){
+  const p = document.getElementById("panel-razlika");
+  p.textContent = "";
+  const uvod = el("div");
+  uvod.appendChild(el("p", "kicker", "Krug 2 · razlikovanje"));
+  uvod.appendChild(el("h2", null, "Šta pripada čemu"));
+  p.appendChild(uvod);
+  PITANJA.forEach(function(q, i){
+    if (q.vrsta === "multiple") p.appendChild(viseTacnih(q, i + 1));
+  });
+  PITANJA.forEach(function(q, i){
+    if (q.vrsta === "truefalse") p.appendChild(jedanTacan(q, i + 1, true));
+  });
+}
+
+function iscrtajRed(){
+  const p = document.getElementById("panel-red");
+  p.textContent = "";
+  const uvod = el("div");
+  uvod.appendChild(el("p", "kicker", "Krug 3 · redoslijed"));
+  uvod.appendChild(el("h2", null, "Šta ide prije, a šta poslije"));
+  uvod.appendChild(el("p", "podnaslov", "Izaberi karticu, pa klikni na mjesto na koje ide."));
+  p.appendChild(uvod);
+  PITANJA.forEach(function(q, i){
+    if (q.vrsta === "reorder") p.appendChild(redoslijed(q, i + 1));
+  });
+}
+
+function iscrtajSituacije(){
+  const p = document.getElementById("panel-sit");
+  p.textContent = "";
+  const uvod = el("div");
+  uvod.appendChild(el("p", "kicker", "Krug 4 · primjena"));
+  uvod.appendChild(el("h2", null, "Četiri situacije iz tvog dana"));
+  uvod.appendChild(el("p", "podnaslov", "Svaka situacija ima dva do tri koraka. Pogrešan izbor ne prekida priču — daje uputu i novi pokušaj."));
+  p.appendChild(uvod);
+  SITUACIJE.forEach(function(s, i){
+    p.appendChild(situacija(s, PITANJA.length + i + 1));
+  });
+}
+
+function iscrtajRazgovor(){
+  const p = document.getElementById("panel-razgovor");
+  p.textContent = "";
+  const uvod = el("div");
+  uvod.appendChild(el("p", "kicker", "Krug 5 · razgovor"));
+  uvod.appendChild(el("h2", null, "Bez bodova — svako kaže svoju rečenicu"));
+  p.appendChild(uvod);
+  RAZGOVOR.forEach(function(r, i){
+    const k = el("div", "razgovor");
+    k.appendChild(el("span", "broj", String(i + 1)));
+    const d = el("div");
+    d.appendChild(el("h3", null, r.pitanje));
+    d.appendChild(el("p", "nap", r.napomena));
+    k.appendChild(d);
+    p.appendChild(k);
+  });
+}
+
+function iscrtajList(){
+  const p = document.getElementById("panel-list");
+  if (p.dataset.spremno === "1") return;
+  p.dataset.spremno = "1";
+  p.textContent = "";
+
+  const glava = el("div", "noprint");
+  glava.appendChild(el("p", "kicker", "Za papir"));
+  glava.appendChild(el("h2", null, "Radni list"));
+  glava.appendChild(el("p", "podnaslov", "Otvori ovaj tab pa štampaj — ostali krugovi se ne printaju."));
+  const akcije = el("div", "akcije");
+  akcije.appendChild(dugme("dugme glavno", "Štampaj radni list", function(){ window.print(); }));
+  glava.appendChild(akcije);
+  p.appendChild(glava);
+
+  const list = el("div", "list");
+
+  const lg = el("div", "listglava");
+  lg.appendChild(el("h3", null, "Islamski šarti i namaz u praksi"));
+  lg.appendChild(el("p", null, "Ime i razred: ______________________"));
+  list.appendChild(lg);
+
+  function zadatakLista(naslov){
+    const d = el("div");
+    d.appendChild(el("h3", null, naslov));
+    return d;
+  }
+
+  const z1 = zadatakLista("1. Dopuni rečenice.");
+  const o1 = el("ol");
+  [
+    "Prvi islamski šart je ____________________.",
+    "Drugi islamski šart je ____________________, a treći ____________________.",
+    "Četvrti islamski šart je ____________________, a peti ____________________.",
+    "Dvije sedžde zbog nehotične greške zovu se ____________________.",
+    "Klanjanje propuštenog namaza zove se ____________________.",
+    "Onaj ko klanja prateći imama zove se ____________________."
+  ].forEach(function(t){ o1.appendChild(el("li", null, t)); });
+  z1.appendChild(o1);
+  list.appendChild(z1);
+
+  const z2 = zadatakLista("2. Poveži pojam s objašnjenjem.");
+  const kolone = el("div", "dvokolone");
+  const k1 = el("ol");
+  ["Sehvi-sedžda", "Naklanjavanje", "Prispijevanje", "Zekat"].forEach(function(t){ k1.appendChild(el("li", null, t)); });
+  const k2 = el("ol");
+  k2.type = "a";
+  [
+    "obavezno davanje dijela imovine siromašnima",
+    "pridruživanje džematu koji je već počeo",
+    "dvije sedžde zbog nehotične greške",
+    "klanjanje propuštenog namaza"
+  ].forEach(function(t){ k2.appendChild(el("li", null, t)); });
+  kolone.appendChild(k1);
+  kolone.appendChild(k2);
+  z2.appendChild(kolone);
+  list.appendChild(z2);
+
+  const z3 = zadatakLista("3. Poredaj brojevima.");
+  const kolone2 = el("div", "dvokolone");
+  const p1 = el("ul", "prazna");
+  ["____ Zekat", "____ Kelimei-šehadet", "____ Hadž", "____ Namaz", "____ Post"].forEach(function(t){ p1.appendChild(el("li", null, t)); });
+  const p2 = el("ul", "prazna");
+  ["____ Iftar", "____ Sehur", "____ Teravih", "____ Imsak"].forEach(function(t){ p2.appendChild(el("li", null, t)); });
+  kolone2.appendChild(p1);
+  kolone2.appendChild(p2);
+  z3.appendChild(kolone2);
+  list.appendChild(z3);
+
+  const z4 = zadatakLista("4. Zaokruži šta kvari namaz.");
+  const z4l = el("ul", "prazna");
+  ["razgovor u namazu", "tiho učenje sure", "jelo ili piće", "sedžda", "smijeh naglas"].forEach(function(t){ z4l.appendChild(el("li", null, "____ " + t)); });
+  z4.appendChild(z4l);
+  list.appendChild(z4);
+
+  const z5 = zadatakLista("5. Napiši svojim riječima.");
+  z5.appendChild(el("p", null, "Prespavao si sabah-namaz. Šta ćeš uraditi i kako ćeš spriječiti da se ponovi? Napiši dvije do tri rečenice."));
+  for (let i = 0; i < 3; i++) z5.appendChild(el("div", "crta"));
+  list.appendChild(z5);
+
+  const z6 = zadatakLista("6. Za kući.");
+  z6.appendChild(el("p", null, "Sedam dana upiši koje si namaze klanjao i koji su bili u džematu. Donesi tabelu na sljedeći čas."));
+  for (let i = 0; i < 2; i++) z6.appendChild(el("div", "crta"));
+  list.appendChild(z6);
+
+    list.appendChild(el("p", "zmeta", "Mekteb.net · Ilmihal nivo 2 · lekcije 11–20"));
+  p.appendChild(list);
+}
+
+/* ---------- NAVIGACIJA I OSVJEŽAVANJE ---------- */
+
+function iscrtajTabove(){
+  const nav = document.getElementById("tabovi");
+  nav.textContent = "";
+  TABOVI.forEach(function(t){
+    const b = dugme("tab", null, function(){ stanje.tab = t.id; osvjezi(); });
+    b.id = "tab-" + t.id;
+    b.setAttribute("aria-selected", stanje.tab === t.id ? "true" : "false");
+    b.setAttribute("aria-controls", "panel-" + t.id);
+    b.appendChild(el("span", null, t.ime));
+    if (!t.bez && krugZavrsen(t.id)) b.appendChild(el("span", "cek", " ✓"));
+    nav.appendChild(b);
+  });
+}
+
+function krugZavrsen(tabId){
+  const vrste = { znanje:["single"], razlika:["multiple","truefalse"], red:["reorder"] };
+  if (tabId === "sit"){
+    return SITUACIJE.every(function(s){
+      const st = stanje.sit[s.id] || { korak:0 };
+      return st.korak >= s.koraci.length;
+    });
+  }
+  const v = vrste[tabId];
+  if (!v) return false;
+  return PITANJA.filter(function(p){ return v.indexOf(p.vrsta) !== -1; })
+    .every(function(p){ return (stanje.z[p.id] || {}).gotovo; });
+}
+
+function osvjezi(){
+  iscrtajTabove();
+
+  TABOVI.forEach(function(t){
+    const panel = document.getElementById("panel-" + t.id);
+    if (t.id === stanje.tab) panel.classList.add("aktivan");
+    else panel.classList.remove("aktivan");
+  });
+
+  if (stanje.tab === "plan") iscrtajPlan();
+  if (stanje.tab === "znanje") iscrtajZnanje();
+  if (stanje.tab === "razlika") iscrtajRazliku();
+  if (stanje.tab === "red") iscrtajRed();
+  if (stanje.tab === "sit") iscrtajSituacije();
+  if (stanje.tab === "razgovor") iscrtajRazgovor();
+  if (stanje.tab === "list") iscrtajList();
+
+  const zavrseno = Math.min(zavrsenihZadataka(), MEKTEB_EXERCISE.totalTasks);
+  const bodovi = Math.min(stanje.bodovi, MAX_BODOVA);
+
+  document.getElementById("brZavrseno").textContent = String(zavrseno);
+  document.getElementById("brUkupno").textContent = "/ " + MEKTEB_EXERCISE.totalTasks;
+  document.getElementById("brBodovi").textContent = String(bodovi);
+  document.getElementById("brMaxBodovi").textContent = "/ " + MAX_BODOVA;
+  document.getElementById("brPonav").textContent = String(zavrsenihPonavljanja());
+  document.getElementById("brPonavUk").textContent = "/ " + UKUPNO_PONAVLJANJA;
+  document.getElementById("traka").style.width =
+    Math.round((zavrseno / MEKTEB_EXERCISE.totalTasks) * 100) + "%";
+
+  const svi = document.querySelectorAll(".brojka");
+  if (zavrseno === MEKTEB_EXERCISE.totalTasks) svi[0].classList.add("gotovo");
+  else svi[0].classList.remove("gotovo");
+
+  document.getElementById("objavaNapretka").textContent =
+    "Završeno " + zavrseno + " od " + MEKTEB_EXERCISE.totalTasks + " zadataka. Bodovi vježbe: " + bodovi + " od " + MAX_BODOVA + ".";
+
+  sendMektebCompletion(zavrseno);
+}
+
+function resetuj(){
+  if (!window.confirm("Resetovati vježbu? Svi odgovori, pokušaji i bodovi vježbe se brišu.")) return;
+  stanje.z = {};
+  stanje.odabir = {};
+  stanje.red = {};
+  stanje.karta = {};
+  stanje.sit = {};
+  stanje.bodovi = 0;
+  stanje.tab = "plan";
+  completionSent = false;
+  const panelList = document.getElementById("panel-list");
+  if (panelList) panelList.dataset.spremno = "";
+  osvjezi();
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("naslovVjezbe").textContent = MEKTEB_EXERCISE.title;
+document.title = MEKTEB_EXERCISE.title + " · Mekteb.net";
+osvjezi();
+</script>
+</body>
+</html>

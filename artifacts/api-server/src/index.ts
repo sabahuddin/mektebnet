@@ -870,6 +870,43 @@ async function runResidualSchema() {
         (3, 'm3-10-etapa',     'Deseta etapa',           '100 lekcija Nivoa 3 — završna etapa znanja.',  100, 'medal', 'violet')
       ON CONFLICT (slug) DO NOTHING;
     `);
+    // Nivo 2 etapne vježbe su statički HTML iz public/vjezbe. UPDATE je
+    // idempotentan i povezuje postojeće medaljone sa server-side ključem vježbe.
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-1-10.html" data-vjezba-kljuc="etapa-nivo2-lekcije-1-10" title="Ponavljanje lekcija 1–10 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-1-sakupljac';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-11-20.html" data-vjezba-kljuc="etapa-nivo2-lekcije-11-20" title="Ponavljanje lekcija 11–20 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-2-graditelj';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-21-30.html" data-vjezba-kljuc="etapa-nivo2-lekcije-21-30" title="Ponavljanje lekcija 21–30 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-3-putnik';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-31-40.html" data-vjezba-kljuc="etapa-nivo2-lekcije-31-40" title="Ponavljanje lekcija 31–40 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-4-strazar';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-41-50.html" data-vjezba-kljuc="etapa-nivo2-lekcije-41-50" title="Ponavljanje lekcija 41–50 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-5-majstor';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-51-60.html" data-vjezba-kljuc="etapa-nivo2-lekcije-51-60" title="Ponavljanje lekcija 51–60 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-6-radilica';
+    `);
+    await db.execute(sql`
+      UPDATE medaljoni
+      SET content_html = '<iframe src="/vjezbe/etapa-nivo2-lekcije-61-68.html" data-vjezba-kljuc="etapa-nivo2-lekcije-61-68" title="Ponavljanje lekcija 61–68 (nivo 2)" style="width:100%;height:1500px;border:0" loading="lazy"></iframe>'
+      WHERE slug = 'm2-7-kraljica';
+    `);
     // Nivo 1 — 6 novih m1-* medaljona (pos 10..60) sa PNG ikonama.
     // Prod baza ima stare slugove (prvi-koraci, putnik, polovina-puta, ustrajni,
     // prva-kosnica) koji nemaju PNG ikone — čistimo ih i ubacujemo nove.

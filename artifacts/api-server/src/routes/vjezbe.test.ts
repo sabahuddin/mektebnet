@@ -94,3 +94,23 @@ test("vježbe za lekcije 21–63 koriste isti generički sistem", async () => {
     assert.equal(body.maxScore, 30);
   }
 });
+
+test("vježbe nivoa 2 koriste isti generički sistem sa 28 zadataka", async () => {
+  for (const key of [
+    "etapa-nivo2-lekcije-1-10",
+    "etapa-nivo2-lekcije-11-20",
+    "etapa-nivo2-lekcije-21-30",
+    "etapa-nivo2-lekcije-31-40",
+    "etapa-nivo2-lekcije-41-50",
+    "etapa-nivo2-lekcije-51-60",
+    "etapa-nivo2-lekcije-61-68",
+  ]) {
+    const response = await submit(key, 28, 28);
+    assert.equal(response.status, 200);
+    const body = await response.json() as { attemptNo: number; hasanatGained: number; score: number; maxScore: number };
+    assert.equal(body.attemptNo, 1);
+    assert.equal(body.hasanatGained, 5);
+    assert.equal(body.score, 28);
+    assert.equal(body.maxScore, 28);
+  }
+});

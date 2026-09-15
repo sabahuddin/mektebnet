@@ -37,6 +37,41 @@ export const STATIC_VJEZBE: Record<string, StaticVjezbaConfig> = {
     naslov: "Ponavljanje lekcija 51–63",
     maxScore: 30,
   },
+  "etapa-nivo2-lekcije-1-10": {
+    key: "etapa-nivo2-lekcije-1-10",
+    naslov: "Ponavljanje lekcija 1–10 (nivo 2)",
+    maxScore: 28,
+  },
+  "etapa-nivo2-lekcije-11-20": {
+    key: "etapa-nivo2-lekcije-11-20",
+    naslov: "Ponavljanje lekcija 11–20 (nivo 2)",
+    maxScore: 28,
+  },
+  "etapa-nivo2-lekcije-21-30": {
+    key: "etapa-nivo2-lekcije-21-30",
+    naslov: "Ponavljanje lekcija 21–30 (nivo 2)",
+    maxScore: 28,
+  },
+  "etapa-nivo2-lekcije-31-40": {
+    key: "etapa-nivo2-lekcije-31-40",
+    naslov: "Ponavljanje lekcija 31–40 (nivo 2)",
+    maxScore: 28,
+  },
+  "etapa-nivo2-lekcije-41-50": {
+    key: "etapa-nivo2-lekcije-41-50",
+    naslov: "Ponavljanje lekcija 41–50 (nivo 2)",
+    maxScore: 28,
+  },
+  "etapa-nivo2-lekcije-51-60": {
+    key: "etapa-nivo2-lekcije-51-60",
+    naslov: "Ponavljanje lekcija 51–60 (nivo 2)",
+    maxScore: 28,
+  },
+  "etapa-nivo2-lekcije-61-68": {
+    key: "etapa-nivo2-lekcije-61-68",
+    naslov: "Ponavljanje lekcija 61–68 (nivo 2)",
+    maxScore: 28,
+  },
 };
 
 export function getStaticVjezba(key: string): StaticVjezbaConfig | null {
