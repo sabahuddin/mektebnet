@@ -350,14 +350,6 @@ export default function VodicPage() {
             title={t("O platformi")}
             subtitle={t("Mekteb.net je digitalna islamska edukativna platforma namijenjena mektebskoj pouci, samostalnom učenju i roditeljskom praćenju napretka djece.")}
           />
-          <div className="mb-6 rounded-2xl border border-border/40 bg-white p-6 space-y-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {t("Platforma je usklađena sa Nastavnim planom i programom za mektebe Islamske zajednice u Bosni i Hercegovini, a lekcije su u potpunosti prenesene iz tri zvanična ilmihala. Ovim temeljnim sadržajima dodani su i drugi edukativni materijali koji proširuju i obogaćuju mektebsku nastavu.")}
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {t("Sadržaji su predstavljeni pregledno, uz tekst, ilustracije, pitanja za razmišljanje, zadatke i druge elemente koji pomažu učeniku da razumije i zapamti gradivo. Posebna pažnja posvećena je tome da platforma ne bude samo digitalna zbirka tekstova. Učenik se podstiče da aktivno učestvuje, odgovara na pitanja, razvrstava pojmove, povezuje sadržaje i provjerava šta je naučio.")}
-            </p>
-          </div>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl border border-border/40 p-6">
               <h4 className="font-bold text-foreground mb-2 flex items-center gap-2">
