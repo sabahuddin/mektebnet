@@ -2,8 +2,11 @@ import { Router, type Request, type Response } from "express";
 import { db, staticVjezbaPokusajiTable } from "@workspace/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
-import { multiplierForAttempt, rewardCapForAttempt } from "../lib/h5p-rules.js";
-import { getStaticVjezba } from "../lib/static-vjezbe.js";
+import {
+  getStaticVjezba,
+  staticVjezbaMultiplierForAttempt,
+  staticVjezbaRewardForAttempt,
+} from "../lib/static-vjezbe.js";
 import {
   applyLegacyStaticVjezbaRuntimePatch,
   getEffectiveStaticVjezbaSource,
@@ -82,7 +85,7 @@ router.post("/:key/result", requireAuth, requireRole("ucenik"), async (req: Requ
         .orderBy(desc(staticVjezbaPokusajiTable.attemptNo))
         .limit(1);
       const attemptNo = (previous[0]?.attemptNo ?? 0) + 1;
-      const hasanatGained = rewardCapForAttempt(attemptNo);
+      const hasanatGained = staticVjezbaRewardForAttempt(attemptNo);
       const [attempt] = await tx.insert(staticVjezbaPokusajiTable).values({
         userId,
         exerciseKey: config.key,
@@ -112,8 +115,8 @@ router.post("/:key/result", requireAuth, requireRole("ucenik"), async (req: Requ
       score: saved.attempt.score,
       maxScore: saved.attempt.maxScore,
       procenat: saved.attempt.procenat,
-      rewardCap: rewardCapForAttempt(saved.attempt.attemptNo),
-      multiplier: multiplierForAttempt(saved.attempt.attemptNo),
+      rewardCap: staticVjezbaRewardForAttempt(saved.attempt.attemptNo),
+      multiplier: staticVjezbaMultiplierForAttempt(saved.attempt.attemptNo),
       hasanatGained: saved.attempt.hasanatGained,
       totalHasanat: saved.totalHasanat,
     });
@@ -131,7 +134,11 @@ router.get("/:key/attempts", requireAuth, requireRole("ucenik"), async (req: Req
     eq(staticVjezbaPokusajiTable.userId, req.user!.userId),
     eq(staticVjezbaPokusajiTable.exerciseKey, config.key),
   )).orderBy(desc(staticVjezbaPokusajiTable.attemptNo));
-  res.json({ attempts, nextAttemptNo: attempts.length + 1, nextRewardCap: rewardCapForAttempt(attempts.length + 1) });
+  res.json({
+    attempts,
+    nextAttemptNo: attempts.length + 1,
+    nextRewardCap: staticVjezbaRewardForAttempt(attempts.length + 1),
+  });
 });
 
 export default router;

@@ -64,14 +64,14 @@ test("legacy vježba 11–20 dobija ograničeni CSP izuzetak za svoj renderer", 
   assert.doesNotMatch(standard.headers.get("content-security-policy") ?? "", /'unsafe-eval'/);
 });
 
-test("statička vježba daje 5, zatim 3, pa 0 kapi meda", async () => {
-  for (const [index, expected] of [5, 3, 0].entries()) {
+test("statička vježba daje 50, zatim 20, pa 0 kapi meda", async () => {
+  for (const [index, expected] of [50, 20, 0].entries()) {
     const response = await submit();
     assert.equal(response.status, 200);
     const body = await response.json() as { attemptNo: number; hasanatGained: number; totalHasanat: number };
     assert.equal(body.attemptNo, index + 1);
     assert.equal(body.hasanatGained, expected);
-    assert.equal(body.totalHasanat, index === 0 ? 5 : 8);
+    assert.equal(body.totalHasanat, index === 0 ? 50 : 70);
   }
 });
 
@@ -86,7 +86,7 @@ test("vježba za lekcije 11–20 koristi isti generički sistem", async () => {
   assert.equal(response.status, 200);
   const body = await response.json() as { attemptNo: number; hasanatGained: number; maxScore: number };
   assert.equal(body.attemptNo, 1);
-  assert.equal(body.hasanatGained, 5);
+  assert.equal(body.hasanatGained, 50);
   assert.equal(body.maxScore, 24);
 });
 
@@ -101,7 +101,7 @@ test("vježbe za lekcije 21–63 koriste isti generički sistem", async () => {
     assert.equal(response.status, 200);
     const body = await response.json() as { attemptNo: number; hasanatGained: number; maxScore: number };
     assert.equal(body.attemptNo, 1);
-    assert.equal(body.hasanatGained, 5);
+    assert.equal(body.hasanatGained, 50);
     assert.equal(body.maxScore, 30);
   }
 });
@@ -120,7 +120,7 @@ test("vježbe nivoa 2 koriste isti generički sistem sa 28 zadataka", async () =
     assert.equal(response.status, 200);
     const body = await response.json() as { attemptNo: number; hasanatGained: number; score: number; maxScore: number };
     assert.equal(body.attemptNo, 1);
-    assert.equal(body.hasanatGained, 5);
+    assert.equal(body.hasanatGained, 50);
     assert.equal(body.score, 28);
     assert.equal(body.maxScore, 28);
   }
@@ -143,7 +143,7 @@ test("vježbe nivoa 3 koriste isti generički sistem sa 28 zadataka", async () =
     assert.equal(response.status, 200);
     const body = await response.json() as { attemptNo: number; hasanatGained: number; score: number; maxScore: number };
     assert.equal(body.attemptNo, 1);
-    assert.equal(body.hasanatGained, 5);
+    assert.equal(body.hasanatGained, 50);
     assert.equal(body.score, 28);
     assert.equal(body.maxScore, 28);
   }

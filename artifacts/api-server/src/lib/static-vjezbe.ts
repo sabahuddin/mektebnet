@@ -127,3 +127,13 @@ export const STATIC_VJEZBE: Record<string, StaticVjezbaConfig> = {
 export function getStaticVjezba(key: string): StaticVjezbaConfig | null {
   return STATIC_VJEZBE[key] ?? null;
 }
+
+export function staticVjezbaRewardForAttempt(attemptNo: number): number {
+  if (attemptNo <= 1) return 50;
+  if (attemptNo === 2) return 20;
+  return 0;
+}
+
+export function staticVjezbaMultiplierForAttempt(attemptNo: number): number {
+  return staticVjezbaRewardForAttempt(attemptNo) / staticVjezbaRewardForAttempt(1);
+}
