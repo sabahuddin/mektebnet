@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { STATIC_VJEZBE } from "./static-vjezbe.js";
 import {
   applyLegacyStaticVjezbaRuntimePatch,
+  applyStaticVjezbaReorderShuffle,
   readBundledStaticVjezba,
   validateStaticVjezbaSource,
 } from "./static-vjezba-source.js";
@@ -14,11 +15,12 @@ test("svi bundlovani izvori statičkih vježbi prolaze validaciju", async () => 
   }
 });
 
-test("svih 23 izvora sigurno miješa odgovore, ali ne mijenja reorder", async () => {
+test("svih 23 izvora miješa odgovore i reorder kartice bez promjene tačnog reda", async () => {
   const bundledKey = "etapa-lekcije-11-20";
 
   for (const key of Object.keys(STATIC_VJEZBE)) {
-    const sourceHtml = await readBundledStaticVjezba(key);
+    const bundledHtml = await readBundledStaticVjezba(key);
+    const sourceHtml = applyStaticVjezbaReorderShuffle(bundledHtml);
     const questionTarget = key === bundledKey ? "Q" : "PITANJA";
     const answerCall = new RegExp(`izmijesajOdgovore\\(${questionTarget}\\)`, "g");
     const situationCall = /izmijesajSituacijskeIzbore\(SITUACIJE\)/g;
@@ -44,13 +46,14 @@ test("svih 23 izvora sigurno miješa odgovore, ali ne mijenja reorder", async ()
       `${key}: izbori situacije se miješaju tačno jednom`,
     );
 
-    // The helper must preserve answer correctness and explicitly skip
-    // reorder tasks; reorder chips/slots/descriptions are never shuffled.
+    // Reorder dobija zasebnu izmiješanu kopiju za kartice. Kanonski
+    // p.stavke ostaje neizmijenjen za slotove i provjeru tačnosti.
     assert.match(sourceHtml, /p\.tacno\s*=/, `${key}: remap single/truefalse`);
     assert.match(sourceHtml, /p\.tacniVise\s*=/, `${key}: remap multiple`);
-    assert.match(sourceHtml, /p\.vrsta\s*===\s*["']reorder["']/);
+    assert.match(sourceHtml, /izmijesaneStavke\s*=\s*fisherYates\(p\.stavke\.slice\(\)\)/);
+    assert.match(sourceHtml, /izmijesaneStavke\s*\|\|/);
     assert.match(sourceHtml, /korak\.izbori/);
-    assert.doesNotMatch(sourceHtml, /fisherYates\s*\([^)]*\bstavke\b/);
+    assert.doesNotMatch(sourceHtml, /p\.stavke\s*=\s*fisherYates/);
   }
 });
 

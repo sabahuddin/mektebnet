@@ -10,6 +10,7 @@ const sourceDir = path.dirname(fileURLToPath(import.meta.url));
 const LEGACY_PATCH_START = "    // This legacy exercise is distributed as a compressed bundler template.";
 const LEGACY_PATCH_END = "    // Nested page bundles (iframe targets).";
 const LEGACY_TEMPLATE_PARSE = "    let template = JSON.parse(templateEl.textContent);";
+const REORDER_SHUFFLE_MARKER = "<!-- mekteb-reorder-shuffle -->";
 
 export function getStaticVjezbaSourceLimit(): number {
   return MAX_SOURCE_HTML_BYTES;
@@ -72,6 +73,35 @@ export function applyLegacyStaticVjezbaRuntimePatch(
   if (parseAt < 0) return sourceHtml;
   const insertAt = parseAt + LEGACY_TEMPLATE_PARSE.length;
   return sourceHtml.slice(0, insertAt) + "\n\n" + patch + sourceHtml.slice(insertAt);
+}
+
+export function applyStaticVjezbaReorderShuffle(sourceHtml: string): string {
+  if (sourceHtml.includes(REORDER_SHUFFLE_MARKER)) return sourceHtml;
+
+  let patched = sourceHtml
+    .replace(
+      'if (!Array.isArray(p.opcije) || p.vrsta === "reorder") return;',
+      'if (p.vrsta === "reorder" && Array.isArray(p.stavke)){ p.izmijesaneStavke = fisherYates(p.stavke.slice()); return; }\n    if (!Array.isArray(p.opcije)) return;',
+    )
+    .replace(
+      'if(!Array.isArray(p.opcije)||p.vrsta==="reorder")return;',
+      'if(p.vrsta==="reorder"&&Array.isArray(p.stavke)){p.izmijesaneStavke=fisherYates(p.stavke.slice());return;}if(!Array.isArray(p.opcije))return;',
+    );
+
+  // Kartice se miješaju, dok p.stavke ostaje kanonski redoslijed za slotove
+  // i provjeru. Legacy 11–20 renderer koristi `chips`, ostali obični DOM.
+  patched = patched
+    .replace(
+      "p.stavke.forEach(function(sv){",
+      "(p.izmijesaneStavke || p.stavke).forEach(function(sv){",
+    )
+    .replace(
+      "chips: q.stavke.map(sv => ({",
+      "chips: (q.izmijesaneStavke || q.stavke).map(sv => ({",
+    );
+
+  if (patched === sourceHtml) return sourceHtml;
+  return patched.replace(/(<head(?:\s[^>]*)?>)/i, `$1\n${REORDER_SHUFFLE_MARKER}`);
 }
 
 export function validateStaticVjezbaSource(sourceHtml: unknown): string | null {

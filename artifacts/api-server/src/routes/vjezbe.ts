@@ -9,6 +9,7 @@ import {
 } from "../lib/static-vjezbe.js";
 import {
   applyLegacyStaticVjezbaRuntimePatch,
+  applyStaticVjezbaReorderShuffle,
   getEffectiveStaticVjezbaSource,
   readBundledStaticVjezba,
 } from "../lib/static-vjezba-source.js";
@@ -34,6 +35,7 @@ router.get("/:key/content", async (req: Request, res: Response): Promise<void> =
         await readBundledStaticVjezba(key),
       );
     }
+    sourceHtml = applyStaticVjezbaReorderShuffle(sourceHtml);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
