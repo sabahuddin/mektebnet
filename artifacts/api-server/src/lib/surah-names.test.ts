@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSurahNames, normalizeSurahNamesDeep } from "./surah-names.js";
+import {
+  normalizeSurahNames,
+  normalizeSurahNamesDeep,
+  restoreSurahNameCaseInUppercaseText,
+} from "./surah-names.js";
 
 test("ujednačava velika slova, razmake, crtice i akademske znakove", () => {
   assert.equal(
@@ -37,5 +41,22 @@ test("normalizuje tekst duboko u JSON podacima", () => {
   assert.deepEqual(
     normalizeSurahNamesDeep({ question: "Koja je EL-FATIHA?", options: ["EL-FELEK", "EN NAS"] }),
     { question: "Koja je El-Fatiha?", options: ["El-Felek", "En-Nas"] },
+  );
+});
+
+test("čuva velika slova naziva sure unutar teksta pisanog velikim slovima", () => {
+  assert.equal(
+    normalizeSurahNames("<p>TO JE SURA EL-FATIHA I ONA JE MAJKA CIJELOG KUR'ANA.</p>"),
+    "<p>TO JE SURA EL-FATIHA I ONA JE MAJKA CIJELOG KUR'ANA.</p>",
+  );
+  assert.equal(
+    normalizeSurahNames("<p>Naša najvažnija sura je EL-FATIHA.</p>"),
+    "<p>Naša najvažnija sura je El-Fatiha.</p>",
+  );
+  assert.equal(
+    restoreSurahNameCaseInUppercaseText(
+      "<p>TO JE SURA El-Fatiha I ONA JE MAJKA CIJELOG KUR'ANA.</p><p>Učimo El-Fatihu.</p>",
+    ),
+    "<p>TO JE SURA EL-FATIHA I ONA JE MAJKA CIJELOG KUR'ANA.</p><p>Učimo El-Fatihu.</p>",
   );
 });

@@ -1,7 +1,11 @@
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
-import { normalizeSurahNames, normalizeSurahNamesDeep } from "./surah-names.js";
+import {
+  normalizeSurahNames,
+  normalizeSurahNamesDeep,
+  restoreSurahNameCaseInUppercaseText,
+} from "./surah-names.js";
 
 type QueryResult<T> = { rows: T[] };
 
@@ -114,8 +118,23 @@ export async function normalizeStoredSurahNames(): Promise<SurahNormalizationRes
       naslov: string;
       content_html: string;
       kviz_pitanja: unknown;
-    }>(sql`SELECT id, naslov, content_html, kviz_pitanja FROM ilmihal_lekcije`);
+      locked: boolean;
+    }>(sql`SELECT id, naslov, content_html, kviz_pitanja, locked FROM ilmihal_lekcije`);
     for (const row of lekcije) {
+      if (row.locked) {
+        // Jednokratno ispravi samo velika slova koja je ranija verzija ovog
+        // normalizatora spustila. Sve ostalo u zaključanoj lekciji ostaje isto.
+        const repairedContentHtml = restoreSurahNameCaseInUppercaseText(row.content_html);
+        if (repairedContentHtml !== row.content_html) {
+          await tx.execute(sql`
+            UPDATE ilmihal_lekcije
+            SET content_html = ${repairedContentHtml}
+            WHERE id = ${row.id}
+          `);
+          result.lekcijeUpdated++;
+        }
+        continue;
+      }
       const naslov = normalizeSurahNames(row.naslov);
       const contentHtml = normalizeSurahNames(row.content_html);
       const kvizPitanja = normalizeSurahNamesDeep(row.kviz_pitanja);
@@ -132,9 +151,10 @@ export async function normalizeStoredSurahNames(): Promise<SurahNormalizationRes
 
     const lessonsById = new Map(lekcije.map((row) => {
       const normalized = {
-        naslov: normalizeSurahNames(row.naslov),
-        content_html: normalizeSurahNames(row.content_html),
-        kviz_pitanja: normalizeSurahNamesDeep(row.kviz_pitanja),
+        naslov: row.locked ? row.naslov : normalizeSurahNames(row.naslov),
+        content_html: row.locked ? row.content_html : normalizeSurahNames(row.content_html),
+        kviz_pitanja: row.locked ? row.kviz_pitanja : normalizeSurahNamesDeep(row.kviz_pitanja),
+        locked: row.locked,
       };
       return [row.id, normalized] as const;
     }));
@@ -152,7 +172,7 @@ export async function normalizeStoredSurahNames(): Promise<SurahNormalizationRes
     `);
     for (const row of prijevodi) {
       const lesson = lessonsById.get(row.red_id);
-      if (!lesson) continue;
+      if (!lesson || lesson.locked) continue;
       const prijevod = normalizeSurahNames(row.prijevod);
       const sourceValue = row.polje === "kviz_pitanja"
         ? JSON.stringify(lesson.kviz_pitanja ?? "")

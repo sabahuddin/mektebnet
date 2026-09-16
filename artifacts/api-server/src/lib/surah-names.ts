@@ -64,11 +64,47 @@ const SURAH_NAME_RULES: SurahNameRule[] = [
   ...GENERIC_SURAH_NAME_RULES,
 ];
 
-export function normalizeSurahNames(text: string): string {
+function isUppercaseTextContext(source: string, offset: number): boolean {
+  const nodeStart = source.lastIndexOf(">", offset) + 1;
+  const nextTag = source.indexOf("<", offset);
+  const nodeEnd = nextTag >= 0 ? nextTag : source.length;
+  const textNode = source.slice(nodeStart, nodeEnd);
+  const letters = textNode.match(/\p{L}/gu) ?? [];
+  const casedLetters = letters.filter(
+    (letter) => letter.toLocaleUpperCase("bs") !== letter.toLocaleLowerCase("bs"),
+  );
+  const uppercaseLetters = casedLetters.filter(
+    (letter) => letter === letter.toLocaleUpperCase("bs"),
+  );
+  return casedLetters.length >= 10
+    && uppercaseLetters.length / casedLetters.length >= 0.8;
+}
+
+function applySurahNameRules(text: string, uppercaseContextsOnly: boolean): string {
   let normalized = text;
   for (const rule of SURAH_NAME_RULES) {
-    normalized = normalized.replace(rule.pattern, rule.replacement);
+    normalized = normalized.replace(rule.pattern, (match: string, ...args: unknown[]) => {
+      const offset = Number(args.at(-2));
+      const uppercaseContext = isUppercaseTextContext(normalized, offset);
+      if (uppercaseContextsOnly && !uppercaseContext) return match;
+      const expanded = rule.replacement.replace(/\$(\d+)/g, (_placeholder, index: string) => {
+        const capture = args[Number(index) - 1];
+        return typeof capture === "string" ? capture : "";
+      });
+      return uppercaseContext
+        ? expanded.toLocaleUpperCase("bs")
+        : expanded;
+    });
   }
+  return normalized;
+}
+
+export function restoreSurahNameCaseInUppercaseText(text: string): string {
+  return applySurahNameRules(text, true);
+}
+
+export function normalizeSurahNames(text: string): string {
+  const normalized = applySurahNameRules(text, false);
   const wholeValue = normalized.trim().toLocaleLowerCase("bs");
   for (const canonical of CANONICAL_SURAH_NAMES) {
     if (!canonical.includes("-") && !canonical.includes(" ")
