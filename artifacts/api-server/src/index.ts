@@ -802,6 +802,17 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS etapa_polaganja_student_med_pokusaj_idx ON etapa_polaganja (student_id, medaljon_id, pokusaj_br);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS etapa_polaganja_student_polozeno_idx ON etapa_polaganja (student_id, medaljon_id, polozeno);`);
     await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS etapa_pokusaj_odobrenja (
+        id serial PRIMARY KEY,
+        student_id varchar(100) NOT NULL,
+        medaljon_id integer NOT NULL,
+        pokusaj_br integer NOT NULL,
+        odobrio_user_id integer NOT NULL,
+        created_at timestamp NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS etapa_odobrenje_student_med_pokusaj_idx ON etapa_pokusaj_odobrenja (student_id, medaljon_id, pokusaj_br);`);
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS krunisanja (
         id serial PRIMARY KEY,
         nivo integer NOT NULL UNIQUE,

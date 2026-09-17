@@ -115,6 +115,22 @@ export const etapaPolaganjaTable = pgTable("etapa_polaganja", {
 
 export type EtapaPolaganje = typeof etapaPolaganjaTable.$inferSelect;
 
+// Jednokratno muallimsko odobrenje za konkretan naredni pokušaj etapnog ispita.
+// Pokušaj 2 se automatski otvara nakon 7 dana; pokušaji 3+ traže ovaj zapis.
+export const etapaPokusajOdobrenjaTable = pgTable("etapa_pokusaj_odobrenja", {
+  id: serial("id").primaryKey(),
+  studentId: varchar("student_id", { length: 100 }).notNull(),
+  medaljonId: integer("medaljon_id").notNull(),
+  pokusajBr: integer("pokusaj_br").notNull(),
+  odobrioUserId: integer("odobrio_user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  studentMedaljonPokusajUnique: uniqueIndex("etapa_odobrenje_student_med_pokusaj_idx")
+    .on(t.studentId, t.medaljonId, t.pokusajBr),
+}));
+
+export type EtapaPokusajOdobrenje = typeof etapaPokusajOdobrenjaTable.$inferSelect;
+
 // === KRUNISANJA — završetak nivoa ============================================
 // Jedan red po nivou (UNIQUE nivo). Drži meta krunisanja i konfiguraciju
 // završnog kviza nivoa (isti pattern kao etapa).

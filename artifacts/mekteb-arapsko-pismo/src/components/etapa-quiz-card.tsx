@@ -20,6 +20,13 @@ interface EtapaMeta {
     brojPitanja: number;
   } | null;
   brojPokusaja: number;
+  attemptAccess: {
+    allowed: boolean;
+    nextAttemptNo: number;
+    availableAt: string | null;
+    requiresApproval: boolean;
+    reason: string | null;
+  } | null;
 }
 
 interface EtapaPitanje {
@@ -125,6 +132,13 @@ export function EtapaQuizCard({ medaljonLessonSlug }: { medaljonLessonSlug: stri
       );
       setRezultat(data);
       setPitanja([]);
+      const refreshed = await apiRequest<EtapaMeta>(
+        "GET",
+        `/etape/medaljon/${medaljonLessonSlug}`,
+        undefined,
+        token,
+      );
+      setMeta(refreshed);
       if (data.newBadges?.length) {
         const badgeReward = data.newBadges.reduce((sum, badge) => sum + badge.hasanatReward, 0);
         toast({
@@ -157,6 +171,7 @@ export function EtapaQuizCard({ medaljonLessonSlug }: { medaljonLessonSlug: stri
   }
 
   const isStudent = user?.role === "ucenik";
+  const attemptBlocked = isStudent && meta.attemptAccess && !meta.attemptAccess.allowed;
   return (
     <section className="mb-6 overflow-hidden rounded-3xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg" data-testid="etapa-quiz-card">
       <div className="p-5 sm:p-6">
@@ -199,20 +214,33 @@ export function EtapaQuizCard({ medaljonLessonSlug }: { medaljonLessonSlug: stri
             {t("Prijavi se kao učenik da bi pristupio ispitu.")}
           </p>
         ) : pitanja.length === 0 ? (
-          <button
-            type="button"
-            onClick={start}
-            disabled={starting}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 font-extrabold text-white shadow hover:bg-amber-600 disabled:opacity-60"
-            data-testid="button-start-etapa-kviz"
-          >
-            {starting
-              ? <Loader2 className="h-5 w-5 animate-spin" />
-              : meta.polozeno
-                ? <RotateCcw className="h-5 w-5" />
-                : <Medal className="h-5 w-5" />}
-            {meta.polozeno ? t("Ponovi ispit") : t("Započni ispit")}
-          </button>
+          <>
+            {attemptBlocked && (
+              <div className="mt-4 rounded-xl border border-amber-300 bg-white/80 p-4 text-sm font-semibold text-amber-950">
+                {meta.attemptAccess?.requiresApproval
+                  ? t("Drugi pokušaj nije bio uspješan. Muallim treba ručno omogućiti sljedeći pokušaj.")
+                  : t("Nakon prvog neuspješnog pokušaja potrebno je sačekati 7 dana. Novi pokušaj dostupan je {datum}.", {
+                      datum: meta.attemptAccess?.availableAt
+                        ? new Date(meta.attemptAccess.availableAt).toLocaleDateString("bs-BA")
+                        : "",
+                    })}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={start}
+              disabled={starting || Boolean(attemptBlocked)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 font-extrabold text-white shadow hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="button-start-etapa-kviz"
+            >
+              {starting
+                ? <Loader2 className="h-5 w-5 animate-spin" />
+                : meta.polozeno
+                  ? <RotateCcw className="h-5 w-5" />
+                  : <Medal className="h-5 w-5" />}
+              {meta.polozeno ? t("Ponovi ispit") : t("Započni ispit")}
+            </button>
+          </>
         ) : (
           <div className="mt-5 space-y-4">
             {pitanja.map((pitanje, index) => (

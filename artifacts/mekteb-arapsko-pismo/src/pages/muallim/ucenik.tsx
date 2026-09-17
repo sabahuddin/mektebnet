@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -114,6 +114,23 @@ interface InteraktivniPitanjePregled {
   prosjekVrijemeSekundi: number;
 }
 
+interface EtapaPokusajiPregled {
+  medaljonId: number;
+  naziv: string;
+  nivo: number;
+  passed: boolean;
+  nextAttemptNo: number;
+  canApprove: boolean;
+  approved: boolean;
+  attempts: Array<{
+    id: number;
+    procenat: number;
+    polozeno: boolean;
+    pokusajBr: number;
+    createdAt: string;
+  }>;
+}
+
 interface RoditeljVeza {
   id: number;
   displayName: string;
@@ -158,6 +175,8 @@ export default function UcenikPage() {
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [h5pPokusaji, setH5pPokusaji] = useState<H5PPokusaj[]>([]);
   const [interaktivnaPitanja, setInteraktivnaPitanja] = useState<InteraktivniPitanjePregled[]>([]);
+  const [etapaPokusaji, setEtapaPokusaji] = useState<EtapaPokusajiPregled[]>([]);
+  const [approvingEtapaId, setApprovingEtapaId] = useState<number | null>(null);
   const [h5pPrilozi, setH5pPrilozi] = useState<H5PPrilogInfo[]>([]);
   const [h5pFilterPrilogId, setH5pFilterPrilogId] = useState<number | null>(() => {
     if (typeof window === "undefined") return null;
@@ -215,7 +234,8 @@ export default function UcenikPage() {
       apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
       apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
       apiRequest<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] }>("GET", `/muallim/napamet/${ucenikId}`, undefined, token).catch(() => ({ katalog: [], ocjene: [] })),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad, napametData]) => {
+      apiRequest<EtapaPokusajiPregled[]>("GET", `/muallim/ucenik/${ucenikId}/etape`, undefined, token).catch(() => []),
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad, napametData, etapeData]) => {
       setRoditelji((rod as RoditeljVeza[]) || []);
       setZadace((zad as ZadacaPregled[]) || []);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
@@ -229,6 +249,7 @@ export default function UcenikPage() {
       setH5pPokusaji((h5pData as any).pokusaji || []);
       setH5pPrilozi((h5pData as any).prilozi || []);
       setInteraktivnaPitanja((interaktivniData as any).pitanja || []);
+      setEtapaPokusaji((etapeData as EtapaPokusajiPregled[]) || []);
       const gId = found?.profil?.grupaId || found?.grupaId;
       if (gId) {
         apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
@@ -239,6 +260,26 @@ export default function UcenikPage() {
       }
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [token, id]);
+
+  async function odobriEtapaPokusaj(medaljonId: number) {
+    if (!token || !id) return;
+    setApprovingEtapaId(medaljonId);
+    try {
+      await apiRequest("POST", `/muallim/ucenik/${id}/etape/${medaljonId}/odobri`, {}, token);
+      setEtapaPokusaji((current) => current.map((etapa) => (
+        etapa.medaljonId === medaljonId ? { ...etapa, canApprove: false, approved: true } : etapa
+      )));
+      toast({ title: t("Sljedeći pokušaj je omogućen.") });
+    } catch (error) {
+      toast({
+        title: t("Pokušaj nije omogućen"),
+        description: error instanceof Error ? error.message : t("Pokušaj ponovo."),
+        variant: "destructive",
+      });
+    } finally {
+      setApprovingEtapaId(null);
+    }
+  }
 
   // Zvjezdice učenika (classroom management)
   useEffect(() => {
@@ -1452,6 +1493,52 @@ export default function UcenikPage() {
                 )}
               </div>
             </div>
+
+            {etapaPokusaji.length > 0 && (
+              <section className="mt-6 bg-white border border-amber-200 rounded-2xl overflow-hidden" data-testid="etapni-pokusaji-ucenik">
+                <div className="px-5 py-4 bg-amber-50 border-b border-amber-100">
+                  <h2 className="font-extrabold text-amber-950 flex items-center gap-2">
+                    <Medal className="w-4 h-4 text-amber-700" /> {t("Etapni ispiti")}
+                  </h2>
+                  <p className="text-xs text-amber-800 mt-1">
+                    {t("Nakon drugog neuspješnog pokušaja muallim odobrava svaki naredni pokušaj.")}
+                  </p>
+                </div>
+                <div className="divide-y divide-border/50">
+                  {etapaPokusaji.map((etapa) => {
+                    const latest = etapa.attempts[0];
+                    return (
+                      <div key={etapa.medaljonId} className="px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-bold text-foreground">{etapa.naziv} · {t("Nivo")} {etapa.nivo}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {t("{n} pokušaja", { n: String(etapa.attempts.length) })}
+                            {latest ? ` · ${t("posljednji rezultat: {n}%", { n: String(latest.procenat) })}` : ""}
+                          </p>
+                        </div>
+                        {etapa.passed ? (
+                          <span className="text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 px-3 py-1.5">{t("Položeno")}</span>
+                        ) : etapa.approved ? (
+                          <span className="text-xs font-bold rounded-full bg-blue-100 text-blue-800 px-3 py-1.5">{t("Pokušaj omogućen")}</span>
+                        ) : etapa.canApprove ? (
+                          <Button
+                            size="sm"
+                            onClick={() => odobriEtapaPokusaj(etapa.medaljonId)}
+                            disabled={approvingEtapaId === etapa.medaljonId}
+                            className="font-bold"
+                          >
+                            {approvingEtapaId === etapa.medaljonId && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {t("Omogući pokušaj {n}", { n: String(etapa.nextAttemptNo) })}
+                          </Button>
+                        ) : (
+                          <span className="text-xs font-bold rounded-full bg-amber-100 text-amber-800 px-3 py-1.5">{t("Drugi pokušaj se otvara automatski nakon 7 dana")}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </>
         )}
       </div>

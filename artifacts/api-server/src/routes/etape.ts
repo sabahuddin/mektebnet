@@ -4,12 +4,13 @@ import {
   medaljoniTable,
   studentMedaljoniTable,
   etapaPolaganjaTable,
+  etapaPokusajOdobrenjaTable,
   pitanjaBankaTable,
   ilmihalLekcijeTable,
   studentProgressTable,
   kvizPitanjaTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, desc, lte, asc } from "drizzle-orm";
+import { eq, and, inArray, desc, lte, asc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 import {
@@ -20,6 +21,78 @@ import {
 import { evaluateAndPersistBadges } from "../lib/badges.js";
 
 const router = Router();
+const ETAPA_RETRY_WAIT_MS = 7 * 24 * 60 * 60 * 1000;
+
+type EtapaAttemptAccess = {
+  allowed: boolean;
+  nextAttemptNo: number;
+  availableAt: string | null;
+  requiresApproval: boolean;
+  reason: string | null;
+};
+
+export function evaluateEtapaAttemptPolicy(
+  attempts: Array<{ pokusajBr: number; polozeno: boolean; createdAt: Date }>,
+  approved: boolean,
+  now = new Date(),
+): EtapaAttemptAccess {
+  const last = attempts[0];
+  const nextAttemptNo = (last?.pokusajBr ?? 0) + 1;
+  if (!last || attempts.some((attempt) => attempt.polozeno)) {
+    return { allowed: true, nextAttemptNo, availableAt: null, requiresApproval: false, reason: null };
+  }
+  if (nextAttemptNo === 2) {
+    const availableAt = new Date(last.createdAt.getTime() + ETAPA_RETRY_WAIT_MS);
+    const allowed = now.getTime() >= availableAt.getTime();
+    return {
+      allowed,
+      nextAttemptNo,
+      availableAt: availableAt.toISOString(),
+      requiresApproval: false,
+      reason: allowed ? null : "Novi pokušaj bit će dostupan 7 dana nakon prvog pokušaja.",
+    };
+  }
+  return {
+    allowed: approved,
+    nextAttemptNo,
+    availableAt: null,
+    requiresApproval: !approved,
+    reason: approved ? null : "Muallim treba odobriti sljedeći pokušaj.",
+  };
+}
+
+async function getEtapaAttemptAccess(
+  studentId: string,
+  medaljonId: number,
+  now = new Date(),
+  database: any = db,
+): Promise<EtapaAttemptAccess> {
+  const attempts = await database
+    .select({
+      pokusajBr: etapaPolaganjaTable.pokusajBr,
+      polozeno: etapaPolaganjaTable.polozeno,
+      createdAt: etapaPolaganjaTable.createdAt,
+    })
+    .from(etapaPolaganjaTable)
+    .where(and(
+      eq(etapaPolaganjaTable.studentId, studentId),
+      eq(etapaPolaganjaTable.medaljonId, medaljonId),
+    ))
+    .orderBy(desc(etapaPolaganjaTable.pokusajBr))
+    .limit(20);
+  const preliminary = evaluateEtapaAttemptPolicy(attempts, false, now);
+  if (preliminary.nextAttemptNo < 3 || preliminary.allowed) return preliminary;
+  const [approval] = await database
+    .select({ id: etapaPokusajOdobrenjaTable.id })
+    .from(etapaPokusajOdobrenjaTable)
+    .where(and(
+      eq(etapaPokusajOdobrenjaTable.studentId, studentId),
+      eq(etapaPokusajOdobrenjaTable.medaljonId, medaljonId),
+      eq(etapaPokusajOdobrenjaTable.pokusajBr, preliminary.nextAttemptNo),
+    ))
+    .limit(1);
+  return evaluateEtapaAttemptPolicy(attempts, Boolean(approval), now);
+}
 
 type EtapaQuestionConfig = {
   kvizIds?: number[] | null;
@@ -131,6 +204,9 @@ router.get("/medaljon/:slug", async (req, res) => {
           .limit(20)
       : [];
     const polozeno = pokusaji.find((p) => p.polozeno) ?? null;
+    const attemptAccess = userId
+      ? await getEtapaAttemptAccess(userId, medaljon.id)
+      : null;
 
     const ids = await resolveEtapaPitanjaIds(medaljon);
     res.json({
@@ -160,6 +236,7 @@ router.get("/medaljon/:slug", async (req, res) => {
           }
         : null,
       brojPokusaja: pokusaji.length,
+      attemptAccess,
     });
   } catch (err) {
     console.error("[etape/medaljon] error", err);
@@ -183,6 +260,10 @@ router.post("/medaljon/:slug/start", requireAuth, requireRole("ucenik"), async (
     // Server-side gating: učenik mora završiti sve lekcije etape (ili ranije) prije nego što pristupi ispitu.
     const gateErr = await proverigatingEtape(userId, medaljon);
     if (gateErr) return res.status(403).json({ error: gateErr });
+    const attemptAccess = await getEtapaAttemptAccess(userId, medaljon.id);
+    if (!attemptAccess.allowed) {
+      return res.status(403).json({ error: attemptAccess.reason, attemptAccess });
+    }
     const pitanja = await db
       .select({
         id: pitanjaBankaTable.id,
@@ -235,6 +316,10 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
     // Server-side gating: isto pravilo kao na /start. Sprječava direktan POST /predaj.
     const gateErr = await proverigatingEtape(userId, medaljon);
     if (gateErr) return res.status(403).json({ error: gateErr });
+    const initialAccess = await getEtapaAttemptAccess(userId, medaljon.id);
+    if (!initialAccess.allowed) {
+      return res.status(403).json({ error: initialAccess.reason, attemptAccess: initialAccess });
+    }
 
     const pitanja = await db
       .select({
@@ -269,28 +354,20 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
       ))
       .limit(1);
 
-    // Sljedeći broj pokušaja
-    const [last] = await db
-      .select({ pokusajBr: etapaPolaganjaTable.pokusajBr })
-      .from(etapaPolaganjaTable)
-      .where(
-        and(
-          eq(etapaPolaganjaTable.studentId, userId),
-          eq(etapaPolaganjaTable.medaljonId, medaljon.id),
-        ),
-      )
-      .orderBy(desc(etapaPolaganjaTable.pokusajBr))
-      .limit(1);
-    const pokusajBr = (last?.pokusajBr ?? 0) + 1;
-
-    await db.insert(etapaPolaganjaTable).values({
-      studentId: userId,
-      medaljonId: medaljon.id,
-      brojTacnih: tacni,
-      brojPitanja: ukupno,
-      procenat,
-      polozeno,
-      pokusajBr,
+    const pokusajBr = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`etapa:${userId}:${medaljon.id}`}))`);
+      const access = await getEtapaAttemptAccess(userId, medaljon.id, new Date(), tx);
+      if (!access.allowed) throw Object.assign(new Error(access.reason ?? "Pokušaj nije dostupan"), { statusCode: 403 });
+      await tx.insert(etapaPolaganjaTable).values({
+        studentId: userId,
+        medaljonId: medaljon.id,
+        brojTacnih: tacni,
+        brojPitanja: ukupno,
+        procenat,
+        polozeno,
+        pokusajBr: access.nextAttemptNo,
+      });
+      return access.nextAttemptNo;
     });
 
     let medaljonClaimed = false;
@@ -334,6 +411,9 @@ router.post("/medaljon/:slug/predaj", requireAuth, requireRole("ucenik"), async 
       ...(totalHasanat === undefined ? {} : { totalHasanat }),
     });
   } catch (err) {
+    if (err instanceof Error && "statusCode" in err && err.statusCode === 403) {
+      return res.status(403).json({ error: err.message });
+    }
     console.error("[etape/predaj] error", err);
     res.status(500).json({ error: "Greška pri predaji ispita" });
   }

@@ -31,6 +31,9 @@ import {
   prilozi,
   interaktivniBlokPokusajiTable,
   napametMuallimProgramTable,
+  medaljoniTable,
+  etapaPolaganjaTable,
+  etapaPokusajOdobrenjaTable,
 } from "@workspace/db/schema";
 import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -3153,6 +3156,84 @@ router.get("/ucenik-rezultati/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
+});
+
+router.get("/ucenik/:id/etape", async (req, res) => {
+  try {
+    const ucenikId = Number(req.params.id);
+    const profil = await getManageableUcenikProfile(req.user!.userId, ucenikId);
+    if (!profil && req.user!.role !== "admin") return res.status(403).json({ error: "Učenik nije vaš" });
+    const attempts = await db
+      .select({
+        id: etapaPolaganjaTable.id,
+        medaljonId: etapaPolaganjaTable.medaljonId,
+        naziv: medaljoniTable.naziv,
+        nivo: medaljoniTable.nivo,
+        procenat: etapaPolaganjaTable.procenat,
+        polozeno: etapaPolaganjaTable.polozeno,
+        pokusajBr: etapaPolaganjaTable.pokusajBr,
+        createdAt: etapaPolaganjaTable.createdAt,
+      })
+      .from(etapaPolaganjaTable)
+      .innerJoin(medaljoniTable, eq(etapaPolaganjaTable.medaljonId, medaljoniTable.id))
+      .where(eq(etapaPolaganjaTable.studentId, String(ucenikId)))
+      .orderBy(desc(etapaPolaganjaTable.createdAt));
+    const approvals = await db.select().from(etapaPokusajOdobrenjaTable)
+      .where(eq(etapaPokusajOdobrenjaTable.studentId, String(ucenikId)));
+    const grouped = new Map<number, typeof attempts>();
+    for (const attempt of attempts) {
+      const rows = grouped.get(attempt.medaljonId) ?? [];
+      rows.push(attempt);
+      grouped.set(attempt.medaljonId, rows);
+    }
+    res.json(Array.from(grouped.values()).map((rows) => {
+      const latest = rows[0]!;
+      const passed = rows.some((row) => row.polozeno);
+      const nextAttemptNo = Math.max(...rows.map((row) => row.pokusajBr)) + 1;
+      const approved = approvals.some((row) => row.medaljonId === latest.medaljonId && row.pokusajBr === nextAttemptNo);
+      return {
+        medaljonId: latest.medaljonId,
+        naziv: latest.naziv,
+        nivo: latest.nivo,
+        attempts: rows,
+        passed,
+        nextAttemptNo,
+        canApprove: !passed && nextAttemptNo >= 3 && !approved,
+        approved,
+      };
+    }));
+  } catch (err) {
+    console.error("[muallim/ucenik/etape] error", err);
+    res.status(500).json({ error: "Greška pri učitavanju etapnih pokušaja" });
+  }
+  return;
+});
+
+router.post("/ucenik/:id/etape/:medaljonId/odobri", async (req, res) => {
+  try {
+    const ucenikId = Number(req.params.id);
+    const medaljonId = Number(req.params.medaljonId);
+    const profil = await getManageableUcenikProfile(req.user!.userId, ucenikId);
+    if (!profil && req.user!.role !== "admin") return res.status(403).json({ error: "Učenik nije vaš" });
+    const attempts = await db.select().from(etapaPolaganjaTable).where(and(
+      eq(etapaPolaganjaTable.studentId, String(ucenikId)),
+      eq(etapaPolaganjaTable.medaljonId, medaljonId),
+    )).orderBy(desc(etapaPolaganjaTable.pokusajBr));
+    if (attempts.some((row) => row.polozeno)) return res.status(409).json({ error: "Etapa je već položena" });
+    const nextAttemptNo = (attempts[0]?.pokusajBr ?? 0) + 1;
+    if (nextAttemptNo < 3) return res.status(400).json({ error: "Ručno odobrenje je potrebno tek nakon drugog neuspješnog pokušaja" });
+    await db.insert(etapaPokusajOdobrenjaTable).values({
+      studentId: String(ucenikId),
+      medaljonId,
+      pokusajBr: nextAttemptNo,
+      odobrioUserId: req.user!.userId,
+    }).onConflictDoNothing();
+    res.json({ ok: true, nextAttemptNo });
+  } catch (err) {
+    console.error("[muallim/ucenik/etape/odobri] error", err);
+    res.status(500).json({ error: "Greška pri odobravanju pokušaja" });
+  }
+  return;
 });
 
 // GET /api/muallim/svi-rezultati - all students' quiz results
