@@ -81,7 +81,6 @@ import AdminPrijevodiPage from "./pages/admin-prijevodi";
 import KrunisanjeNivoPage from "./pages/krunisanje";
 import KrunisanjeLekcijaPage from "./pages/krunisanje-lekcija";
 import AdminVjezbePage from "./pages/admin-vjezbe";
-import AdminSigurnosnaKopijaPage from "./pages/admin-sigurnosna-kopija";
 
 // Učenik profil
 import UcenikProfilPage from "./pages/ucenik-profil";
@@ -244,7 +243,6 @@ function Router() {
       <Route path="/admin/etape" component={AdminEtapePage} />
       <Route path="/admin/prijevodi" component={AdminPrijevodiPage} />
       <Route path="/admin/vjezbe" component={AdminVjezbePage} />
-      <Route path="/admin/sigurnosna-kopija" component={AdminSigurnosnaKopijaPage} />
       <Route path="/admin" component={AdminPage} />
 
       {/* Muallim panel */}

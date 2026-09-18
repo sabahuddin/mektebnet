@@ -30,8 +30,7 @@
     "translate-content": "tsx ./src/translate-content.ts",
     "test:translate-content": "tsx --test ./src/translate-content.test.ts",
     "transfer-content": "tsx ./src/transfer-content.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "vrati-sadrzaj": "tsx ./src/vrati-sadrzaj.ts"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
