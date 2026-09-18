@@ -5,7 +5,8 @@
 //
 // Servira `dist/public` lokalno, ugradi vježbu u iframe kao što to radi
 // stranica lekcije, pa provjeri: širine 360/768/1280, prevlačenje mišem i
-// prstom, način „dodirni riječ pa prazninu", tastaturu, pogrešan pokušaj,
+// prstom, način „dodirni riječ pa prazninu", tastaturu, slobodno slaganje i
+// provjeru na kraju (pogrešna riječ se prihvata, pa se ispravlja),
 // dugme „Pomozi mi", kontrast teksta, prefers-reduced-motion, da poruka
 // "kraj" stigne tačno jednom te da nema grešaka u konzoli ni ijednog zahtjeva
 // prema vanjskim domenama. Izlazni kod 1 znači da je nešto palo.
@@ -145,23 +146,44 @@ async function prevuci(odRijeci, naPrazninu) {
   return true;
 }
 
-// pogrešna riječ na prvu prazninu
+// pogrešna riječ se sada PRIHVATA — provjera dolazi tek na kraju
 await prevuci(trazene[1], 0);
-const poslijeGreske = await okvir.evaluate(() => ({
+const poslijePogresne = await okvir.evaluate(() => ({
   poruka: document.getElementById("poruka").textContent,
-  tacnih: document.querySelectorAll(".praznina.tacna").length,
+  tekstPrve: document.querySelector(".praznina").textContent,
+  popunjenih: document.querySelectorAll(".praznina.popunjena").length,
+  oznacenih: document.querySelectorAll(".praznina.netacna").length,
+  provjeriZakljucano: document.getElementById("provjeri").disabled,
 }));
-provjeri("pogrešna riječ se ne prihvata i javlja se poruka", poslijeGreske.tacnih === 0 && /drugo mjesto/.test(poslijeGreske.poruka), JSON.stringify(poslijeGreske));
+provjeri("pogrešna riječ se prihvata i ostaje u praznini",
+  poslijePogresne.tekstPrve === trazene[1] && poslijePogresne.popunjenih === 1 && poslijePogresne.oznacenih === 0,
+  JSON.stringify(poslijePogresne));
+provjeri("dugme Provjeri je zaključano dok sve nije popunjeno", poslijePogresne.provjeriZakljucano === true);
+
+// dodir na smještenu riječ vraća je među ponuđene
+const tackaPrve = await tacka(".praznina", 0);
+await page.mouse.click(tackaPrve.x, tackaPrve.y);
+await new Promise(r => setTimeout(r, 150));
+const poslijeVracanja = await okvir.evaluate(() => ({
+  tekstPrve: document.querySelector(".praznina").textContent,
+  popunjenih: document.querySelectorAll(".praznina.popunjena").length,
+  brojac: document.getElementById("brojac").textContent,
+}));
+provjeri("dodir na smještenu riječ vraća je u ponudu",
+  poslijeVracanja.tekstPrve === "?" && poslijeVracanja.popunjenih === 0,
+  JSON.stringify(poslijeVracanja));
 
 // tačna riječ prevlačenjem
 await prevuci(trazene[0], 0);
 const poslijeTacne = await okvir.evaluate(() => ({
-  tacnih: document.querySelectorAll(".praznina.tacna").length,
+  popunjenih: document.querySelectorAll(".praznina.popunjena").length,
+  zelenih: document.querySelectorAll(".praznina.tacna").length,
   brojac: document.getElementById("brojac").textContent,
   tekstPrve: document.querySelector(".praznina").textContent,
 }));
-provjeri("tačna riječ prevlačenjem sjeda na mjesto", poslijeTacne.tacnih === 1 && poslijeTacne.tekstPrve === trazene[0], JSON.stringify(poslijeTacne));
-provjeri("brojač prati napredak", poslijeTacne.brojac === `1 od ${trazene.length}`, poslijeTacne.brojac);
+provjeri("riječ prevlačenjem sjeda na mjesto", poslijeTacne.popunjenih === 1 && poslijeTacne.tekstPrve === trazene[0], JSON.stringify(poslijeTacne));
+provjeri("prije provjere nema zelenih oznaka", poslijeTacne.zelenih === 0, `${poslijeTacne.zelenih}`);
+provjeri("brojač prati popunjenost", poslijeTacne.brojac === `1 od ${trazene.length}`, poslijeTacne.brojac);
 
 // način „dodirni riječ pa prazninu"
 const iDruge = await indeksRijeci(trazene[1]);
@@ -173,25 +195,71 @@ provjeri("dodir na riječ je označi", izabrana === 1);
 const tackaPraznine = await tacka(".praznina", 1);
 await page.mouse.click(tackaPraznine.x, tackaPraznine.y);
 await new Promise(r => setTimeout(r, 150));
-provjeri("dodir na prazninu smješta označenu riječ", (await okvir.evaluate(() => document.querySelectorAll(".praznina.tacna").length)) === 2);
+provjeri("dodir na prazninu smješta označenu riječ",
+  (await okvir.evaluate(() => document.querySelectorAll(".praznina.popunjena").length)) === 2);
 
-// dugme „Pomozi mi"
+// dugme „Pomozi mi" rješava jednu prazninu odmah i zeleno
 await okvir.click("#pomoc");
 await new Promise(r => setTimeout(r, 150));
-provjeri("dugme Pomozi mi popuni jednu prazninu", (await okvir.evaluate(() => document.querySelectorAll(".praznina.tacna").length)) === 3);
+provjeri("dugme Pomozi mi riješi jednu prazninu",
+  (await okvir.evaluate(() => document.querySelectorAll(".praznina.tacna").length)) === 1);
 
-// ostatak prevlačenjem
+// ostatak popunjavamo, ali dvije riječi namjerno zamijenimo
+const zamjena = { [trazene.length - 2]: trazene[trazene.length - 1], [trazene.length - 1]: trazene[trazene.length - 2] };
 for (let i = 3; i < trazene.length; i++) {
+  await prevuci(zamjena[i] ?? trazene[i], i);
+}
+const prijeProvjere = await okvir.evaluate(() => ({
+  brojac: document.getElementById("brojac").textContent,
+  provjeriZakljucano: document.getElementById("provjeri").disabled,
+  krajVidljiv: !document.getElementById("kraj").hasAttribute("hidden"),
+}));
+provjeri("kad je sve popunjeno, Provjeri se otključa", prijeProvjere.provjeriZakljucano === false, JSON.stringify(prijeProvjere));
+provjeri("panel kraja se ne pojavljuje sam od sebe", prijeProvjere.krajVidljiv === false);
+provjeri("brojač pokazuje da je sve popunjeno", prijeProvjere.brojac === `${trazene.length} od ${trazene.length}`, prijeProvjere.brojac);
+provjeri("događaj 'kraj' još nije poslan",
+  (await page.evaluate(() => window.__poruke.filter(p => p.dogadjaj === "kraj").length)) === 0);
+
+// prva provjera: dvije riječi su zamijenjene
+await okvir.click("#provjeri");
+await new Promise(r => setTimeout(r, 250));
+const prvaProvjera = await okvir.evaluate(() => ({
+  zelenih: document.querySelectorAll(".praznina.tacna").length,
+  crvenih: document.querySelectorAll(".praznina.netacna").length,
+  poruka: document.getElementById("poruka").textContent,
+  krajVidljiv: !document.getElementById("kraj").hasAttribute("hidden"),
+}));
+provjeri("provjera oboji tačne zeleno, a pogrešne crveno",
+  prvaProvjera.zelenih === trazene.length - 2 && prvaProvjera.crvenih === 2, JSON.stringify(prvaProvjera));
+provjeri("poruka kaže koliko je tačno",
+  prvaProvjera.poruka.includes(`${trazene.length - 2} od ${trazene.length}`), prvaProvjera.poruka);
+provjeri("vježba se ne završava dok ima grešaka", prvaProvjera.krajVidljiv === false);
+
+// ispravljanje: vrati dvije pogrešne pa ih smjesti kako treba
+for (const i of [trazene.length - 2, trazene.length - 1]) {
+  const t = await tacka(".praznina", i);
+  await page.mouse.click(t.x, t.y);
+  await new Promise(r => setTimeout(r, 120));
+}
+provjeri("vraćanjem pogrešnih nestaju crvene oznake",
+  (await okvir.evaluate(() => document.querySelectorAll(".praznina.netacna").length)) === 0);
+for (const i of [trazene.length - 2, trazene.length - 1]) {
   await prevuci(trazene[i], i);
 }
+await okvir.click("#provjeri");
+await new Promise(r => setTimeout(r, 300));
+
 const kraj = await okvir.evaluate(() => ({
   tacnih: document.querySelectorAll(".praznina.tacna").length,
   brojac: document.getElementById("brojac").textContent,
   krajVidljiv: !document.getElementById("kraj").hasAttribute("hidden"),
+  krajOpis: document.getElementById("kraj-opis").textContent,
   ponudaPrazna: !document.getElementById("ponuda-prazna").hasAttribute("hidden"),
 }));
 provjeri("sve praznine tačno popunjene", kraj.tacnih === trazene.length, JSON.stringify(kraj));
 provjeri("panel kraja prikazan", kraj.krajVidljiv);
+provjeri("panel kraja kaže koliko je bilo tačno iz prve",
+  kraj.krajOpis.includes(`Iz prve tačno: ${trazene.length - 2} od ${trazene.length}`), kraj.krajOpis);
 provjeri("ponuda riječi je prazna na kraju", kraj.ponudaPrazna);
 
 const poruke = await page.evaluate(() => window.__poruke);
@@ -204,7 +272,9 @@ provjeri("događaj 'kraj' nosi tražena polja", krajevi[0]
   && typeof krajevi[0].sekunde === "number"
   && typeof krajevi[0].greske === "number"
   && typeof krajevi[0].pomoc === "number", JSON.stringify(krajevi[0]));
-provjeri("greška i pomoć su izbrojane", krajevi[0]?.greske === 1 && krajevi[0]?.pomoc === 1, JSON.stringify({ greske: krajevi[0]?.greske, pomoc: krajevi[0]?.pomoc }));
+provjeri("greške, pomoć i broj provjera su izbrojani",
+  krajevi[0]?.greske === 2 && krajevi[0]?.pomoc === 1 && krajevi[0]?.provjere === 2
+  && krajevi[0]?.tacnoIzPrve === trazene.length - 2, JSON.stringify(krajevi[0]));
 provjeri("događaj 'rijec' po svakoj tačnoj riječi", poruke.filter(p => p.dogadjaj === "rijec").length === trazene.length);
 provjeri("događaj 'visina' poslan", poruke.some(p => p.dogadjaj === "visina"));
 provjeri("nema grešaka u konzoli tokom igre", greske.length === 0, greske.join(" | "));
@@ -237,7 +307,7 @@ const oznacena = await page2.evaluate(() => document.querySelectorAll(".rijec.iz
 provjeri("Enter na riječi je označi", oznacena === 1, JSON.stringify(prvaRijec));
 await page2.evaluate(() => document.querySelector(".praznina").focus());
 await page2.keyboard.press("Enter");
-provjeri("Enter na praznini smješta riječ", (await page2.evaluate(() => document.querySelectorAll(".praznina.tacna").length)) === 1);
+provjeri("Enter na praznini smješta riječ", (await page2.evaluate(() => document.querySelectorAll(".praznina.popunjena").length)) === 1);
 await page2.close();
 
 // ── 4. Kontrast (WCAG AA ≥ 4,5:1) ────────────────────────────────────────

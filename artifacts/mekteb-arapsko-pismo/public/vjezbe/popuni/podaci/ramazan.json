@@ -1,7 +1,10 @@
 {
   "id": "ramazan-popuni-01",
   "naslov": "Dan u ramazanu",
-  "uputa": "Pročitaj priču i prevuci riječi na prazna mjesta.",
+  "uputa": "Pročitaj priču i prevuci riječi na prazna mjesta. Kad popuniš sve, klikni „Provjeri\".",
   "tekst": "Mjesec u kojem muslimani poste zove se {ramazan}. Prije zore ustajemo na {sehur} i tada jedemo i pijemo.\n\nCijeli dan postimo. Kad zađe sunce, uči se {akšam} i tada se postač {iftari}. U ramazanskim noćima klanja se i {teravija}.\n\nNa kraju ramazana dolazi {Bajram}, dan radosti i posjeta.",
-  "dodatne": ["zima", "utakmica"]
+  "dodatne": [
+    "zima",
+    "utakmica"
+  ]
 }
