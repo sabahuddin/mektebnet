@@ -67,7 +67,6 @@ import {
   getStaticVjezbaSourceLimit,
 } from "../lib/static-vjezba-source.js";
 import { STATIC_VJEZBE, getStaticVjezba } from "../lib/static-vjezbe.js";
-import { OSMOSMJERKA_MARKER, getOsmosmjerka, osmosmjerkaMarker, osmosmjerkaUrl } from "../lib/osmosmjerke.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -678,58 +677,6 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
   return;
 });
 
-// POST /api/admin/prilozi/:lekcijaId/osmosmjerka — dodaj VLASTITU vježbu
-// (osmosmjerka) ispod lekcije. Za razliku od embed vježbi, izvor je na našoj
-// domeni: statički HTML iz `public/vjezbe/osmosmjerka/` koji čita JSON iz
-// `podaci/`. Nova osmosmjerka = nova JSON datoteka, bez izmjene koda.
-//
-// Prilog se upisuje kao kind="embed" da bi koristio postojeći put (popup u
-// lekciji + POST /api/content/embed/zavrseno + anti-double-claim). Razlika je
-// `stored_name` = "osmosmjerka:<id>": po tom markeru frontend zna da je vježba
-// naša, pa dugme "Završi vježbu" otključava tek kad igra javi da su sve riječi
-// pronađene (poruka "kraj" s iste domene).
-router.post("/prilozi/:lekcijaId/osmosmjerka", async (req, res) => {
-  try {
-    const lekcijaId = parseInt(req.params.lekcijaId);
-    if (isNaN(lekcijaId)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
-    const { osmosmjerkaId, label, hasanatReward } = (req.body || {}) as {
-      osmosmjerkaId?: string;
-      label?: string;
-      hasanatReward?: number;
-    };
-    const osmosmjerka = typeof osmosmjerkaId === "string" ? await getOsmosmjerka(osmosmjerkaId) : null;
-    if (!osmosmjerka) {
-      return res.status(400).json({ error: "Odaberi osmosmjerku sa spiska" });
-    }
-    const [exists] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
-    if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
-
-    const displayName = (label && label.trim()) || `Osmosmjerka: ${osmosmjerka.naslov}`;
-    const uploaderRole = req.user?.role ?? "muallim";
-    const uploaderUserId = req.user?.userId ?? null;
-    const redoslijed = await nextPrilogRedoslijed(lekcijaId);
-    const [inserted] = await db.insert(prilozi).values({
-      lekcijaId,
-      redoslijed,
-      originalName: displayName.slice(0, 200),
-      storedName: osmosmjerkaMarker(osmosmjerka.id),
-      fileSize: 0,
-      mimeType: "text/embed",
-      kind: "embed",
-      externalUrl: osmosmjerkaUrl(osmosmjerka.id),
-      approved: uploaderRole === "admin",
-      uploadedByRole: uploaderRole,
-      uploadedByUserId: uploaderUserId,
-      hasanatReward: normalizeEmbedReward(hasanatReward),
-    }).returning();
-    res.json(inserted);
-  } catch (e: any) {
-    console.error("[POST /prilozi/:lekcijaId/osmosmjerka] failed:", e?.message);
-    res.status(500).json({ error: e.message });
-  }
-  return;
-});
-
 // PUT /api/admin/prilozi/:lekcijaId/redoslijed — trajno preuredi nastavne
 // materijale (file/url) unutar jedne lekcije.
 router.put("/prilozi/:lekcijaId/redoslijed", async (req, res) => {
@@ -819,10 +766,6 @@ router.put("/prilozi/:id", async (req, res) => {
         });
       }
       updates.externalUrl = src;
-      // Ako je prilog ranije bio naša osmosmjerka, a sada pokazuje na vanjski
-      // izvor, marker mora otpasti — inače bi lekcija i dalje čekala poruku
-      // "kraj" koju vanjska vježba nikad ne šalje, pa dugme ostaje zaključano.
-      if (existing.storedName?.startsWith(OSMOSMJERKA_MARKER)) updates.storedName = "";
     }
 
     if (Object.keys(updates).length === 0) {

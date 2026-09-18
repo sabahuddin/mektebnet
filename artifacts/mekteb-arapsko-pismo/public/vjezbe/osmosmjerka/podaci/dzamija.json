@@ -1,0 +1,21 @@
+{
+  "id": "dzamija-i-mekteb-01",
+  "naslov": "U džamiji i mektebu",
+  "uputa": "Pronađi skrivene riječi. Povuci prstom preko slova ili dodirni prvo, pa zadnje slovo riječi.",
+  "velicina": 10,
+  "tezina": "lako",
+  "prikaz": "rijeci",
+  "dvoslovi": true,
+  "rijeci": [
+    { "rijec": "namaz",   "opis": "Molitva koju muslimani obavljaju pet puta dnevno." },
+    { "rijec": "abdest",  "opis": "Pranje kojim se pripremamo za namaz." },
+    { "rijec": "džamija", "opis": "Kuća u kojoj muslimani zajedno klanjaju." },
+    { "rijec": "munara",  "opis": "Visoki toranj uz džamiju s kojeg se uči ezan." },
+    { "rijec": "ezan",    "opis": "Poziv na namaz." },
+    { "rijec": "mihrab",  "opis": "Mjesto u džamiji na kojem stoji imam dok predvodi namaz." },
+    { "rijec": "imam",    "opis": "Predvodi džematlije u namazu." },
+    { "rijec": "džemat",  "opis": "Zajednica ljudi koji zajedno klanjaju." },
+    { "rijec": "Kur'an",  "opis": "Allahova knjiga objavljena Muhammedu, a.s." },
+    { "rijec": "mekteb",  "opis": "Mjesto gdje djeca uče o svojoj vjeri." }
+  ]
+}
