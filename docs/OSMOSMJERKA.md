@@ -1,13 +1,25 @@
 # Osmosmjerka — naša vježba ispod lekcije
 
 Osmosmjerka je prva vježba koju platforma servira sama, bez LearningAppsa,
-Wordwalla i H5P-a. Jedan statički HTML fajl čita sadržaj iz JSON datoteke:
-**nova osmosmjerka znači samo novu JSON datoteku**, bez ijedne izmjene koda.
+Wordwalla i H5P-a. Jedan statički HTML fajl čita sadržaj iz JSON-a, a
+**novu osmosmjerku admin pravi sam, u panelu** — bez izmjene koda i bez deploya.
+Osmosmjerke koje idu uz kod i dalje mogu biti JSON datoteke u repozitoriju.
 
 Igra ne šalje nijedan zahtjev prema vanjskim domenama i ne postavlja kolačiće.
 Font Nunito učitava se s našeg servera (`public/fonts/nunito-*.woff2`, SIL OFL).
 
-## Kako dodati novu osmosmjerku (5 koraka)
+## Kako napraviti novu osmosmjerku (iz admin panela)
+
+**Admin panel → Vježbe → Naše vježbe → Nova vježba** (kod „Osmosmjerka").
+Upiši naslov, odaberi težinu i šta se prikazuje na spisku (riječi ili opise),
+pa dodaj riječi (i opise, ako se prikazuju opisi). **Sačuvaj** — ispod se odmah
+otvori pregled. Vježba se čuva u bazi i dostupna je u lekciji bez deploya.
+
+Ugrađene osmosmjerke stoje u istom spisku; izmjena ih prekriva, a **Obriši**
+vraća ugrađenu verziju. **Kopiraj** pravi novu od postojeće.
+
+## Kako dodati novu osmosmjerku kao datoteku uz kod (5 koraka)
+
 
 1. Napravi datoteku `artifacts/mekteb-arapsko-pismo/public/vjezbe/osmosmjerka/podaci/<ime>.json`
    (ime smije imati samo mala slova, cifre i crticu — to je ujedno ID vježbe).
@@ -60,7 +72,8 @@ za embed vježbe.
 | `public/vjezbe/osmosmjerka/osmosmjerka.html` | cijela igra: mreža, potezi, tastatura, događaji |
 | `public/vjezbe/osmosmjerka/podaci/*.json` | sadržaj pojedine osmosmjerke |
 | `public/fonts/nunito-latin*.woff2` | font platforme, lokalno (bez Google Fontsa) |
-| `api-server/src/lib/nase-vjezbe.ts` | zajednički registar naših vježbi (čita foldere, provjerava ID, gradi URL) |
+| `api-server/src/lib/nase-vjezbe.ts` | zajednički registar (ugrađene datoteke + tabela `nase_vjezbe`), provjera sadržaja, URL |
+| `src/pages/admin-nase-vjezbe.tsx` | uređivač u admin panelu (kartica „Naše vježbe") |
 | `api-server/src/lib/osmosmjerke.ts` | tanak sloj nad registrom, za ranije pozive |
 | `api-server/src/routes/nase-vjezbe.ts` | `GET /api/nase-vjezbe` — vrste i njihove vježbe za admin formu |
 | `api-server/src/routes/admin.ts` | `POST /api/admin/prilozi/:lekcijaId/nasa-vjezba` |

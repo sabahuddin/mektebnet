@@ -21,7 +21,7 @@ test("ID osmosmjerke prima samo mala slova, cifre i crticu", () => {
 test("URL vježbe ostaje na našoj domeni i nosi putanju do JSON-a", () => {
   assert.equal(
     osmosmjerkaUrl("ramazan"),
-    "/vjezbe/osmosmjerka/osmosmjerka.html?podaci=/vjezbe/osmosmjerka/podaci/ramazan.json",
+    "/vjezbe/osmosmjerka/osmosmjerka.html?podaci=/api/nase-vjezbe/podaci/osmosmjerka/ramazan.json",
   );
   assert.throws(() => osmosmjerkaUrl("../tajna"), /Nevažeći ID/);
 });

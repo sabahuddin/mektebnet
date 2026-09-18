@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
+import AdminNaseVjezbe from "./admin-nase-vjezbe";
 import { 
   ArrowLeft, Search, Loader2, Save, RotateCcw, 
   Check, FileCode2, Eye, FileEdit, AlertTriangle, 
@@ -44,6 +45,10 @@ export default function AdminVjezbePage() {
   const [sourceSearch, setSourceSearch] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [previewKey, setPreviewKey] = useState(0);
+
+  // Kartica "Naše vježbe" (osmosmjerka, popuni prazninu) stoji uz postojeće
+  // etapne vježbe: iste su vrste posla, pa ih admin traži na istom mjestu.
+  const [kartica, setKartica] = useState<"nase" | "etapne">("nase");
 
   const [advancedMode, setAdvancedMode] = useState(false);
   const [findText, setFindText] = useState("");
@@ -195,11 +200,32 @@ export default function AdminVjezbePage() {
                 <FileCode2 className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-extrabold text-foreground">{t("Statičke vježbe")}</h1>
-                <p className="text-muted-foreground text-base">{t("Uređivanje izvornog koda statičkih vježbi")}</p>
+                <h1 className="text-2xl font-extrabold text-foreground">{t("Vježbe")}</h1>
+                <p className="text-muted-foreground text-base">{t("Naše vježbe i izvorni kod etapnih vježbi")}</p>
               </div>
             </div>
 
+            <div className="inline-flex bg-muted rounded-xl p-1 mb-6 self-start">
+              <button
+                onClick={() => setKartica("nase")}
+                className={`px-4 py-2.5 min-h-11 rounded-lg font-bold text-sm ${kartica === "nase" ? "bg-white shadow-sm text-teal-700" : "text-muted-foreground"}`}
+                data-testid="kartica-nase-vjezbe"
+              >
+                {t("Naše vježbe")}
+              </button>
+              <button
+                onClick={() => setKartica("etapne")}
+                className={`px-4 py-2.5 min-h-11 rounded-lg font-bold text-sm ${kartica === "etapne" ? "bg-white shadow-sm text-emerald-700" : "text-muted-foreground"}`}
+                data-testid="kartica-etapne-vjezbe"
+              >
+                {t("Etapne vježbe (HTML)")}
+              </button>
+            </div>
+
+            {kartica === "nase" && <AdminNaseVjezbe />}
+
+            {kartica === "etapne" && (
+            <>
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -257,6 +283,8 @@ export default function AdminVjezbePage() {
                   </button>
                 ))}
               </div>
+            )}
+            </>
             )}
           </>
         ) : (

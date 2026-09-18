@@ -3,12 +3,17 @@ import { test } from "node:test";
 import {
   NASE_VJEZBE_PREFIKSI,
   TIPOVI_VJEZBI,
+  citajPodatke,
   getVjezba,
   isValidTip,
   isValidVjezbaId,
   jeNasaVjezba,
   listSveVjezbe,
   listVjezbe,
+  obrisiVjezbu,
+  slobodanId,
+  spremiVjezbu,
+  validirajPodatke,
   vjezbaMarker,
   vjezbaUrl,
 } from "./nase-vjezbe.js";
@@ -33,11 +38,11 @@ test("ID vježbe prima samo mala slova, cifre i crticu", () => {
 test("URL i marker vježbe ostaju na našoj domeni", () => {
   assert.equal(
     vjezbaUrl("popuni", "abdest"),
-    "/vjezbe/popuni/popuni.html?podaci=/vjezbe/popuni/podaci/abdest.json",
+    "/vjezbe/popuni/popuni.html?podaci=/api/nase-vjezbe/podaci/popuni/abdest.json",
   );
   assert.equal(
     vjezbaUrl("osmosmjerka", "ramazan"),
-    "/vjezbe/osmosmjerka/osmosmjerka.html?podaci=/vjezbe/osmosmjerka/podaci/ramazan.json",
+    "/vjezbe/osmosmjerka/osmosmjerka.html?podaci=/api/nase-vjezbe/podaci/osmosmjerka/ramazan.json",
   );
   assert.equal(vjezbaMarker("popuni", "abdest"), "popuni:abdest");
   assert.throws(() => vjezbaUrl("popuni", "../tajna"), /Nevažeći ID/);
@@ -74,9 +79,9 @@ test("vježba popuni prazninu ima izbrojane praznine u detalju", async () => {
   const abdest = await getVjezba("popuni", "abdest");
   assert.ok(abdest, "abdest.json mora postojati");
   assert.match(abdest!.naslov, /abdest/i, abdest!.naslov);
-  assert.match(abdest!.detalj, /^\d+ praznina/, abdest!.detalj);
+  assert.match(abdest!.detalj, /^\d+ praznin/, abdest!.detalj);
   const ramazan = await getVjezba("popuni", "ramazan");
-  assert.match(ramazan!.detalj, /^\d+ praznina · \d+ dodatnih riječi/, ramazan!.detalj);
+  assert.match(ramazan!.detalj, /^\d+ praznin\S* · \d+ dodatn\S* riječ\S*/, ramazan!.detalj);
   assert.equal(await getVjezba("popuni", "ne-postoji"), null);
   assert.equal(await getVjezba("popuni", "../../../etc/passwd"), null);
 });
@@ -88,4 +93,64 @@ test("jedan poziv vraća sve vrste sa svojim vježbama", async () => {
     assert.ok(tv.naziv.length > 0, tv.tip);
     assert.ok(tv.vjezbe.every(v => v.tip === tv.tip), `${tv.tip}: vježbe nose svoju vrstu`);
   }
+});
+
+test("provjera sadržaja odbija nepotpune vježbe i prihvata ispravne", () => {
+  assert.match(String(validirajPodatke("popuni", { naslov: "" })), /naslov/i);
+  assert.match(String(validirajPodatke("popuni", { naslov: "Bez praznina", tekst: "Nema ništa." })), /praznin/i);
+  assert.equal(validirajPodatke("popuni", { naslov: "Dobra", tekst: "Uzimamo {abdest}." }), null);
+
+  assert.match(String(validirajPodatke("osmosmjerka", { naslov: "Malo riječi", rijeci: [{ rijec: "ezan" }] })), /dvije riječi/i);
+  assert.match(String(validirajPodatke("osmosmjerka", {
+    naslov: "Bez opisa", prikaz: "opisi",
+    rijeci: [{ rijec: "ezan" }, { rijec: "namaz" }],
+  })), /opis/i);
+  assert.equal(validirajPodatke("osmosmjerka", {
+    naslov: "Dobra", rijeci: [{ rijec: "ezan", opis: "Poziv na namaz." }, { rijec: "namaz", opis: "Molitva." }],
+  }), null);
+  assert.match(String(validirajPodatke("nepostojeci", { naslov: "X" })), /vrsta/i);
+});
+
+test("vježba iz panela se upiše, pročita, prekrije ugrađenu i obriše", async () => {
+  const id = `test-panel-${Date.now()}`.slice(0, 60).toLowerCase();
+  try {
+    assert.equal(await slobodanId("popuni", id), true);
+    const spremljeno = await spremiVjezbu("popuni", id, {
+      naslov: "Test iz panela",
+      tekst: "Prije namaza uzimamo {abdest}.",
+      dodatne: ["sanke"],
+    }, null);
+    assert.equal(spremljeno.izvor, "vlastita");
+    assert.match(spremljeno.detalj, /^1 praznina/);
+    assert.equal(await slobodanId("popuni", id), false);
+
+    const procitano = await citajPodatke("popuni", id);
+    assert.equal(procitano?.izvor, "vlastita");
+    assert.equal((procitano?.podaci as { id?: string }).id, id, "sadržaj nosi svoju oznaku");
+
+    const uSpisku = (await listVjezbe("popuni")).find(v => v.id === id);
+    assert.ok(uSpisku, "vježba je u spisku");
+  } finally {
+    await obrisiVjezbu("popuni", id);
+  }
+  assert.equal(await citajPodatke("popuni", id), null, "poslije brisanja je nema");
+});
+
+test("izmjena ugrađene vježbe prekrije datoteku, brisanje je vrati", async () => {
+  const ugradjena = await citajPodatke("popuni", "abdest");
+  assert.equal(ugradjena?.izvor, "ugradjena");
+  try {
+    await spremiVjezbu("popuni", "abdest", {
+      naslov: "Izmijenjeni abdest",
+      tekst: "Samo {jedna} praznina.",
+    }, null);
+    const poslije = await citajPodatke("popuni", "abdest");
+    assert.equal(poslije?.izvor, "vlastita");
+    assert.equal((poslije?.podaci as { naslov?: string }).naslov, "Izmijenjeni abdest");
+  } finally {
+    await obrisiVjezbu("popuni", "abdest");
+  }
+  const vraceno = await citajPodatke("popuni", "abdest");
+  assert.equal(vraceno?.izvor, "ugradjena", "brisanje vraća ugrađenu verziju");
+  assert.equal((vraceno?.podaci as { naslov?: string }).naslov, (ugradjena?.podaci as { naslov?: string }).naslov);
 });
