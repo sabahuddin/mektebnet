@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -137,6 +137,7 @@ interface RoditeljVeza {
   username: string;
   status: string;
   approvedAt: string | null;
+  canDeleteAccount?: boolean;
 }
 
 interface RoditeljPretraga {
@@ -213,6 +214,7 @@ export default function UcenikPage() {
   const [pretragaRoditelja, setPretragaRoditelja] = useState(false);
   const [linkujemPostojeceg, setLinkujemPostojeceg] = useState(false);
   const [uklaniRoditeljId, setUklaniRoditeljId] = useState<number | null>(null);
+  const [briseRoditeljId, setBriseRoditeljId] = useState<number | null>(null);
 
   // Pregled zadaća ovog učenika (read-only). Dodavanje ide iz Muallim → Zadaća.
   const [zadace, setZadace] = useState<ZadacaPregled[]>([]);
@@ -387,6 +389,7 @@ export default function UcenikPage() {
         username: created.username,
         status: "approved",
         approvedAt: new Date().toISOString(),
+        canDeleteAccount: true,
       }]);
       setNovoRoditeljIme("");
       toast({ title: t("Roditelj kreiran!"), description: t("Proslijedi kredencijale roditelju.") });
@@ -469,6 +472,40 @@ export default function UcenikPage() {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće ukloniti roditelja"), variant: "destructive" });
     } finally {
       setUklaniRoditeljId(null);
+    }
+  }
+
+  async function izbrisiRoditeljskiNalog(roditelj: RoditeljVeza) {
+    if (!token || !id) return;
+    const potvrda = window.confirm(
+      t("Trajno izbrisati račun roditelja {ime} (@{korisnik})? Ova radnja se ne može poništiti.", {
+        ime: roditelj.displayName,
+        korisnik: roditelj.username,
+      }),
+    );
+    if (!potvrda) return;
+
+    setBriseRoditeljId(roditelj.id);
+    try {
+      await apiRequest(
+        "DELETE",
+        `/muallim/ucenici/${parseInt(id)}/roditelji/${roditelj.id}/nalog`,
+        undefined,
+        token,
+      );
+      setRoditelji(prev => prev.filter(r => r.id !== roditelj.id));
+      toast({
+        title: t("Roditeljski račun izbrisan"),
+        description: t("Račun i njegova veza s učenikom trajno su uklonjeni."),
+      });
+    } catch (e: any) {
+      toast({
+        title: t("Greška"),
+        description: e?.message || t("Nije moguće izbrisati roditeljski račun"),
+        variant: "destructive",
+      });
+    } finally {
+      setBriseRoditeljId(null);
     }
   }
 
@@ -1326,6 +1363,22 @@ export default function UcenikPage() {
                                     {uklaniRoditeljId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
                                     {t("Ukloni")}
                                   </Button>
+                                  {r.canDeleteAccount && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => izbrisiRoditeljskiNalog(r)}
+                                      disabled={briseRoditeljId === r.id}
+                                      className="rounded-xl text-xs font-bold flex items-center gap-1.5 h-8 px-3 text-red-700 border-red-300 hover:bg-red-100 hover:text-red-800"
+                                      title={t("Trajno izbriši roditeljski račun")}
+                                      data-testid={`btn-izbrisi-roditelja-${r.id}`}
+                                    >
+                                      {briseRoditeljId === r.id
+                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        : <Trash2 className="w-3.5 h-3.5" />}
+                                      {t("Izbriši račun")}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                               {resetRoditeljPass?.id === r.id && (

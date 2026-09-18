@@ -34,8 +34,9 @@ import {
   medaljoniTable,
   etapaPolaganjaTable,
   etapaPokusajOdobrenjaTable,
+  pushTokensTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
+import { eq, and, or, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
@@ -2200,13 +2201,29 @@ router.get("/ucenici/:id/roditelji", async (req, res) => {
         username: usersTable.username,
         status: roditeljUcenikTable.status,
         approvedAt: roditeljUcenikTable.approvedAt,
+        approvedBy: roditeljUcenikTable.approvedBy,
       })
       .from(roditeljUcenikTable)
       .innerJoin(usersTable, eq(usersTable.id, roditeljUcenikTable.roditeljId))
       .where(eq(roditeljUcenikTable.ucenikId, ucenikId))
       .orderBy(asc(roditeljUcenikTable.id));
 
-    res.json(veze);
+    const brojVeza = veze.length > 0
+      ? await db
+          .select({
+            roditeljId: roditeljUcenikTable.roditeljId,
+            broj: count(),
+          })
+          .from(roditeljUcenikTable)
+          .where(inArray(roditeljUcenikTable.roditeljId, veze.map((veza) => veza.id)))
+          .groupBy(roditeljUcenikTable.roditeljId)
+      : [];
+    const brojVezaPoRoditelju = new Map(brojVeza.map((red) => [red.roditeljId, Number(red.broj)]));
+
+    res.json(veze.map(({ approvedBy, ...veza }) => ({
+      ...veza,
+      canDeleteAccount: approvedBy === muallimId && brojVezaPoRoditelju.get(veza.id) === 1,
+    })));
   } catch (err) {
     console.error("[GET /muallim/ucenici/:id/roditelji]", err);
     res.status(500).json({ error: "Greška servera" });
@@ -2419,6 +2436,77 @@ router.delete("/ucenici/:ucenikId/roditelji/:roditeljId", async (req, res) => {
   } catch (err) {
     console.error("[DELETE /muallim/ucenici/:ucenikId/roditelji/:roditeljId]", err);
     res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// DELETE /api/muallim/ucenici/:ucenikId/roditelji/:roditeljId/nalog
+// Trajno briše roditeljski račun samo kada ga je trenutni muallim dodao/odobrio
+// i račun nije povezan ni sa jednim drugim učenikom.
+router.delete("/ucenici/:ucenikId/roditelji/:roditeljId/nalog", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.ucenikId);
+    const roditeljId = parseInt(req.params.roditeljId);
+    const muallimId = req.user!.userId;
+
+    if (!Number.isInteger(ucenikId) || !Number.isInteger(roditeljId)) {
+      res.status(400).json({ error: "Neispravan učenik ili roditelj" });
+      return;
+    }
+
+    const profil = await getManageableUcenikProfile(muallimId, ucenikId);
+    if (!profil) {
+      res.status(404).json({ error: "Učenik nije pronađen" });
+      return;
+    }
+
+    const [veza] = await db
+      .select({
+        approvedBy: roditeljUcenikTable.approvedBy,
+        role: usersTable.role,
+      })
+      .from(roditeljUcenikTable)
+      .innerJoin(usersTable, eq(usersTable.id, roditeljUcenikTable.roditeljId))
+      .where(and(
+        eq(roditeljUcenikTable.ucenikId, ucenikId),
+        eq(roditeljUcenikTable.roditeljId, roditeljId),
+      ));
+
+    if (!veza || veza.role !== "roditelj") {
+      res.status(404).json({ error: "Roditeljski račun nije pronađen" });
+      return;
+    }
+    if (veza.approvedBy !== muallimId) {
+      res.status(403).json({ error: "Samo muallim koji je dodao roditelja može izbrisati njegov račun" });
+      return;
+    }
+
+    const [ukupnoVeza] = await db
+      .select({ broj: count() })
+      .from(roditeljUcenikTable)
+      .where(eq(roditeljUcenikTable.roditeljId, roditeljId));
+    if (Number(ukupnoVeza?.broj ?? 0) !== 1) {
+      res.status(409).json({ error: "Račun je povezan s drugim djetetom. Možete ukloniti samo ovu vezu." });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(pushTokensTable).where(eq(pushTokensTable.userId, roditeljId));
+      await tx.delete(porukeTable).where(or(
+        eq(porukeTable.posiljateljId, roditeljId),
+        eq(porukeTable.primateljId, roditeljId),
+      ));
+      await tx.delete(roditeljUcenikTable).where(eq(roditeljUcenikTable.roditeljId, roditeljId));
+      await tx.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, roditeljId));
+      await tx.delete(usersTable).where(and(
+        eq(usersTable.id, roditeljId),
+        eq(usersTable.role, "roditelj"),
+      ));
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete parent account");
+    res.status(500).json({ error: "Nije moguće izbrisati roditeljski račun" });
   }
 });
 
