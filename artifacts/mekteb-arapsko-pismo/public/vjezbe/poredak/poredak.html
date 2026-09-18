@@ -419,7 +419,11 @@ body{
   }
 
   /* ---------- crtanje ---------- */
-  function nacrtaj() {
+  function nacrtaj(fokusId) {
+    // Spisak se iscrtava iznova, pa fokus vraćamo na stavku koja je dirnuta —
+    // inače bi dijete koje radi tastaturom ostalo bez fokusa.
+    var imaoFokus = document.activeElement && document.activeElement.classList
+      && document.activeElement.classList.contains('hvat');
     el.spisak.textContent = '';
     stanje.red.forEach(function (stavka, i) {
       var li = document.createElement('li');
@@ -462,6 +466,12 @@ body{
       li.appendChild(strelice);
       el.spisak.appendChild(li);
     });
+
+    if (fokusId && imaoFokus) {
+      var mjestoStavke = stanje.red.findIndex(function (s) { return s.id === fokusId; });
+      var novo = mjestoStavke >= 0 ? el.spisak.querySelector('.hvat[data-i="' + mjestoStavke + '"]') : null;
+      if (novo && !novo.disabled) novo.focus({ preventScroll: true });
+    }
   }
 
   /** Najbliže mjesto u zadatom smjeru koje nije zaključano. */
@@ -489,7 +499,7 @@ body{
   /* ---------- premještanje ---------- */
   function oznaci(id) {
     stanje.izabrana = id;
-    nacrtaj();
+    nacrtaj(id);
   }
 
   /**
@@ -505,7 +515,7 @@ body{
     a.netacna = false; b.netacna = false;
     stanje.izabrana = null;
     el.provjeri.disabled = false;
-    nacrtaj();
+    nacrtaj(a.id);
     poruci('Zamijenjeno: „' + a.tekst + '" i „' + b.tekst + '".');
     reci('Zamijenjeno.');
   }

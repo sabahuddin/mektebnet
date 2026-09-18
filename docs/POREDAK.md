@@ -96,3 +96,5 @@ i `docs/POPUNI-PRAZNINU.md`.
 | `kraj` | cijeli redoslijed tačan | `id`, `pronadjeno`, `ukupno`, `sekunde`, `greske`, `pomoc`, `provjere`, `tacnoIzPrve` |
 
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "poredak"`.
+
+Četvrta naša vježba, „Razvrstaj", radi po istom obrascu — vidi `docs/RAZVRSTAJ.md`.

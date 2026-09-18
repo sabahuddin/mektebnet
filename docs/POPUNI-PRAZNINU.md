@@ -111,3 +111,5 @@ Osmosmjerka radi po istom obrascu — vidi `docs/OSMOSMJERKA.md`.
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "popuni"`.
 
 Treća naša vježba, „Poredak", radi po istom obrascu — vidi `docs/POREDAK.md`.
+
+Četvrta naša vježba, „Razvrstaj", radi po istom obrascu — vidi `docs/RAZVRSTAJ.md`.

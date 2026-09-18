@@ -5,11 +5,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import {
   Loader2, Plus, Save, Trash2, Eye, Copy, ArrowLeft,
-  PencilRuler, Grid3x3, TextCursorInput, ListOrdered, AlertTriangle,
+  PencilRuler, Grid3x3, TextCursorInput, ListOrdered, Columns3, AlertTriangle,
 } from "lucide-react";
 
 /**
- * Uređivač naših vježbi (osmosmjerka, popuni prazninu, poredak) u admin panelu.
+ * Uređivač naših vježbi (osmosmjerka, popuni prazninu, poredak, razvrstaj)
+ * u admin panelu.
  *
  * Vježbe napravljene ovdje čuvaju se u bazi (`nase_vjezbe`) i odmah su
  * dostupne u lekciji, bez deploya. Ugrađene vježbe (JSON datoteke uz kod)
@@ -36,6 +37,9 @@ interface TipVjezbe {
 
 interface OsmosmjerkaRijec { rijec: string; opis: string }
 
+/** Jedna kutija u vježbi „Razvrstaj"; stavke su tekst, jedna po redu. */
+interface Kutija { naziv: string; stavke: string }
+
 interface Nacrt {
   tip: string;
   id: string;
@@ -53,6 +57,8 @@ interface Nacrt {
   dodatne: string;
   // poredak — jedna stavka po redu, tačnim redoslijedom
   stavke: string;
+  // razvrstaj — od dvije do pet kutija
+  kutije: Kutija[];
 }
 
 const PRAZAN_NACRT: Omit<Nacrt, "tip" | "id" | "noviUnos"> = {
@@ -66,6 +72,7 @@ const PRAZAN_NACRT: Omit<Nacrt, "tip" | "id" | "noviUnos"> = {
   tekst: "",
   dodatne: "",
   stavke: "",
+  kutije: [{ naziv: "", stavke: "" }, { naziv: "", stavke: "" }],
 };
 
 /** Oznaka vježbe iz naslova: „Dan u ramazanu" → „dan-u-ramazanu". */
@@ -102,6 +109,15 @@ function nacrtIzPodataka(tip: string, id: string, podaci: Record<string, unknown
     tekst: String(podaci.tekst ?? ""),
     dodatne: Array.isArray(podaci.dodatne) ? podaci.dodatne.join(", ") : "",
     stavke: Array.isArray(podaci.stavke) ? podaci.stavke.map(s => String(s)).join("\n") : "",
+    kutije: Array.isArray(podaci.kategorije) && podaci.kategorije.length
+      ? podaci.kategorije.map(k => {
+        const kat = (k ?? {}) as Record<string, unknown>;
+        return {
+          naziv: String(kat.naziv ?? ""),
+          stavke: Array.isArray(kat.stavke) ? kat.stavke.map(s => String(s)).join("\n") : "",
+        };
+      })
+      : [{ naziv: "", stavke: "" }, { naziv: "", stavke: "" }],
   };
 }
 
@@ -133,6 +149,16 @@ function podaciIzNacrta(n: Nacrt): Record<string, unknown> {
       stavke: stavkeIzTeksta(n.stavke),
     };
   }
+  if (n.tip === "razvrstaj") {
+    return {
+      id: n.id,
+      naslov: n.naslov.trim(),
+      uputa: n.uputa.trim() || undefined,
+      kategorije: n.kutije
+        .filter(k => k.naziv.trim() || k.stavke.trim())
+        .map(k => ({ naziv: k.naziv.trim(), stavke: stavkeIzTeksta(k.stavke) })),
+    };
+  }
   return {
     id: n.id,
     naslov: n.naslov.trim(),
@@ -146,6 +172,7 @@ function podaciIzNacrta(n: Nacrt): Record<string, unknown> {
 function IkonaVrste({ tip, className }: { tip: string; className?: string }) {
   if (tip === "osmosmjerka") return <Grid3x3 className={className} />;
   if (tip === "poredak") return <ListOrdered className={className} />;
+  if (tip === "razvrstaj") return <Columns3 className={className} />;
   return <TextCursorInput className={className} />;
 }
 
@@ -541,6 +568,67 @@ export default function AdminNaseVjezbe() {
               </button>
             </div>
           </>
+        ) : nacrt.tip === "razvrstaj" ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-bold">{t("Kutije")}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("Stavki ukupno:")}{" "}
+                <strong>{nacrt.kutije.reduce((zbir, k) => zbir + stavkeIzTeksta(k.stavke).length, 0)}</strong>
+              </span>
+            </div>
+            {nacrt.kutije.map((k, i) => (
+              <div key={i} className="rounded-2xl border border-border p-3 flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <input
+                    value={k.naziv}
+                    onChange={e => {
+                      const kutije = [...nacrt.kutije];
+                      kutije[i] = { ...kutije[i], naziv: e.target.value };
+                      setNacrt({ ...nacrt, kutije });
+                    }}
+                    placeholder={t("naziv kutije, npr. Hidžretski mjeseci")}
+                    className="flex-1 px-3 py-2.5 rounded-xl border border-border min-h-11 font-bold"
+                    data-testid={`kutija-naziv-${i}`}
+                  />
+                  <button
+                    onClick={() => setNacrt({ ...nacrt, kutije: nacrt.kutije.filter((_, x) => x !== i) })}
+                    disabled={nacrt.kutije.length <= 2}
+                    className="w-11 min-h-11 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center"
+                    aria-label={t("Obriši kutiju")}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                <textarea
+                  value={k.stavke}
+                  onChange={e => {
+                    const kutije = [...nacrt.kutije];
+                    kutije[i] = { ...kutije[i], stavke: e.target.value };
+                    setNacrt({ ...nacrt, kutije });
+                  }}
+                  rows={5}
+                  placeholder={"muharrem\nsafer\nramazan"}
+                  className="px-3 py-2.5 rounded-xl border border-border font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  data-testid={`kutija-stavke-${i}`}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {t("Stavki u ovoj kutiji:")} <strong>{stavkeIzTeksta(k.stavke).length}</strong>
+                </span>
+              </div>
+            ))}
+            <button
+              onClick={() => setNacrt({ ...nacrt, kutije: [...nacrt.kutije, { naziv: "", stavke: "" }] })}
+              disabled={nacrt.kutije.length >= 5}
+              className="self-start inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 min-h-11 font-bold hover:bg-muted disabled:opacity-40"
+              data-testid="dodaj-kutiju"
+            >
+              <Plus className="w-4 h-4" /> {t("Dodaj kutiju")}
+            </button>
+            <p className="text-xs text-muted-foreground">
+              {t("Od dvije do pet kutija, u svakoj jedna stavka po redu. Ista stavka ne smije stajati u dvije kutije. Vježba sve stavke izmiješa i ponudi djetetu.")}
+            </p>
+          </div>
         ) : nacrt.tip === "poredak" ? (
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center justify-between gap-2">

@@ -51,6 +51,12 @@ export const TIPOVI_VJEZBI: Record<string, TipVjezbe> = {
     opis: "Dijete slaže izmiješane stavke u tačan redoslijed.",
     html: "/vjezbe/poredak/poredak.html",
   },
+  razvrstaj: {
+    tip: "razvrstaj",
+    naziv: "Razvrstaj",
+    opis: "Dijete razvrstava pojmove u dvije do pet kutija.",
+    html: "/vjezbe/razvrstaj/razvrstaj.html",
+  },
 };
 
 /** Prefiksi po kojima stranica lekcije prepoznaje našu vježbu. */
@@ -178,6 +184,29 @@ export function validirajPodatke(tip: string, podaci: unknown): string | null {
     return null;
   }
 
+  if (tip === "razvrstaj") {
+    const kategorije = Array.isArray(p.kategorije) ? p.kategorije : null;
+    if (!kategorije || kategorije.length < 2) return "Razvrstavanje treba bar dvije kutije.";
+    if (kategorije.length > 5) return "Razvrstavanje može imati najviše pet kutija.";
+    const sveStavke = new Set<string>();
+    let ukupno = 0;
+    for (const k of kategorije) {
+      const kat = (k ?? {}) as Podaci;
+      if (typeof kat.naziv !== "string" || !kat.naziv.trim()) return "Svaka kutija treba naziv.";
+      const stavke = Array.isArray(kat.stavke) ? kat.stavke : null;
+      if (!stavke || stavke.length < 1) return `Kutija „${String(kat.naziv).trim()}" nema nijednu stavku.`;
+      for (const s of stavke) {
+        if (typeof s !== "string" || !s.trim()) return "Nijedna stavka ne smije biti prazna.";
+        const kljuc = s.trim().toLocaleLowerCase("bs");
+        if (sveStavke.has(kljuc)) return `Stavka „${s.trim()}" stoji u dvije kutije — dijete ne bi znalo gdje ide.`;
+        sveStavke.add(kljuc);
+        ukupno += 1;
+      }
+    }
+    if (ukupno > 40) return "Razvrstavanje može imati najviše četrdeset stavki.";
+    return null;
+  }
+
   if (tip === "poredak") {
     const stavke = Array.isArray(p.stavke) ? p.stavke : null;
     if (!stavke || stavke.length < 2) return "Poredak treba bar dvije stavke.";
@@ -228,6 +257,13 @@ function sazetak(tip: string, id: string, podaci: Podaci, izvor: IzvorVjezbe, up
   } else if (tip === "poredak") {
     const stavke = Array.isArray(podaci.stavke) ? podaci.stavke : [];
     detalj = mnozina(stavke.length, "stavka", "stavke", "stavki");
+  } else if (tip === "razvrstaj") {
+    const kategorije = Array.isArray(podaci.kategorije) ? podaci.kategorije : [];
+    const stavki = kategorije.reduce((zbir, k) => {
+      const stavke = (k as Podaci)?.stavke;
+      return zbir + (Array.isArray(stavke) ? stavke.length : 0);
+    }, 0);
+    detalj = `${mnozina(kategorije.length, "kutija", "kutije", "kutija")} · ${mnozina(stavki, "stavka", "stavke", "stavki")}`;
   } else {
     const praznina = brojPraznina(String(podaci.tekst ?? ""));
     const dodatne = Array.isArray(podaci.dodatne) ? podaci.dodatne.length : 0;

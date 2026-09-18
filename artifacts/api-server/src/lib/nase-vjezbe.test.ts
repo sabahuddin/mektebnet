@@ -19,7 +19,7 @@ import {
 } from "./nase-vjezbe.js";
 
 test("poznate su tačno dvije vrste naših vježbi", () => {
-  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni", "poredak"]);
+  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni", "poredak", "razvrstaj"]);
   for (const tip of Object.keys(TIPOVI_VJEZBI)) assert.equal(isValidTip(tip), true, tip);
   for (const nije of ["", "h5p", "../tajna", 7, null]) {
     assert.equal(isValidTip(nije as unknown), false, String(nije));
@@ -174,4 +174,40 @@ test("poredak prima samo spisak razlicitih stavki", async () => {
   const koraci = await getVjezba("poredak", "abdest-koraci");
   assert.ok(koraci, "abdest-koraci.json mora postojati");
   assert.equal(koraci?.detalj, "9 stavki");
+});
+
+test("razvrstavanje trazi dvije do pet kutija i razlicite stavke", async () => {
+  const dobra = {
+    naslov: "Mjeseci",
+    kategorije: [
+      { naziv: "Hidžretski", stavke: ["muharrem", "safer"] },
+      { naziv: "Po Suncu", stavke: ["januar"] },
+    ],
+  };
+  assert.equal(validirajPodatke("razvrstaj", dobra), null);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "Jedina", stavke: ["a"] }],
+  })), /bar dvije kutije/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X",
+    kategorije: [1, 2, 3, 4, 5, 6].map(n => ({ naziv: `K${n}`, stavke: [`s${n}`] })),
+  })), /najviše pet kutija/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "", stavke: ["a"] }, { naziv: "B", stavke: ["b"] }],
+  })), /naziv/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "A", stavke: [] }, { naziv: "B", stavke: ["b"] }],
+  })), /nema nijednu stavku/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "A", stavke: ["ista"] }, { naziv: "B", stavke: ["Ista"] }],
+  })), /u dvije kutije/);
+
+  const spisak = await listVjezbe("razvrstaj");
+  assert.ok(spisak.length >= 2, "očekujemo bar dvije ugrađene vježbe razvrstavanja");
+  for (const stavka of spisak) {
+    assert.equal(stavka.url, vjezbaUrl("razvrstaj", stavka.id));
+    assert.match(stavka.detalj, /kutij\S* · \d+ stavk/, `${stavka.id}: detalj`);
+  }
+  const mjeseci = await getVjezba("razvrstaj", "mjeseci");
+  assert.equal(mjeseci?.detalj, "2 kutije · 10 stavki");
 });

@@ -1,0 +1,15 @@
+{
+  "id": "abdest-namaz",
+  "naslov": "Abdest ili namaz?",
+  "uputa": "Gdje spada svaka radnja? Prevuci je u pravu kutiju, pa klikni „Provjeri\".",
+  "kategorije": [
+    {
+      "naziv": "Radimo pri abdestu",
+      "stavke": ["peremo šake", "ispiremo usta", "ispiremo nos", "peremo lice", "potiremo glavu", "peremo noge"]
+    },
+    {
+      "naziv": "Radimo u namazu",
+      "stavke": ["stojimo na kijamu", "učimo Fatihu", "činimo ruku'", "činimo sedždu", "predajemo selam"]
+    }
+  ]
+}
