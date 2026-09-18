@@ -96,3 +96,5 @@ Ostale naše vježbe rade po istom obrascu — vidi `docs/OSMOSMJERKA.md`,
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "spoji"`.
 
 Šesta naša vježba, „Upiši odgovor", radi po istom obrascu — vidi `docs/UPISI-ODGOVOR.md`.
+
+Vježba se javlja kratkim, tihim tonom — vidi `docs/ZVUK.md`.

@@ -103,3 +103,5 @@ Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "razvrstaj"`.
 Peta naša vježba, „Spoji parove", radi po istom obrascu — vidi `docs/SPOJI-PAROVE.md`.
 
 Šesta naša vježba, „Upiši odgovor", radi po istom obrascu — vidi `docs/UPISI-ODGOVOR.md`.
+
+Vježba se javlja kratkim, tihim tonom — vidi `docs/ZVUK.md`.
