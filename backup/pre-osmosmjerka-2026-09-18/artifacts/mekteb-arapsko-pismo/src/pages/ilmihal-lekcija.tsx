@@ -62,24 +62,6 @@ interface Prilog {
   hasanatReward?: number;
 }
 
-/** Naša (interna) vježba — statički HTML s naše domene, npr. osmosmjerka.
- *  Za razliku od vanjskih embeda (LearningApps, Wordwall…), ova javlja kad je
- *  završena, pa dugme „Završi vježbu" otključavamo tek na tu poruku. */
-const NASA_VJEZBA_PREFIX = "/vjezbe/osmosmjerka/";
-function jeNasaVjezba(a: Prilog | null): boolean {
-  if (!a || a.kind !== "embed") return false;
-  return String(a.externalUrl || a.url || "").startsWith(NASA_VJEZBA_PREFIX);
-}
-
-interface Osmosmjerka {
-  id: string;
-  naslov: string;
-  tezina: string;
-  prikaz: string;
-  brojRijeci: number;
-  url: string;
-}
-
 interface H5pAttemptState {
   nextAttemptNo: number;
   nextMultiplier: number;
@@ -1786,17 +1768,6 @@ function PriloziSection({
   // (poslije refresh-a server svejedno odbije sa alreadyClaimed:true).
   const [claimedEmbeds, setClaimedEmbeds] = useState<Set<number>>(new Set());
   const [claimingEmbed, setClaimingEmbed] = useState(false);
-  // Naše vježbe (osmosmjerka) javljaju završetak porukom "kraj" s iste domene.
-  // Dok poruka ne stigne, dugme "Završi vježbu" stoji zaključano.
-  const [zavrseneNaseVjezbe, setZavrseneNaseVjezbe] = useState<Set<number>>(new Set());
-  const embedIframeRef = useRef<HTMLIFrameElement>(null);
-  // Admin forma "Dodaj našu vježbu (osmosmjerka)".
-  const [showOsmosmjerkaForm, setShowOsmosmjerkaForm] = useState(false);
-  const [osmosmjerke, setOsmosmjerke] = useState<Osmosmjerka[]>([]);
-  const [osmosmjerkaId, setOsmosmjerkaId] = useState("");
-  const [osmosmjerkaLabel, setOsmosmjerkaLabel] = useState("");
-  const [osmosmjerkaReward, setOsmosmjerkaReward] = useState<0 | 3 | 5 | 10>(5);
-  const [savingOsmosmjerka, setSavingOsmosmjerka] = useState(false);
   const [galleryItems, setGalleryItems] = useState<Prilog[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryImageUrl, setGalleryImageUrl] = useState<string | null>(null);
@@ -1920,42 +1891,6 @@ function PriloziSection({
     }
   }, [token]);
 
-  // Naša vježba (osmosmjerka) javlja završetak porukom iz iframe-a. Poruka se
-  // prihvata samo ako dolazi s NAŠE domene i baš iz tog iframe-a; sve ostalo
-  // (druge kartice, vanjski embedi, proširenja preglednika) se odbacuje.
-  // Poruka ne nosi nagradu — samo otključava dugme; kapi meda i dalje dodjeljuje
-  // server na POST /content/embed/zavrseno.
-  useEffect(() => {
-    if (!openEmbed || !jeNasaVjezba(openEmbed)) return;
-    const priloziId = openEmbed.id;
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.source !== embedIframeRef.current?.contentWindow) return;
-      const payload = event.data as { izvor?: string; dogadjaj?: string } | null;
-      if (!payload || payload.izvor !== "mekteb-igra" || payload.dogadjaj !== "kraj") return;
-      setZavrseneNaseVjezbe(prev => (prev.has(priloziId) ? prev : new Set(prev).add(priloziId)));
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [openEmbed]);
-
-  // Spisak dostupnih osmosmjerki za admin formu — čita se iz foldera s JSON
-  // datotekama, pa nova osmosmjerka znači samo novu datoteku.
-  useEffect(() => {
-    if (!showOsmosmjerkaForm || !token || osmosmjerke.length > 0) return;
-    let cancelled = false;
-    apiRequest<{ osmosmjerke: Osmosmjerka[] }>("GET", "/osmosmjerke", undefined, token)
-      .then(res => {
-        if (cancelled) return;
-        setOsmosmjerke(res.osmosmjerke || []);
-        if (!osmosmjerkaId && res.osmosmjerke?.length) setOsmosmjerkaId(res.osmosmjerke[0].id);
-      })
-      .catch(() => {
-        if (!cancelled) toast({ title: t("Greška"), description: t("Nije moguće učitati spisak osmosmjerki"), variant: "destructive" });
-      });
-    return () => { cancelled = true; };
-  }, [showOsmosmjerkaForm, token, osmosmjerke.length, osmosmjerkaId, t]);
-
   // Ako učenik ostavi stranicu otvorenu do isteka 48-satne blokade, lokalni
   // snapshot ne smije ostati zaključan zauvijek. Osvježi baš u trenutku isteka
   // kako bi se isto dugme pretvorilo u novi pokušaj bez ručnog reload-a.
@@ -2070,25 +2005,6 @@ function PriloziSection({
       toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
       setSavingUrl(false);
-    }
-  };
-
-  const handleAddOsmosmjerka = async () => {
-    if (!osmosmjerkaId || !token) return;
-    setSavingOsmosmjerka(true);
-    try {
-      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/osmosmjerka`, {
-        osmosmjerkaId,
-        label: osmosmjerkaLabel.trim() || undefined,
-        hasanatReward: osmosmjerkaReward,
-      }, token);
-      setAttachments(prev => [{ ...result, url: (result as any).externalUrl || "" }, ...prev]);
-      toast({ title: t("Vježba dodana"), description: result.originalName });
-      setOsmosmjerkaId(""); setOsmosmjerkaLabel(""); setOsmosmjerkaReward(5); setShowOsmosmjerkaForm(false);
-    } catch (err: any) {
-      toast({ title: t("Greška"), description: err.message, variant: "destructive" });
-    } finally {
-      setSavingOsmosmjerka(false);
     }
   };
 
@@ -2616,14 +2532,6 @@ function PriloziSection({
                     >
                       <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? t("Odustani") : t("Dodaj embed vježbu")}
                     </Button>
-                    <Button
-                      onClick={() => setShowOsmosmjerkaForm(v => !v)}
-                      variant="outline"
-                      className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-100 font-bold"
-                      data-testid="osmosmjerka-toggle"
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" /> {showOsmosmjerkaForm ? t("Odustani") : t("Dodaj našu vježbu")}
-                    </Button>
                   </div>
                   <p className="text-sm text-blue-400 mt-1">{t(".h5p arhiva (max 50MB) ili embed vježba (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")}</p>
                   {showEmbedForm && (
@@ -2668,57 +2576,6 @@ function PriloziSection({
                         className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold self-start"
                       >
                         {savingEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi embed vježbu")}
-                      </Button>
-                    </div>
-                  )}
-                  {showOsmosmjerkaForm && (
-                    <div className="mt-3 p-3 bg-white rounded-xl border border-teal-200 flex flex-col gap-2" data-testid="osmosmjerka-form">
-                      <p className="text-xs text-teal-700 font-semibold">
-                        {t("Naša vježba sa servera mekteb.net — bez vanjskih alata i bez zahtjeva prema drugim domenama. Nova osmosmjerka se dodaje kao nova JSON datoteka u")} <code>public/vjezbe/osmosmjerka/podaci/</code>.
-                      </p>
-                      <select
-                        value={osmosmjerkaId}
-                        onChange={e => setOsmosmjerkaId(e.target.value)}
-                        className="px-3 py-2 rounded-lg border border-teal-200 text-sm font-semibold bg-white focus:outline-none focus:border-teal-500"
-                        data-testid="osmosmjerka-select"
-                      >
-                        {osmosmjerke.length === 0 && <option value="">{t("Učitavam…")}</option>}
-                        {osmosmjerke.map(o => (
-                          <option key={o.id} value={o.id}>
-                            {o.naslov} ({o.brojRijeci} {t("riječi")} · {o.tezina})
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        placeholder={t("Naziv vježbe (opciono)")}
-                        value={osmosmjerkaLabel}
-                        onChange={e => setOsmosmjerkaLabel(e.target.value)}
-                        className="px-3 py-2 rounded-lg border border-teal-200 text-sm focus:outline-none focus:border-teal-500"
-                      />
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <label className="text-xs font-bold text-teal-800">{t("Kapi meda za završetak:")}</label>
-                        <select
-                          value={osmosmjerkaReward}
-                          onChange={e => setOsmosmjerkaReward(Number(e.target.value) as 0 | 3 | 5 | 10)}
-                          className="px-2 py-1.5 rounded-lg border border-teal-300 text-sm font-semibold bg-white focus:outline-none focus:border-teal-500"
-                          data-testid="osmosmjerka-reward-select"
-                        >
-                          <option value={0}>{t("Bez nagrade (0 🍯)")}</option>
-                          <option value={3}>{t("Lahka vježba — 3 🍯")}</option>
-                          <option value={5}>{t("Srednja vježba — 5 🍯")}</option>
-                          <option value={10}>{t("Teža vježba — 10 🍯")}</option>
-                        </select>
-                      </div>
-                      <p className="text-xs text-teal-600 italic">
-                        {t("Dugme")} <strong>{t('"Završi vježbu"')}</strong> {t("otključava se tek kada učenik pronađe sve riječi — i kapi se dodjeljuju samo prvi put.")}
-                      </p>
-                      <Button
-                        onClick={handleAddOsmosmjerka}
-                        disabled={savingOsmosmjerka || !osmosmjerkaId}
-                        className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold self-start"
-                      >
-                        {savingOsmosmjerka ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi našu vježbu")}
                       </Button>
                     </div>
                   )}
@@ -2912,22 +2769,12 @@ function PriloziSection({
                 <DialogContent
                   className="p-0 gap-0 max-w-[100vw] sm:max-w-[95vw] md:max-w-5xl w-full h-[100dvh] sm:h-[92vh] sm:rounded-2xl rounded-none overflow-hidden flex flex-col"
                   data-testid="embed-modal"
-                  // U našim vježbama dijete povlači prstom preko slova. Ako prst
-                  // završi malo izvan okvira igre, popup bi se zatvorio usred
-                  // rješavanja i rad bi bio izgubljen. Zato klik izvan ne
-                  // zatvara našu vježbu — ostaju dugme X i tipka Escape.
-                  onPointerDownOutside={jeNasaVjezba(openEmbed) ? (e) => e.preventDefault() : undefined}
-                  onInteractOutside={jeNasaVjezba(openEmbed) ? (e) => e.preventDefault() : undefined}
                 >
                   {(() => {
                     const reward = openEmbed?.hasanatReward ?? 0;
                     const isStudent = user?.role === "ucenik";
                     const alreadyClaimed = openEmbed ? claimedEmbeds.has(openEmbed.id) : false;
                     const showClaim = !!openEmbed && reward > 0 && isStudent;
-                    // Naša vježba sama javi kada je gotova, pa dugme čeka tu poruku.
-                    // Vanjski embed to ne može, pa tamo dugme ostaje odmah dostupno.
-                    const nasa = jeNasaVjezba(openEmbed);
-                    const cekaZavrsetak = nasa && !!openEmbed && !zavrseneNaseVjezbe.has(openEmbed.id);
                     const headerBadge = reward > 0
                       ? t("Do {reward} kapi meda 🍯", { reward: String(reward) })
                       : t("Bez kapi meda 🍯");
@@ -2952,7 +2799,6 @@ function PriloziSection({
                         </div>
                         {openEmbed && (openEmbed.externalUrl || openEmbed.url) && (
                           <iframe
-                            ref={embedIframeRef}
                             src={openEmbed.externalUrl || openEmbed.url}
                             title={openEmbed.originalName}
                             className="flex-1 w-full bg-white"
@@ -2967,13 +2813,11 @@ function PriloziSection({
                             <p className="text-xs sm:text-sm text-amber-800 font-semibold">
                               {alreadyClaimed
                                 ? t("Već si dobio kapi za ovu vježbu.")
-                                : cekaZavrsetak
-                                  ? t("Pronađi sve riječi — dugme se otključava samo.")
-                                  : t("Kada završiš vježbu, klikni dugme da preuzmeš kapi meda.")}
+                                : t("Kada završiš vježbu, klikni dugme da preuzmeš kapi meda.")}
                             </p>
                             <Button
                               onClick={() => handleClaimEmbed(openEmbed)}
-                              disabled={claimingEmbed || alreadyClaimed || cekaZavrsetak}
+                              disabled={claimingEmbed || alreadyClaimed}
                               className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold whitespace-nowrap"
                               data-testid="embed-claim"
                             >

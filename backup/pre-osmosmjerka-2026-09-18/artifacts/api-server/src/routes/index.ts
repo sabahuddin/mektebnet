@@ -22,7 +22,6 @@ import ocjeneRouter from "./ocjene";
 import etapeRouter from "./etape";
 import krunisanjaRouter from "./krunisanja";
 import vjezbeRouter from "./vjezbe";
-import osmosmjerkeRouter from "./osmosmjerke";
 
 const router: IRouter = Router();
 
@@ -60,7 +59,6 @@ router.use("/ocjene", ocjeneRouter);
 router.use("/etape", etapeRouter);
 router.use("/krunisanja", krunisanjaRouter);
 router.use("/vjezbe", vjezbeRouter);
-router.use("/osmosmjerke", osmosmjerkeRouter);
 
 export default router;
 

@@ -1,0 +1,20 @@
+{
+  "id": "ramazan-01",
+  "naslov": "Ramazan",
+  "uputa": "Pročitaj opis, pogodi riječ, pa je pronađi u mreži.",
+  "velicina": 10,
+  "tezina": "srednje",
+  "prikaz": "opisi",
+  "dvoslovi": true,
+  "rijeci": [
+    { "rijec": "ramazan",  "opis": "Mjesec u kojem muslimani poste." },
+    { "rijec": "post",     "opis": "Od zore do zalaska sunca ne jedemo i ne pijemo." },
+    { "rijec": "sehur",    "opis": "Obrok prije zore." },
+    { "rijec": "iftar",    "opis": "Obrok kojim se navečer prekida post." },
+    { "rijec": "akšam",    "opis": "Namaz uz koji se postač iftari." },
+    { "rijec": "teravija", "opis": "Namaz koji se klanja samo u ramazanskim noćima." },
+    { "rijec": "sadaka",   "opis": "Dobro djelo ili dar onome kome je potrebno." },
+    { "rijec": "Bajram",   "opis": "Praznik koji dolazi po završetku ramazana." },
+    { "rijec": "postač",   "opis": "Onaj koji posti." }
+  ]
+}
