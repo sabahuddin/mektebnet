@@ -36,7 +36,7 @@ test("spisak čita JSON datoteke iz javnog foldera", async () => {
   for (const stavka of sve) {
     assert.equal(isValidOsmosmjerkaId(stavka.id), true, stavka.id);
     assert.ok(stavka.naslov.length > 0, `${stavka.id}: naslov`);
-    assert.ok(stavka.brojRijeci >= 2, `${stavka.id}: broj riječi`);
+    assert.match(stavka.detalj, /\d+ riječi/, `${stavka.id}: detalj`);
     assert.equal(stavka.url, osmosmjerkaUrl(stavka.id));
   }
   const naslovi = sve.map(s => s.naslov);

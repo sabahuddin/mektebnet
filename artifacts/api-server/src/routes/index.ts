@@ -23,6 +23,7 @@ import etapeRouter from "./etape";
 import krunisanjaRouter from "./krunisanja";
 import vjezbeRouter from "./vjezbe";
 import osmosmjerkeRouter from "./osmosmjerke";
+import naseVjezbeRouter from "./nase-vjezbe";
 
 const router: IRouter = Router();
 
@@ -61,6 +62,7 @@ router.use("/etape", etapeRouter);
 router.use("/krunisanja", krunisanjaRouter);
 router.use("/vjezbe", vjezbeRouter);
 router.use("/osmosmjerke", osmosmjerkeRouter);
+router.use("/nase-vjezbe", naseVjezbeRouter);
 
 export default router;
 

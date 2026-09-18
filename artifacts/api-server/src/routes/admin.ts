@@ -68,6 +68,7 @@ import {
 } from "../lib/static-vjezba-source.js";
 import { STATIC_VJEZBE, getStaticVjezba } from "../lib/static-vjezbe.js";
 import { OSMOSMJERKA_MARKER, getOsmosmjerka, osmosmjerkaMarker, osmosmjerkaUrl } from "../lib/osmosmjerke.js";
+import { TIPOVI_VJEZBI, getVjezba, jeNasaVjezba, vjezbaMarker, vjezbaUrl } from "../lib/nase-vjezbe.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -730,6 +731,61 @@ router.post("/prilozi/:lekcijaId/osmosmjerka", async (req, res) => {
   return;
 });
 
+// POST /api/admin/prilozi/:lekcijaId/nasa-vjezba — dodaj vlastitu vježbu bilo
+// koje vrste (osmosmjerka, popuni prazninu) ispod lekcije. Izvor je na našoj
+// domeni: statički HTML iz `public/vjezbe/<tip>/` koji čita JSON iz `podaci/`.
+// Nova vježba = nova JSON datoteka, bez izmjene koda.
+//
+// Prilog se upisuje kao kind="embed" da bi koristio postojeći put (popup u
+// lekciji + POST /api/content/embed/zavrseno + anti-double-claim). Razlika je
+// `stored_name` = "<tip>:<id>": po tome i po adresi frontend zna da je vježba
+// naša, pa dugme "Završi vježbu" otključava tek kad vježba javi da je gotova.
+router.post("/prilozi/:lekcijaId/nasa-vjezba", async (req, res) => {
+  try {
+    const lekcijaId = parseInt(req.params.lekcijaId);
+    if (isNaN(lekcijaId)) return res.status(400).json({ error: "Nevažeći ID lekcije" });
+    const { tip, vjezbaId, label, hasanatReward } = (req.body || {}) as {
+      tip?: string;
+      vjezbaId?: string;
+      label?: string;
+      hasanatReward?: number;
+    };
+    const vjezba = typeof tip === "string" && typeof vjezbaId === "string"
+      ? await getVjezba(tip, vjezbaId)
+      : null;
+    if (!vjezba) {
+      return res.status(400).json({ error: "Odaberi vježbu sa spiska" });
+    }
+    const [exists] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
+    if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
+
+    const nazivTipa = TIPOVI_VJEZBI[vjezba.tip]?.naziv ?? "Vježba";
+    const displayName = (label && label.trim()) || `${nazivTipa}: ${vjezba.naslov}`;
+    const uploaderRole = req.user?.role ?? "muallim";
+    const uploaderUserId = req.user?.userId ?? null;
+    const redoslijed = await nextPrilogRedoslijed(lekcijaId);
+    const [inserted] = await db.insert(prilozi).values({
+      lekcijaId,
+      redoslijed,
+      originalName: displayName.slice(0, 200),
+      storedName: vjezbaMarker(vjezba.tip, vjezba.id),
+      fileSize: 0,
+      mimeType: "text/embed",
+      kind: "embed",
+      externalUrl: vjezbaUrl(vjezba.tip, vjezba.id),
+      approved: uploaderRole === "admin",
+      uploadedByRole: uploaderRole,
+      uploadedByUserId: uploaderUserId,
+      hasanatReward: normalizeEmbedReward(hasanatReward),
+    }).returning();
+    res.json(inserted);
+  } catch (e: any) {
+    console.error("[POST /prilozi/:lekcijaId/nasa-vjezba] failed:", e?.message);
+    res.status(500).json({ error: e.message });
+  }
+  return;
+});
+
 // PUT /api/admin/prilozi/:lekcijaId/redoslijed — trajno preuredi nastavne
 // materijale (file/url) unutar jedne lekcije.
 router.put("/prilozi/:lekcijaId/redoslijed", async (req, res) => {
@@ -822,7 +878,7 @@ router.put("/prilozi/:id", async (req, res) => {
       // Ako je prilog ranije bio naša osmosmjerka, a sada pokazuje na vanjski
       // izvor, marker mora otpasti — inače bi lekcija i dalje čekala poruku
       // "kraj" koju vanjska vježba nikad ne šalje, pa dugme ostaje zaključano.
-      if (existing.storedName?.startsWith(OSMOSMJERKA_MARKER)) updates.storedName = "";
+      if (jeNasaVjezba(existing.externalUrl)) updates.storedName = "";
     }
 
     if (Object.keys(updates).length === 0) {

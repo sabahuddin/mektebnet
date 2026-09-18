@@ -43,9 +43,9 @@ Font Nunito učitava se s našeg servera (`public/fonts/nunito-*.woff2`, SIL OFL
    Za opise i nazive vrijedi transkripcija po Pravilima Rijaseta.
 3. Push na GitHub i redeploy u Coolifyju (spisak se čita s diska pri svakom
    pozivu, pa nema migracije ni unosa u bazu).
-4. U lekciji otvori karticu **Vježbe** → **Dodaj našu vježbu**, odaberi
-   osmosmjerku sa spiska, po želji promijeni naziv i odaberi kapi meda
-   (0, 3, 5 ili 10 — ista skala kao za embed vježbe) i spasi.
+4. U lekciji otvori karticu **Vježbe** → **Dodaj našu vježbu**, odaberi vrstu
+   *Osmosmjerka*, pa osmosmjerku sa spiska, po želji promijeni naziv i odaberi
+   kapi meda (0, 3, 5 ili 10 — ista skala kao za embed vježbe) i spasi.
 5. Provjeri je u pregledniku:
    `node artifacts/mekteb-arapsko-pismo/scripts/provjeri-osmosmjerku.mjs`
    (prije toga `pnpm run build`; u skripti promijeni `PODACI` na novu datoteku).
@@ -60,9 +60,10 @@ za embed vježbe.
 | `public/vjezbe/osmosmjerka/osmosmjerka.html` | cijela igra: mreža, potezi, tastatura, događaji |
 | `public/vjezbe/osmosmjerka/podaci/*.json` | sadržaj pojedine osmosmjerke |
 | `public/fonts/nunito-latin*.woff2` | font platforme, lokalno (bez Google Fontsa) |
-| `api-server/src/lib/osmosmjerke.ts` | čitanje foldera s podacima, provjera ID-a, URL vježbe |
-| `api-server/src/routes/osmosmjerke.ts` | `GET /api/osmosmjerke` — spisak za admin formu |
-| `api-server/src/routes/admin.ts` | `POST /api/admin/prilozi/:lekcijaId/osmosmjerka` |
+| `api-server/src/lib/nase-vjezbe.ts` | zajednički registar naših vježbi (čita foldere, provjerava ID, gradi URL) |
+| `api-server/src/lib/osmosmjerke.ts` | tanak sloj nad registrom, za ranije pozive |
+| `api-server/src/routes/nase-vjezbe.ts` | `GET /api/nase-vjezbe` — vrste i njihove vježbe za admin formu |
+| `api-server/src/routes/admin.ts` | `POST /api/admin/prilozi/:lekcijaId/nasa-vjezba` |
 | `src/pages/ilmihal-lekcija.tsx` | admin forma, popup vježbe, otključavanje dugmeta |
 
 Prilog se upisuje kao `kind="embed"` sa relativnim `external_url`, pa koristi
@@ -82,3 +83,6 @@ otključano od početka. Poruka ne nosi nagradu; nagradu i dalje određuje serve
 | `kraj` | pronađene sve riječi | `id`, `pronadjeno`, `ukupno`, `sekunde`, `pomoc`, `tezina`, `prikaz` |
 
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "osmosmjerka"`.
+
+Druga naša vježba, „Popuni prazninu", radi po istom obrascu — vidi
+`docs/POPUNI-PRAZNINU.md`.
