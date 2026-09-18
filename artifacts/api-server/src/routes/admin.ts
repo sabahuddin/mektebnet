@@ -76,6 +76,8 @@ import {
   KOPIJA_FORMAT,
   KOPIJA_VERZIJA,
   imeKopije,
+  imeKopijeFajlova,
+  kopijaFajlova,
   kopijaSadrzaja,
   prebrojRedove,
   stanjeFajlova,
@@ -5232,6 +5234,27 @@ router.get("/sigurnosna-kopija", async (_req, res): Promise<void> => {
     logger.error({ err }, "[Kopija] izvoz nije uspio");
     // Zaglavlja su već poslana, pa prekid veze je jedini pošten signal —
     // nepotpuna kopija ne smije izgledati kao ispravna.
+    gzip.destroy();
+    res.destroy();
+  }
+});
+
+router.get("/sigurnosna-kopija/fajlovi", async (_req, res): Promise<void> => {
+  const ime = imeKopijeFajlova();
+  res.set("Content-Type", "application/gzip");
+  res.set("Content-Disposition", `attachment; filename="${ime}"`);
+  res.set("Cache-Control", "no-store");
+  res.set("X-Content-Type-Options", "nosniff");
+
+  const gzip = createGzip();
+  gzip.pipe(res);
+  try {
+    for await (const komad of kopijaFajlova()) {
+      if (!gzip.write(komad)) await once(gzip, "drain");
+    }
+    gzip.end();
+  } catch (err) {
+    logger.error({ err }, "[Kopija] izvoz fajlova nije uspio");
     gzip.destroy();
     res.destroy();
   }

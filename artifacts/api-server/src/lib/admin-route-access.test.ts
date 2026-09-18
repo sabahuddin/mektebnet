@@ -97,3 +97,10 @@ test("sigurnosna kopija je samo za admina", () => {
     assert.equal(canAccessAdminRoute({ method: "GET", path }), false, path);
   }
 });
+
+test("kopija fajlova je samo za admina", () => {
+  const path = "/sigurnosna-kopija/fajlovi";
+  assert.equal(canAccessAdminRoute({ role: "admin", method: "GET", path }), true);
+  assert.equal(canAccessAdminRoute({ role: "muallim", method: "GET", path }), false);
+  assert.equal(canAccessAdminRoute({ role: "ucenik", method: "GET", path }), false);
+});

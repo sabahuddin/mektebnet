@@ -94,11 +94,16 @@ export function imeKopije(sada = new Date()): string {
 
 export type StanjeFajlova = { folder: string; fajlova: number; bajtova: number };
 
-/** Koliko je priloženih fajlova (PDF, slike, audio, H5P) i koliko zauzimaju. */
-export async function stanjeFajlova(): Promise<StanjeFajlova> {
-  const folder = process.env["UPLOADS_DIR"]
+/** Folder u koji admin panel sprema priložene fajlove (PDF, slike, audio, H5P). */
+export function folderFajlova(): string {
+  return process.env["UPLOADS_DIR"]
     ? path.resolve(process.env["UPLOADS_DIR"])
     : path.resolve(process.cwd(), "uploads");
+}
+
+/** Koliko je priloženih fajlova (PDF, slike, audio, H5P) i koliko zauzimaju. */
+export async function stanjeFajlova(): Promise<StanjeFajlova> {
+  const folder = folderFajlova();
   let fajlova = 0;
   let bajtova = 0;
   async function prodji(dir: string): Promise<void> {
@@ -124,4 +129,120 @@ export async function stanjeFajlova(): Promise<StanjeFajlova> {
   }
   await prodji(folder);
   return { folder, fajlova, bajtova };
+}
+
+// ---------------------------------------------------------------------------
+// Kopija priloženih fajlova kao .tar.gz
+//
+// Pišemo tar sami, u komadima, da kopija od par stotina megabajta ne mora
+// stati u memoriju i da ne uvodimo novu biblioteku. Format je ustar; naziv
+// duži od 100 bajtova ide kroz POSIX pax zapis, koji razumiju i GNU tar i
+// bsdtar (macOS), a Windows 11 otvara .tar.gz sam.
+// ---------------------------------------------------------------------------
+
+const BLOK = 512;
+
+function oktalno(broj: number, sirina: number): string {
+  return broj.toString(8).padStart(sirina - 1, "0") + "\0";
+}
+
+function zaglavlje(ime: string, velicina: number, izmijenjen: number, vrsta: "0" | "5" | "x"): Buffer {
+  const blok = Buffer.alloc(BLOK);
+  blok.write(ime.slice(0, 100), 0, 100, "utf8");
+  blok.write(oktalno(vrsta === "5" ? 0o755 : 0o644, 8), 100, 8, "ascii");
+  blok.write(oktalno(0, 8), 108, 8, "ascii");   // uid
+  blok.write(oktalno(0, 8), 116, 8, "ascii");   // gid
+  blok.write(oktalno(velicina, 12), 124, 12, "ascii");
+  blok.write(oktalno(Math.floor(izmijenjen / 1000), 12), 136, 12, "ascii");
+  blok.write("        ", 148, 8, "ascii");      // mjesto zbira, dok se računa
+  blok.write(vrsta, 156, 1, "ascii");
+  blok.write("ustar\0", 257, 6, "ascii");
+  blok.write("00", 263, 2, "ascii");
+
+  let zbir = 0;
+  for (const bajt of blok) zbir += bajt;
+  blok.write(`${zbir.toString(8).padStart(6, "0")}\0 `, 148, 8, "ascii");
+  return blok;
+}
+
+function dopuna(velicina: number): Buffer | null {
+  const ostatak = velicina % BLOK;
+  return ostatak === 0 ? null : Buffer.alloc(BLOK - ostatak);
+}
+
+/** POSIX pax zapis: "<duzina> kljuc=vrijednost\n", gdje duzina broji i sebe. */
+function paxZapis(kljuc: string, vrijednost: string): Buffer {
+  const rep = ` ${kljuc}=${vrijednost}\n`;
+  let duzina = Buffer.byteLength(rep) + 1;
+  for (;;) {
+    const puna = Buffer.byteLength(String(duzina)) + Buffer.byteLength(rep);
+    if (puna === duzina) break;
+    duzina = puna;
+  }
+  return Buffer.from(String(duzina) + rep, "utf8");
+}
+
+async function* stavka(put: string, ime: string, vrsta: "0" | "5"): AsyncGenerator<Buffer> {
+  const podaci = await fs.stat(put);
+  const velicina = vrsta === "5" ? 0 : podaci.size;
+  const imeTar = vrsta === "5" ? `${ime}/` : ime;
+
+  if (Buffer.byteLength(imeTar) > 100) {
+    const zapis = paxZapis("path", imeTar);
+    yield zaglavlje("PaxHeader", zapis.length, podaci.mtimeMs, "x");
+    yield zapis;
+    const rep = dopuna(zapis.length);
+    if (rep) yield rep;
+  }
+
+  yield zaglavlje(imeTar, velicina, podaci.mtimeMs, vrsta);
+  if (vrsta === "5") return;
+
+  const { createReadStream } = await import("node:fs");
+  let procitano = 0;
+  for await (const komad of createReadStream(put)) {
+    procitano += (komad as Buffer).length;
+    yield komad as Buffer;
+  }
+  // Fajl koji je u međuvremenu skraćen pokvario bi cijelu kopiju, pa dopunimo
+  // do veličine iz zaglavlja.
+  if (procitano < velicina) yield Buffer.alloc(velicina - procitano);
+  const rep = dopuna(velicina);
+  if (rep) yield rep;
+}
+
+/** Cijeli folder priloženih fajlova kao tar tok (kroz gzip ide u rutu). */
+export async function* kopijaFajlova(korijen = folderFajlova()): AsyncGenerator<Buffer> {
+  async function* prodji(dir: string, prefiks: string): AsyncGenerator<Buffer> {
+    const stavke = (await fs.readdir(dir, { withFileTypes: true }))
+      .sort((a, b) => a.name.localeCompare(b.name, "en"));
+    for (const red of stavke) {
+      const put = path.join(dir, red.name);
+      const ime = prefiks ? `${prefiks}/${red.name}` : red.name;
+      try {
+        if (red.isDirectory()) {
+          yield* stavka(put, ime, "5");
+          yield* prodji(put, ime);
+        } else if (red.isFile()) {
+          yield* stavka(put, ime, "0");
+        }
+      } catch {
+        // Fajl je nestao ili se ne da pročitati — preskoči ga, kopija ostalog
+        // je vrednija od prekida.
+      }
+    }
+  }
+  try {
+    await fs.access(korijen);
+  } catch {
+    yield Buffer.alloc(BLOK * 2);
+    return;
+  }
+  yield* prodji(korijen, "");
+  yield Buffer.alloc(BLOK * 2); // kraj arhive: dva prazna bloka
+}
+
+/** Naziv datoteke: mekteb-fajlovi-2026-09-18-1830.tar.gz */
+export function imeKopijeFajlova(sada = new Date()): string {
+  return imeKopije(sada).replace("mekteb-sadrzaj-", "mekteb-fajlovi-").replace(".ndjson.gz", ".tar.gz");
 }

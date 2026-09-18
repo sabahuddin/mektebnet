@@ -28,7 +28,7 @@ export default function AdminSigurnosnaKopijaPage() {
 
   const [pregled, setPregled] = useState<Pregled | null>(null);
   const [ucitavanje, setUcitavanje] = useState(true);
-  const [preuzimanje, setPreuzimanje] = useState(false);
+  const [preuzimanje, setPreuzimanje] = useState<"sadrzaj" | "fajlovi" | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -53,16 +53,18 @@ export default function AdminSigurnosnaKopijaPage() {
   }, [user, token, authLoading]);
 
   // Kopija se preuzima uz Authorization zaglavlje, pa ne može običnim <a href>.
-  const preuzmi = async () => {
+  const preuzmi = async (sta: "sadrzaj" | "fajlovi") => {
     if (!token) return;
-    setPreuzimanje(true);
+    setPreuzimanje(sta);
     try {
-      const res = await fetch(`${getApiBase()}/admin/sigurnosna-kopija`, {
+      const putanja = sta === "fajlovi" ? "/admin/sigurnosna-kopija/fajlovi" : "/admin/sigurnosna-kopija";
+      const res = await fetch(`${getApiBase()}${putanja}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(String(res.status));
       const zaglavlje = res.headers.get("Content-Disposition") || "";
-      const ime = /filename="([^"]+)"/.exec(zaglavlje)?.[1] || "mekteb-sadrzaj.ndjson.gz";
+      const zadano = sta === "fajlovi" ? "mekteb-fajlovi.tar.gz" : "mekteb-sadrzaj.ndjson.gz";
+      const ime = /filename="([^"]+)"/.exec(zaglavlje)?.[1] || zadano;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const veza = document.createElement("a");
@@ -76,7 +78,7 @@ export default function AdminSigurnosnaKopijaPage() {
     } catch {
       toast({ title: t("Greška"), description: t("Preuzimanje kopije nije uspjelo"), variant: "destructive" });
     } finally {
-      setPreuzimanje(false);
+      setPreuzimanje(null);
     }
   };
 
@@ -125,13 +127,13 @@ export default function AdminSigurnosnaKopijaPage() {
                 </p>
               ) : null}
               <button
-                onClick={preuzmi}
-                disabled={preuzimanje}
+                onClick={() => preuzmi("sadrzaj")}
+                disabled={preuzimanje !== null}
                 data-testid="button-preuzmi-kopiju"
                 className="mt-4 inline-flex items-center gap-2 min-h-11 px-5 rounded-xl bg-sky-600 text-white font-bold hover:bg-sky-700 disabled:opacity-60"
               >
-                {preuzimanje ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                {preuzimanje ? t("Pripremam…") : t("Preuzmi kopiju sadržaja")}
+                {preuzimanje === "sadrzaj" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {preuzimanje === "sadrzaj" ? t("Pripremam…") : t("Preuzmi kopiju sadržaja")}
               </button>
             </div>
           </div>
@@ -143,7 +145,7 @@ export default function AdminSigurnosnaKopijaPage() {
             <div className="min-w-0">
               <h2 className="font-bold text-foreground">{t("2. Priloženi fajlovi (PDF, slike, audio, H5P)")}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {t("Oni nisu u bazi nego na disku servera, pa se kopiraju zasebno — u Coolifyju.")}
+                {t("Oni nisu u bazi nego na disku servera. Preuzimanje traje duže nego kod sadržaja, jer ih ima mnogo više.")}
               </p>
               {pregled ? (
                 <p className="text-sm text-foreground mt-3" data-testid="kopija-fajlovi">
@@ -152,6 +154,15 @@ export default function AdminSigurnosnaKopijaPage() {
                   <span className="block text-muted-foreground break-all">{pregled.fajlovi.folder}</span>
                 </p>
               ) : null}
+              <button
+                onClick={() => preuzmi("fajlovi")}
+                disabled={preuzimanje !== null}
+                data-testid="button-preuzmi-fajlove"
+                className="mt-4 inline-flex items-center gap-2 min-h-11 px-5 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 disabled:opacity-60"
+              >
+                {preuzimanje === "fajlovi" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {preuzimanje === "fajlovi" ? t("Pakujem… ovo traje") : t("Preuzmi sve fajlove")}
+              </button>
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ Platforma živi na tri mjesta i svako se čuva na svoj način:
 |---|---|---|
 | **Kod** (sve što programeri pišu) | GitHub, grana `main` | već je sigurno; povremeno spasi i ZIP na svoj računar |
 | **Sadržaj** (lekcije, kvizovi, učenici, hasanati, vježbe) | samo u bazi na serveru | **Admin panel → Sigurnosna kopija → Preuzmi kopiju sadržaja** |
-| **Fajlovi** (PDF, slike, audio, H5P) | folder na disku servera (`/app/uploads`) | Coolify (kopija volumena) ili `scripts/sigurnosna-kopija.sh` |
+| **Fajlovi** (PDF, slike, audio, H5P) | disk servera, `/data/mekteb-uploads` (u kontejneru `/app/uploads`) | **Admin panel → Sigurnosna kopija → Preuzmi sve fajlove** |
 
 Kod je jedini koji se sam čuva. Sadržaj i fajlovi postoje **samo na serveru** dok
 ih neko ne prekopira negdje drugdje.
@@ -19,6 +19,11 @@ ih neko ne prekopira negdje drugdje.
    (Google Drive, OneDrive — bilo šta što nije server).
 3. Čuvaj zadnje četiri kopije; starije slobodno briši.
 
+Drugo dugme, **Preuzmi sve fajlove**, daje `mekteb-fajlovi-<datum>.tar.gz` sa
+svim priloženim PDF-ovima, slikama, audiom i H5P-om. Ono je mnogo veće i mijenja
+se rjeđe, pa je dovoljno jednom mjesečno i poslije većeg dodavanja materijala.
+Arhivu otvara i macOS i Windows 11 dvoklikom, bez dodatnog programa.
+
 Pravilo je jednostavno: kopija na serveru ne vrijedi ništa kad server nestane.
 Neka bar jedna kopija uvijek bude negdje drugdje.
 
@@ -27,10 +32,11 @@ Neka bar jedna kopija uvijek bude negdje drugdje.
 1. **Automatska kopija baze.** Coolify → resurs baze (PostgreSQL) → *Backups* →
    uključi dnevnu kopiju i, ako imaš, upiši S3 (Backblaze B2, Wasabi, Hetzner).
    Bez S3 kopija ostaje na istom serveru — bolje nego ništa, ali nije dovoljno.
-2. **Provjeri trajni folder za fajlove.** Coolify → aplikacija → *Storages*:
-   mora postojati trajni folder (volume) za `/app/uploads`. Ako ga nema, svaki
-   novi deploy briše sve što je admin otad okačio (PDF-ove, slike, audio).
-   Ovo provjeri prvo — važnije je od svega ostalog na ovoj stranici.
+2. **Trajni folder za fajlove — provjereno 18.09.2026, uredu je.**
+   Coolify → aplikacija → *Storages* → *Volumes*: `/app/uploads` je vezan na
+   `/data/mekteb-uploads` na serveru, a `/app/edu` na folder aplikacije. Znači
+   redeploy ne briše okačene fajlove. Ako se ovo ikad promijeni, novi fajlovi
+   bi nestajali pri svakom deployu — zato pogledaj ovdje ako slike nestanu.
 
 ## Sve sa servera jednom komandom
 
@@ -69,11 +75,25 @@ pnpm --filter @workspace/scripts vrati-sadrzaj -- --fajl=mekteb-sadrzaj-<datum>.
 Vraćanje ide u jednoj transakciji: ili prođe sve, ili se ništa ne promijeni.
 Brojači ID-eva se poslije podese sami, pa novi unosi ne udaraju u stare.
 
-**Fajlovi:**
+**Fajlovi** (arhiva iz admin panela ili sa servera):
 
 ```bash
-tar -xzf mekteb-fajlovi-<datum>.tar.gz -C /app/uploads
+tar -xzf mekteb-fajlovi-<datum>.tar.gz -C /data/mekteb-uploads
 ```
+
+## Šta pokriva sam server
+
+Hetzner Cloud backup (uključen 18.09.2026) slika **cijeli server** jednom
+dnevno i drži **sedam kopija** — kad napravi osmu, briše najstariju. To pokriva
+kvar servera: baza, fajlovi, Coolify i sve ostalo vrate se na stanje od jučer.
+
+Ne pokriva dvije stvari, i zato kopije kod sebe i dalje vrijede:
+
+- grešku koja se primijeti poslije sedam dana (kopija je već prepisana),
+- gubitak samog naloga kod Hetznera ili brisanje u panelu.
+
+Za veću izmjenu na serveru napravi **Snapshot** (Hetzner → server → Snapshots);
+on ostaje dok ga sam ne obrišeš.
 
 ## Proba vraćanja — dva puta godišnje
 
@@ -93,8 +113,8 @@ koja se pojavi ostaje prazna — kopija starija od izmjene baze i dalje radi.
 
 | Fajl | Uloga |
 |---|---|
-| `api-server/src/lib/sigurnosna-kopija.ts` | pravi kopiju (popis tabela, redovi, stanje fajlova) |
-| `api-server/src/routes/admin.ts` | `GET /api/admin/sigurnosna-kopija` i `.../pregled` (admin-only) |
+| `api-server/src/lib/sigurnosna-kopija.ts` | pravi kopiju: redovi baze (NDJSON) i fajlovi (tar, pisan bez dodatne biblioteke) |
+| `api-server/src/routes/admin.ts` | `GET /api/admin/sigurnosna-kopija`, `.../fajlovi` i `.../pregled` (admin-only) |
 | `src/pages/admin-sigurnosna-kopija.tsx` | stranica u admin panelu |
 | `scripts/src/vrati-sadrzaj.ts` | vraćanje kopije u bazu |
 | `scripts/sigurnosna-kopija.sh` | kopija baze i fajlova sa servera |
