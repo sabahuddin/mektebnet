@@ -102,3 +102,5 @@ Ostale naše vježbe rade po istom obrascu — vidi `docs/OSMOSMJERKA.md`,
 | `kraj` | svi odgovori tačni | `id`, `pronadjeno`, `ukupno`, `sekunde`, `greske`, `pomoc`, `provjere`, `tacnoIzPrve` |
 
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "upisi"`.
+
+Vježba se javlja kratkim, tihim tonom — vidi `docs/ZVUK.md`.

@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { goBackOr } from "@/lib/back-navigation";
 import {
   ArrowLeft, Plus, Pencil, Trash2, BookOpen, Loader2, X, Save,
-  Image as ImageIcon, Eye, EyeOff, Upload, FolderOpen, ChevronDown,
+  Image as ImageIcon, Eye, EyeOff, Upload, FolderOpen, ChevronDown, BookMarked,
 } from "lucide-react";
 
 const WysiwygEditor = lazy(() =>
@@ -103,6 +103,11 @@ export default function AdminCitaonicaPage() {
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Kategorije CRUD state
+  // Uvoz knjige „33 priče za djecu" — priče idu uz kod, dugme ih ubaci u bazu.
+  const [uvoz, setUvoz] = useState<{ ukupno: number; nedostaje: number; naslovi: string[] } | null>(null);
+  const [uvozim, setUvozim] = useState(false);
+  const [uvozKategorija, setUvozKategorija] = useState("prica");
+
   const [katOpen, setKatOpen] = useState(false);
   const [editingKat, setEditingKat] = useState<KatFormState | null>(null);
   const [savingKat, setSavingKat] = useState(false);
@@ -120,12 +125,17 @@ export default function AdminCitaonicaPage() {
     if (!token) return;
     try {
       setLoading(true);
-      const [knj, kats] = await Promise.all([
+      const [knj, kats, stanjeUvoza] = await Promise.all([
         apiRequest<Knjiga[]>("GET", "/admin/knjige", undefined, token),
         apiRequest<Kategorija[]>("GET", "/admin/kategorije-knjiga", undefined, token),
+        apiRequest<{ ukupno: number; nedostaje: number; naslovi: string[] }>(
+          "GET", "/admin/knjige/uvoz-33-price", undefined, token,
+        ).catch(() => null),
       ]);
       setList(knj);
       setKategorije(kats);
+      setUvoz(stanjeUvoza);
+      if (kats.length > 0) setUvozKategorija(prev => (prev === "prica" ? kats[0]!.slug : prev));
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće učitati podatke"), variant: "destructive" });
     } finally {
@@ -134,6 +144,28 @@ export default function AdminCitaonicaPage() {
   };
 
   const loadList = loadAll;
+
+  const uveziPrice = async () => {
+    if (!token || !uvoz || uvoz.nedostaje === 0) return;
+    const kat = kategorije.find(k => k.slug === uvozKategorija);
+    const gdje = kat ? kat.naziv : uvozKategorija;
+    if (!window.confirm(t(`Ubaciti ${uvoz.nedostaje} priča u kategoriju „${gdje}"? Priče koje već postoje se preskaču.`))) return;
+    setUvozim(true);
+    try {
+      const rezultat = await apiRequest<{ dodano: { naslov: string }[]; preskoceno: { naslov: string }[] }>(
+        "POST", "/admin/knjige/uvoz-33-price", { kategorija: uvozKategorija }, token,
+      );
+      toast({
+        title: t("Priče su uvezene"),
+        description: t(`Dodano: ${rezultat.dodano.length}. Preskočeno (već postoji): ${rezultat.preskoceno.length}.`),
+      });
+      await loadAll();
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err?.message || t("Uvoz nije uspio"), variant: "destructive" });
+    } finally {
+      setUvozim(false);
+    }
+  };
 
   const startNew = () => {
     const defaultKat = kategorije[0]?.slug ?? "prica";
@@ -375,6 +407,51 @@ export default function AdminCitaonicaPage() {
           </div>
         ) : (
           <div className="space-y-6">
+            {uvoz && uvoz.nedostaje > 0 ? (
+              <div className="bg-white rounded-2xl border border-amber-200 p-5" data-testid="kartica-uvoz-33">
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                    <BookMarked className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-extrabold text-foreground">{t("33 priče za djecu")}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {t(`Knjiga ide uz platformu, s ilustracijama. Od ${uvoz.ukupno} priča, u Čitaonici nedostaje ${uvoz.nedostaje}. Priče koje već postoje se preskaču.`)}
+                    </p>
+                    <details className="mt-2">
+                      <summary className="text-sm font-bold text-teal-700 cursor-pointer">{t("Koje priče nedostaju")}</summary>
+                      <ul className="mt-2 text-sm text-muted-foreground grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                        {uvoz.naslovi.map(n => <li key={n}>• {n}</li>)}
+                      </ul>
+                    </details>
+                    <div className="flex flex-wrap items-end gap-3 mt-4">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-bold">{t("U kategoriju")}</span>
+                        <select
+                          value={uvozKategorija}
+                          onChange={e => setUvozKategorija(e.target.value)}
+                          className="px-3 py-2.5 rounded-xl border border-border bg-white min-h-11"
+                          data-testid="uvoz-kategorija"
+                        >
+                          {kategorije.map(k => <option key={k.slug} value={k.slug}>{k.naziv}</option>)}
+                          {kategorije.every(k => k.slug !== "prica") ? <option value="prica">{t("Priče")}</option> : null}
+                        </select>
+                      </label>
+                      <button
+                        onClick={uveziPrice}
+                        disabled={uvozim}
+                        data-testid="button-uvezi-33"
+                        className="inline-flex items-center gap-2 px-5 min-h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold disabled:opacity-60"
+                      >
+                        {uvozim ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        {uvozim ? t("Uvozim…") : t(`Uvezi ${uvoz.nedostaje} priča`)}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <KategorijeManager
               kategorije={kategorije}
               expanded={katOpen}

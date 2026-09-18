@@ -327,6 +327,9 @@ body{
   <p class="sr" id="glas" aria-live="polite"></p>
 </main>
 
+<!-- Diskretni zvukovi (Web Audio, bez zvučnih datoteka). Vidi /vjezbe/zvuk.js. -->
+<script src="/vjezbe/zvuk.js" defer></script>
+
 <noscript>Za ovu vježbu treba uključiti JavaScript.</noscript>
 
 <!-- Ugrađeni primjer. Isti oblik ima i vanjska JSON datoteka. -->
@@ -611,6 +614,11 @@ body{
     });
   }
 
+  /** Diskretan zvuk; ako zvuk.js nije učitan ili je ugašen, ništa se ne desi. */
+  function zvuk(vrsta) {
+    try { if (window.MektebZvuk && window.MektebZvuk[vrsta]) window.MektebZvuk[vrsta](); } catch (g) {}
+  }
+
   /* ---------- provjera ---------- */
   function provjeri() {
     if (!stanje || stanje.gotovo || popunjenih() < trazene.length) return;
@@ -639,6 +647,7 @@ body{
     if (tacnih === trazene.length) { zavrsi(); return; }
 
     var pogresnih = trazene.length - tacnih;
+    zvuk('greska');
     poruci('Tačno: ' + tacnih + ' od ' + trazene.length + '. ' +
            (pogresnih === 1 ? 'Jedna riječ nije na svome mjestu — dodirni je da je vratiš, pa probaj ponovo.'
                             : 'Riječi koje nisu na svome mjestu su označene — dodirni ih da ih vratiš, pa probaj ponovo.'), 'lose');
@@ -752,6 +761,7 @@ body{
   /* ---------- kraj ---------- */
   function zavrsi() {
     stanje.gotovo = true;
+    zvuk('kraj');
     clearInterval(stanje.sat); stanje.sat = null;
     if (stanje.pocetak) stanje.sekunde = Math.round((Date.now() - stanje.pocetak) / 1000);
     el.sat.textContent = vrijeme(stanje.sekunde);
