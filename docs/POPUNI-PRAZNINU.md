@@ -109,3 +109,5 @@ Osmosmjerka radi po istom obrascu — vidi `docs/OSMOSMJERKA.md`.
 | `kraj` | sve praznine tačne | `id`, `pronadjeno`, `ukupno`, `sekunde`, `greske`, `pomoc`, `provjere`, `tacnoIzPrve` |
 
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "popuni"`.
+
+Treća naša vježba, „Poredak", radi po istom obrascu — vidi `docs/POREDAK.md`.

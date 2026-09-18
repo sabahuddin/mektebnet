@@ -19,7 +19,7 @@ import {
 } from "./nase-vjezbe.js";
 
 test("poznate su tačno dvije vrste naših vježbi", () => {
-  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni"]);
+  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni", "poredak"]);
   for (const tip of Object.keys(TIPOVI_VJEZBI)) assert.equal(isValidTip(tip), true, tip);
   for (const nije of ["", "h5p", "../tajna", 7, null]) {
     assert.equal(isValidTip(nije as unknown), false, String(nije));
@@ -50,7 +50,7 @@ test("URL i marker vježbe ostaju na našoj domeni", () => {
 });
 
 test("naša vježba se prepoznaje po adresi, vanjski embed ne", () => {
-  assert.equal(NASE_VJEZBE_PREFIKSI.length, 2);
+  assert.equal(NASE_VJEZBE_PREFIKSI.length, Object.keys(TIPOVI_VJEZBI).length);
   assert.equal(jeNasaVjezba(vjezbaUrl("popuni", "abdest")), true);
   assert.equal(jeNasaVjezba(vjezbaUrl("osmosmjerka", "ramazan")), true);
   assert.equal(jeNasaVjezba("https://learningapps.org/watch?app=123"), false);
@@ -88,7 +88,7 @@ test("vježba popuni prazninu ima izbrojane praznine u detalju", async () => {
 
 test("jedan poziv vraća sve vrste sa svojim vježbama", async () => {
   const tipovi = await listSveVjezbe();
-  assert.equal(tipovi.length, 2);
+  assert.equal(tipovi.length, Object.keys(TIPOVI_VJEZBI).length);
   for (const tv of tipovi) {
     assert.ok(tv.naziv.length > 0, tv.tip);
     assert.ok(tv.vjezbe.every(v => v.tip === tv.tip), `${tv.tip}: vježbe nose svoju vrstu`);
@@ -153,4 +153,25 @@ test("izmjena ugrađene vježbe prekrije datoteku, brisanje je vrati", async () 
   const vraceno = await citajPodatke("popuni", "abdest");
   assert.equal(vraceno?.izvor, "ugradjena", "brisanje vraća ugrađenu verziju");
   assert.equal((vraceno?.podaci as { naslov?: string }).naslov, (ugradjena?.podaci as { naslov?: string }).naslov);
+});
+
+test("poredak prima samo spisak razlicitih stavki", async () => {
+  const dobra = { naslov: "Koraci", stavke: ["Prvo", "Drugo", "Treće"] };
+  assert.equal(validirajPodatke("poredak", dobra), null);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: ["Samo jedna"] })), /bar dvije stavke/);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: ["Ista", "ista"] })), /ne smiju biti iste/);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: ["Prvo", "  "] })), /prazna/);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: "Prvo" })), /bar dvije stavke/);
+
+  const spisak = await listVjezbe("poredak");
+  assert.ok(spisak.length >= 2, "očekujemo bar dvije ugrađene vježbe poretka");
+  for (const stavka of spisak) {
+    assert.equal(isValidVjezbaId(stavka.id), true, stavka.id);
+    assert.match(stavka.detalj, /stavk/, `${stavka.id}: detalj`);
+    assert.equal(stavka.url, vjezbaUrl("poredak", stavka.id));
+  }
+
+  const koraci = await getVjezba("poredak", "abdest-koraci");
+  assert.ok(koraci, "abdest-koraci.json mora postojati");
+  assert.equal(koraci?.detalj, "9 stavki");
 });

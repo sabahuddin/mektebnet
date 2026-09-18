@@ -99,3 +99,5 @@ Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "osmosmjerka"`.
 
 Druga naša vježba, „Popuni prazninu", radi po istom obrascu — vidi
 `docs/POPUNI-PRAZNINU.md`.
+
+Treća naša vježba, „Poredak", radi po istom obrascu — vidi `docs/POREDAK.md`.

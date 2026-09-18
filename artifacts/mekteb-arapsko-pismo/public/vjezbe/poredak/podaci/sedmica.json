@@ -1,0 +1,14 @@
+{
+  "id": "sedmica",
+  "naslov": "Poredaj dane u sedmici",
+  "uputa": "Složi dane od ponedjeljka do nedjelje, pa klikni „Provjeri\".",
+  "stavke": [
+    "ponedjeljak",
+    "utorak",
+    "srijeda",
+    "četvrtak",
+    "petak",
+    "subota",
+    "nedjelja"
+  ]
+}

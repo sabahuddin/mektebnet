@@ -45,6 +45,12 @@ export const TIPOVI_VJEZBI: Record<string, TipVjezbe> = {
     opis: "Dijete prevlači riječi na prazna mjesta u priči.",
     html: "/vjezbe/popuni/popuni.html",
   },
+  poredak: {
+    tip: "poredak",
+    naziv: "Poredak",
+    opis: "Dijete slaže izmiješane stavke u tačan redoslijed.",
+    html: "/vjezbe/poredak/poredak.html",
+  },
 };
 
 /** Prefiksi po kojima stranica lekcije prepoznaje našu vježbu. */
@@ -172,6 +178,23 @@ export function validirajPodatke(tip: string, podaci: unknown): string | null {
     return null;
   }
 
+  if (tip === "poredak") {
+    const stavke = Array.isArray(p.stavke) ? p.stavke : null;
+    if (!stavke || stavke.length < 2) return "Poredak treba bar dvije stavke.";
+    if (stavke.length > 20) return "Poredak može imati najviše dvadeset stavki.";
+    if (stavke.some(s => typeof s !== "string" || !String(s).trim())) return "Nijedna stavka ne smije biti prazna.";
+    const vidjene = new Set<string>();
+    for (const s of stavke) {
+      const kljuc = String(s).trim().toLocaleLowerCase("bs");
+      if (vidjene.has(kljuc)) return "Dvije stavke ne smiju biti iste — dijete ih ne bi moglo razlikovati.";
+      vidjene.add(kljuc);
+    }
+    if (p.poredaj !== undefined && !["mijesaj", "redom"].includes(String(p.poredaj))) {
+      return "Redoslijed može biti: mijesaj ili redom.";
+    }
+    return null;
+  }
+
   if (tip === "popuni") {
     const tekst = typeof p.tekst === "string" ? p.tekst : "";
     if (!tekst.trim()) return "Upiši priču.";
@@ -202,6 +225,9 @@ function sazetak(tip: string, id: string, podaci: Podaci, izvor: IzvorVjezbe, up
     const rijeci = Array.isArray(podaci.rijeci) ? podaci.rijeci : [];
     const tezina = typeof podaci.tezina === "string" ? podaci.tezina : "lako";
     detalj = `${mnozina(rijeci.length, "riječ", "riječi", "riječi")} · ${tezina}`;
+  } else if (tip === "poredak") {
+    const stavke = Array.isArray(podaci.stavke) ? podaci.stavke : [];
+    detalj = mnozina(stavke.length, "stavka", "stavke", "stavki");
   } else {
     const praznina = brojPraznina(String(podaci.tekst ?? ""));
     const dodatne = Array.isArray(podaci.dodatne) ? podaci.dodatne.length : 0;

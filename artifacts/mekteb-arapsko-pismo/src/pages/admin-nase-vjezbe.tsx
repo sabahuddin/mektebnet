@@ -5,11 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import {
   Loader2, Plus, Save, Trash2, Eye, Copy, ArrowLeft,
-  PencilRuler, Grid3x3, TextCursorInput, AlertTriangle,
+  PencilRuler, Grid3x3, TextCursorInput, ListOrdered, AlertTriangle,
 } from "lucide-react";
 
 /**
- * Uređivač naših vježbi (osmosmjerka, popuni prazninu) u admin panelu.
+ * Uređivač naših vježbi (osmosmjerka, popuni prazninu, poredak) u admin panelu.
  *
  * Vježbe napravljene ovdje čuvaju se u bazi (`nase_vjezbe`) i odmah su
  * dostupne u lekciji, bez deploya. Ugrađene vježbe (JSON datoteke uz kod)
@@ -51,6 +51,8 @@ interface Nacrt {
   // popuni prazninu
   tekst: string;
   dodatne: string;
+  // poredak — jedna stavka po redu, tačnim redoslijedom
+  stavke: string;
 }
 
 const PRAZAN_NACRT: Omit<Nacrt, "tip" | "id" | "noviUnos"> = {
@@ -63,6 +65,7 @@ const PRAZAN_NACRT: Omit<Nacrt, "tip" | "id" | "noviUnos"> = {
   rijeci: [{ rijec: "", opis: "" }, { rijec: "", opis: "" }],
   tekst: "",
   dodatne: "",
+  stavke: "",
 };
 
 /** Oznaka vježbe iz naslova: „Dan u ramazanu" → „dan-u-ramazanu". */
@@ -98,7 +101,13 @@ function nacrtIzPodataka(tip: string, id: string, podaci: Record<string, unknown
     rijeci: rijeci.length ? rijeci : [{ rijec: "", opis: "" }, { rijec: "", opis: "" }],
     tekst: String(podaci.tekst ?? ""),
     dodatne: Array.isArray(podaci.dodatne) ? podaci.dodatne.join(", ") : "",
+    stavke: Array.isArray(podaci.stavke) ? podaci.stavke.map(s => String(s)).join("\n") : "",
   };
+}
+
+/** Stavke poretka: jedna po redu, prazni redovi se preskaču. */
+function stavkeIzTeksta(tekst: string): string[] {
+  return tekst.split("\n").map(s => s.trim()).filter(Boolean);
 }
 
 function podaciIzNacrta(n: Nacrt): Record<string, unknown> {
@@ -116,6 +125,14 @@ function podaciIzNacrta(n: Nacrt): Record<string, unknown> {
         .map(r => ({ rijec: r.rijec.trim(), opis: r.opis.trim() })),
     };
   }
+  if (n.tip === "poredak") {
+    return {
+      id: n.id,
+      naslov: n.naslov.trim(),
+      uputa: n.uputa.trim() || undefined,
+      stavke: stavkeIzTeksta(n.stavke),
+    };
+  }
   return {
     id: n.id,
     naslov: n.naslov.trim(),
@@ -123,6 +140,13 @@ function podaciIzNacrta(n: Nacrt): Record<string, unknown> {
     tekst: n.tekst,
     dodatne: n.dodatne.split(",").map(d => d.trim()).filter(Boolean),
   };
+}
+
+/** Ikona uz vrstu vježbe u spisku i u formi. */
+function IkonaVrste({ tip, className }: { tip: string; className?: string }) {
+  if (tip === "osmosmjerka") return <Grid3x3 className={className} />;
+  if (tip === "poredak") return <ListOrdered className={className} />;
+  return <TextCursorInput className={className} />;
 }
 
 export default function AdminNaseVjezbe() {
@@ -269,9 +293,7 @@ export default function AdminNaseVjezbe() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-2xl bg-teal-100 flex items-center justify-center">
-                  {tv.tip === "osmosmjerka"
-                    ? <Grid3x3 className="w-5 h-5 text-teal-700" />
-                    : <TextCursorInput className="w-5 h-5 text-teal-700" />}
+                  <IkonaVrste tip={tv.tip} className="w-5 h-5 text-teal-700" />
                 </div>
                 <div>
                   <h2 className="text-xl font-extrabold text-foreground">{tv.naziv}</h2>
@@ -379,7 +401,7 @@ export default function AdminNaseVjezbe() {
 
       <div className="bg-white border border-border/60 rounded-2xl p-5 flex flex-col gap-4">
         <div className="flex items-center gap-2 text-sm font-bold text-teal-800">
-          {nacrt.tip === "osmosmjerka" ? <Grid3x3 className="w-4 h-4" /> : <TextCursorInput className="w-4 h-4" />}
+          <IkonaVrste tip={nacrt.tip} className="w-4 h-4" />
           {tipInfo?.naziv ?? nacrt.tip}
         </div>
 
@@ -519,6 +541,26 @@ export default function AdminNaseVjezbe() {
               </button>
             </div>
           </>
+        ) : nacrt.tip === "poredak" ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-bold">{t("Stavke, tačnim redoslijedom")}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("Stavki:")} <strong>{stavkeIzTeksta(nacrt.stavke).length}</strong>
+              </span>
+            </div>
+            <textarea
+              value={nacrt.stavke}
+              onChange={e => setNacrt({ ...nacrt, stavke: e.target.value })}
+              rows={12}
+              placeholder={"Prouči Bismillu\nOperi šake tri puta\nIsperi usta tri puta"}
+              className="px-3 py-2.5 rounded-xl border border-border font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-400"
+              data-testid="polje-stavke"
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("Jedna stavka po redu, od prve do zadnje. Vježba ih sama izmiješa pred djetetom. Stavka može biti riječ, izraz ili cijela rečenica; dvije iste stavke nisu dozvoljene.")}
+            </p>
+          </div>
         ) : (
           <>
             <div className="flex flex-col gap-2">
