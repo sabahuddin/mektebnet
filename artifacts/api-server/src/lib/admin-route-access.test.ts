@@ -89,3 +89,11 @@ test("ostale uloge ne mogu pristupiti admin rutama", () => {
     }), false);
   }
 });
+test("sigurnosna kopija je samo za admina", () => {
+  for (const path of ["/sigurnosna-kopija", "/sigurnosna-kopija/pregled"]) {
+    assert.equal(canAccessAdminRoute({ role: "admin", method: "GET", path }), true, path);
+    assert.equal(canAccessAdminRoute({ role: "muallim", method: "GET", path }), false, path);
+    assert.equal(canAccessAdminRoute({ role: "ucenik", method: "GET", path }), false, path);
+    assert.equal(canAccessAdminRoute({ method: "GET", path }), false, path);
+  }
+});

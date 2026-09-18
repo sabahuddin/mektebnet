@@ -597,6 +597,24 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN file_size SET DEFAULT 0;`);
     await db.execute(sql`ALTER TABLE prilozi ALTER COLUMN mime_type SET DEFAULT 'application/octet-stream';`);
 
+    // Naše vježbe (osmosmjerka, popuni prazninu) koje admin pravi kroz panel.
+    // Ugrađene vježbe ostaju kao JSON datoteke u public/vjezbe/<tip>/podaci/;
+    // ovdje su samo one koje je admin napravio ili izmijenio, pa se nova
+    // vježba ne mora deployati. Isti (tip, vjezba_id) prepisuje ugrađenu.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS nase_vjezbe (
+        id serial PRIMARY KEY,
+        tip varchar(40) NOT NULL,
+        vjezba_id varchar(80) NOT NULL,
+        naslov varchar(200) NOT NULL,
+        podaci jsonb NOT NULL,
+        updated_by integer,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS nase_vjezbe_tip_id_uidx ON nase_vjezbe (tip, vjezba_id);`);
+
     // embed_completions — audit + anti-double-claim za embed vježbe.
     // Učenik može klikom "Završio sam" zatražiti hasanate SAMO jednom po
     // (student_id, prilozi_id). Unique index garantuje atomski guard.

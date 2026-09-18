@@ -69,17 +69,6 @@ import {
 import { STATIC_VJEZBE, getStaticVjezba } from "../lib/static-vjezbe.js";
 import { OSMOSMJERKA_MARKER, getOsmosmjerka, osmosmjerkaMarker, osmosmjerkaUrl } from "../lib/osmosmjerke.js";
 import { TIPOVI_VJEZBI, getVjezba, jeNasaVjezba, vjezbaMarker, vjezbaUrl } from "../lib/nase-vjezbe.js";
-import { createGzip } from "node:zlib";
-import { logger } from "../lib/logger.js";
-import { once } from "node:events";
-import {
-  KOPIJA_FORMAT,
-  KOPIJA_VERZIJA,
-  imeKopije,
-  kopijaSadrzaja,
-  prebrojRedove,
-  stanjeFajlova,
-} from "../lib/sigurnosna-kopija.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -5187,53 +5176,6 @@ router.put("/napamet-program-redoslijed", async (req, res) => {
     res.json({ katalog: await getGlobalNapametKatalog(true) });
   } catch {
     res.status(500).json({ error: "Greška servera" });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// Sigurnosna kopija sadržaja — strogo admin-only (canAccessAdminRoute).
-// Kopija nosi sve redove baze, pa i lične podatke; zato je bez keširanja i
-// samo za admina. Priloženi fajlovi (/uploads) idu zasebno, sa servera.
-// ---------------------------------------------------------------------------
-
-router.get("/sigurnosna-kopija/pregled", async (_req, res): Promise<void> => {
-  try {
-    const [tabele, fajlovi] = await Promise.all([prebrojRedove(), stanjeFajlova()]);
-    res.set("Cache-Control", "no-store");
-    res.json({
-      format: KOPIJA_FORMAT,
-      verzija: KOPIJA_VERZIJA,
-      vrijeme: new Date().toISOString(),
-      tabele,
-      ukupnoRedova: tabele.reduce((zbir, t) => zbir + t.redova, 0),
-      fajlovi,
-    });
-  } catch (err) {
-    logger.error({ err }, "[Kopija] pregled nije uspio");
-    res.status(500).json({ error: "Greška servera" });
-  }
-});
-
-router.get("/sigurnosna-kopija", async (_req, res): Promise<void> => {
-  const ime = imeKopije();
-  res.set("Content-Type", "application/gzip");
-  res.set("Content-Disposition", `attachment; filename="${ime}"`);
-  res.set("Cache-Control", "no-store");
-  res.set("X-Content-Type-Options", "nosniff");
-
-  const gzip = createGzip();
-  gzip.pipe(res);
-  try {
-    for await (const komad of kopijaSadrzaja()) {
-      if (!gzip.write(komad)) await once(gzip, "drain");
-    }
-    gzip.end();
-  } catch (err) {
-    logger.error({ err }, "[Kopija] izvoz nije uspio");
-    // Zaglavlja su već poslana, pa prekid veze je jedini pošten signal —
-    // nepotpuna kopija ne smije izgledati kao ispravna.
-    gzip.destroy();
-    res.destroy();
   }
 });
 

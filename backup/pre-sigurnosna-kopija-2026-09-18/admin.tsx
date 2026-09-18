@@ -2931,7 +2931,6 @@ export default function AdminPage() {
                 <AdminToolCard icon={<Award />} label="Etape i krunisanja" tone="emerald" onClick={() => setLocation("/admin/etape")} testId="button-admin-etape" />
                 <AdminToolCard icon={<Languages />} label="Uređivanje prijevoda" tone="sky" onClick={() => setLocation("/admin/prijevodi")} testId="button-admin-prijevodi" />
                 <AdminToolCard icon={<Wrench />} label="Statičke vježbe" tone="emerald" onClick={() => setLocation("/admin/vjezbe")} testId="button-admin-vjezbe" />
-                <AdminToolCard icon={<ShieldCheck />} label="Sigurnosna kopija" tone="sky" onClick={() => setLocation("/admin/sigurnosna-kopija")} testId="button-admin-sigurnosna-kopija" />
               </div>
             </TabsContent>
 

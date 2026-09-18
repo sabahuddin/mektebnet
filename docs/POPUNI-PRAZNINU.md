@@ -2,7 +2,8 @@
 
 Druga vježba koju platforma servira sama, bez LearningAppsa, Wordwalla i H5P-a.
 Dijete čita kratku priču u kojoj nedostaju riječi i prevlači ih na prazna
-mjesta. **Nova vježba znači samo novu JSON datoteku**, bez ijedne izmjene koda.
+mjesta. **Novu vježbu admin pravi sam, u panelu** — bez izmjene koda i bez
+deploya. Vježbe koje idu uz kod i dalje mogu biti JSON datoteke u repozitoriju.
 
 Vježba ne šalje nijedan zahtjev prema vanjskim domenama i ne postavlja kolačiće.
 Font Nunito učitava se s našeg servera (`public/fonts/nunito-*.woff2`, SIL OFL).
@@ -18,7 +19,27 @@ Font Nunito učitava se s našeg servera (`public/fonts/nunito-*.woff2`, SIL OFL
 - Kad su sve praznine tačne, vježba javi „kraj" i stranica lekcije otključa
   dugme **Završi vježbu**.
 
-## Kako dodati novu vježbu (5 koraka)
+## Kako napraviti novu vježbu (iz admin panela)
+
+1. **Admin panel → Vježbe → Naše vježbe → Nova vježba** (kod „Popuni prazninu").
+2. Upiši naslov i priču.
+3. Označi riječ u priči mišem pa klikni **Označi riječ kao prazninu** — riječ
+   dobije vitičaste zagrade i postaje prazno mjesto. Prazan red pravi novi pasus.
+4. Po želji dopiši **dodatne riječi** (odvojene zarezom) koje nigdje ne trebaju.
+5. **Sačuvaj** — ispod se odmah otvori pregled onakav kakvim ga dijete vidi.
+
+Vježba se čuva u bazi (`nase_vjezbe`) i odmah je dostupna u lekciji, bez
+deploya. Oznaka (dio adrese) se pravi iz naslova ako je ne upišeš sam, a poslije
+čuvanja se više ne mijenja, jer lekcije pokazuju na nju.
+
+Ugrađene vježbe (one koje idu uz kod) stoje u istom spisku. Kad ih izmijeniš,
+izmjena se upiše u bazu i od tada prekriva ugrađenu; **Obriši** vraća ugrađenu
+verziju. Dugme **Kopiraj** pravi novu vježbu od postojeće.
+
+## Kako dodati novu vježbu kao datoteku uz kod (5 koraka)
+
+Ovaj put je i dalje tu za vježbe koje idu uz kod (idu u git i u svaki deploy).
+
 
 1. Napravi datoteku `artifacts/mekteb-arapsko-pismo/public/vjezbe/popuni/podaci/<ime>.json`
    (ime smije imati samo mala slova, cifre i crticu — to je ujedno ID vježbe).
@@ -60,8 +81,9 @@ Font Nunito učitava se s našeg servera (`public/fonts/nunito-*.woff2`, SIL OFL
 |---|---|
 | `public/vjezbe/popuni/popuni.html` | cijela vježba: priča, praznine, prevlačenje, tastatura, događaji |
 | `public/vjezbe/popuni/podaci/*.json` | sadržaj pojedine vježbe |
-| `api-server/src/lib/nase-vjezbe.ts` | zajednički registar svih naših vježbi (čita foldere, provjerava ID, gradi URL) |
-| `api-server/src/routes/nase-vjezbe.ts` | `GET /api/nase-vjezbe` — vrste i njihove vježbe za admin formu |
+| `api-server/src/lib/nase-vjezbe.ts` | zajednički registar (ugrađene datoteke + tabela `nase_vjezbe`), provjera sadržaja, URL |
+| `api-server/src/routes/nase-vjezbe.ts` | spisak, sadržaj vježbe za iframe i CRUD za uređivač u panelu |
+| `src/pages/admin-nase-vjezbe.tsx` | uređivač u admin panelu (kartica „Naše vježbe") |
 | `api-server/src/routes/admin.ts` | `POST /api/admin/prilozi/:lekcijaId/nasa-vjezba` |
 | `src/pages/ilmihal-lekcija.tsx` | admin forma, popup vježbe, otključavanje dugmeta |
 
