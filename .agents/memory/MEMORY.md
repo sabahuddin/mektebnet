@@ -65,3 +65,4 @@
 - [Hero kopije moraju biti WebP](hero-kopije-webp.md) — galerijska hero kopija se ponovo obrađuje; DB reference se ažuriraju prije brisanja starog fajla.
 - [Zadaća — adresati i ispitivanje](zadaca-adresati-i-ispitivanje.md) — kartica je za jednog učenika; glavni modul za grupu ili 2+; Ispitano broji samo ocjene.
 - [Bundler template script escape](bundler-template-script-escape.md) — nakon JSON reserializacije obavezno escapuj unutrašnje zatvarajuće script tagove ili browser prekida template JSON.
+- [pnpm verzija na Replitu](pnpm-package-manager-version-replit.md) — isključi pnpm samoprebacivanje verzije; inače packageManager noviji od Nix pnpm-a izaziva rekurzivnu instalaciju.
