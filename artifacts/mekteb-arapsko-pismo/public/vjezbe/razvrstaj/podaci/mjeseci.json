@@ -1,0 +1,15 @@
+{
+  "id": "mjeseci",
+  "naslov": "Razvrstaj mjesece",
+  "uputa": "Prevuci svaki mjesec u kutiju kojoj pripada. Kad razvrstaš sve, klikni „Provjeri\".",
+  "kategorije": [
+    {
+      "naziv": "Hidžretski mjeseci",
+      "stavke": ["muharrem", "safer", "redžeb", "ramazan", "ševval"]
+    },
+    {
+      "naziv": "Mjeseci po Suncu",
+      "stavke": ["januar", "april", "juli", "oktobar", "decembar"]
+    }
+  ]
+}

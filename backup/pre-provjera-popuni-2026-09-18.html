@@ -70,9 +70,6 @@
   --narandzasta-tamna:#8A5A00;
   --zelena:#2F7D4F;
   --zelena-blijeda:#E7F4EC;
-  --crvena:#C0462A;
-  --crvena-blijeda:#FBECE6;
-  --crvena-tamna:#7A2E15;
   --mastilo:#1F2D38;
   --mastilo-blijedo:#5F6F76;
   --papir:#FFFFFF;
@@ -150,18 +147,11 @@ body{
 }
 .praznina:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
 .praznina.cilj{background:#fff;border-color:var(--narandzasta);border-style:solid;transform:scale(1.04)}
-.praznina.popunjena{
-  background:#fff;border:2px solid var(--tirkiz);color:var(--mastilo);
-}
 .praznina.tacna{
   background:var(--zelena-blijeda);border:2px solid var(--zelena);
   color:#1E5735;cursor:default;
 }
-.praznina.netacna{
-  background:var(--crvena-blijeda);border:2px solid var(--crvena);
-  color:var(--crvena-tamna);text-decoration:line-through;
-  animation:tresi .4s ease-in-out;
-}
+.praznina.netacna{animation:tresi .4s ease-in-out}
 @keyframes tresi{
   0%,100%{transform:translateX(0)}
   25%{transform:translateX(-5px)}
@@ -318,8 +308,7 @@ body{
     <footer class="komande" id="komande">
       <div class="dugmad">
         <button class="dugme" id="pomoc" type="button">Pomozi mi</button>
-        <button class="dugme" id="nova" type="button">Počni ispočetka</button>
-        <button class="dugme glavno" id="provjeri" type="button" disabled>Provjeri</button>
+        <button class="dugme glavno" id="nova" type="button">Počni ispočetka</button>
       </div>
     </footer>
   </div>
@@ -349,7 +338,7 @@ body{
     naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), sat: $('sat'),
     prica: $('prica'), rijeci: $('rijeci'), poruka: $('poruka'), glas: $('glas'),
     kraj: $('kraj'), krajOpis: $('kraj-opis'), ponovo: $('ponovo'),
-    pomoc: $('pomoc'), nova: $('nova'), provjeri: $('provjeri'), ponudaPrazna: $('ponuda-prazna'),
+    pomoc: $('pomoc'), nova: $('nova'), ponudaPrazna: $('ponuda-prazna'),
     desno: $('desno')
   };
 
@@ -422,7 +411,7 @@ body{
 
     el.naslov.textContent = podaci.naslov || 'Popuni prazninu';
     document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Popuni prazninu · Mekteb.net';
-    el.uputa.textContent = podaci.uputa || 'Prevuci riječ na prazno mjesto. Kad popuniš sve praznine, klikni „Provjeri".';
+    el.uputa.textContent = podaci.uputa || 'Prevuci riječ na prazno mjesto. Možeš i ovako: dodirni riječ, pa dodirni prazninu.';
     el.uputa.hidden = !el.uputa.textContent;
   }
 
@@ -435,7 +424,7 @@ body{
     }
 
     stanje = {
-      rijesene: 0, greske: 0, pomoc: 0, provjere: 0, izPrve: null,
+      rijesene: 0, greske: 0, pomoc: 0,
       pocetak: 0, sekunde: 0, sat: null, gotovo: false,
       izabrana: null, vuce: null, duh: null, cilj: null
     };
@@ -449,7 +438,6 @@ body{
 
     el.kraj.hidden = true;
     el.pomoc.disabled = false;
-    el.provjeri.disabled = true;
     el.sat.textContent = '0:00';
     poruci('');
     nacrtajPricu();
@@ -491,7 +479,7 @@ body{
       dugme.setAttribute('aria-label', 'Praznina ' + (i + 1) + ' od ' + trazene.length);
       dugme.textContent = '?';
       pasus.appendChild(dugme);
-      stanje.praznine.push({ el: dugme, tacna: false, zakljucana: false, ponudjena: null, rijec: d.sadrzaj });
+      stanje.praznine.push({ el: dugme, tacna: false, rijec: d.sadrzaj });
     });
   }
 
@@ -511,18 +499,8 @@ body{
     el.ponudaPrazna.hidden = ostalo;
   }
 
-  function popunjenih() {
-    var broj = 0;
-    for (var i = 0; i < stanje.praznine.length; i++) if (stanje.praznine[i].ponudjena) broj++;
-    return broj;
-  }
-
   function osvjeziBrojac() {
-    var broj = popunjenih();
-    el.brojac.textContent = broj + ' od ' + trazene.length;
-    // Provjera ima smisla tek kad je sve popunjeno — dotad dijete slaže bez
-    // ijedne crvene oznake.
-    el.provjeri.disabled = stanje.gotovo || broj < trazene.length;
+    el.brojac.textContent = stanje.rijesene + ' od ' + trazene.length;
   }
 
   /* ---------- sat ---------- */
@@ -549,102 +527,35 @@ body{
     });
   }
 
-  /** Riječ se vraća u ponudu, a praznina ostaje prazna. */
-  function isprazni(praznina) {
-    if (!praznina || !praznina.ponudjena) return;
-    praznina.ponudjena.potrosena = false;
-    praznina.ponudjena = null;
-    praznina.el.textContent = '?';
-    praznina.el.classList.remove('popunjena', 'tacna', 'netacna');
-    praznina.el.setAttribute('aria-label', 'Praznina ' + (+praznina.el.dataset.i + 1) + ' od ' + trazene.length);
-  }
-
-  /**
-   * Smještanje je uvijek dozvoljeno — i kad riječ nije tačna. Dijete slaže
-   * cijelu priču kako misli da treba, a tek „Provjeri" kaže šta je tačno.
-   */
   function smjesti(ponudjena, praznina) {
-    if (!ponudjena || !praznina || praznina.zakljucana || stanje.gotovo) return;
+    if (!ponudjena || !praznina || praznina.tacna || stanje.gotovo) return;
     pokreniSat();
 
-    // Riječ koja je već bila u toj praznini vraća se u ponudu.
-    if (praznina.ponudjena && praznina.ponudjena !== ponudjena) isprazni(praznina);
-    // Ista riječ ne može stajati na dva mjesta.
-    for (var i = 0; i < stanje.praznine.length; i++) {
-      if (stanje.praznine[i] !== praznina && stanje.praznine[i].ponudjena === ponudjena) {
-        isprazni(stanje.praznine[i]);
-      }
+    if (kljuc(ponudjena.rijec) === kljuc(praznina.rijec)) {
+      praznina.tacna = true;
+      praznina.el.textContent = ponudjena.rijec;
+      praznina.el.classList.remove('netacna');
+      praznina.el.classList.add('tacna');
+      praznina.el.disabled = true;
+      ponudjena.potrosena = true;
+      stanje.rijesene++;
+      oznaciIzabranu(null);
+      nacrtajPonudu();
+      osvjeziBrojac();
+      poruci('Tačno: ' + ponudjena.rijec + '.', 'dobro');
+      reci('Tačno. ' + ponudjena.rijec);
+      javi('rijec', { rijec: ponudjena.rijec, pronadjeno: stanje.rijesene, ukupno: trazene.length });
+      if (stanje.rijesene === trazene.length) zavrsi();
+      return;
     }
 
-    praznina.ponudjena = ponudjena;
-    ponudjena.potrosena = true;
-    praznina.el.textContent = ponudjena.rijec;
-    praznina.el.classList.remove('tacna', 'netacna');
-    praznina.el.classList.add('popunjena');
-    praznina.el.setAttribute('aria-label', 'Praznina ' + (+praznina.el.dataset.i + 1) + ': ' + ponudjena.rijec);
-
+    stanje.greske++;
+    praznina.el.classList.remove('netacna');
+    void praznina.el.offsetWidth;
+    praznina.el.classList.add('netacna');
     oznaciIzabranu(null);
-    nacrtajPonudu();
-    osvjeziBrojac();
-
-    if (popunjenih() === trazene.length) {
-      poruci('Sve praznine su popunjene. Klikni „Provjeri" da vidiš kako si uradio.');
-      reci('Sve je popunjeno. Klikni Provjeri.');
-    } else {
-      poruci('Smješteno: ' + ponudjena.rijec + '. Ako se predomisliš, dodirni riječ u priči da je vratiš.');
-      reci('Smješteno. ' + ponudjena.rijec);
-    }
-  }
-
-  /** Tačna riječ ostaje na mjestu i više se ne dira. */
-  function zakljucajTacnu(praznina) {
-    praznina.tacna = true;
-    praznina.zakljucana = true;
-    praznina.el.classList.remove('popunjena', 'netacna');
-    praznina.el.classList.add('tacna');
-    praznina.el.disabled = true;
-    stanje.rijesene = 0;
-    for (var i = 0; i < stanje.praznine.length; i++) if (stanje.praznine[i].zakljucana) stanje.rijesene++;
-    javi('rijec', {
-      rijec: praznina.ponudjena.rijec,
-      pronadjeno: stanje.rijesene, ukupno: trazene.length
-    });
-  }
-
-  /* ---------- provjera ---------- */
-  function provjeri() {
-    if (!stanje || stanje.gotovo || popunjenih() < trazene.length) return;
-    stanje.provjere++;
-
-    var tacnih = 0;
-    stanje.praznine.forEach(function (praznina) {
-      // Već potvrđene (i one koje je riješila pomoć) ne provjeravamo ponovo.
-      if (praznina.zakljucana) { tacnih++; return; }
-      if (praznina.ponudjena && kljuc(praznina.ponudjena.rijec) === kljuc(praznina.rijec)) {
-        zakljucajTacnu(praznina);
-        tacnih++;
-      } else {
-        praznina.tacna = false;
-        stanje.greske++;
-        praznina.el.classList.remove('popunjena', 'tacna', 'netacna');
-        void praznina.el.offsetWidth;
-        praznina.el.classList.add('netacna');
-      }
-    });
-
-    stanje.rijesene = tacnih;
-    if (stanje.izPrve === null) stanje.izPrve = tacnih;
-    osvjeziBrojac();
-
-    if (tacnih === trazene.length) { zavrsi(); return; }
-
-    var pogresnih = trazene.length - tacnih;
-    poruci('Tačno: ' + tacnih + ' od ' + trazene.length + '. ' +
-           (pogresnih === 1 ? 'Jedna riječ nije na svome mjestu — dodirni je da je vratiš, pa probaj ponovo.'
-                            : 'Riječi koje nisu na svome mjestu su označene — dodirni ih da ih vratiš, pa probaj ponovo.'), 'lose');
-    reci('Tačno ' + tacnih + ' od ' + trazene.length + '. Ispravi označene riječi.');
-    // Pogrešne riječi se vrate u ponudu tek na dodir, da dijete vidi šta je bilo.
-    el.provjeri.disabled = true;
+    poruci('Ta riječ ide na drugo mjesto. Pokušaj ponovo.', 'lose');
+    reci('Nije tačno. Pokušaj ponovo.');
   }
 
   /* ---------- miš, prst i tastatura ---------- */
@@ -731,22 +642,12 @@ body{
     var cilj = e.target.closest && e.target.closest('.praznina');
     if (!cilj || !stanje || stanje.gotovo) return;
     var praznina = stanje.praznine[+cilj.dataset.i];
-    if (!praznina || praznina.zakljucana) return;
-    if (stanje.izabrana) {
-      smjesti(nadjiPonudjenu(stanje.izabrana), praznina);
+    if (!praznina || praznina.tacna) return;
+    if (!stanje.izabrana) {
+      poruci('Prvo odaberi riječ sa spiska, pa je smjesti ovdje.');
       return;
     }
-    if (praznina.ponudjena) {
-      // Dodir na smještenu riječ vraća je u ponudu — i onu označenu crvenim.
-      var vracena = praznina.ponudjena.rijec;
-      isprazni(praznina);
-      nacrtajPonudu();
-      osvjeziBrojac();
-      poruci('Riječ „' + vracena + '" je vraćena među ponuđene.');
-      reci('Vraćeno. ' + vracena);
-      return;
-    }
-    poruci('Prvo odaberi riječ sa spiska, pa je smjesti ovdje.');
+    smjesti(nadjiPonudjenu(stanje.izabrana), praznina);
   });
 
   /* ---------- kraj ---------- */
@@ -756,19 +657,11 @@ body{
     if (stanje.pocetak) stanje.sekunde = Math.round((Date.now() - stanje.pocetak) / 1000);
     el.sat.textContent = vrijeme(stanje.sekunde);
     el.pomoc.disabled = true;
-    el.provjeri.disabled = true;
     poruci('');
 
     var opis = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '.';
-    if (stanje.izPrve !== null) {
-      opis += stanje.izPrve === trazene.length
-        ? ' Iz prve sve tačno!'
-        : ' Iz prve tačno: ' + stanje.izPrve + ' od ' + trazene.length + '.';
-    }
-    if (stanje.greske > 0) {
-      opis += stanje.greske === 1 ? ' Jedna riječ je bila na pogrešnom mjestu.'
-                                  : ' Riječi na pogrešnom mjestu: ' + stanje.greske + '.';
-    }
+    opis += stanje.greske === 0 ? ' Bez ijedne greške.' :
+            stanje.greske === 1 ? ' Jedan pogrešan pokušaj.' : ' Pogrešnih pokušaja: ' + stanje.greske + '.';
     if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? ' Pomoć korištena jednom.' : ' Pomoć korištena ' + stanje.pomoc + ' puta.';
     el.krajOpis.textContent = opis;
     el.kraj.hidden = false;
@@ -777,56 +670,27 @@ body{
 
     javi('kraj', {
       pronadjeno: stanje.rijesene, ukupno: trazene.length, sekunde: stanje.sekunde,
-      greske: stanje.greske, pomoc: stanje.pomoc,
-      provjere: stanje.provjere, tacnoIzPrve: stanje.izPrve
+      greske: stanje.greske, pomoc: stanje.pomoc
     });
   }
 
   /* ---------- komande ---------- */
   el.pomoc.addEventListener('click', function () {
     if (!stanje || stanje.gotovo) return;
-    // Pomoć ide tamo gdje je dijete zapelo: prva prazna ili pogrešno
-    // popunjena praznina. Ako takve nema, uzima prvu nezaključanu.
-    var red = [];
-    stanje.praznine.forEach(function (p) {
-      if (p.zakljucana) return;
-      var dobro = p.ponudjena && kljuc(p.ponudjena.rijec) === kljuc(p.rijec);
-      if (!dobro) red.push(p);
-    });
-    stanje.praznine.forEach(function (p) {
-      if (!p.zakljucana && red.indexOf(p) < 0) red.push(p);
-    });
-
-    for (var i = 0; i < red.length; i++) {
-      var praznina = red[i];
+    // Popuni prvu praznu prazninu odgovarajućom riječju iz ponude.
+    for (var i = 0; i < stanje.praznine.length; i++) {
+      var praznina = stanje.praznine[i];
+      if (praznina.tacna) continue;
       for (var j = 0; j < ponudene.length; j++) {
-        var kandidat = ponudene[j];
-        var slobodna = !kandidat.potrosena || praznina.ponudjena === kandidat;
-        if (!slobodna || kljuc(kandidat.rijec) !== kljuc(praznina.rijec)) continue;
-        stanje.pomoc++;
-        pokreniSat();
-        smjesti(kandidat, praznina);
-        zakljucajTacnu(praznina);
-        osvjeziBrojac();
-        poruci('Ovdje ide riječ „' + kandidat.rijec + '".', 'dobro');
-        reci('Pomoć. Ovdje ide ' + kandidat.rijec);
-        if (popunjenih() === trazene.length) provjeri();
-        return;
-      }
-      // Tačna riječ stoji na drugom mjestu — oslobodi je pa je smjesti ovdje.
-      for (var k = 0; k < stanje.praznine.length; k++) {
-        var druga = stanje.praznine[k];
-        if (druga === praznina || druga.zakljucana || !druga.ponudjena) continue;
-        if (kljuc(druga.ponudjena.rijec) !== kljuc(praznina.rijec)) continue;
-        isprazni(druga);
-        nacrtajPonudu();
-        osvjeziBrojac();
-        el.pomoc.click();
-        return;
+        if (!ponudene[j].potrosena && kljuc(ponudene[j].rijec) === kljuc(praznina.rijec)) {
+          stanje.pomoc++;
+          pokreniSat();
+          smjesti(ponudene[j], praznina);
+          return;
+        }
       }
     }
   });
-  el.provjeri.addEventListener('click', provjeri);
   el.nova.addEventListener('click', novaIgra);
   el.ponovo.addEventListener('click', function () {
     novaIgra();

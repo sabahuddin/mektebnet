@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="bs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spoji parove · Mekteb.net</title>
+<!--
+  SPOJI PAROVE – vježba za mekteb.net
+  Jedan fajl, bez vanjskih skripti, fontova, kolačića i analitike.
+  Font Nunito se učita s ove iste domene (/fonts/nunito-*.woff2).
+
+  SADRŽAJ
+    Vježba čita podatke ovim redom:
+      1. window.SPOJI_PODACI  (ako ga stranica postavi prije ove skripte)
+      2. ?podaci=/putanja/do/datoteke.json  (samo s iste domene)
+      3. ugrađeni primjer na dnu ovog fajla (script id="podaci")
+    Nova vježba = nova JSON datoteka u podaci/. Polja:
+      id      – oznaka vježbe, vraća se u događajima
+      naslov  – naslov iznad parova
+      uputa   – jedna-dvije rečenice (nije obavezno)
+      parovi  – [{ "lijevo": "ezan", "desno": "poziv na namaz" }, …]
+      poredaj – "mijesaj" (zadano) ili "redom" za ponuđene odgovore
+
+  KAKO DIJETE RJEŠAVA
+    Lijevo stoje pojmovi, a ispod (ili desno) izmiješani odgovori. Dijete
+    prevuče odgovor na mjesto uz pojam — svaki se prihvata, i kad nije tačan.
+    Kad spoji sve, klikne „Provjeri": tačni parovi pozelene i zaključaju se,
+    ostali se označe crveno i dodirom se vrate u ponudu.
+
+  DOGAĐAJI (postMessage roditelju i CustomEvent "mekteb-igra")
+    visina – kad se promijeni visina sadržaja
+    par    – kad je jedan par potvrđen kao tačan
+    kraj   – kad su svi parovi tačni
+             { id, pronadjeno, ukupno, sekunde, greske, pomoc, provjere, tacnoIzPrve }
+-->
+<style>
+/* Nunito — lokalno hostan, promjenljivi rez (200–1000). Bez Google Fontsa. */
+@font-face{
+  font-family:'Nunito';
+  src:url('/fonts/nunito-latin-ext.woff2') format('woff2');
+  font-weight:200 1000;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face{
+  font-family:'Nunito';
+  src:url('/fonts/nunito-latin.woff2') format('woff2');
+  font-weight:200 1000;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root{
+  --tirkiz:#248F92;
+  --tirkiz-tamni:#176F72;
+  --tirkiz-blijedi:#E8F3F3;
+  --narandzasta:#F59E0B;
+  --narandzasta-blijedo:#FDF3E0;
+  --narandzasta-tamna:#8A5A00;
+  --zelena:#2F7D4F;
+  --zelena-blijeda:#E7F4EC;
+  --crvena:#C0462A;
+  --crvena-blijeda:#FBECE6;
+  --crvena-tamna:#7A2E15;
+  --mastilo:#1F2D38;
+  --mastilo-blijedo:#5F6F76;
+  --papir:#FFFFFF;
+  --linija:#E6E3DB;
+  --podloga:#FAF9F5;
+  --sjena:0 1px 2px rgba(31,45,56,.06), 0 4px 12px rgba(31,45,56,.05);
+  --r-kartica:16px;
+  --r-dugme:12px;
+  --font:'Nunito', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  padding:clamp(10px,2.5vw,20px);
+  background:var(--podloga);
+  color:var(--mastilo);
+  font-family:var(--font);
+  font-size:17px;
+  line-height:1.5;
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* okvir vježbe: kartica platforme */
+.igra{
+  max-width:940px;
+  margin:0 auto;
+  background:var(--papir);
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  box-shadow:var(--sjena);
+  padding:clamp(16px,3.2vw,28px);
+}
+
+.glava{margin-bottom:16px}
+.kicker{margin:0 0 4px;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tirkiz-tamni)}
+.glava h1{margin:0;font-size:clamp(22px,4vw,30px);line-height:1.15;font-weight:800;letter-spacing:-.01em;color:var(--mastilo)}
+.glava p.uputa{margin:6px 0 0;max-width:58ch;color:var(--mastilo-blijedo)}
+.stanje{display:flex;gap:10px;margin:0;flex-wrap:wrap}
+.stanje > div{
+  background:var(--papir);
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  padding:10px 16px;
+  min-width:124px;
+}
+.stanje dt{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mastilo-blijedo)}
+.stanje dd{margin:0;font-size:26px;font-weight:800;line-height:1.15;color:var(--tirkiz-tamni);font-variant-numeric:tabular-nums}
+
+.stupac{display:flex;flex-direction:column;min-width:0}
+.desni{gap:16px}
+
+/* priča s prazninama */
+.prica{
+  background:#fff;
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  padding:clamp(16px,2.4vw,24px);
+  font-size:clamp(17px,1.4vw,19px);
+  line-height:2.1;
+}
+.prica p{margin:0 0 14px}
+.prica p:last-child{margin-bottom:0}
+
+
+/* parovi */
+.parovi{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.par{
+  display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;
+}
+.pojam{
+  flex:1 1 200px;min-width:0;display:flex;align-items:center;
+  background:var(--tirkiz-blijedi);border:2px solid var(--tirkiz);
+  border-radius:var(--r-kartica);padding:10px 14px;min-height:56px;
+  font-weight:800;font-size:16.5px;color:var(--tirkiz-tamni);
+}
+.mjesto{
+  flex:1 1 200px;min-width:0;display:flex;align-items:center;justify-content:flex-start;
+  background:#fff;border:2px dashed var(--tirkiz);border-radius:var(--r-kartica);
+  padding:6px 8px;min-height:56px;cursor:pointer;
+  transition:background .15s,border-color .15s,transform .12s;
+}
+.mjesto.cilj{background:var(--tirkiz-blijedi);border-style:solid;border-color:var(--narandzasta);transform:scale(1.01)}
+.mjesto:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+.mjesto .prazno{margin:0 6px;color:var(--mastilo-blijedo);font-weight:700;font-size:15px}
+.par.tacan .mjesto{border-style:solid;border-color:var(--zelena);background:var(--zelena-blijeda)}
+.par.netacan .mjesto{border-style:solid;border-color:var(--crvena);background:var(--crvena-blijeda)}
+
+/* odgovori */
+.odgovor{
+  font:inherit;font-weight:800;font-size:16.5px;
+  min-height:44px;padding:9px 16px;max-width:100%;
+  background:#fff;color:var(--mastilo);
+  border:2px solid var(--linija);border-radius:var(--r-dugme);
+  cursor:grab;touch-action:none;text-align:left;
+  transition:border-color .15s,background .15s,transform .12s;
+}
+.odgovor:hover{border-color:var(--tirkiz);background:var(--tirkiz-blijedi)}
+.odgovor:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+.odgovor.izabrana{border-color:var(--narandzasta);background:var(--narandzasta-blijedo);transform:translateY(-2px)}
+.odgovor.vuce{opacity:.35}
+.odgovor.tacan{background:var(--zelena-blijeda);border-color:var(--zelena);color:#1E5735;cursor:default}
+.odgovor.netacan{
+  background:var(--crvena-blijeda);border-color:var(--crvena);color:var(--crvena-tamna);
+  animation:tresi .4s ease-in-out;
+}
+@keyframes tresi{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-5px)}
+  75%{transform:translateX(5px)}
+}
+
+/* ponuda */
+.ponuda h2{margin:0 0 10px;font-size:17px;font-weight:800;color:var(--tirkiz-tamni)}
+.odgovori{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;list-style:none}
+.ponuda .prazno{color:var(--mastilo-blijedo);font-weight:700;margin:0}
+
+/* odgovor koji putuje ispod prsta */
+.duh{
+  position:fixed;z-index:9;pointer-events:none;
+  font-weight:800;font-size:16.5px;padding:9px 16px;max-width:70vw;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:#fff;color:var(--mastilo);
+  border:2px solid var(--narandzasta);border-radius:var(--r-dugme);
+  box-shadow:0 8px 20px rgba(31,45,56,.18);
+  transform:translate(-50%,-50%);
+}
+
+/* komande */
+.komande{
+  display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;
+  margin-top:18px;padding-top:16px;border-top:1px solid var(--linija);
+}
+.dugmad{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
+.dugme{
+  font:inherit;font-weight:800;font-size:15.5px;min-height:46px;padding:10px 18px;
+  border-radius:var(--r-dugme);border:1.5px solid var(--linija);
+  background:#fff;color:var(--tirkiz-tamni);cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.dugme:hover{background:var(--tirkiz-blijedi);border-color:var(--tirkiz)}
+.dugme.glavno{background:var(--narandzasta);border-color:var(--narandzasta);color:#2B1600}
+.dugme.glavno:hover{background:#e08f06;border-color:#e08f06}
+.dugme:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+.dugme:disabled{opacity:.45;cursor:default}
+.dugme:disabled:hover{background:#fff;border-color:var(--linija)}
+
+.poruka{margin:12px 2px 0;font-size:16px;font-weight:700;color:var(--mastilo-blijedo);min-height:1.6em}
+.poruka.dobro{color:#1E5735}
+.poruka.lose{color:#8A3A1B}
+
+.kraj{
+  margin-top:14px;
+  background:var(--narandzasta-blijedo);
+  border:1px solid var(--narandzasta);border-radius:var(--r-kartica);
+  padding:16px 16px 18px;text-align:center;
+  animation:digni .4s ease-out;
+}
+.kraj h2{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--narandzasta-tamna)}
+.kraj p{margin:0 0 12px;color:var(--mastilo-blijedo)}
+@keyframes digni{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+.greska{padding:16px;border:1px solid var(--narandzasta);border-radius:var(--r-kartica);background:var(--narandzasta-blijedo);color:var(--mastilo)}
+
+/* Široki ekran: parovi lijevo, ponuda i dugmad desno. */
+@media (min-width:900px){
+  .igra{max-width:1240px;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(250px,1fr);column-gap:clamp(20px,3vw,34px);align-items:start}
+  .lijevi,.desni{max-height:calc(100svh - 98px);min-height:0}
+  .parovi{flex:1 1 auto;min-height:0;overflow:auto}
+  .ponuda{flex:1 1 auto;min-height:0;overflow:auto}
+  .komande{margin-top:auto}
+}
+@media (max-width:899px){
+  .igra{display:flex;flex-direction:column}
+  .stupac{display:contents}
+  .glava{order:1}
+  .stanje{order:2;margin-bottom:14px}
+  .parovi{order:3}
+  .poruka{order:4}
+  .kraj{order:5}
+  .ponuda{
+    order:6;margin-top:14px;position:sticky;bottom:0;z-index:4;
+    background:var(--papir);padding:10px 0 6px;
+    box-shadow:0 -12px 18px rgba(255,255,255,.9);
+    max-height:38svh;overflow:auto;
+  }
+  .komande{order:7}
+  .dugmad{margin-left:0;width:100%}
+  .dugmad .dugme{flex:1 1 auto;white-space:nowrap}
+  .pojam,.mjesto{flex:1 1 100%}
+}
+@media (prefers-reduced-motion:reduce){
+  .kraj,.odgovor.netacan{animation-duration:.01s}
+  .dugme,.odgovor,.mjesto{transition:none}
+}
+</style>
+</head>
+<body>
+
+<main class="igra" id="igra">
+  <div class="stupac lijevi" id="lijevo">
+    <header class="glava">
+      <p class="kicker">Mekteb.net · vježba</p>
+      <h1 id="naslov">Spoji parove</h1>
+      <p class="uputa" id="uputa"></p>
+    </header>
+
+    <ul class="parovi" id="parovi"></ul>
+    <p class="poruka" id="poruka" aria-live="polite"></p>
+
+    <div class="kraj" id="kraj" hidden>
+      <h2>Mašallah, svi parovi su tačni!</h2>
+      <p id="kraj-opis"></p>
+      <button class="dugme glavno" id="ponovo" type="button">Pokušaj ponovo</button>
+    </div>
+  </div>
+
+  <div class="stupac desni" id="desno">
+    <dl class="stanje">
+      <div><dt>Spojeno</dt><dd id="brojac">0 od 0</dd></div>
+      <div><dt>Vrijeme</dt><dd id="sat">0:00</dd></div>
+    </dl>
+
+    <section class="ponuda">
+      <h2 id="ponuda-naslov">Odgovori</h2>
+      <ul class="odgovori" id="ponuda"></ul>
+      <p class="prazno" id="ponuda-prazna" hidden>Svi odgovori su iskorišteni.</p>
+    </section>
+
+    <footer class="komande" id="komande">
+      <div class="dugmad">
+        <button class="dugme" id="pomoc" type="button">Pomozi mi</button>
+        <button class="dugme" id="nova" type="button">Počni ispočetka</button>
+        <button class="dugme glavno" id="provjeri" type="button" disabled>Provjeri</button>
+      </div>
+    </footer>
+  </div>
+
+  <p class="sr" id="glas" aria-live="polite"></p>
+</main>
+
+<noscript>Za ovu vježbu treba uključiti JavaScript.</noscript>
+
+<!-- Ugrađeni primjer. Isti oblik ima i vanjska JSON datoteka. -->
+<script type="application/json" id="podaci">
+{
+  "id": "mektebski-pojmovi",
+  "naslov": "Spoji pojam i objašnjenje",
+  "uputa": "Prevuci odgovor uz pojam kojem pripada. Kad spojiš sve, klikni „Provjeri\".",
+  "parovi": [
+    { "lijevo": "ezan", "desno": "poziv na namaz" },
+    { "lijevo": "abdest", "desno": "pranje pred namaz" },
+    { "lijevo": "sehur", "desno": "obrok prije zore" },
+    { "lijevo": "iftar", "desno": "obrok kad sunce zađe" },
+    { "lijevo": "mihrab", "desno": "udubljenje u zidu džamije" }
+  ]
+}
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = {
+    naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), sat: $('sat'),
+    parovi: $('parovi'), ponuda: $('ponuda'), ponudaPrazna: $('ponuda-prazna'),
+    poruka: $('poruka'), glas: $('glas'),
+    kraj: $('kraj'), krajOpis: $('kraj-opis'), ponovo: $('ponovo'),
+    pomoc: $('pomoc'), nova: $('nova'), provjeri: $('provjeri'), desno: $('desno')
+  };
+
+  var podaci, parovi, stanje;
+
+  /* ---------- sitnice ---------- */
+  function slucajan(n) { return Math.floor(Math.random() * n); }
+  function promijesaj(niz) {
+    for (var i = niz.length - 1; i > 0; i--) {
+      var j = slucajan(i + 1), p = niz[i]; niz[i] = niz[j]; niz[j] = p;
+    }
+    return niz;
+  }
+  function vrijeme(sek) { return Math.floor(sek / 60) + ':' + String(sek % 60).padStart(2, '0'); }
+
+  function javi(dogadjaj, detalji) {
+    var poruka = Object.assign({ izvor: 'mekteb-igra', igra: 'spoji', dogadjaj: dogadjaj, id: podaci && podaci.id }, detalji || {});
+    try { window.parent.postMessage(poruka, '*'); } catch (g) {}
+    try { window.dispatchEvent(new CustomEvent('mekteb-igra', { detail: poruka })); } catch (g) {}
+  }
+  function reci(tekst) { el.glas.textContent = tekst; }
+  function poruci(tekst, vrsta) {
+    el.poruka.textContent = tekst || '';
+    el.poruka.className = 'poruka' + (vrsta ? ' ' + vrsta : '');
+  }
+
+  /* ---------- podaci ---------- */
+  function ucitaj() {
+    if (window.SPOJI_PODACI) return Promise.resolve(window.SPOJI_PODACI);
+    var ugradjeni = function () { return JSON.parse($('podaci').textContent); };
+    var putanja = new URLSearchParams(location.search).get('podaci');
+    // Samo relativna putanja s naše domene — nikakav vanjski zahtjev.
+    if (!putanja || !/^\/[^/]/.test(putanja)) return Promise.resolve(ugradjeni());
+    return fetch(putanja, { credentials: 'same-origin' })
+      .then(function (o) { if (!o.ok) throw new Error('HTTP ' + o.status); return o.json(); })
+      .catch(function () { return ugradjeni(); });
+  }
+
+  function pripremi(p) {
+    podaci = p || {};
+    parovi = Array.isArray(podaci.parovi)
+      ? podaci.parovi
+        .map(function (par) {
+          return {
+            lijevo: String((par && par.lijevo) || '').trim(),
+            desno: String((par && par.desno) || '').trim()
+          };
+        })
+        .filter(function (par) { return par.lijevo && par.desno; })
+      : [];
+
+    el.naslov.textContent = podaci.naslov || 'Spoji parove';
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Spoji parove · Mekteb.net';
+    el.uputa.textContent = podaci.uputa || 'Prevuci odgovor uz pojam kojem pripada, pa klikni „Provjeri".';
+    el.uputa.hidden = !el.uputa.textContent;
+  }
+
+  function greska(tekst) {
+    var p = document.createElement('p');
+    p.className = 'greska'; p.textContent = tekst;
+    el.parovi.replaceWith(p);
+    el.poruka.hidden = true;
+    el.kraj.hidden = true;
+    el.desno.hidden = true;
+  }
+
+  /* ---------- nova igra ---------- */
+  function novaIgra() {
+    if (stanje && stanje.sat) clearInterval(stanje.sat);
+    if (parovi.length < 2) {
+      greska('Za ovu vježbu trebaju najmanje dva para. Par se piše kao „lijevo" i „desno".');
+      return;
+    }
+
+    stanje = {
+      greske: 0, pomoc: 0, provjere: 0, izPrve: null, tacnih: 0,
+      pocetak: 0, sekunde: 0, sat: null, gotovo: false,
+      izabrani: null, vuce: null, duh: null, cilj: null,
+      pojmovi: [], odgovori: []
+    };
+
+    // Pojmovi stoje jednim redom, odgovori se miješaju.
+    stanje.pojmovi = parovi.map(function (par, i) {
+      return { i: i, tekst: par.lijevo, zakljucan: false, netacan: false };
+    });
+    if (podaci.poredaj !== 'redom') promijesaj(stanje.pojmovi);
+
+    stanje.odgovori = parovi.map(function (par, i) {
+      return { id: 'o' + i, tekst: par.desno, par: i, gdje: null, zakljucan: false, netacan: false };
+    });
+    if (podaci.poredaj !== 'redom') promijesaj(stanje.odgovori);
+
+    el.kraj.hidden = true;
+    el.pomoc.disabled = false;
+    el.provjeri.disabled = true;
+    el.sat.textContent = '0:00';
+    poruci('');
+    nacrtaj();
+    osvjeziBrojac();
+  }
+
+  /* ---------- crtanje ---------- */
+  function napraviOdgovor(odgovor) {
+    var dugme = document.createElement('button');
+    dugme.type = 'button';
+    dugme.className = 'odgovor'
+      + (odgovor.zakljucan ? ' tacan' : '')
+      + (odgovor.netacan ? ' netacan' : '')
+      + (stanje.izabrani === odgovor.id ? ' izabrana' : '');
+    dugme.dataset.id = odgovor.id;
+    dugme.textContent = odgovor.tekst;
+    dugme.disabled = odgovor.zakljucan || stanje.gotovo;
+    if (stanje.izabrani === odgovor.id) dugme.setAttribute('aria-pressed', 'true');
+    return dugme;
+  }
+
+  function odgovorNa(i) {
+    for (var k = 0; k < stanje.odgovori.length; k++) {
+      if (stanje.odgovori[k].gdje === i) return stanje.odgovori[k];
+    }
+    return null;
+  }
+
+  function nacrtaj(fokusId) {
+    var imaoFokus = document.activeElement && document.activeElement.classList
+      && document.activeElement.classList.contains('odgovor');
+
+    el.parovi.textContent = '';
+    stanje.pojmovi.forEach(function (pojam) {
+      var li = document.createElement('li');
+      li.className = 'par' + (pojam.zakljucan ? ' tacan' : '') + (pojam.netacan ? ' netacan' : '');
+
+      var lijevo = document.createElement('div');
+      lijevo.className = 'pojam';
+      lijevo.textContent = pojam.tekst;
+
+      var mjesto = document.createElement('div');
+      mjesto.className = 'mjesto';
+      mjesto.dataset.i = pojam.i;
+      mjesto.tabIndex = 0;
+      mjesto.setAttribute('role', 'button');
+      var smjesten = odgovorNa(pojam.i);
+      mjesto.setAttribute('aria-label', smjesten
+        ? pojam.tekst + ': ' + smjesten.tekst
+        : pojam.tekst + ' — ovdje smjesti odgovor');
+      if (smjesten) {
+        mjesto.appendChild(napraviOdgovor(smjesten));
+      } else {
+        var prazno = document.createElement('p');
+        prazno.className = 'prazno';
+        prazno.textContent = 'Ovdje ide odgovor';
+        mjesto.appendChild(prazno);
+      }
+
+      li.appendChild(lijevo);
+      li.appendChild(mjesto);
+      el.parovi.appendChild(li);
+    });
+
+    el.ponuda.textContent = '';
+    var uPonudi = stanje.odgovori.filter(function (o) { return o.gdje === null; });
+    uPonudi.forEach(function (o) {
+      var li = document.createElement('li');
+      li.appendChild(napraviOdgovor(o));
+      el.ponuda.appendChild(li);
+    });
+    el.ponudaPrazna.hidden = uPonudi.length > 0;
+
+    if (fokusId) {
+      var novo = document.querySelector('.odgovor[data-id="' + fokusId + '"]');
+      if (novo && !novo.disabled && (imaoFokus || fokusId === stanje.izabrani)) {
+        novo.focus({ preventScroll: true });
+      }
+    }
+  }
+
+  function osvjeziBrojac() {
+    var spojeno = stanje.odgovori.filter(function (o) { return o.gdje !== null; }).length;
+    el.brojac.textContent = spojeno + ' od ' + parovi.length;
+    el.provjeri.disabled = stanje.gotovo || spojeno < parovi.length;
+  }
+
+  /* ---------- sat ---------- */
+  function pokreniSat() {
+    if (stanje.sat || stanje.gotovo) return;
+    stanje.pocetak = Date.now();
+    stanje.sat = setInterval(function () {
+      stanje.sekunde = Math.floor((Date.now() - stanje.pocetak) / 1000);
+      el.sat.textContent = vrijeme(stanje.sekunde);
+    }, 500);
+  }
+
+  /* ---------- spajanje ---------- */
+  function nadji(id) {
+    for (var k = 0; k < stanje.odgovori.length; k++) if (stanje.odgovori[k].id === id) return stanje.odgovori[k];
+    return null;
+  }
+  function pojamNa(i) {
+    for (var k = 0; k < stanje.pojmovi.length; k++) if (stanje.pojmovi[k].i === i) return stanje.pojmovi[k];
+    return null;
+  }
+
+  /** Svaki odgovor ide uz svaki pojam — tačnost se provjerava na kraju. */
+  function spoji(odgovor, i) {
+    var pojam = pojamNa(i);
+    if (!odgovor || !pojam || odgovor.zakljucan || pojam.zakljucan || stanje.gotovo) return;
+    pokreniSat();
+
+    // Odgovor koji je već stajao uz taj pojam vraća se u ponudu.
+    var raniji = odgovorNa(i);
+    if (raniji && raniji !== odgovor) { raniji.gdje = null; raniji.netacan = false; }
+
+    odgovor.gdje = i;
+    odgovor.netacan = false;
+    pojam.netacan = false;
+    stanje.izabrani = null;
+    nacrtaj(odgovor.id);
+    osvjeziBrojac();
+
+    if (el.provjeri.disabled === false) {
+      poruci('Svi parovi su spojeni. Klikni „Provjeri" da vidiš kako si uradio.');
+      reci('Sve je spojeno. Klikni Provjeri.');
+    } else {
+      poruci('Spojeno: ' + pojam.tekst + ' → ' + odgovor.tekst + '.');
+      reci('Spojeno. ' + pojam.tekst + ' i ' + odgovor.tekst);
+    }
+  }
+
+  function vrati(odgovor) {
+    if (!odgovor || odgovor.zakljucan || stanje.gotovo || odgovor.gdje === null) return;
+    var pojam = pojamNa(odgovor.gdje);
+    if (pojam) pojam.netacan = false;
+    odgovor.gdje = null;
+    odgovor.netacan = false;
+    stanje.izabrani = null;
+    nacrtaj(odgovor.id);
+    osvjeziBrojac();
+    poruci('Odgovor „' + odgovor.tekst + '" je vraćen među ponuđene.');
+    reci('Vraćeno. ' + odgovor.tekst);
+  }
+
+  function oznaci(id) {
+    stanje.izabrani = id;
+    [].forEach.call(document.querySelectorAll('.odgovor'), function (b) {
+      var jeste = b.dataset.id === id;
+      b.classList.toggle('izabrana', jeste);
+      b.setAttribute('aria-pressed', jeste ? 'true' : 'false');
+    });
+  }
+
+  /* ---------- provjera ---------- */
+  function zakljucajTacan(odgovor) {
+    odgovor.zakljucan = true;
+    odgovor.netacan = false;
+    var pojam = pojamNa(odgovor.par);
+    if (pojam) { pojam.zakljucan = true; pojam.netacan = false; }
+    stanje.tacnih = stanje.odgovori.filter(function (o) { return o.zakljucan; }).length;
+    javi('par', {
+      lijevo: pojam ? pojam.tekst : '', desno: odgovor.tekst,
+      pronadjeno: stanje.tacnih, ukupno: parovi.length
+    });
+  }
+
+  function provjeri() {
+    if (!stanje || stanje.gotovo) return;
+    var spojeno = stanje.odgovori.filter(function (o) { return o.gdje !== null; }).length;
+    if (spojeno < parovi.length) return;
+    stanje.provjere++;
+
+    var tacnih = 0;
+    stanje.odgovori.forEach(function (odgovor) {
+      if (odgovor.zakljucan) { tacnih++; return; }
+      if (odgovor.gdje === odgovor.par) {
+        zakljucajTacan(odgovor);
+        tacnih++;
+      } else {
+        odgovor.netacan = true;
+        var pojam = pojamNa(odgovor.gdje);
+        if (pojam) pojam.netacan = true;
+        stanje.greske++;
+      }
+    });
+
+    stanje.tacnih = tacnih;
+    if (stanje.izPrve === null) stanje.izPrve = tacnih;
+    stanje.izabrani = null;
+    nacrtaj();
+    osvjeziBrojac();
+
+    if (tacnih === parovi.length) { zavrsi(); return; }
+
+    poruci('Tačnih parova: ' + tacnih + ' od ' + parovi.length +
+           '. Označeni odgovori nisu uz svoj pojam — dodirni ih da ih vratiš, pa probaj ponovo.', 'lose');
+    reci('Tačno ' + tacnih + ' od ' + parovi.length + '. Ispravi označene.');
+    el.provjeri.disabled = true;
+  }
+
+  /* ---------- kraj ---------- */
+  function zavrsi() {
+    stanje.gotovo = true;
+    clearInterval(stanje.sat); stanje.sat = null;
+    if (stanje.pocetak) stanje.sekunde = Math.round((Date.now() - stanje.pocetak) / 1000);
+    el.sat.textContent = vrijeme(stanje.sekunde);
+    el.pomoc.disabled = true;
+    el.provjeri.disabled = true;
+    poruci('');
+    nacrtaj();
+
+    var opis = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '.';
+    if (stanje.izPrve !== null) {
+      opis += stanje.izPrve === parovi.length
+        ? ' Iz prve svi parovi tačni!'
+        : ' Iz prve tačno: ' + stanje.izPrve + ' od ' + parovi.length + '.';
+    }
+    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? ' Pomoć korištena jednom.' : ' Pomoć korištena ' + stanje.pomoc + ' puta.';
+    el.krajOpis.textContent = opis;
+    el.kraj.hidden = false;
+    el.ponovo.focus({ preventScroll: true });
+    try { el.kraj.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (g) {}
+
+    javi('kraj', {
+      pronadjeno: stanje.tacnih, ukupno: parovi.length, sekunde: stanje.sekunde,
+      greske: stanje.greske, pomoc: stanje.pomoc,
+      provjere: stanje.provjere, tacnoIzPrve: stanje.izPrve
+    });
+  }
+
+  /* ---------- miš, prst i tastatura ---------- */
+  function pocniVucu(e) {
+    var dugme = e.target.closest && e.target.closest('.odgovor');
+    if (!dugme || e.button || !stanje || stanje.gotovo) return;
+    var odgovor = nadji(dugme.dataset.id);
+    if (!odgovor || odgovor.zakljucan) return;
+    e.preventDefault();
+    stanje.vuce = { odgovor: odgovor, dugme: dugme, pomjereno: false, x: e.clientX, y: e.clientY };
+    try { dugme.setPointerCapture(e.pointerId); } catch (g) {}
+  }
+  el.ponuda.addEventListener('pointerdown', pocniVucu);
+  el.parovi.addEventListener('pointerdown', pocniVucu);
+
+  function pomjeriDuh(x, y) {
+    if (!stanje.duh) {
+      stanje.duh = document.createElement('div');
+      stanje.duh.className = 'duh';
+      stanje.duh.textContent = stanje.vuce.odgovor.tekst;
+      document.body.appendChild(stanje.duh);
+      stanje.vuce.dugme.classList.add('vuce');
+    }
+    stanje.duh.style.left = x + 'px';
+    stanje.duh.style.top = y + 'px';
+
+    var ispod = document.elementFromPoint(x, y);
+    var cilj = ispod && ispod.closest ? ispod.closest('.mjesto') : null;
+    if (cilj && cilj.closest('.par').classList.contains('tacan')) cilj = null;
+    if (!cilj && ispod && ispod.closest && ispod.closest('.ponuda')) cilj = el.ponuda;
+    if (cilj !== stanje.cilj) {
+      if (stanje.cilj && stanje.cilj.classList) stanje.cilj.classList.remove('cilj');
+      if (cilj && cilj.classList) cilj.classList.add('cilj');
+      stanje.cilj = cilj;
+    }
+  }
+
+  document.addEventListener('pointermove', function (e) {
+    if (!stanje || !stanje.vuce) return;
+    if (!stanje.vuce.pomjereno) {
+      var d = Math.abs(e.clientX - stanje.vuce.x) + Math.abs(e.clientY - stanje.vuce.y);
+      if (d < 6) return;
+      stanje.vuce.pomjereno = true;
+    }
+    e.preventDefault();
+    pomjeriDuh(e.clientX, e.clientY);
+  }, { passive: false });
+
+  function pustiVucu(e) {
+    if (!stanje || !stanje.vuce) return;
+    var vuce = stanje.vuce;
+    stanje.vuce = null;
+    if (stanje.duh) { stanje.duh.remove(); stanje.duh = null; }
+    vuce.dugme.classList.remove('vuce');
+    var cilj = stanje.cilj;
+    if (stanje.cilj && stanje.cilj.classList) stanje.cilj.classList.remove('cilj');
+    stanje.cilj = null;
+
+    if (e.type === 'pointercancel') return;
+    if (!vuce.pomjereno) {
+      // Dodir bez povlačenja: odgovor uz pojam se vraća, odgovor iz ponude se označi.
+      if (vuce.odgovor.gdje !== null) { vrati(vuce.odgovor); return; }
+      oznaci(stanje.izabrani === vuce.odgovor.id ? null : vuce.odgovor.id);
+      poruci(stanje.izabrani ? 'Sada dodirni pojam uz koji ide „' + vuce.odgovor.tekst + '".' : '');
+      return;
+    }
+    if (!cilj) return;
+    if (cilj === el.ponuda) { vrati(vuce.odgovor); return; }
+    spoji(vuce.odgovor, +cilj.dataset.i);
+  }
+  document.addEventListener('pointerup', pustiVucu);
+  document.addEventListener('pointercancel', pustiVucu);
+
+  function klikNaOdgovor(e) {
+    if (!stanje || stanje.gotovo) return;
+    var dugme = e.target.closest && e.target.closest('.odgovor');
+    if (!dugme || e.detail !== 0) return;
+    var odgovor = nadji(dugme.dataset.id);
+    if (!odgovor || odgovor.zakljucan) return;
+    if (odgovor.gdje !== null) { vrati(odgovor); return; }
+    oznaci(stanje.izabrani === odgovor.id ? null : odgovor.id);
+    poruci(stanje.izabrani ? 'Sada odaberi pojam uz koji ide „' + odgovor.tekst + '".' : '');
+  }
+  el.ponuda.addEventListener('click', klikNaOdgovor);
+  el.parovi.addEventListener('click', klikNaOdgovor);
+
+  el.parovi.addEventListener('click', function (e) {
+    if (!stanje || stanje.gotovo) return;
+    if (e.target.closest && e.target.closest('.odgovor')) return;
+    var mjesto = e.target.closest && e.target.closest('.mjesto');
+    if (!mjesto) return;
+    if (!stanje.izabrani) {
+      poruci('Prvo odaberi odgovor, pa ga smjesti uz pojam.');
+      return;
+    }
+    spoji(nadji(stanje.izabrani), +mjesto.dataset.i);
+  });
+
+  el.parovi.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var mjesto = e.target.closest && e.target.closest('.mjesto');
+    if (!mjesto || e.target !== mjesto) return;
+    e.preventDefault();
+    if (!stanje || stanje.gotovo) return;
+    if (!stanje.izabrani) {
+      poruci('Prvo odaberi odgovor, pa ga smjesti uz pojam.');
+      return;
+    }
+    spoji(nadji(stanje.izabrani), +mjesto.dataset.i);
+  });
+
+  /* ---------- komande ---------- */
+  el.provjeri.addEventListener('click', provjeri);
+  el.nova.addEventListener('click', novaIgra);
+  el.ponovo.addEventListener('click', function () {
+    novaIgra();
+    var prvi = el.ponuda.querySelector('.odgovor');
+    if (prvi) prvi.focus({ preventScroll: true });
+  });
+
+  el.pomoc.addEventListener('click', function () {
+    if (!stanje || stanje.gotovo) return;
+    // Pomoć uzima prvi odgovor koji nije uz svoj pojam i smješta ga kako treba.
+    var red = stanje.odgovori.filter(function (o) { return !o.zakljucan && o.gdje !== o.par; });
+    if (red.length === 0) red = stanje.odgovori.filter(function (o) { return !o.zakljucan; });
+    var odgovor = red[0];
+    if (!odgovor) return;
+    stanje.pomoc++;
+    pokreniSat();
+    // Oslobodi mjesto ako je na njemu neki drugi odgovor.
+    var raniji = odgovorNa(odgovor.par);
+    if (raniji && raniji !== odgovor) { raniji.gdje = null; raniji.netacan = false; }
+    odgovor.gdje = odgovor.par;
+    zakljucajTacan(odgovor);
+    stanje.izabrani = null;
+    nacrtaj();
+    osvjeziBrojac();
+    var pojam = pojamNa(odgovor.par);
+    poruci('Uz „' + (pojam ? pojam.tekst : '') + '" ide „' + odgovor.tekst + '".', 'dobro');
+    reci('Pomoć. ' + (pojam ? pojam.tekst : '') + ' ide sa ' + odgovor.tekst);
+    if (stanje.odgovori.every(function (o) { return o.gdje !== null; })) provjeri();
+  });
+
+  /* ---------- visina za iframe ---------- */
+  if (window.parent !== window && 'ResizeObserver' in window) {
+    new ResizeObserver(function () {
+      javi('visina', { visina: Math.ceil(document.documentElement.getBoundingClientRect().height) });
+    }).observe(document.documentElement);
+  }
+
+  ucitaj().then(function (p) { pripremi(p); novaIgra(); })
+          .catch(function () { parovi = []; podaci = {}; novaIgra(); });
+})();
+</script>
+</body>
+</html>

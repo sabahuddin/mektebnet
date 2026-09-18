@@ -19,7 +19,7 @@ import {
 } from "./nase-vjezbe.js";
 
 test("poznate su tačno dvije vrste naših vježbi", () => {
-  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni"]);
+  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi"]);
   for (const tip of Object.keys(TIPOVI_VJEZBI)) assert.equal(isValidTip(tip), true, tip);
   for (const nije of ["", "h5p", "../tajna", 7, null]) {
     assert.equal(isValidTip(nije as unknown), false, String(nije));
@@ -50,7 +50,7 @@ test("URL i marker vježbe ostaju na našoj domeni", () => {
 });
 
 test("naša vježba se prepoznaje po adresi, vanjski embed ne", () => {
-  assert.equal(NASE_VJEZBE_PREFIKSI.length, 2);
+  assert.equal(NASE_VJEZBE_PREFIKSI.length, Object.keys(TIPOVI_VJEZBI).length);
   assert.equal(jeNasaVjezba(vjezbaUrl("popuni", "abdest")), true);
   assert.equal(jeNasaVjezba(vjezbaUrl("osmosmjerka", "ramazan")), true);
   assert.equal(jeNasaVjezba("https://learningapps.org/watch?app=123"), false);
@@ -88,7 +88,7 @@ test("vježba popuni prazninu ima izbrojane praznine u detalju", async () => {
 
 test("jedan poziv vraća sve vrste sa svojim vježbama", async () => {
   const tipovi = await listSveVjezbe();
-  assert.equal(tipovi.length, 2);
+  assert.equal(tipovi.length, Object.keys(TIPOVI_VJEZBI).length);
   for (const tv of tipovi) {
     assert.ok(tv.naziv.length > 0, tv.tip);
     assert.ok(tv.vjezbe.every(v => v.tip === tv.tip), `${tv.tip}: vježbe nose svoju vrstu`);
@@ -153,4 +153,127 @@ test("izmjena ugrađene vježbe prekrije datoteku, brisanje je vrati", async () 
   const vraceno = await citajPodatke("popuni", "abdest");
   assert.equal(vraceno?.izvor, "ugradjena", "brisanje vraća ugrađenu verziju");
   assert.equal((vraceno?.podaci as { naslov?: string }).naslov, (ugradjena?.podaci as { naslov?: string }).naslov);
+});
+
+test("poredak prima samo spisak razlicitih stavki", async () => {
+  const dobra = { naslov: "Koraci", stavke: ["Prvo", "Drugo", "Treće"] };
+  assert.equal(validirajPodatke("poredak", dobra), null);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: ["Samo jedna"] })), /bar dvije stavke/);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: ["Ista", "ista"] })), /ne smiju biti iste/);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: ["Prvo", "  "] })), /prazna/);
+  assert.match(String(validirajPodatke("poredak", { naslov: "X", stavke: "Prvo" })), /bar dvije stavke/);
+
+  const spisak = await listVjezbe("poredak");
+  assert.ok(spisak.length >= 2, "očekujemo bar dvije ugrađene vježbe poretka");
+  for (const stavka of spisak) {
+    assert.equal(isValidVjezbaId(stavka.id), true, stavka.id);
+    assert.match(stavka.detalj, /stavk/, `${stavka.id}: detalj`);
+    assert.equal(stavka.url, vjezbaUrl("poredak", stavka.id));
+  }
+
+  const koraci = await getVjezba("poredak", "abdest-koraci");
+  assert.ok(koraci, "abdest-koraci.json mora postojati");
+  assert.equal(koraci?.detalj, "9 stavki");
+});
+
+test("razvrstavanje trazi dvije do pet kutija i razlicite stavke", async () => {
+  const dobra = {
+    naslov: "Mjeseci",
+    kategorije: [
+      { naziv: "Hidžretski", stavke: ["muharrem", "safer"] },
+      { naziv: "Po Suncu", stavke: ["januar"] },
+    ],
+  };
+  assert.equal(validirajPodatke("razvrstaj", dobra), null);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "Jedina", stavke: ["a"] }],
+  })), /bar dvije kutije/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X",
+    kategorije: [1, 2, 3, 4, 5, 6].map(n => ({ naziv: `K${n}`, stavke: [`s${n}`] })),
+  })), /najviše pet kutija/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "", stavke: ["a"] }, { naziv: "B", stavke: ["b"] }],
+  })), /naziv/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "A", stavke: [] }, { naziv: "B", stavke: ["b"] }],
+  })), /nema nijednu stavku/);
+  assert.match(String(validirajPodatke("razvrstaj", {
+    naslov: "X", kategorije: [{ naziv: "A", stavke: ["ista"] }, { naziv: "B", stavke: ["Ista"] }],
+  })), /u dvije kutije/);
+
+  const spisak = await listVjezbe("razvrstaj");
+  assert.ok(spisak.length >= 2, "očekujemo bar dvije ugrađene vježbe razvrstavanja");
+  for (const stavka of spisak) {
+    assert.equal(stavka.url, vjezbaUrl("razvrstaj", stavka.id));
+    assert.match(stavka.detalj, /kutij\S* · \d+ stavk/, `${stavka.id}: detalj`);
+  }
+  const mjeseci = await getVjezba("razvrstaj", "mjeseci");
+  assert.equal(mjeseci?.detalj, "2 kutije · 10 stavki");
+});
+
+test("spajanje parova trazi dva do dvanaest razlicitih parova", async () => {
+  const dobra = {
+    naslov: "Pojmovi",
+    parovi: [
+      { lijevo: "ezan", desno: "poziv na namaz" },
+      { lijevo: "sehur", desno: "obrok prije zore" },
+    ],
+  };
+  assert.equal(validirajPodatke("spoji", dobra), null);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "a", desno: "b" }],
+  })), /bar dva para/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X",
+    parovi: Array.from({ length: 13 }, (_, i) => ({ lijevo: `l${i}`, desno: `d${i}` })),
+  })), /najviše dvanaest/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "a", desno: "" }, { lijevo: "b", desno: "d" }],
+  })), /i lijevu i desnu/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "ista", desno: "d1" }, { lijevo: "Ista", desno: "d2" }],
+  })), /Pojam .* se ponavlja/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "l1", desno: "isti" }, { lijevo: "l2", desno: "Isti" }],
+  })), /Odgovor .* se ponavlja/);
+
+  const spisak = await listVjezbe("spoji");
+  assert.ok(spisak.length >= 2, "očekujemo bar dvije ugrađene vježbe spajanja");
+  for (const stavka of spisak) {
+    assert.equal(stavka.url, vjezbaUrl("spoji", stavka.id));
+    assert.match(stavka.detalj, /\d+ par/, `${stavka.id}: detalj`);
+  }
+  const pojmovi = await getVjezba("spoji", "pojmovi");
+  assert.equal(pojmovi?.detalj, "6 parova");
+});
+
+test("upisivanje odgovora trazi pitanje i odgovor za svaki red", async () => {
+  const dobra = {
+    naslov: "Pitanja",
+    pitanja: [{ pitanje: "Kako se zove poziv na namaz?", odgovor: "ezan", prihvati: ["Ezan"], pomoc: "S munare." }],
+  };
+  assert.equal(validirajPodatke("upisi", dobra), null);
+  assert.match(String(validirajPodatke("upisi", { naslov: "X", pitanja: [] })), /bar jedno pitanje/);
+  assert.match(String(validirajPodatke("upisi", {
+    naslov: "X", pitanja: Array.from({ length: 21 }, (_, i) => ({ pitanje: `p${i}`, odgovor: `o${i}` })),
+  })), /najviše dvadeset/);
+  assert.match(String(validirajPodatke("upisi", {
+    naslov: "X", pitanja: [{ pitanje: "", odgovor: "a" }],
+  })), /tekst pitanja/);
+  assert.match(String(validirajPodatke("upisi", {
+    naslov: "X", pitanja: [{ pitanje: "Bez odgovora?", odgovor: "  " }],
+  })), /nema odgovor/);
+  assert.match(String(validirajPodatke("upisi", {
+    naslov: "X", pitanja: [{ pitanje: "P", odgovor: "o", prihvati: "nije spisak" }],
+  })), /spisak riječi/);
+
+  const spisak = await listVjezbe("upisi");
+  assert.ok(spisak.length >= 2, "očekujemo bar dvije ugrađene vježbe upisivanja");
+  for (const stavka of spisak) {
+    assert.equal(stavka.url, vjezbaUrl("upisi", stavka.id));
+    assert.match(stavka.detalj, /\d+ pitanj/, `${stavka.id}: detalj`);
+  }
+  const pojmovi = await getVjezba("upisi", "pojmovi");
+  assert.equal(pojmovi?.detalj, "4 pitanja");
 });

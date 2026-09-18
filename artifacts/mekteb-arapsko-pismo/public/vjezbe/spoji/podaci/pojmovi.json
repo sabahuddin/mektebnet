@@ -1,0 +1,13 @@
+{
+  "id": "pojmovi",
+  "naslov": "Spoji pojam i objašnjenje",
+  "uputa": "Prevuci odgovor uz pojam kojem pripada. Kad spojiš sve, klikni „Provjeri\".",
+  "parovi": [
+    { "lijevo": "ezan", "desno": "poziv na namaz" },
+    { "lijevo": "abdest", "desno": "pranje pred namaz" },
+    { "lijevo": "sehur", "desno": "obrok prije zore" },
+    { "lijevo": "iftar", "desno": "obrok kad sunce zađe" },
+    { "lijevo": "mihrab", "desno": "udubljenje u zidu džamije" },
+    { "lijevo": "munara", "desno": "toranj s kojeg se uči ezan" }
+  ]
+}

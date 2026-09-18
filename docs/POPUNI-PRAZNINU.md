@@ -13,11 +13,17 @@ Font Nunito učitava se s našeg servera (`public/fonts/nunito-*.woff2`, SIL OFL
 - **Mišem i prstom:** prevuče riječ na prazninu; praznina ispod prsta posvijetli.
 - **Bez prevlačenja:** dodirne riječ (ona se označi), pa dodirne prazninu.
 - **Tastaturom:** Tab do riječi, Enter, pa Tab do praznine i Enter.
-- Tačna riječ ostaje na mjestu i pozeleni; pogrešna se vrati uz kratku poruku i
-  broji se kao pogrešan pokušaj.
-- **Pomozi mi** popuni jednu prazninu; koliko je puta korišteno, piše na kraju.
+- **Svaka riječ se prihvata, i kad nije tačna.** Dijete slaže cijelu priču kako
+  misli da treba; dok slaže, nema nijedne crvene oznake.
+- Predomisli li se, dodirne riječ u priči i ona se vrati među ponuđene.
+- Kad su sve praznine popunjene, otključa se dugme **Provjeri**. Tek tada
+  tačne riječi pozelene i zaključaju se, a pogrešne se označe crveno — dijete
+  ih vrati i pokuša ponovo. Svaka pogrešno smještena riječ broji se kao greška.
+- **Pomozi mi** riješi prazninu na kojoj je dijete zapelo (praznu ili pogrešno
+  popunjenu) i odmah je oboji zeleno; koliko je puta korišteno, piše na kraju.
 - Kad su sve praznine tačne, vježba javi „kraj" i stranica lekcije otključa
-  dugme **Završi vježbu**.
+  dugme **Završi vježbu**. Na kraju piše vrijeme, koliko je bilo tačno **iz
+  prve**, koliko je bilo grešaka i koliko puta je tražena pomoć.
 
 ## Kako napraviti novu vježbu (iz admin panela)
 
@@ -99,7 +105,15 @@ Osmosmjerka radi po istom obrascu — vidi `docs/OSMOSMJERKA.md`.
 | Događaj | Kada | Polja |
 |---|---|---|
 | `visina` | promjena visine sadržaja | `visina` |
-| `rijec` | riječ tačno smještena | `rijec`, `pronadjeno`, `ukupno` |
-| `kraj` | sve praznine tačne | `id`, `pronadjeno`, `ukupno`, `sekunde`, `greske`, `pomoc` |
+| `rijec` | praznina potvrđena kao tačna (pri provjeri ili kroz pomoć) | `rijec`, `pronadjeno`, `ukupno` |
+| `kraj` | sve praznine tačne | `id`, `pronadjeno`, `ukupno`, `sekunde`, `greske`, `pomoc`, `provjere`, `tacnoIzPrve` |
 
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "popuni"`.
+
+Treća naša vježba, „Poredak", radi po istom obrascu — vidi `docs/POREDAK.md`.
+
+Četvrta naša vježba, „Razvrstaj", radi po istom obrascu — vidi `docs/RAZVRSTAJ.md`.
+
+Peta naša vježba, „Spoji parove", radi po istom obrascu — vidi `docs/SPOJI-PAROVE.md`.
+
+Šesta naša vježba, „Upiši odgovor", radi po istom obrascu — vidi `docs/UPISI-ODGOVOR.md`.
