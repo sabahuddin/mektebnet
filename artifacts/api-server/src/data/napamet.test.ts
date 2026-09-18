@@ -32,6 +32,8 @@ test("NAPAMET katalog ima četiri sekcije i jedinstvene stabilne stavke", () => 
 
 const SUFFIX = `napamet-${Date.now()}`;
 const STAVKA_ID = "n1-fatiha";
+/** Lekcija-izvor koju test sam napravi, da povezana stavka postoji i na praznoj bazi. */
+const LEKCIJA_SLUG = `sura-test-${Date.now()}`.slice(0, 60);
 let server: Server;
 let baseUrl: string;
 let mektebId: number;
@@ -140,6 +142,23 @@ before(async () => {
     grupaId,
     mektebId,
   });
+  // Globalni NAPAMET katalog povuče sure i dove iz objavljenih Ilmihal lekcija.
+  // Test ne smije zavisiti od toga da baza već ima taj sadržaj (prazna baza u
+  // CI-ju ga nema), pa sam napravi jednu lekciju-izvor i obriše je na kraju.
+  await db.insert(ilmihalLekcijeTable).values({
+    nivo: 1,
+    slug: LEKCIJA_SLUG,
+    naslov: `Sura za NAPAMET ${SUFFIX}`,
+    contentHtml: "<p>Test.</p>",
+    redoslijed: 9000,
+    isPublished: true,
+  }).onConflictDoNothing();
+
+  // Na praznoj bazi globalni katalog još nije zasijan, pa bi brisanje stavke
+  // (test ispod) prošlo prije nego što stavka uopšte nastane. U produkciji je
+  // katalog uvijek zasijan, pa ga i ovdje zasijemo prije prvog testa.
+  await getGlobalNapametKatalog(true);
+
   await db.insert(roditeljProfiliTable).values({ userId: roditeljId });
   await db.insert(roditeljUcenikTable).values({
     roditeljId,
@@ -181,6 +200,8 @@ after(async () => {
   if (muallimId) await db.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
   if (grupaId) await db.delete(grupeTable).where(eq(grupeTable.id, grupaId));
   if (mektebId) await db.delete(mektebiTable).where(eq(mektebiTable.id, mektebId));
+  await db.delete(napametGlobalProgramTable).where(eq(napametGlobalProgramTable.sourceLessonSlug, LEKCIJA_SLUG));
+  await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, LEKCIJA_SLUG));
   const userIds = [muallimId, ucenikId, roditeljId, adminId].filter(Boolean);
   if (userIds.length) await db.delete(usersTable).where(inArray(usersTable.id, userIds));
 });
@@ -255,8 +276,10 @@ test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i rodi
 });
 
 test("ručni izbor iste povezane stavke ne pravi duplu NAPAMET ocjenu", async () => {
-  const povezano = (await getGlobalNapametKatalog()).find((item) => item.sourceLessonSlug);
-  assert.ok(povezano?.sourceLessonSlug);
+  const katalog = await getGlobalNapametKatalog();
+  const povezano = katalog.find((item) => item.sourceLessonSlug === LEKCIJA_SLUG)
+    ?? katalog.find((item) => item.sourceLessonSlug);
+  assert.ok(povezano?.sourceLessonSlug, "katalog mora imati stavku povezanu s lekcijom");
   const datum = "2026-08-24";
   const response = await authed("/api/muallim/ocjene", muallimToken, {
     method: "POST",

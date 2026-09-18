@@ -62,22 +62,30 @@ interface Prilog {
   hasanatReward?: number;
 }
 
-/** Naša (interna) vježba — statički HTML s naše domene, npr. osmosmjerka.
- *  Za razliku od vanjskih embeda (LearningApps, Wordwall…), ova javlja kad je
- *  završena, pa dugme „Završi vježbu" otključavamo tek na tu poruku. */
-const NASA_VJEZBA_PREFIX = "/vjezbe/osmosmjerka/";
+/** Naša (interna) vježba — statički HTML s naše domene (osmosmjerka, popuni
+ *  prazninu…). Za razliku od vanjskih embeda (LearningApps, Wordwall…), ova
+ *  javlja kad je završena, pa dugme „Završi vježbu" otključavamo tek na tu
+ *  poruku. Prefiksi prate foldere u public/vjezbe/. */
+const NASE_VJEZBE_PREFIKSI = ["/vjezbe/osmosmjerka/", "/vjezbe/popuni/"];
 function jeNasaVjezba(a: Prilog | null): boolean {
   if (!a || a.kind !== "embed") return false;
-  return String(a.externalUrl || a.url || "").startsWith(NASA_VJEZBA_PREFIX);
+  const url = String(a.externalUrl || a.url || "");
+  return NASE_VJEZBE_PREFIKSI.some(prefix => url.startsWith(prefix));
 }
 
-interface Osmosmjerka {
+interface NasaVjezba {
+  tip: string;
   id: string;
   naslov: string;
-  tezina: string;
-  prikaz: string;
-  brojRijeci: number;
+  detalj: string;
   url: string;
+}
+
+interface TipVjezbe {
+  tip: string;
+  naziv: string;
+  opis: string;
+  vjezbe: NasaVjezba[];
 }
 
 interface H5pAttemptState {
@@ -1790,13 +1798,14 @@ function PriloziSection({
   // Dok poruka ne stigne, dugme "Završi vježbu" stoji zaključano.
   const [zavrseneNaseVjezbe, setZavrseneNaseVjezbe] = useState<Set<number>>(new Set());
   const embedIframeRef = useRef<HTMLIFrameElement>(null);
-  // Admin forma "Dodaj našu vježbu (osmosmjerka)".
-  const [showOsmosmjerkaForm, setShowOsmosmjerkaForm] = useState(false);
-  const [osmosmjerke, setOsmosmjerke] = useState<Osmosmjerka[]>([]);
-  const [osmosmjerkaId, setOsmosmjerkaId] = useState("");
-  const [osmosmjerkaLabel, setOsmosmjerkaLabel] = useState("");
-  const [osmosmjerkaReward, setOsmosmjerkaReward] = useState<0 | 3 | 5 | 10>(5);
-  const [savingOsmosmjerka, setSavingOsmosmjerka] = useState(false);
+  // Admin forma "Dodaj našu vježbu" (osmosmjerka, popuni prazninu…).
+  const [showNasaVjezbaForm, setShowNasaVjezbaForm] = useState(false);
+  const [tipoviVjezbi, setTipoviVjezbi] = useState<TipVjezbe[]>([]);
+  const [nasTip, setNasTip] = useState("");
+  const [nasaVjezbaId, setNasaVjezbaId] = useState("");
+  const [nasaVjezbaLabel, setNasaVjezbaLabel] = useState("");
+  const [nasaVjezbaReward, setNasaVjezbaReward] = useState<0 | 3 | 5 | 10>(5);
+  const [savingNasaVjezba, setSavingNasaVjezba] = useState(false);
   const [galleryItems, setGalleryItems] = useState<Prilog[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryImageUrl, setGalleryImageUrl] = useState<string | null>(null);
@@ -1939,22 +1948,26 @@ function PriloziSection({
     return () => window.removeEventListener("message", onMessage);
   }, [openEmbed]);
 
-  // Spisak dostupnih osmosmjerki za admin formu — čita se iz foldera s JSON
-  // datotekama, pa nova osmosmjerka znači samo novu datoteku.
+  // Spisak naših vježbi za admin formu — čita se iz foldera s JSON datotekama,
+  // pa nova vježba znači samo novu datoteku (bez izmjene koda i baze).
   useEffect(() => {
-    if (!showOsmosmjerkaForm || !token || osmosmjerke.length > 0) return;
+    if (!showNasaVjezbaForm || !token || tipoviVjezbi.length > 0) return;
     let cancelled = false;
-    apiRequest<{ osmosmjerke: Osmosmjerka[] }>("GET", "/osmosmjerke", undefined, token)
+    apiRequest<{ tipovi: TipVjezbe[] }>("GET", "/nase-vjezbe", undefined, token)
       .then(res => {
         if (cancelled) return;
-        setOsmosmjerke(res.osmosmjerke || []);
-        if (!osmosmjerkaId && res.osmosmjerke?.length) setOsmosmjerkaId(res.osmosmjerke[0].id);
+        const tipovi = (res.tipovi || []).filter(t => t.vjezbe?.length > 0);
+        setTipoviVjezbi(tipovi);
+        if (!nasTip && tipovi.length) {
+          setNasTip(tipovi[0].tip);
+          setNasaVjezbaId(tipovi[0].vjezbe[0]?.id ?? "");
+        }
       })
       .catch(() => {
-        if (!cancelled) toast({ title: t("Greška"), description: t("Nije moguće učitati spisak osmosmjerki"), variant: "destructive" });
+        if (!cancelled) toast({ title: t("Greška"), description: t("Nije moguće učitati spisak vježbi"), variant: "destructive" });
       });
     return () => { cancelled = true; };
-  }, [showOsmosmjerkaForm, token, osmosmjerke.length, osmosmjerkaId, t]);
+  }, [showNasaVjezbaForm, token, tipoviVjezbi.length, nasTip, t]);
 
   // Ako učenik ostavi stranicu otvorenu do isteka 48-satne blokade, lokalni
   // snapshot ne smije ostati zaključan zauvijek. Osvježi baš u trenutku isteka
@@ -2073,22 +2086,23 @@ function PriloziSection({
     }
   };
 
-  const handleAddOsmosmjerka = async () => {
-    if (!osmosmjerkaId || !token) return;
-    setSavingOsmosmjerka(true);
+  const handleAddNasaVjezba = async () => {
+    if (!nasTip || !nasaVjezbaId || !token) return;
+    setSavingNasaVjezba(true);
     try {
-      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/osmosmjerka`, {
-        osmosmjerkaId,
-        label: osmosmjerkaLabel.trim() || undefined,
-        hasanatReward: osmosmjerkaReward,
+      const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/nasa-vjezba`, {
+        tip: nasTip,
+        vjezbaId: nasaVjezbaId,
+        label: nasaVjezbaLabel.trim() || undefined,
+        hasanatReward: nasaVjezbaReward,
       }, token);
       setAttachments(prev => [{ ...result, url: (result as any).externalUrl || "" }, ...prev]);
       toast({ title: t("Vježba dodana"), description: result.originalName });
-      setOsmosmjerkaId(""); setOsmosmjerkaLabel(""); setOsmosmjerkaReward(5); setShowOsmosmjerkaForm(false);
+      setNasaVjezbaLabel(""); setNasaVjezbaReward(5); setShowNasaVjezbaForm(false);
     } catch (err: any) {
       toast({ title: t("Greška"), description: err.message, variant: "destructive" });
     } finally {
-      setSavingOsmosmjerka(false);
+      setSavingNasaVjezba(false);
     }
   };
 
@@ -2617,12 +2631,12 @@ function PriloziSection({
                       <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? t("Odustani") : t("Dodaj embed vježbu")}
                     </Button>
                     <Button
-                      onClick={() => setShowOsmosmjerkaForm(v => !v)}
+                      onClick={() => setShowNasaVjezbaForm(v => !v)}
                       variant="outline"
                       className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-100 font-bold"
-                      data-testid="osmosmjerka-toggle"
+                      data-testid="nasa-vjezba-toggle"
                     >
-                      <Sparkles className="w-4 h-4 mr-2" /> {showOsmosmjerkaForm ? t("Odustani") : t("Dodaj našu vježbu")}
+                      <Sparkles className="w-4 h-4 mr-2" /> {showNasaVjezbaForm ? t("Odustani") : t("Dodaj našu vježbu")}
                     </Button>
                   </div>
                   <p className="text-sm text-blue-400 mt-1">{t(".h5p arhiva (max 50MB) ili embed vježba (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")}</p>
@@ -2671,38 +2685,51 @@ function PriloziSection({
                       </Button>
                     </div>
                   )}
-                  {showOsmosmjerkaForm && (
-                    <div className="mt-3 p-3 bg-white rounded-xl border border-teal-200 flex flex-col gap-2" data-testid="osmosmjerka-form">
+                  {showNasaVjezbaForm && (
+                    <div className="mt-3 p-3 bg-white rounded-xl border border-teal-200 flex flex-col gap-2" data-testid="nasa-vjezba-form">
                       <p className="text-xs text-teal-700 font-semibold">
-                        {t("Naša vježba sa servera mekteb.net — bez vanjskih alata i bez zahtjeva prema drugim domenama. Nova osmosmjerka se dodaje kao nova JSON datoteka u")} <code>public/vjezbe/osmosmjerka/podaci/</code>.
+                        {t("Naše vježbe sa servera mekteb.net — bez vanjskih alata i bez zahtjeva prema drugim domenama. Nova vježba se dodaje kao nova JSON datoteka u")} <code>public/vjezbe/&lt;vrsta&gt;/podaci/</code>.
                       </p>
                       <select
-                        value={osmosmjerkaId}
-                        onChange={e => setOsmosmjerkaId(e.target.value)}
+                        value={nasTip}
+                        onChange={e => {
+                          const tip = e.target.value;
+                          setNasTip(tip);
+                          setNasaVjezbaId(tipoviVjezbi.find(x => x.tip === tip)?.vjezbe[0]?.id ?? "");
+                        }}
                         className="px-3 py-2 rounded-lg border border-teal-200 text-sm font-semibold bg-white focus:outline-none focus:border-teal-500"
-                        data-testid="osmosmjerka-select"
+                        data-testid="nasa-vjezba-tip-select"
                       >
-                        {osmosmjerke.length === 0 && <option value="">{t("Učitavam…")}</option>}
-                        {osmosmjerke.map(o => (
-                          <option key={o.id} value={o.id}>
-                            {o.naslov} ({o.brojRijeci} {t("riječi")} · {o.tezina})
-                          </option>
+                        {tipoviVjezbi.length === 0 && <option value="">{t("Učitavam…")}</option>}
+                        {tipoviVjezbi.map(tv => (
+                          <option key={tv.tip} value={tv.tip}>{tv.naziv} — {tv.opis}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={nasaVjezbaId}
+                        onChange={e => setNasaVjezbaId(e.target.value)}
+                        className="px-3 py-2 rounded-lg border border-teal-200 text-sm font-semibold bg-white focus:outline-none focus:border-teal-500"
+                        data-testid="nasa-vjezba-select"
+                      >
+                        {tipoviVjezbi.length === 0 && <option value="">{t("Učitavam…")}</option>}
+                        {(tipoviVjezbi.find(tv => tv.tip === nasTip)?.vjezbe ?? []).map(v => (
+                          <option key={v.id} value={v.id}>{v.naslov} ({v.detalj})</option>
                         ))}
                       </select>
                       <input
                         type="text"
                         placeholder={t("Naziv vježbe (opciono)")}
-                        value={osmosmjerkaLabel}
-                        onChange={e => setOsmosmjerkaLabel(e.target.value)}
+                        value={nasaVjezbaLabel}
+                        onChange={e => setNasaVjezbaLabel(e.target.value)}
                         className="px-3 py-2 rounded-lg border border-teal-200 text-sm focus:outline-none focus:border-teal-500"
                       />
                       <div className="flex items-center gap-2 flex-wrap">
                         <label className="text-xs font-bold text-teal-800">{t("Kapi meda za završetak:")}</label>
                         <select
-                          value={osmosmjerkaReward}
-                          onChange={e => setOsmosmjerkaReward(Number(e.target.value) as 0 | 3 | 5 | 10)}
+                          value={nasaVjezbaReward}
+                          onChange={e => setNasaVjezbaReward(Number(e.target.value) as 0 | 3 | 5 | 10)}
                           className="px-2 py-1.5 rounded-lg border border-teal-300 text-sm font-semibold bg-white focus:outline-none focus:border-teal-500"
-                          data-testid="osmosmjerka-reward-select"
+                          data-testid="nasa-vjezba-reward-select"
                         >
                           <option value={0}>{t("Bez nagrade (0 🍯)")}</option>
                           <option value={3}>{t("Lahka vježba — 3 🍯")}</option>
@@ -2711,14 +2738,14 @@ function PriloziSection({
                         </select>
                       </div>
                       <p className="text-xs text-teal-600 italic">
-                        {t("Dugme")} <strong>{t('"Završi vježbu"')}</strong> {t("otključava se tek kada učenik pronađe sve riječi — i kapi se dodjeljuju samo prvi put.")}
+                        {t("Dugme")} <strong>{t('"Završi vježbu"')}</strong> {t("otključava se tek kada učenik riješi vježbu do kraja — i kapi se dodjeljuju samo prvi put.")}
                       </p>
                       <Button
-                        onClick={handleAddOsmosmjerka}
-                        disabled={savingOsmosmjerka || !osmosmjerkaId}
+                        onClick={handleAddNasaVjezba}
+                        disabled={savingNasaVjezba || !nasTip || !nasaVjezbaId}
                         className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold self-start"
                       >
-                        {savingOsmosmjerka ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi našu vježbu")}
+                        {savingNasaVjezba ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi našu vježbu")}
                       </Button>
                     </div>
                   )}

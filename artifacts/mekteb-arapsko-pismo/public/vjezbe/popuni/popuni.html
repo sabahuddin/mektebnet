@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="bs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Popuni prazninu · Mekteb.net</title>
+<!--
+  POPUNI PRAZNINU – vježba za mekteb.net
+  Jedan fajl, bez vanjskih skripti, fontova, kolačića i analitike.
+  Font Nunito se učita s ove iste domene (/fonts/nunito-*.woff2).
+
+  SADRŽAJ
+    Vježba čita podatke ovim redom:
+      1. window.POPUNI_PODACI  (ako ga stranica postavi prije ove skripte)
+      2. ?podaci=/putanja/do/datoteke.json  (samo s iste domene)
+      3. ugrađeni primjer na dnu ovog fajla (script id="podaci")
+    Nova vježba = nova JSON datoteka u podaci/. Polja:
+      id        – oznaka vježbe, vraća se u događajima
+      naslov    – naslov iznad priče
+      uputa     – jedna-dvije rečenice (nije obavezno)
+      tekst     – priča; riječi u vitičastim zagradama postaju praznine:
+                  "Prije namaza uzimamo {abdest}."
+                  Prazan red (dva prelaza reda) pravi novi pasus.
+      dodatne   – riječi koje nigdje ne trebaju, da ne bude prelako (nije obavezno)
+      poredaj   – "mijesaj" (zadano) ili "redom" za ponuđene riječi
+
+  UGRADNJA NA MEKTEB.NET
+    Vježba se dodaje ispod lekcije (kartica „Vježbe") kroz admin formu
+    „Dodaj našu vježbu". Backend upisuje prilog kind="embed" sa external_url:
+      /vjezbe/popuni/popuni.html?podaci=/vjezbe/popuni/podaci/<id>.json
+    Stranica lekcije sluša poruke (provjerava e.origin i e.source) i tek nakon
+    događaja "kraj" otključava dugme „Završi vježbu", koje poziva postojeću
+    rutu POST /api/content/embed/zavrseno (server dodjeljuje kapi meda).
+
+  DOGAĐAJI koje vježba šalje (postMessage roditelju i CustomEvent "mekteb-igra")
+    visina – kad se promijeni visina sadržaja
+    rijec  – kad je jedna riječ tačno smještena
+    kraj   – kad su sve praznine tačno popunjene
+             { id, pronadjeno, ukupno, sekunde, greske, pomoc }
+
+  IZGLED
+    Boje, zaobljenja i font su u :root varijablama i preuzeti su iz sistema
+    platforme (tirkiz #248F92, amber #F59E0B, papir #FAF9F5).
+-->
+<style>
+/* Nunito — lokalno hostan, promjenljivi rez (200–1000). Bez Google Fontsa. */
+@font-face{
+  font-family:'Nunito';
+  src:url('/fonts/nunito-latin-ext.woff2') format('woff2');
+  font-weight:200 1000;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face{
+  font-family:'Nunito';
+  src:url('/fonts/nunito-latin.woff2') format('woff2');
+  font-weight:200 1000;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root{
+  --tirkiz:#248F92;
+  --tirkiz-tamni:#176F72;
+  --tirkiz-blijedi:#E8F3F3;
+  --narandzasta:#F59E0B;
+  --narandzasta-blijedo:#FDF3E0;
+  --narandzasta-tamna:#8A5A00;
+  --zelena:#2F7D4F;
+  --zelena-blijeda:#E7F4EC;
+  --mastilo:#1F2D38;
+  --mastilo-blijedo:#5F6F76;
+  --papir:#FFFFFF;
+  --linija:#E6E3DB;
+  --podloga:#FAF9F5;
+  --sjena:0 1px 2px rgba(31,45,56,.06), 0 4px 12px rgba(31,45,56,.05);
+  --r-kartica:16px;
+  --r-dugme:12px;
+  --font:'Nunito', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  padding:clamp(10px,2.5vw,20px);
+  background:var(--podloga);
+  color:var(--mastilo);
+  font-family:var(--font);
+  font-size:17px;
+  line-height:1.5;
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* okvir vježbe: kartica platforme */
+.igra{
+  max-width:940px;
+  margin:0 auto;
+  background:var(--papir);
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  box-shadow:var(--sjena);
+  padding:clamp(16px,3.2vw,28px);
+}
+
+.glava{margin-bottom:16px}
+.kicker{margin:0 0 4px;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tirkiz-tamni)}
+.glava h1{margin:0;font-size:clamp(22px,4vw,30px);line-height:1.15;font-weight:800;letter-spacing:-.01em;color:var(--mastilo)}
+.glava p.uputa{margin:6px 0 0;max-width:58ch;color:var(--mastilo-blijedo)}
+.stanje{display:flex;gap:10px;margin:0;flex-wrap:wrap}
+.stanje > div{
+  background:var(--papir);
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  padding:10px 16px;
+  min-width:124px;
+}
+.stanje dt{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mastilo-blijedo)}
+.stanje dd{margin:0;font-size:26px;font-weight:800;line-height:1.15;color:var(--tirkiz-tamni);font-variant-numeric:tabular-nums}
+
+.stupac{display:flex;flex-direction:column;min-width:0}
+.desni{gap:16px}
+
+/* priča s prazninama */
+.prica{
+  background:#fff;
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  padding:clamp(16px,2.4vw,24px);
+  font-size:clamp(17px,1.4vw,19px);
+  line-height:2.1;
+}
+.prica p{margin:0 0 14px}
+.prica p:last-child{margin-bottom:0}
+
+/* praznina: mjesto na koje ide riječ */
+.praznina{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:130px;min-height:44px;padding:4px 14px;margin:0 2px;
+  font:inherit;font-weight:800;color:var(--tirkiz-tamni);
+  background:var(--tirkiz-blijedi);
+  border:2px dashed var(--tirkiz);border-radius:var(--r-dugme);
+  cursor:pointer;vertical-align:middle;
+  transition:background .15s,border-color .15s,transform .12s;
+}
+.praznina:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+.praznina.cilj{background:#fff;border-color:var(--narandzasta);border-style:solid;transform:scale(1.04)}
+.praznina.tacna{
+  background:var(--zelena-blijeda);border:2px solid var(--zelena);
+  color:#1E5735;cursor:default;
+}
+.praznina.netacna{animation:tresi .4s ease-in-out}
+@keyframes tresi{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-5px)}
+  75%{transform:translateX(5px)}
+}
+
+/* ponuđene riječi */
+.ponuda h2{margin:0 0 10px;font-size:17px;font-weight:800;color:var(--tirkiz-tamni)}
+.rijeci{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;list-style:none}
+.rijec{
+  font:inherit;font-weight:800;font-size:16.5px;
+  min-height:44px;padding:9px 16px;
+  background:#fff;color:var(--mastilo);
+  border:2px solid var(--linija);border-radius:var(--r-dugme);
+  cursor:grab;touch-action:none;
+  transition:border-color .15s,background .15s,transform .12s;
+}
+.rijec:hover{border-color:var(--tirkiz);background:var(--tirkiz-blijedi)}
+.rijec:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+.rijec.izabrana{border-color:var(--narandzasta);background:var(--narandzasta-blijedo);transform:translateY(-2px)}
+.rijec.vuce{opacity:.35}
+.rijec.potrosena{display:none}
+.ponuda .prazno{color:var(--mastilo-blijedo);font-weight:700;margin:0}
+
+/* riječ koja putuje ispod prsta */
+.duh{
+  position:fixed;z-index:9;pointer-events:none;
+  font-weight:800;font-size:16.5px;padding:9px 16px;
+  background:#fff;color:var(--mastilo);
+  border:2px solid var(--narandzasta);border-radius:var(--r-dugme);
+  box-shadow:0 8px 20px rgba(31,45,56,.18);
+  transform:translate(-50%,-50%);
+}
+
+/* komande */
+.komande{
+  display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;
+  margin-top:18px;padding-top:16px;border-top:1px solid var(--linija);
+}
+.dugmad{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
+.dugme{
+  font:inherit;font-weight:800;font-size:15.5px;min-height:46px;padding:10px 18px;
+  border-radius:var(--r-dugme);border:1.5px solid var(--linija);
+  background:#fff;color:var(--tirkiz-tamni);cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.dugme:hover{background:var(--tirkiz-blijedi);border-color:var(--tirkiz)}
+.dugme.glavno{background:var(--narandzasta);border-color:var(--narandzasta);color:#2B1600}
+.dugme.glavno:hover{background:#e08f06;border-color:#e08f06}
+.dugme:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+.dugme:disabled{opacity:.45;cursor:default}
+.dugme:disabled:hover{background:#fff;border-color:var(--linija)}
+
+.poruka{margin:12px 2px 0;font-size:16px;font-weight:700;color:var(--mastilo-blijedo);min-height:1.6em}
+.poruka.dobro{color:#1E5735}
+.poruka.lose{color:#8A3A1B}
+
+.kraj{
+  margin-top:14px;
+  background:var(--narandzasta-blijedo);
+  border:1px solid var(--narandzasta);border-radius:var(--r-kartica);
+  padding:16px 16px 18px;text-align:center;
+  animation:digni .4s ease-out;
+}
+.kraj h2{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--narandzasta-tamna)}
+.kraj p{margin:0 0 12px;color:var(--mastilo-blijedo)}
+@keyframes digni{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+.greska{padding:16px;border:1px solid var(--narandzasta);border-radius:var(--r-kartica);background:var(--narandzasta-blijedo);color:var(--mastilo)}
+
+/* Široki ekran: priča lijevo, ponuđene riječi i komande desno. */
+@media (min-width:900px){
+  .igra{max-width:1280px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);column-gap:clamp(20px,3vw,34px);align-items:start}
+  /* Duga priča skrola u svom okviru, a ponuđene riječi i dugmad ostaju na
+     mjestu — dijete ih ne mora tražiti dok prevlači. */
+  .lijevi,.desni{max-height:calc(100svh - 98px);min-height:0}
+  .prica{flex:1 1 auto;min-height:0;overflow:auto}
+  .ponuda{flex:1 1 auto;min-height:0;overflow:auto}
+  .komande{margin-top:auto}
+}
+@media (min-width:900px) and (max-height:900px){
+  body{padding:10px}
+  .igra{padding:16px 20px}
+  .glava{margin-bottom:12px}
+  .glava h1{font-size:clamp(20px,2.4vw,26px)}
+  .stanje > div{padding:8px 14px;min-width:108px}
+  .stanje dd{font-size:22px}
+  .lijevi,.desni{max-height:calc(100svh - 54px)}
+  .prica{line-height:1.95}
+  .komande{margin-top:14px;padding-top:12px}
+}
+/* Uski ekran: sve u jednoj koloni, redoslijed kao na papiru. */
+@media (max-width:899px){
+  .igra{display:flex;flex-direction:column}
+  .stupac{display:contents}
+  .glava{order:1}
+  .stanje{order:2;margin-bottom:14px}
+  .prica{order:3}
+  .poruka{order:4}
+  .kraj{order:5}
+  /* Na telefonu ponuđene riječi ostaju prilijepljene za dno ekrana, da ih
+     dijete ne mora tražiti skrolanjem dok čita priču. */
+  .ponuda{
+    order:6;margin-top:14px;position:sticky;bottom:0;z-index:4;
+    background:var(--papir);padding:10px 0 6px;
+    box-shadow:0 -12px 18px rgba(255,255,255,.9);
+    max-height:40svh;overflow:auto;
+  }
+  .ponuda h2{margin-bottom:8px}
+  .praznina{min-width:96px;padding:2px 10px}
+  .prica{line-height:2}
+  .komande{order:7}
+  .dugmad{margin-left:0;width:100%}
+  .dugmad .dugme{flex:1 1 auto;white-space:nowrap}
+}
+@media (prefers-reduced-motion:reduce){
+  .kraj,.praznina.netacna{animation-duration:.01s}
+  .dugme,.rijec,.praznina{transition:none}
+}
+</style>
+</head>
+<body>
+
+<main class="igra" id="igra">
+  <div class="stupac lijevi" id="lijevo">
+    <header class="glava">
+      <p class="kicker">Mekteb.net · vježba</p>
+      <h1 id="naslov">Popuni prazninu</h1>
+      <p class="uputa" id="uputa"></p>
+    </header>
+
+    <div class="prica" id="prica"></div>
+    <p class="poruka" id="poruka" aria-live="polite"></p>
+
+    <div class="kraj" id="kraj" hidden>
+      <h2>Mašallah, sve riječi su na svome mjestu!</h2>
+      <p id="kraj-opis"></p>
+      <button class="dugme glavno" id="ponovo" type="button">Pokušaj ponovo</button>
+    </div>
+  </div>
+
+  <div class="stupac desni" id="desno">
+    <dl class="stanje">
+      <div><dt>Popunjeno</dt><dd id="brojac">0 od 0</dd></div>
+      <div><dt>Vrijeme</dt><dd id="sat">0:00</dd></div>
+    </dl>
+
+    <section class="ponuda">
+      <h2 id="ponuda-naslov">Riječi koje nedostaju</h2>
+      <ul class="rijeci" id="rijeci"></ul>
+      <p class="prazno" id="ponuda-prazna" hidden>Sve riječi su iskorištene.</p>
+    </section>
+
+    <footer class="komande" id="komande">
+      <div class="dugmad">
+        <button class="dugme" id="pomoc" type="button">Pomozi mi</button>
+        <button class="dugme glavno" id="nova" type="button">Počni ispočetka</button>
+      </div>
+    </footer>
+  </div>
+
+  <p class="sr" id="glas" aria-live="polite"></p>
+</main>
+
+<noscript>Za ovu vježbu treba uključiti JavaScript.</noscript>
+
+<!-- Ugrađeni primjer. Isti oblik ima i vanjska JSON datoteka. -->
+<script type="application/json" id="podaci">
+{
+  "id": "abdest-01",
+  "naslov": "Kako se uzima abdest",
+  "uputa": "Prevuci riječ na prazno mjesto. Možeš i ovako: dodirni riječ, pa dodirni prazninu.",
+  "tekst": "Prije namaza muslimani uzimaju {abdest}. Prvo operemo {ruke}, pa isperemo usta i nos.\n\nZatim operemo {lice}, potaremo mokrim rukama {glavu} i na kraju operemo {noge}. Sada smo čisti i možemo klanjati.",
+  "dodatne": ["sanke", "lopta"]
+}
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = {
+    naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), sat: $('sat'),
+    prica: $('prica'), rijeci: $('rijeci'), poruka: $('poruka'), glas: $('glas'),
+    kraj: $('kraj'), krajOpis: $('kraj-opis'), ponovo: $('ponovo'),
+    pomoc: $('pomoc'), nova: $('nova'), ponudaPrazna: $('ponuda-prazna'),
+    desno: $('desno')
+  };
+
+  var podaci, dijelovi, trazene, ponudene;
+  var stanje;
+
+  /* ---------- pomoćne ---------- */
+  function slucajan(n) { return Math.floor(Math.random() * n); }
+  function promijesaj(niz) {
+    for (var i = niz.length - 1; i > 0; i--) { var j = slucajan(i + 1); var t = niz[i]; niz[i] = niz[j]; niz[j] = t; }
+    return niz;
+  }
+  function vrijeme(sek) { return Math.floor(sek / 60) + ':' + String(sek % 60).padStart(2, '0'); }
+  function javi(dogadjaj, detalji) {
+    var poruka = { izvor: 'mekteb-igra', igra: 'popuni', id: podaci && podaci.id, dogadjaj: dogadjaj };
+    for (var k in detalji) poruka[k] = detalji[k];
+    try { if (window.parent !== window) window.parent.postMessage(poruka, '*'); } catch (g) {}
+    document.dispatchEvent(new CustomEvent('mekteb-igra', { detail: poruka }));
+  }
+  function reci(tekst) { el.glas.textContent = tekst; }
+  function poruci(tekst, vrsta) {
+    el.poruka.textContent = tekst;
+    el.poruka.className = 'poruka' + (vrsta ? ' ' + vrsta : '');
+  }
+  // Ista riječ na dva mjesta je ista riječ: poređenje bez razlike u velikim
+  // slovima i bez rubnih znakova interpunkcije.
+  function kljuc(rijec) {
+    return String(rijec).toLocaleLowerCase('bs').replace(/^[^\wčćđšžČĆĐŠŽ]+|[^\wčćđšžČĆĐŠŽ]+$/g, '');
+  }
+
+  /* ---------- učitavanje ---------- */
+  function ucitaj() {
+    if (window.POPUNI_PODACI) return Promise.resolve(window.POPUNI_PODACI);
+    var ugradjeni = function () { return JSON.parse($('podaci').textContent); };
+    var adresa = new URLSearchParams(location.search).get('podaci');
+    if (!adresa) return Promise.resolve(ugradjeni());
+    var url;
+    try { url = new URL(adresa, location.href); } catch (g) { return Promise.resolve(ugradjeni()); }
+    if (url.origin !== location.origin) {
+      console.warn('Popuni prazninu: podaci moraju biti na istoj domeni. Koristim ugrađeni primjer.');
+      return Promise.resolve(ugradjeni());
+    }
+    return fetch(url.href, { credentials: 'same-origin' })
+      .then(function (o) { if (!o.ok) throw new Error('HTTP ' + o.status); return o.json(); })
+      .catch(function (g) {
+        console.warn('Popuni prazninu: podaci se nisu učitali (' + g.message + '). Koristim ugrađeni primjer.');
+        return ugradjeni();
+      });
+  }
+
+  // Tekst se dijeli na obične dijelove i praznine: "Uzimamo {abdest}." →
+  // [{tekst}, {praznina:'abdest'}, {tekst}]
+  function razlomi(tekst) {
+    var izlaz = [];
+    var re = /\{([^{}]+)\}/g, zadnji = 0, m;
+    while ((m = re.exec(tekst)) !== null) {
+      if (m.index > zadnji) izlaz.push({ vrsta: 'tekst', sadrzaj: tekst.slice(zadnji, m.index) });
+      izlaz.push({ vrsta: 'praznina', sadrzaj: m[1].trim() });
+      zadnji = m.index + m[0].length;
+    }
+    if (zadnji < tekst.length) izlaz.push({ vrsta: 'tekst', sadrzaj: tekst.slice(zadnji) });
+    return izlaz;
+  }
+
+  function pripremi(p) {
+    podaci = p || {};
+    var tekst = typeof podaci.tekst === 'string' ? podaci.tekst : '';
+    dijelovi = razlomi(tekst);
+    trazene = dijelovi.filter(function (d) { return d.vrsta === 'praznina'; }).map(function (d) { return d.sadrzaj; });
+
+    el.naslov.textContent = podaci.naslov || 'Popuni prazninu';
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Popuni prazninu · Mekteb.net';
+    el.uputa.textContent = podaci.uputa || 'Prevuci riječ na prazno mjesto. Možeš i ovako: dodirni riječ, pa dodirni prazninu.';
+    el.uputa.hidden = !el.uputa.textContent;
+  }
+
+  /* ---------- nova igra ---------- */
+  function novaIgra() {
+    if (stanje && stanje.sat) clearInterval(stanje.sat);
+    if (!trazene.length) {
+      greska('U podacima nema nijedne praznine. Riječ koja nedostaje piše se u vitičastim zagradama, npr. {abdest}.');
+      return;
+    }
+
+    stanje = {
+      rijesene: 0, greske: 0, pomoc: 0,
+      pocetak: 0, sekunde: 0, sat: null, gotovo: false,
+      izabrana: null, vuce: null, duh: null, cilj: null
+    };
+
+    // Ponuda: sve tražene riječi (ista riječ dva puta = dvije kartice) i dodatne.
+    var dodatne = Array.isArray(podaci.dodatne) ? podaci.dodatne.filter(function (d) { return typeof d === 'string' && d.trim(); }) : [];
+    ponudene = trazene.concat(dodatne).map(function (rijec, i) {
+      return { id: 'r' + i, rijec: String(rijec).trim(), potrosena: false };
+    });
+    if (podaci.poredaj !== 'redom') promijesaj(ponudene);
+
+    el.kraj.hidden = true;
+    el.pomoc.disabled = false;
+    el.sat.textContent = '0:00';
+    poruci('');
+    nacrtajPricu();
+    nacrtajPonudu();
+    osvjeziBrojac();
+  }
+
+  function greska(tekst) {
+    var p = document.createElement('p');
+    p.className = 'greska'; p.textContent = tekst;
+    el.prica.replaceWith(p);
+    el.poruka.hidden = true;
+    el.kraj.hidden = true;
+    el.desno.hidden = true;
+  }
+
+  function nacrtajPricu() {
+    el.prica.textContent = '';
+    stanje.praznine = [];
+    var pasus = document.createElement('p');
+    el.prica.appendChild(pasus);
+    var broj = 0;
+
+    dijelovi.forEach(function (d) {
+      if (d.vrsta === 'tekst') {
+        // Prazan red u JSON-u pravi novi pasus.
+        var komadi = d.sadrzaj.split(/\n\s*\n/);
+        komadi.forEach(function (komad, i) {
+          if (i > 0) { pasus = document.createElement('p'); el.prica.appendChild(pasus); }
+          pasus.appendChild(document.createTextNode(komad.replace(/\s*\n\s*/g, ' ')));
+        });
+        return;
+      }
+      var i = broj++;
+      var dugme = document.createElement('button');
+      dugme.type = 'button';
+      dugme.className = 'praznina';
+      dugme.dataset.i = i;
+      dugme.setAttribute('aria-label', 'Praznina ' + (i + 1) + ' od ' + trazene.length);
+      dugme.textContent = '?';
+      pasus.appendChild(dugme);
+      stanje.praznine.push({ el: dugme, tacna: false, rijec: d.sadrzaj });
+    });
+  }
+
+  function nacrtajPonudu() {
+    el.rijeci.textContent = '';
+    ponudene.forEach(function (p) {
+      var li = document.createElement('li');
+      var dugme = document.createElement('button');
+      dugme.type = 'button';
+      dugme.className = 'rijec' + (p.potrosena ? ' potrosena' : '');
+      dugme.dataset.id = p.id;
+      dugme.textContent = p.rijec;
+      li.appendChild(dugme);
+      el.rijeci.appendChild(li);
+    });
+    var ostalo = ponudene.some(function (p) { return !p.potrosena; });
+    el.ponudaPrazna.hidden = ostalo;
+  }
+
+  function osvjeziBrojac() {
+    el.brojac.textContent = stanje.rijesene + ' od ' + trazene.length;
+  }
+
+  /* ---------- sat ---------- */
+  function pokreniSat() {
+    if (stanje.sat || stanje.gotovo) return;
+    stanje.pocetak = Date.now();
+    stanje.sat = setInterval(function () {
+      stanje.sekunde = Math.floor((Date.now() - stanje.pocetak) / 1000);
+      el.sat.textContent = vrijeme(stanje.sekunde);
+    }, 500);
+  }
+
+  /* ---------- smještanje riječi ---------- */
+  function nadjiPonudjenu(id) {
+    for (var i = 0; i < ponudene.length; i++) if (ponudene[i].id === id) return ponudene[i];
+    return null;
+  }
+
+  function oznaciIzabranu(id) {
+    stanje.izabrana = id;
+    [].forEach.call(el.rijeci.querySelectorAll('.rijec'), function (b) {
+      b.classList.toggle('izabrana', b.dataset.id === id);
+      b.setAttribute('aria-pressed', b.dataset.id === id ? 'true' : 'false');
+    });
+  }
+
+  function smjesti(ponudjena, praznina) {
+    if (!ponudjena || !praznina || praznina.tacna || stanje.gotovo) return;
+    pokreniSat();
+
+    if (kljuc(ponudjena.rijec) === kljuc(praznina.rijec)) {
+      praznina.tacna = true;
+      praznina.el.textContent = ponudjena.rijec;
+      praznina.el.classList.remove('netacna');
+      praznina.el.classList.add('tacna');
+      praznina.el.disabled = true;
+      ponudjena.potrosena = true;
+      stanje.rijesene++;
+      oznaciIzabranu(null);
+      nacrtajPonudu();
+      osvjeziBrojac();
+      poruci('Tačno: ' + ponudjena.rijec + '.', 'dobro');
+      reci('Tačno. ' + ponudjena.rijec);
+      javi('rijec', { rijec: ponudjena.rijec, pronadjeno: stanje.rijesene, ukupno: trazene.length });
+      if (stanje.rijesene === trazene.length) zavrsi();
+      return;
+    }
+
+    stanje.greske++;
+    praznina.el.classList.remove('netacna');
+    void praznina.el.offsetWidth;
+    praznina.el.classList.add('netacna');
+    oznaciIzabranu(null);
+    poruci('Ta riječ ide na drugo mjesto. Pokušaj ponovo.', 'lose');
+    reci('Nije tačno. Pokušaj ponovo.');
+  }
+
+  /* ---------- miš, prst i tastatura ---------- */
+  // Povlačenje radi preko pointer događaja, pa isti kod pokriva i miš i prst.
+  el.rijeci.addEventListener('pointerdown', function (e) {
+    var dugme = e.target.closest && e.target.closest('.rijec');
+    if (!dugme || e.button || !stanje || stanje.gotovo) return;
+    var ponudjena = nadjiPonudjenu(dugme.dataset.id);
+    if (!ponudjena || ponudjena.potrosena) return;
+    e.preventDefault();
+    stanje.vuce = { ponudjena: ponudjena, dugme: dugme, pomjereno: false, x: e.clientX, y: e.clientY };
+    try { dugme.setPointerCapture(e.pointerId); } catch (g) {}
+  });
+
+  function pomjeriDuh(x, y) {
+    if (!stanje.duh) {
+      stanje.duh = document.createElement('div');
+      stanje.duh.className = 'duh';
+      stanje.duh.textContent = stanje.vuce.ponudjena.rijec;
+      document.body.appendChild(stanje.duh);
+      stanje.vuce.dugme.classList.add('vuce');
+    }
+    stanje.duh.style.left = x + 'px';
+    stanje.duh.style.top = y + 'px';
+
+    var ispod = document.elementFromPoint(x, y);
+    var cilj = ispod && ispod.closest ? ispod.closest('.praznina') : null;
+    if (cilj && cilj.classList.contains('tacna')) cilj = null;
+    if (stanje.cilj !== cilj) {
+      if (stanje.cilj) stanje.cilj.classList.remove('cilj');
+      if (cilj) cilj.classList.add('cilj');
+      stanje.cilj = cilj;
+    }
+  }
+
+  document.addEventListener('pointermove', function (e) {
+    if (!stanje || !stanje.vuce) return;
+    if (!stanje.vuce.pomjereno) {
+      var d = Math.abs(e.clientX - stanje.vuce.x) + Math.abs(e.clientY - stanje.vuce.y);
+      if (d < 6) return;
+      stanje.vuce.pomjereno = true;
+    }
+    e.preventDefault();
+    pomjeriDuh(e.clientX, e.clientY);
+  }, { passive: false });
+
+  function pustiVucu(e) {
+    if (!stanje || !stanje.vuce) return;
+    var vuce = stanje.vuce;
+    stanje.vuce = null;
+    if (stanje.duh) { stanje.duh.remove(); stanje.duh = null; }
+    vuce.dugme.classList.remove('vuce');
+    var cilj = stanje.cilj;
+    if (stanje.cilj) { stanje.cilj.classList.remove('cilj'); stanje.cilj = null; }
+
+    if (e.type === 'pointercancel') return;
+    if (!vuce.pomjereno) {
+      // Nije povučeno, nego dodirnuto: izaberi riječ, pa se dodirne praznina.
+      oznaciIzabranu(stanje.izabrana === vuce.ponudjena.id ? null : vuce.ponudjena.id);
+      if (stanje.izabrana) poruci('Sada dodirni prazninu u koju ide riječ „' + vuce.ponudjena.rijec + '".');
+      else poruci('');
+      return;
+    }
+    if (cilj) smjesti(vuce.ponudjena, stanje.praznine[+cilj.dataset.i]);
+  }
+  document.addEventListener('pointerup', pustiVucu);
+  document.addEventListener('pointercancel', pustiVucu);
+
+  // Klik na riječ (tastatura ili miš bez povlačenja)
+  el.rijeci.addEventListener('click', function (e) {
+    var dugme = e.target.closest && e.target.closest('.rijec');
+    if (!dugme || !stanje || stanje.gotovo) return;
+    // Pointer tok je već obradio izbor; ovdje hvatamo samo tastaturu.
+    if (e.detail !== 0) return;
+    var ponudjena = nadjiPonudjenu(dugme.dataset.id);
+    if (!ponudjena || ponudjena.potrosena) return;
+    oznaciIzabranu(stanje.izabrana === ponudjena.id ? null : ponudjena.id);
+    if (stanje.izabrana) poruci('Sada odaberi prazninu u koju ide riječ „' + ponudjena.rijec + '".');
+    else poruci('');
+  });
+
+  // Klik ili Enter na praznini
+  el.prica.addEventListener('click', function (e) {
+    var cilj = e.target.closest && e.target.closest('.praznina');
+    if (!cilj || !stanje || stanje.gotovo) return;
+    var praznina = stanje.praznine[+cilj.dataset.i];
+    if (!praznina || praznina.tacna) return;
+    if (!stanje.izabrana) {
+      poruci('Prvo odaberi riječ sa spiska, pa je smjesti ovdje.');
+      return;
+    }
+    smjesti(nadjiPonudjenu(stanje.izabrana), praznina);
+  });
+
+  /* ---------- kraj ---------- */
+  function zavrsi() {
+    stanje.gotovo = true;
+    clearInterval(stanje.sat); stanje.sat = null;
+    if (stanje.pocetak) stanje.sekunde = Math.round((Date.now() - stanje.pocetak) / 1000);
+    el.sat.textContent = vrijeme(stanje.sekunde);
+    el.pomoc.disabled = true;
+    poruci('');
+
+    var opis = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '.';
+    opis += stanje.greske === 0 ? ' Bez ijedne greške.' :
+            stanje.greske === 1 ? ' Jedan pogrešan pokušaj.' : ' Pogrešnih pokušaja: ' + stanje.greske + '.';
+    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? ' Pomoć korištena jednom.' : ' Pomoć korištena ' + stanje.pomoc + ' puta.';
+    el.krajOpis.textContent = opis;
+    el.kraj.hidden = false;
+    el.ponovo.focus({ preventScroll: true });
+    try { el.kraj.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (g) {}
+
+    javi('kraj', {
+      pronadjeno: stanje.rijesene, ukupno: trazene.length, sekunde: stanje.sekunde,
+      greske: stanje.greske, pomoc: stanje.pomoc
+    });
+  }
+
+  /* ---------- komande ---------- */
+  el.pomoc.addEventListener('click', function () {
+    if (!stanje || stanje.gotovo) return;
+    // Popuni prvu praznu prazninu odgovarajućom riječju iz ponude.
+    for (var i = 0; i < stanje.praznine.length; i++) {
+      var praznina = stanje.praznine[i];
+      if (praznina.tacna) continue;
+      for (var j = 0; j < ponudene.length; j++) {
+        if (!ponudene[j].potrosena && kljuc(ponudene[j].rijec) === kljuc(praznina.rijec)) {
+          stanje.pomoc++;
+          pokreniSat();
+          smjesti(ponudene[j], praznina);
+          return;
+        }
+      }
+    }
+  });
+  el.nova.addEventListener('click', novaIgra);
+  el.ponovo.addEventListener('click', function () {
+    novaIgra();
+    var prva = el.prica.querySelector('.praznina');
+    if (prva) prva.focus({ preventScroll: true });
+  });
+
+  /* ---------- visina za iframe ---------- */
+  if (window.parent !== window && 'ResizeObserver' in window) {
+    new ResizeObserver(function () {
+      javi('visina', { visina: Math.ceil(document.documentElement.getBoundingClientRect().height) });
+    }).observe(document.documentElement);
+  }
+
+  ucitaj().then(function (p) { pripremi(p); novaIgra(); })
+          .catch(function () { trazene = []; podaci = {}; novaIgra(); });
+})();
+</script>
+</body>
+</html>

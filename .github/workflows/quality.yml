@@ -12,7 +12,29 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+
+    # Testovi api-servera rade nad pravom bazom (lib/db odbija start bez
+    # DATABASE_URL), pa je servis obavezan da bi provjera uopšte imala smisla.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mekteb
+          POSTGRES_PASSWORD: mekteb
+          POSTGRES_DB: mekteb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U mekteb -d mekteb_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DATABASE_URL: postgres://mekteb:mekteb@127.0.0.1:5432/mekteb_test
+      JWT_SECRET: ci-test-only-secret-not-for-production
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +53,33 @@ jobs:
 
       - name: Typecheck
         run: pnpm run typecheck
+
+      # Shemu i početne podatke pravi sam server pri pokretanju (drizzle
+      # migracije + runDataBootstrap). Zato ga jednom podignemo nad praznom
+      # bazom, sačekamo /api/healthz i ugasimo ga — poslije toga testovi rade
+      # nad bazom kakvu vide i u razvoju.
+      - name: Build API server
+        run: pnpm --filter @workspace/api-server run build
+
+      - name: Prepare test database
+        run: |
+          node artifacts/api-server/dist/index.mjs > /tmp/priprema-baze.log 2>&1 &
+          echo $! > /tmp/api.pid
+          for i in $(seq 1 60); do
+            if curl -fsS -m 5 http://127.0.0.1:3000/api/healthz > /dev/null 2>&1; then
+              echo "Baza pripremljena nakon ${i}. pokušaja."
+              kill "$(cat /tmp/api.pid)" 2>/dev/null || true
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Server se nije podigao; zadnjih 50 redova loga:" >&2
+          tail -50 /tmp/priprema-baze.log >&2
+          kill "$(cat /tmp/api.pid)" 2>/dev/null || true
+          exit 1
+        env:
+          NODE_ENV: test
+          PORT: 3000
 
       - name: API tests
         run: pnpm --filter @workspace/api-server test
