@@ -71,6 +71,21 @@ import { OSMOSMJERKA_MARKER, getOsmosmjerka, osmosmjerkaMarker, osmosmjerkaUrl }
 import { TIPOVI_VJEZBI, getVjezba, jeNasaVjezba, vjezbaMarker, vjezbaUrl } from "../lib/nase-vjezbe.js";
 import { createGzip } from "node:zlib";
 import { logger } from "../lib/logger.js";
+import { KNJIGA_33_PRICE, KNJIGA_33_PRICE_IZVOR } from "../data/citaonica-33-price.js";
+
+/** Naslov bez razlike u velikim slovima, kvačicama i razmacima — za poređenje. */
+function kljucNaslova(naslov: string): string {
+  return naslov
+    .toLocaleLowerCase("bs")
+    .replace(/[čć]/g, "c").replace(/đ/g, "d").replace(/š/g, "s").replace(/ž/g, "z")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Knjiga „33 priče za djecu" ide uz kod (bundlana uz server). */
+function citajKnjigu33Price(): { izvor: string; price: typeof KNJIGA_33_PRICE } {
+  return { izvor: KNJIGA_33_PRICE_IZVOR, price: KNJIGA_33_PRICE };
+}
 import { once } from "node:events";
 import {
   KOPIJA_FORMAT,
@@ -2570,6 +2585,76 @@ router.get("/knjige", async (_req, res) => {
     res.json(result);
   } catch (err) {
     console.error("[GET /admin/knjige]", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/admin/knjige/uvoz-33-price — ubaci priče iz knjige „33 priče za djecu"
+//
+// Knjiga je uz kod (`src/data/citaonica-33-price.json`, ilustracije u
+// `public/citaonica/33-price/`). Uvoz je namjerno idempotentan: priča koja već
+// postoji — po slugu ili po naslovu — preskače se, pa se dugme može pritisnuti
+// i kad je dio priča ranije ručno unesen.
+router.post("/knjige/uvoz-33-price", async (req, res): Promise<void> => {
+  try {
+    const kategorija = typeof req.body?.kategorija === "string" && req.body.kategorija.trim()
+      ? req.body.kategorija.trim()
+      : "prica";
+    const { price } = citajKnjigu33Price();
+    const postojece = await db.select({ slug: knjige.slug, naslov: knjige.naslov }).from(knjige);
+    const poSlugu = new Set(postojece.map(k => k.slug.toLocaleLowerCase("bs")));
+    const poNaslovu = new Set(postojece.map(k => kljucNaslova(k.naslov)));
+
+    const dodano: { naslov: string; slug: string }[] = [];
+    const preskoceno: { naslov: string; razlog: string }[] = [];
+
+    for (const prica of price) {
+      if (poSlugu.has(prica.slug.toLocaleLowerCase("bs"))) {
+        preskoceno.push({ naslov: prica.naslov, razlog: "već postoji (ista oznaka)" });
+        continue;
+      }
+      if (poNaslovu.has(kljucNaslova(prica.naslov))) {
+        preskoceno.push({ naslov: prica.naslov, razlog: "već postoji (isti naslov)" });
+        continue;
+      }
+      await db.insert(knjige).values({
+        slug: prica.slug,
+        naslov: prica.naslov,
+        kategorija,
+        contentHtml: prica.contentHtml,
+        coverImage: prica.coverImage,
+        redoslijed: prica.broj,
+        isPublished: true,
+      });
+      poSlugu.add(prica.slug.toLocaleLowerCase("bs"));
+      poNaslovu.add(kljucNaslova(prica.naslov));
+      dodano.push({ naslov: prica.naslov, slug: prica.slug });
+    }
+
+    res.json({ ukupno: price.length, dodano, preskoceno, kategorija });
+  } catch (err) {
+    logger.error({ err }, "[Čitaonica] uvoz 33 priče nije uspio");
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/admin/knjige/uvoz-33-price — šta bi uvoz uradio (bez upisa)
+router.get("/knjige/uvoz-33-price", async (_req, res): Promise<void> => {
+  try {
+    const { price, izvor } = citajKnjigu33Price();
+    const postojece = await db.select({ slug: knjige.slug, naslov: knjige.naslov }).from(knjige);
+    const poSlugu = new Set(postojece.map(k => k.slug.toLocaleLowerCase("bs")));
+    const poNaslovu = new Set(postojece.map(k => kljucNaslova(k.naslov)));
+    const nedostaju = price.filter(p =>
+      !poSlugu.has(p.slug.toLocaleLowerCase("bs")) && !poNaslovu.has(kljucNaslova(p.naslov)));
+    res.json({
+      izvor,
+      ukupno: price.length,
+      nedostaje: nedostaju.length,
+      naslovi: nedostaju.map(p => p.naslov),
+    });
+  } catch (err) {
+    logger.error({ err }, "[Čitaonica] pregled uvoza nije uspio");
     res.status(500).json({ error: "Greška servera" });
   }
 });
