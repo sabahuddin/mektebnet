@@ -1,0 +1,11 @@
+{
+  "id": "ramazan",
+  "naslov": "Ramazan — upiši odgovor",
+  "uputa": "Upiši odgovor u polje ispod pitanja, pa klikni „Provjeri\".",
+  "pitanja": [
+    { "pitanje": "U kojem mjesecu muslimani poste?", "odgovor": "ramazan" },
+    { "pitanje": "Kako se zove obrok prije zore?", "odgovor": "sehur" },
+    { "pitanje": "Kako se zove obrok kojim se prekida post?", "odgovor": "iftar", "pomoc": "Jede se kad sunce zađe." },
+    { "pitanje": "Kako se zove bajram poslije ramazana?", "odgovor": "Ramazanski bajram", "prihvati": ["ramazanski bajram", "idul-fitr"] }
+  ]
+}

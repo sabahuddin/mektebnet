@@ -1,0 +1,11 @@
+{
+  "id": "pojmovi",
+  "naslov": "Upiši odgovor",
+  "uputa": "Upiši odgovor u polje ispod pitanja. Kad odgovoriš na sva pitanja, klikni „Provjeri\".",
+  "pitanja": [
+    { "pitanje": "Kako se zove poziv na namaz?", "odgovor": "ezan", "pomoc": "Uči se s munare." },
+    { "pitanje": "Kako se zove pranje koje uzimamo pred namaz?", "odgovor": "abdest" },
+    { "pitanje": "Koliko farz-namaza klanjamo svaki dan?", "odgovor": "pet", "prihvati": ["5"] },
+    { "pitanje": "Kako se zove toranj s kojeg se uči ezan?", "odgovor": "munara", "prihvati": ["minaret"] }
+  ]
+}

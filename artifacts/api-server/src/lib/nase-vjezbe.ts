@@ -63,6 +63,12 @@ export const TIPOVI_VJEZBI: Record<string, TipVjezbe> = {
     opis: "Dijete spaja pojam s njegovim značenjem.",
     html: "/vjezbe/spoji/spoji.html",
   },
+  upisi: {
+    tip: "upisi",
+    naziv: "Upiši odgovor",
+    opis: "Dijete upisuje odgovor na pitanje.",
+    html: "/vjezbe/upisi/upisi.html",
+  },
 };
 
 /** Prefiksi po kojima stranica lekcije prepoznaje našu vježbu. */
@@ -190,6 +196,25 @@ export function validirajPodatke(tip: string, podaci: unknown): string | null {
     return null;
   }
 
+  if (tip === "upisi") {
+    const pitanja = Array.isArray(p.pitanja) ? p.pitanja : null;
+    if (!pitanja || pitanja.length < 1) return "Upiši bar jedno pitanje.";
+    if (pitanja.length > 20) return "Vježba može imati najviše dvadeset pitanja.";
+    for (const red of pitanja) {
+      const stavka = (red ?? {}) as Podaci;
+      if (typeof stavka.pitanje !== "string" || !stavka.pitanje.trim()) return "Svako pitanje treba tekst pitanja.";
+      if (typeof stavka.odgovor !== "string" || !stavka.odgovor.trim()) {
+        return `Pitanje „${String(stavka.pitanje).trim().slice(0, 40)}" nema odgovor.`;
+      }
+      if (stavka.prihvati !== undefined
+        && (!Array.isArray(stavka.prihvati) || stavka.prihvati.some(d => typeof d !== "string"))) {
+        return "Drugi prihvaćeni odgovori moraju biti spisak riječi.";
+      }
+      if (stavka.pomoc !== undefined && typeof stavka.pomoc !== "string") return "Pomoć uz pitanje mora biti tekst.";
+    }
+    return null;
+  }
+
   if (tip === "spoji") {
     const parovi = Array.isArray(p.parovi) ? p.parovi : null;
     if (!parovi || parovi.length < 2) return "Spajanje treba bar dva para.";
@@ -284,6 +309,9 @@ function sazetak(tip: string, id: string, podaci: Podaci, izvor: IzvorVjezbe, up
   } else if (tip === "poredak") {
     const stavke = Array.isArray(podaci.stavke) ? podaci.stavke : [];
     detalj = mnozina(stavke.length, "stavka", "stavke", "stavki");
+  } else if (tip === "upisi") {
+    const pitanja = Array.isArray(podaci.pitanja) ? podaci.pitanja : [];
+    detalj = mnozina(pitanja.length, "pitanje", "pitanja", "pitanja");
   } else if (tip === "spoji") {
     const parovi = Array.isArray(podaci.parovi) ? podaci.parovi : [];
     detalj = mnozina(parovi.length, "par", "para", "parova");
