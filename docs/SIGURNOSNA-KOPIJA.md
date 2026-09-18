@@ -6,7 +6,7 @@ Platforma živi na tri mjesta i svako se čuva na svoj način:
 |---|---|---|
 | **Kod** (sve što programeri pišu) | GitHub, grana `main` | već je sigurno; povremeno spasi i ZIP na svoj računar |
 | **Sadržaj** (lekcije, kvizovi, učenici, hasanati, vježbe) | samo u bazi na serveru | **Admin panel → Sigurnosna kopija → Preuzmi kopiju sadržaja** |
-| **Fajlovi** (PDF, slike, audio, H5P) | folder na disku servera (`/app/uploads`) | Coolify (kopija volumena) ili `scripts/sigurnosna-kopija.sh` |
+| **Fajlovi** (PDF, slike, audio, H5P) | disk servera, `/data/mekteb-uploads` (u kontejneru `/app/uploads`) | kopija tog foldera ili `scripts/sigurnosna-kopija.sh` |
 
 Kod je jedini koji se sam čuva. Sadržaj i fajlovi postoje **samo na serveru** dok
 ih neko ne prekopira negdje drugdje.
@@ -27,10 +27,11 @@ Neka bar jedna kopija uvijek bude negdje drugdje.
 1. **Automatska kopija baze.** Coolify → resurs baze (PostgreSQL) → *Backups* →
    uključi dnevnu kopiju i, ako imaš, upiši S3 (Backblaze B2, Wasabi, Hetzner).
    Bez S3 kopija ostaje na istom serveru — bolje nego ništa, ali nije dovoljno.
-2. **Provjeri trajni folder za fajlove.** Coolify → aplikacija → *Storages*:
-   mora postojati trajni folder (volume) za `/app/uploads`. Ako ga nema, svaki
-   novi deploy briše sve što je admin otad okačio (PDF-ove, slike, audio).
-   Ovo provjeri prvo — važnije je od svega ostalog na ovoj stranici.
+2. **Trajni folder za fajlove — provjereno 18.09.2026, uredu je.**
+   Coolify → aplikacija → *Storages* → *Volumes*: `/app/uploads` je vezan na
+   `/data/mekteb-uploads` na serveru, a `/app/edu` na folder aplikacije. Znači
+   redeploy ne briše okačene fajlove. Ako se ovo ikad promijeni, novi fajlovi
+   bi nestajali pri svakom deployu — zato pogledaj ovdje ako slike nestanu.
 
 ## Sve sa servera jednom komandom
 
