@@ -77,3 +77,61 @@ test("stanje fajlova vraća folder i brojeve", async () => {
   assert.ok(stanje.fajlova >= 0);
   assert.ok(stanje.bajtova >= 0);
 });
+
+test("kopija fajlova je ispravan tar koji sistemski tar vrati nepromijenjen", async () => {
+  const fs = await import("node:fs/promises");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const pokreni = promisify(execFile);
+
+  const radni = await fs.mkdtemp(path.join(os.tmpdir(), "kopija-"));
+  const izvor = path.join(radni, "izvor");
+  const cilj = path.join(radni, "vraceno");
+  await fs.mkdir(path.join(izvor, "slike", "lekcije"), { recursive: true });
+  await fs.mkdir(path.join(izvor, "prazan-folder"), { recursive: true });
+
+  const dugoIme = `${"a-vrlo-dugacak-naziv-priloga".repeat(5)}-čćđšž.pdf`;
+  const fajlovi: Record<string, string> = {
+    "obican.txt": "Prvi red\nDrugi red\n",
+    "naši slogovi č ć đ š ž.txt": "Bosanska slova u nazivu",
+    "prazan.bin": "",
+    [path.join("slike", "lekcije", dugoIme)]: "x".repeat(5000),
+    [path.join("slike", "veliki.bin")]: "y".repeat(600 * 1024),
+  };
+  for (const [ime, sadrzaj] of Object.entries(fajlovi)) {
+    await fs.writeFile(path.join(izvor, ime), sadrzaj);
+  }
+
+  const { kopijaFajlova } = await import("./sigurnosna-kopija.js");
+  const arhiva = path.join(radni, "kopija.tar");
+  const komadi: Buffer[] = [];
+  for await (const komad of kopijaFajlova(izvor)) komadi.push(komad);
+  await fs.writeFile(arhiva, Buffer.concat(komadi));
+  assert.equal(Buffer.concat(komadi).length % 512, 0, "tar mora biti u blokovima od 512");
+
+  await fs.mkdir(cilj, { recursive: true });
+  await pokreni("tar", ["-xf", arhiva, "-C", cilj]);
+
+  for (const [ime, sadrzaj] of Object.entries(fajlovi)) {
+    const vraceno = await fs.readFile(path.join(cilj, ime), "utf8");
+    assert.equal(vraceno, sadrzaj, `${ime}: sadržaj`);
+  }
+  const prazan = await fs.stat(path.join(cilj, "prazan-folder"));
+  assert.equal(prazan.isDirectory(), true, "prazan folder mora ostati");
+
+  await fs.rm(radni, { recursive: true, force: true });
+});
+
+test("kopija fajlova ne pukne kad folder ne postoji", async () => {
+  const { kopijaFajlova } = await import("./sigurnosna-kopija.js");
+  let bajtova = 0;
+  for await (const komad of kopijaFajlova("/nema-ovog-foldera-nigdje")) bajtova += komad.length;
+  assert.equal(bajtova, 1024, "prazna arhiva su dva prazna bloka");
+});
+
+test("naziv kopije fajlova nosi datum i sat", async () => {
+  const { imeKopijeFajlova } = await import("./sigurnosna-kopija.js");
+  assert.equal(imeKopijeFajlova(new Date(2026, 8, 18, 18, 30)), "mekteb-fajlovi-2026-09-18-1830.tar.gz");
+});
