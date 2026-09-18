@@ -103,3 +103,5 @@ Druga naša vježba, „Popuni prazninu", radi po istom obrascu — vidi
 Treća naša vježba, „Poredak", radi po istom obrascu — vidi `docs/POREDAK.md`.
 
 Četvrta naša vježba, „Razvrstaj", radi po istom obrascu — vidi `docs/RAZVRSTAJ.md`.
+
+Peta naša vježba, „Spoji parove", radi po istom obrascu — vidi `docs/SPOJI-PAROVE.md`.

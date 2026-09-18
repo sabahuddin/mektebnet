@@ -57,6 +57,12 @@ export const TIPOVI_VJEZBI: Record<string, TipVjezbe> = {
     opis: "Dijete razvrstava pojmove u dvije do pet kutija.",
     html: "/vjezbe/razvrstaj/razvrstaj.html",
   },
+  spoji: {
+    tip: "spoji",
+    naziv: "Spoji parove",
+    opis: "Dijete spaja pojam s njegovim značenjem.",
+    html: "/vjezbe/spoji/spoji.html",
+  },
 };
 
 /** Prefiksi po kojima stranica lekcije prepoznaje našu vježbu. */
@@ -184,6 +190,27 @@ export function validirajPodatke(tip: string, podaci: unknown): string | null {
     return null;
   }
 
+  if (tip === "spoji") {
+    const parovi = Array.isArray(p.parovi) ? p.parovi : null;
+    if (!parovi || parovi.length < 2) return "Spajanje treba bar dva para.";
+    if (parovi.length > 12) return "Spajanje može imati najviše dvanaest parova.";
+    const lijeve = new Set<string>();
+    const desne = new Set<string>();
+    for (const par of parovi) {
+      const red = (par ?? {}) as Podaci;
+      const lijevo = typeof red.lijevo === "string" ? red.lijevo.trim() : "";
+      const desno = typeof red.desno === "string" ? red.desno.trim() : "";
+      if (!lijevo || !desno) return "Svaki par treba i lijevu i desnu stranu.";
+      const kljucL = lijevo.toLocaleLowerCase("bs");
+      const kljucD = desno.toLocaleLowerCase("bs");
+      if (lijeve.has(kljucL)) return `Pojam „${lijevo}" se ponavlja — dijete ne bi znalo na koji red misliš.`;
+      if (desne.has(kljucD)) return `Odgovor „${desno}" se ponavlja — dijete ne bi znalo uz koji pojam ide.`;
+      lijeve.add(kljucL);
+      desne.add(kljucD);
+    }
+    return null;
+  }
+
   if (tip === "razvrstaj") {
     const kategorije = Array.isArray(p.kategorije) ? p.kategorije : null;
     if (!kategorije || kategorije.length < 2) return "Razvrstavanje treba bar dvije kutije.";
@@ -257,6 +284,9 @@ function sazetak(tip: string, id: string, podaci: Podaci, izvor: IzvorVjezbe, up
   } else if (tip === "poredak") {
     const stavke = Array.isArray(podaci.stavke) ? podaci.stavke : [];
     detalj = mnozina(stavke.length, "stavka", "stavke", "stavki");
+  } else if (tip === "spoji") {
+    const parovi = Array.isArray(podaci.parovi) ? podaci.parovi : [];
+    detalj = mnozina(parovi.length, "par", "para", "parova");
   } else if (tip === "razvrstaj") {
     const kategorije = Array.isArray(podaci.kategorije) ? podaci.kategorije : [];
     const stavki = kategorije.reduce((zbir, k) => {

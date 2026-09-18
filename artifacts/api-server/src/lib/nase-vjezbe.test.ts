@@ -19,7 +19,7 @@ import {
 } from "./nase-vjezbe.js";
 
 test("poznate su tačno dvije vrste naših vježbi", () => {
-  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni", "poredak", "razvrstaj"]);
+  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji"]);
   for (const tip of Object.keys(TIPOVI_VJEZBI)) assert.equal(isValidTip(tip), true, tip);
   for (const nije of ["", "h5p", "../tajna", 7, null]) {
     assert.equal(isValidTip(nije as unknown), false, String(nije));
@@ -210,4 +210,40 @@ test("razvrstavanje trazi dvije do pet kutija i razlicite stavke", async () => {
   }
   const mjeseci = await getVjezba("razvrstaj", "mjeseci");
   assert.equal(mjeseci?.detalj, "2 kutije · 10 stavki");
+});
+
+test("spajanje parova trazi dva do dvanaest razlicitih parova", async () => {
+  const dobra = {
+    naslov: "Pojmovi",
+    parovi: [
+      { lijevo: "ezan", desno: "poziv na namaz" },
+      { lijevo: "sehur", desno: "obrok prije zore" },
+    ],
+  };
+  assert.equal(validirajPodatke("spoji", dobra), null);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "a", desno: "b" }],
+  })), /bar dva para/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X",
+    parovi: Array.from({ length: 13 }, (_, i) => ({ lijevo: `l${i}`, desno: `d${i}` })),
+  })), /najviše dvanaest/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "a", desno: "" }, { lijevo: "b", desno: "d" }],
+  })), /i lijevu i desnu/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "ista", desno: "d1" }, { lijevo: "Ista", desno: "d2" }],
+  })), /Pojam .* se ponavlja/);
+  assert.match(String(validirajPodatke("spoji", {
+    naslov: "X", parovi: [{ lijevo: "l1", desno: "isti" }, { lijevo: "l2", desno: "Isti" }],
+  })), /Odgovor .* se ponavlja/);
+
+  const spisak = await listVjezbe("spoji");
+  assert.ok(spisak.length >= 2, "očekujemo bar dvije ugrađene vježbe spajanja");
+  for (const stavka of spisak) {
+    assert.equal(stavka.url, vjezbaUrl("spoji", stavka.id));
+    assert.match(stavka.detalj, /\d+ par/, `${stavka.id}: detalj`);
+  }
+  const pojmovi = await getVjezba("spoji", "pojmovi");
+  assert.equal(pojmovi?.detalj, "6 parova");
 });

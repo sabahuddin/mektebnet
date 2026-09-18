@@ -113,3 +113,5 @@ Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "popuni"`.
 Treća naša vježba, „Poredak", radi po istom obrascu — vidi `docs/POREDAK.md`.
 
 Četvrta naša vježba, „Razvrstaj", radi po istom obrascu — vidi `docs/RAZVRSTAJ.md`.
+
+Peta naša vježba, „Spoji parove", radi po istom obrascu — vidi `docs/SPOJI-PAROVE.md`.

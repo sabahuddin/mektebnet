@@ -5,12 +5,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import {
   Loader2, Plus, Save, Trash2, Eye, Copy, ArrowLeft,
-  PencilRuler, Grid3x3, TextCursorInput, ListOrdered, Columns3, AlertTriangle,
+  PencilRuler, Grid3x3, TextCursorInput, ListOrdered, Columns3, ArrowLeftRight, AlertTriangle,
 } from "lucide-react";
 
 /**
- * Uređivač naših vježbi (osmosmjerka, popuni prazninu, poredak, razvrstaj)
- * u admin panelu.
+ * Uređivač naših vježbi (osmosmjerka, popuni prazninu, poredak, razvrstaj,
+ * spoji parove) u admin panelu.
  *
  * Vježbe napravljene ovdje čuvaju se u bazi (`nase_vjezbe`) i odmah su
  * dostupne u lekciji, bez deploya. Ugrađene vježbe (JSON datoteke uz kod)
@@ -40,6 +40,9 @@ interface OsmosmjerkaRijec { rijec: string; opis: string }
 /** Jedna kutija u vježbi „Razvrstaj"; stavke su tekst, jedna po redu. */
 interface Kutija { naziv: string; stavke: string }
 
+/** Jedan par u vježbi „Spoji parove". */
+interface Par { lijevo: string; desno: string }
+
 interface Nacrt {
   tip: string;
   id: string;
@@ -59,6 +62,8 @@ interface Nacrt {
   stavke: string;
   // razvrstaj — od dvije do pet kutija
   kutije: Kutija[];
+  // spoji parove
+  parovi: Par[];
 }
 
 const PRAZAN_NACRT: Omit<Nacrt, "tip" | "id" | "noviUnos"> = {
@@ -73,6 +78,7 @@ const PRAZAN_NACRT: Omit<Nacrt, "tip" | "id" | "noviUnos"> = {
   dodatne: "",
   stavke: "",
   kutije: [{ naziv: "", stavke: "" }, { naziv: "", stavke: "" }],
+  parovi: [{ lijevo: "", desno: "" }, { lijevo: "", desno: "" }],
 };
 
 /** Oznaka vježbe iz naslova: „Dan u ramazanu" → „dan-u-ramazanu". */
@@ -118,6 +124,12 @@ function nacrtIzPodataka(tip: string, id: string, podaci: Record<string, unknown
         };
       })
       : [{ naziv: "", stavke: "" }, { naziv: "", stavke: "" }],
+    parovi: Array.isArray(podaci.parovi) && podaci.parovi.length
+      ? podaci.parovi.map(p => {
+        const par = (p ?? {}) as Record<string, unknown>;
+        return { lijevo: String(par.lijevo ?? ""), desno: String(par.desno ?? "") };
+      })
+      : [{ lijevo: "", desno: "" }, { lijevo: "", desno: "" }],
   };
 }
 
@@ -149,6 +161,16 @@ function podaciIzNacrta(n: Nacrt): Record<string, unknown> {
       stavke: stavkeIzTeksta(n.stavke),
     };
   }
+  if (n.tip === "spoji") {
+    return {
+      id: n.id,
+      naslov: n.naslov.trim(),
+      uputa: n.uputa.trim() || undefined,
+      parovi: n.parovi
+        .filter(p => p.lijevo.trim() && p.desno.trim())
+        .map(p => ({ lijevo: p.lijevo.trim(), desno: p.desno.trim() })),
+    };
+  }
   if (n.tip === "razvrstaj") {
     return {
       id: n.id,
@@ -173,6 +195,7 @@ function IkonaVrste({ tip, className }: { tip: string; className?: string }) {
   if (tip === "osmosmjerka") return <Grid3x3 className={className} />;
   if (tip === "poredak") return <ListOrdered className={className} />;
   if (tip === "razvrstaj") return <Columns3 className={className} />;
+  if (tip === "spoji") return <ArrowLeftRight className={className} />;
   return <TextCursorInput className={className} />;
 }
 
@@ -568,6 +591,61 @@ export default function AdminNaseVjezbe() {
               </button>
             </div>
           </>
+        ) : nacrt.tip === "spoji" ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-bold">{t("Parovi")}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("Parova:")}{" "}
+                <strong>{nacrt.parovi.filter(p => p.lijevo.trim() && p.desno.trim()).length}</strong>
+              </span>
+            </div>
+            {nacrt.parovi.map((p, i) => (
+              <div key={i} className="flex flex-col sm:flex-row gap-2">
+                <input
+                  value={p.lijevo}
+                  onChange={e => {
+                    const parovi = [...nacrt.parovi];
+                    parovi[i] = { ...parovi[i], lijevo: e.target.value };
+                    setNacrt({ ...nacrt, parovi });
+                  }}
+                  placeholder={t("pojam (npr. ezan)")}
+                  className="sm:w-52 px-3 py-2.5 rounded-xl border border-border min-h-11 font-bold"
+                  data-testid={`par-lijevo-${i}`}
+                />
+                <input
+                  value={p.desno}
+                  onChange={e => {
+                    const parovi = [...nacrt.parovi];
+                    parovi[i] = { ...parovi[i], desno: e.target.value };
+                    setNacrt({ ...nacrt, parovi });
+                  }}
+                  placeholder={t("odgovor (npr. poziv na namaz)")}
+                  className="flex-1 px-3 py-2.5 rounded-xl border border-border min-h-11"
+                  data-testid={`par-desno-${i}`}
+                />
+                <button
+                  onClick={() => setNacrt({ ...nacrt, parovi: nacrt.parovi.filter((_, x) => x !== i) })}
+                  disabled={nacrt.parovi.length <= 2}
+                  className="sm:w-11 min-h-11 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center"
+                  aria-label={t("Obriši par")}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => setNacrt({ ...nacrt, parovi: [...nacrt.parovi, { lijevo: "", desno: "" }] })}
+              disabled={nacrt.parovi.length >= 12}
+              className="self-start inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 min-h-11 font-bold hover:bg-muted disabled:opacity-40"
+              data-testid="dodaj-par"
+            >
+              <Plus className="w-4 h-4" /> {t("Dodaj par")}
+            </button>
+            <p className="text-xs text-muted-foreground">
+              {t("Od dva do dvanaest parova. Lijevo pojam, desno njegovo značenje. Vježba pomiješa odgovore pred djetetom; isti pojam ili isti odgovor ne smiju se ponavljati.")}
+            </p>
+          </div>
         ) : nacrt.tip === "razvrstaj" ? (
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">

@@ -1,0 +1,12 @@
+{
+  "id": "brojevi",
+  "naslov": "Spoji broj i riječ",
+  "uputa": "Prevuci riječ uz broj kojem pripada. Kad spojiš sve, klikni „Provjeri\".",
+  "parovi": [
+    { "lijevo": "1", "desno": "jedan" },
+    { "lijevo": "3", "desno": "tri" },
+    { "lijevo": "5", "desno": "pet" },
+    { "lijevo": "7", "desno": "sedam" },
+    { "lijevo": "10", "desno": "deset" }
+  ]
+}

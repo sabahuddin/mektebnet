@@ -499,7 +499,12 @@ body{
   /* ---------- premještanje ---------- */
   function oznaci(id) {
     stanje.izabrana = id;
-    nacrtaj(id);
+    [].forEach.call(el.spisak.querySelectorAll('.stavka'), function (li, i) {
+      var jeste = !!(stanje.red[i] && stanje.red[i].id === id);
+      li.classList.toggle('izabrana', jeste);
+      var hvat = li.querySelector('.hvat');
+      if (hvat) hvat.setAttribute('aria-pressed', jeste ? 'true' : 'false');
+    });
   }
 
   /**

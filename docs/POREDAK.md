@@ -98,3 +98,5 @@ i `docs/POPUNI-PRAZNINU.md`.
 Svaka poruka nosi `izvor: "mekteb-igra"` i `igra: "poredak"`.
 
 Četvrta naša vježba, „Razvrstaj", radi po istom obrascu — vidi `docs/RAZVRSTAJ.md`.
+
+Peta naša vježba, „Spoji parove", radi po istom obrascu — vidi `docs/SPOJI-PAROVE.md`.
