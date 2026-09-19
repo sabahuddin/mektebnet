@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/language";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, LogIn, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, LogIn, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -147,6 +147,7 @@ export function Layout({ children }: LayoutProps) {
     try { return parseInt(localStorage.getItem("mekteb-fontsize") || "0", 10); } catch { return 0; }
   });
   const [audioMuted, setAudioMutedState] = useState<boolean>(() => isAudioMuted());
+  const [footerOpen, setFooterOpen] = useState(false);
   const unreadPoruke = useUnreadPoruke();
 
   // Zaključaj scroll stranice dok je mobilni meni otvoren
@@ -445,7 +446,31 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       <footer className="border-t border-border/30 bg-muted/20 mt-8">
-        <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
+        {user && (
+          <div className="max-w-7xl mx-auto px-4">
+            <button
+              type="button"
+              onClick={() => setFooterOpen(open => !open)}
+              className="w-full min-h-14 py-3 flex items-center justify-between gap-4 text-left"
+              aria-expanded={footerOpen}
+              aria-controls="prijavljeni-footer-sadrzaj"
+              data-testid="footer-accordion-toggle"
+            >
+              <span className="font-extrabold text-sm sm:text-base text-foreground">
+                Mekteb.net - {t("Islamska edukativna platforma")}
+              </span>
+              <span className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl border border-border/60 bg-white text-primary shadow-sm">
+                <ChevronDown className={`w-5 h-5 transition-transform ${footerOpen ? "rotate-180" : ""}`} />
+                <span className="sr-only">{footerOpen ? t("Zatvori") : t("Otvori")}</span>
+              </span>
+            </button>
+          </div>
+        )}
+        <div
+          id={user ? "prijavljeni-footer-sadrzaj" : undefined}
+          hidden={!!user && !footerOpen}
+          className="max-w-7xl mx-auto px-4 py-6 md:py-10"
+        >
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-5 md:gap-8">
             {/* Brend */}
             <div className="col-span-2 md:col-span-1">

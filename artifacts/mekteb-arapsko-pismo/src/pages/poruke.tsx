@@ -32,11 +32,20 @@ interface Razgovor {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatTime(s: string) {
-  const d = new Date(s), now = new Date();
-  if (d.toDateString() === now.toDateString())
-    return d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString("bs-BA", { day: "numeric", month: "short" });
+function formatDate(s: string) {
+  const d = new Date(s);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}.${month}.${year}`;
+}
+
+function formatDateTime(s: string) {
+  const d = new Date(s);
+  return `${formatDate(s)} · ${d.toLocaleTimeString("bs-BA", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
 }
 function roleLabel(r: string) {
   return ({ muallim: "Muallim", roditelj: "Roditelj", admin: "Admin", ucenik: "Učenik" } as Record<string, string>)[r] || r;
@@ -305,17 +314,17 @@ export default function PorukePage() {
       >
 
         {/* ══ TOP TAB BAR ══════════════════════════════════════════════════ */}
-        <div className="bg-white border border-border/50 border-b-0 rounded-t-2xl overflow-x-auto shrink-0 shadow-sm">
-          <div className="flex items-center px-2 py-2 gap-1 min-w-max">
+        <div className="bg-white border border-border/50 border-b-0 rounded-t-2xl overflow-x-visible sm:overflow-x-auto shrink-0 shadow-sm">
+          <div className="flex flex-wrap sm:flex-nowrap items-center px-2 py-2 gap-1 sm:min-w-max">
             {tabs.map(tab => {
-              if (tab.separator) return <div key={tab.key} className="w-px h-5 bg-border/50 mx-1" />;
+              if (tab.separator) return <div key={tab.key} className="hidden sm:block w-px h-5 bg-border/50 mx-1" />;
               const isActive = activeTab === tab.key;
               const unread = tab.key === "primljene" ? unreadPrimljene : 0;
               return (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors whitespace-nowrap
+                  className={`flex flex-1 sm:flex-none justify-center items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-bold transition-colors whitespace-nowrap
                     ${isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
@@ -340,7 +349,7 @@ export default function PorukePage() {
           {/* ── LEFT: contact/conversation list ── */}
           {activeTab !== "bulk" && (
             <div className={`border-r border-border/50 flex-col shrink-0 bg-muted/[0.08]
-              ${aktivan ? "hidden md:flex md:w-72 lg:w-80" : "flex w-full md:w-72 lg:w-80"}`}>
+              ${aktivan ? "hidden md:flex md:w-80 lg:w-96" : "flex w-full md:w-80 lg:w-96"}`}>
 
               {/* Group filter dropdown — only for muallim/admin with groups */}
               {(user.role === "muallim" || user.role === "admin") && grupeList.length > 0 && (
@@ -527,7 +536,7 @@ export default function PorukePage() {
                             ${isMoj ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
                             <p className="leading-relaxed whitespace-pre-wrap">{p.sadrzaj}</p>
                             <p className={`text-xs mt-1 ${isMoj ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                              {formatTime(p.createdAt)}
+                              {formatDateTime(p.createdAt)}
                             </p>
                           </div>
                         </div>
@@ -599,18 +608,18 @@ function RoleSection({
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full px-3 py-1.5 bg-muted/20 border-b border-border/20 sticky top-0 z-10 flex items-center justify-between hover:bg-muted/40 transition-colors"
+        className="w-full px-4 py-2.5 bg-muted/20 border-b border-border/20 sticky top-0 z-10 flex items-center justify-between hover:bg-muted/40 transition-colors"
       >
-        <span className="text-[9px] font-extrabold text-muted-foreground/70 uppercase tracking-widest flex items-center gap-1.5">
+        <span className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           {label}
-          <span className="opacity-60 font-normal normal-case tracking-normal text-[9px]">({items.length})</span>
+          <span className="opacity-70 font-normal normal-case tracking-normal text-xs">({items.length})</span>
           {totalUnread > 0 && (
-            <span className="bg-primary text-primary-foreground text-[8px] rounded-full min-w-[14px] h-3.5 flex items-center justify-center font-bold px-1">
+            <span className="bg-primary text-primary-foreground text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
               {totalUnread}
             </span>
           )}
         </span>
-        <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`} />
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`} />
       </button>
 
       {/* Items */}
@@ -618,20 +627,20 @@ function RoleSection({
         <button
           key={item.korisnik.id}
           onClick={() => onOpen(item.korisnik)}
-          className={`w-full flex items-center gap-2 px-3 py-2.5 border-b border-border/15 hover:bg-muted/30 text-left transition-colors
+          className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-border/15 hover:bg-muted/30 text-left transition-colors
             ${aktivan?.id === item.korisnik.id ? "bg-muted/50 border-l-2 border-l-primary" : ""}`}
         >
-          <Avatar name={item.korisnik.displayName} size="sm" />
+          <Avatar name={item.korisnik.displayName} />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1 justify-between">
-              <span className="text-xs font-bold text-foreground truncate">{item.korisnik.displayName}</span>
-              <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-2 justify-between">
+              <span className="text-sm font-extrabold text-foreground truncate">{item.korisnik.displayName}</span>
+              <div className="flex items-center gap-1.5 shrink-0">
                 <UnreadBadge n={item.unread} />
-                {item.lastTime && <span className="text-[9px] text-muted-foreground/50">{formatTime(item.lastTime)}</span>}
+                {item.lastTime && <span className="text-xs font-semibold tabular-nums text-muted-foreground">{formatDate(item.lastTime)}</span>}
               </div>
             </div>
             {item.lastMsg && (
-              <p className="text-[10px] text-muted-foreground truncate mt-0.5 leading-tight">{item.lastMsg}</p>
+              <p className="text-xs text-muted-foreground truncate mt-1 leading-snug">{item.lastMsg}</p>
             )}
           </div>
         </button>
