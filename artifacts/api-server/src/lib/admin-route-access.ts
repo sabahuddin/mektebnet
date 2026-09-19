@@ -19,7 +19,14 @@ export function canAccessAdminRoute({
   if (role !== "muallim") return false;
 
   const isPriloziRoute = path === "/prilozi" || path.startsWith("/prilozi/");
-  if (isPriloziRoute || path === "/upload") return true;
+  if (isPriloziRoute) {
+    // Muallim može i dalje dodavati nastavne materijale (fajl ili URL), ali
+    // vježbe koje se prikazuju poslije lekcije dodaje samo admin.
+    const isExerciseCreateRoute = method.toUpperCase() === "POST"
+      && /^\/prilozi\/\d+\/(?:h5p|embed|osmosmjerka|nasa-vjezba)$/.test(path);
+    return !isExerciseCreateRoute;
+  }
+  if (path === "/upload") return true;
 
   // Muallim može uređivati samo sadržaj postojeće Ilmihal lekcije. Namjerno
   // ne dopuštamo naslov, predmet, redoslijed, kviz, preduvjete ni forceUnlock.

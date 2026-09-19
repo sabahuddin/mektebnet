@@ -2601,7 +2601,7 @@ function PriloziSection({
             className="overflow-hidden"
           >
             <div className="px-5 pb-5">
-              {isAdmin && (
+              {canDelete && (
                 <div className="mb-4">
                   <input
                     ref={h5pInputRef}

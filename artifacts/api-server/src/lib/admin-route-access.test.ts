@@ -79,6 +79,16 @@ test("postojeći muallim pristup prilozima i uploadu ostaje dozvoljen", () => {
   }), true);
 });
 
+test("muallim ne može dodavati vježbe poslije lekcije", () => {
+  for (const suffix of ["h5p", "embed", "osmosmjerka", "nasa-vjezba"]) {
+    assert.equal(canAccessAdminRoute({
+      role: "muallim",
+      method: "POST",
+      path: `/prilozi/12/${suffix}`,
+    }), false, suffix);
+  }
+});
+
 test("ostale uloge ne mogu pristupiti admin rutama", () => {
   for (const role of ["ucenik", "roditelj", "gost", undefined]) {
     assert.equal(canAccessAdminRoute({
