@@ -493,7 +493,7 @@ export default function GrupaPage() {
         napomena: newOcjena.napomena,
         datum: newOcjena.datum,
         grupaId,
-        napametStavkaId: newOcjena.napametStavkaId || undefined,
+        napametStavkaId: brzaNapametOcjena ? newOcjena.napametStavkaId || undefined : undefined,
       }, token);
       toast({ title: t("Ocjena dodana!"), description: `${ocjenaTarget.displayName} — ${newOcjena.ocjena}` });
       setOcjenaTarget(null);
@@ -1291,40 +1291,6 @@ export default function GrupaPage() {
                     {[6,5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
-                <label className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 cursor-pointer">
-                  <input type="checkbox" checked={!!newOcjena.napametStavkaId}
-                    onChange={async (e) => {
-                      if (!e.target.checked) { setNewOcjena(o => ({ ...o, napametStavkaId: "" })); return; }
-                      let katalog = napametKatalog;
-                      if (napametKatalog.length === 0 && token && ocjenaTarget) {
-                        const data = await apiRequest<{ katalog: NapametStavka[] }>("GET", `/muallim/napamet/${ocjenaTarget.id}`, undefined, token);
-                        katalog = data.katalog;
-                        setNapametKatalog(data.katalog);
-                      }
-                      const povezana = newOcjena.lekcijaSlug
-                        ? katalog.find(stavka => stavka.sourceLessonSlug === newOcjena.lekcijaSlug)
-                        : undefined;
-                      setNewOcjena(o => ({ ...o, napametStavkaId: povezana?.id || katalog[0]?.id || "" }));
-                    }} />
-                  <span className="text-sm font-bold text-emerald-900">
-                    {t("Dodaj u napamet")}
-                  </span>
-                </label>
-                {!!newOcjena.napametStavkaId && (
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Napamet stavka")}</label>
-                    <select value={newOcjena.napametStavkaId}
-                      onChange={e => setNewOcjena(o => ({ ...o, napametStavkaId: e.target.value }))}
-                      className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-white">
-                      <option value="select" disabled>{t("Odaberi stavku")}</option>
-                      {[1, 2, 3, 4].map(nivo => (
-                        <optgroup key={nivo} label={nivo === 4 ? t("Dodatak") : `${t("Napamet")} ${nivo}. nivo`}>
-                          {napametKatalog.filter(s => s.nivo === nivo).map(s => <option key={s.id} value={s.id}>{s.naziv}</option>)}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-                )}
                 <div>
                   <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                   <LekcijaPicker
@@ -1332,14 +1298,11 @@ export default function GrupaPage() {
                     value={newOcjena.lekcijaNaziv}
                     onChange={v => setNewOcjena(o => ({ ...o, lekcijaNaziv: v, lekcijaSlug: "" }))}
                     onSelectLesson={lekcija => {
-                      const povezanaNapametStavka = lekcija?.slug
-                        ? napametKatalog.find(stavka => stavka.sourceLessonSlug === lekcija.slug)
-                        : undefined;
                       setNewOcjena(o => ({
                         ...o,
                         lekcijaNaziv: lekcija?.naslov || "",
                         lekcijaSlug: lekcija?.slug || "",
-                        napametStavkaId: povezanaNapametStavka?.id || "",
+                        napametStavkaId: "",
                       }));
                     }}
                     placeholder={t("Pretraži lekciju ili upiši broj…")}

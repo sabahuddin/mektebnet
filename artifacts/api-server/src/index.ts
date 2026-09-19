@@ -1166,6 +1166,49 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS grupa_muallimi_uidx ON grupa_muallimi (grupa_id, muallim_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupa_muallimi_muallim_idx ON grupa_muallimi (muallim_id);`);
 
+    // Stari direktni Napamet unosi nisu imali predmet pa su ostajali izvan
+    // ukupnog broja/prosjeka ocjena. Označi samo samostalne unose; prateći
+    // Napamet zapisi uz redovnu ocjenu/zadaću ostaju bez predmeta kako se ista
+    // ocjena ne bi računala dvaput.
+    await db.execute(sql`
+      UPDATE ocjene AS napamet
+      SET predmet = 'Napamet'
+      WHERE napamet.kategorija = 'napamet'
+        AND napamet.napamet_stavka_id IS NOT NULL
+        AND napamet.predmet IS NULL
+        AND napamet.lekcija_naziv IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ocjene AS glavna
+          WHERE glavna.id <> napamet.id
+            AND glavna.ucenik_id = napamet.ucenik_id
+            AND glavna.kategorija <> 'napamet'
+            AND glavna.ocjena = napamet.ocjena
+            AND glavna.datum = napamet.datum
+            AND COALESCE(glavna.grupa_id, -1) = COALESCE(napamet.grupa_id, -1)
+            AND LOWER(TRIM(COALESCE(glavna.lekcija_naziv, ''))) = LOWER(TRIM(napamet.lekcija_naziv))
+        );
+    `);
+
+    // Vrlo stara verzija zadaća toka mogla je uz glavnu ocjenu napraviti i
+    // tehnički Napamet duplikat. Brišemo samo parove nastale praktično u istom
+    // trenutku, s istim učenikom/stavkom/nazivom i bez predmeta na pratećem redu.
+    await db.execute(sql`
+      DELETE FROM ocjene AS prateca
+      USING ocjene AS glavna
+      WHERE glavna.zadaca_id IS NOT NULL
+        AND glavna.napamet_stavka_id IS NOT NULL
+        AND prateca.id <> glavna.id
+        AND prateca.zadaca_id IS NULL
+        AND prateca.predmet IS NULL
+        AND prateca.ucenik_id = glavna.ucenik_id
+        AND prateca.napamet_stavka_id = glavna.napamet_stavka_id
+        AND COALESCE(prateca.grupa_id, -1) = COALESCE(glavna.grupa_id, -1)
+        AND LOWER(TRIM(COALESCE(prateca.lekcija_naziv, ''))) =
+            LOWER(TRIM(COALESCE(glavna.lekcija_naziv, '')))
+        AND ABS(EXTRACT(EPOCH FROM (prateca.created_at - glavna.created_at))) <= 10;
+    `);
+
     logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");

@@ -30,6 +30,11 @@ import { getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
+const ukupneOcjeneFilter = or(
+  sql`${ocjeneTable.napametStavkaId} IS NULL`,
+  eq(ocjeneTable.predmet, "Napamet"),
+  sql`${ocjeneTable.zadacaId} IS NOT NULL`,
+);
 
 // GET /api/ucenik/profil — student's own profile + stats
 router.get("/profil", async (req, res) => {
@@ -67,7 +72,7 @@ router.get("/profil", async (req, res) => {
     let ocjene = await db.select().from(ocjeneTable)
       .where(and(
         eq(ocjeneTable.ucenikId, userId),
-        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+        ukupneOcjeneFilter,
       ))
       .orderBy(desc(ocjeneTable.createdAt));
 

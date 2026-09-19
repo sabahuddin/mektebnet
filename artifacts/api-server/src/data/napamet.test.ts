@@ -19,7 +19,7 @@ import {
 } from "@workspace/db/schema";
 import app from "../app.js";
 import { signToken } from "../middlewares/auth.js";
-import { getGlobalNapametKatalog, NAPAMET_KATALOG, NAPAMET_KATALOG_MAP } from "./napamet.js";
+import { getGlobalNapametKatalog, getNapametKatalog, NAPAMET_KATALOG, NAPAMET_KATALOG_MAP } from "./napamet.js";
 
 test("NAPAMET katalog ima četiri sekcije i jedinstvene stabilne stavke", () => {
   assert.deepEqual(
@@ -247,6 +247,16 @@ test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i rodi
   assert.equal(grade.napametStavkaId, STAVKA_ID);
   assert.equal(grade.ocjena, 5);
 
+  const profilResponse = await authed("/api/ucenik/profil", ucenikToken);
+  assert.equal(profilResponse.status, 200);
+  const profil = await profilResponse.json() as { ocjene: Array<{ id: number; predmet: string | null }> };
+  assert.equal(profil.ocjene.some((ocjena) => ocjena.id === grade.id && ocjena.predmet === "Napamet"), true);
+
+  const roditeljOcjeneResponse = await authed(`/api/roditelj/ocjene/${ucenikId}`, roditeljToken);
+  assert.equal(roditeljOcjeneResponse.status, 200);
+  const roditeljOcjene = await roditeljOcjeneResponse.json() as Array<{ id: number }>;
+  assert.equal(roditeljOcjene.some((ocjena) => ocjena.id === grade.id), true);
+
   const renameResponse = await authed(`/api/admin/napamet-program/${STAVKA_ID}`, adminToken, {
     method: "PUT",
     body: JSON.stringify({ naziv: "El-Fatiha (izmijenjeni naziv)" }),
@@ -272,6 +282,53 @@ test("izmjena NAPAMET programa čuva ocjenu po stabilnom ID-u za učenika i rodi
     assert.equal(response.status, 200);
     const payload = await response.json() as { katalog: Array<{ id: string; naziv: string }> };
     assert.equal(payload.katalog.find((item) => item.id === STAVKA_ID)?.naziv, "El-Fatiha (izmijenjeni naziv)");
+  }
+});
+
+test("lokalni zapis ne može promijeniti admin raspored globalne NAPAMET stavke", async () => {
+  const globalna = (await getGlobalNapametKatalog(true)).find((item) => item.id === STAVKA_ID);
+  assert.ok(globalna);
+  await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, STAVKA_ID));
+  try {
+    await db.insert(napametMuallimProgramTable).values({
+      stavkaId: STAVKA_ID,
+      muallimId,
+      grupaId,
+      nivo: 4,
+      naziv: "Lokalno prepisan naziv",
+      redoslijed: 999,
+      isVisible: true,
+    });
+    const katalog = await getNapametKatalog({ grupaId, muallimId, includeHidden: true });
+    const prikazana = katalog.find((item) => item.id === STAVKA_ID);
+    assert.deepEqual(prikazana, globalna);
+  } finally {
+    await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, STAVKA_ID));
+  }
+});
+
+test("skrivena globalna stavka ne može ponovo postati vidljiva kroz lokalni zapis", async () => {
+  await db.update(napametGlobalProgramTable)
+    .set({ isVisible: false })
+    .where(eq(napametGlobalProgramTable.stavkaId, STAVKA_ID));
+  await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, STAVKA_ID));
+  try {
+    await db.insert(napametMuallimProgramTable).values({
+      stavkaId: STAVKA_ID,
+      muallimId,
+      grupaId,
+      nivo: 1,
+      naziv: "Lokalna kopija skrivene stavke",
+      redoslijed: 1,
+      isVisible: true,
+    });
+    const katalog = await getNapametKatalog({ grupaId, muallimId });
+    assert.equal(katalog.some((item) => item.id === STAVKA_ID), false);
+  } finally {
+    await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, STAVKA_ID));
+    await db.update(napametGlobalProgramTable)
+      .set({ isVisible: true })
+      .where(eq(napametGlobalProgramTable.stavkaId, STAVKA_ID));
   }
 });
 
@@ -309,7 +366,9 @@ test("obična ocjena preuzima predmet lekcije i ne pravi NAPAMET zapis", async (
     method: "POST",
     body: JSON.stringify({
       ucenikId, grupaId, ocjena: 4,
-      lekcijaNaziv: lekcija.naslov, lekcijaSlug: lekcija.slug, datum,
+      lekcijaNaziv: lekcija.naslov, lekcijaSlug: lekcija.slug,
+      napametStavkaId: STAVKA_ID,
+      datum,
     }),
   });
   assert.equal(response.status, 201);

@@ -45,6 +45,11 @@ import { normalizeUploadedFilename } from "../lib/file-names.js";
 import { getGlobalNapametKatalog, getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
+const ukupneOcjeneFilter = or(
+  sql`${ocjeneTable.napametStavkaId} IS NULL`,
+  eq(ocjeneTable.predmet, "Napamet"),
+  sql`${ocjeneTable.zadacaId} IS NOT NULL`,
+);
 router.use(requireAuth, requireRole("muallim", "admin"));
 
 // ── KORISNIK HELPERI ────────────────────────────────────────────────────────
@@ -1331,7 +1336,11 @@ router.get("/grupe/:id/izvjestaj", async (req, res) => {
         FROM ocjene o
         JOIN users u ON u.id = o.ucenik_id
         WHERE o.grupa_id = ${grupaId}
-          AND o.napamet_stavka_id IS NULL
+          AND (
+            o.napamet_stavka_id IS NULL
+            OR o.predmet = 'Napamet'
+            OR o.zadaca_id IS NOT NULL
+          )
         ORDER BY o.datum ASC, u.display_name ASC
       `),
       db.execute(sql`
@@ -2706,12 +2715,14 @@ router.post("/ocjene", async (req, res) => {
           includeHidden: true,
         })
       : [];
-    // Ako je odabrana lekcija dio Napamet programa, veza se postavlja
-    // automatski. Muallim je i dalje može eksplicitno odabrati za ručne stavke.
+    // Kod ocjene vezane za lekciju Napamet veza dolazi isključivo iz sluga
+    // lekcije. Ručni ID vrijedi samo za zasebni brzi Napamet unos.
     const povezanaNapametStavka = lekcijaSlug
       ? program.find((item) => item.sourceLessonSlug === String(lekcijaSlug))
       : undefined;
-    const effectiveNapametStavkaId = napametStavkaId || povezanaNapametStavka?.id || undefined;
+    const effectiveNapametStavkaId = lekcijaSlug
+      ? povezanaNapametStavka?.id
+      : napametStavkaId || undefined;
     const isNapamet = Boolean(effectiveNapametStavkaId);
     if (isNapamet && (!ucenikId || !grupaId)) {
       res.status(400).json({ error: "NAPAMET ocjena mora pripadati grupi" });
@@ -2743,7 +2754,7 @@ router.post("/ocjene", async (req, res) => {
           muallimId: req.user!.userId,
           grupaId,
           kategorija: "napamet",
-          predmet: null,
+          predmet: "Napamet",
           ocjena,
           lekcijaNaziv: lekcijaNaziv || null,
           napomena,
@@ -3079,7 +3090,7 @@ router.get("/ocjene/:ucenikId", async (req, res) => {
       .where(and(
         eq(ocjeneTable.ucenikId, parseInt(req.params.ucenikId)),
         eq(ocjeneTable.muallimId, req.user!.userId),
-        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+        ukupneOcjeneFilter,
       ));
     res.json(ocjene);
   } catch (err) {
@@ -3930,7 +3941,7 @@ async function getGrupaFullStats(grupaId: number) {
   const sveOcjeneRaw = await db.select().from(ocjeneTable)
     .where(and(
       eq(ocjeneTable.grupaId, grupaId),
-      sql`${ocjeneTable.napametStavkaId} IS NULL`,
+      ukupneOcjeneFilter,
     ));
   const sveOcjene = sveOcjeneRaw.filter(o =>
     ucenikIds.includes(o.ucenikId) && isFromCurrentSchoolYear(o.datum),
@@ -4161,7 +4172,7 @@ router.get("/dashboard-stats", async (req, res) => {
           : db.select().from(priustvoTable).where(sql`false`),
         grupeIds.length > 0
           ? db.select().from(ocjeneTable)
-              .where(inArray(ocjeneTable.grupaId, grupeIds))
+              .where(and(inArray(ocjeneTable.grupaId, grupeIds), ukupneOcjeneFilter))
           : db.select().from(ocjeneTable).where(sql`false`),
         db.select().from(kvizRezultatiTable).where(inArray(kvizRezultatiTable.userId, ucenikIds)),
         db.select({ id: korisnikNapredakTable.id }).from(korisnikNapredakTable)
@@ -4895,7 +4906,7 @@ router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
 
     const sveOcjeneExcel = await db.select().from(ocjeneTable).where(and(
       eq(ocjeneTable.grupaId, grupaId),
-      sql`${ocjeneTable.napametStavkaId} IS NULL`,
+      ukupneOcjeneFilter,
     ));
     const activeIds = new Set(stats.ucenici.map(u => u.id));
     const ocjeneRows: any[] = [["Učenik", "Datum", "Predmet", "Ocjena", "Lekcija", "Napomena"]];
@@ -6074,11 +6085,11 @@ async function buildUcenikIzvjestaj(ucenikId: number, muallimId?: number) {
     ? and(
         eq(ocjeneTable.ucenikId, ucenikId),
         eq(ocjeneTable.muallimId, muallimId),
-        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+        ukupneOcjeneFilter,
       )
     : and(
         eq(ocjeneTable.ucenikId, ucenikId),
-        sql`${ocjeneTable.napametStavkaId} IS NULL`,
+        ukupneOcjeneFilter,
       );
 
   const [prisustvo, ocjene, kvizRezultati, napredak, zvjezdiceMap] = await Promise.all([

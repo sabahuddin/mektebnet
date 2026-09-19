@@ -578,6 +578,17 @@ test("NAPAMET pamti direktne ocjene i samo ocjene 5/6 iz zadaće", async () => {
     6,
   );
 
+  const otherProfilResponse = await studentGet("/api/ucenik/profil", {}, otherStudentToken);
+  assert.equal(otherProfilResponse.status, 200);
+  const otherProfil = await otherProfilResponse.json() as {
+    ocjene: Array<{ zadacaId: number | null; ocjena: number; napametStavkaId: string | null }>;
+  };
+  const ukupneOcjeneIzZadace = otherProfil.ocjene
+    .filter((ocjena) => ocjena.zadacaId === napametHomeworkId);
+  assert.equal(ukupneOcjeneIzZadace.length, 1);
+  assert.equal(ukupneOcjeneIzZadace[0]?.ocjena, 6);
+  assert.equal(ukupneOcjeneIzZadace[0]?.napametStavkaId, otherStavka.id);
+
   const fourResponse = await teacherPut(
     `/api/muallim/zadace/${napametHomeworkId}/status/${otherStudentId}`,
     { uradjeno: false, ocjena: 4, kapiMeda: 0, noviRok: null },

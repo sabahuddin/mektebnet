@@ -136,8 +136,9 @@ export async function getNapametKatalog({
   muallimId,
   includeHidden = false,
 }: NapametKatalogOptions = {}): Promise<NapametStavka[]> {
-  const [globalne, lokalne, legacy] = await Promise.all([
+  const [globalne, rezervisaniGlobalniRedovi, lokalne, legacy] = await Promise.all([
     getGlobalNapametKatalog(includeHidden),
+    db.select({ id: napametGlobalProgramTable.stavkaId }).from(napametGlobalProgramTable),
     grupaId ? db.select({
       id: napametMuallimProgramTable.stavkaId,
       nivo: napametMuallimProgramTable.nivo,
@@ -162,15 +163,27 @@ export async function getNapametKatalog({
     ).orderBy(asc(napametProgramTable.nivo), asc(napametProgramTable.redoslijed)) : [],
   ]);
 
+  // I skriveni/obrisani globalni ID ostaje rezervisan. U suprotnom bi stari
+  // lokalni red s istim ID-em ponovo izložio stavku koju je Admin sakrio.
+  const rezervisaniGlobalniId = new Set(rezervisaniGlobalniRedovi.map((item) => item.id));
   const merged = new Map<string, NapametStavka>();
   for (const item of globalne) merged.set(item.id, item);
   for (const item of lokalne) {
-    if (includeHidden || item.isVisible) merged.set(item.id, { ...item, nivo: asNivo(item.nivo), scope: "lokalno" });
+    // Globalni raspored iz Admin panela je kanonski. Lokalni program smije
+    // dodati novu stavku, ali ne smije prepisati redoslijed/naziv globalne.
+    if ((includeHidden || item.isVisible) && !rezervisaniGlobalniId.has(item.id) && !merged.has(item.id)) {
+      merged.set(item.id, { ...item, nivo: asNivo(item.nivo), scope: "lokalno" });
+    }
   }
   for (const item of legacy) {
-    if ((includeHidden || item.isVisible) && !merged.has(item.id)) {
+    if ((includeHidden || item.isVisible) && !rezervisaniGlobalniId.has(item.id) && !merged.has(item.id)) {
       merged.set(item.id, { ...item, nivo: asNivo(item.nivo), scope: "legacy" });
     }
   }
-  return [...merged.values()].sort((a, b) => a.nivo - b.nivo || a.redoslijed - b.redoslijed || a.naziv.localeCompare(b.naziv, "bs"));
+  return [...merged.values()].sort((a, b) =>
+    a.nivo - b.nivo
+    || (a.scope === "global" ? 0 : 1) - (b.scope === "global" ? 0 : 1)
+    || a.redoslijed - b.redoslijed
+    || a.naziv.localeCompare(b.naziv, "bs")
+  );
 }

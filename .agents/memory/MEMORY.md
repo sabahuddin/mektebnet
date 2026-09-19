@@ -61,7 +61,7 @@
 - [Sufara audio batch poslovi](sufara-audio-batch.md) — overwrite i FFmpeg normalizacija prelaze Replit timeout; koristi resumable foreground chunkove.
 - [JSON normalizacija i Date](json-normalizacija-date.md) — globalni rekurzivni formatter smije obilaziti samo plain objekte; Date inače postane {} i frontend prikaže Invalid Date.
 - [Popuni prazninu — ključni pojmovi](fillin-kljucni-pojmovi.md) — praznina provjerava riječ koja nosi znanje, ne slučajnu ili pretežno završnu riječ.
-- [Ocjene po predmetu](ocjene-po-predmetu.md) — bez ručnih kategorija; predmet dolazi iz lekcije, Napamet je eksplicitna i ne ulazi dvaput u prosjek.
+- [Ocjene po predmetu i Napamet](ocjene-po-predmetu.md) — predmet dolazi iz lekcije; Napamet ulazi u ukupni prosjek jednom, iako isti unos može služiti Napamet prikazu.
 - [Hero kopije moraju biti WebP](hero-kopije-webp.md) — galerijska hero kopija se ponovo obrađuje; DB reference se ažuriraju prije brisanja starog fajla.
 - [Zadaća — adresati i ispitivanje](zadaca-adresati-i-ispitivanje.md) — kartica je za jednog učenika; glavni modul za grupu ili 2+; Ispitano broji samo ocjene.
 - [Bundler template script escape](bundler-template-script-escape.md) — nakon JSON reserializacije obavezno escapuj unutrašnje zatvarajuće script tagove ili browser prekida template JSON.

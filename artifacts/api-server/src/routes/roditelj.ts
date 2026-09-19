@@ -19,7 +19,7 @@ import {
   obavjestenjaTable,
   mektebDokumentiTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, asc, desc, sql } from "drizzle-orm";
+import { eq, and, or, inArray, asc, desc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, evaluateAndPersistBadges, type EarnedBadge } from "../lib/badges.js";
 import { computeGameStats } from "./games.js";
@@ -30,6 +30,11 @@ import { getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
+const ukupneOcjeneFilter = or(
+  sql`${ocjeneTable.napametStavkaId} IS NULL`,
+  eq(ocjeneTable.predmet, "Napamet"),
+  sql`${ocjeneTable.zadacaId} IS NOT NULL`,
+);
 
 // Sažetak za jedno dijete — koristi se i u /dashboard/:ucenikId i u /djeca-summary.
 // Pretpostavlja da je pristup već provjeren prije poziva.
@@ -46,7 +51,7 @@ async function computeChildDashboard(ucenikId: number): Promise<{
   bedzeviError: boolean;
 }> {
   const [posljednja] = await db.select().from(ocjeneTable)
-    .where(eq(ocjeneTable.ucenikId, ucenikId))
+    .where(and(eq(ocjeneTable.ucenikId, ucenikId), ukupneOcjeneFilter))
     .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
     .limit(1);
 
@@ -356,7 +361,7 @@ router.get("/ocjene/:ucenikId", async (req, res) => {
 
     let ocjene = await db.select().from(ocjeneTable).where(and(
       eq(ocjeneTable.ucenikId, ucenikId),
-      sql`${ocjeneTable.napametStavkaId} IS NULL`,
+      ukupneOcjeneFilter,
     ));
 
     const godineInfo = await getStudentGodine(ucenikId);
