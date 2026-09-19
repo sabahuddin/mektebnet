@@ -24,7 +24,9 @@ export const ocjeneTable = pgTable("ocjene", {
   // Predmet se automatski preuzima iz odabrane Ilmihal lekcije. `kategorija`
   // ostaje samo radi kompatibilnosti sa starim zapisima i internim NAPAMET redovima.
   predmet: varchar("predmet", { length: 60 }),
-  ocjena: integer("ocjena").notNull(),
+  ocjena: integer("ocjena"),
+  // Opisna ocjena za mlađu djecu; dozvoljene vrijednosti: uradjeno, neuradjeno.
+  ocjenaOpisna: varchar("ocjena_opisna", { length: 20 }),
   lekcijaNaziv: varchar("lekcija_naziv", { length: 200 }),
   napomena: text("napomena"),
   datum: varchar("datum", { length: 20 }).notNull(),
@@ -96,6 +98,7 @@ export const zadaceStatusTable = pgTable("zadace_status", {
   // da li je učenik uradio/naučio zadaću (muallim označava)
   uradjeno: boolean("uradjeno").notNull().default(false),
   ocjena: integer("ocjena"),
+  ocjenaOpisna: varchar("ocjena_opisna", { length: 20 }),
   kapiMeda: integer("kapi_meda").notNull().default(0),
   // novi rok za učenika koji nije uradio/naučio (prolongacija)
   noviRok: varchar("novi_rok", { length: 20 }),

@@ -85,6 +85,7 @@ interface UcenikZadaca {
   rokDo?: string | null;
   efektivniRok?: string | null;
   ocjena?: number | null;
+  ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
   uradjeno?: boolean;
   kapiMeda?: number;
   noviRok?: string | null;
@@ -189,7 +190,7 @@ export default function GrupaPage() {
   // Ocjena modal
   const [ocjenaTarget, setOcjenaTarget] = useState<Ucenik | null>(null);
   const [newOcjena, setNewOcjena] = useState({
-    ocjena: 6, lekcijaNaziv: "", napomena: "",
+    ocjena: 6 as number | "uradjeno" | "neuradjeno", lekcijaNaziv: "", napomena: "",
     datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
   });
   const [napametKatalog, setNapametKatalog] = useState<NapametStavka[]>([]);
@@ -487,7 +488,8 @@ export default function GrupaPage() {
     try {
       await apiRequest("POST", "/muallim/ocjene", {
         ucenikId: ocjenaTarget.id,
-        ocjena: parseInt(String(newOcjena.ocjena)),
+        ocjena: typeof newOcjena.ocjena === "number" ? newOcjena.ocjena : null,
+        ocjenaOpisna: typeof newOcjena.ocjena === "string" ? newOcjena.ocjena : null,
         lekcijaNaziv: newOcjena.lekcijaNaziv || null,
         lekcijaSlug: newOcjena.lekcijaSlug || null,
         napomena: newOcjena.napomena,
@@ -495,7 +497,10 @@ export default function GrupaPage() {
         grupaId,
         napametStavkaId: brzaNapametOcjena ? newOcjena.napametStavkaId || undefined : undefined,
       }, token);
-      toast({ title: t("Ocjena dodana!"), description: `${ocjenaTarget.displayName} — ${newOcjena.ocjena}` });
+      const prikaz = newOcjena.ocjena === "uradjeno" ? t("Urađeno")
+        : newOcjena.ocjena === "neuradjeno" ? t("Neurađeno")
+        : String(newOcjena.ocjena);
+      toast({ title: t("Ocjena dodana!"), description: `${ocjenaTarget.displayName} — ${prikaz}` });
       setOcjenaTarget(null);
       setBrzaNapametOcjena(null);
       refreshNapametKatalog();
@@ -536,6 +541,7 @@ export default function GrupaPage() {
         {
           uradjeno: zadaca.uradjeno ?? false,
           ocjena: zadaca.ocjena ?? null,
+          ocjenaOpisna: zadaca.ocjenaOpisna ?? null,
           kapiMeda: zadaca.kapiMeda ?? 0,
           noviRok: zadaca.noviRok || null,
         },
@@ -1284,11 +1290,18 @@ export default function GrupaPage() {
               ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–6)")}</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena")}</label>
                   <select value={newOcjena.ocjena}
-                    onChange={e => setNewOcjena(o => ({ ...o, ocjena: parseInt(e.target.value) }))}
+                      onChange={e => setNewOcjena(o => ({
+                        ...o,
+                        ocjena: e.target.value === "uradjeno" || e.target.value === "neuradjeno"
+                          ? e.target.value
+                          : parseInt(e.target.value),
+                      }))}
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-bold">
                     {[6,5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="uradjeno">{t("Urađeno")}</option>
+                      <option value="neuradjeno">{t("Neurađeno")}</option>
                   </select>
                 </div>
                 <div>
@@ -1390,8 +1403,10 @@ export default function GrupaPage() {
                           <p className="font-extrabold text-sm text-foreground">{z.naslov}</p>
                           {z.opis && <p className="text-xs text-muted-foreground mt-1">{z.opis}</p>}
                         </div>
-                        {z.ocjena != null
-                          ? <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-1 text-xs font-extrabold">{t("Ocjena")} {z.ocjena}</span>
+                        {z.ocjena != null || z.ocjenaOpisna
+                          ? <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-1 text-xs font-extrabold">
+                              {t("Ocjena")} {z.ocjenaOpisna === "uradjeno" ? t("Urađeno") : z.ocjenaOpisna === "neuradjeno" ? t("Neurađeno") : z.ocjena}
+                            </span>
                           : <span className={`rounded-full px-2 py-1 text-xs font-bold ${z.kategorija === "neuradjene" || z.istekao ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
                               {z.kategorija === "neuradjene" ? t("Neurađeno") : z.istekao ? t("Isteklo") : t("Čeka ispitivanje")}
                             </span>}
@@ -1401,15 +1416,21 @@ export default function GrupaPage() {
                         <div>
                           <label className="mb-1 block text-xs font-bold text-muted-foreground">{t("Ocijeni")}</label>
                           <select
-                            value={z.ocjena ?? ""}
+                            value={z.ocjenaOpisna ?? z.ocjena ?? ""}
                             onChange={e => {
-                              const value = e.target.value ? Number(e.target.value) : null;
-                              setZadaceTargeta(prev => prev.map(item => item.id === z.id ? { ...item, ocjena: value } : item));
+                              const value = e.target.value;
+                              setZadaceTargeta(prev => prev.map(item => item.id === z.id ? {
+                                ...item,
+                                ocjena: value && value !== "uradjeno" && value !== "neuradjeno" ? Number(value) : null,
+                                ocjenaOpisna: value === "uradjeno" || value === "neuradjeno" ? value : null,
+                              } : item));
                             }}
                             className="w-full rounded-lg border border-border bg-white px-2 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
                           >
                             <option value="">{t("Bez ocjene")}</option>
                             {[6, 5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
+                            <option value="uradjeno">{t("Urađeno")}</option>
+                            <option value="neuradjeno">{t("Neurađeno")}</option>
                           </select>
                         </div>
                         <div>

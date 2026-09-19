@@ -39,7 +39,7 @@ const ukupneOcjeneFilter = or(
 // Sažetak za jedno dijete — koristi se i u /dashboard/:ucenikId i u /djeca-summary.
 // Pretpostavlja da je pristup već provjeren prije poziva.
 async function computeChildDashboard(ucenikId: number): Promise<{
-  posljednjaOcjena: { ocjena: number; kategorija: string; datum: string; napomena?: string | null } | null;
+  posljednjaOcjena: { ocjena: number | null; ocjenaOpisna: string | null; kategorija: string; datum: string; napomena?: string | null } | null;
   prisustvoOvajMjesec: number;
   ukupnoOvajMjesec: number;
   zavrseneLekcije: number;
@@ -114,7 +114,7 @@ async function computeChildDashboard(ucenikId: number): Promise<{
 
   return {
     posljednjaOcjena: posljednja
-      ? { ocjena: posljednja.ocjena, kategorija: posljednja.kategorija, datum: posljednja.datum, napomena: posljednja.napomena }
+      ? { ocjena: posljednja.ocjena, ocjenaOpisna: posljednja.ocjenaOpisna, kategorija: posljednja.kategorija, datum: posljednja.datum, napomena: posljednja.napomena }
       : null,
     prisustvoOvajMjesec: prisutanOvajMjesec,
     ukupnoOvajMjesec: ovajMjesec.length,

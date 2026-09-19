@@ -235,7 +235,7 @@ interface ProfilData {
   profil: { grupaId: number; muallimId: number } | null;
   grupa: { id: number; naziv: string; skolskaGodina: string } | null;
   muallim: { id: number; displayName: string } | null;
-  ocjene: { id: number; kategorija: string; predmet?: string | null; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string; napametStavkaId?: string | null }[];
+  ocjene: { id: number; kategorija: string; predmet?: string | null; ocjena: number | null; ocjenaOpisna?: "uradjeno" | "neuradjeno" | null; lekcijaNaziv?: string; napomena?: string; datum: string; napametStavkaId?: string | null }[];
   prisustvo: { id: number; datum: string; status: string }[];
   kvizovi: { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }[];
   napredak?: {
@@ -290,6 +290,7 @@ interface Zadaca {
   status?: string;
   uradjeno?: boolean;
   ocjena?: number | null;
+  ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
   kapiMeda?: number;
   noviRok?: string | null;
   prolongCount?: number;
@@ -432,7 +433,10 @@ export default function UcenikProfilPage() {
   }
 
   const prisutnih = profil ? profil.prisustvo.filter(p => p.status === "prisutan").length : 0;
-  const prosjecnaOcjena = profil && profil.ocjene.length ? (profil.ocjene.reduce((s, o) => s + o.ocjena, 0) / profil.ocjene.length).toFixed(1) : "—";
+  const brojcaneOcjene = profil?.ocjene.filter((o): o is typeof o & { ocjena: number } => o.ocjena !== null) ?? [];
+  const prosjecnaOcjena = brojcaneOcjene.length
+    ? (brojcaneOcjene.reduce((s, o) => s + o.ocjena, 0) / brojcaneOcjene.length).toFixed(1)
+    : "—";
 
   const TABS = [
     { id: "zadace", label: t("Zadaće"), icon: FileText, badge: zadace.length },
@@ -1076,8 +1080,8 @@ export default function UcenikProfilPage() {
                               {o.lekcijaNaziv && <span className="text-primary text-xs ml-1">({o.lekcijaNaziv})</span>}
                               <div className="text-xs text-muted-foreground">{o.datum}</div>
                             </div>
-                            <span className={`font-extrabold px-2.5 py-0.5 rounded-full text-sm ${OCJENA_COLORS[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
-                              {o.ocjena}
+                            <span className={`font-extrabold px-2.5 py-0.5 rounded-full text-sm ${o.ocjena !== null ? OCJENA_COLORS[o.ocjena] : o.ocjenaOpisna === "uradjeno" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                              {o.ocjenaOpisna === "uradjeno" ? t("Urađeno") : o.ocjenaOpisna === "neuradjeno" ? t("Neurađeno") : o.ocjena}
                             </span>
                           </div>
                         ))}
@@ -1125,8 +1129,8 @@ export default function UcenikProfilPage() {
                             {o.napomena && <span className="text-muted-foreground ml-2 text-sm">— {o.napomena}</span>}
                             <div className="text-xs text-muted-foreground mt-0.5">{o.datum}</div>
                           </div>
-                          <span className={`text-lg font-extrabold px-3 py-1 rounded-full ${OCJENA_COLORS[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
-                            {o.ocjena}
+                          <span className={`text-lg font-extrabold px-3 py-1 rounded-full ${o.ocjena !== null ? OCJENA_COLORS[o.ocjena] : o.ocjenaOpisna === "uradjeno" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                            {o.ocjenaOpisna === "uradjeno" ? t("Urađeno") : o.ocjenaOpisna === "neuradjeno" ? t("Neurađeno") : o.ocjena}
                           </span>
                         </div>
                       ))}
@@ -1294,8 +1298,14 @@ export default function UcenikProfilPage() {
                           )}
                           {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
                             <div className="flex flex-wrap items-center gap-2 mt-3 sm:pl-12">
-                              {(z.ocjena ?? null) !== null && (
-                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">{t("Ocjena: {n}", { n: String(z.ocjena) })}</span>
+                              {((z.ocjena ?? null) !== null || z.ocjenaOpisna) && (
+                                <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                                  {t("Ocjena: {n}", {
+                                    n: z.ocjenaOpisna === "uradjeno" ? t("Urađeno")
+                                      : z.ocjenaOpisna === "neuradjeno" ? t("Neurađeno")
+                                      : String(z.ocjena),
+                                  })}
+                                </span>
                               )}
                               {(z.kapiMeda ?? 0) > 0 && (
                                 <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">{t("+{n} kapi meda", { n: String(z.kapiMeda) })}</span>

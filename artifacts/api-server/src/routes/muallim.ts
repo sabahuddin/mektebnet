@@ -2691,7 +2691,18 @@ router.get("/prisustvo", async (req, res) => {
 // POST /api/muallim/ocjene - add grade
 router.post("/ocjene", async (req, res) => {
   try {
-    const { ucenikId, grupaId, ocjena, lekcijaNaziv, lekcijaSlug, napomena, napametStavkaId } = req.body;
+    const { ucenikId, grupaId, lekcijaNaziv, lekcijaSlug, napomena, napametStavkaId } = req.body;
+    const ocjenaOpisna = req.body.ocjenaOpisna === "uradjeno" || req.body.ocjenaOpisna === "neuradjeno"
+      ? req.body.ocjenaOpisna as "uradjeno" | "neuradjeno"
+      : null;
+    const ocjenaBroj = req.body.ocjena === null || req.body.ocjena === undefined || req.body.ocjena === ""
+      ? null
+      : Number(req.body.ocjena);
+    if ((!ocjenaOpisna && (!Number.isInteger(ocjenaBroj) || ocjenaBroj! < 1 || ocjenaBroj! > 6))
+      || (ocjenaOpisna && ocjenaBroj !== null)) {
+      res.status(400).json({ error: "Odaberite brojčanu ili opisnu ocjenu" });
+      return;
+    }
     const datum = typeof req.body.datum === "string" && req.body.datum.trim()
       ? req.body.datum.trim()
       : new Date().toISOString().slice(0, 10);
@@ -2724,6 +2735,10 @@ router.post("/ocjene", async (req, res) => {
       ? povezanaNapametStavka?.id
       : napametStavkaId || undefined;
     const isNapamet = Boolean(effectiveNapametStavkaId);
+    if (isNapamet && ocjenaOpisna) {
+      res.status(400).json({ error: "NAPAMET koristi brojčanu ocjenu" });
+      return;
+    }
     if (isNapamet && (!ucenikId || !grupaId)) {
       res.status(400).json({ error: "NAPAMET ocjena mora pripadati grupi" });
       return;
@@ -2755,7 +2770,8 @@ router.post("/ocjene", async (req, res) => {
           grupaId,
           kategorija: "napamet",
           predmet: "Napamet",
-          ocjena,
+          ocjena: ocjenaBroj,
+          ocjenaOpisna: null,
           lekcijaNaziv: lekcijaNaziv || null,
           napomena,
           datum,
@@ -2770,7 +2786,8 @@ router.post("/ocjene", async (req, res) => {
         grupaId,
         kategorija: "ocjena",
         predmet,
-        ocjena,
+        ocjena: ocjenaBroj,
+        ocjenaOpisna,
         lekcijaNaziv: lekcijaNaziv || null,
         napomena,
         datum,
@@ -2784,7 +2801,8 @@ router.post("/ocjene", async (req, res) => {
           grupaId,
           kategorija: "napamet",
           predmet: null,
-          ocjena,
+          ocjena: ocjenaBroj,
+          ocjenaOpisna: null,
           lekcijaNaziv: null,
           napomena,
           datum,
@@ -2804,7 +2822,10 @@ router.post("/ocjene", async (req, res) => {
         .where(eq(usersTable.id, ucenikId));
       const ime = ucenik?.displayName || "vaše dijete";
       const naslov = `Nova ocjena za ${ime}`;
-      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjena}) iz predmeta ${predmet || "Ostali sadržaji"}.`;
+      const ocjenaPrikaz = ocjenaOpisna === "uradjeno" ? "Urađeno"
+        : ocjenaOpisna === "neuradjeno" ? "Neurađeno"
+        : String(ocjenaBroj);
+      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjenaPrikaz}) iz predmeta ${predmet || "Ostali sadržaji"}.`;
       await notifyApprovedRoditelji({
         ucenikId,
         posiljateljId: req.user!.userId,
@@ -3982,7 +4003,7 @@ async function getGrupaFullStats(grupaId: number) {
     for (const o of ocjeneRec) {
       const predmet = o.predmet || "Nije određeno";
       if (!predmeti[predmet]) predmeti[predmet] = [];
-      predmeti[predmet].push(o.ocjena);
+      if (o.ocjena !== null) predmeti[predmet].push(o.ocjena);
     }
     const prosjecneOcjene: Record<string, { prosjek: number; broj: number }> = {};
     for (const [predmet, vals] of Object.entries(predmeti)) {
@@ -3991,8 +4012,9 @@ async function getGrupaFullStats(grupaId: number) {
         broj: vals.length,
       };
     }
-    const ukupnaProsjecna = ocjeneRec.length > 0
-      ? Math.round((ocjeneRec.reduce((a, o) => a + o.ocjena, 0) / ocjeneRec.length) * 10) / 10
+    const brojcaneOcjene = ocjeneRec.filter((o): o is typeof o & { ocjena: number } => o.ocjena !== null);
+    const ukupnaProsjecna = brojcaneOcjene.length > 0
+      ? Math.round((brojcaneOcjene.reduce((a, o) => a + o.ocjena, 0) / brojcaneOcjene.length) * 10) / 10
       : null;
 
     const kvizovi = kvizRezultati.filter(k => k.userId === uid);
@@ -4188,8 +4210,9 @@ router.get("/dashboard-stats", async (req, res) => {
 
       const prisutnih = prisustvo.filter(p => p.status === "prisutan").length;
       prosjekPrisustva = prisustvo.length > 0 ? Math.round((prisutnih / prisustvo.length) * 100) : null;
-      prosjekOcjena = ocjene.length > 0
-        ? Math.round((ocjene.reduce((a, o) => a + o.ocjena, 0) / ocjene.length) * 10) / 10
+      const brojcaneOcjene = ocjene.filter((o): o is typeof o & { ocjena: number } => o.ocjena !== null);
+      prosjekOcjena = brojcaneOcjene.length > 0
+        ? Math.round((brojcaneOcjene.reduce((a, o) => a + o.ocjena, 0) / brojcaneOcjene.length) * 10) / 10
         : null;
       ukupnoLekcijaZavrseno = lekcije.length;
       ukupnoKvizovaUradeno = kvizovi.length;
@@ -5669,6 +5692,7 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
         status,
         uradjeno: s?.uradjeno ?? false,
         ocjena: s?.ocjena ?? null,
+        ocjenaOpisna: s?.ocjenaOpisna ?? null,
         kapiMeda: s?.kapiMeda ?? 0,
         noviRok: s?.noviRok ?? null,
         prolongCount: s?.prolongCount ?? 0,
@@ -5689,7 +5713,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const ucenikId = parseInt(req.params.ucenikId);
-    const { uradjeno, ocjena, kapiMeda, noviRok, oznaciZavrseno } = req.body;
+    const { uradjeno, ocjena, ocjenaOpisna, kapiMeda, noviRok, oznaciZavrseno } = req.body;
 
     const [zadaca] = await db.select().from(zadaceTable)
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
@@ -5717,6 +5741,17 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     const ocjenaVal = ocjena === null || ocjena === undefined || ocjena === ""
       ? null
       : Math.min(6, Math.max(1, Math.trunc(Number(ocjena))));
+    const ocjenaOpisnaVal = ocjenaOpisna === "uradjeno" || ocjenaOpisna === "neuradjeno"
+      ? ocjenaOpisna as "uradjeno" | "neuradjeno"
+      : null;
+    if (ocjenaOpisna != null && ocjenaOpisna !== "" && !ocjenaOpisnaVal) {
+      res.status(400).json({ error: "Neispravna opisna ocjena" });
+      return;
+    }
+    if (ocjenaVal !== null && ocjenaOpisnaVal !== null) {
+      res.status(400).json({ error: "Odaberite brojčanu ili opisnu ocjenu" });
+      return;
+    }
     // Zadaća povezana sa Ilmihal lekcijom može biti i Napamet stavka
     // (npr. Subhaneke). Samo uspješna ocjena (5/6) završava tu stavku;
     // niže ocjene ostaju obična ocjena zadaće.
@@ -5732,7 +5767,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
       : { napametNivo: null, napametStavkaId: null };
     const statusVal = oznaciZavrseno === true ? "zavrseno"
       : oznaciZavrseno === false ? "na_cekanju"
-      : ocjenaVal !== null || newKapi > 0 ? "zavrseno"
+      : ocjenaVal !== null || ocjenaOpisnaVal !== null || newKapi > 0 ? "zavrseno"
       : (postojeci?.status ?? "na_cekanju");
     // Eksplicitna kontrola omogućava završavanje i bez ocjene ili vraćanje
     // na čekanje. Bez eksplicitne kontrole, dodjela ocjene ili kapi meda znači
@@ -5746,6 +5781,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
       ucenikId,
       uradjeno: uradjenoVal,
       ocjena: ocjenaVal,
+      ocjenaOpisna: ocjenaOpisnaVal,
       kapiMeda: newKapi,
       noviRok: noviRokVal,
       prolongCount: prolong,
@@ -5776,7 +5812,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
       const zadacaPredmet = zadacaLekcija?.predmet || (zadacaLekcija ? "Ostali sadržaji" : null);
       const [postojecaOcjena] = await db.select({ id: ocjeneTable.id }).from(ocjeneTable)
         .where(and(eq(ocjeneTable.zadacaId, id), eq(ocjeneTable.ucenikId, ucenikId)));
-      if (ocjenaVal === null) {
+       if (ocjenaVal === null && ocjenaOpisnaVal === null) {
         if (postojecaOcjena) {
           await db.delete(ocjeneTable).where(eq(ocjeneTable.id, postojecaOcjena.id));
         }
@@ -5786,6 +5822,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
         if (postojecaOcjena) {
           await db.update(ocjeneTable).set({
             ocjena: ocjenaVal,
+             ocjenaOpisna: ocjenaOpisnaVal,
             lekcijaNaziv: ocjenaNaziv,
             predmet: zadacaPredmet,
             grupaId: zadaca.grupaId,
@@ -5800,6 +5837,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
             kategorija: "zadaća",
             predmet: zadacaPredmet,
             ocjena: ocjenaVal,
+             ocjenaOpisna: ocjenaOpisnaVal,
             lekcijaNaziv: ocjenaNaziv,
             napomena: null,
             datum: ocjenaDatum,
@@ -5864,7 +5902,12 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
     // Šaljemo samo ako je ocjena uspješno upisana u tabelu ocjene, da roditelj
     // ne dobije obavijest za ocjenu koja se neće prikazati u njihovom panelu.
     const prevOcjena = postojeci?.ocjena ?? null;
-    if (ocjeneSyncOk && ocjenaVal !== null && ocjenaVal !== prevOcjena) {
+    const prevOcjenaOpisna = postojeci?.ocjenaOpisna ?? null;
+    const ocjenaPrikaz = ocjenaOpisnaVal === "uradjeno" ? "Urađeno"
+      : ocjenaOpisnaVal === "neuradjeno" ? "Neurađeno"
+      : ocjenaVal !== null ? String(ocjenaVal) : null;
+    if (ocjeneSyncOk && ocjenaPrikaz !== null
+      && (ocjenaVal !== prevOcjena || ocjenaOpisnaVal !== prevOcjenaOpisna)) {
       (async () => {
         const [dijete] = await db
           .select({ displayName: usersTable.displayName })
@@ -5877,8 +5920,8 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
           posiljateljId: req.user!.userId,
           naslov: `Nova ocjena za ${ime}`,
           sadrzaj: lekcija
-            ? `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaVal} iz zadaće "${lekcija}".`
-            : `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaVal} iz zadaće.`,
+            ? `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaPrikaz} iz zadaće "${lekcija}".`
+            : `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaPrikaz} iz zadaće.`,
           logTag: "zadaca-ocjena-notify",
           pushData: { type: "ocjena", zadacaId: id },
         });

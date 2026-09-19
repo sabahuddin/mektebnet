@@ -416,6 +416,7 @@ router.get("/zadace", async (req, res) => {
         status,
         uradjeno: s?.uradjeno ?? false,
         ocjena: s?.ocjena ?? null,
+        ocjenaOpisna: s?.ocjenaOpisna ?? null,
         kapiMeda: s?.kapiMeda ?? 0,
         noviRok: s?.noviRok ?? null,
         prolongCount,

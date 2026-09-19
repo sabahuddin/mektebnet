@@ -51,6 +51,8 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS napamet_nivo integer;`);
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS napamet_stavka_id varchar(80);`);
     await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS predmet varchar(60);`);
+    await db.execute(sql`ALTER TABLE ocjene ALTER COLUMN ocjena DROP NOT NULL;`);
+    await db.execute(sql`ALTER TABLE ocjene ADD COLUMN IF NOT EXISTS ocjena_opisna varchar(20);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS ocjene_napamet_ucenik_idx ON ocjene (ucenik_id, napamet_stavka_id) WHERE napamet_stavka_id IS NOT NULL;`);
     await db.execute(sql`
       UPDATE ocjene o
@@ -296,6 +298,7 @@ async function runResidualSchema() {
         ucenik_id integer NOT NULL,
         uradjeno boolean NOT NULL DEFAULT false,
         ocjena integer,
+        ocjena_opisna varchar(20),
         kapi_meda integer NOT NULL DEFAULT 0,
         novi_rok varchar(20),
         prolong_count integer NOT NULL DEFAULT 0,
@@ -306,6 +309,7 @@ async function runResidualSchema() {
         updated_at timestamp DEFAULT now()
       );
     `);
+    await db.execute(sql`ALTER TABLE zadace_status ADD COLUMN IF NOT EXISTS ocjena_opisna varchar(20);`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS zadace_status_zadaca_ucenik_uidx ON zadace_status (zadaca_id, ucenik_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS zadace_status_ucenik_idx ON zadace_status (ucenik_id);`);
     // Stariji tok je mogao sačuvati nagradu/ocjenu bez zatvaranja statusa.

@@ -293,6 +293,7 @@ interface ZadacaStatusRed {
   username: string;
   uradjeno: boolean;
   ocjena: number | null;
+  ocjenaOpisna: "uradjeno" | "neuradjeno" | null;
   kapiMeda: number;
   noviRok: string | null;
   prolongCount: number;
@@ -1111,6 +1112,7 @@ export default function MuallimPanel() {
         {
           uradjeno: red.uradjeno,
           ocjena: red.ocjena,
+          ocjenaOpisna: red.ocjenaOpisna,
           kapiMeda: red.kapiMeda,
           noviRok: red.noviRok || null,
           ...(oznaciZavrseno !== undefined ? { oznaciZavrseno } : {}),
@@ -1121,6 +1123,7 @@ export default function MuallimPanel() {
         noviRok: saved.noviRok,
         uradjeno: saved.uradjeno,
         ocjena: saved.ocjena,
+        ocjenaOpisna: saved.ocjenaOpisna,
         kapiMeda: saved.kapiMeda,
       });
       toast({ title: oznaciZavrseno === true ? t("Označeno završenim") : t("Sačuvano") });
@@ -4051,11 +4054,19 @@ export default function MuallimPanel() {
                                   {/* Ocjena 1-6 */}
                                   <div>
                                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena")}</label>
-                                    <select value={red.ocjena ?? ""}
-                                      onChange={e => updatePregledRed(red.ucenikId, { ocjena: e.target.value ? Number(e.target.value) : null })}
+                                    <select value={red.ocjenaOpisna ?? red.ocjena ?? ""}
+                                      onChange={e => {
+                                        const value = e.target.value;
+                                        updatePregledRed(red.ucenikId, {
+                                          ocjena: value && value !== "uradjeno" && value !== "neuradjeno" ? Number(value) : null,
+                                          ocjenaOpisna: value === "uradjeno" || value === "neuradjeno" ? value : null,
+                                        });
+                                      }}
                                       className="w-full border border-border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30">
                                       <option value="">—</option>
                                       {[1, 2, 3, 4, 5, 6].map(o => <option key={o} value={o}>{o}</option>)}
+                                      <option value="uradjeno">{t("Urađeno")}</option>
+                                      <option value="neuradjeno">{t("Neurađeno")}</option>
                                     </select>
                                   </div>
 

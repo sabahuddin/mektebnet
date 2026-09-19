@@ -515,6 +515,33 @@ test("dodijeljene kapi meda završavaju pregledanu zadaću", async () => {
   assert.equal(rewarded?.kapiMeda, 10);
 });
 
+test("opisna ocjena završava zadaću i prikazuje se učeniku", async () => {
+  const gradeResponse = await teacherPut(
+    `/api/muallim/zadace/${emptyHomeworkId}/status/${studentId}`,
+    { uradjeno: false, ocjena: null, ocjenaOpisna: "uradjeno", kapiMeda: 10, noviRok: null },
+  );
+  assert.equal(gradeResponse.status, 200);
+  const saved = await gradeResponse.json() as {
+    status: string;
+    uradjeno: boolean;
+    ocjena: number | null;
+    ocjenaOpisna: string | null;
+  };
+  assert.equal(saved.status, "zavrseno");
+  assert.equal(saved.uradjeno, true);
+  assert.equal(saved.ocjena, null);
+  assert.equal(saved.ocjenaOpisna, "uradjeno");
+
+  const studentResponse = await studentGet("/api/ucenik/profil");
+  assert.equal(studentResponse.status, 200);
+  const profile = await studentResponse.json() as {
+    ocjene: Array<{ zadacaId: number | null; ocjena: number | null; ocjenaOpisna: string | null }>;
+  };
+  const descriptive = profile.ocjene.find((item) => item.zadacaId === emptyHomeworkId);
+  assert.equal(descriptive?.ocjena, null);
+  assert.equal(descriptive?.ocjenaOpisna, "uradjeno");
+});
+
 test("ocjena završava grupnu zadaću samo ocijenjenom učeniku", async () => {
   const gradeResponse = await teacherPut(
     `/api/muallim/zadace/${emptyHomeworkId}/status/${studentId}`,
@@ -542,6 +569,33 @@ test("ocjena završava grupnu zadaću samo ocijenjenom učeniku", async () => {
   assert.equal(graded?.ocjena, 5);
   assert.equal(ungraded?.kategorija, "aktivne");
   assert.equal(ungraded?.ocjena, null);
+});
+
+test("redovna opisna ocjena se čuva bez brojčane vrijednosti", async () => {
+  const response = await teacherPost("/api/muallim/ocjene", {
+    ucenikId: studentId,
+    grupaId: groupId,
+    ocjena: null,
+    ocjenaOpisna: "neuradjeno",
+    lekcijaNaziv: `Zadata lekcija ${suffix}`,
+    lekcijaSlug: assignedSlug,
+    datum: "2026-08-22",
+  });
+  assert.equal(response.status, 201);
+  const saved = await response.json() as { ocjena: number | null; ocjenaOpisna: string | null };
+  assert.equal(saved.ocjena, null);
+  assert.equal(saved.ocjenaOpisna, "neuradjeno");
+
+  const invalid = await teacherPost("/api/muallim/ocjene", {
+    ucenikId: studentId,
+    grupaId: groupId,
+    ocjena: null,
+    ocjenaOpisna: "odlicno",
+    lekcijaNaziv: `Zadata lekcija ${suffix}`,
+    lekcijaSlug: assignedSlug,
+    datum: "2026-08-22",
+  });
+  assert.equal(invalid.status, 400);
 });
 
 test("arhivirana grupna zadaća je završena realizovanom, a neurađena ostalim učenicima", async () => {

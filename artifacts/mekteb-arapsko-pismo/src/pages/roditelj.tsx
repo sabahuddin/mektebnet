@@ -68,7 +68,8 @@ interface Ocjena {
   id: number;
   kategorija: string;
   predmet?: string | null;
-  ocjena: number;
+  ocjena: number | null;
+  ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
   napomena?: string;
   datum: string;
   lekcijaNaziv?: string | null;
@@ -116,7 +117,7 @@ function formatEarnedDate(iso: string | null | undefined): string | null {
 }
 
 interface DashboardSummary {
-  posljednjaOcjena: { ocjena: number; kategorija: string; datum: string; napomena?: string | null } | null;
+  posljednjaOcjena: { ocjena: number | null; ocjenaOpisna?: "uradjeno" | "neuradjeno" | null; kategorija: string; datum: string; napomena?: string | null } | null;
   prisustvoOvajMjesec: number;
   ukupnoOvajMjesec: number;
   zavrseneLekcije: number;
@@ -418,7 +419,11 @@ function DijeteContent({
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex flex-col items-center justify-center text-center">
               <Star className="w-4 h-4 text-amber-600 mb-1" />
               <div className="text-lg font-extrabold text-amber-700 leading-none">
-                {summary?.posljednjaOcjena ? summary.posljednjaOcjena.ocjena : "—"}
+                {summary?.posljednjaOcjena
+                  ? summary.posljednjaOcjena.ocjenaOpisna === "uradjeno" ? t("Urađeno")
+                    : summary.posljednjaOcjena.ocjenaOpisna === "neuradjeno" ? t("Neurađeno")
+                    : summary.posljednjaOcjena.ocjena
+                  : "—"}
               </div>
               <div className="text-[10px] text-amber-700/80 font-bold uppercase mt-1 tracking-wide">{t("Posljednja ocjena")}</div>
             </div>
@@ -664,8 +669,8 @@ function DijeteContent({
                       <td className="py-2 px-2 text-muted-foreground">{o.predmet || t("Nije određeno")}</td>
                       <td className="py-2 px-2 text-muted-foreground whitespace-nowrap tabular-nums">{o.datum}</td>
                       <td className="py-2 px-2 text-right">
-                        <span className={`inline-block text-sm font-extrabold px-2.5 py-0.5 rounded-full ${OCJENA_COLOR[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
-                          {o.ocjena}
+                        <span className={`inline-block text-sm font-extrabold px-2.5 py-0.5 rounded-full ${o.ocjena !== null ? OCJENA_COLOR[o.ocjena] : o.ocjenaOpisna === "uradjeno" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                          {o.ocjenaOpisna === "uradjeno" ? t("Urađeno") : o.ocjenaOpisna === "neuradjeno" ? t("Neurađeno") : o.ocjena}
                         </span>
                       </td>
                     </tr>
