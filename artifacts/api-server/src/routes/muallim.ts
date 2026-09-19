@@ -5732,10 +5732,11 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
       : { napametNivo: null, napametStavkaId: null };
     const statusVal = oznaciZavrseno === true ? "zavrseno"
       : oznaciZavrseno === false ? "na_cekanju"
-      : ocjenaVal !== null ? "zavrseno"
+      : ocjenaVal !== null || newKapi > 0 ? "zavrseno"
       : (postojeci?.status ?? "na_cekanju");
     // Eksplicitna kontrola omogućava završavanje i bez ocjene ili vraćanje
-    // na čekanje. Bez eksplicitne kontrole, dodjela ocjene završava zadaću.
+    // na čekanje. Bez eksplicitne kontrole, dodjela ocjene ili kapi meda znači
+    // da je muallim zadaću pregledao i završio.
     const uradjenoVal = statusVal === "zavrseno"
       ? true
       : typeof uradjeno === "boolean" ? uradjeno : (postojeci?.uradjeno ?? false);

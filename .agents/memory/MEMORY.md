@@ -52,6 +52,7 @@
 - [GitHub content API i JSX](github-content-api-jsx.md) — ne mijenjaj složeni JSX marker-zamjenama na udaljenom fajlu; validiraj tačan sadržaj prije Coolify redeploya.
 - [Tailwind v4 modal centriranje](tailwind-v4-modal-centering.md) — resetuj interne translate varijable; optimizovani build može izbaciti samo `translate:none`.
 - [Arhiviranje grupne zadaće](arhiviranje-grupne-zadace.md) — arhiva zatvara zadaću za sve; završeni ostaju završeni, nezavršeni prelaze u Neurađeno.
+- [Pregledana zadaća i nagrada](pregledana-zadaca-nagrada.md) — ocjena ili pozitivne kapi meda znače da je zadaća završena, osim kad je muallim izričito vrati na čekanje.
 - [Nastavnički materijali nisu zadaća](nastavnicki-materijali.md) — file/url prilozi pripadaju Pripremi i ostaju samo muallimu/adminu; učenicima su dostupne samo vježbe.
 - [Bundlovani materijali i trajni uploads](bundled-materials-persistent-uploads.md) — seedovane zamjene moraju prepisati postojeći fajl u trajnom volumenu, ne samo upis u bazu.
 - [Kvizovi po etapama](kvizovi-po-etapama.md) — etapa je broj 1–7 unutar nivoa; cijeli interaktivni kviz se povezuje s medaljon-lekcijom, ne pretvara u mini-kviz.

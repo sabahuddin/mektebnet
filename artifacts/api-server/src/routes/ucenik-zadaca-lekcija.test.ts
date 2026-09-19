@@ -486,6 +486,35 @@ test("pregled zadaće razlikuje završenu povezanu lekciju od ručnog pregleda",
   assert.equal(empty.ucenici.every((u) => !u.lekcijaZavrsena), true);
 });
 
+test("dodijeljene kapi meda završavaju pregledanu zadaću", async () => {
+  const rewardResponse = await teacherPut(
+    `/api/muallim/zadace/${emptyHomeworkId}/status/${studentId}`,
+    { uradjeno: false, ocjena: null, kapiMeda: 10, noviRok: null },
+  );
+  assert.equal(rewardResponse.status, 200);
+  const saved = await rewardResponse.json() as {
+    status: string;
+    uradjeno: boolean;
+    ocjena: number | null;
+    kapiMeda: number;
+  };
+  assert.equal(saved.status, "zavrseno");
+  assert.equal(saved.uradjeno, true);
+  assert.equal(saved.ocjena, null);
+  assert.equal(saved.kapiMeda, 10);
+
+  const studentResponse = await studentGet("/api/ucenik/zadace");
+  assert.equal(studentResponse.status, 200);
+  const homework = await studentResponse.json() as Array<{
+    id: number;
+    kategorija: string;
+    kapiMeda: number;
+  }>;
+  const rewarded = homework.find((item) => item.id === emptyHomeworkId);
+  assert.equal(rewarded?.kategorija, "zavrsene");
+  assert.equal(rewarded?.kapiMeda, 10);
+});
+
 test("ocjena završava grupnu zadaću samo ocijenjenom učeniku", async () => {
   const gradeResponse = await teacherPut(
     `/api/muallim/zadace/${emptyHomeworkId}/status/${studentId}`,

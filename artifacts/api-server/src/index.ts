@@ -308,6 +308,19 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS zadace_status_zadaca_ucenik_uidx ON zadace_status (zadaca_id, ucenik_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS zadace_status_ucenik_idx ON zadace_status (ucenik_id);`);
+    // Stariji tok je mogao sačuvati nagradu/ocjenu bez zatvaranja statusa.
+    // reviewed_at IS NULL ograničava backfill na takve historijske redove i ne
+    // zatvara ponovo zadaću koju je muallim kasnije svjesno vratio na čekanje.
+    await db.execute(sql`
+      UPDATE zadace_status
+      SET status = 'zavrseno',
+          uradjeno = true,
+          reviewed_at = COALESCE(updated_at, created_at, NOW()),
+          updated_at = NOW()
+      WHERE status <> 'zavrseno'
+        AND reviewed_at IS NULL
+        AND (ocjena IS NOT NULL OR kapi_meda > 0);
+    `);
     await db.execute(sql`
       DO $$
       BEGIN
