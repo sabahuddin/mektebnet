@@ -45,7 +45,7 @@ function extractPages(html: string): string[] {
   //    Dijelimo po:
   //      - eksplicitnim <hr> separatorima (ako ih admin koristi),
   //      - h1/h2/h3 naslovima (svaki novi naslov ≈ nova stranica),
-  //      - i ograničenju riječi (cilj ~180 riječi po stranici, max ~280).
+  //      - i ograničenju riječi (max ~380 riječi po stranici).
   const root: HTMLElement = (doc.querySelector(".book-content") as HTMLElement | null) || doc.body;
   const children = Array.from(root.children) as HTMLElement[];
   if (children.length === 0) {
@@ -53,8 +53,7 @@ function extractPages(html: string): string[] {
     return fallback ? [fallback] : [html];
   }
 
-  const TARGET_WORDS = 180;
-  const MAX_WORDS = 280;
+  const MAX_WORDS = 380;
   const MIN_WORDS_BEFORE_HEADING_BREAK = 60;
   const HEADING_TAGS = new Set(["H1", "H2", "H3"]);
 
@@ -91,7 +90,7 @@ function extractPages(html: string): string[] {
     buffer.push(el.outerHTML);
     bufferWords += words;
 
-    // Sigurnosni limit — nikad ne preći ~280 riječi po stranici.
+    // Sigurnosni limit — nikad ne preći ~380 riječi po stranici.
     if (bufferWords >= MAX_WORDS) {
       flush();
     }
