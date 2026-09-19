@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import {
-  AlertTriangle,
   BookOpen,
   Calendar,
   CalendarCheck,
@@ -8,7 +7,6 @@ import {
   FileText,
   Heart,
   Settings,
-  Sparkles,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -16,16 +14,15 @@ import { useLanguage } from "@/context/language";
 
 export type GroupModuleKey =
   | "ucenici"
-  | "napamet"
   | "greske"
-  | "plan"
   | "prisustvo"
+  | "zadace"
+  | "napamet"
+  | "plan"
   | "kalendar"
   | "statistika"
-  | "zadace"
   | "izvjestaji"
   | "roditelji"
-  | "h5p"
   | "podesavanja";
 
 interface MuallimGroupSidebarProps {
@@ -42,16 +39,14 @@ export function MuallimGroupSidebar({
   const { t } = useLanguage();
   const modules = [
     { key: "ucenici" as const, label: t("Učenici"), icon: Users, href: `/muallim/grupa/${grupaId}` },
-    { key: "napamet" as const, label: t("NAPAMET"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=napamet` },
-    { key: "greske" as const, label: t("Gdje učenici griješe"), icon: AlertTriangle, href: `/muallim/grupa/${grupaId}?modul=greske` },
-    { key: "plan" as const, label: t("Plan lekcija"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=plan` },
     { key: "prisustvo" as const, label: t("Prisustvo"), icon: CalendarCheck, href: `/muallim/prisustvo/${grupaId}` },
+    { key: "zadace" as const, label: t("Zadaća"), icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupaId}`, badge: zadacaBadge },
+    { key: "napamet" as const, label: t("Napamet"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=napamet` },
+    { key: "plan" as const, label: t("Plan lekcija"), icon: BookOpen, href: `/muallim/grupa/${grupaId}?modul=plan` },
     { key: "kalendar" as const, label: t("Kalendar"), icon: Calendar, href: `/muallim?tab=kalendar&grupaId=${grupaId}` },
     { key: "statistika" as const, label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupaId}` },
-    { key: "zadace" as const, label: t("Zadaća"), icon: ClipboardList, href: `/muallim?tab=zadace&grupaId=${grupaId}`, badge: zadacaBadge },
     { key: "izvjestaji" as const, label: t("Izvještaji"), icon: FileText, href: `/muallim/izvjestaj/grupa/${grupaId}` },
     { key: "roditelji" as const, label: t("Roditelji"), icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupaId}` },
-    { key: "h5p" as const, label: t("H5P statistika"), icon: Sparkles, href: `/muallim/h5p-statistika?grupaId=${grupaId}` },
     { key: "podesavanja" as const, label: t("Podešavanja"), icon: Settings, href: `/muallim/grupa/${grupaId}/uredi` },
   ];
 

@@ -572,6 +572,39 @@ export default function GrupaPage() {
     }
   }
 
+  async function closeZadacaModal() {
+    if (savingZadaca || !showZadacaModal) return;
+    if (!token || !zadacaTarget || zadacaModalTab !== "pregled" || zadaceTargeta.length === 0) {
+      setShowZadacaModal(false);
+      return;
+    }
+    setSavingZadaca(true);
+    try {
+      await Promise.all(zadaceTargeta.map(zadaca => apiRequest(
+        "PUT",
+        `/muallim/zadace/${zadaca.id}/status/${zadacaTarget.id}`,
+        {
+          uradjeno: zadaca.uradjeno ?? false,
+          ocjena: zadaca.ocjena ?? null,
+          ocjenaOpisna: zadaca.ocjenaOpisna ?? null,
+          kapiMeda: zadaca.kapiMeda ?? 0,
+          noviRok: zadaca.noviRok || null,
+        },
+        token,
+      )));
+      setShowZadacaModal(false);
+      toast({ title: t("Promjene su sačuvane") });
+    } catch (e: any) {
+      toast({
+        title: t("Greška"),
+        description: e?.message || t("Nije moguće sačuvati promjene"),
+        variant: "destructive",
+      });
+    } finally {
+      setSavingZadaca(false);
+    }
+  }
+
   async function saveZadaca() {
     if (!token || !newZadaca.lekcijaNaslov.trim()) {
       toast({ title: t("Odaberi lekciju"), variant: "destructive" });
@@ -587,7 +620,7 @@ export default function GrupaPage() {
         lekcijaNaslov: newZadaca.lekcijaNaslov || null,
         lekcijaSlug: newZadaca.lekcijaSlug || null,
         lekcijaTip: newZadaca.lekcijaSlug ? "ilmihal" : null,
-        priloziIds: Array.from(zadPriloziIds),
+        priloziIds: zadacaTarget ? [] : Array.from(zadPriloziIds),
         ucenikIds: zadacaTarget ? [zadacaTarget.id] : [],
       }, token);
       toast({
@@ -1361,7 +1394,7 @@ export default function GrupaPage() {
         )}
 
         {showZadacaModal && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => !savingZadaca && setShowZadacaModal(false)}>
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => void closeZadacaModal()}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
               <h3 className="font-extrabold text-foreground mb-1 flex items-center gap-2">
@@ -1494,7 +1527,7 @@ export default function GrupaPage() {
                       onSelectLesson={async lekcija => {
                         setNewZadaca(z => ({ ...z, lekcijaSlug: lekcija?.slug || "" }));
                         setZadPriloziIds(new Set());
-                        if (!lekcija?.slug || !token) { setZadMaterijali([]); return; }
+                        if (zadacaTarget || !lekcija?.slug || !token) { setZadMaterijali([]); return; }
                         try {
                           const data = await apiRequest<{ prilozi?: NastavniMaterijal[] }>("GET", `/content/ilmihal/${lekcija.slug}`, undefined, token);
                           setZadMaterijali((data.prilozi || []).filter(p => p.kind === "file" || p.kind === "url"));
@@ -1503,7 +1536,7 @@ export default function GrupaPage() {
                       placeholder={t("Pretraži lekciju ili upiši broj…")}
                     />
                 </div>
-                {newZadaca.lekcijaSlug && (
+                {!zadacaTarget && newZadaca.lekcijaSlug && (
                   <div>
                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Materijali za nastavu")}</label>
                     {zadMaterijali.length === 0 ? <p className="text-xs text-muted-foreground italic">{t("Ova lekcija nema dostupnih materijala.")}</p> : (
@@ -1521,8 +1554,8 @@ export default function GrupaPage() {
               </div>
               )}
               <div className="flex gap-3 mt-4">
-                <Button variant="outline" onClick={() => setShowZadacaModal(false)} disabled={savingZadaca} className="flex-1 rounded-xl">
-                  {t("Otkaži")}
+                <Button variant="outline" onClick={() => void closeZadacaModal()} disabled={savingZadaca} className="flex-1 rounded-xl">
+                  {savingZadaca && zadacaTarget && zadacaModalTab === "pregled" ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Zatvori")}
                 </Button>
                 {(!zadacaTarget || zadacaModalTab === "nova") && <Button onClick={saveZadaca} disabled={savingZadaca || !newZadaca.lekcijaNaslov.trim()} className="flex-1 rounded-xl font-bold"
                   data-testid="btn-save-zadaca"

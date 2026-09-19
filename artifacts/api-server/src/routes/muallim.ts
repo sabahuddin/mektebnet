@@ -28,6 +28,7 @@ import {
   mektebiTable,
   mektebDokumentiTable,
   h5pPokusajiTable,
+  staticVjezbaPokusajiTable,
   prilozi,
   interaktivniBlokPokusajiTable,
   napametMuallimProgramTable,
@@ -4831,8 +4832,14 @@ router.get("/ucenik/:id/h5p-pokusaji", async (req, res) => {
       .where(and(...baseConds))
       .orderBy(desc(h5pPokusajiTable.completedAt));
 
+    const [naseVjezbe] = await db.select({
+      brojPokusaja: count(),
+    }).from(staticVjezbaPokusajiTable)
+      .where(eq(staticVjezbaPokusajiTable.userId, ucenikId));
+    const naseVjezbePokusaji = Number(naseVjezbe?.brojPokusaja ?? 0);
+
     if (pokusaji.length === 0) {
-      res.json({ pokusaji: [], prilozi: [] });
+      res.json({ pokusaji: [], prilozi: [], naseVjezbePokusaji });
       return;
     }
 
@@ -4867,7 +4874,7 @@ router.get("/ucenik/:id/h5p-pokusaji", async (req, res) => {
       };
     });
 
-    res.json({ pokusaji, prilozi: priloziOut });
+    res.json({ pokusaji, prilozi: priloziOut, naseVjezbePokusaji });
   } catch (err) {
     console.error("Ucenik H5P pokusaji error:", err);
     res.status(500).json({ error: "Greška servera" });

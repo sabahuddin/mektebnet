@@ -423,7 +423,7 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "h5p" | "profil";
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "profil";
   const [activeTab, setActiveTab] = useState<TabId>("pregled");
   const [panelContext, setPanelContext] = useState<"moje" | "mekteb">("moje");
   const [selectedMuallimId, setSelectedMuallimId] = useState<number | null>(null);
@@ -440,7 +440,7 @@ export default function MuallimPanel() {
   useEffect(() => {
     const params = new URLSearchParams(locationSearch);
     const t = params.get("tab");
-    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","h5p","profil"].includes(t)) {
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","profil"].includes(t)) {
       setActiveTab(t as TabId);
       if (t === "ucenici") setPanelContext("mekteb");
       else setPanelContext("moje");
@@ -3031,7 +3031,7 @@ export default function MuallimPanel() {
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <h4 className="font-extrabold text-teal-950 flex items-center gap-2">
-                            <BookOpen className="w-4 h-4 text-teal-700" /> {t("Gdje učenici zapinju u lekcijama")}
+                            <BookOpen className="w-4 h-4 text-teal-700" /> {t("Gdje učenici griješe")}
                           </h4>
                           <p className="text-xs text-teal-800 mt-1">{t("Privatni pedagoški pregled — odvojen od ocjena, bodova i zvjezdica.")}</p>
                         </div>
@@ -3666,7 +3666,7 @@ export default function MuallimPanel() {
                       return (
                         <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/50 p-1.5">
                           {([
-                             { id: "pojedinacno" as const, label: t("Odabrani učenici"), broj: pojedinacne.length },
+                             { id: "pojedinacno" as const, label: t("Više učenika"), broj: pojedinacne.length },
                             { id: "svi" as const, label: t("Svi"), broj: zaSve.length },
                           ]).map(tab => {
                             const aktivan = zadTipTab === tab.id;
@@ -3693,34 +3693,19 @@ export default function MuallimPanel() {
                       );
                     })()}
 
-                    {/* Pod-tabovi: Nova zadaća / U toku / Završeno */}
-                    {(() => {
-                       const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 1);
-                      const uTokuBroj = zadacePoTipu.filter(z => z.isActive !== false && !z.completed).length;
-                      const zavrsenoBroj = zadacePoTipu.filter(z => z.completed || z.isActive === false).length;
-                      const tabovi: { id: "nova" | "utoku" | "zavrseno"; label: string; broj?: number }[] = [
-                        { id: "nova", label: t("Nova zadaća") },
-                        { id: "utoku", label: t("U toku"), broj: uTokuBroj },
-                        { id: "zavrseno", label: t("Završeno"), broj: zavrsenoBroj },
-                      ];
-                      return (
-                        <div className="flex flex-wrap gap-2">
-                          {tabovi.map(t => {
-                            const aktivan = zadSubTab === t.id;
-                            return (
-                              <button key={t.id} onClick={() => { setZadSubTab(t.id); if (t.id === "nova") setShowZadForm(true); }}
-                                className={`rounded-xl px-4 py-2.5 text-sm font-bold border transition-colors flex items-center gap-2 ${aktivan ? "bg-primary text-primary-foreground border-primary" : "bg-white text-muted-foreground border-border hover:bg-muted/40"}`}>
-                                {t.id === "nova" && <Plus className="w-4 h-4" />}
-                                {t.label}
-                                {typeof t.broj === "number" && (
-                                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${aktivan ? "bg-white/25" : "bg-muted text-muted-foreground"}`}>{t.broj}</span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          const opening = zadSubTab !== "nova";
+                          setZadSubTab(opening ? "nova" : "utoku");
+                          setShowZadForm(opening);
+                        }}
+                        className={`rounded-xl px-4 py-2.5 text-sm font-bold border transition-colors flex items-center gap-2 ${zadSubTab === "nova" ? "bg-primary text-primary-foreground border-primary" : "bg-white text-muted-foreground border-border hover:bg-muted/40"}`}
+                      >
+                        <Plus className="w-4 h-4" />
+                        {t("Nova zadaća")}
+                      </button>
+                    </div>
 
                     {zadSubTab === "nova" && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
@@ -3746,7 +3731,7 @@ export default function MuallimPanel() {
                                  onClick={() => setZadDodjela("pojedinacno")}
                                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${zadDodjela === "pojedinacno" ? "border-amber-400 bg-amber-50 text-amber-800 ring-2 ring-amber-200" : "border-border bg-white text-muted-foreground hover:bg-muted/30"}`}
                                >
-                                 <span className="block text-sm font-extrabold">{t("Odabrani učenici")}</span>
+                                 <span className="block text-sm font-extrabold">{t("Više učenika")}</span>
                                   <span className="block text-xs mt-1 opacity-80">{t("Najmanje dva učenika")}</span>
                                </button>
                              </div>
@@ -3845,20 +3830,14 @@ export default function MuallimPanel() {
 
                     {zadSubTab !== "nova" && (() => {
                        const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 1);
-                      const filtrirane = zadacePoTipu.filter(z => zadSubTab === "zavrseno"
-                        ? z.completed || z.isActive === false
-                        : z.isActive !== false && !z.completed);
-                      const praznoTekst = zadSubTab === "zavrseno"
-                        ? t("Nema završenih zadaća. Zadaća se prebaci ovdje kad svi učenici budu označeni završenim.")
-                        : t("Nema zadaća u toku. Kreiraj novu zadaću.");
-                      return filtrirane.length === 0 ? (
+                      return zadacePoTipu.length === 0 ? (
                       <div className="text-center py-12 text-muted-foreground bg-white rounded-2xl border border-border/50">
                         <ClipboardList className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium">{praznoTekst}</p>
+                        <p className="font-medium">{t("Nema zadaća. Kreiraj novu zadaću.")}</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {filtrirane.map((z, i) => {
+                        {zadacePoTipu.map((z, i) => {
                           const isArchived = z.isActive === false;
                           const isExpired = !z.completed && !isArchived && z.rokDo && new Date(z.rokDo) < new Date();
                           return (
@@ -4798,25 +4777,6 @@ export default function MuallimPanel() {
                 muallimId={scopedMuallimId}
                 readOnly={isMuallimPreview}
               />
-            )}
-
-            {activeTab === "h5p" && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-2xl p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-6 h-6 text-purple-600" />
-                    <h3 className="font-extrabold text-lg text-foreground">{t("H5P statistika učenika")}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
-                    {t("Pregled napretka učenika kroz H5P interaktivne vježbe — najslabiji rezultati, prosjek po vježbi, mjesečni trendovi.")}
-                  </p>
-                  <Link href="/muallim/h5p-statistika">
-                    <Button className="rounded-xl font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2" data-testid="btn-otvori-h5p-statistiku">
-                      <BarChart3 className="w-4 h-4" /> {t("Otvori H5P statistiku")}
-                    </Button>
-                  </Link>
-                </div>
-              </motion.div>
             )}
 
             {/* PROFIL — uređivanje display name-a, premješteno iz inline header dugmeta. */}

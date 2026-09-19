@@ -109,7 +109,6 @@ import MuallimGrupaPage from "./pages/muallim/grupa";
 import MuallimIzvjestajPage from "./pages/muallim/izvjestaj";
 import MuallimTutorijalPage from "./pages/muallim/tutorijal";
 import H5pUputstvoPage from "./pages/h5p-uputstvo";
-import MuallimH5pStatistikaPage from "./pages/muallim/h5p-statistika";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -252,7 +251,6 @@ function Router() {
       <Route path="/muallim/izvjestaj/:tip/:id" component={MuallimIzvjestajPage} />
       <Route path="/muallim/tutorijal" component={MuallimTutorijalPage} />
       <Route path="/muallim/h5p-uputstvo" component={H5pUputstvoPage} />
-      <Route path="/muallim/h5p-statistika" component={MuallimH5pStatistikaPage} />
       <Route path="/muallim" component={MuallimPanel} />
       <Route path="/muallim/dodaj-ucenika" component={MuallimDodajUcenikaPage} />
       <Route path="/muallim/dodaj-grupu" component={MuallimDodajGrupuPage} />

@@ -181,6 +181,7 @@ export default function UcenikPage() {
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
   const [h5pPokusaji, setH5pPokusaji] = useState<H5PPokusaj[]>([]);
+  const [naseVjezbePokusaji, setNaseVjezbePokusaji] = useState(0);
   const [interaktivnaPitanja, setInteraktivnaPitanja] = useState<InteraktivniPitanjePregled[]>([]);
   const [etapaPokusaji, setEtapaPokusaji] = useState<EtapaPokusajiPregled[]>([]);
   const [approvingEtapaId, setApprovingEtapaId] = useState<number | null>(null);
@@ -237,7 +238,7 @@ export default function UcenikPage() {
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
       apiRequest<{ rezultati: KvizRezultat[] }>("GET", `/muallim/ucenik-rezultati/${ucenikId}`, undefined, token).catch(() => ({ rezultati: [] })),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
-      apiRequest<{ pokusaji: H5PPokusaj[]; prilozi: H5PPrilogInfo[] }>("GET", `/muallim/ucenik/${ucenikId}/h5p-pokusaji`, undefined, token).catch(() => ({ pokusaji: [], prilozi: [] })),
+      apiRequest<{ pokusaji: H5PPokusaj[]; prilozi: H5PPrilogInfo[]; naseVjezbePokusaji: number }>("GET", `/muallim/ucenik/${ucenikId}/h5p-pokusaji`, undefined, token).catch(() => ({ pokusaji: [], prilozi: [], naseVjezbePokusaji: 0 })),
       apiRequest<{ pitanja: InteraktivniPitanjePregled[] }>("GET", `/muallim/ucenik/${ucenikId}/interaktivni-blokovi`, undefined, token).catch(() => ({ pitanja: [] })),
       apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
       apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
@@ -256,6 +257,7 @@ export default function UcenikPage() {
       setIlmihalLekcije(lekcije as IlmihalLekcija[]);
       setH5pPokusaji((h5pData as any).pokusaji || []);
       setH5pPrilozi((h5pData as any).prilozi || []);
+      setNaseVjezbePokusaji((h5pData as any).naseVjezbePokusaji || 0);
       setInteraktivnaPitanja((interaktivniData as any).pitanja || []);
       setEtapaPokusaji((etapeData as EtapaPokusajiPregled[]) || []);
       const gId = found?.profil?.grupaId || found?.grupaId;
@@ -780,6 +782,15 @@ export default function UcenikPage() {
                         {zvjezdice && zvjezdice.negativne > 0 && (
                           <div className="text-xs text-gray-500 mt-1">★ {zvjezdice.negativne} {t("negativnih")}</div>
                         )}
+                      </div>
+                      {/* Naše vježbe + H5P */}
+                      <div className="bg-white border border-border/50 rounded-2xl p-4">
+                        <Sparkles className="w-5 h-5 text-violet-600 mb-2" />
+                        <div className="text-2xl font-extrabold text-violet-600">{naseVjezbePokusaji + h5pPokusaji.length || "—"}</div>
+                        <div className="text-sm text-muted-foreground font-medium">{t("Vježbe")}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {t("Naše: {n} · H5P: {h}", { n: String(naseVjezbePokusaji), h: String(h5pPokusaji.length) })}
+                        </div>
                       </div>
                     </div>
 
