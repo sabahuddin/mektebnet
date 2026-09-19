@@ -146,7 +146,13 @@ interface InteraktivniPregledGrupe {
 
 interface NapametDetalji {
   stavka: { id: string; naziv: string; nivo: number; scope?: string };
-  ocijenjeni: Array<{ id: number; displayName: string; ocjena: number; datum: string }>;
+  ocijenjeni: Array<{
+    id: number;
+    displayName: string;
+    ocjena: number | null;
+    ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
+    datum: string;
+  }>;
   nisuOcijenjeni: Array<{ id: number; displayName: string }>;
 }
 
@@ -205,7 +211,7 @@ export default function GrupaPage() {
   // Zadaća modal — ako zadacaTarget=null → zadaća za cijelu grupu
   const [showZadacaModal, setShowZadacaModal] = useState(false);
   const [zadacaTarget, setZadacaTarget] = useState<Ucenik | null>(null);
-  const [newZadaca, setNewZadaca] = useState({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
+  const [newZadaca, setNewZadaca] = useState({ opis: "", lekcijaNaslov: "", lekcijaSlug: "" });
   const [zadMaterijali, setZadMaterijali] = useState<NastavniMaterijal[]>([]);
   const [zadPriloziIds, setZadPriloziIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
@@ -464,7 +470,7 @@ export default function GrupaPage() {
   function openBrzaNapametOcjena(
     stavka: NapametStavka,
     student: { id: number; displayName: string },
-    existingGrade?: number,
+    existingGrade?: number | "uradjeno" | "neuradjeno" | null,
   ) {
     setOcjenaTarget({ id: student.id, displayName: student.displayName, username: "" });
     setBrzaNapametOcjena({ stavka });
@@ -516,7 +522,7 @@ export default function GrupaPage() {
     setZadacaTarget(u);
     setZadacaModalTab("pregled");
     setZadaceTargeta([]);
-    setNewZadaca({ naslov: "", opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
+    setNewZadaca({ opis: "", lekcijaNaslov: "", lekcijaSlug: "" });
     setZadMaterijali([]); setZadPriloziIds(new Set());
     setShowZadacaModal(true);
     if (!token) return;
@@ -567,17 +573,17 @@ export default function GrupaPage() {
   }
 
   async function saveZadaca() {
-    if (!token || !newZadaca.naslov.trim()) {
-      toast({ title: t("Naslov je obavezan"), variant: "destructive" });
+    if (!token || !newZadaca.lekcijaNaslov.trim()) {
+      toast({ title: t("Odaberi lekciju"), variant: "destructive" });
       return;
     }
     setSavingZadaca(true);
     try {
       await apiRequest("POST", "/muallim/zadace", {
         grupaId,
-        naslov: newZadaca.naslov.trim(),
+        naslov: newZadaca.lekcijaNaslov.trim(),
         opis: newZadaca.opis.trim() || null,
-        rokDo: newZadaca.rokDo || null,
+        rokDo: null,
         lekcijaNaslov: newZadaca.lekcijaNaslov || null,
         lekcijaSlug: newZadaca.lekcijaSlug || null,
         lekcijaTip: newZadaca.lekcijaSlug ? "ilmihal" : null,
@@ -1279,11 +1285,18 @@ export default function GrupaPage() {
                     <p className="mt-1 font-extrabold text-emerald-950">{brzaNapametOcjena.stavka.naziv}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena (1–6)")}</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena")}</label>
                     <select value={newOcjena.ocjena}
-                      onChange={e => setNewOcjena(o => ({ ...o, ocjena: parseInt(e.target.value) }))}
+                      onChange={e => setNewOcjena(o => ({
+                        ...o,
+                        ocjena: e.target.value === "uradjeno" || e.target.value === "neuradjeno"
+                          ? e.target.value
+                          : parseInt(e.target.value),
+                      }))}
                       className="w-full border border-border rounded-xl px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-extrabold">
                       {[6, 5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="uradjeno">{t("Urađeno")}</option>
+                      <option value="neuradjeno">{t("Neurađeno")}</option>
                     </select>
                   </div>
                 </div>
@@ -1466,29 +1479,13 @@ export default function GrupaPage() {
               ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Naslov *")}</label>
-                  <input type="text" value={newZadaca.naslov}
-                    onChange={e => setNewZadaca(z => ({ ...z, naslov: e.target.value }))}
-                    placeholder={t("Npr. Nauči Fatihu napamet")}
-                    className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    data-testid="input-zadaca-naslov"
-                  />
-                </div>
-                <div>
                   <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Opis")}</label>
                   <textarea value={newZadaca.opis} rows={3}
                     onChange={e => setNewZadaca(z => ({ ...z, opis: e.target.value }))}
                     placeholder={t("Detalji zadaće (opciono)")}
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Rok do")}</label>
-                    <input type="date" value={newZadaca.rokDo}
-                      onChange={e => setNewZadaca(z => ({ ...z, rokDo: e.target.value }))}
-                      className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                  </div>
-                  <div>
+                <div>
                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                     <LekcijaPicker
                       lekcije={ilmihalLekcije}
@@ -1505,7 +1502,6 @@ export default function GrupaPage() {
                       }}
                       placeholder={t("Pretraži lekciju ili upiši broj…")}
                     />
-                  </div>
                 </div>
                 {newZadaca.lekcijaSlug && (
                   <div>
@@ -1528,7 +1524,7 @@ export default function GrupaPage() {
                 <Button variant="outline" onClick={() => setShowZadacaModal(false)} disabled={savingZadaca} className="flex-1 rounded-xl">
                   {t("Otkaži")}
                 </Button>
-                {(!zadacaTarget || zadacaModalTab === "nova") && <Button onClick={saveZadaca} disabled={savingZadaca || !newZadaca.naslov.trim()} className="flex-1 rounded-xl font-bold"
+                {(!zadacaTarget || zadacaModalTab === "nova") && <Button onClick={saveZadaca} disabled={savingZadaca || !newZadaca.lekcijaNaslov.trim()} className="flex-1 rounded-xl font-bold"
                   data-testid="btn-save-zadaca"
                 >
                   {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Dodaj zadaću")}
@@ -1700,10 +1696,16 @@ export default function GrupaPage() {
                     <h3 className="mb-2 flex items-center gap-2 font-extrabold text-emerald-800"><Check className="h-4 w-4" /> {t("Ocijenjeni")} <span className="text-xs font-bold text-muted-foreground">({napametDetalji.ocijenjeni.length})</span></h3>
                     {napametDetalji.ocijenjeni.length ? <div className="space-y-2">{napametDetalji.ocijenjeni.map((student) => (
                        <button type="button" key={student.id}
-                         onClick={() => openBrzaNapametOcjena(napametOdabrana, student, student.ocjena)}
+                         onClick={() => openBrzaNapametOcjena(
+                           napametOdabrana,
+                           student,
+                           student.ocjenaOpisna ?? student.ocjena,
+                         )}
                          className="flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5 text-left hover:border-emerald-300 hover:bg-emerald-100 transition-colors">
                         <span className="min-w-0 truncate text-sm font-bold">{student.displayName}</span>
-                        <span className="shrink-0 text-right"><strong className="rounded-full bg-emerald-100 px-2 py-1 text-sm text-emerald-800">{student.ocjena}</strong><small className="ml-2 text-xs text-muted-foreground">{fmtDatum(student.datum) || student.datum}</small></span>
+                        <span className="shrink-0 text-right"><strong className="rounded-full bg-emerald-100 px-2 py-1 text-sm text-emerald-800">
+                          {student.ocjenaOpisna === "uradjeno" ? t("Urađeno") : student.ocjenaOpisna === "neuradjeno" ? t("Neurađeno") : student.ocjena}
+                        </strong><small className="ml-2 text-xs text-muted-foreground">{fmtDatum(student.datum) || student.datum}</small></span>
                        </button>
                     ))}</div> : <p className="rounded-xl bg-slate-50 p-4 text-sm text-muted-foreground">{t("Niko još nije ocijenjen.")}</p>}
                   </div>

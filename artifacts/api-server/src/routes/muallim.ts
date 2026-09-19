@@ -2735,10 +2735,6 @@ router.post("/ocjene", async (req, res) => {
       ? povezanaNapametStavka?.id
       : napametStavkaId || undefined;
     const isNapamet = Boolean(effectiveNapametStavkaId);
-    if (isNapamet && ocjenaOpisna) {
-      res.status(400).json({ error: "NAPAMET koristi brojčanu ocjenu" });
-      return;
-    }
     if (isNapamet && (!ucenikId || !grupaId)) {
       res.status(400).json({ error: "NAPAMET ocjena mora pripadati grupi" });
       return;
@@ -2771,7 +2767,7 @@ router.post("/ocjene", async (req, res) => {
           kategorija: "napamet",
           predmet: "Napamet",
           ocjena: ocjenaBroj,
-          ocjenaOpisna: null,
+          ocjenaOpisna,
           lekcijaNaziv: lekcijaNaziv || null,
           napomena,
           datum,
@@ -2802,7 +2798,7 @@ router.post("/ocjene", async (req, res) => {
           kategorija: "napamet",
           predmet: null,
           ocjena: ocjenaBroj,
-          ocjenaOpisna: null,
+          ocjenaOpisna,
           lekcijaNaziv: null,
           napomena,
           datum,
@@ -2825,7 +2821,7 @@ router.post("/ocjene", async (req, res) => {
       const ocjenaPrikaz = ocjenaOpisna === "uradjeno" ? "Urađeno"
         : ocjenaOpisna === "neuradjeno" ? "Neurađeno"
         : String(ocjenaBroj);
-      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjenaPrikaz}) iz predmeta ${predmet || "Ostali sadržaji"}.`;
+      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjenaPrikaz}) iz predmeta ${isNapamet ? "Napamet" : (predmet || "Ostali sadržaji")}.`;
       await notifyApprovedRoditelji({
         ucenikId,
         posiljateljId: req.user!.userId,
@@ -2930,6 +2926,7 @@ router.get("/napamet-program/:stavkaId/detalji", async (req, res) => {
     const grades = studentIds.length ? await db.select({
       ucenikId: ocjeneTable.ucenikId,
       ocjena: ocjeneTable.ocjena,
+      ocjenaOpisna: ocjeneTable.ocjenaOpisna,
       napametStavkaId: ocjeneTable.napametStavkaId,
       lekcijaNaziv: ocjeneTable.lekcijaNaziv,
       datum: ocjeneTable.datum,
@@ -2945,7 +2942,13 @@ router.get("/napamet-program/:stavkaId/detalji", async (req, res) => {
     for (const grade of relevantGrades) if (!latest.has(grade.ucenikId)) latest.set(grade.ucenikId, grade);
     const assessed = students.filter((student) => latest.has(student.id)).map((student) => {
       const grade = latest.get(student.id)!;
-      return { id: student.id, displayName: student.displayName, ocjena: grade.ocjena, datum: grade.datum };
+      return {
+        id: student.id,
+        displayName: student.displayName,
+        ocjena: grade.ocjena,
+        ocjenaOpisna: grade.ocjenaOpisna,
+        datum: grade.datum,
+      };
     });
     const unassessed = students.filter((student) => !latest.has(student.id));
     res.json({
@@ -5677,14 +5680,20 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
     const prilogMap = await getHomeworkAttachments(visible.map(z => z.id));
     const withStatus = visible.map(z => {
       const s = statusMap.get(z.id);
-      const status = s?.status ?? "na_cekanju";
+      // Stariji redovi mogu imati ocjenu ili nagradu, ali status nije bio
+      // zatvoren. Svaki pregledani rezultat znači da je zadaća završena.
+      const zavrseno = s?.status === "zavrseno"
+        || s?.ocjena != null
+        || s?.ocjenaOpisna != null
+        || (s?.kapiMeda ?? 0) > 0;
+      const status = zavrseno ? "zavrseno" : (s?.status ?? "na_cekanju");
       const efektivniRok = s?.noviRok ?? z.rokDo ?? null;
-      const kategorija = status === "zavrseno"
-        ? (s?.ocjena !== null && s?.ocjena !== undefined ? "zavrsene" : "neuradjene")
+      const kategorija = zavrseno
+        ? "zavrsene"
         : z.isActive === false
           ? "neuradjene"
           : "aktivne";
-      const istekao = !!(efektivniRok && efektivniRok < today);
+      const istekao = !zavrseno && !!(efektivniRok && efektivniRok < today);
       return {
         ...z,
         prilozi: prilogMap.get(z.id) || [],

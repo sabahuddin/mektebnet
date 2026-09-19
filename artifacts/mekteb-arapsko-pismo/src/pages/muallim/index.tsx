@@ -594,9 +594,7 @@ export default function MuallimPanel() {
   const [zadTipTab, setZadTipTab] = useState<"pojedinacno" | "svi">("svi");
   const [zadSubTab, setZadSubTab] = useState<"nova" | "utoku" | "zavrseno">("utoku");
   const [zadDodjela, setZadDodjela] = useState<"svi" | "pojedinacno">("svi");
-  const [zadNaslov, setZadNaslov] = useState("");
   const [zadOpis, setZadOpis] = useState("");
-  const [zadRok, setZadRok] = useState("");
   const [zadLekcija, setZadLekcija] = useState("");
   const [zadLekcijaSlug, setZadLekcijaSlug] = useState("");
   const [zadUcenikIds, setZadUcenikIds] = useState<Set<number>>(new Set());
@@ -1025,7 +1023,7 @@ export default function MuallimPanel() {
         grupaId: zadGrupaId,
         naslov: zadLekcija.trim() || zadOpis.trim().slice(0, 80),
         opis: zadOpis.trim() || null,
-        rokDo: zadRok || null,
+        rokDo: null,
         lekcijaNaslov: zadLekcija || null,
         lekcijaSlug: zadLekcijaSlug || null,
         lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
@@ -1041,7 +1039,7 @@ export default function MuallimPanel() {
       setZadace(prev => editingZadaca
         ? prev.map(z => z.id === saved.id ? saved : z)
         : [saved, ...prev]);
-      setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set());
+      setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set());
       setEditingZadaca(null);
       setShowZadForm(false);
       setZadTipTab(saved.ucenikIds?.length ? "pojedinacno" : "svi");
@@ -1056,7 +1054,6 @@ export default function MuallimPanel() {
     setZadLekcija(zadaca.lekcijaNaslov || "");
     setZadLekcijaSlug(zadaca.lekcijaSlug || "");
     setZadOpis(zadaca.opis || "");
-    setZadRok(zadaca.rokDo ? zadaca.rokDo.slice(0, 10) : "");
     setZadUcenikIds(new Set(zadaca.ucenikIds || []));
     setZadDodjela(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
     setZadTipTab(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
@@ -3732,11 +3729,6 @@ export default function MuallimPanel() {
                           {editingZadaca ? <Pencil className="w-4 h-4 text-primary" /> : <Plus className="w-4 h-4 text-primary" />}
                           {editingZadaca ? t("Uredi zadaću") : t("Nova zadaća")}
                         </h4>
-                        {editingZadaca && (
-                          <p className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
-                            {t("Promjena roka ovdje važi za sve učenike kojima je zadaća dodijeljena. Individualni rok mijenjaj samo kroz pregled učenika kada za to postoji stvaran razlog.")}
-                          </p>
-                        )}
                         <div className="grid sm:grid-cols-2 gap-4">
                            <div className="sm:col-span-2">
                              <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Dodjela zadaće")}</label>
@@ -3781,11 +3773,6 @@ export default function MuallimPanel() {
                             <textarea value={zadOpis} onChange={e => setZadOpis(e.target.value)} rows={2}
                               placeholder={t("Detalji zadaće...")}
                               className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Rok do")}</label>
-                            <input type="date" value={zadRok} onChange={e => setZadRok(e.target.value)}
-                              className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
                           </div>
                           <div className={`sm:col-span-2 ${zadDodjela === "svi" ? "hidden" : ""}`}>
                             <label className="text-sm font-bold text-muted-foreground block mb-1">
@@ -3846,7 +3833,7 @@ export default function MuallimPanel() {
                           </div>
                         </div>
                         <div className="flex flex-col-reverse gap-2 mt-4 sm:flex-row sm:justify-end">
-                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadNaslov(""); setZadOpis(""); setZadRok(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
+                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
                             {t("Otkaži")}
                           </button>
                           <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2)} className="w-full rounded-xl font-bold sm:w-auto">

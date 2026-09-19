@@ -18,7 +18,8 @@ export interface NapametStavka {
 export interface NapametOcjena {
   id: number;
   napametStavkaId: string | null;
-  ocjena: number;
+  ocjena: number | null;
+  ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
   datum: string;
   napomena?: string | null;
 }
@@ -222,8 +223,12 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
                           )}
                         </span>
                         {ocjena ? (
-                          <span className={`font-extrabold rounded-full px-2.5 py-1 text-sm ${OCJENA_COLORS[ocjena.ocjena] || "bg-muted text-foreground"}`} title={`${ocjena.datum}${ocjena.napomena ? ` · ${ocjena.napomena}` : ""}`}>
-                            {ocjena.ocjena}
+                          <span className={`font-extrabold rounded-full px-2.5 py-1 text-sm ${ocjena.ocjena != null ? (OCJENA_COLORS[ocjena.ocjena] || "bg-muted text-foreground") : "bg-emerald-100 text-emerald-700"}`} title={`${ocjena.datum}${ocjena.napomena ? ` · ${ocjena.napomena}` : ""}`}>
+                            {ocjena.ocjenaOpisna === "uradjeno"
+                              ? t("Urađeno")
+                              : ocjena.ocjenaOpisna === "neuradjeno"
+                                ? t("Neurađeno")
+                                : ocjena.ocjena}
                           </span>
                         ) : (
                           <span className="text-xs text-slate-400">{t("Čeka pregled")}</span>

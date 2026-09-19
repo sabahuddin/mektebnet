@@ -598,6 +598,46 @@ test("redovna opisna ocjena se čuva bez brojčane vrijednosti", async () => {
   assert.equal(invalid.status, 400);
 });
 
+test("NAPAMET opisna ocjena ostaje u Napamet i zajedničkoj listi ocjena", async () => {
+  const response = await teacherPost("/api/muallim/ocjene", {
+    ucenikId: studentId,
+    grupaId: groupId,
+    ocjena: null,
+    ocjenaOpisna: "uradjeno",
+    lekcijaNaziv: `NAPAMET lekcija ${suffix}`,
+    lekcijaSlug: napametSlug,
+    datum: "2026-08-22",
+  });
+  assert.equal(response.status, 201);
+
+  const [napametResponse, profileResponse] = await Promise.all([
+    studentGet("/api/ucenik/napamet"),
+    studentGet("/api/ucenik/profil"),
+  ]);
+  assert.equal(napametResponse.status, 200);
+  assert.equal(profileResponse.status, 200);
+
+  const napamet = await napametResponse.json() as {
+    katalog: Array<{ id: string; sourceLessonSlug?: string | null }>;
+    ocjene: Array<{ napametStavkaId: string | null; ocjena: number | null; ocjenaOpisna: string | null }>;
+  };
+  const stavka = napamet.katalog.find((item) => item.sourceLessonSlug === napametSlug);
+  assert.ok(stavka);
+  assert.equal(
+    napamet.ocjene.find((item) => item.napametStavkaId === stavka.id)?.ocjenaOpisna,
+    "uradjeno",
+  );
+
+  const profile = await profileResponse.json() as {
+    ocjene: Array<{ lekcijaNaziv: string | null; ocjena: number | null; ocjenaOpisna: string | null }>;
+  };
+  assert.ok(profile.ocjene.some((item) =>
+    item.lekcijaNaziv === `NAPAMET lekcija ${suffix}`
+    && item.ocjena === null
+    && item.ocjenaOpisna === "uradjeno"
+  ));
+});
+
 test("arhivirana grupna zadaća je završena realizovanom, a neurađena ostalim učenicima", async () => {
   const archiveResponse = await teacherPut(`/api/muallim/zadace/${emptyHomeworkId}/arhiviraj`, {});
   assert.equal(archiveResponse.status, 200);

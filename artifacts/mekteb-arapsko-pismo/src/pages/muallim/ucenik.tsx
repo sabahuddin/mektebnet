@@ -32,7 +32,8 @@ interface Prisustvo {
 interface Ocjena {
   id: number;
   predmet?: string | null;
-  ocjena: number;
+  ocjena: number | null;
+  ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
   lekcijaNaziv?: string;
   napomena?: string;
   datum: string;
@@ -66,6 +67,7 @@ interface ZadacaPregled {
   status?: string;
   uradjeno?: boolean;
   ocjena?: number | null;
+  ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
   kapiMeda?: number;
   noviRok?: string | null;
   prolongCount?: number;
@@ -517,8 +519,11 @@ export default function UcenikPage() {
   const zakasnio = prisustvo.filter(p => p.status === "zakasnio").length;
   const opravdano = prisustvo.filter(p => p.status === "opravdan").length;
   const prisustvoPct = prisustvo.length > 0 ? Math.round((prisutnih / prisustvo.length) * 100) : null;
-  const prosjecnaOcjena = ocjene.length ? (ocjene.reduce((s, o) => s + o.ocjena, 0) / ocjene.length).toFixed(2) : null;
-  const ocjenePoPredmetu = Object.entries(ocjene.reduce<Record<string, number[]>>((acc, o) => {
+  const brojcaneOcjene = ocjene.filter((o): o is Ocjena & { ocjena: number } => o.ocjena != null);
+  const prosjecnaOcjena = brojcaneOcjene.length
+    ? (brojcaneOcjene.reduce((s, o) => s + o.ocjena, 0) / brojcaneOcjene.length).toFixed(2)
+    : null;
+  const ocjenePoPredmetu = Object.entries(brojcaneOcjene.reduce<Record<string, number[]>>((acc, o) => {
     const predmet = o.predmet || t("Nije određeno");
     (acc[predmet] ||= []).push(o.ocjena);
     return acc;
@@ -977,8 +982,12 @@ export default function UcenikPage() {
                                     {o.datum.split("-").reverse().join(".")}
                                   </td>
                                   <td className="py-3 px-4 text-center">
-                                    <span className={`inline-flex items-center justify-center w-8 h-8 text-sm font-extrabold rounded-full shadow-sm ${OCJENA_COLORS[o.ocjena] || "bg-gray-100 text-gray-700"}`}>
-                                      {o.ocjena}
+                                    <span className={`inline-flex min-h-8 items-center justify-center rounded-full px-2.5 text-sm font-extrabold shadow-sm ${o.ocjena != null ? (OCJENA_COLORS[o.ocjena] || "bg-gray-100 text-gray-700") : "bg-emerald-100 text-emerald-700"}`}>
+                                      {o.ocjenaOpisna === "uradjeno"
+                                        ? t("Urađeno")
+                                        : o.ocjenaOpisna === "neuradjeno"
+                                          ? t("Neurađeno")
+                                          : o.ocjena}
                                     </span>
                                   </td>
                                 </tr>
