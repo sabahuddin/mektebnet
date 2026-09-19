@@ -451,15 +451,15 @@ export function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={() => setFooterOpen(open => !open)}
-              className="w-full min-h-14 py-3 flex items-center justify-between gap-4 text-left"
+               className="relative w-full min-h-14 py-3 flex items-center justify-center gap-4 text-center"
               aria-expanded={footerOpen}
               aria-controls="prijavljeni-footer-sadrzaj"
               data-testid="footer-accordion-toggle"
             >
               <span className="font-extrabold text-sm sm:text-base text-foreground">
-                Mekteb.net - {t("Islamska edukativna platforma")}
+                 Mekteb.net
               </span>
-              <span className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl border border-border/60 bg-white text-primary shadow-sm">
+               <span className="absolute right-0 shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl border border-border/60 bg-white text-primary shadow-sm">
                 <ChevronDown className={`w-5 h-5 transition-transform ${footerOpen ? "rotate-180" : ""}`} />
                 <span className="sr-only">{footerOpen ? t("Zatvori") : t("Otvori")}</span>
               </span>
@@ -471,10 +471,10 @@ export function Layout({ children }: LayoutProps) {
           hidden={!!user && !footerOpen}
           className="max-w-7xl mx-auto px-4 py-6 md:py-10"
         >
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-5 md:gap-8">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-5 md:gap-8">
             {/* Brend */}
-            <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-2 md:mb-3">
+             <div className="col-span-2 flex flex-col items-center text-center">
+               <div className="flex items-center justify-center gap-2">
                 <img
                   src={`${import.meta.env.BASE_URL}images/maskota/pcela.png`}
                   alt=""
@@ -484,9 +484,6 @@ export function Layout({ children }: LayoutProps) {
                 />
                 <span className="font-bold text-sm md:text-lg text-primary">mekteb<span className="text-secondary">.net</span></span>
               </div>
-              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-[230px]">
-                {t("Islamska edukativna platforma")}
-              </p>
               <a href="https://buymeacoffee.com/mekteb" target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-700 font-medium text-[13px] md:text-sm transition-colors mt-3 md:mt-4">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -526,8 +523,8 @@ export function Layout({ children }: LayoutProps) {
 
           </div>
 
-          <div className="mt-5 md:mt-8 pt-4 md:pt-6 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-3 text-[12px] md:text-sm text-muted-foreground">
-            <div>© {new Date().getFullYear()} · mekteb.net · {t("footer.platforma")}</div>
+          <div className="mt-5 md:mt-8 pt-4 md:pt-6 border-t border-border/30 flex flex-col items-center justify-center gap-2 md:gap-3 text-center text-[12px] md:text-sm text-muted-foreground">
+            <div>© {new Date().getFullYear()} · mekteb.net</div>
             <div>{t("Sva prava zadržana.")}</div>
           </div>
         </div>
